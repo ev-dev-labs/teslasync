@@ -1612,6 +1612,26 @@
       "requiredCount": 4,
       "promptId": "p4-apple/P7/page:system/StatusApiDocs",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-StatusApiDocsPage.log"
+    },
+    {
+      "unitId": "page:system/TeslaAccount",
+      "platform": "apple-macos",
+      "status": "blocked",
+      "coveredCount": 16,
+      "requiredCount": 16,
+      "promptId": "p4-apple/P7/page:system/TeslaAccount",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-TeslaAccountPage.log",
+      "note": "SwiftUI parity at 16/16. SwiftLint clean. Build blocked by pre-existing MyActivityPage.swift errors."
+    },
+    {
+      "unitId": "page:system/TeslaAccount",
+      "platform": "apple-ios",
+      "status": "blocked",
+      "coveredCount": 16,
+      "requiredCount": 16,
+      "promptId": "p4-apple/P7/page:system/TeslaAccount",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-TeslaAccountPage.log",
+      "note": "SwiftUI parity at 16/16. SwiftLint clean. Build blocked by pre-existing MyActivityPage.swift errors."
     }
   ]
 }

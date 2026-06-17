@@ -1,6 +1,116 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "teslaAccount.avatar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile picture"
+          }
+        }
+      }
+    },
+    "teslaAccount.email" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email"
+          }
+        }
+      }
+    },
+    "teslaAccount.fetchedAt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fetched At"
+          }
+        }
+      }
+    },
+    "teslaAccount.lastSynced" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last synced: %@"
+          }
+        }
+      }
+    },
+    "teslaAccount.name" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "teslaAccount.neverSynced" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Never synced \u2014 click Refresh to fetch from Tesla"
+          }
+        }
+      }
+    },
+    "teslaAccount.noProfile" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No profile data yet. Click \"Refresh from Tesla\" to sync your account."
+          }
+        }
+      }
+    },
+    "teslaAccount.profile" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile"
+          }
+        }
+      }
+    },
+    "teslaAccount.refresh" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh from Tesla"
+          }
+        }
+      }
+    },
+    "teslaAccount.subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Tesla account profile synced from the Fleet API"
+          }
+        }
+      }
+    },
+    "teslaAccount.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tesla Account"
+          }
+        }
+      }
+    },
     "docs.statusApi.title" : {
       "extractionState" : "manual",
       "localizations" : {

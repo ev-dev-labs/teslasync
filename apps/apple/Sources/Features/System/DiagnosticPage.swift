@@ -13,11 +13,11 @@ import SwiftUI
 /// state, and per-check cards. Every data state (idle, running, complete, error) renders a fully
 /// populated surface; no region is ever hidden behind a null check (ADR-011).
 public struct DiagnosticPage: View {
-    @State private var model: DiagnosticPageModel
-    @State private var showCopyConfirm = false
+    @State fileprivate var model: DiagnosticPageModel
+    @State fileprivate var showCopyConfirm = false
 
     #if os(iOS)
-        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        @Environment(\.horizontalSizeClass) fileprivate var horizontalSizeClass
     #endif
 
     public init(model: DiagnosticPageModel) {
@@ -88,7 +88,7 @@ public struct DiagnosticPage: View {
 
     // MARK: - Helpers (panels and cards are in DiagnosticPage.Sections.swift)
 
-    private func overallTone(_ status: DiagnosticOverallStatus) -> TSTone {
+    fileprivate func overallTone(_ status: DiagnosticOverallStatus) -> TSTone {
         switch status {
         case .ok: .success
         case .degraded: .warning
@@ -96,7 +96,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    private func overallIcon(_ status: DiagnosticOverallStatus) -> String {
+    fileprivate func overallIcon(_ status: DiagnosticOverallStatus) -> String {
         switch status {
         case .ok: "checkmark.circle.fill"
         case .degraded: "exclamationmark.triangle.fill"
@@ -104,7 +104,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    private func statusTone(_ status: DiagnosticCheckStatus) -> TSTone {
+    fileprivate func statusTone(_ status: DiagnosticCheckStatus) -> TSTone {
         switch status {
         case .ok: .success
         case .warn: .warning
@@ -112,7 +112,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    private func statusIcon(_ status: DiagnosticCheckStatus) -> String {
+    fileprivate func statusIcon(_ status: DiagnosticCheckStatus) -> String {
         switch status {
         case .ok: "checkmark.circle.fill"
         case .warn: "exclamationmark.triangle.fill"
@@ -120,7 +120,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    private func formatDateTime(_ isoString: String) -> String {
+    fileprivate func formatDateTime(_ isoString: String) -> String {
         let formatter = ISO8601DateFormatter()
         guard let date = formatter.date(from: isoString) else { return isoString }
         let display = DateFormatter()
@@ -129,7 +129,7 @@ public struct DiagnosticPage: View {
         return display.string(from: date)
     }
 
-    private func copyToClipboard(_ text: String) {
+    fileprivate func copyToClipboard(_ text: String) {
         #if os(macOS)
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
@@ -138,7 +138,7 @@ public struct DiagnosticPage: View {
         #endif
     }
 
-    private func downloadReport() {
+    fileprivate func downloadReport() {
         guard let report = model.report else { return }
         let filename = downloadFilename(report.generatedAt)
         let text = model.reportText

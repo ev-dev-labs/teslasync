@@ -212,8 +212,10 @@ public protocol MyActivityDataSource {
 }
 
 /// Production data source — delegates to KMP `UserRepository.myRecentActivity`.
-struct DefaultMyActivityDataSource: MyActivityDataSource {
-    func loadMyActivity(_ params: Shared.MyActivityParams) async throws -> [Shared.UserActivityEntry] {
+public struct DefaultMyActivityDataSource: MyActivityDataSource {
+    public init() {}
+    
+    public func loadMyActivity(_ params: Shared.MyActivityParams) async throws -> [Shared.UserActivityEntry] {
         // This will be wired to AppContainer.shared.core.userRepository.myRecentActivity(params)
         // once P1/S8 UserStore is fully integrated. For preview/development, returns sample data.
         // parity:allow pending P1/S8 UserStore integration per ADR-004

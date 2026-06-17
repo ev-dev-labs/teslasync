@@ -1,4 +1,5 @@
 import SwiftUI
+import Shared
 
 /// Native SwiftUI parity of `web/src/features/system/pages/MyActivityPage.tsx`
 /// (route `/me/activity`). Renders the current user's own audit-log entries
