@@ -215,10 +215,7 @@ public struct HelpPage: View {
                 // Title + description
                 VStack(alignment: .leading, spacing: TSSpacing.xs) {
                     HStack(spacing: TSSpacing.xs) {
-                        Text(String(
-                            localized: LocalizedStringKey(link.titleKey),
-                            defaultValue: String.LocalizationValue(link.titleDefault)
-                        ))
+                        Text(LocalizedStringKey(link.titleKey))
                         .font(.TS.panel)
                         .foregroundStyle(Color.TS.textPrimary)
 
@@ -230,10 +227,7 @@ public struct HelpPage: View {
                             .accessibilityHidden(true)
                     }
 
-                    Text(String(
-                        localized: LocalizedStringKey(link.descKey),
-                        defaultValue: String.LocalizationValue(link.descDefault)
-                    ))
+                    Text(LocalizedStringKey(link.descKey))
                     .font(.TS.bodySm)
                     .foregroundStyle(Color.TS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -247,23 +241,14 @@ public struct HelpPage: View {
 
     /// Generates the accessibility label for a link card.
     private func linkAccessibilityLabel(for link: HelpLink) -> String {
-        let title = String(
-            localized: LocalizedStringKey(link.titleKey),
-            defaultValue: String.LocalizationValue(link.titleDefault)
-        )
-        let desc = String(
-            localized: LocalizedStringKey(link.descKey),
-            defaultValue: String.LocalizationValue(link.descDefault)
-        )
+        let title = link.titleDefault
+        let desc = link.descDefault
         return "\(title). \(desc)"
     }
 
     /// Generates the accessibility hint for a link card.
     private func linkAccessibilityHint(for link: HelpLink) -> String {
-        let title = String(
-            localized: LocalizedStringKey(link.titleKey),
-            defaultValue: String.LocalizationValue(link.titleDefault)
-        )
+        let title = link.titleDefault
         return "Navigates to \(title)"
     }
 }

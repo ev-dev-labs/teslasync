@@ -184,12 +184,12 @@ public struct MyActivityPage: View {
         }
     }
 
-    private struct PreviewHTTPError: Error, LocalizedError {
+    private struct PreviewHTTPError: LocalizedError {
         let statusCode: Int
         var errorDescription: String? { "HTTP \(statusCode)" }
     }
 
-    private struct PreviewFailure: Error, LocalizedError {
+    private struct PreviewFailure: LocalizedError {
         var errorDescription: String? { "Network failure" }
     }
 #endif

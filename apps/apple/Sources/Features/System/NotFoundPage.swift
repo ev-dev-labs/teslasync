@@ -121,7 +121,7 @@ public struct NotFoundPage: View {
                         // parity:allow - Suggestion navigation deferred (web uses React Router, native needs AppRoute integration)
                     } label: {
                         HStack(spacing: TSSpacing.xs) {
-                            Text(verbatim: String(localized: LocalizedStringKey(suggestion.i18nKey)))
+                            Text(LocalizedStringKey(suggestion.i18nKey))
                                 .foregroundStyle(Color.TS.accent)
                             Text(verbatim: suggestion.path)
                                 .font(Font.TS.caption)

@@ -38,7 +38,7 @@ public final class BatteryRadialGaugeModel {
     public var resolvedVehicleID: Int64 {
         if let explicitVehicleID { return explicitVehicleID }
         let vehicles = vehiclesHolder.state?.value ?? []
-        return vehicles.first?.id ?? 0
+        return Int64(vehicles.first?.id ?? "") ?? 0
     }
 
     /// The fully-resolved render input the view switches over.

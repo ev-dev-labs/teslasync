@@ -207,7 +207,7 @@ public struct ActivityDisplayEntry: Identifiable {
 }
 
 /// Data source protocol for loading user activity (production or preview).
-public protocol MyActivityDataSource {
+public protocol MyActivityDataSource: Sendable {
     func loadMyActivity(_ params: Shared.MyActivityParams) async throws -> [Shared.UserActivityEntry]
 }
 

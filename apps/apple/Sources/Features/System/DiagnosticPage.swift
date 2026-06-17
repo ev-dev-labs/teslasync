@@ -13,11 +13,11 @@ import SwiftUI
 /// state, and per-check cards. Every data state (idle, running, complete, error) renders a fully
 /// populated surface; no region is ever hidden behind a null check (ADR-011).
 public struct DiagnosticPage: View {
-    @State fileprivate var model: DiagnosticPageModel
-    @State fileprivate var showCopyConfirm = false
+    @State internal var model: DiagnosticPageModel
+    @State internal var showCopyConfirm = false
 
     #if os(iOS)
-        @Environment(\.horizontalSizeClass) fileprivate var horizontalSizeClass
+        @Environment(\.horizontalSizeClass) internal var horizontalSizeClass
     #endif
 
     public init(model: DiagnosticPageModel) {

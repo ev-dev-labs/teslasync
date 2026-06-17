@@ -114,6 +114,7 @@ enum ScheduledExportsPanelState {
 // MARK: - ViewModel
 
 @Observable
+@MainActor
 final class ScheduledExportsPanelModel {
     var state: ScheduledExportsPanelState = .loading
     var showForm: Bool = false

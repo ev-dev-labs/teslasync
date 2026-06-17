@@ -48,11 +48,15 @@ final class SystemStatusPageModel {
     }
 
     var teslaTokenWarn: String? {
-        guard let auth = authStatus, auth.authenticated,
+        guard let auth = authStatus else {
+            return nil
+        }
+        
+        guard auth.authenticated,
               let expiresAt = auth.tokenExpiresAt,
               let expireDate = ISO8601DateFormatter().date(from: expiresAt)
         else {
-            return auth?.authenticated == false ? String(localized: "Tesla account not connected") : nil
+            return auth.authenticated == false ? String(localized: "Tesla account not connected") : nil
         }
 
         let days = Calendar.current.dateComponents([.day], from: Date(), to: expireDate).day ?? 0

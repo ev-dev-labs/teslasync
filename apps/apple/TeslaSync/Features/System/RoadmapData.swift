@@ -49,7 +49,7 @@ public enum RoadmapPhase: String, CaseIterable {
     }
 }
 
-public struct RoadmapEntry: Identifiable {
+public struct RoadmapEntry: Identifiable, Sendable {
     public let id = UUID()
     let title: String
     let description: String
