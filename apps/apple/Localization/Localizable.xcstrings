@@ -1,6 +1,40 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.chargePlanner.cost_decimal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cost"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cost"
+          }
+        }
+      }
+    },
+    "route.smartCharge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smart Charging"
+          }
+        }
+      }
+    },
     "analytics.weeklyDigest.title" : {
       "extractionState" : "manual",
       "localizations" : {

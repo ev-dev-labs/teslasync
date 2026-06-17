@@ -1832,6 +1832,24 @@
       "requiredCount": 23,
       "promptId": "p4-apple/P7/page:vehicles/VehicleDetail",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-VehicleDetailPage.log"
+    },
+    {
+      "unitId": "page:charging/SmartCharge",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 44,
+      "requiredCount": 44,
+      "promptId": "p4-apple/P7/page:charging/SmartCharge",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-SmartChargePage.log"
+    },
+    {
+      "unitId": "page:charging/SmartCharge",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 44,
+      "requiredCount": 44,
+      "promptId": "p4-apple/P7/page:charging/SmartCharge",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-SmartChargePage.log"
     }
   ]
 }
