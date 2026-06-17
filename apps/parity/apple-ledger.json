@@ -1423,6 +1423,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:notifications/Webhooks",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-WebhooksPage.log"
+    },
+    {
+      "unitId": "page:power-user/SqlPlayground",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 14,
+      "requiredCount": 14,
+      "promptId": "p4-apple/P7/page:power-user/SqlPlayground",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-power-user-SqlPlaygroundPage.log"
+    },
+    {
+      "unitId": "page:power-user/SqlPlayground",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 14,
+      "requiredCount": 14,
+      "promptId": "p4-apple/P7/page:power-user/SqlPlayground",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-power-user-SqlPlaygroundPage.log"
     }
   ]
 }

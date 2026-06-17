@@ -34,7 +34,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case notificationsAudit, notificationsWebhooks
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
-    case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
+    case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, powerSql, system
     case backupRestore
     case securityAccess
     case settings, onboarding, teslaOrders, gasPrice, teslaFeatures, teslaRegion, explore, search, sharing, watch
@@ -64,6 +64,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .energyFlow: "energy-flow"
         case .energyProducts: "energy-products"
         case .powerUser: "power-user"
+        case .powerSql: "power/sql"
         case .apiKeys: "api-keys"
         case .apiPlayground: "api-playground"
         case .apiLogs: "api-logs"
@@ -172,6 +173,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .gasPrice: "fuelpump.fill"
         case .teslaFeatures: "flag.fill"
         case .powerUser: "terminal.fill"
+        case .powerSql: "tablecells"
         case .system: "server.rack"
         case .backupRestore: "externaldrive.fill.badge.timemachine"
         case .securityAccess: "shield.lefthalf.filled"
@@ -202,7 +204,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
              .diagnostics, .sharing, .watch, .exports: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
-             .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore,
+             .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .powerSql, .system, .backupRestore,
              .ingestXRay, .feedbackQueue, .securityAccess: .system
         case .settings, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures, .teslaRegion: .account
         }

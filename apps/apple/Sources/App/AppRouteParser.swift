@@ -46,6 +46,7 @@ public enum AppRouteParser {
         "/admin/users": .users,
         "/admin/system": .system,
         "/admin/security-access": .securityAccess,
+        "/power/sql": .powerSql,
         "/subjects": .users,
         "/account": .settings
     ]

@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "powerSql.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SQL Playground"
+          }
+        }
+      }
+    },
+    "powerSql.intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write read-only SELECT or WITH queries against the curated schema catalog below. Queries do NOT execute from the browser; copy your query into your preferred database client."
+          }
+        }
+      }
+    },
+    "powerSql.editor.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual SQL editor"
+          }
+        }
+      }
+    },
+    "powerSql.editor.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SQL query editor"
+          }
+        }
+      }
+    },
+    "powerSql.editor.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SELECT COUNT(*) FROM drives WHERE started_at >= NOW() - INTERVAL '7 days'"
+          }
+        }
+      }
+    },
+    "powerSql.editor.run" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Run"
+          }
+        }
+      }
+    },
+    "powerSql.editor.clear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "powerSql.editor.runEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type or paste a SELECT/WITH query above before running."
+          }
+        }
+      }
+    },
+    "powerSql.editor.runUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read-only execution from the browser is not enabled in this build. Copy the query into your preferred database client (psql, DBeaver, TablePlus) and run it there."
+          }
+        }
+      }
+    },
+    "powerSql.catalog.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curated schema catalog"
+          }
+        }
+      }
+    },
+    "powerSql.catalog.intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These tables are the only tables the curated catalog exposes. The Helix natural-language drafter refuses any query referencing tables outside this list."
+          }
+        }
+      }
+    },
+    "route.powerSql" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SQL Playground"
+          }
+        }
+      }
+    },
     "Action" : {
       "extractionState" : "manual",
       "localizations" : {
