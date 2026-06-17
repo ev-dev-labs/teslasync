@@ -2192,6 +2192,24 @@
       "requiredCount": 18,
       "promptId": "p4-apple/P7/page:system/Chatbot",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-ChatbotPage.log"
+    },
+    {
+      "unitId": "page:system/IncidentTimeline",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 6,
+      "requiredCount": 6,
+      "promptId": "p4-apple/P7/page:system/IncidentTimeline",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-IncidentTimelinePage.log"
+    },
+    {
+      "unitId": "page:system/IncidentTimeline",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 6,
+      "requiredCount": 6,
+      "promptId": "p4-apple/P7/page:system/IncidentTimeline",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-IncidentTimelinePage.log"
     }
   ]
 }
