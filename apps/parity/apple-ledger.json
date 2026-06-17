@@ -1922,6 +1922,24 @@
       "requiredCount": 81,
       "promptId": "p4-apple/P7/page:maps/Geofences",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-maps-GeofencesPage.log"
+    },
+    {
+      "unitId": "page:driving/SpeedProfile",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 37,
+      "requiredCount": 37,
+      "promptId": "p4-apple/P7/page:driving/SpeedProfile",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-SpeedProfilePage.log"
+    },
+    {
+      "unitId": "page:driving/SpeedProfile",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 37,
+      "requiredCount": 37,
+      "promptId": "p4-apple/P7/page:driving/SpeedProfile",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-SpeedProfilePage.log"
     }
   ]
 }

@@ -1,0 +1,175 @@
+=== P7 · page:driving/SpeedProfile · Apple SwiftUI Implementation ===
+Prompt: p4-apple/P7/page:driving/SpeedProfile
+Target: apps/apple/TeslaSync/Features/Driving/SpeedProfilePage.swift (+ 6 peers)
+Web source: web/src/features/driving/pages/SpeedProfilePage.tsx (343 lines)
+Base commit: b605c5327
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 at /usr/bin/xcodebuild  (Swift 6.3.2, MacOSX26.5 SDK)
+✓ swiftlint at /opt/homebrew/bin/swiftlint
+✓ swiftformat at /opt/homebrew/bin/swiftformat
+✓ pwsh at /opt/homebrew/bin/pwsh
+✓ xcodegen at /opt/homebrew/bin/xcodegen — project regenerates with the 7 new files in
+    both app targets (TeslaSync + TeslaSync-macOS; 150 pbxproj refs)
+✓ Platform: Darwin (arm64-apple)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+✓ Design tokens: apps/design/generated/apple/Tokens.swift (Color.TS / Font.TS / TSSpacing / TSRadius)
+✓ KMP Shared.xcframework assembled via Gradle (:core:assembleSharedDebugXCFramework →
+    macos-arm64 + ios-arm64 + ios-arm64-simulator slices, BUILD SUCCESSFUL) and staged at
+    apps/apple/Frameworks/Shared.xcframework. The page imports SwiftUI/Charts only (no Shared),
+    so the standalone Swift-6 compile fully validates the surface.
+
+ROUTE NOTE — `/speed-profile` has no dedicated `AppRoute` case, and AppRoute.swift /
+  AppRouteParser.swift (apps/apple/Sources/App) are OUTSIDE this prompt's allowed-files scope
+  (Features/Driving/** + nav-registration + catalog + log). Per the accepted sibling precedent
+  (RouteEfficiency / TripsReplay / TeslaChargingSessions), the page is delivered as a
+  NavigationStack-ready `View` (.navigationTitle + #Preview in NavigationStack) plus a typed
+  deep-link `NavigationDestination` (SpeedProfileRouteRegistration.swift —
+  `.speedProfileDestination()` / `SpeedProfileLink`), rather than editing the shared route host.
+
+ENV NOTE — full `xcodebuild build`/`test` is BLOCKED in this worktree by PRE-EXISTING repo
+  breakage, none caused by (nor fixable within the allowed-files scope of) this change. Verified
+  by building the TeslaSync-macOS scheme (WMO, signing disabled) and capturing the errors:
+  (1) Duplicate source basename in the app target (xcodebuild rejects two files with the same
+      basename before any compilation):
+        apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift  AND
+        apps/apple/TeslaSync/Features/System/ScheduledExportsPanel.swift
+      Both committed (git ls-files), UNMODIFIED by this change, different types declared
+      (ScheduledExportsPanelView vs ScheduledExportsPanel). Error:
+        error: filename "ScheduledExportsPanel.swift" used twice
+  (2) After transiently renaming one of those (verification only, restored — the .xcodeproj is
+      git-ignored / xcodegen-generated), the WMO build surfaced 7144 module-wide
+      "ambiguous use of 'md' / 'sm' / 'lg' / 'x2xl' / 'xs' / 'Preview' / 'init'" errors caused by
+      a PRE-EXISTING duplicate token definition:
+        apps/apple/TeslaSync/Features/System/StatusApiDocsPage.swift:399  redefines `enum TSSpacing`
+        apps/apple/TeslaSync/Features/System/StatusApiDocsPage.swift:408  redefines `enum TSRadius`
+      colliding with the canonical apps/design/generated/apple/Tokens.swift. These errors occur in
+      UNTOUCHED files across the whole codebase (e.g. Sources/Features/Driving/DriveDetailPage.*,
+      TeslaSync/shared-surfaces/AIAlertTuningSuggestions.*, every *.Previews.swift). The 7 new
+      SpeedProfile files exhibit ONLY these same systemic ambiguities — ZERO unique errors — proving
+      the breakage is pre-existing and orthogonal to this change. Both blockers are outside the
+      allowed-files scope (Features/System, feature-views) and were left untouched in the commit.
+  The deliverable is therefore verified by the authoritative Swift 6 compiler directly (see GATE).
+
+=== PARITY ===
+PARITY_REQUIRED=37
+
+panels (5):
+✓ panel — GlassPanel1 (hero gauges) — SpeedProfilePage.Sections.swift:21 SpeedProfileHeroSection (TSGlassPanel + 3 gauges)
+✓ panel — Speed-Distribution (ChartContainer + BarChart) — SpeedProfilePage.Sections.swift:77 SpeedDistributionSection (TSChartContainer @ :81)
+✓ panel — GlassPanel3 (per-bucket detail cards) — SpeedProfilePage.Sections.swift:98 SpeedBucketCardsSection (LazyVGrid of SpeedBucketCard :139)
+✓ panel — Efficiency-vs-Speed (ChartContainer + ScatterChart) — SpeedProfilePage.Sections.swift:212 SpeedEfficiencySection (TSChartContainer @ :218)
+✓ panel — GlassPanel5 (efficiency insight banner) — SpeedProfilePage.Sections.swift:270 SpeedInsightSection (TSGlassPanel, accent bar + bolt)
+
+charts (7 — native Swift Charts / SwiftUI shapes, never WKWebView):
+✓ chart — RadialGauge (Avg Speed) — SpeedProfilePage.Sections.swift:42 SpeedProfileGauge (Circle().trim @ Charts:38)
+✓ chart — RadialGauge (Peak Speed) — SpeedProfilePage.Sections.swift:50 SpeedProfileGauge
+✓ chart — RadialGauge (Optimal Speed) — SpeedProfilePage.Sections.swift:58 SpeedProfileGauge
+✓ chart — ChartContainer (distribution) — SpeedProfilePage.Sections.swift:81 TSChartContainer (titled + aria-labelled frame)
+✓ chart — BarChart — SpeedProfilePage.Charts.swift:74 SpeedDistributionChart (Charts BarMark @ :87, per-bucket band color)
+✓ chart — ChartContainer (eff vs speed) — SpeedProfilePage.Sections.swift:218 TSChartContainer
+✓ chart — ScatterChart — SpeedProfilePage.Charts.swift:137 SpeedEfficiencyScatterChart (Charts PointMark @ :171, per-band color)
+
+states (4):
+✓ state — loading  — SpeedProfilePageModel.swift:186 .loading → SpeedProfilePage.swift:156 SpeedProfileSkeleton (:227, .redacted)
+✓ state — empty    — SpeedProfilePageModel.swift phase .empty (summary nil) → SpeedProfilePage.swift:160/194 emptyView (TSEmptyState noData); per-source inner empties (distribution :83, scatter :228, bucket cards :103)
+✓ state — error    — SpeedProfilePageModel.swift .failed + fail(_:) → SpeedProfilePage.swift:158/203 errorView (+Retry)
+✓ state — success  — SpeedProfilePageModel.swift phase .ready → SpeedProfilePage.swift:162/170 sections (5 panels)
+
+strings (21 — every visible literal resolves from Localizable.xcstrings; web key names kept under
+the `translation.` catalog prefix, matching the TeslaChargingSessions precedent):
+✓ string — speedProfile.avgSpeed          — SpeedProfilePage.Sections.swift:45 (hero + bucket card)
+✓ string — speedProfile.better            — SpeedProfilePage.Sections.swift:237 (scatter subtitle)
+✓ string — speedProfile.distribution      — SpeedProfilePage.Sections.swift:81 (chart title)
+✓ string — speedProfile.distribution.aria — SpeedProfilePage.Charts.swift:98 (bar chart accessibilityLabel)  [ADDED to catalog]
+✓ string — speedProfile.drives            — SpeedProfilePage.Sections.swift:155 (bucket card row)
+✓ string — speedProfile.effVsSpeed        — SpeedProfilePage.Sections.swift:218 (chart title)
+✓ string — speedProfile.effVsSpeed.aria   — SpeedProfilePage.Charts.swift:182 (scatter accessibilityLabel)  [ADDED to catalog]
+✓ string — speedProfile.efficient         — SpeedProfilePage.Sections.swift:245 (legend)
+✓ string — speedProfile.highConsumption   — SpeedProfilePage.Sections.swift:247 (legend)
+✓ string — speedProfile.insightText       — SpeedProfileFormat.swift:202 (insight sentence, %1$@/%2$@ interpolation)
+✓ string — speedProfile.insightTitle      — SpeedProfilePage.Sections.swift:287 (insight title)
+✓ string — speedProfile.lower             — SpeedProfilePage.Sections.swift:236 (scatter subtitle)
+✓ string — speedProfile.moderate          — SpeedProfilePage.Sections.swift:246 (legend)
+✓ string — speedProfile.noData            — SpeedProfilePage.Sections.swift:83 (+ page emptyView / insight fallback / chart empties)
+✓ string — speedProfile.optimalSpeed      — SpeedProfilePage.Sections.swift:61 (hero gauge)
+✓ string — speedProfile.peakSpeed         — SpeedProfilePage.Sections.swift:53 (hero gauge)
+✓ string — speedProfile.speed             — SpeedProfilePage.Charts.swift:78 (bar X axis + scatter X axis :155)
+✓ string — speedProfile.subtitle          — SpeedProfilePage.swift:87 (page subtitle)
+✓ string — speedProfile.timeShare         — SpeedProfilePage.Sections.swift:150 (bucket card "Time" row)
+✓ string — speedProfile.timeSpent         — SpeedProfilePage.Charts.swift:82 (bar value label "% time")
+✓ string — speedProfile.title             — SpeedProfilePage.swift:45 (page + nav title + skeleton + error)
+
+PARITY_COVERED=37
+
+Hook ports (web query name kept at the Swift call site — single KMP seam, ADR-004):
+✓ useSpeedProfile — SpeedProfilePageModel.swift:127  (GET /analytics/speed-profile?vehicle_id&start&end)
+✓ useDrives       — SpeedProfilePageModel.swift:128  (GET /drives?vehicle_id)
+✓ loadVehicles    — SpeedProfilePageModel.swift:126  (useSelectedVehicle / GET /vehicles, chrome)
+
+Supporting strings localized beyond the required 21 (zero hardcoded visible literals):
+  translation.range.7d/30d/90d/mtd/ytd/all (RangePicker presets), translation.common.dateRange,
+  translation.common.vehicle, translation.common.retry, translation.error.loadFailed.
+
+=== SUMMARY ===
+✓ All 5 panels implemented (hero gauges, distribution chart, per-bucket cards, eff-vs-speed scatter,
+  insight banner); every web region reproduced (the StaggerContainer detail cards, the scatter
+  legend + "Lower {unit} = better" subtitle, the left-accented insight). The web `actions`
+  (VehicleSelect + RangePicker) become the adaptive header controls (TSSelect + a preset range Picker).
+✓ All 7 charts are first-party native surfaces — 3 SwiftUI Circle().trim value gauges (web RadialGauge,
+  value+unit) + 2 TSChartContainer frames + a Swift Charts BarMark distribution + a Swift Charts
+  PointMark scatter — no WKWebView. Each bar/point keeps its web band color via P2 chart-palette tokens
+  (green→Battery, cyan→Regen, amber→Energy, red→Temperature).
+✓ All 4 data states (loading/empty/error/success); per-source inner empties (distribution / scatter /
+  bucket cards) use ContentUnavailableView — never a blank region. Web's `scatterData.length > 3` and
+  `optimalSpeedMps > 0` guards become in-panel empty/fallback states so every panel stays visible.
+✓ All 21 required i18n strings resolve from Localizable.xcstrings (19 pre-existing translation.speedProfile.*
+  keys from the web en.json import + 2 newly ADDED `.aria` keys); web key names kept; +10 supporting keys.
+✓ @MainActor @Observable model; web queries kept by name as the single KMP seam (ADR-004); the view body
+  holds no business logic; SI honored — speeds read as m/s, consumption as Wh/km, converted only at the
+  display boundary via Units.convertSpeed (P1/S5).
+✓ Tokens (P2) for all color/typography; materials for glass (ADR-005); adaptive macOS + iOS (ADR-002/006,
+  size-class header/gauge/grid reflow); a11y labels/values on gauges + charts, Dynamic Type, light/dark.
+
+=== GATE ===
+# 1. Placeholder / stub gate (ADR-011)
+PLACEHOLDER_ALLOWED=1   (one `.redacted(reason: .placeholder) // parity:allow` skeleton opt-out)
+PLACEHOLDER_EXIT=0      ✓ PASS (PLACEHOLDER_COUNT=0)
+
+# 2. SwiftLint --strict (the 7 new files, repo ruleset)
+LINT_EXIT=0             ✓ PASS — "Found 0 violations, 0 serious in 7 files"
+  NOTE: the literal `swiftlint --strict apps/apple/TeslaSync/Features/Driving` resolves the repo
+  .swiftlint.yml `included:` set (which does not list TeslaSync/Features) and reports 4 PRE-EXISTING
+  violations in untouched files (Sources/Features/System/MyActivityPageModel.swift,
+  TeslaSync/dashboard-widgets/WeeklyDigestWidget.*). The 7 new files were linted in isolation with the
+  identical ruleset → 0 violations.
+
+# 3. SwiftFormat --lint (the 7 new files)
+FORMAT_EXIT=0           ✓ PASS — "0/7 files require formatting"
+
+# 4. Authoritative Swift 6 compile (the deliverable — strict concurrency, macOS SDK)
+   swiftc -typecheck -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos14.0 \
+          <7 SpeedProfile files> <accurate token/component/Units stand-in>
+TYPECHECK_EXIT=0        ✓ PASS — 0 errors, 0 warnings
+  (Stand-in mirrors the real signatures from apps/design/generated/apple/Tokens.swift +
+   apps/apple/Sources/Components/** + apps/apple/Sources/SharedFacade/Units+Facade.swift, used solely to
+   isolate the 7 new files from the repo's pre-existing module-wide duplicate-symbol breakage above.)
+
+# 5. xcodebuild build / test
+BUILD_EXIT=65           ⚠ BLOCKED by pre-existing, out-of-scope duplicate symbols (see ENV NOTE):
+                          ScheduledExportsPanel.swift basename + StatusApiDocsPage TSSpacing/TSRadius
+                          redefinition. Zero errors attributable to the 7 new files.
+TEST_EXIT=n/a           ⚠ unreachable while BUILD is blocked (no Swift compiled).
+
+DECISION: every in-scope gate is green (placeholder/lint/format/Swift-6 typecheck) and
+PARITY_COVERED(37) == PARITY_REQUIRED(37). The only red is PRE-EXISTING, committed, out-of-allowed-scope
+repo breakage that is provably orthogonal to this change (identical errors in untouched files; the 7 new
+files add none). Per the accepted sibling precedent (apple-page-charging-TeslaChargingSessionsPage.log),
+the deliverable is verified DONE via the authoritative Swift 6 compiler.
+
+Files: apps/apple/TeslaSync/Features/Driving/SpeedProfile*.swift (7 files, 1578 lines)
+       apps/apple/Localization/Localizable.xcstrings (+2 aria keys)
+Ledger: apps/parity/apple-ledger.json — page:driving/SpeedProfile {apple-macos, apple-ios} = done 37/37
+
+EXIT=0
+STATUS=DONE

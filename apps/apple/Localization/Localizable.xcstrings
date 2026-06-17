@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.speedProfile.distribution.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed-bucket time-share distribution bar chart"
+          }
+        }
+      }
+    },
+    "translation.speedProfile.effVsSpeed.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-drive efficiency versus speed scatter plot"
+          }
+        }
+      }
+    },
     "Add Geofence" : {
       "extractionState" : "manual",
       "localizations" : {
