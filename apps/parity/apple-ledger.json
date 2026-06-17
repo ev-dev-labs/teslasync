@@ -1641,6 +1641,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-sharing-SharedDrivePage.log"
     },
     {
+      "unitId": "page:sharing/SharingTrips",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 13,
+      "requiredCount": 13,
+      "promptId": "p4-apple/P7/page:sharing/SharingTrips",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-sharing-SharingTripsPage.log"
+    },
+    {
+      "unitId": "page:sharing/SharingTrips",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 13,
+      "requiredCount": 13,
+      "promptId": "p4-apple/P7/page:sharing/SharingTrips",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-sharing-SharingTripsPage.log"
+    },
+    {
       "unitId": "page:system/DBHealth",
       "platform": "apple-macos",
       "status": "done",
