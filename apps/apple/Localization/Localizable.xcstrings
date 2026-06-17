@@ -1,6 +1,94 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.Choose up to 5 signals, set a date range, then hit Explore \u2014 or toggle Live to stream in real time." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose up to 5 signals, set a date range, then hit Explore \u2014 or toggle Live to stream in real time."
+          }
+        }
+      }
+    },
+    "translation.Pick signals and click Explore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick signals and click Explore"
+          }
+        }
+      }
+    },
+    "translation.Signal Explorer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signal Explorer"
+          }
+        }
+      }
+    },
+    "translation.Visualise signal history with chart and stats \u2014 or stream live" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visualise signal history with chart and stats \u2014 or stream live"
+          }
+        }
+      }
+    },
+    "translation.signalExplorer.live" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live"
+          }
+        }
+      }
+    },
+    "translation.signalExplorer.noVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a vehicle to begin"
+          }
+        }
+      }
+    },
+    "translation.signalExplorer.noVehicleDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a vehicle from the picker above to explore its signals."
+          }
+        }
+      }
+    },
+    "translation.signalExplorer.stopLive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop live"
+          }
+        }
+      }
+    },
     "trips.chart.col.trip" : {
       "extractionState" : "manual",
       "localizations" : {

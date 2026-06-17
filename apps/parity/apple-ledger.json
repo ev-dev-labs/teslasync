@@ -2304,6 +2304,26 @@
       "requiredCount": 34,
       "promptId": "p4-apple/P7/page:trips/TripList",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-trips-TripListPage.log"
+    },
+    {
+      "unitId": "page:telemetry/SignalExplorer",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 20,
+      "requiredCount": 20,
+      "promptId": "p4-apple/P7/page:telemetry/SignalExplorer",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalExplorerPage.log",
+      "note": "SwiftUI parity at 20/20 (1 GlassPanel control panel + 4 useSignals data states + 15 strings). Placeholder scan clean (0); the seven SignalExplorer* page files typecheck clean under Swift 6 strict concurrency (swiftc -typecheck against the real Tokens.swift + SignalsWorkspaceTypes.swift + faithful AISignalExplorerNlFilter stubs, RC=0); 0 swiftlint violations attributable to the page or its tests. Full xcodebuild + swiftlint --strict are red ONLY on pre-existing, out-of-scope issues (StatusApiDocsPage TSSpacing/TSRadius, TirePressureUnit, HeroStatus duplicate symbols; Swift-6.3 ViewBuilder-return + 4 swiftlint violations in unrelated files) — none in Features/Telemetry."
+    },
+    {
+      "unitId": "page:telemetry/SignalExplorer",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 20,
+      "requiredCount": 20,
+      "promptId": "p4-apple/P7/page:telemetry/SignalExplorer",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalExplorerPage.log",
+      "note": "SwiftUI parity at 20/20 (1 GlassPanel control panel + 4 useSignals data states + 15 strings). Placeholder scan clean (0); the seven SignalExplorer* page files typecheck clean under Swift 6 strict concurrency (swiftc -typecheck against the real Tokens.swift + SignalsWorkspaceTypes.swift + faithful AISignalExplorerNlFilter stubs, RC=0); 0 swiftlint violations attributable to the page or its tests. Full xcodebuild + swiftlint --strict are red ONLY on pre-existing, out-of-scope issues (StatusApiDocsPage TSSpacing/TSRadius, TirePressureUnit, HeroStatus duplicate symbols; Swift-6.3 ViewBuilder-return + 4 swiftlint violations in unrelated files) — none in Features/Telemetry."
     }
   ]
 }
