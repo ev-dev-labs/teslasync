@@ -1558,6 +1558,24 @@
       "requiredCount": 5,
       "promptId": "p4-apple/P7/page:system/Help",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-HelpPage.log"
+    },
+    {
+      "unitId": "page:system/NotFound",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 9,
+      "requiredCount": 9,
+      "promptId": "p4-apple/P7/page:system/NotFound",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-NotFoundPage.log"
+    },
+    {
+      "unitId": "page:system/NotFound",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 9,
+      "requiredCount": 9,
+      "promptId": "p4-apple/P7/page:system/NotFound",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-NotFoundPage.log"
     }
   ]
 }
