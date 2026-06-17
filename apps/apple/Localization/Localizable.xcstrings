@@ -133,6 +133,39 @@
         }
       }
     },
+    "notifications.webhooks.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webhooks"
+          }
+        }
+      }
+    },
+    "notifications.webhooks.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom HTTPS endpoints that receive HMAC-signed event payloads."
+          }
+        }
+      }
+    },
+    "route.notificationsWebhooks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webhooks"
+          }
+        }
+      }
+    },
     "Time" : {
       "extractionState" : "manual",
       "localizations" : {

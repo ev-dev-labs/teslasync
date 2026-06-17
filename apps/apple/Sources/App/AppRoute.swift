@@ -31,7 +31,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics, exports
-    case notificationsAudit
+    case notificationsAudit, notificationsWebhooks
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
     case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
@@ -91,6 +91,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .backupRestore: "backup"
         case .securityAccess: "security-access"
         case .notificationsAudit: "notifications/audit"
+        case .notificationsWebhooks: "notifications/webhooks"
         default: rawValue
         }
     }
@@ -140,6 +141,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .automationsList: "checklist"
         case .notifications: "bell.fill"
         case .notificationsAudit: "clock.arrow.circlepath"
+        case .notificationsWebhooks: "point.3.connected.trianglepath.dotted"
         case .telemetry: "dot.radiowaves.left.and.right"
         case .diagnostics: "stethoscope"
         case .exports: "arrow.down.doc.fill"
@@ -196,8 +198,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .projectedRange: .energy
         case .analytics, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage, .timeline,
              .yearReview: .insights
-        case .automations, .automationsList, .notifications, .notificationsAudit, .diagnostics, .sharing, .watch,
-             .exports: .operations
+        case .automations, .automationsList, .notifications, .notificationsAudit, .notificationsWebhooks,
+             .diagnostics, .sharing, .watch, .exports: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
              .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore,
