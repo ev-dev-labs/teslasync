@@ -192,14 +192,23 @@ struct SampleDrivingDynamicsDataSource: DrivingDynamicsDataSource {
     }
 
     private func samplePerDriveScores(vehicleID: Int64) -> [CoachDriveScore] {
-        (0 ..< 12).map { index in
-            CoachDriveScore(
-                driveID: Int64(vehicleID * 100 + Int64(index)),
-                date: now.addingTimeInterval(Double(-index) * 86_400),
-                score: 60 + Double((index * 9) % 38),
-                style: CoachStyle.allCases[index % CoachStyle.allCases.count],
-                efficiency: 130 + Double((index * 13) % 90),
-                distance: 8 + Double((index * 7) % 40)
+        let range = 0 ..< 12
+        return range.map { index in
+            let driveID = Int64(vehicleID * 100 + Int64(index))
+            let date = now.addingTimeInterval(Double(-index) * 86_400)
+            let score = 60 + Double((index * 9) % 38)
+            let styleIndex = index % CoachStyle.allCases.count
+            let style = CoachStyle.allCases[styleIndex]
+            let efficiency = 130 + Double((index * 13) % 90)
+            let distance = 8 + Double((index * 7) % 40)
+            
+            return CoachDriveScore(
+                driveID: driveID,
+                date: date,
+                score: score,
+                style: style,
+                efficiency: efficiency,
+                distance: distance
             )
         }
     }

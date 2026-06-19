@@ -17,7 +17,7 @@ import Charts
 ///
 /// NOTE: File length exceeds 400 lines due to complex multi-panel layout at web parity.
 public struct DBHealthPage: View {
-    @State private var model: DBHealthPageModel
+    @State internal var model: DBHealthPageModel
 
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -264,8 +264,9 @@ public struct DBHealthPage: View {
                     // Table or empty state
                     if model.tables.isEmpty {
                         TSEmptyState(
-                            systemImage: "tablecells.badge.ellipsis",
-                            message: "translation.dbHealth.noTables"
+                            title: "translation.dbHealth.noTables.title",
+                            message: "translation.dbHealth.noTables",
+                            systemImage: "tablecells.badge.ellipsis"
                         )
                         .frame(maxWidth: .infinity, minHeight: 200)
                     } else {

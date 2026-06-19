@@ -51,6 +51,7 @@ enum DataRepairState {
 // MARK: - ViewModel
 
 @Observable
+@MainActor
 final class DataRepairPageModel {
     var state: DataRepairState = .loading
     var selectedTab: DataRepairTab = .charging

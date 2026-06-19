@@ -39,7 +39,7 @@ import SwiftUI
 
     private func loadedUpdate(
         connection: TirePressureConnection = .live,
-        unit: TirePressureUnit = .bar,
+        unit: TirePressureWidgetUnit = .bar,
         updatedAt: Date = Date()
     ) -> TirePressureHistoryUpdate {
         TirePressureHistoryUpdate(

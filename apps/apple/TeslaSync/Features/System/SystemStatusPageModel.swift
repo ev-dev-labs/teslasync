@@ -10,6 +10,7 @@ import Observation
 import SwiftUI
 
 @Observable
+@MainActor
 final class SystemStatusPageModel {
     // MARK: - State
 

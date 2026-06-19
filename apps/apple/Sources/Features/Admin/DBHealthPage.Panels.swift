@@ -69,7 +69,7 @@ extension DBHealthPage {
                                             .truncationMode(.tail)
                                         Spacer()
                                         if let appliedAt = mig.appliedAt {
-                                            Text(verbatim: formatTimestamp(appliedAt))
+                                            Text(verbatim: appliedAt)
                                                 .font(.system(size: 10))
                                                 .foregroundStyle(Color.TS.textMuted)
                                         }
@@ -78,16 +78,18 @@ extension DBHealthPage {
                             }
                         } else {
                             TSEmptyState(
-                                systemImage: "arrow.triangle.branch",
-                                message: "translation.dbHealth.noMigrations"
+                                title: "translation.dbHealth.noMigrations.title",
+                                message: "translation.dbHealth.noMigrations",
+                                systemImage: "arrow.triangle.branch"
                             )
                             .frame(maxWidth: .infinity, minHeight: 80)
                         }
                     }
                 } else {
                     TSEmptyState(
-                        systemImage: "arrow.triangle.branch",
-                        message: "translation.dbHealth.noMigrationData"
+                        title: "translation.dbHealth.noMigrationData.title",
+                        message: "translation.dbHealth.noMigrationData",
+                        systemImage: "arrow.triangle.branch"
                     )
                     .frame(maxWidth: .infinity, minHeight: 120)
                 }
@@ -128,7 +130,7 @@ extension DBHealthPage {
                                 ZStack(alignment: .leading) {
                                     // Background
                                     RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color.TS.surface2)
+                                        .fill(Color.TS.border.opacity(0.3))
                                         .frame(height: 8)
                                     // Progress
                                     RoundedRectangle(cornerRadius: 4)
@@ -148,8 +150,9 @@ extension DBHealthPage {
                     }
                 } else {
                     TSEmptyState(
-                        systemImage: "server.rack",
-                        message: "translation.dbHealth.noPoolData"
+                        title: "translation.dbHealth.noPoolData.title",
+                        message: "translation.dbHealth.noPoolData",
+                        systemImage: "server.rack"
                     )
                     .frame(maxWidth: .infinity, minHeight: 120)
                 }

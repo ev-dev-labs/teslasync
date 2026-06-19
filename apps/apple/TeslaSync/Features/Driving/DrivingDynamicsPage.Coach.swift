@@ -202,7 +202,7 @@ struct DDynCoachTrendCard: View {
 // MARK: - Shared coach color/tone helpers
 
 enum DDynCoachStyle {
-    struct Chip {
+    struct Chip: Sendable {
         let style: CoachStyle
         let tone: TSTone
     }

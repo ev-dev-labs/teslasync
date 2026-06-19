@@ -58,6 +58,7 @@ enum TeslaAccountState {
 /// The @Observable model for TeslaAccountPage. Fetches profile data on load, exposes
 /// refresh mutation, and maintains 4-state (loading/empty/error/success) UI contract.
 /// KMP integration point: TBD once the KMP core UserRepository is wired.
+@MainActor
 @Observable
 final class TeslaAccountPageModel {
     var state: TeslaAccountState = .loading

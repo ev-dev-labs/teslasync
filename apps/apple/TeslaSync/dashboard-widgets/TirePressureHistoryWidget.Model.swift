@@ -59,14 +59,14 @@ public struct TirePressureHistoryUpdate: Sendable, Equatable {
     public var status: TirePressureLoadStatus
     public var connection: TirePressureConnection
     public var snapshots: [TirePressureSnapshotInput]
-    public var unit: TirePressureUnit
+    public var unit: TirePressureWidgetUnit
     public var updatedAt: Date?
 
     public init(
         status: TirePressureLoadStatus = .loading,
         connection: TirePressureConnection = .live,
         snapshots: [TirePressureSnapshotInput] = [],
-        unit: TirePressureUnit = .bar,
+        unit: TirePressureWidgetUnit = .bar,
         updatedAt: Date? = nil
     ) {
         self.status = status

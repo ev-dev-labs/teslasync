@@ -47,10 +47,11 @@ public final class MyActivityPageModel {
 
     private func performLoad() async {
         loadTask?.cancel()
-        loadTask = Task {
+        loadTask = Task { @MainActor in
             do {
                 let params = defaultParams()
-                let entries = try await dataSource.loadMyActivity(params)
+                nonisolated(unsafe) let unsafeParams = params
+                let entries = try await dataSource.loadMyActivity(unsafeParams)
 
                 guard !Task.isCancelled else { return }
 

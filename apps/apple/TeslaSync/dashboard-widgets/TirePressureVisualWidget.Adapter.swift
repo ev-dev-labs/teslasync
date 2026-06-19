@@ -31,7 +31,7 @@ import SwiftUI
 /// The per-tire pressure status, mapped to a shared `TSTone` for value tinting
 /// and to the exact web diagram hex for the silhouette fill. Mirrors the web
 /// `getPressureStatus` result + `STATUS_COLORS`.
-public enum TirePressureStatus: Sendable, Equatable {
+public enum TirePressureWidgetStatus: Sendable, Equatable {
     case green
     case amber
     case red
@@ -61,7 +61,7 @@ public enum TirePressureStatus: Sendable, Equatable {
 /// Pressure thresholds in bar for color coding — verbatim web `THRESHOLD`
 /// (2.068 / 2.275 / 2.896 / 3.103 bar). Kept as named constants so the adapter,
 /// the tests, and any future spec audit stay in lock-step.
-public enum TirePressureThresholds {
+public enum TirePressureWidgetThresholds {
     public static let dangerLowBar = 2.068
     public static let warnLowBar = 2.275
     public static let warnHighBar = 2.896
@@ -76,21 +76,21 @@ public enum TirePressureThresholds {
 /// projection uses (the seam carries kPa — see the file-level parity note).
 public enum TirePressureClassifier {
     /// Literal port of the web `getPressureStatus(bar)`.
-    public static func pressureStatus(bar: Double?) -> TirePressureStatus {
+    public static func pressureStatus(bar: Double?) -> TirePressureWidgetStatus {
         guard let bar, bar.isFinite else { return .red }
-        if bar < TirePressureThresholds.dangerLowBar || bar > TirePressureThresholds.dangerHighBar {
+        if bar < TirePressureWidgetThresholds.dangerLowBar || bar > TirePressureWidgetThresholds.dangerHighBar {
             return .red
         }
-        if bar < TirePressureThresholds.warnLowBar || bar > TirePressureThresholds.warnHighBar {
+        if bar < TirePressureWidgetThresholds.warnLowBar || bar > TirePressureWidgetThresholds.warnHighBar {
             return .amber
         }
         return .green
     }
 
     /// SI wrapper: reduces kilopascals to bar, then applies the web thresholds.
-    public static func status(forKilopascals kpa: Double?) -> TirePressureStatus {
+    public static func status(forKilopascals kpa: Double?) -> TirePressureWidgetStatus {
         guard let kpa, kpa.isFinite else { return .red }
-        return pressureStatus(bar: kpa / TirePressureThresholds.kilopascalsPerBar)
+        return pressureStatus(bar: kpa / TirePressureWidgetThresholds.kilopascalsPerBar)
     }
 }
 
@@ -124,7 +124,7 @@ public enum TirePressureVisualWidgetUnit: String, Sendable, CaseIterable {
         switch self {
         case .kilopascals: return kpa
         case .psi: return kpa / Self.kilopascalsPerPsi
-        case .bar: return kpa / TirePressureThresholds.kilopascalsPerBar
+        case .bar: return kpa / TirePressureWidgetThresholds.kilopascalsPerBar
         }
     }
 
@@ -175,7 +175,7 @@ public enum TirePressureVisualWidgetCorner: String, Sendable, CaseIterable {
 public struct TireReading: Identifiable, Equatable, Sendable {
     public let corner: TirePressureVisualWidgetCorner
     public let kilopascals: Double?
-    public let status: TirePressureStatus
+    public let status: TirePressureWidgetStatus
 
     public var id: String {
         corner.rawValue

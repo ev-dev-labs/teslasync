@@ -31,7 +31,7 @@ public enum TirePressureWidgetUnit: String, Sendable, CaseIterable, Equatable {
     /// Resolves the unit from a stored settings label, defaulting to bar — matching
     /// the web `derivePressure` (`unit_of_pressure === 'psi' ? 'psi' : 'bar'`), with
     /// `kPa` honored when explicitly stored.
-    public static func fromLabel(_ raw: String?) -> TirePressureUnit {
+    public static func fromLabel(_ raw: String?) -> TirePressureWidgetUnit {
         switch raw {
         case "psi": .psi
         case "kPa": .kpa
@@ -46,7 +46,7 @@ public enum TirePressureWidgetUnit: String, Sendable, CaseIterable, Equatable {
 /// `convertPressureFromSI` (lib/unitConversion.ts). The DB and API stay SI
 /// (kilopascals, per Phase-42); conversion happens only here, at the render
 /// boundary — never on disk.
-public enum TirePressureConvert {
+public enum TirePressureWidgetConvert {
     /// Kilopascals per psi (web `KPA_PER_PSI`, NIST SP 811).
     public static let kpaPerPsi = 6.894757
     /// Kilopascals per bar (web `KPA_PER_BAR`, BIPM definition).
@@ -54,7 +54,7 @@ public enum TirePressureConvert {
 
     /// Converts SI kilopascals to the display unit. Non-finite / absent input maps
     /// to `nil` (web `toPressureValue` returns `null` for null/`!Number.isFinite`).
-    public static func fromSI(_ kpa: Double?, _ unit: TirePressureUnit) -> Double? {
+    public static func fromSI(_ kpa: Double?, _ unit: TirePressureWidgetUnit) -> Double? {
         guard let kpa, kpa.isFinite else { return nil }
         switch unit {
         case .kpa: return kpa
@@ -203,7 +203,7 @@ public struct TirePressureProjection: Equatable, Sendable {
         latest: [:],
         recommendedLow: TirePressureRecommendation.lowKpa,
         recommendedHigh: TirePressureRecommendation.highKpa,
-        pressureUnitLabel: TirePressureUnit.bar.label,
+        pressureUnitLabel: TirePressureWidgetUnit.bar.label,
         yDomain: 0 ... 1
     )
 
@@ -230,12 +230,12 @@ public struct TirePressureProjection: Equatable, Sendable {
 public enum TirePressureProjectionBuilder {
     public static func build(
         snapshots: [TirePressureSnapshotInput],
-        unit: TirePressureUnit
+        unit: TirePressureWidgetUnit
     ) -> TirePressureProjection {
         let data = chartData(from: snapshots, unit: unit)
-        let low = TirePressureConvert.fromSI(TirePressureRecommendation.lowKpa, unit)
+        let low = TirePressureWidgetConvert.fromSI(TirePressureRecommendation.lowKpa, unit)
             ?? TirePressureRecommendation.lowKpa
-        let high = TirePressureConvert.fromSI(TirePressureRecommendation.highKpa, unit)
+        let high = TirePressureWidgetConvert.fromSI(TirePressureRecommendation.highKpa, unit)
             ?? TirePressureRecommendation.highKpa
         var latest: [TireCorner: Double] = [:]
         for corner in TireCorner.allCases {
@@ -255,7 +255,7 @@ public enum TirePressureProjectionBuilder {
     /// to the display unit, and sort ascending by time.
     static func chartData(
         from snapshots: [TirePressureSnapshotInput],
-        unit: TirePressureUnit
+        unit: TirePressureWidgetUnit
     ) -> [TirePressureChartDatum] {
         snapshots
             .compactMap { snapshot -> TirePressureChartDatum? in
@@ -263,10 +263,10 @@ public enum TirePressureProjectionBuilder {
                       let time = parseTimestamp(stamp) else { return nil }
                 return TirePressureChartDatum(
                     time: time,
-                    frontLeft: TirePressureConvert.fromSI(snapshot.frontLeft, unit),
-                    frontRight: TirePressureConvert.fromSI(snapshot.frontRight, unit),
-                    rearLeft: TirePressureConvert.fromSI(snapshot.rearLeft, unit),
-                    rearRight: TirePressureConvert.fromSI(snapshot.rearRight, unit),
+                    frontLeft: TirePressureWidgetConvert.fromSI(snapshot.frontLeft, unit),
+                    frontRight: TirePressureWidgetConvert.fromSI(snapshot.frontRight, unit),
+                    rearLeft: TirePressureWidgetConvert.fromSI(snapshot.rearLeft, unit),
+                    rearRight: TirePressureWidgetConvert.fromSI(snapshot.rearRight, unit),
                     id: stamp
                 )
             }

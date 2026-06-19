@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0101 · TirePressureHistoryWidget (Apple)
 //
 //  Unit coverage for the TirePressureHistoryWidget surface:
-//    • Conversion — `TirePressureConvert.fromSI` parity with web `convertPressureFromSI`.
+//    • Conversion — `TirePressureWidgetConvert.fromSI` parity with web `convertPressureFromSI`.
 //    • Adapter (cached → projection) — `TirePressureProjectionBuilder` parity with the
 //      web `buildChartData` + `latestNonNull` + the recommended-range / y-domain math.
 //    • State holder — `TirePressureHistoryModel` phase resolution + P1/S11 telemetry.
@@ -21,29 +21,29 @@ import XCTest
 
 @MainActor final class TirePressureConvertTests: XCTestCase {
     func testKilopascalIdentity() throws {
-        XCTAssertEqual(try XCTUnwrap(TirePressureConvert.fromSI(250, .kpa)), 250, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(TirePressureWidgetConvert.fromSI(250, .kpa)), 250, accuracy: 0.0001)
     }
 
     func testBarIsKpaOverHundred() throws {
-        XCTAssertEqual(try XCTUnwrap(TirePressureConvert.fromSI(100, .bar)), 1, accuracy: 0.0001)
-        XCTAssertEqual(try XCTUnwrap(TirePressureConvert.fromSI(240, .bar)), 2.4, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(TirePressureWidgetConvert.fromSI(100, .bar)), 1, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(TirePressureWidgetConvert.fromSI(240, .bar)), 2.4, accuracy: 0.0001)
     }
 
     func testPsiUsesNistFactor() throws {
-        XCTAssertEqual(try XCTUnwrap(TirePressureConvert.fromSI(250, .psi)), 250 / 6.894757, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(TirePressureWidgetConvert.fromSI(250, .psi)), 250 / 6.894757, accuracy: 0.0001)
     }
 
     func testNilAndNonFiniteBecomeNil() {
-        XCTAssertNil(TirePressureConvert.fromSI(nil, .bar))
-        XCTAssertNil(TirePressureConvert.fromSI(.nan, .bar))
-        XCTAssertNil(TirePressureConvert.fromSI(.infinity, .psi))
+        XCTAssertNil(TirePressureWidgetConvert.fromSI(nil, .bar))
+        XCTAssertNil(TirePressureWidgetConvert.fromSI(.nan, .bar))
+        XCTAssertNil(TirePressureWidgetConvert.fromSI(.infinity, .psi))
     }
 
     func testUnitFromLabelDefaultsToBar() {
-        XCTAssertEqual(TirePressureUnit.fromLabel("psi"), .psi)
-        XCTAssertEqual(TirePressureUnit.fromLabel("kPa"), .kpa)
-        XCTAssertEqual(TirePressureUnit.fromLabel(nil), .bar)
-        XCTAssertEqual(TirePressureUnit.fromLabel("bar"), .bar)
+        XCTAssertEqual(TirePressureWidgetUnit.fromLabel("psi"), .psi)
+        XCTAssertEqual(TirePressureWidgetUnit.fromLabel("kPa"), .kpa)
+        XCTAssertEqual(TirePressureWidgetUnit.fromLabel(nil), .bar)
+        XCTAssertEqual(TirePressureWidgetUnit.fromLabel("bar"), .bar)
     }
 }
 

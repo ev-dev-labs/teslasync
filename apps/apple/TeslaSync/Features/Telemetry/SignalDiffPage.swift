@@ -551,6 +551,7 @@ public struct SignalDiffPage: View {
 // MARK: - View Model
 
 @Observable
+@MainActor
 public final class SignalDiffPageModel {
     enum State {
         case loading

@@ -224,7 +224,7 @@ public struct DataRepairPage: View {
             } else {
                 VStack(spacing: 12) {
                     ForEach(viewModel.staleCharging) { session in
-                        ChargingSessionRow(
+                        DataRepairPageViewsChargingSessionRow(
                             session: session,
                             isExpanded: viewModel.expandedId == session.id,
                             onTap: {

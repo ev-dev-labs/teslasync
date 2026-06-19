@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Semantic tone shared by badges/pills/icon boxes, mapped to status tokens.
-public enum TSTone {
+public enum TSTone: Sendable {
     case neutral, accent, success, warning, danger, info
 
     public var color: Color {

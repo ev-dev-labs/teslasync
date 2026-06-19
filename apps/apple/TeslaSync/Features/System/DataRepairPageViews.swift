@@ -72,7 +72,7 @@ struct TabButton: View {
 }
 
 struct DataRepairPageViewsChargingSessionRow: View {
-    let session: ChargingSession
+    let session: DataRepairPageModelChargingSession
     let isExpanded: Bool
     let onTap: () -> Void
     let viewModel: DataRepairPageModel
@@ -131,7 +131,7 @@ struct DataRepairPageViewsChargingSessionRow: View {
 }
 
 struct ChargingEditForm: View {
-    let session: ChargingSession
+    let session: DataRepairPageModelChargingSession
     let viewModel: DataRepairPageModel
 
     @State private var endTs = ""

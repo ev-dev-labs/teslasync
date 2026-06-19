@@ -277,6 +277,7 @@ private struct RoadmapCard: View {
 // MARK: - View Model
 
 @Observable
+@MainActor
 public final class RoadmapPageModel {
     enum State {
         case loading

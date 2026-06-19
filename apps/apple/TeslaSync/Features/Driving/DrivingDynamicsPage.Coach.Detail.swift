@@ -184,23 +184,23 @@ struct DDynCoachTableCard: View {
 
     private var columns: [TSColumn<CoachDriveScore>] {
         [
-            TSColumn(id: "date", title: DDynStrings.key("dynamics.coach.colDate")) { row in
+            TSColumn(id: "date", title: DDynStrings.key("dynamics.coach.colDate"), comparator: { lhs, rhs in compare(lhs.date, rhs.date) }) { row in
                 Text(verbatim: row.date.formatted(date: .abbreviated, time: .omitted))
-            } comparator: { lhs, rhs in compare(lhs.date, rhs.date) },
-            TSColumn(id: "score", title: DDynStrings.key("dynamics.coach.colScore")) { row in
+            },
+            TSColumn(id: "score", title: DDynStrings.key("dynamics.coach.colScore"), comparator: { lhs, rhs in compare(lhs.score, rhs.score) }) { row in
                 DDynValueBadge(text: DDynFormat.number(row.score, fractionDigits: 0),
                                tone: DDynCoachStyle.scoreTone(row.score))
-            } comparator: { lhs, rhs in compare(lhs.score, rhs.score) },
+            },
             TSColumn(id: "style", title: DDynStrings.key("dynamics.coach.colStyle")) { row in
                 DDynValueBadge(text: DDynStrings.styleLabel(row.style),
                                tone: DDynCoachStyle.tone(for: row.style))
             },
-            TSColumn(id: "efficiency", title: DDynStrings.key("dynamics.coach.colEfficiency")) { row in
+            TSColumn(id: "efficiency", title: DDynStrings.key("dynamics.coach.colEfficiency"), comparator: { lhs, rhs in compare(lhs.efficiency, rhs.efficiency) }) { row in
                 Text(verbatim: DDynFormat.number(row.efficiency, fractionDigits: 1))
-            } comparator: { lhs, rhs in compare(lhs.efficiency, rhs.efficiency) },
-            TSColumn(id: "distance", title: DDynStrings.key("dynamics.coach.colDistance")) { row in
+            },
+            TSColumn(id: "distance", title: DDynStrings.key("dynamics.coach.colDistance"), comparator: { lhs, rhs in compare(lhs.distance, rhs.distance) }) { row in
                 Text(verbatim: "\(DDynFormat.number(row.distance, fractionDigits: 1)) km")
-            } comparator: { lhs, rhs in compare(lhs.distance, rhs.distance) }
+            }
         ]
     }
 
