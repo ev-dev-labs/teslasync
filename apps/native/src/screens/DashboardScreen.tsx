@@ -24,7 +24,7 @@ export function DashboardScreen() {
     vehiclesQuery.isFetching || alertsQuery.isFetching || systemQuery.isFetching;
 
   const refresh = () => {
-    void queryClient.invalidateQueries();
+    queryClient.invalidateQueries();
   };
 
   const selectedVehicleId = vehicles[0]?.id;
