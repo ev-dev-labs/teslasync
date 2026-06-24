@@ -12,10 +12,22 @@ export type RouteId =
 export type RouteGroup = 'command' | 'fleet' | 'operations' | 'platform';
 export type RouteImplementationStatus = 'implemented' | 'pending';
 
+export const routeGroups = [
+  'command',
+  'fleet',
+  'operations',
+  'platform',
+] as const satisfies readonly RouteGroup[];
+
 export interface RouteParitySummary {
   total: number;
   implemented: number;
   pending: number;
+}
+
+export interface RouteGroupParitySummary extends RouteParitySummary {
+  group: RouteGroup;
+  label: string;
 }
 
 export interface RouteDefinition {
@@ -1541,6 +1553,10 @@ export function getRouteParityForTarget(nativeTarget: RouteId) {
   return summarizeRoutes(getRoutesForNativeTarget(nativeTarget));
 }
 
+export function getRouteParityForGroup(group: RouteGroup) {
+  return summarizeRoutes(webRouteManifest.filter(route => route.group === group));
+}
+
 export function getRouteParitySummary() {
   return summarizeRoutes(webRouteManifest);
 }
@@ -1565,3 +1581,10 @@ export const routeGroupLabels: Record<RouteGroup, string> = {
   operations: 'Operations',
   platform: 'Platform',
 };
+
+export const routeGroupParitySummaries: RouteGroupParitySummary[] =
+  routeGroups.map(group => ({
+    group,
+    label: routeGroupLabels[group],
+    ...getRouteParityForGroup(group),
+  }));

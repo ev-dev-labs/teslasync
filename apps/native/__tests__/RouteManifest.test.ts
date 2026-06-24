@@ -1,6 +1,8 @@
 import {
   EXPECTED_WEB_ROUTE_COUNT,
   getRouteParitySummary,
+  routeGroupParitySummaries,
+  routeGroups,
   routes,
   webRouteManifest,
 } from '../src/navigation/routes';
@@ -36,6 +38,10 @@ const representativeSourcePaths = [
   'quick-stats',
   'vehicles/:id/access',
   'charging/vampire-drain',
+  'vehicle-systems/software',
+  'analytics/range',
+  'analytics/anomalies',
+  'charging/curves',
   'notifications/studio',
   'admin/live-signals',
   'analytics/tco',
@@ -91,6 +97,27 @@ test('derives native shell parity counters from the route manifest', () => {
   expect(
     routes.find(route => route.id === 'system')?.parity.pending,
   ).toBeGreaterThan(0);
+});
+
+test('derives route parity counters by web route group', () => {
+  expect(routeGroupParitySummaries.map(summary => summary.group)).toEqual(
+    routeGroups,
+  );
+
+  const groupedTotal = routeGroupParitySummaries.reduce(
+    (total, summary) => total + summary.total,
+    0,
+  );
+  expect(groupedTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
+
+  for (const summary of routeGroupParitySummaries) {
+    const groupedRoutes = webRouteManifest.filter(
+      route => route.group === summary.group,
+    );
+    expect(summary.total).toBe(groupedRoutes.length);
+    expect(summary.implemented + summary.pending).toBe(summary.total);
+    expect(summary.label.length).toBeGreaterThan(0);
+  }
 });
 
 test('marks N0006 energy analytics and diagnostics routes with implemented evidence', () => {

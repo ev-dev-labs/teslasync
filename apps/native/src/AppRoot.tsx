@@ -14,11 +14,12 @@ import { GlassPanel } from './components/ui/GlassPanel';
 import { NavItem } from './components/navigation/NavItem';
 import {
   getPendingRoutesForNativeTarget,
+  routeGroupParitySummaries,
   routeGroupLabels,
+  routeGroups,
   routeParitySummary,
   routes,
   type RouteDefinition,
-  type RouteGroup,
   type RouteId,
   type WebRouteDefinition,
 } from './navigation/routes';
@@ -33,13 +34,6 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { SystemScreen } from './screens/SystemScreen';
 import { VehiclesScreen } from './screens/VehiclesScreen';
 import { colors, layout, shadows, spacing } from './theme/tokens';
-
-const routeGroups: RouteGroup[] = [
-  'command',
-  'fleet',
-  'operations',
-  'platform',
-];
 
 export function AppRoot() {
   const scheme = useColorScheme();
@@ -141,6 +135,12 @@ export function AppRoot() {
               {routeParitySummary.total} web routes tracked
             </AppText>
             <AppText variant="caption" tone="muted">
+              {routeParitySummary.implemented} implemented
+            </AppText>
+            <AppText variant="caption" tone="muted">
+              {routeParitySummary.pending} pending
+            </AppText>
+            <AppText variant="caption" tone="muted">
               lifecycle: {platformStatus.appState}
             </AppText>
           </View>
@@ -161,6 +161,24 @@ export function AppRoot() {
               <AppText variant="caption" tone="muted">
                 {routeParitySummary.pending} pending routes mapped
               </AppText>
+              <View style={styles.groupSummaryList}>
+                <AppText variant="caption" tone="muted">
+                  Pending by group
+                </AppText>
+                {routeGroupParitySummaries.map(groupSummary => (
+                  <View
+                    key={groupSummary.group}
+                    style={styles.groupSummaryRow}
+                  >
+                    <AppText variant="caption" tone="muted">
+                      {groupSummary.label}
+                    </AppText>
+                    <AppText variant="caption" weight="semibold">
+                      {groupSummary.pending}
+                    </AppText>
+                  </View>
+                ))}
+              </View>
             </GlassPanel>
           </View>
 
@@ -328,9 +346,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   statusCard: {
-    minWidth: 220,
+    minWidth: 260,
     padding: spacing.md,
     gap: spacing.xs,
+  },
+  groupSummaryList: {
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  groupSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
