@@ -12,11 +12,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from './components/ui/AppText';
 import { GlassPanel } from './components/ui/GlassPanel';
 import { NavItem } from './components/navigation/NavItem';
-import { routes, type RouteId } from './navigation/routes';
+import { routeGroupLabels, routes, type RouteGroup, type RouteId } from './navigation/routes';
+import { AlertsScreen } from './screens/AlertsScreen';
+import { AuthScreen } from './screens/AuthScreen';
+import { ChargingScreen } from './screens/ChargingScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
+import { DrivingScreen } from './screens/DrivingScreen';
+import { EnergyScreen } from './screens/EnergyScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { SystemScreen } from './screens/SystemScreen';
 import { VehiclesScreen } from './screens/VehiclesScreen';
 import { colors, layout, shadows, spacing } from './theme/tokens';
+
+const routeGroups: RouteGroup[] = ['command', 'fleet', 'operations', 'platform'];
 
 export function AppRoot() {
   const scheme = useColorScheme();
@@ -29,6 +37,18 @@ export function AppRoot() {
         return <DashboardScreen />;
       case 'vehicles':
         return <VehiclesScreen />;
+      case 'charging':
+        return <ChargingScreen />;
+      case 'driving':
+        return <DrivingScreen />;
+      case 'energy':
+        return <EnergyScreen />;
+      case 'alerts':
+        return <AlertsScreen />;
+      case 'system':
+        return <SystemScreen />;
+      case 'auth':
+        return <AuthScreen />;
       case 'settings':
         return <SettingsScreen />;
     }
@@ -57,13 +77,22 @@ export function AppRoot() {
           </View>
 
           <View style={styles.navList}>
-            {routes.map(route => (
-              <NavItem
-                key={route.id}
-                route={route}
-                selected={route.id === activeRoute}
-                onPress={() => setActiveRoute(route.id)}
-              />
+            {routeGroups.map(group => (
+              <View key={group} style={styles.navGroup}>
+                <AppText variant="caption" tone="muted" weight="semibold">
+                  {routeGroupLabels[group]}
+                </AppText>
+                {routes
+                  .filter(route => route.group === group)
+                  .map(route => (
+                    <NavItem
+                      key={route.id}
+                      route={route}
+                      selected={route.id === activeRoute}
+                      onPress={() => setActiveRoute(route.id)}
+                    />
+                  ))}
+              </View>
             ))}
           </View>
 
@@ -84,7 +113,7 @@ export function AppRoot() {
             <GlassPanel style={styles.statusCard}>
               <AppText variant="caption">Native parity track</AppText>
               <AppText weight="semibold" tone="accent">
-                Phase 0 foundation
+                {activeMeta.webPaths.length} web routes mapped
               </AppText>
             </GlassPanel>
           </View>
@@ -155,6 +184,9 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   navList: {
+    gap: spacing.lg,
+  },
+  navGroup: {
     gap: spacing.sm,
   },
   platformPill: {

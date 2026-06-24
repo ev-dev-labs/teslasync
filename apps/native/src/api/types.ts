@@ -32,3 +32,48 @@ export interface SystemStatus {
   uptime?: string;
   services?: Record<string, string | boolean | number | null>;
 }
+
+export interface Drive {
+  id: number;
+  vehicle_id: number;
+  start_ts: string;
+  end_ts: string | null;
+  duration_s: number | null;
+  distance_m: number | null;
+  energy_used_wh: number | null;
+  regen_energy_wh: number | null;
+  avg_speed_mps: number | null;
+  max_speed_mps: number | null;
+  ended_status: string | null;
+  score: number | null;
+}
+
+export interface ChargingSession {
+  id: number;
+  vehicle_id: number;
+  started_at: string;
+  ended_at: string | null;
+  start_soc_pct: number | null;
+  end_soc_pct: number | null;
+  total_energy_added_wh: number | null;
+  peak_power_w: number | null;
+  avg_power_w: number | null;
+  charger_type: string | null;
+  live?: boolean;
+}
+
+export interface AuthModeResponse {
+  mode: 'open' | 'forward_auth' | string;
+  subject?: string | null;
+  capabilities?: Record<string, boolean>;
+}
+
+export interface AppSettings {
+  unit_of_length?: string;
+  unit_of_temp?: string;
+  unit_of_pressure?: string;
+  decimal_precision?: number;
+  theme?: string;
+}
+
+export type UnknownApiObject = Record<string, unknown>;

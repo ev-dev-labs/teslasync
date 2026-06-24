@@ -39,6 +39,36 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: null,
   }),
+  useDrives: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useChargingSessions: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useVehicleEnergy: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useAuthMode: () => ({
+    data: {mode: 'open', subject: null, capabilities: {}},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useSettings: () => ({
+    data: {unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar'},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
 }));
 
 jest.mock('react-native-safe-area-context', () => {
@@ -64,4 +94,7 @@ test('renders the TeslaSync native shell', async () => {
   const serialized = JSON.stringify(tree?.toJSON());
   expect(serialized).toContain('TeslaSync');
   expect(serialized).toContain('Dashboard');
+  expect(serialized).toContain('Charging');
+  expect(serialized).toContain('Driving');
+  expect(serialized).toContain('Auth');
 });
