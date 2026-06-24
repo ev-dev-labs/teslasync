@@ -283,6 +283,383 @@ export interface BatteryHealth {
   monthly_trend: MonthlyTrend[];
 }
 
+export interface StatsSummary {
+  min?: number | null;
+  max?: number | null;
+  avg?: number | null;
+  median?: number | null;
+  p95?: number | null;
+  count?: number | null;
+}
+
+export interface FleetAnalyticsVehicleComparison {
+  id: number;
+  name: string;
+  distance: number;
+  energy: number;
+  efficiency: number;
+  drives: number;
+}
+
+export interface FleetAnalytics {
+  period_days?: number;
+  total_vehicles?: number;
+  total_distance_km?: number;
+  total_drives?: number;
+  total_charging_sessions?: number;
+  total_cost?: number;
+  avg_efficiency_wh_km?: number;
+  most_efficient_vehicle?: {
+    id: number;
+    name: string;
+    efficiency: number;
+  } | null;
+  vehicle_comparison?: FleetAnalyticsVehicleComparison[];
+  drive_analytics?: {
+    hourly_pattern?: { hour: number; drives: number; distance: number }[];
+    day_of_week?: {
+      day: string;
+      drives: number;
+      distance: number;
+      avg_distance: number;
+    }[];
+    speed_distribution?: { range: string; count: number }[];
+    distance_distribution?: { range: string; count: number }[];
+    speed_stats?: StatsSummary;
+    power_stats?: StatsSummary;
+    regen_stats?: StatsSummary;
+    duration_stats?: StatsSummary;
+    distance_stats?: StatsSummary;
+    efficiency_stats?: StatsSummary;
+    daily_trend?: {
+      date: string;
+      drives: number;
+      distance: number;
+      efficiency?: number | null;
+    }[];
+    temp_vs_efficiency?: {
+      temp: number;
+      efficiency: number;
+      distance: number;
+    }[];
+    duration_distribution?: { range: string; count: number }[];
+    temperature?: { inside?: StatsSummary; outside?: StatsSummary };
+  };
+  charging_analytics?: {
+    hourly_pattern?: { hour: number; charges: number; energy: number }[];
+    charger_types?: { type: string; count: number }[];
+    charger_brands?: { brand: string; count: number }[];
+    monthly_trend?: {
+      month: string;
+      energy: number;
+      cost: number;
+      sessions: number;
+      avg_power: number;
+      gas_cost: number;
+      savings: number;
+    }[];
+    power_stats?: StatsSummary;
+    duration_stats?: StatsSummary;
+    energy_stats?: StatsSummary;
+    cost_stats?: StatsSummary;
+    start_battery_dist?: { range: string; count: number }[];
+    efficiency_stats?: StatsSummary;
+  };
+  battery_trend?: {
+    date: string;
+    health_score: number;
+    capacity_wh: number;
+    degradation_pct: number;
+    range_km: number;
+    cycle_count: number;
+  }[];
+}
+
+export interface TCOAnalytics {
+  vehicle_id: number;
+  total_charging_cost?: number;
+  total_wh?: number;
+  total_sessions?: number;
+  total_km?: number;
+  first_date?: string | null;
+  last_date?: string | null;
+  months_of_ownership?: number;
+  cost_per_km_ev?: number;
+  cost_per_km_ice?: number;
+  equivalent_gas_cost?: number;
+  total_savings?: number;
+  monthly_savings?: number;
+  maintenance_savings_estimate?: number;
+  gas_price?: number;
+  monthly_breakdown?: {
+    month: string;
+    ev_cost: number;
+    equiv_gas_cost: number;
+    savings: number;
+    cumulative_savings: number;
+    energy_wh: number;
+  }[];
+}
+
+export interface SleepAnalytics {
+  vehicle_id: number;
+  period_days?: number;
+  state_distribution?: {
+    state: string;
+    count: number;
+    total_minutes: number;
+  }[];
+  sleep_efficiency_pct?: number;
+  sentry_comparison?: {
+    sentry_mode: boolean;
+    count: number;
+    avg_drain_rate: number;
+    avg_duration_hours: number;
+    avg_battery_lost: number;
+    avg_temp: number;
+  }[];
+  sentry_on_drain_rate?: number;
+  sentry_off_drain_rate?: number;
+  sentry_monthly_cost?: number;
+  sentry_extra_drain_rate?: number;
+  sentry_extra_monthly_cost?: number;
+  battery_capacity_wh?: number;
+  capacity_source?: string;
+  recent_events?: {
+    id: number;
+    start_date: string;
+    end_date: string;
+    duration_hours: number;
+    battery_lost: number;
+    drain_rate: number;
+    sentry_mode: boolean;
+    outside_temp: number | null;
+    start_battery: number;
+    end_battery: number;
+  }[];
+  total_events?: number;
+  avg_sentry_duration_hours?: number;
+}
+
+export interface RegenAnalytics {
+  vehicle_id: number;
+  total_regen_wh?: number;
+  total_drive_wh?: number;
+  regen_ratio?: number;
+  monthly_avg_regen?: number;
+  free_charges?: number;
+  battery_capacity_wh?: number;
+  capacity_source?: string;
+}
+
+export interface BatteryDegradationAnalytics {
+  vehicle_id: number;
+  current_health?: number;
+  current_capacity?: number;
+  current_degradation?: number;
+  current_range?: number;
+  current_cycles?: number;
+  current_temp?: number;
+  current_health_pct?: number;
+  degradation_rate_pct_per_month?: number;
+  projected_80pct_date?: string;
+  stress_level?: string;
+  fast_charge_ratio?: number;
+  battery_capacity_wh?: number;
+  capacity_source?: string;
+  monthly_trend?: {
+    month: string;
+    avg_health: number;
+    avg_capacity: number;
+    avg_degradation: number;
+    avg_range: number;
+    max_cycles: number;
+    avg_cell_temp: number;
+  }[];
+  snapshots?: {
+    id: number;
+    health_score: number;
+    capacity_wh: number;
+    degradation_pct: number;
+    est_range_km: number;
+    cycle_count: number;
+    avg_cell_temp_c: number;
+    created_at: string;
+  }[];
+  charging_habits?: {
+    fast_charge_count: number;
+    slow_charge_count: number;
+    deep_discharge_count: number;
+    charge_to_full_count: number;
+    avg_energy_per_session: number;
+  };
+  prediction?: {
+    slope_per_year: number;
+    years_to_80_pct: number;
+    predicted_date: string;
+    has_enough_data: boolean;
+    projection_points: { month: string; health: number }[];
+  };
+  projections?: { month: string; health: number }[];
+  risk_factors?: {
+    factor: string;
+    severity: string;
+    value: number | string;
+    threshold?: number | string;
+  }[];
+  recommendations?: string[];
+}
+
+export interface SpeedBucket {
+  speed_bucket: string;
+  readings: number;
+  avg_power_w?: number | null;
+}
+
+export interface EfficiencyCategory {
+  category: string;
+  drive_count: number;
+  avg_speed: number;
+  battery_pct_per_100km: number;
+}
+
+export interface EfficiencyPoint {
+  avg_speed_mps: number;
+  distance: number;
+  efficiency: number;
+}
+
+export interface SpeedProfileData {
+  distribution?: SpeedBucket[];
+  categories?: EfficiencyCategory[];
+  points?: EfficiencyPoint[];
+  avg_speed_mps?: number;
+  peak_speed_mps?: number;
+  optimal_speed_mps?: number;
+}
+
+export interface TemperatureImpactData {
+  efficiency?: {
+    temp_bucket: string;
+    drive_count: number;
+    avg_distance_km: number;
+    avg_duration_s: number;
+    avg_battery_pct_per_100km: number;
+    avg_temp: number;
+  }[];
+  vampire_drain?: {
+    temp_bucket: string;
+    avg_drain_rate: number;
+    event_count: number;
+  }[];
+  monthly_trend?: {
+    month: string;
+    avg_temp: number;
+    avg_efficiency: number;
+    drive_count: number;
+    total_distance: number;
+  }[];
+}
+
+export interface RouteEfficiencyData {
+  routes?: {
+    start_location: string;
+    end_location: string;
+    trip_count: number;
+    avg_distance_km: number;
+    avg_duration_s: number;
+    avg_efficiency: number;
+    best_efficiency: number;
+    worst_efficiency: number;
+    avg_speed: number;
+    avg_temp: number;
+  }[];
+}
+
+export interface FleetTelemetryFieldCoverage {
+  field: string;
+  destination: string;
+  column?: string;
+  also_signal_log?: boolean;
+  subscribed: boolean;
+}
+
+export interface FleetTelemetryCategoryCoverage {
+  category: string;
+  total_fields: number;
+  destinations: Record<string, number>;
+  fields: FleetTelemetryFieldCoverage[];
+}
+
+export interface FleetTelemetryCoverageResponse {
+  categories: FleetTelemetryCategoryCoverage[];
+  destination_totals: Record<string, number>;
+  orphan_fields?: string[];
+}
+
+export interface FleetTelemetryErrorVIN {
+  id: number;
+  vin: string;
+  active: boolean;
+  first_seen_at: string;
+  last_seen_at: string;
+  resolved_at: string | null;
+}
+
+export interface FleetTelemetryError {
+  id: number;
+  vin: string;
+  error_code: string | null;
+  error_message: string | null;
+  reported_at: string | null;
+  tesla_updated_at: string | null;
+  fetched_at: string;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  ts: string;
+  actor?: string;
+  action: string;
+  entity_type: string;
+  entity_id?: number | null;
+  detail?: string | null;
+}
+
+export interface AvailableSignal {
+  name: string;
+  category: string;
+  value_kind: string;
+  unit_kind: string;
+  is_compound: boolean;
+  is_setting_unit: boolean;
+}
+
+export interface AvailableSignalsResponse {
+  vehicle_id: number;
+  count: number;
+  signals: AvailableSignal[];
+  source: string;
+}
+
+export type LiveSignalValue = string | number | boolean | null;
+
+export interface LiveSignalEntry {
+  kind: string;
+  value: LiveSignalValue;
+  ts?: string;
+  timestamp?: string;
+  source?: 'l1' | 'l2' | 'stale' | 'unknown' | string;
+  age_ms?: number;
+}
+
+export interface LiveSignalsResponse {
+  vehicle_id: number;
+  count: number;
+  signals: Record<string, LiveSignalEntry>;
+  at: string;
+}
+
 export type AuthMode = 'open' | 'forward_auth';
 
 export interface AuthModeCapabilities {
@@ -311,7 +688,7 @@ export interface AuthUrlResponse {
 }
 
 export type TOTPStatus =
-  | {mode: 'open'}
+  | { mode: 'open' }
   | {
       mode: 'session';
       activated: boolean;
@@ -348,8 +725,8 @@ export interface ActiveSession {
 }
 
 export type ActiveSessionsResponse =
-  | {mode: 'open'}
-  | {mode: 'session'; sessions: ActiveSession[]};
+  | { mode: 'open' }
+  | { mode: 'session'; sessions: ActiveSession[] };
 
 export interface RevokeAllOthersResponse {
   mode: 'session';

@@ -23,7 +23,9 @@ test('tracks the current web route universe with representative routes present',
 
   expect(EXPECTED_WEB_ROUTE_COUNT).toBe(157);
   expect(webRouteManifest).toHaveLength(EXPECTED_WEB_ROUTE_COUNT);
-  expect(sourcePaths).toEqual(expect.arrayContaining(representativeSourcePaths));
+  expect(sourcePaths).toEqual(
+    expect.arrayContaining(representativeSourcePaths),
+  );
   expect(sourcePaths.filter(sourcePath => sourcePath === '*')).toHaveLength(2);
 });
 
@@ -37,20 +39,55 @@ test('keeps every manifest entry typed and mapped to a native target', () => {
     expect(nativeTargets.has(route.nativeTarget)).toBe(true);
     expect(route.evidence.length).toBeGreaterThan(0);
     expect(route.evidence).toMatch(
-      route.implementationStatus === 'implemented' ? /^Implemented/ : /^Pending/,
+      route.implementationStatus === 'implemented'
+        ? /^Implemented/
+        : /^Pending/,
     );
   }
 });
 
 test('derives native shell parity counters from the route manifest', () => {
   const summary = getRouteParitySummary();
-  const nativeTotal = routes.reduce((total, route) => total + route.parity.total, 0);
+  const nativeTotal = routes.reduce(
+    (total, route) => total + route.parity.total,
+    0,
+  );
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
-    implemented: 8,
-    pending: EXPECTED_WEB_ROUTE_COUNT - 8,
+    implemented: 26,
+    pending: EXPECTED_WEB_ROUTE_COUNT - 26,
   });
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
-  expect(routes.find(route => route.id === 'system')?.parity.pending).toBeGreaterThan(0);
+  expect(
+    routes.find(route => route.id === 'system')?.parity.pending,
+  ).toBeGreaterThan(0);
+});
+
+test('marks N0006 energy analytics and diagnostics routes with implemented evidence', () => {
+  const implementedRouteIds = [
+    'battery',
+    'battery-health',
+    'analytics',
+    'battery-degradation',
+    'tco',
+    'analytics-tco',
+    'sleep-efficiency',
+    'temperature-impact',
+    'route-efficiency',
+    'regen-efficiency',
+    'speed-profile',
+    'admin-telemetry-coverage',
+    'admin-live-signals',
+    'admin-audit-log',
+    'signals',
+    'signal-explorer',
+    'live-monitor',
+  ];
+
+  for (const routeId of implementedRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
+  }
 });
