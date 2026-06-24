@@ -11,7 +11,13 @@ import {
   semanticIconNames,
   type SemanticIconName,
 } from '../src/components/icons/SemanticIcon';
-import { getRouteBounds, MapRouteSummary } from '../src/components/maps/MapRouteSummary';
+import {
+  getRouteBounds,
+  getRouteSegments,
+  MapRouteSummary,
+  projectRoutePoints,
+  sampleRoutePoints,
+} from '../src/components/maps/MapRouteSummary';
 
 const webIntentIconLabels = [
   'severityCritical',
@@ -323,4 +329,53 @@ test('computes route bounds from native route points', () => {
     minLongitude: -122.3,
     maxLongitude: -121.8,
   });
+});
+
+test('projects native route coordinates into normalized map space', () => {
+  const points = [
+    {latitude: 37.2, longitude: -122.3, label: 'start'},
+    {latitude: 37.4, longitude: -122.05, label: 'mid'},
+    {latitude: 37.6, longitude: -121.8, label: 'end'},
+  ];
+  const bounds = getRouteBounds(points);
+
+  expect(bounds).not.toBeNull();
+
+  const projected = projectRoutePoints(points, bounds!);
+
+  expect(projected).toHaveLength(3);
+  expect(projected[0]).toMatchObject({x: 0, y: 1});
+  expect(projected[1].x).toBeCloseTo(0.5);
+  expect(projected[1].y).toBeCloseTo(0.5);
+  expect(projected[2]).toMatchObject({x: 1, y: 0});
+});
+
+test('samples route points without losing start and end anchors', () => {
+  const sampled = sampleRoutePoints(
+    Array.from({length: 9}, (_, index) => ({latitude: index, longitude: index})),
+    4,
+  );
+
+  expect(sampled).toHaveLength(4);
+  expect(sampled[0]).toEqual({latitude: 0, longitude: 0});
+  expect(sampled[sampled.length - 1]).toEqual({latitude: 8, longitude: 8});
+});
+
+test('builds native route line segments from projected points', () => {
+  const segments = getRouteSegments(
+    [
+      {latitude: 37.2, longitude: -122.3, x: 0, y: 0},
+      {latitude: 37.2, longitude: -121.8, x: 1, y: 0},
+      {latitude: 37.6, longitude: -121.8, x: 1, y: 1},
+    ],
+    100,
+    50,
+  );
+
+  expect(segments).toHaveLength(2);
+  expect(segments[0].left).toBeCloseTo(0);
+  expect(segments[0].width).toBeCloseTo(100);
+  expect(segments[0].angleRad).toBeCloseTo(0);
+  expect(segments[1].width).toBeCloseTo(50);
+  expect(segments[1].angleRad).toBeCloseTo(Math.PI / 2);
 });
