@@ -71,106 +71,134 @@ const drive = {
   score: 96,
 };
 
+const chargeTelemetry = [
+  {
+    session_id: 9,
+    vehicle_id: 42,
+    ts: '2026-06-23T07:15:00Z',
+    ac_charging_power_w: 7200,
+    dc_charging_power_w: null,
+    ac_charging_energy_in_wh: 1800,
+    dc_charging_energy_in_wh: null,
+    charger_voltage_v: 240,
+    charger_actual_current_a: 30,
+    charger_pilot_current_a: 32,
+    battery_heater_on: false,
+    created_at: '2026-06-23T07:15:00Z',
+  },
+];
+
+const driveTelemetry = [
+  {
+    id: 1,
+    drive_id: 3,
+    vehicle_id: 42,
+    ts: '2026-06-23T18:05:00Z',
+    latitude: 37.2,
+    longitude: -122.1,
+    heading: 90,
+    speed_mps: 8,
+    power_w: 7000,
+    battery_level: 81,
+    created_at: '2026-06-23T18:05:00Z',
+  },
+  {
+    id: 2,
+    drive_id: 3,
+    vehicle_id: 42,
+    ts: '2026-06-23T18:25:00Z',
+    latitude: 37.6,
+    longitude: -121.8,
+    heading: 94,
+    speed_mps: 22,
+    power_w: 11000,
+    battery_level: 79,
+    created_at: '2026-06-23T18:25:00Z',
+  },
+];
+
+let mockVehiclesData: typeof vehicle[] | undefined;
+let mockVehicleDetailData: typeof vehicle | undefined;
+let mockVehicleStateData: {state: typeof vehicleState; live: boolean} | undefined;
+let mockChargingSessionsData: typeof chargingSession[] | undefined;
+let mockChargingSessionData: typeof chargingSession | undefined;
+let mockChargeTelemetryData: typeof chargeTelemetry | undefined;
+let mockDrivesData: typeof drive[] | undefined;
+let mockDriveData: typeof drive | undefined;
+let mockDriveTelemetryData: typeof driveTelemetry | undefined;
+let mockVehiclesError: Error | null;
+let mockChargingError: Error | null;
+let mockDrivesError: Error | null;
+
+beforeEach(() => {
+  mockVehiclesData = [vehicle];
+  mockVehicleDetailData = vehicle;
+  mockVehicleStateData = {state: vehicleState, live: true};
+  mockChargingSessionsData = [chargingSession];
+  mockChargingSessionData = chargingSession;
+  mockChargeTelemetryData = chargeTelemetry;
+  mockDrivesData = [drive];
+  mockDriveData = drive;
+  mockDriveTelemetryData = driveTelemetry;
+  mockVehiclesError = null;
+  mockChargingError = null;
+  mockDrivesError = null;
+});
+
 jest.mock('../src/api/hooks', () => ({
   useVehicles: () => ({
-    data: [vehicle],
+    data: mockVehiclesData,
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockVehiclesError,
   }),
   useVehicle: (vehicleId: number | null) => ({
-    data: vehicleId ? vehicle : undefined,
+    data: vehicleId ? mockVehicleDetailData : undefined,
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockVehiclesError,
   }),
   useVehicleState: (vehicleId: number | null) => ({
-    data: vehicleId ? {state: vehicleState, live: true} : undefined,
+    data: vehicleId ? mockVehicleStateData : undefined,
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockVehiclesError,
   }),
   useChargingSessions: () => ({
-    data: [chargingSession],
+    data: mockChargingSessionsData,
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockChargingError,
   }),
   useChargingSession: (sessionId: number | null) => ({
-    data: sessionId ? chargingSession : undefined,
+    data: sessionId ? mockChargingSessionData : undefined,
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockChargingError,
   }),
   useChargeTelemetry: (sessionId: number | null) => ({
-    data: sessionId
-      ? [
-          {
-            session_id: 9,
-            vehicle_id: 42,
-            ts: '2026-06-23T07:15:00Z',
-            ac_charging_power_w: 7200,
-            dc_charging_power_w: null,
-            ac_charging_energy_in_wh: 1800,
-            dc_charging_energy_in_wh: null,
-            charger_voltage_v: 240,
-            charger_actual_current_a: 30,
-            charger_pilot_current_a: 32,
-            battery_heater_on: false,
-            created_at: '2026-06-23T07:15:00Z',
-          },
-        ]
-      : [],
+    data: sessionId ? mockChargeTelemetryData : [],
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockChargingError,
   }),
   useDrives: () => ({
-    data: [drive],
+    data: mockDrivesData,
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockDrivesError,
   }),
   useDrive: (driveId: number | null) => ({
-    data: driveId ? drive : undefined,
+    data: driveId ? mockDriveData : undefined,
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockDrivesError,
   }),
   useDriveTelemetry: (driveId: number | null) => ({
-    data: driveId
-      ? [
-          {
-            id: 1,
-            drive_id: 3,
-            vehicle_id: 42,
-            ts: '2026-06-23T18:05:00Z',
-            latitude: 37.2,
-            longitude: -122.1,
-            heading: 90,
-            speed_mps: 8,
-            power_w: 7000,
-            battery_level: 81,
-            created_at: '2026-06-23T18:05:00Z',
-          },
-          {
-            id: 2,
-            drive_id: 3,
-            vehicle_id: 42,
-            ts: '2026-06-23T18:25:00Z',
-            latitude: 37.6,
-            longitude: -121.8,
-            heading: 94,
-            speed_mps: 22,
-            power_w: 11000,
-            battery_level: 79,
-            created_at: '2026-06-23T18:25:00Z',
-          },
-        ]
-      : [],
+    data: driveId ? mockDriveTelemetryData : [],
     isLoading: false,
     isFetching: false,
-    error: null,
+    error: mockDrivesError,
   }),
 }));
 
@@ -215,4 +243,48 @@ test('renders drive list, trip detail, route replay, and readiness sections', as
   expect(serialized).toContain('Drive route route summary from Home to Office');
   expect(serialized).toContain('Replay speed summary');
   expect(serialized).toContain('Trips list parity');
+});
+
+test('renders empty states without hiding detail or readiness sections', async () => {
+  mockVehiclesData = [];
+  mockVehicleDetailData = undefined;
+  mockVehicleStateData = undefined;
+  mockChargingSessionsData = [];
+  mockChargingSessionData = undefined;
+  mockChargeTelemetryData = [];
+  mockDrivesData = [];
+  mockDriveData = undefined;
+  mockDriveTelemetryData = [];
+
+  const vehiclesSerialized = await render(<VehiclesScreen />);
+  const chargingSerialized = await render(<ChargingScreen />);
+  const drivingSerialized = await render(<DrivingScreen />);
+
+  expect(vehiclesSerialized).toContain('No vehicles yet');
+  expect(vehiclesSerialized).toContain('No selected vehicle');
+  expect(vehiclesSerialized).toContain('Vehicle route readiness');
+  expect(chargingSerialized).toContain('No charging sessions');
+  expect(chargingSerialized).toContain('No selected charging session');
+  expect(chargingSerialized).toContain('Charging route readiness');
+  expect(drivingSerialized).toContain('No drives returned');
+  expect(drivingSerialized).toContain('No selected drive');
+  expect(drivingSerialized).toContain('No replay drive selected');
+  expect(drivingSerialized).toContain('Driving and trips route readiness');
+});
+
+test('renders API error states without inventing fleet data', async () => {
+  mockVehiclesData = [];
+  mockChargingSessionsData = [];
+  mockDrivesData = [];
+  mockVehiclesError = new Error('vehicle API failed');
+  mockChargingError = new Error('charging API failed');
+  mockDrivesError = new Error('drive API failed');
+
+  const vehiclesSerialized = await render(<VehiclesScreen />);
+  const chargingSerialized = await render(<ChargingScreen />);
+  const drivingSerialized = await render(<DrivingScreen />);
+
+  expect(vehiclesSerialized).toContain('Vehicle API unavailable');
+  expect(chargingSerialized).toContain('Charging API unavailable');
+  expect(drivingSerialized).toContain('Drive API unavailable');
 });
