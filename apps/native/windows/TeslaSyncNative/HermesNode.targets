@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <NodeExe Condition="'$(NodeExe)' == '' and Exists('$(ProgramFiles)\nodejs\node.exe')">$(ProgramFiles)\nodejs\node.exe</NodeExe>
+  </PropertyGroup>
+
+  <Target Name="CompileHermesBytecode" AfterTargets="MakeBundle" Condition="'$(UseBundle)' == 'true' AND '$(UseHermes)' == 'true'">
+    <Error Condition="'$(NodeExe)' == ''" Text="NodeExe was not set and node.exe was not found under Program Files. Install Node.js or pass /p:NodeExe=&lt;path-to-node.exe&gt;." />
+    <Message Importance="High" Text="Running [$(HermesCompilerCommand) -emit-binary -out $(BundleOutputFile).hbc $(BundleOutputFile) $(HermesCompilerFlags) -output-source-map] to precompile bundle file." />
+    <Exec Command='$(HermesCompilerCommand) -emit-binary -out "$(BundleOutputFile).hbc" "$(BundleOutputFile)" $(HermesCompilerFlags) -output-source-map' ConsoleToMSBuild="true" WorkingDirectory="$(BundleCommandWorkingDir)" />
+    <Move SourceFiles="$(BundleOutputFile).hbc" DestinationFiles="$(BundleOutputFile)" />
+    <Move SourceFiles="$(BundleOutputFile).hbc.map" DestinationFiles="$(HermesSourceMap)" />
+    <Exec Command='&quot;$(NodeExe)&quot; "$(ReactNativeDir)\scripts\compose-source-maps.js" "$(PackagerSourceMap)" "$(HermesSourceMap)" -o "$(BundleSourceMap)"' ConsoleToMSBuild="true" WorkingDirectory="$(BundleCommandWorkingDir)" />
+  </Target>
+</Project>

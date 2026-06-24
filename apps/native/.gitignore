@@ -55,6 +55,28 @@ yarn-error.log
 
 # Bundle artifact
 *.jsbundle
+.bundle/*
+!.bundle/config
+
+# Package/signing outputs. Keep certificates and provisioning profiles out of git.
+*.aab
+*.apk
+*.appx
+*.appxbundle
+*.appinstaller
+*.ipa
+*.msix
+*.msixbundle
+*.p12
+*.pfx
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.pem
+*.key
+*.jks
+*.xcarchive
+**/packages.lock.json
 
 # Ruby / CocoaPods
 **/Pods/

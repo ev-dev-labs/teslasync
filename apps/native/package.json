@@ -10,6 +10,17 @@
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "windows": "npx @react-native-community/cli run-windows",
+    "macos": "react-native run-macos",
+    "bundle:android": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\bundle-native.ps1 -Platform android",
+    "bundle:ios": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\bundle-native.ps1 -Platform ios",
+    "bundle:windows": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\bundle-native.ps1 -Platform windows",
+    "bundle:macos": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\bundle-native.ps1 -Platform macos",
+    "package:android": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\package-native.ps1 -Platform android",
+    "package:ios": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\package-native.ps1 -Platform ios",
+    "package:windows": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\package-native.ps1 -Platform windows",
+    "package:macos": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\package-native.ps1 -Platform macos",
+    "package:all": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\package-native.ps1 -Platform all",
+    "check:packaging": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\check-packaging.ps1",
     "test:windows": "jest --config jest.config.windows.js"
   },
   "dependencies": {
