@@ -3,11 +3,14 @@ import { View } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 
 import { ChartSummary } from '../src/components/charts/ChartSummary';
+import { MiniBarChart } from '../src/components/charts/MiniBarChart';
 import { ListRow } from '../src/components/data/ListRow';
 import { MetricGrid } from '../src/components/data/MetricGrid';
 import { SectionHeader } from '../src/components/data/SectionHeader';
 import {
   getSemanticIconDefinition,
+  SemanticIcon,
+  semanticIconIntentNames,
   semanticIconNames,
   type SemanticIconName,
 } from '../src/components/icons/SemanticIcon';
@@ -227,6 +230,7 @@ const webIntentIconLabels = [
 ] as const satisfies readonly SemanticIconName[];
 
 test('covers every canonical web icon intent label with native semantics', () => {
+  expect(semanticIconIntentNames).toEqual(webIntentIconLabels);
   expect(new Set(semanticIconNames)).toEqual(new Set(webIntentIconLabels));
 
   for (const name of webIntentIconLabels) {
@@ -237,6 +241,25 @@ test('covers every canonical web icon intent label with native semantics', () =>
     expect(definition.glyph.length).toBeGreaterThan(0);
     expect(definition.glyph.length).toBeLessThanOrEqual(3);
   }
+});
+
+test('renders semantic icons with accessible labels unless decorative', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <View>
+        <SemanticIcon name="batteryCharging" accessibilityLabel="Battery charging status" />
+        <SemanticIcon name="warning" decorative />
+      </View>,
+    );
+  });
+
+  const serialized = JSON.stringify(tree?.toJSON());
+
+  expect(serialized).toContain('Battery charging status');
+  expect(serialized).toContain('"accessibilityRole":"image"');
+  expect(serialized).toContain('"accessible":false');
 });
 
 test('renders premium primitives with accessible summaries', async () => {
@@ -314,6 +337,42 @@ test('renders premium primitives with accessible summaries', async () => {
   expect(serialized).toContain('Roadrunner, Model Y Performance, online');
   expect(serialized).toContain('Energy by day chart summary with 2 points');
   expect(serialized).toContain('Drive route route summary from Home to Office');
+});
+
+test('renders native chart and map empty states without web embedding', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <View>
+        <ChartSummary
+          title="Charge sessions"
+          metricLabel="Total"
+          metricValue="0 kWh"
+          emptyLabel="No charge data is available."
+          data={[]}
+        />
+        <MiniBarChart title="Speed bands" values={[]} emptyLabel="No speed bands are available." />
+        <MapRouteSummary
+          title="Empty route"
+          startLabel="Unknown start"
+          endLabel="Unknown end"
+          distanceLabel="0 km"
+          durationLabel="0 min"
+          emptyLabel="No route points are available."
+          points={[]}
+        />
+      </View>,
+    );
+  });
+
+  const serialized = JSON.stringify(tree?.toJSON());
+
+  expect(serialized).toContain('No charge data is available.');
+  expect(serialized).toContain('No speed bands are available.');
+  expect(serialized).toContain('No route points are available.');
+  expect(serialized).not.toContain('WebView');
+  expect(serialized).not.toContain('Electron');
 });
 
 test('computes route bounds from native route points', () => {
