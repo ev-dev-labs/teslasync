@@ -39,6 +39,52 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: null,
   }),
+  useSystemHealth: () => ({
+    data: {
+      status: 'healthy',
+      healthy: true,
+      components: {
+        database: {status: 'healthy'},
+        mqtt: {status: 'healthy'},
+        tesla_api: {status: 'healthy'},
+        fleet_telemetry: {status: 'healthy'},
+      },
+    },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useVehicleState: () => ({
+    data: {
+      state: {
+        vehicle_id: 42,
+        state: 'online',
+        battery_level: 78,
+        speed_mps: 0,
+        power_w: 0,
+        is_charging: false,
+        is_locked: true,
+        software_version: '2026.20.1',
+      },
+    },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useBatteryHealth: () => ({
+    data: {
+      health_score: 94,
+      degradation_pct: 2.1,
+      current_capacity_pct: 97.9,
+      total_cycles: 88,
+      estimated_range_current_km: 505,
+      estimated_range_new_km: 516,
+      monthly_trend: [],
+    },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
   useDrives: () => ({
     data: [],
     isLoading: false,

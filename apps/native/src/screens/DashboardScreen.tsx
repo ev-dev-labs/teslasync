@@ -3,14 +3,13 @@ import { StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useAlerts, useSystemStatus, useVehicles } from '../api/hooks';
-import { MiniBarChart } from '../components/charts/MiniBarChart';
-import { EmptyState } from '../components/feedback/EmptyState';
+import { SectionHeader } from '../components/data/SectionHeader';
 import { AppButton } from '../components/ui/AppButton';
 import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { MetricCard } from '../components/ui/MetricCard';
-import { StatusPill } from '../components/ui/StatusPill';
 import { colors, spacing } from '../theme/tokens';
+import { IMPLEMENTED_NATIVE_WIDGETS, PENDING_NATIVE_WIDGETS } from '../widgets';
 
 export function DashboardScreen() {
   const queryClient = useQueryClient();
@@ -24,19 +23,11 @@ export function DashboardScreen() {
   const isRefreshing =
     vehiclesQuery.isFetching || alertsQuery.isFetching || systemQuery.isFetching;
 
-  const stateBreakdown = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const vehicle of vehicles) {
-      const state = vehicle.state || 'unknown';
-      counts.set(state, (counts.get(state) ?? 0) + 1);
-    }
-
-    return Array.from(counts.entries()).map(([label, value]) => ({label, value}));
-  }, [vehicles]);
-
   const refresh = () => {
     void queryClient.invalidateQueries();
   };
+
+  const selectedVehicleId = vehicles[0]?.id;
 
   return (
     <View style={styles.root}>
@@ -59,46 +50,42 @@ export function DashboardScreen() {
           helper={systemQuery.error ? 'Status endpoint unavailable' : 'Backend health'}
           tone={systemQuery.data?.healthy ? 'accent' : 'neutral'}
         />
+        <MetricCard
+          label="Widgets"
+          value={`${IMPLEMENTED_NATIVE_WIDGETS.length}/${IMPLEMENTED_NATIVE_WIDGETS.length + PENDING_NATIVE_WIDGETS.length}`}
+          helper={`${PENDING_NATIVE_WIDGETS.length} pending parity concepts tracked`}
+          tone="accent"
+        />
       </View>
 
-      <GlassPanel style={styles.hero}>
-        <View style={styles.heroHeader}>
-          <View>
-            <AppText variant="title" weight="bold">
-              Native parity proof
-            </AppText>
-            <AppText tone="secondary">
-              The first React Native shell reads the same TeslaSync API without web views.
-            </AppText>
-          </View>
-          <StatusPill
-            label={vehiclesQuery.error ? 'API offline' : 'API wired'}
-            state={vehiclesQuery.error ? 'warning' : 'online'}
-          />
+      <GlassPanel style={styles.registryPanel}>
+        <SectionHeader
+          title="Native widget registry"
+          subtitle="Dashboard widgets are typed, statused, and mapped back to web dashboard concepts."
+          icon="layoutDashboard"
+        />
+        <View style={styles.registryList}>
+          {PENDING_NATIVE_WIDGETS.map(widget => (
+            <View key={widget.id} style={styles.pendingWidget}>
+              <AppText weight="semibold">{widget.title}</AppText>
+              <AppText variant="caption" tone="muted">
+                Pending: {widget.pendingReason}
+              </AppText>
+            </View>
+          ))}
         </View>
-
-        {vehicles.length > 0 ? (
-          <MiniBarChart
-            title="Vehicle states"
-            values={stateBreakdown}
-            emptyLabel="No vehicle state data yet."
-          />
-        ) : (
-          <EmptyState
-            title={vehiclesQuery.isLoading ? 'Loading fleet' : 'No vehicles returned'}
-            message={
-              vehiclesQuery.error
-                ? 'Connect to a TeslaSync API host to populate live fleet data.'
-                : 'Fleet cards will render here as soon as vehicles are available.'
-            }
-          />
-        )}
-
         <View style={styles.actions}>
-          <AppButton label={isRefreshing ? 'Refreshing...' : 'Refresh'} onPress={refresh} />
+          <AppButton label={isRefreshing ? 'Refreshing...' : 'Refresh all widgets'} onPress={refresh} />
           <AppButton label="API /api/v1" onPress={refresh} variant="ghost" />
         </View>
       </GlassPanel>
+
+      <View style={styles.widgetGrid}>
+        {IMPLEMENTED_NATIVE_WIDGETS.map(widget => {
+          const Widget = widget.component;
+          return <Widget key={widget.id} vehicleId={selectedVehicleId} />;
+        })}
+      </View>
     </View>
   );
 }
@@ -112,14 +99,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
-  hero: {
+  registryPanel: {
     padding: spacing.lg,
     gap: spacing.lg,
-  },
-  heroHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
   },
   actions: {
     flexDirection: 'row',
@@ -128,5 +110,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.lg,
+  },
+  registryList: {
+    gap: spacing.sm,
+  },
+  pendingWidget: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: spacing.md,
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceRaised,
+  },
+  widgetGrid: {
+    gap: spacing.lg,
   },
 });
