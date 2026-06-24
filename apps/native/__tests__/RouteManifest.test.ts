@@ -5,6 +5,32 @@ import {
   webRouteManifest,
 } from '../src/navigation/routes';
 
+declare const __dirname: string;
+declare function require(moduleName: string): unknown;
+
+const {readFileSync} = require('fs') as {
+  readFileSync: (path: string, encoding: string) => string;
+};
+const {resolve} = require('path') as {
+  resolve: (...paths: string[]) => string;
+};
+
+const appSource = readFileSync(
+  resolve(__dirname, '..', '..', '..', 'web', 'src', 'App.tsx'),
+  'utf8',
+);
+
+function extractWebRoutePaths(source: string) {
+  return [...source.matchAll(/<Route\s+path="([^"]+)"/g)].map(match => match[1]);
+}
+
+function countByPath(paths: readonly string[]) {
+  return paths.reduce<Record<string, number>>((counts, path) => {
+    counts[path] = (counts[path] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
 const representativeSourcePaths = [
   '/',
   'quick-stats',
@@ -20,9 +46,12 @@ const representativeSourcePaths = [
 
 test('tracks the current web route universe with representative routes present', () => {
   const sourcePaths = webRouteManifest.map(route => route.sourcePath);
+  const appRoutePaths = extractWebRoutePaths(appSource);
 
   expect(EXPECTED_WEB_ROUTE_COUNT).toBe(157);
+  expect(appRoutePaths).toHaveLength(EXPECTED_WEB_ROUTE_COUNT);
   expect(webRouteManifest).toHaveLength(EXPECTED_WEB_ROUTE_COUNT);
+  expect(countByPath(sourcePaths)).toEqual(countByPath(appRoutePaths));
   expect(sourcePaths).toEqual(
     expect.arrayContaining(representativeSourcePaths),
   );
