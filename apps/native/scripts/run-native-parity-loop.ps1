@@ -84,7 +84,7 @@ function Stop-ProcessTree {
 }
 
 function Test-TranscriptResult {
-    param([string]$Path, [bool]$TimedOut)
+    param([string]$Path, [bool]$TimedOut, [bool]$CommittedClean)
     if ($TimedOut) { return [pscustomobject]@{ Done = $false; Reason = "timeout-or-idle" } }
     if (-not (Test-Path $Path)) { return [pscustomobject]@{ Done = $false; Reason = "missing transcript" } }
     $text = Get-Content $Path -Raw
@@ -97,6 +97,9 @@ function Test-TranscriptResult {
     }
     if ($hasBlocked -or $hasNonZeroExit) {
         return [pscustomobject]@{ Done = $false; Reason = "blocked marker" }
+    }
+    if ($CommittedClean) {
+        return [pscustomobject]@{ Done = $true; Reason = "committed cleanly without red markers" }
     }
     return [pscustomobject]@{ Done = $false; Reason = "missing final markers" }
 }
@@ -135,6 +138,7 @@ function Invoke-OnePrompt {
     $transcript = Join-Path $LogRoot "$stamp-$safeName-attempt-$Attempt.log"
     $input = New-RunPrompt -PromptPath $Prompt.FullName -TranscriptPath $transcript -Attempt $Attempt
     $runner = Join-Path $LogRoot "$stamp-$safeName-runner.ps1"
+    $beforeHead = (git -C $RepoRoot rev-parse HEAD).Trim()
     @"
 Set-Location '$RepoRoot'
 Get-Content -Raw '$input' | copilot --yolo --autopilot -s
@@ -152,10 +156,12 @@ Get-Content -Raw '$input' | copilot --yolo --autopilot -s
         $idle = ((Get-Date) - $lastWrite).TotalMinutes
         if ($elapsed -gt $TimeoutMinutes -or $idle -gt $IdleTimeoutMinutes) {
             Stop-ProcessTree -ProcessId $proc.Id
-            return [pscustomobject]@{ Transcript = $transcript; TimedOut = $true }
+            $afterHead = (git -C $RepoRoot rev-parse HEAD).Trim()
+            return [pscustomobject]@{ Transcript = $transcript; TimedOut = $true; BeforeHead = $beforeHead; AfterHead = $afterHead }
         }
     }
-    return [pscustomobject]@{ Transcript = $transcript; TimedOut = $false }
+    $afterHead = (git -C $RepoRoot rev-parse HEAD).Trim()
+    return [pscustomobject]@{ Transcript = $transcript; TimedOut = $false; BeforeHead = $beforeHead; AfterHead = $afterHead }
 }
 
 $prompts = @(Get-ChildItem $PromptRoot -Filter "*.prompt.md" -File | Sort-Object Name)
@@ -188,7 +194,9 @@ do {
         Write-LoopEvent @{ event = "start"; prompt = $id; attempt = $attempt; pass = $loopPass }
 
         $run = Invoke-OnePrompt -Prompt $prompt -Attempt $attempt
-        $result = Test-TranscriptResult -Path $run.Transcript -TimedOut:$run.TimedOut
+        $nativeDirty = @(git -C $RepoRoot status --short -- apps/native 2>$null)
+        $committedClean = ($run.BeforeHead -ne $run.AfterHead -and $nativeDirty.Count -eq 0)
+        $result = Test-TranscriptResult -Path $run.Transcript -TimedOut:$run.TimedOut -CommittedClean:$committedClean
         if ($result.Done) {
             [void]$doneSet.Add($id)
             Write-DoneSet $doneSet

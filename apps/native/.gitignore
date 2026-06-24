@@ -99,3 +99,5 @@ yarn-error.log
 # React Native parity loop runtime artifacts
 .loop-state/
 loop-logs/
+.universal-loop-state/
+universal-loop-logs/
