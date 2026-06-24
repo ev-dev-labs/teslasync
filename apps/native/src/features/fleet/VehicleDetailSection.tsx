@@ -101,6 +101,8 @@ export function VehicleDetailSection({
           <MetricGrid items={metrics} minItemWidth={180} />
           <View>
             <KeyValueRow label="VIN" value={shortVin(vehicle.vin)} />
+            <KeyValueRow label="Detail endpoint" value={`/vehicles/${vehicle.id}`} />
+            <KeyValueRow label="State endpoint" value={`/vehicles/${vehicle.id}/state`} />
             <KeyValueRow label="Wheel type" value={vehicle.wheel_type || '-'} />
             <KeyValueRow label="Firmware" value={liveState?.software_version ?? '-'} />
             <KeyValueRow

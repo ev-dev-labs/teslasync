@@ -47,6 +47,8 @@ export function DriveDetailSection({drive, isLoading, hasError}: DriveDetailSect
             <View style={fleetStyles.detailCopy}>
               <KeyValueRow label="Started" value={formatDateTime(drive.start_ts)} />
               <KeyValueRow label="Ended" value={formatDateTime(drive.end_ts)} />
+              <KeyValueRow label="Detail endpoint" value={`/drives/${drive.id}`} />
+              <KeyValueRow label="Telemetry endpoint" value={`/drives/${drive.id}/telemetry`} />
             </View>
             <StatusPill
               label={drive.end_ts ? drive.ended_status ?? 'Complete' : 'In progress'}

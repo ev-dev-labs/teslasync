@@ -73,6 +73,11 @@ export function ChargingDetailSection({
               <KeyValueRow label="Started" value={formatDateTime(session.started_at)} />
               <KeyValueRow label="Ended" value={formatDateTime(session.ended_at)} />
               <KeyValueRow label="Duration" value={formatChargingDuration(session)} />
+              <KeyValueRow label="Detail endpoint" value={`/charging/${session.id}`} />
+              <KeyValueRow
+                label="Telemetry endpoint"
+                value={`/charging/${session.id}/telemetry`}
+              />
               <KeyValueRow
                 label="Cost"
                 value={formatCost(session.cost_decimal, session.cost_currency)}

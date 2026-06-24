@@ -219,6 +219,8 @@ test('renders vehicle list, detail, and route readiness sections', async () => {
   expect(serialized).toContain('Vehicle detail shell');
   expect(serialized).toContain('Roadrunner');
   expect(serialized).toContain('37.4200, -122.0800');
+  expect(serialized).toContain('"/vehicles/1"');
+  expect(serialized).toContain('/vehicles/1/state');
   expect(serialized).toContain('Live map coordinates');
   expect(serialized).toContain('Access routes are mapped and named here');
 });
@@ -229,6 +231,8 @@ test('renders charging sessions, detail, telemetry chart, and readiness sections
   expect(serialized).toContain('Charging overview');
   expect(serialized).toContain('Charge detail and telemetry');
   expect(serialized).toContain('Wall Connector');
+  expect(serialized).toContain('"/charging/9"');
+  expect(serialized).toContain('/charging/9/telemetry');
   expect(serialized).toContain('Charging curve summary');
   expect(serialized).toContain('Latest charger power');
   expect(serialized).toContain('Charging vampire drain');
@@ -241,6 +245,7 @@ test('renders drive list, trip detail, route replay, and readiness sections', as
   expect(serialized).toContain('Drives and trips');
   expect(serialized).toContain('Trip parity summary');
   expect(serialized).toContain('Drive-backed trip detail');
+  expect(serialized).toContain('"/drives/3"');
   expect(serialized).toContain('/drives/3/telemetry');
   expect(serialized).toContain('Drive detail shell');
   expect(serialized).toContain('Drive route route summary from Home to Office');
