@@ -57,6 +57,7 @@ yarn-error.log
 *.jsbundle
 .bundle/*
 !.bundle/config
+.web-build/
 
 # Package/signing outputs. Keep certificates and provisioning profiles out of git.
 *.aab

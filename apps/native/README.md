@@ -6,6 +6,7 @@ React Native foundation for TeslaSync parity across Android, iOS, Windows, and m
 
 - React Native 0.81.6, pinned because React Native Windows and macOS both publish compatible 0.81.x packages.
 - React 19.1.4.
+- React Native Web with Vite for browser parity smoke checks.
 - React Native Windows generated with the modern `cpp-app` WinAppSDK template.
 - React Native macOS generated from the `react-native-macos@0.81.6` packaged template.
 - TanStack Query for API data.
@@ -16,6 +17,8 @@ React Native foundation for TeslaSync parity across Android, iOS, Windows, and m
 cd apps\native
 npm run typecheck
 npm test
+npm run web:dev
+npm run web:build
 npm run bundle:android
 npm run bundle:windows
 npm run check:packaging
@@ -45,6 +48,6 @@ Signing secrets are never committed. Android release signing is enabled only whe
 
 ## Current scope
 
-This native parity shell includes premium dark glass UI, typed API hooks, dashboard widgets, vehicle/charging/driving surfaces, energy and system diagnostics, notifications, auth/settings, Android/iOS scaffolds, Windows WinAppSDK scaffolding, and macOS project/package scaffolding. It intentionally does not use Electron or WebView.
+This native parity shell includes premium dark glass UI, typed API hooks, dashboard widgets, vehicle/charging/driving surfaces, energy and system diagnostics, notifications, auth/settings, Android/iOS scaffolds, Windows WinAppSDK scaffolding, macOS project/package scaffolding, and a React Native Web target for browser smoke checks. It intentionally does not use Electron or WebView.
 
 The native route manifest in `src/navigation/routes.ts` tracks all 157 `<Route path="...">` entries from `web/src/App.tsx`. The shell derives route counts from that typed manifest and shows implemented native evidence for every mapped route target.
