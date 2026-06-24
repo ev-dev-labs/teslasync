@@ -189,6 +189,10 @@ function Invoke-AndroidPackage {
     }
 
     Invoke-External -FilePath $gradlew -Arguments @("assemble$Configuration") -WorkingDirectory $androidRoot
+
+    if ($Configuration -eq "Release") {
+        Invoke-External -FilePath $gradlew -Arguments @("bundle$Configuration") -WorkingDirectory $androidRoot
+    }
 }
 
 function Invoke-IosPackage {

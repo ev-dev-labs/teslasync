@@ -107,6 +107,25 @@ function Resolve-AndroidSdk {
     return $null
 }
 
+function Read-JsonFile {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    return Get-Content $Path -Raw | ConvertFrom-Json
+}
+
+function Read-ReactNativeConfig {
+    $configOutput = & npx react-native config
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to read React Native CLI config."
+    }
+
+    try {
+        return ($configOutput -join "`n") | ConvertFrom-Json
+    } catch {
+        throw "React Native CLI config was not valid JSON: $($_.Exception.Message)"
+    }
+}
+
 $packageJson = Get-Content (Join-Path $NativeRoot "package.json") -Raw | ConvertFrom-Json
 $scriptNames = @($packageJson.scripts.PSObject.Properties.Name)
 $requiredScripts = @(
@@ -141,6 +160,31 @@ foreach ($relativePath in $requiredPaths) {
     Assert-Condition (Test-Path (Join-Path $NativeRoot $relativePath)) "Missing packaging path: $relativePath"
 }
 
+$rnConfig = Read-ReactNativeConfig
+$registeredPlatforms = @($rnConfig.project.PSObject.Properties.Name)
+foreach ($platform in @("android", "ios", "windows", "macos")) {
+    Assert-Condition ($registeredPlatforms -contains $platform) "React Native CLI config does not register project.$platform."
+}
+
+$rnCommands = @($rnConfig.commands | ForEach-Object { $_.name })
+foreach ($command in @("build-macos", "run-macos")) {
+    Assert-Condition ($rnCommands -contains $command) "react-native-macos CLI command is unavailable: $command"
+}
+
+$rnMacOSPackagePath = Join-Path $NativeRoot "node_modules\react-native-macos\package.json"
+Assert-Condition (Test-Path $rnMacOSPackagePath) "react-native-macos package is not installed under node_modules."
+$rnMacOSPackage = Read-JsonFile $rnMacOSPackagePath
+Assert-Condition ($rnMacOSPackage.version -like "$($rnConfig.reactNativeVersion).*") "react-native-macos $($rnMacOSPackage.version) does not match React Native $($rnConfig.reactNativeVersion).x."
+
+$macOSProject = $rnConfig.project.macos
+Assert-Condition ($null -ne $macOSProject.sourceDir -and $macOSProject.sourceDir -like "*\macos") "React Native CLI config does not point macOS sourceDir at apps\native\macos."
+Assert-Condition ($null -ne $macOSProject.xcodeProject -and $macOSProject.xcodeProject.name -eq "TeslaSyncNative.xcodeproj") "React Native CLI config does not detect the macOS Xcode project."
+
+$macOSPbxproj = Get-Content (Join-Path $NativeRoot "macos\TeslaSyncNative.xcodeproj\project.pbxproj") -Raw
+Assert-Condition ($macOSPbxproj -match "TeslaSyncNative-macOS") "macOS Xcode project is missing the TeslaSyncNative-macOS target."
+Assert-Condition ($macOSPbxproj -match "SDKROOT = macosx;") "macOS Xcode project is not targeting the macOS SDK."
+Assert-Condition ($macOSPbxproj -match "react-native-macos/scripts/react-native-xcode\.sh") "macOS Xcode project is not wired to the react-native-macos bundle phase."
+
 $gradle = Get-Content (Join-Path $NativeRoot "android\app\build.gradle") -Raw
 Assert-Condition ($gradle -match "ANDROID_UPLOAD_STORE_FILE") "Android release signing must be driven by ANDROID_UPLOAD_* environment variables."
 $buildTypesStart = $gradle.IndexOf("buildTypes {")
@@ -164,6 +208,10 @@ $forbiddenSigningFiles = @(
 Assert-Condition ($forbiddenSigningFiles.Count -eq 0) "Signing material is tracked in git: $($forbiddenSigningFiles -join ', ')"
 
 Write-Host "[packaging] Static packaging checks passed."
+Write-Host "[packaging] React Native version: $($rnConfig.reactNativeVersion)"
+Write-Host "[packaging] React Native config platforms: $($registeredPlatforms -join ', ')"
+Write-Host "[packaging] react-native-macos version: $($rnMacOSPackage.version)"
+Write-Host "[packaging] react-native-macos commands: build-macos=$($rnCommands -contains 'build-macos'), run-macos=$($rnCommands -contains 'run-macos')"
 Write-Host "[packaging] Android Gradle wrapper: $((Test-Path (Join-Path $NativeRoot 'android\gradlew.bat')) -or (Test-Path (Join-Path $NativeRoot 'android\gradlew')))"
 Write-Host "[packaging] Android SDK available: $([bool](Resolve-AndroidSdk))"
 Write-Host "[packaging] xcodebuild available: $(Test-HostCommand 'xcodebuild')"
