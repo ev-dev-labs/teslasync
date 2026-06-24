@@ -11,20 +11,24 @@ interface NavItemProps {
   onPress: () => void;
 }
 
-export function NavItem({route, selected, onPress}: NavItemProps) {
+export function NavItem({ route, selected, onPress }: NavItemProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{selected}}
+      accessibilityState={{ selected }}
       accessibilityLabel={route.label}
       onPress={onPress}
-      style={({pressed}) => [
+      style={({ pressed }) => [
         styles.root,
         selected && styles.selected,
         pressed && styles.pressed,
-      ]}>
+      ]}
+    >
       <View style={[styles.icon, selected && styles.selectedIcon]}>
-        <AppText weight="bold" style={selected ? styles.selectedIconText : styles.iconText}>
+        <AppText
+          weight="bold"
+          style={selected ? styles.selectedIconText : styles.iconText}
+        >
           {route.icon}
         </AppText>
       </View>
@@ -33,8 +37,12 @@ export function NavItem({route, selected, onPress}: NavItemProps) {
         <AppText variant="caption" tone="muted">
           {route.shortDescription}
         </AppText>
-        <AppText variant="caption" tone={route.parity.pending === 0 ? 'accent' : 'muted'}>
+        <AppText
+          variant="caption"
+          tone={route.parity.pending === 0 ? 'accent' : 'muted'}
+        >
           {route.parity.implemented}/{route.parity.total} implemented
+          {route.parity.pending > 0 ? `, ${route.parity.pending} pending` : ''}
         </AppText>
       </View>
     </Pressable>

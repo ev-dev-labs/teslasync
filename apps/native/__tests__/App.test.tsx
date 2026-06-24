@@ -1,5 +1,5 @@
 import React from 'react';
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 
 import App from '../App';
@@ -34,7 +34,7 @@ jest.mock('../src/api/hooks', () => ({
     error: null,
   }),
   useSystemStatus: () => ({
-    data: {status: 'healthy', healthy: true},
+    data: { status: 'healthy', healthy: true },
     isLoading: false,
     isFetching: false,
     error: null,
@@ -44,10 +44,10 @@ jest.mock('../src/api/hooks', () => ({
       status: 'healthy',
       healthy: true,
       components: {
-        database: {status: 'healthy'},
-        mqtt: {status: 'healthy'},
-        tesla_api: {status: 'healthy'},
-        fleet_telemetry: {status: 'healthy'},
+        database: { status: 'healthy' },
+        mqtt: { status: 'healthy' },
+        tesla_api: { status: 'healthy' },
+        fleet_telemetry: { status: 'healthy' },
       },
     },
     isLoading: false,
@@ -122,13 +122,13 @@ jest.mock('../src/api/hooks', () => ({
     error: null,
   }),
   useAuthMode: () => ({
-    data: {mode: 'open', subject: null, capabilities: {}},
+    data: { mode: 'open', subject: null, capabilities: {} },
     isLoading: false,
     isFetching: false,
     error: null,
   }),
   useSettings: () => ({
-    data: {unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar'},
+    data: { unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar' },
     isLoading: false,
     isFetching: false,
     error: null,
@@ -137,14 +137,14 @@ jest.mock('../src/api/hooks', () => ({
 
 jest.mock('react-native-safe-area-context', () => {
   const ReactActual = require('react') as typeof import('react');
-  const {View} = require('react-native') as typeof import('react-native');
-  const SafeAreaHost = ({children}: {children: ReactNode}) =>
+  const { View } = require('react-native') as typeof import('react-native');
+  const SafeAreaHost = ({ children }: { children: ReactNode }) =>
     ReactActual.createElement(View, null, children);
 
   return {
     SafeAreaProvider: SafeAreaHost,
     SafeAreaView: SafeAreaHost,
-    useSafeAreaInsets: () => ({top: 0, right: 0, bottom: 0, left: 0}),
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
   };
 });
 
@@ -162,6 +162,7 @@ test('renders the TeslaSync native shell', async () => {
   expect(serialized).toContain('Driving');
   expect(serialized).toContain('Auth');
   expect(serialized).toContain('Native route parity');
-  expect(serialized).toContain('Unresolved by group');
+  expect(serialized).toContain('Pending by group');
+  expect(serialized).toContain('Pending route status');
   expect(serialized).toContain('Route parity evidence');
 });

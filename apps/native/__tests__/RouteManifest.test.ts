@@ -1,5 +1,6 @@
 import {
   EXPECTED_WEB_ROUTE_COUNT,
+  IMPLEMENTED_WEB_ROUTE_IDS,
   getRouteParitySummary,
   routeGroupParitySummaries,
   routeGroups,
@@ -10,10 +11,10 @@ import {
 declare const __dirname: string;
 declare function require(moduleName: string): unknown;
 
-const {readFileSync} = require('fs') as {
+const { readFileSync } = require('fs') as {
   readFileSync: (path: string, encoding: string) => string;
 };
-const {resolve} = require('path') as {
+const { resolve } = require('path') as {
   resolve: (...paths: string[]) => string;
 };
 
@@ -23,7 +24,9 @@ const appSource = readFileSync(
 );
 
 function extractWebRoutePaths(source: string) {
-  return [...source.matchAll(/<Route\s+path="([^"]+)"/g)].map(match => match[1]);
+  return [...source.matchAll(/<Route\s+path="([^"]+)"/g)].map(
+    match => match[1],
+  );
 }
 
 function countByPath(paths: readonly string[]) {
@@ -64,7 +67,7 @@ test('tracks the current web route universe with representative routes present',
   expect(sourcePaths.filter(sourcePath => sourcePath === '*')).toHaveLength(2);
 });
 
-test('keeps every manifest entry typed, implemented, and mapped to a native target', () => {
+test('keeps every manifest entry typed, statused, and mapped to a native target', () => {
   const nativeTargets = new Set(routes.map(route => route.id));
 
   for (const route of webRouteManifest) {
@@ -72,28 +75,43 @@ test('keeps every manifest entry typed, implemented, and mapped to a native targ
     expect(route.label.length).toBeGreaterThan(0);
     expect(route.webPath.length).toBeGreaterThan(0);
     expect(nativeTargets.has(route.nativeTarget)).toBe(true);
-    expect(route.implementationStatus).toBe('implemented');
+    expect(['implemented', 'pending']).toContain(route.implementationStatus);
     expect(route.evidence.length).toBeGreaterThan(0);
-    expect(route.evidence).toMatch(/^Implemented/);
+    expect(route.evidence).toMatch(
+      route.implementationStatus === 'implemented'
+        ? /^Implemented/
+        : /^Pending/,
+    );
   }
 });
 
-test('derives complete native shell parity counters from the route manifest', () => {
+test('derives honest native shell parity counters from the route manifest', () => {
   const summary = getRouteParitySummary();
   const nativeTotal = routes.reduce(
     (total, route) => total + route.parity.total,
     0,
   );
+  const implementedRoutes = webRouteManifest.filter(
+    route => route.implementationStatus === 'implemented',
+  );
+  const pendingRoutes = webRouteManifest.filter(
+    route => route.implementationStatus === 'pending',
+  );
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
-    implemented: EXPECTED_WEB_ROUTE_COUNT,
-    pending: 0,
+    implemented: IMPLEMENTED_WEB_ROUTE_IDS.length,
+    pending: EXPECTED_WEB_ROUTE_COUNT - IMPLEMENTED_WEB_ROUTE_IDS.length,
   });
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
+  expect(implementedRoutes.map(route => route.id).sort()).toEqual(
+    [...IMPLEMENTED_WEB_ROUTE_IDS].sort(),
+  );
+  expect(implementedRoutes.length).toBeGreaterThan(0);
+  expect(pendingRoutes.length).toBeGreaterThan(0);
   expect(
     routes.find(route => route.id === 'system')?.parity.pending,
-  ).toBe(0);
+  ).toBeGreaterThan(0);
 });
 
 test('derives route parity counters by web route group', () => {
@@ -143,12 +161,17 @@ test('marks N0006 energy analytics and diagnostics routes with implemented evide
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
   }
+
+  for (const routeId of ['energy-products', 'energy-flow', 'power-flow']) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('pending');
+    expect(route?.evidence).toMatch(/^Pending: /);
+  }
 });
 
-test('marks N0007 notification platform routes with implemented or honest unavailable evidence', () => {
+test('marks N0007 notification platform routes with implemented and pending evidence', () => {
   const implementedRouteIds = [
     'alerts',
-    'alert-studio',
     'alert-rules',
     'notifications',
     'notifications-inbox',
@@ -156,11 +179,14 @@ test('marks N0007 notification platform routes with implemented or honest unavai
     'notifications-alerts',
     'notifications-channels',
     'notifications-webhooks',
-    'notifications-browser',
     'notifications-quiet-hours',
     'notifications-rules',
-    'notifications-studio',
     'notifications-audit',
+  ];
+  const pendingRouteIds = [
+    'alert-studio',
+    'notifications-browser',
+    'notifications-studio',
   ];
 
   for (const routeId of implementedRouteIds) {
@@ -169,12 +195,9 @@ test('marks N0007 notification platform routes with implemented or honest unavai
     expect(route?.evidence).toMatch(/^Implemented: /);
   }
 
-  expect(
-    webRouteManifest.find(entry => entry.id === 'notifications-browser')
-      ?.evidence,
-  ).toContain('unavailable');
-  expect(
-    webRouteManifest.find(entry => entry.id === 'notifications-studio')
-      ?.implementationStatus,
-  ).toBe('implemented');
+  for (const routeId of pendingRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('pending');
+    expect(route?.evidence).toMatch(/^Pending: /);
+  }
 });

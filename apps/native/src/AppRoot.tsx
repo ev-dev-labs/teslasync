@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from './components/ui/AppText';
 import { GlassPanel } from './components/ui/GlassPanel';
+import { StatusPill } from './components/ui/StatusPill';
 import { NavItem } from './components/navigation/NavItem';
 import {
   getRoutesForNativeTarget,
@@ -138,7 +139,7 @@ export function AppRoot() {
               {routeParitySummary.implemented} implemented
             </AppText>
             <AppText variant="caption" tone="muted">
-              {routeParitySummary.pending} unresolved
+              {routeParitySummary.pending} pending
             </AppText>
             <AppText variant="caption" tone="muted">
               lifecycle: {platformStatus.appState}
@@ -159,17 +160,14 @@ export function AppRoot() {
                 implemented
               </AppText>
               <AppText variant="caption" tone="muted">
-                {routeParitySummary.pending} unresolved routes
+                {routeParitySummary.pending} pending routes
               </AppText>
               <View style={styles.groupSummaryList}>
                 <AppText variant="caption" tone="muted">
-                  Unresolved by group
+                  Pending by group
                 </AppText>
                 {routeGroupParitySummaries.map(groupSummary => (
-                  <View
-                    key={groupSummary.group}
-                    style={styles.groupSummaryRow}
-                  >
+                  <View key={groupSummary.group} style={styles.groupSummaryRow}>
                     <AppText variant="caption" tone="muted">
                       {groupSummary.label}
                     </AppText>
@@ -203,7 +201,17 @@ interface RouteParityPanelProps {
   mappedRoutes: WebRouteDefinition[];
 }
 
+function routeStatusCopy(route: WebRouteDefinition) {
+  return route.implementationStatus === 'implemented'
+    ? { label: 'Implemented', state: 'online' as const }
+    : { label: 'Pending', state: 'warning' as const };
+}
+
 function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
+  const pendingRoutes = mappedRoutes.filter(
+    mappedRoute => mappedRoute.implementationStatus === 'pending',
+  );
+
   return (
     <GlassPanel style={styles.routePanel}>
       <View style={styles.parityHeader}>
@@ -213,7 +221,8 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
           </AppText>
           <AppText tone="secondary">
             {route.label} owns {route.parity.total} web routes from
-            web/src/App.tsx and renders native evidence for each.
+            web/src/App.tsx. Implemented routes render native parity evidence;
+            pending routes stay visible until a dedicated native surface exists.
           </AppText>
         </View>
         <View style={styles.parityStats}>
@@ -227,7 +236,7 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
           </View>
           <View style={styles.parityStat}>
             <AppText variant="caption" tone="muted">
-              Unresolved
+              Pending
             </AppText>
             <AppText
               weight="bold"
@@ -239,29 +248,47 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
         </View>
       </View>
 
+      <View style={styles.pendingSummary}>
+        <AppText variant="caption" tone="muted">
+          Pending route status
+        </AppText>
+        <AppText tone="secondary">
+          {pendingRoutes.length === 0
+            ? 'No pending web routes for this native target.'
+            : `${pendingRoutes.length} mapped web routes still need dedicated native parity.`}
+        </AppText>
+      </View>
+
       {mappedRoutes.length === 0 ? (
         <AppText tone="secondary">
           No web routes are mapped to this native target.
         </AppText>
       ) : (
-        <View style={styles.pendingList}>
-          {mappedRoutes.map(mappedRoute => (
-            <View key={mappedRoute.id} style={styles.pendingRoute}>
-              <View style={styles.pendingRouteCopy}>
-                <AppText weight="semibold">{mappedRoute.label}</AppText>
-                <AppText variant="caption" tone="muted">
-                  {mappedRoute.webPath}
+        <View style={styles.routeList}>
+          {mappedRoutes.map(mappedRoute => {
+            const status = routeStatusCopy(mappedRoute);
+
+            return (
+              <View key={mappedRoute.id} style={styles.mappedRoute}>
+                <View style={styles.mappedRouteCopy}>
+                  <View style={styles.mappedRouteTitle}>
+                    <AppText weight="semibold">{mappedRoute.label}</AppText>
+                    <StatusPill label={status.label} state={status.state} />
+                  </View>
+                  <AppText variant="caption" tone="muted">
+                    {mappedRoute.webPath}
+                  </AppText>
+                </View>
+                <AppText
+                  variant="caption"
+                  tone="muted"
+                  style={styles.routeEvidence}
+                >
+                  {mappedRoute.evidence}
                 </AppText>
               </View>
-              <AppText
-                variant="caption"
-                tone="muted"
-                style={styles.pendingEvidence}
-              >
-                {mappedRoute.evidence}
-              </AppText>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </GlassPanel>
@@ -390,10 +417,18 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     backgroundColor: colors.surfaceRaised,
   },
-  pendingList: {
+  pendingSummary: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: spacing.md,
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceRaised,
+  },
+  routeList: {
     gap: spacing.sm,
   },
-  pendingRoute: {
+  mappedRoute: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.md,
@@ -401,11 +436,17 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     paddingTop: spacing.sm,
   },
-  pendingRouteCopy: {
+  mappedRouteCopy: {
     minWidth: 180,
     gap: spacing.xs,
   },
-  pendingEvidence: {
+  mappedRouteTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  routeEvidence: {
     flex: 1,
   },
 });
