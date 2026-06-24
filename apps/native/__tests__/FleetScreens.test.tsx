@@ -239,6 +239,9 @@ test('renders drive list, trip detail, route replay, and readiness sections', as
 
   expect(serialized).toContain('Driving overview');
   expect(serialized).toContain('Drives and trips');
+  expect(serialized).toContain('Trip parity summary');
+  expect(serialized).toContain('Drive-backed trip detail');
+  expect(serialized).toContain('/drives/3/telemetry');
   expect(serialized).toContain('Drive detail shell');
   expect(serialized).toContain('Drive route route summary from Home to Office');
   expect(serialized).toContain('Replay speed summary');
@@ -267,6 +270,7 @@ test('renders empty states without hiding detail or readiness sections', async (
   expect(chargingSerialized).toContain('No selected charging session');
   expect(chargingSerialized).toContain('Charging route readiness');
   expect(drivingSerialized).toContain('No drives returned');
+  expect(drivingSerialized).toContain('No selected trip');
   expect(drivingSerialized).toContain('No selected drive');
   expect(drivingSerialized).toContain('No replay drive selected');
   expect(drivingSerialized).toContain('Driving and trips route readiness');
@@ -287,4 +291,5 @@ test('renders API error states without inventing fleet data', async () => {
   expect(vehiclesSerialized).toContain('Vehicle API unavailable');
   expect(chargingSerialized).toContain('Charging API unavailable');
   expect(drivingSerialized).toContain('Drive API unavailable');
+  expect(drivingSerialized).toContain('Trip source API unavailable');
 });

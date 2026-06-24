@@ -11,6 +11,7 @@ import {
   type FleetRouteReadinessItem,
 } from './FleetRouteReadiness';
 import {fleetStyles} from './fleetStyles';
+import {TripSummarySection} from './TripSummarySection';
 
 const drivingReadinessItems: FleetRouteReadinessItem[] = [
   {
@@ -93,6 +94,12 @@ export function DrivingFleetView() {
         isLoading={drivesQuery.isLoading}
         hasError={Boolean(drivesQuery.error)}
         onSelect={setSelectedDriveId}
+      />
+      <TripSummarySection
+        drives={drives}
+        selectedTrip={detailDrive}
+        isLoading={drivesQuery.isLoading || detailQuery.isLoading}
+        hasError={Boolean(drivesQuery.error || detailQuery.error)}
       />
       <DriveDetailSection
         drive={detailDrive}
