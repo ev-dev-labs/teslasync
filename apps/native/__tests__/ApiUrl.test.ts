@@ -1,4 +1,4 @@
-import { apiUrl, buildQueryPath } from '../src/api/client';
+import { apiUrl, buildQueryPath, request } from '../src/api/client';
 import {
   buildChargeTelemetryPath,
   buildChargingSessionPath,
@@ -13,12 +13,15 @@ import {
 } from '../src/api/hooks';
 
 describe('native API URL construction', () => {
+  const originalFetch = globalThis.fetch;
+
   beforeEach(() => {
     globalThis.TESLASYNC_API_BASE_URL = 'https://teslasync.example.test/';
   });
 
   afterEach(() => {
     globalThis.TESLASYNC_API_BASE_URL = undefined;
+    globalThis.fetch = originalFetch;
   });
 
   test('client adds a single api prefix for relative hook paths', () => {
@@ -56,5 +59,26 @@ describe('native API URL construction', () => {
     expect(buildQueryPath('/system/status', {vehicle_id: null, limit: undefined})).toBe(
       '/system/status',
     );
+  });
+
+  test('includes proxy cookies for forward-auth API calls without adding a token header', async () => {
+    const response = new Response(JSON.stringify({mode: 'open'}), {
+      status: 200,
+      headers: {'content-type': 'application/json'},
+    });
+    const mockFetch = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
+    mockFetch.mockResolvedValue(response);
+    globalThis.fetch = mockFetch as typeof fetch;
+
+    await request('/system/auth-mode');
+
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init).toEqual(
+      expect.objectContaining({
+        credentials: 'include',
+      }),
+    );
+    expect(init?.headers).toBeInstanceOf(Headers);
+    expect((init?.headers as Headers).has('Authorization')).toBe(false);
   });
 });

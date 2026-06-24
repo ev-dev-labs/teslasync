@@ -127,6 +127,7 @@ async function parseError(response: Response): Promise<{message: string; code?: 
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(apiUrl(path), {
+    credentials: 'include',
     ...init,
     headers: buildHeaders(init),
   });
