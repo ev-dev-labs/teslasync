@@ -88,6 +88,19 @@ const mockPlatformStatus = {
       evidence: 'No native registration module is claimed.',
     },
   ],
+  launchActions: [
+    {
+      id: 'notifications-inbox',
+      label: 'Notification inbox action',
+      routeId: 'alerts',
+      sourcePath: 'notifications/inbox',
+      deepLinkURL: 'teslasync://notifications/inbox',
+      state: 'unavailable',
+      detail:
+        'Notification inbox action is mapped to alerts but is not installed.',
+      evidence: 'No jump-list bridge is claimed.',
+    },
+  ],
 };
 
 jest.mock('../src/api/hooks', () => ({
@@ -462,6 +475,9 @@ test('keeps settings and API error states visible when native hooks fail', async
   pressButton(tree, 'Settings');
 
   const rendered = serialize(tree);
+  expect(rendered).toContain('Platform launch actions');
+  expect(rendered).toContain('Notification inbox action');
+  expect(rendered).toContain('teslasync://notifications/inbox');
   expect(rendered).toContain('Settings unavailable');
   expect(rendered).toContain('Native settings editing unavailable');
   expect(rendered).toContain('Auth state partially unavailable');

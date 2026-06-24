@@ -410,8 +410,10 @@ export const webRouteManifest = [
     sourcePath: 'alert-studio',
     group: 'operations',
     label: 'Legacy Alert Studio Redirect',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders native notification-studio write actions as unavailable instead of claiming unsupported rule editing.',
   }),
   webRoute({
     id: 'alert-rules',
@@ -446,8 +448,10 @@ export const webRouteManifest = [
     sourcePath: 'notifications/archived',
     group: 'operations',
     label: 'Archived Notifications',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders archived notification rows from /notifications/logs?archived=true.',
   }),
   webRoute({
     id: 'notifications-alerts',
@@ -514,16 +518,20 @@ export const webRouteManifest = [
     sourcePath: 'notifications/studio',
     group: 'operations',
     label: 'Notifications Studio',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders native notification studio actions as unavailable until validation and confirmation gates exist.',
   }),
   webRoute({
     id: 'notifications-audit',
     sourcePath: 'notifications/audit',
     group: 'operations',
     label: 'Notifications Audit',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders notification delivery rows as an audit-style trail with status and error context.',
   }),
   webRoute({
     id: 'geofences',

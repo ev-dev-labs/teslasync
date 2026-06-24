@@ -73,6 +73,7 @@ export function SettingsScreen({ platformStatus }: SettingsScreenProps) {
     'unknown';
   const currentPlatformStatus =
     platformStatus ?? buildPlatformIntegrationStatus();
+  const platformLaunchActions = currentPlatformStatus.launchActions ?? [];
 
   return (
     <View style={styles.root}>
@@ -128,6 +129,35 @@ export function SettingsScreen({ platformStatus }: SettingsScreenProps) {
               />
             </View>
           ))}
+          {platformLaunchActions.length > 0 ? (
+            <View style={styles.launchActions}>
+              <AppText variant="title" weight="bold">
+                Platform launch actions
+              </AppText>
+              <AppText tone="secondary">
+                Typed taskbar, jump-list, and launcher shortcut equivalents are
+                visible here without claiming OS installation.
+              </AppText>
+              {platformLaunchActions.map(action => (
+                <View key={action.id} style={styles.capabilityRow}>
+                  <View style={styles.capabilityCopy}>
+                    <AppText weight="semibold">{action.label}</AppText>
+                    <AppText tone="secondary">{action.detail}</AppText>
+                    <AppText variant="caption" tone="muted">
+                      {action.deepLinkURL}
+                    </AppText>
+                    <AppText variant="caption" tone="muted">
+                      {action.evidence}
+                    </AppText>
+                  </View>
+                  <StatusPill
+                    label={action.state}
+                    state={capabilityPillState(action.state)}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       </GlassPanel>
 
@@ -383,6 +413,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: spacing.xs,
+  },
+  launchActions: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.sm,
+    paddingTop: spacing.md,
   },
   codeBox: {
     borderWidth: 1,

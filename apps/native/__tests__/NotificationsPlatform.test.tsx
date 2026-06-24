@@ -38,6 +38,11 @@ function renderAlertsScreen(): string {
   return JSON.stringify(tree?.toJSON());
 }
 
+interface NotificationLogFilters {
+  archived?: boolean;
+  limit?: number;
+}
+
 beforeEach(() => {
   mockUseAlerts.mockReturnValue(
     query([
@@ -52,8 +57,46 @@ beforeEach(() => {
       },
     ]),
   );
-  mockUseNotificationLogs.mockReturnValue(
-    query([
+  mockUseNotificationLogs.mockImplementation((filters?: NotificationLogFilters) => {
+    if (filters?.archived) {
+      return query([
+        {
+          id: 22,
+          channel_id: 3,
+          alert_id: 5,
+          title: 'Archived charging notice',
+          message: 'User archived the resolved charge alert.',
+          status: 'sent',
+          severity: 'warn',
+          error: null,
+          created_at: '2026-06-23T20:05:00Z',
+          sent_at: '2026-06-23T20:05:01Z',
+          read_at: '2026-06-23T20:06:00Z',
+          archived_at: '2026-06-23T20:07:00Z',
+        },
+      ]);
+    }
+
+    if (filters?.limit === 12) {
+      return query([
+        {
+          id: 23,
+          channel_id: 3,
+          alert_id: 5,
+          title: 'Notification audit event',
+          message: 'Delivery attempt captured for native audit parity.',
+          status: 'sent',
+          severity: 'info',
+          error: null,
+          created_at: '2026-06-23T20:08:00Z',
+          sent_at: '2026-06-23T20:08:01Z',
+          read_at: null,
+          archived_at: null,
+        },
+      ]);
+    }
+
+    return query([
       {
         id: 21,
         channel_id: 3,
@@ -68,8 +111,8 @@ beforeEach(() => {
         read_at: null,
         archived_at: null,
       },
-    ]),
-  );
+    ]);
+  });
   mockUseAlertRules.mockReturnValue(
     query([
       {
@@ -144,14 +187,22 @@ test('renders native notification inbox, rules, channels, quiet hours, and unava
     archived: false,
     limit: 10,
   });
+  expect(mockUseNotificationLogs).toHaveBeenCalledWith({
+    archived: true,
+    limit: 5,
+  });
+  expect(mockUseNotificationLogs).toHaveBeenCalledWith({ limit: 12 });
   expect(serialized).toContain('Native notification platform');
   expect(serialized).toContain('Charging stopped');
+  expect(serialized).toContain('Archived charging notice');
+  expect(serialized).toContain('Notification audit event');
   expect(serialized).toContain('webhook returned 500');
   expect(serialized).toContain('Battery alert rule');
   expect(serialized).toContain('Ops Webhook');
   expect(serialized).toContain('22:00 - 06:00');
   expect(serialized).toContain('Charge interrupted');
   expect(serialized).toContain('Native rule editing unavailable');
+  expect(serialized).toContain('Native notification studio unavailable');
   expect(serialized).toContain('Push token registration unavailable');
 });
 
@@ -176,8 +227,10 @@ test('renders explicit unavailable states when notification endpoints fail', () 
   const serialized = renderAlertsScreen();
 
   expect(serialized).toContain('Notification inbox unavailable');
+  expect(serialized).toContain('Archived notifications unavailable');
   expect(serialized).toContain('Alert rules unavailable');
   expect(serialized).toContain('Notification channels unavailable');
+  expect(serialized).toContain('Notification audit unavailable');
   expect(serialized).toContain('Quiet-hours windows unavailable');
   expect(serialized).toContain('no delivery success is assumed');
 });

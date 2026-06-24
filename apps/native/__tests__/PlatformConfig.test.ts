@@ -32,6 +32,20 @@ describe('native platform notification and deep-link config', () => {
     expect(manifest).toContain('android.intent.action.VIEW');
     expect(manifest).toContain('android.intent.category.BROWSABLE');
     expect(manifest).toContain('android:scheme="teslasync"');
+
+    const mainActivity = readNativeFile(
+      'android',
+      'app',
+      'src',
+      'main',
+      'java',
+      'com',
+      'teslasyncnative',
+      'MainActivity.kt',
+    );
+
+    expect(mainActivity).toContain('override fun onNewIntent(intent: Intent)');
+    expect(mainActivity).toContain('setIntent(intent)');
   });
 
   test('iOS declares teslasync URL scheme and notification usage copy', () => {

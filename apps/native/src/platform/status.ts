@@ -12,6 +12,7 @@ import {
   TESLASYNC_URL_SCHEME,
   type ParsedDeepLink,
 } from './deepLinks';
+import type { RouteId } from '../navigation/routes';
 
 export type PlatformCapabilityState =
   | 'available'
@@ -27,6 +28,17 @@ export interface PlatformCapabilityStatus {
   evidence: string;
 }
 
+export interface PlatformLaunchActionStatus {
+  id: string;
+  label: string;
+  routeId: RouteId;
+  sourcePath: string;
+  deepLinkURL: string;
+  state: PlatformCapabilityState;
+  detail: string;
+  evidence: string;
+}
+
 export interface PlatformIntegrationStatus {
   os: PlatformOSType | string;
   appState: AppStateStatus;
@@ -35,7 +47,40 @@ export interface PlatformIntegrationStatus {
   lastDeepLink: ParsedDeepLink | null;
   deepLinkError?: string;
   capabilities: PlatformCapabilityStatus[];
+  launchActions: PlatformLaunchActionStatus[];
 }
+
+const launchActionDefinitions = [
+  {
+    id: 'dashboard',
+    label: 'Fleet dashboard action',
+    routeId: 'dashboard',
+    sourcePath: '/',
+  },
+  {
+    id: 'notifications-inbox',
+    label: 'Notification inbox action',
+    routeId: 'alerts',
+    sourcePath: 'notifications/inbox',
+  },
+  {
+    id: 'vehicles',
+    label: 'Vehicle garage action',
+    routeId: 'vehicles',
+    sourcePath: 'vehicles',
+  },
+  {
+    id: 'system-status',
+    label: 'System status action',
+    routeId: 'system',
+    sourcePath: 'system/status',
+  },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  routeId: RouteId;
+  sourcePath: string;
+}[];
 
 function platformLabel(os: PlatformOSType | string): string {
   if (os === 'ios') {
@@ -112,9 +157,33 @@ export function getPlatformCapabilities(
           ? 'Windows protocol activation is declared, but jump-list/taskbar commands require a native WinAppSDK bridge.'
           : 'Launcher shortcut equivalents require platform-native shortcut modules and are intentionally not claimed as done.',
       evidence:
-        'The native UI shows this as unavailable instead of reporting a fake shortcut integration.',
+        'The native UI shows typed launch action placeholders as unavailable instead of reporting a fake shortcut integration.',
     },
   ];
+}
+
+export function getPlatformLaunchActions(
+  os: PlatformOSType | string = Platform.OS,
+): PlatformLaunchActionStatus[] {
+  const label = platformLabel(os);
+  const shortcutName =
+    os === 'windows' ? 'taskbar jump list' : 'launcher shortcut';
+
+  return launchActionDefinitions.map(action => {
+    const deepLinkPath =
+      action.sourcePath === '/' ? '' : action.sourcePath.replace(/^\/+/, '');
+    return {
+      ...action,
+      deepLinkURL:
+        deepLinkPath.length === 0
+          ? `${TESLASYNC_URL_SCHEME}:///`
+          : `${TESLASYNC_URL_SCHEME}://${deepLinkPath}`,
+      state: 'unavailable',
+      detail: `${action.label} is mapped to the ${action.routeId} native route, but it is not installed as a ${label} ${shortcutName}.`,
+      evidence:
+        'Protocol URLs are parseable by the native shell; no OS shortcut installer, jump-list bridge, or token-backed push action is wired in this slice.',
+    };
+  });
 }
 
 export function buildPlatformIntegrationStatus(
@@ -131,6 +200,7 @@ export function buildPlatformIntegrationStatus(
     lastDeepLink,
     deepLinkError,
     capabilities: getPlatformCapabilities(),
+    launchActions: getPlatformLaunchActions(),
   };
 }
 
@@ -186,6 +256,7 @@ export function usePlatformIntegrationStatus(): PlatformIntegrationStatus {
   }, []);
 
   const capabilities = useMemo(() => getPlatformCapabilities(), []);
+  const launchActions = useMemo(() => getPlatformLaunchActions(), []);
 
   return {
     os: Platform.OS,
@@ -195,5 +266,6 @@ export function usePlatformIntegrationStatus(): PlatformIntegrationStatus {
     lastDeepLink,
     deepLinkError,
     capabilities,
+    launchActions,
   };
 }

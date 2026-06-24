@@ -1,4 +1,8 @@
-import { parseDeepLink, pathFromDeepLinkURL } from '../src/platform/deepLinks';
+import {
+  parseDeepLink,
+  pathFromDeepLinkURL,
+  queryParamsFromDeepLinkURL,
+} from '../src/platform/deepLinks';
 
 describe('native deep-link route parsing', () => {
   test('normalizes custom scheme, HTTPS, and path-only URLs', () => {
@@ -15,7 +19,9 @@ describe('native deep-link route parsing', () => {
   });
 
   test('maps notification links to the alerts native target', () => {
-    const parsed = parseDeepLink('teslasync://notifications/inbox');
+    const parsed = parseDeepLink(
+      'teslasync://notifications/inbox?notification_id=21&from=push',
+    );
 
     expect(parsed).toEqual(
       expect.objectContaining({
@@ -25,8 +31,23 @@ describe('native deep-link route parsing', () => {
         routeId: 'alerts',
         label: 'Notifications Inbox',
         implementationStatus: 'implemented',
+        queryParams: {
+          notification_id: '21',
+          from: 'push',
+        },
       }),
     );
+  });
+
+  test('extracts query params separately from route params for push handoffs', () => {
+    expect(
+      queryParamsFromDeepLinkURL(
+        'teslasync://vehicles/42/access?notification_id=21&from=push#details',
+      ),
+    ).toEqual({
+      notification_id: '21',
+      from: 'push',
+    });
   });
 
   test('extracts dynamic route params while preserving pending parity status', () => {

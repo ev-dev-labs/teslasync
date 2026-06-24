@@ -244,6 +244,8 @@ function QuietHoursRow({ window }: { window: QuietHoursWindow }) {
 export function AlertsScreen() {
   const alertsQuery = useAlerts();
   const inboxQuery = useNotificationLogs({ archived: false, limit: 10 });
+  const archivedQuery = useNotificationLogs({ archived: true, limit: 5 });
+  const auditQuery = useNotificationLogs({ limit: 12 });
   const rulesQuery = useAlertRules();
   const channelsQuery = useNotificationChannels();
   const statsQuery = useNotificationStats();
@@ -251,6 +253,8 @@ export function AlertsScreen() {
 
   const alerts = alertsQuery.data ?? [];
   const inbox = inboxQuery.data ?? [];
+  const archived = archivedQuery.data ?? [];
+  const auditRows = auditQuery.data ?? [];
   const rules = rulesQuery.data ?? [];
   const channels = channelsQuery.data ?? [];
   const quietHours = quietHoursQuery.data ?? [];
@@ -299,6 +303,10 @@ export function AlertsScreen() {
             value={formatCount(quietHours.length)}
           />
           <KeyValueRow
+            label="Archived rows"
+            value={formatCount(archived.length)}
+          />
+          <KeyValueRow
             label="Sent notifications"
             value={formatCount(stats?.sent)}
           />
@@ -337,6 +345,33 @@ export function AlertsScreen() {
       </ScreenSection>
 
       <ScreenSection
+        title="Archived notifications"
+        subtitle="Native read-only view over /notifications/logs?archived=true for acknowledged delivery rows."
+      >
+        {archivedQuery.error ? (
+          <EmptyState
+            title="Archived notifications unavailable"
+            message="The archived notification query could not be loaded; no archive state is assumed."
+          />
+        ) : archived.length === 0 ? (
+          <EmptyState
+            title={
+              archivedQuery.isLoading
+                ? 'Loading archived notifications'
+                : 'No archived notification rows returned'
+            }
+            message="Archived notification rows will appear here after users archive inbox items."
+          />
+        ) : (
+          <View style={styles.list}>
+            {archived.map(log => (
+              <NotificationLogRow key={log.id} log={log} />
+            ))}
+          </View>
+        )}
+      </ScreenSection>
+
+      <ScreenSection
         title="Alert rules"
         subtitle="Native rule inventory from /alerts/rules; creation, edits, snooze, and test sends remain unavailable in this slice."
       >
@@ -368,6 +403,22 @@ export function AlertsScreen() {
       </ScreenSection>
 
       <ScreenSection
+        title="Notification studio"
+        subtitle="Write-oriented notification routes are represented as disabled native actions until validation and confirmation flows exist."
+      >
+        <View style={styles.metricGrid}>
+          <KeyValueRow label="Create rules" value="Unavailable" />
+          <KeyValueRow label="Edit rules" value="Unavailable" />
+          <KeyValueRow label="Snooze rules" value="Unavailable" />
+          <KeyValueRow label="Test channel sends" value="Unavailable" />
+        </View>
+        <EmptyState
+          title="Native notification studio unavailable"
+          message="Native write actions remain disabled instead of faking alert-studio or notification-studio parity without form validation, sudo confirmation, and test-send gates."
+        />
+      </ScreenSection>
+
+      <ScreenSection
         title="Delivery channels"
         subtitle="Configured notification transports from /notifications with secrets hidden and test sends disabled."
       >
@@ -389,6 +440,33 @@ export function AlertsScreen() {
           <View style={styles.list}>
             {channels.map(channel => (
               <ChannelRow key={channel.id} channel={channel} />
+            ))}
+          </View>
+        )}
+      </ScreenSection>
+
+      <ScreenSection
+        title="Notification audit trail"
+        subtitle="Recent notification delivery rows are reused as an audit-style trail with status, channel, read, archive, and error context."
+      >
+        {auditQuery.error ? (
+          <EmptyState
+            title="Notification audit unavailable"
+            message="The notification log endpoint could not be loaded for audit context."
+          />
+        ) : auditRows.length === 0 ? (
+          <EmptyState
+            title={
+              auditQuery.isLoading
+                ? 'Loading notification audit'
+                : 'No notification audit rows returned'
+            }
+            message="Recent notification activity will appear here when delivery rows are present."
+          />
+        ) : (
+          <View style={styles.list}>
+            {auditRows.map(log => (
+              <NotificationLogRow key={log.id} log={log} />
             ))}
           </View>
         )}
@@ -468,6 +546,12 @@ export function AlertsScreen() {
         title="Native push readiness"
         subtitle="Platform push registration is explicit about unavailable states; this slice does not persist device tokens."
       >
+        <View style={styles.metricGrid}>
+          <KeyValueRow label="APNs registration" value="Unavailable" />
+          <KeyValueRow label="FCM registration" value="Unavailable" />
+          <KeyValueRow label="WNS registration" value="Unavailable" />
+          <KeyValueRow label="Device token storage" value="Disabled" />
+        </View>
         <EmptyState
           title="Push token registration unavailable"
           message="APNs, FCM, and WNS registration need native modules plus secure server enrollment. In-app notification data above is API-backed; OS push delivery is not claimed as working."

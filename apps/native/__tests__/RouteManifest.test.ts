@@ -84,8 +84,8 @@ test('derives native shell parity counters from the route manifest', () => {
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
-    implemented: 35,
-    pending: EXPECTED_WEB_ROUTE_COUNT - 35,
+    implemented: 39,
+    pending: EXPECTED_WEB_ROUTE_COUNT - 39,
   });
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
   expect(
@@ -124,15 +124,19 @@ test('marks N0006 energy analytics and diagnostics routes with implemented evide
 test('marks N0007 notification platform routes with implemented or honest unavailable evidence', () => {
   const implementedRouteIds = [
     'alerts',
+    'alert-studio',
     'alert-rules',
     'notifications',
     'notifications-inbox',
+    'notifications-archived',
     'notifications-alerts',
     'notifications-channels',
     'notifications-webhooks',
     'notifications-browser',
     'notifications-quiet-hours',
     'notifications-rules',
+    'notifications-studio',
+    'notifications-audit',
   ];
 
   for (const routeId of implementedRouteIds) {
@@ -148,5 +152,5 @@ test('marks N0007 notification platform routes with implemented or honest unavai
   expect(
     webRouteManifest.find(entry => entry.id === 'notifications-studio')
       ?.implementationStatus,
-  ).toBe('pending');
+  ).toBe('implemented');
 });

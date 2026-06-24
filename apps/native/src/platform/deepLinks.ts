@@ -16,6 +16,7 @@ export interface ParsedDeepLink {
   implementationStatus: RouteImplementationStatus | 'unmatched';
   matched: boolean;
   params: Record<string, string>;
+  queryParams: Record<string, string>;
   reason?: string;
 }
 
@@ -25,6 +26,27 @@ function trimSlashes(value: string): string {
 
 function removeQueryAndHash(value: string): string {
   return value.replace(/[?#].*$/, '');
+}
+
+function queryStringFromDeepLinkURL(url: string): string {
+  const questionIndex = url.indexOf('?');
+  if (questionIndex === -1) {
+    return '';
+  }
+
+  const hashIndex = url.indexOf('#', questionIndex);
+  return url.slice(
+    questionIndex + 1,
+    hashIndex === -1 ? undefined : hashIndex,
+  );
+}
+
+function decodeQueryComponent(value: string): string {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, ' '));
+  } catch {
+    return value;
+  }
 }
 
 function normalizeSourcePath(value: string): string {
@@ -57,6 +79,27 @@ export function pathFromDeepLinkURL(url: string): string {
   }
 
   return normalizeSourcePath(raw);
+}
+
+export function queryParamsFromDeepLinkURL(
+  url: string,
+): Record<string, string> {
+  const queryString = queryStringFromDeepLinkURL(url.trim());
+  if (!queryString) {
+    return {};
+  }
+
+  const queryParams: Record<string, string> = {};
+  for (const segment of queryString.split('&')) {
+    if (!segment) {
+      continue;
+    }
+    const [rawKey, ...rawValueParts] = segment.split('=');
+    const key = decodeQueryComponent(rawKey);
+    const value = decodeQueryComponent(rawValueParts.join('='));
+    queryParams[key] = value;
+  }
+  return queryParams;
 }
 
 function matchRoutePattern(
@@ -112,6 +155,7 @@ function findRoute(sourcePath: string): {
 
 export function parseDeepLink(url: string): ParsedDeepLink {
   const sourcePath = pathFromDeepLinkURL(url);
+  const queryParams = queryParamsFromDeepLinkURL(url);
   const { route, params } = findRoute(sourcePath);
 
   if (!route) {
@@ -124,6 +168,7 @@ export function parseDeepLink(url: string): ParsedDeepLink {
       implementationStatus: 'unmatched',
       matched: false,
       params,
+      queryParams,
       reason: 'No route manifest entry matched this deep-link path.',
     };
   }
@@ -137,6 +182,7 @@ export function parseDeepLink(url: string): ParsedDeepLink {
     implementationStatus: route.implementationStatus,
     matched: true,
     params,
+    queryParams,
     reason:
       route.implementationStatus === 'implemented'
         ? route.evidence
