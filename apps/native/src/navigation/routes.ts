@@ -161,6 +161,18 @@ const implementedRouteIds = new Set<string>([
   'signals',
   'signal-explorer',
   'live-monitor',
+  'vehicles-id-access',
+  'digital-twin',
+  'tire-pressure',
+  'software-updates',
+  'vehicle-systems-software',
+  'climate-control',
+  'climate',
+  'security-access',
+  'safety-settings',
+  'maintenance',
+  'media-player',
+  'guard-mode',
   'tesla-account',
   'search',
   'not-found-layout',
@@ -168,8 +180,6 @@ const implementedRouteIds = new Set<string>([
 ] as const);
 
 const nativeSummaryRouteIds = new Set<string>([
-  'vehicles-id-access',
-  'digital-twin',
   'commands',
   'command-history',
   'automations',
@@ -209,12 +219,8 @@ const nativeSummaryRouteIds = new Set<string>([
   'power-flow',
   'energy-products',
   'battery-cells',
-  'safety-settings',
   'geofences',
   'chatbot',
-  'tire-pressure',
-  'software-updates',
-  'vehicle-systems-software',
   'vampire-drain',
   'locations',
   'timeline',
@@ -253,9 +259,6 @@ const nativeSummaryRouteIds = new Set<string>([
   'anomaly-detection',
   'analytics-anomalies',
   'driving-dynamics',
-  'climate-control',
-  'climate',
-  'security-access',
   'cost-analysis',
   'charging-costs',
   'tesla-charging-history',
@@ -265,11 +268,8 @@ const nativeSummaryRouteIds = new Set<string>([
   'powershare',
   'drive-score',
   'weekly-digest',
-  'maintenance',
   'data-export',
   'drivetrain-health',
-  'media-player',
-  'guard-mode',
   'navigation',
   'vehicle-comparison',
   'charging-heatmap',
@@ -538,6 +538,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Vehicle Access',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders native vehicle access state from /vehicles/{vehicleID}/state and /security/latest, with invite/driver mutations explicitly unavailable.',
   }),
   webRoute({
     id: 'digital-twin',
@@ -545,6 +547,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Digital Twin',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders digital-twin metadata, firmware, vehicle config, and live state without embedding the web 3D view.',
   }),
   webRoute({
     id: 'energy',
@@ -843,6 +847,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Tire Pressure',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders native TPMS pressure cards from /tire-pressure/latest with visible empty and error states.',
   }),
   webRoute({
     id: 'software-updates',
@@ -850,6 +856,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Software Updates',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders software update history and current firmware from /software-updates, /vehicle-config/latest, and live vehicle state.',
   }),
   webRoute({
     id: 'vehicle-systems-software',
@@ -857,6 +865,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Vehicle Software',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders the vehicle-systems software route through native firmware, config, and update-history sections.',
   }),
   webRoute({
     id: 'vampire-drain',
@@ -1309,6 +1319,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Climate Control',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders native climate-control state from /climate/latest and keeps HVAC command actions unavailable.',
   }),
   webRoute({
     id: 'climate',
@@ -1316,6 +1328,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Climate',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders cabin temperature, fan, keeper, defrost, and protection summaries from /climate/latest.',
   }),
   webRoute({
     id: 'security-access',
@@ -1323,6 +1337,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Security Access',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders lock, door/window, valet, service, and phone-key state from /security/latest without unsafe mutations.',
   }),
   webRoute({
     id: 'charging-curve',
@@ -1414,6 +1430,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Maintenance',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders deterministic maintenance reminders and service-record status from /maintenance and /maintenance/records.',
   }),
   webRoute({
     id: 'data-export',
@@ -1463,13 +1481,17 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Media Player',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders now-playing state from /media/latest with play/pause/source controls explicitly unavailable.',
   }),
   webRoute({
     id: 'safety-settings',
     sourcePath: 'safety-settings',
-    group: 'platform',
+    group: 'fleet',
     label: 'Safety Settings',
-    nativeTarget: 'settings',
+    nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders read-only ADAS and PIN-to-drive safety settings from /safety/latest.',
   }),
   webRoute({
     id: 'guard-mode',
@@ -1477,6 +1499,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Guard Mode',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders guard/sentry state from /security/latest and leaves guard commands unavailable.',
   }),
   webRoute({
     id: 'navigation',

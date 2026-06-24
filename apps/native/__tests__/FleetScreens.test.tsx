@@ -34,6 +34,108 @@ const vehicleState = {
   software_version: '2026.20.1',
 };
 
+const tirePressure = {
+  front_left: 295000,
+  front_right: 296000,
+  rear_left: 301000,
+  rear_right: 300000,
+};
+
+const climate = {
+  inside_temp: 21.5,
+  outside_temp: 18.2,
+  driver_temp_setting: 20,
+  passenger_temp_setting: 20,
+  hvac_power: 'on',
+  is_ac_on: true,
+  fan_speed: 3,
+  climate_keeper_mode: 'off',
+  rear_defrost_enabled: false,
+  battery_heater: false,
+  overheat_protection: 'fan_only',
+  wiper_heat_enabled: false,
+  seat_vent_enabled: false,
+};
+
+const security = {
+  locked: true,
+  sentry_mode: true,
+  door_state: 'closed',
+  fd_window: 'closed',
+  fp_window: 'closed',
+  rd_window: 'closed',
+  rp_window: 'closed',
+  valet_mode_enabled: false,
+  service_mode: 'off',
+  paired_phone_key_count: 2,
+};
+
+const safety = {
+  automatic_emergency_braking_off: false,
+  automatic_blind_spot_camera: true,
+  pin_to_drive_enabled: true,
+  cruise_follow_distance: 4,
+};
+
+const media = {
+  playback_status: 'playing',
+  now_playing_title: 'Electric Feel',
+  now_playing_artist: 'MGMT',
+  now_playing_album: 'Oracular Spectacular',
+  playback_source: 'Bluetooth',
+  audio_volume: 6,
+  audio_volume_max: 11,
+  now_playing_elapsed: 42,
+  now_playing_duration: 230,
+};
+
+const vehicleConfig = {
+  car_type: 'Model Y',
+  trim_badging: 'Performance',
+  exterior_color: 'Pearl White',
+  wheel_type: 'Uberturbine',
+  software_version: '2026.20.1',
+};
+
+const softwareUpdate = {
+  id: 12,
+  vehicle_id: 42,
+  version: '2026.20.1',
+  status: 'installed',
+  installed_at: '2026-06-20T08:00:00Z',
+  scheduled_at: null,
+  created_at: '2026-06-20T08:00:00Z',
+};
+
+const maintenanceItem = {
+  id: 1,
+  vehicle_id: 42,
+  category: 'tires',
+  name: 'Tire Rotation',
+  description: 'Rotate tires for even wear',
+  due_date: null,
+  due_mileage: 20000,
+  current_mileage: 12500,
+  last_service_date: null,
+  last_service_mileage: null,
+  interval_months: null,
+  interval_miles: 10000,
+  status: 'good' as const,
+  created_at: '2026-06-01T00:00:00Z',
+};
+
+const serviceRecord = {
+  id: 3,
+  vehicle_id: 42,
+  date: '2026-05-01',
+  description: 'Cabin air filter replaced',
+  mileage: 11800,
+  cost: 42,
+  provider: 'Tesla Service',
+  notes: 'Routine service',
+  created_at: '2026-05-01T00:00:00Z',
+};
+
 const chargingSession = {
   id: 9,
   vehicle_id: 42,
@@ -117,32 +219,54 @@ const driveTelemetry = [
   },
 ];
 
-let mockVehiclesData: typeof vehicle[] | undefined;
+let mockVehiclesData: (typeof vehicle)[] | undefined;
 let mockVehicleDetailData: typeof vehicle | undefined;
-let mockVehicleStateData: {state: typeof vehicleState; live: boolean} | undefined;
-let mockChargingSessionsData: typeof chargingSession[] | undefined;
+let mockVehicleStateData:
+  | { state: typeof vehicleState; live: boolean }
+  | undefined;
+let mockChargingSessionsData: (typeof chargingSession)[] | undefined;
 let mockChargingSessionData: typeof chargingSession | undefined;
 let mockChargeTelemetryData: typeof chargeTelemetry | undefined;
-let mockDrivesData: typeof drive[] | undefined;
+let mockDrivesData: (typeof drive)[] | undefined;
 let mockDriveData: typeof drive | undefined;
 let mockDriveTelemetryData: typeof driveTelemetry | undefined;
+let mockTirePressureData: typeof tirePressure | undefined;
+let mockClimateData: typeof climate | undefined;
+let mockSecurityData: typeof security | undefined;
+let mockSafetyData: typeof safety | undefined;
+let mockMediaData: typeof media | undefined;
+let mockVehicleConfigData: typeof vehicleConfig | undefined;
+let mockSoftwareUpdatesData: (typeof softwareUpdate)[] | undefined;
+let mockMaintenanceItemsData: (typeof maintenanceItem)[] | undefined;
+let mockServiceRecordsData: (typeof serviceRecord)[] | undefined;
 let mockVehiclesError: Error | null;
 let mockChargingError: Error | null;
 let mockDrivesError: Error | null;
+let mockVehicleSystemsError: Error | null;
 
 beforeEach(() => {
   mockVehiclesData = [vehicle];
   mockVehicleDetailData = vehicle;
-  mockVehicleStateData = {state: vehicleState, live: true};
+  mockVehicleStateData = { state: vehicleState, live: true };
   mockChargingSessionsData = [chargingSession];
   mockChargingSessionData = chargingSession;
   mockChargeTelemetryData = chargeTelemetry;
   mockDrivesData = [drive];
   mockDriveData = drive;
   mockDriveTelemetryData = driveTelemetry;
+  mockTirePressureData = tirePressure;
+  mockClimateData = climate;
+  mockSecurityData = security;
+  mockSafetyData = safety;
+  mockMediaData = media;
+  mockVehicleConfigData = vehicleConfig;
+  mockSoftwareUpdatesData = [softwareUpdate];
+  mockMaintenanceItemsData = [maintenanceItem];
+  mockServiceRecordsData = [serviceRecord];
   mockVehiclesError = null;
   mockChargingError = null;
   mockDrivesError = null;
+  mockVehicleSystemsError = null;
 });
 
 jest.mock('../src/api/hooks', () => ({
@@ -163,6 +287,60 @@ jest.mock('../src/api/hooks', () => ({
     isLoading: false,
     isFetching: false,
     error: mockVehiclesError,
+  }),
+  useTirePressureLatest: (vehicleId: number | null) => ({
+    data: vehicleId ? mockTirePressureData : undefined,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useClimateLatest: (vehicleId: number | null) => ({
+    data: vehicleId ? mockClimateData : undefined,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useSecurityLatest: (vehicleId: number | null) => ({
+    data: vehicleId ? mockSecurityData : undefined,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useSafetyLatest: (vehicleId: number | null) => ({
+    data: vehicleId ? mockSafetyData : undefined,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useMediaLatest: (vehicleId: number | null) => ({
+    data: vehicleId ? mockMediaData : undefined,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useVehicleConfigLatest: (vehicleId: number | null) => ({
+    data: vehicleId ? mockVehicleConfigData : undefined,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useSoftwareUpdates: () => ({
+    data: mockSoftwareUpdatesData,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useMaintenanceItems: () => ({
+    data: mockMaintenanceItemsData,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useServiceRecords: () => ({
+    data: mockServiceRecordsData,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
   }),
   useChargingSessions: () => ({
     data: mockChargingSessionsData,
@@ -225,7 +403,19 @@ test('renders vehicle list, detail, and route readiness sections', async () => {
   expect(serialized).toContain('Live route parser');
   expect(serialized).toContain('Live map coordinates');
   expect(serialized).toContain('dedicated live map route surface');
-  expect(serialized).toContain('Access routes are represented with typed route evidence');
+  expect(serialized).toContain('Vehicle access and digital twin routes');
+  expect(serialized).toContain('Tire pressure route');
+  expect(serialized).toContain('Climate and climate-control routes');
+  expect(serialized).toContain(
+    'Security access, guard mode, and safety settings routes',
+  );
+  expect(serialized).toContain('Media player route');
+  expect(serialized).toContain('Software updates and vehicle software routes');
+  expect(serialized).toContain('Maintenance route');
+  expect(serialized).toContain('295 kPa');
+  expect(serialized).toContain('Electric Feel');
+  expect(serialized).toContain('Tire Rotation');
+  expect(serialized).toContain('Native renders selected vehicle access state');
 });
 
 test('renders charging sessions, detail, telemetry chart, and readiness sections', async () => {
@@ -272,6 +462,15 @@ test('renders empty states without hiding detail or readiness sections', async (
   mockDrivesData = [];
   mockDriveData = undefined;
   mockDriveTelemetryData = [];
+  mockTirePressureData = undefined;
+  mockClimateData = undefined;
+  mockSecurityData = undefined;
+  mockSafetyData = undefined;
+  mockMediaData = undefined;
+  mockVehicleConfigData = undefined;
+  mockSoftwareUpdatesData = [];
+  mockMaintenanceItemsData = [];
+  mockServiceRecordsData = [];
 
   const vehiclesSerialized = await render(<VehiclesScreen />);
   const chargingSerialized = await render(<ChargingScreen />);
@@ -279,6 +478,12 @@ test('renders empty states without hiding detail or readiness sections', async (
 
   expect(vehiclesSerialized).toContain('No vehicles yet');
   expect(vehiclesSerialized).toContain('No selected vehicle');
+  expect(vehiclesSerialized).toContain('No tire pressure payload');
+  expect(vehiclesSerialized).toContain('No climate payload');
+  expect(vehiclesSerialized).toContain('No security payload');
+  expect(vehiclesSerialized).toContain('No media payload');
+  expect(vehiclesSerialized).toContain('No software update history');
+  expect(vehiclesSerialized).toContain('No maintenance items');
   expect(vehiclesSerialized).toContain('Vehicle route readiness');
   expect(chargingSerialized).toContain('No charging sessions');
   expect(chargingSerialized).toContain('No selected charging session');
@@ -297,12 +502,28 @@ test('renders API error states without inventing fleet data', async () => {
   mockVehiclesError = new Error('vehicle API failed');
   mockChargingError = new Error('charging API failed');
   mockDrivesError = new Error('drive API failed');
+  mockVehicleSystemsError = new Error('vehicle systems failed');
+  mockTirePressureData = undefined;
+  mockClimateData = undefined;
+  mockSecurityData = undefined;
+  mockSafetyData = undefined;
+  mockMediaData = undefined;
+  mockVehicleConfigData = undefined;
+  mockSoftwareUpdatesData = [];
+  mockMaintenanceItemsData = [];
+  mockServiceRecordsData = [];
 
   const vehiclesSerialized = await render(<VehiclesScreen />);
   const chargingSerialized = await render(<ChargingScreen />);
   const drivingSerialized = await render(<DrivingScreen />);
 
   expect(vehiclesSerialized).toContain('Vehicle API unavailable');
+  expect(vehiclesSerialized).toContain('Tire pressure unavailable');
+  expect(vehiclesSerialized).toContain('Climate payload unavailable');
+  expect(vehiclesSerialized).toContain('Security routes unavailable');
+  expect(vehiclesSerialized).toContain('Media payload unavailable');
+  expect(vehiclesSerialized).toContain('Software update history unavailable');
+  expect(vehiclesSerialized).toContain('Maintenance schedule unavailable');
   expect(chargingSerialized).toContain('Charging API unavailable');
   expect(drivingSerialized).toContain('Drive API unavailable');
   expect(drivingSerialized).toContain('Trip source API unavailable');

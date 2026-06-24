@@ -32,6 +32,155 @@ export interface VehicleStateResponse {
   live?: boolean;
 }
 
+export interface TirePressureLatest {
+  front_left?: number | null;
+  front_right?: number | null;
+  rear_left?: number | null;
+  rear_right?: number | null;
+  last_seen_fl?: string | number | null;
+  last_seen_fr?: string | number | null;
+  last_seen_rl?: string | number | null;
+  last_seen_rr?: string | number | null;
+}
+
+export type VehicleSystemValue = string | number | boolean | null;
+
+export interface ClimateLatest {
+  inside_temp?: number | null;
+  outside_temp?: number | null;
+  driver_temp_setting?: number | null;
+  passenger_temp_setting?: number | null;
+  hvac_power?: VehicleSystemValue;
+  is_ac_on?: boolean | null;
+  hvac_auto_mode?: VehicleSystemValue;
+  fan_speed?: number | null;
+  hvac_fan_status?: VehicleSystemValue;
+  climate_keeper_mode?: VehicleSystemValue;
+  defrost_mode?: VehicleSystemValue;
+  defrost_for_preconditioning?: boolean | null;
+  rear_defrost_enabled?: boolean | null;
+  wiper_heat_enabled?: boolean | null;
+  rear_display_hvac_enabled?: boolean | null;
+  battery_heater?: boolean | null;
+  overheat_protection?: VehicleSystemValue;
+  cabin_overheat_protection_temp_limit?: VehicleSystemValue;
+  hvac_steering_wheel_heat_auto?: boolean | null;
+  hvac_steering_wheel_heat_level?: number | null;
+  seat_heater_left?: number | null;
+  seat_heater_right?: number | null;
+  seat_heater_rear_left?: number | null;
+  seat_heater_rear_center?: number | null;
+  seat_heater_rear_right?: number | null;
+  auto_seat_climate_left?: boolean | null;
+  auto_seat_climate_right?: boolean | null;
+  climate_seat_cooling_front_left?: number | null;
+  climate_seat_cooling_front_right?: number | null;
+  seat_vent_enabled?: boolean | null;
+}
+
+export interface SecurityLatest {
+  locked?: boolean | null;
+  sentry_mode?: VehicleSystemValue;
+  door_state?: VehicleSystemValue;
+  fd_window?: VehicleSystemValue;
+  fp_window?: VehicleSystemValue;
+  rd_window?: VehicleSystemValue;
+  rp_window?: VehicleSystemValue;
+  homelink_nearby?: boolean | null;
+  guest_mode?: boolean | null;
+  homelink_device_count?: number | null;
+  guest_mode_mobile_access_state?: VehicleSystemValue;
+  driver_seat_occupied?: boolean | null;
+  center_display?: VehicleSystemValue;
+  speed_limit_mode?: VehicleSystemValue;
+  valet_mode_enabled?: boolean | null;
+  service_mode?: VehicleSystemValue;
+  paired_phone_key_count?: number | null;
+  lights_hazards_active?: boolean | null;
+  lights_high_beams?: boolean | null;
+  lights_turn_signal?: VehicleSystemValue;
+  driver_seat_belt?: VehicleSystemValue;
+  passenger_seat_belt?: VehicleSystemValue;
+}
+
+export interface SafetyLatest {
+  automatic_emergency_braking_off?: boolean | null;
+  automatic_blind_spot_camera?: boolean | null;
+  blind_spot_collision_warning?: VehicleSystemValue;
+  cruise_follow_distance?: VehicleSystemValue;
+  emergency_lane_departure_avoidance?: boolean | null;
+  forward_collision_warning?: VehicleSystemValue;
+  lane_departure_avoidance?: VehicleSystemValue;
+  speed_limit_warning?: VehicleSystemValue;
+  pin_to_drive_enabled?: boolean | null;
+  miles_since_reset?: number | null;
+  self_driving_miles_since_reset?: number | null;
+}
+
+export interface MediaLatest {
+  playback_status?: string | null;
+  now_playing_title?: string | null;
+  now_playing_artist?: string | null;
+  now_playing_album?: string | null;
+  playback_source?: string | null;
+  audio_volume?: number | null;
+  audio_volume_max?: number | null;
+  audio_volume_increment?: number | null;
+  now_playing_station?: string | null;
+  now_playing_duration?: number | null;
+  now_playing_elapsed?: number | null;
+}
+
+export interface VehicleConfigLatest {
+  car_type?: string | null;
+  trim_badging?: string | null;
+  exterior_color?: string | null;
+  wheel_type?: string | null;
+  software_version?: string | null;
+  config?: unknown;
+}
+
+export interface SoftwareUpdate {
+  id: number;
+  vehicle_id: number;
+  version: string;
+  status: string;
+  scheduled_at?: string | null;
+  installed_at?: string | null;
+  created_at: string;
+}
+
+export type MaintenanceStatus = 'good' | 'soon' | 'overdue' | 'completed';
+
+export interface MaintenanceItem {
+  id: number;
+  vehicle_id: number;
+  category: string;
+  name: string;
+  description: string;
+  due_date: string | null;
+  due_mileage: number | null;
+  current_mileage: number;
+  last_service_date: string | null;
+  last_service_mileage: number | null;
+  interval_months: number | null;
+  interval_miles: number | null;
+  status: MaintenanceStatus;
+  created_at: string;
+}
+
+export interface ServiceRecord {
+  id: number;
+  vehicle_id: number;
+  date: string;
+  description: string;
+  mileage: number;
+  cost: number;
+  provider: string;
+  notes: string;
+  created_at: string;
+}
+
 export interface Alert {
   id: number;
   vehicle_id?: number | null;

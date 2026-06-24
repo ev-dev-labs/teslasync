@@ -73,6 +73,60 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: null,
   }),
+  useTirePressureLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useClimateLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useSecurityLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useSafetyLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useMediaLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useVehicleConfigLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useSoftwareUpdates: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useMaintenanceItems: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useServiceRecords: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
   useBatteryHealth: () => ({
     data: {
       health_score: 94,
@@ -202,7 +256,9 @@ test('renders the responsive shell navigation with a browser route index', async
   const tree = await render(<NavigationHarness />);
   const serialized = JSON.stringify(tree.toJSON());
 
-  expect(tree.root.findByProps({ testID: 'shell-navigation-sidebar' })).toBeTruthy();
+  expect(
+    tree.root.findByProps({ testID: 'shell-navigation-sidebar' }),
+  ).toBeTruthy();
   expect(serialized).toContain('Command route');
   expect(serialized).toContain('Browser route index');
   expect(serialized).toContain('Search native routes or paste a web path');
@@ -220,7 +276,8 @@ test('switches native routes from keyboard-focusable navigation items', async ()
     tree.root.findByProps({ testID: 'nav-item-auth' }).props.accessibilityState,
   ).toEqual({ selected: true });
   expect(
-    tree.root.findByProps({ testID: 'nav-item-dashboard' }).props.accessibilityState,
+    tree.root.findByProps({ testID: 'nav-item-dashboard' }).props
+      .accessibilityState,
   ).toEqual({ selected: false });
 });
 
@@ -235,15 +292,17 @@ test('resolves route search commands from web paths to native targets', async ()
   );
 
   await ReactTestRenderer.act(async () => {
-    tree.root.findByProps({ testID: 'route-search-input' }).props.onChangeText(
-      '/battery-cells',
-    );
+    tree.root
+      .findByProps({ testID: 'route-search-input' })
+      .props.onChangeText('/battery-cells');
   });
 
   expect(JSON.stringify(tree.toJSON())).toContain('Energy');
 
   await ReactTestRenderer.act(async () => {
-    tree.root.findByProps({ testID: 'route-search-input' }).props.onSubmitEditing();
+    tree.root
+      .findByProps({ testID: 'route-search-input' })
+      .props.onSubmitEditing();
   });
 
   expect(onNavigate).toHaveBeenCalledWith('energy');
@@ -253,7 +312,9 @@ test('renders compact navigation for mobile and native desktop narrow widths', a
   const tree = await render(<NavigationHarness compact />);
   const serialized = JSON.stringify(tree.toJSON());
 
-  expect(tree.root.findByProps({ testID: 'shell-navigation-compact' })).toBeTruthy();
+  expect(
+    tree.root.findByProps({ testID: 'shell-navigation-compact' }),
+  ).toBeTruthy();
   expect(serialized).toContain('Command');
   expect(serialized).toContain('Fleet');
   expect(serialized).toContain('Operations');

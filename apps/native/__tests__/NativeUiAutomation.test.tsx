@@ -1,10 +1,10 @@
 import React from 'react';
-import type {ReactNode} from 'react';
-import {Linking} from 'react-native';
+import type { ReactNode } from 'react';
+import { Linking } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 
 import App from '../App';
-import {routes} from '../src/navigation/routes';
+import { routes } from '../src/navigation/routes';
 
 type QueryState<T = unknown> = {
   data: T | undefined;
@@ -14,13 +14,22 @@ type QueryState<T = unknown> = {
 };
 
 type AuthUrlMutationOptions = {
-  onSuccess?: (result: {auth_url: string}) => void;
+  onSuccess?: (result: { auth_url: string }) => void;
   onError?: (error: Error) => void;
 };
 
 const mockUseVehicles = jest.fn();
 const mockUseVehicle = jest.fn();
 const mockUseVehicleState = jest.fn();
+const mockUseTirePressureLatest = jest.fn();
+const mockUseClimateLatest = jest.fn();
+const mockUseSecurityLatest = jest.fn();
+const mockUseSafetyLatest = jest.fn();
+const mockUseMediaLatest = jest.fn();
+const mockUseVehicleConfigLatest = jest.fn();
+const mockUseSoftwareUpdates = jest.fn();
+const mockUseMaintenanceItems = jest.fn();
+const mockUseServiceRecords = jest.fn();
 const mockUseAlerts = jest.fn();
 const mockUseAlertRules = jest.fn();
 const mockUseSystemStatus = jest.fn();
@@ -107,6 +116,17 @@ jest.mock('../src/api/hooks', () => ({
   useVehicles: (...args: unknown[]) => mockUseVehicles(...args),
   useVehicle: (...args: unknown[]) => mockUseVehicle(...args),
   useVehicleState: (...args: unknown[]) => mockUseVehicleState(...args),
+  useTirePressureLatest: (...args: unknown[]) =>
+    mockUseTirePressureLatest(...args),
+  useClimateLatest: (...args: unknown[]) => mockUseClimateLatest(...args),
+  useSecurityLatest: (...args: unknown[]) => mockUseSecurityLatest(...args),
+  useSafetyLatest: (...args: unknown[]) => mockUseSafetyLatest(...args),
+  useMediaLatest: (...args: unknown[]) => mockUseMediaLatest(...args),
+  useVehicleConfigLatest: (...args: unknown[]) =>
+    mockUseVehicleConfigLatest(...args),
+  useSoftwareUpdates: (...args: unknown[]) => mockUseSoftwareUpdates(...args),
+  useMaintenanceItems: (...args: unknown[]) => mockUseMaintenanceItems(...args),
+  useServiceRecords: (...args: unknown[]) => mockUseServiceRecords(...args),
   useAlerts: (...args: unknown[]) => mockUseAlerts(...args),
   useAlertRules: (...args: unknown[]) => mockUseAlertRules(...args),
   useSystemStatus: (...args: unknown[]) => mockUseSystemStatus(...args),
@@ -115,10 +135,8 @@ jest.mock('../src/api/hooks', () => ({
   useDrives: (...args: unknown[]) => mockUseDrives(...args),
   useDrive: (...args: unknown[]) => mockUseDrive(...args),
   useDriveTelemetry: (...args: unknown[]) => mockUseDriveTelemetry(...args),
-  useChargingSessions: (...args: unknown[]) =>
-    mockUseChargingSessions(...args),
-  useChargingSession: (...args: unknown[]) =>
-    mockUseChargingSession(...args),
+  useChargingSessions: (...args: unknown[]) => mockUseChargingSessions(...args),
+  useChargingSession: (...args: unknown[]) => mockUseChargingSession(...args),
   useChargeTelemetry: (...args: unknown[]) => mockUseChargeTelemetry(...args),
   useVehicleEnergy: (...args: unknown[]) => mockUseVehicleEnergy(...args),
   useBatteryHealth: (...args: unknown[]) => mockUseBatteryHealth(...args),
@@ -139,8 +157,7 @@ jest.mock('../src/api/hooks', () => ({
   useFleetTelemetryErrors: (...args: unknown[]) =>
     mockUseFleetTelemetryErrors(...args),
   useSystemAudit: (...args: unknown[]) => mockUseSystemAudit(...args),
-  useAvailableSignals: (...args: unknown[]) =>
-    mockUseAvailableSignals(...args),
+  useAvailableSignals: (...args: unknown[]) => mockUseAvailableSignals(...args),
   useLiveSignals: (...args: unknown[]) => mockUseLiveSignals(...args),
   useAuthMode: (...args: unknown[]) => mockUseAuthMode(...args),
   useAuthStatus: (...args: unknown[]) => mockUseAuthStatus(...args),
@@ -150,8 +167,7 @@ jest.mock('../src/api/hooks', () => ({
   useSettings: (...args: unknown[]) => mockUseSettings(...args),
   useNotificationChannels: (...args: unknown[]) =>
     mockUseNotificationChannels(...args),
-  useNotificationLogs: (...args: unknown[]) =>
-    mockUseNotificationLogs(...args),
+  useNotificationLogs: (...args: unknown[]) => mockUseNotificationLogs(...args),
   useNotificationStats: (...args: unknown[]) =>
     mockUseNotificationStats(...args),
   useQuietHours: (...args: unknown[]) => mockUseQuietHours(...args),
@@ -167,19 +183,19 @@ jest.mock('../src/platform/status', () => {
 
 jest.mock('react-native-safe-area-context', () => {
   const ReactActual = require('react') as typeof import('react');
-  const {View} = require('react-native') as typeof import('react-native');
-  const SafeAreaHost = ({children}: {children: ReactNode}) =>
+  const { View } = require('react-native') as typeof import('react-native');
+  const SafeAreaHost = ({ children }: { children: ReactNode }) =>
     ReactActual.createElement(View, null, children);
 
   return {
     SafeAreaProvider: SafeAreaHost,
     SafeAreaView: SafeAreaHost,
-    useSafeAreaInsets: () => ({top: 0, right: 0, bottom: 0, left: 0}),
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
   };
 });
 
 function query<T>(data: T): QueryState<T> {
-  return {data, isLoading: false, isFetching: false, error: null};
+  return { data, isLoading: false, isFetching: false, error: null };
 }
 
 function failedQuery(message: string): QueryState {
@@ -225,7 +241,7 @@ function pressButton(
   label: string,
 ): void {
   const button = buttonByLabel(tree, label);
-  const {onPress} = button.props as {onPress: () => void};
+  const { onPress } = button.props as { onPress: () => void };
 
   ReactTestRenderer.act(() => {
     onPress();
@@ -285,6 +301,91 @@ beforeEach(() => {
       },
     }),
   );
+  mockUseTirePressureLatest.mockReturnValue(
+    query({
+      front_left: 295000,
+      front_right: 296000,
+      rear_left: 301000,
+      rear_right: 300000,
+    }),
+  );
+  mockUseClimateLatest.mockReturnValue(
+    query({
+      inside_temp: 21.5,
+      outside_temp: 18.2,
+      hvac_power: 'on',
+      fan_speed: 3,
+    }),
+  );
+  mockUseSecurityLatest.mockReturnValue(
+    query({
+      locked: true,
+      sentry_mode: true,
+      door_state: 'closed',
+      fd_window: 'closed',
+      fp_window: 'closed',
+      rd_window: 'closed',
+      rp_window: 'closed',
+    }),
+  );
+  mockUseSafetyLatest.mockReturnValue(
+    query({
+      automatic_emergency_braking_off: false,
+      automatic_blind_spot_camera: true,
+      pin_to_drive_enabled: true,
+    }),
+  );
+  mockUseMediaLatest.mockReturnValue(
+    query({
+      playback_status: 'playing',
+      now_playing_title: 'Electric Feel',
+      now_playing_artist: 'MGMT',
+      playback_source: 'Bluetooth',
+    }),
+  );
+  mockUseVehicleConfigLatest.mockReturnValue(
+    query({
+      car_type: 'Model Y',
+      trim_badging: 'Performance',
+      exterior_color: 'Pearl White',
+      wheel_type: 'Uberturbine',
+      software_version: '2026.20.1',
+    }),
+  );
+  mockUseSoftwareUpdates.mockReturnValue(
+    query([
+      {
+        id: 1,
+        vehicle_id: 42,
+        version: '2026.20.1',
+        status: 'installed',
+        installed_at: '2026-06-20T08:00:00Z',
+        scheduled_at: null,
+        created_at: '2026-06-20T08:00:00Z',
+      },
+    ]),
+  );
+  mockUseMaintenanceItems.mockReturnValue(
+    query([
+      {
+        id: 1,
+        vehicle_id: 42,
+        category: 'tires',
+        name: 'Tire Rotation',
+        description: 'Rotate tires for even wear',
+        due_date: null,
+        due_mileage: 20000,
+        current_mileage: 12500,
+        last_service_date: null,
+        last_service_mileage: null,
+        interval_months: null,
+        interval_miles: 10000,
+        status: 'good',
+        created_at: '2026-06-01T00:00:00Z',
+      },
+    ]),
+  );
+  mockUseServiceRecords.mockReturnValue(query([]));
   mockUseAlerts.mockReturnValue(query([]));
   mockUseAlertRules.mockReturnValue(query([]));
   mockUseSystemStatus.mockReturnValue(
@@ -292,10 +393,10 @@ beforeEach(() => {
       overall: 'healthy',
       status: 'healthy',
       healthy: true,
-      database: {status: 'healthy'},
-      mqtt: {status: 'healthy'},
-      tesla_api: {status: 'healthy'},
-      fleet_telemetry: {status: 'healthy'},
+      database: { status: 'healthy' },
+      mqtt: { status: 'healthy' },
+      tesla_api: { status: 'healthy' },
+      fleet_telemetry: { status: 'healthy' },
     }),
   );
   mockUseSystemHealth.mockReturnValue(
@@ -303,10 +404,10 @@ beforeEach(() => {
       status: 'healthy',
       healthy: true,
       components: {
-        database: {status: 'healthy'},
-        mqtt: {status: 'healthy'},
-        tesla_api: {status: 'healthy'},
-        fleet_telemetry: {status: 'healthy'},
+        database: { status: 'healthy' },
+        mqtt: { status: 'healthy' },
+        tesla_api: { status: 'healthy' },
+        fleet_telemetry: { status: 'healthy' },
       },
     }),
   );
@@ -356,10 +457,10 @@ beforeEach(() => {
   mockUseFleetTelemetryErrors.mockReturnValue(query([]));
   mockUseSystemAudit.mockReturnValue(query([]));
   mockUseAvailableSignals.mockReturnValue(
-    query({vehicle_id: 1, signals: [], count: 0}),
+    query({ vehicle_id: 1, signals: [], count: 0 }),
   );
   mockUseLiveSignals.mockReturnValue(
-    query({vehicle_id: 1, signals: [], count: 0}),
+    query({ vehicle_id: 1, signals: [], count: 0 }),
   );
   mockUseAuthMode.mockReturnValue(
     query({
@@ -377,7 +478,7 @@ beforeEach(() => {
     }),
   );
   mockUseAuthStatus.mockReturnValue(
-    query({authenticated: true, expires_at: '2026-06-24T05:00:00Z'}),
+    query({ authenticated: true, expires_at: '2026-06-24T05:00:00Z' }),
   );
   mockUseAuthURL.mockReturnValue({
     isPending: false,
@@ -421,11 +522,11 @@ beforeEach(() => {
     }),
   );
   mockUseNotificationChannels.mockReturnValue(
-    query([{id: 1, name: 'Email', type: 'email', enabled: true}]),
+    query([{ id: 1, name: 'Email', type: 'email', enabled: true }]),
   );
   mockUseNotificationLogs.mockReturnValue(query([]));
   mockUseNotificationStats.mockReturnValue(
-    query({enabled_channels: 1, sent: 12, failed: 0, pending: 0}),
+    query({ enabled_channels: 1, sent: 12, failed: 0, pending: 0 }),
   );
   mockUseQuietHours.mockReturnValue(query([]));
 });

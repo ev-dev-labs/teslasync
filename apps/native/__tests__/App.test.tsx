@@ -71,6 +71,60 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: null,
   }),
+  useTirePressureLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useClimateLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useSecurityLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useSafetyLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useMediaLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useVehicleConfigLatest: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useSoftwareUpdates: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useMaintenanceItems: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useServiceRecords: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
   useBatteryHealth: () => ({
     data: {
       health_score: 94,

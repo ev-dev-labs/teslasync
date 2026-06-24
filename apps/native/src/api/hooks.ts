@@ -21,6 +21,7 @@ import type {
   BatteryDegradationAnalytics,
   ChargeTelemetryReading,
   ChargingSession,
+  ClimateLatest,
   Drive,
   DriveTelemetryReading,
   EnergyStats,
@@ -29,6 +30,8 @@ import type {
   FleetTelemetryError,
   FleetTelemetryErrorVIN,
   LiveSignalsResponse,
+  MaintenanceItem,
+  MediaLatest,
   NotificationChannel,
   NotificationLog,
   NotificationStats,
@@ -37,7 +40,11 @@ import type {
   RegenAnalytics,
   RevokeAllOthersResponse,
   RouteEfficiencyData,
+  SafetyLatest,
+  SecurityLatest,
+  ServiceRecord,
   SleepAnalytics,
+  SoftwareUpdate,
   SpeedProfileData,
   SystemHealth,
   SystemStatus,
@@ -47,7 +54,9 @@ import type {
   TCOAnalytics,
   TemperatureImpactData,
   TOTPSudoToken,
+  TirePressureLatest,
   Vehicle,
+  VehicleConfigLatest,
   VehicleStateResponse,
   VersionInfo,
 } from './types';
@@ -88,6 +97,18 @@ export const apiKeys = {
   vehicles: ['vehicles'] as const,
   vehicle: (id: number | string) => ['vehicles', id] as const,
   vehicleState: (id: number | string) => ['vehicles', id, 'state'] as const,
+  tirePressureLatest: (id: number | string) =>
+    ['tire-pressure', id, 'latest'] as const,
+  climateLatest: (id: number | string) => ['climate', id, 'latest'] as const,
+  securityLatest: (id: number | string) => ['security', id, 'latest'] as const,
+  safetyLatest: (id: number | string) => ['safety', id, 'latest'] as const,
+  mediaLatest: (id: number | string) => ['media', id, 'latest'] as const,
+  vehicleConfigLatest: (id: number | string) =>
+    ['vehicle-config', id, 'latest'] as const,
+  softwareUpdates: (options: VehicleListOptions) =>
+    ['software-updates', options] as const,
+  maintenanceItems: ['maintenance'] as const,
+  serviceRecords: ['maintenance', 'records'] as const,
   vehicleEnergy: (id: number | string, days: number) =>
     ['vehicles', id, 'energy', days] as const,
   batteryHealth: (id: number | string) => ['vehicles', id, 'battery'] as const,
@@ -371,6 +392,52 @@ export function buildVehicleStatePath(vehicleId: number | string): string {
   return `/vehicles/${vehicleId}/state`;
 }
 
+export function buildTirePressureLatestPath(
+  vehicleId: number | string,
+): string {
+  return buildQueryPath('/tire-pressure/latest', { vehicle_id: vehicleId });
+}
+
+export function buildClimateLatestPath(vehicleId: number | string): string {
+  return buildQueryPath('/climate/latest', { vehicle_id: vehicleId });
+}
+
+export function buildSecurityLatestPath(vehicleId: number | string): string {
+  return buildQueryPath('/security/latest', { vehicle_id: vehicleId });
+}
+
+export function buildSafetyLatestPath(vehicleId: number | string): string {
+  return buildQueryPath('/safety/latest', { vehicle_id: vehicleId });
+}
+
+export function buildMediaLatestPath(vehicleId: number | string): string {
+  return buildQueryPath('/media/latest', { vehicle_id: vehicleId });
+}
+
+export function buildVehicleConfigLatestPath(
+  vehicleId: number | string,
+): string {
+  return buildQueryPath('/vehicle-config/latest', { vehicle_id: vehicleId });
+}
+
+export function buildSoftwareUpdatesPath(
+  options: VehicleListOptions = { limit: 20 },
+): string {
+  return buildQueryPath('/software-updates', {
+    vehicle_id: options.vehicle_id ?? undefined,
+    limit: options.limit,
+    offset: options.offset,
+  });
+}
+
+export function buildMaintenanceItemsPath(): string {
+  return '/maintenance';
+}
+
+export function buildServiceRecordsPath(): string {
+  return '/maintenance/records';
+}
+
 export function buildDriveDetailPath(driveId: number | string): string {
   return `/drives/${driveId}`;
 }
@@ -415,6 +482,111 @@ export function useVehicleState(vehicleId: number | string | null) {
         signal,
       }),
     enabled: isPositiveId(vehicleId),
+  });
+}
+
+export function useTirePressureLatest(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.tirePressureLatest(vehicleId)
+      : ['tire-pressure', 'latest', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<TirePressureLatest>(buildTirePressureLatestPath(vehicleId!), {
+        signal,
+      }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 15_000,
+  });
+}
+
+export function useClimateLatest(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.climateLatest(vehicleId)
+      : ['climate', 'latest', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<ClimateLatest>(buildClimateLatestPath(vehicleId!), { signal }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 15_000,
+  });
+}
+
+export function useSecurityLatest(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.securityLatest(vehicleId)
+      : ['security', 'latest', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<SecurityLatest>(buildSecurityLatestPath(vehicleId!), { signal }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 15_000,
+  });
+}
+
+export function useSafetyLatest(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.safetyLatest(vehicleId)
+      : ['safety', 'latest', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<SafetyLatest>(buildSafetyLatestPath(vehicleId!), { signal }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 15_000,
+  });
+}
+
+export function useMediaLatest(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.mediaLatest(vehicleId)
+      : ['media', 'latest', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<MediaLatest>(buildMediaLatestPath(vehicleId!), { signal }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 15_000,
+  });
+}
+
+export function useVehicleConfigLatest(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.vehicleConfigLatest(vehicleId)
+      : ['vehicle-config', 'latest', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<VehicleConfigLatest>(buildVehicleConfigLatestPath(vehicleId!), {
+        signal,
+      }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 60_000,
+  });
+}
+
+export function useSoftwareUpdates(
+  options: VehicleListOptions = { limit: 20 },
+) {
+  return useQuery({
+    queryKey: apiKeys.softwareUpdates(options),
+    queryFn: ({ signal }) =>
+      request<SoftwareUpdate[]>(buildSoftwareUpdatesPath(options), { signal }),
+    staleTime: 60_000,
+  });
+}
+
+export function useMaintenanceItems() {
+  return useQuery({
+    queryKey: apiKeys.maintenanceItems,
+    queryFn: ({ signal }) =>
+      request<MaintenanceItem[]>(buildMaintenanceItemsPath(), { signal }),
+    staleTime: 60_000,
+  });
+}
+
+export function useServiceRecords() {
+  return useQuery({
+    queryKey: apiKeys.serviceRecords,
+    queryFn: ({ signal }) =>
+      request<ServiceRecord[]>(buildServiceRecordsPath(), { signal }),
+    staleTime: 60_000,
   });
 }
 
@@ -640,10 +812,9 @@ export function useTemperatureImpact(vehicleId: number | string | null) {
       ? apiKeys.temperatureImpact(vehicleId)
       : ['analytics', 'temperature-impact', 'disabled'],
     queryFn: ({ signal }) =>
-      request<TemperatureImpactData>(
-        buildTemperatureImpactPath(vehicleId!),
-        { signal },
-      ),
+      request<TemperatureImpactData>(buildTemperatureImpactPath(vehicleId!), {
+        signal,
+      }),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -654,10 +825,9 @@ export function useRouteEfficiency(vehicleId: number | string | null) {
       ? apiKeys.routeEfficiency(vehicleId)
       : ['analytics', 'route-efficiency', 'disabled'],
     queryFn: ({ signal }) =>
-      request<RouteEfficiencyData>(
-        buildRouteEfficiencyPath(vehicleId!),
-        { signal },
-      ),
+      request<RouteEfficiencyData>(buildRouteEfficiencyPath(vehicleId!), {
+        signal,
+      }),
     enabled: isPositiveId(vehicleId),
   });
 }

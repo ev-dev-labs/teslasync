@@ -223,9 +223,44 @@ test('marks R0001 command, shared, onboarding, live, search, and fallback routes
     expect(route?.deletionReadiness.status).toBe('blocked');
   }
 
-  expect(routes.find(route => route.id === 'dashboard')?.parity.implemented).toBeGreaterThanOrEqual(7);
-  expect(routes.find(route => route.id === 'driving')?.parity.implemented).toBeGreaterThanOrEqual(5);
-  expect(routes.find(route => route.id === 'vehicles')?.parity.implemented).toBeGreaterThanOrEqual(3);
+  expect(
+    routes.find(route => route.id === 'dashboard')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(7);
+  expect(
+    routes.find(route => route.id === 'driving')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(5);
+  expect(
+    routes.find(route => route.id === 'vehicles')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(3);
+});
+
+test('marks R0002 vehicle-system routes implemented with native evidence', () => {
+  const implementedRouteIds = [
+    'vehicles-id-access',
+    'digital-twin',
+    'tire-pressure',
+    'software-updates',
+    'vehicle-systems-software',
+    'climate-control',
+    'climate',
+    'security-access',
+    'safety-settings',
+    'maintenance',
+    'media-player',
+    'guard-mode',
+  ];
+
+  for (const routeId of implementedRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.nativeTarget).toBe('vehicles');
+    expect(route?.evidence).toMatch(/^Implemented: VehiclesScreen renders/);
+    expect(route?.deletionReadiness.status).toBe('blocked');
+  }
+
+  expect(
+    routes.find(route => route.id === 'vehicles')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(15);
 });
 
 test('marks notification platform routes with implemented or honest unavailable evidence', () => {

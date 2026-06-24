@@ -1,16 +1,30 @@
-import React, {useEffect, useMemo, useState} from 'react';
-import {View} from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View } from 'react-native';
 
-import {useVehicle, useVehicleState, useVehicles} from '../../api/hooks';
+import {
+  useClimateLatest,
+  useMaintenanceItems,
+  useMediaLatest,
+  useSafetyLatest,
+  useSecurityLatest,
+  useServiceRecords,
+  useSoftwareUpdates,
+  useTirePressureLatest,
+  useVehicle,
+  useVehicleConfigLatest,
+  useVehicleState,
+  useVehicles,
+} from '../../api/hooks';
 import {
   FleetRouteReadiness,
   type FleetRouteReadinessItem,
 } from './FleetRouteReadiness';
-import {fleetStyles} from './fleetStyles';
-import {LiveVehicleRouteSection} from './LiveVehicleRouteSection';
-import {VehicleDetailSection} from './VehicleDetailSection';
-import {VehicleFleetOverviewSection} from './VehicleFleetOverviewSection';
-import {VehicleListSection} from './VehicleListSection';
+import { fleetStyles } from './fleetStyles';
+import { LiveVehicleRouteSection } from './LiveVehicleRouteSection';
+import { VehicleDetailSection } from './VehicleDetailSection';
+import { VehicleFleetOverviewSection } from './VehicleFleetOverviewSection';
+import { VehicleListSection } from './VehicleListSection';
+import { VehicleSystemsSection } from './VehicleSystemsSection';
 
 const vehicleReadinessItems: FleetRouteReadinessItem[] = [
   {
@@ -26,10 +40,10 @@ const vehicleReadinessItems: FleetRouteReadinessItem[] = [
     id: 'vehicle-access',
     label: 'Vehicle access readiness',
     route: '/vehicles/:id/access',
-    api: '/vehicles/{vehicleID}/drivers, /vehicles/{vehicleID}/invitations',
-    status: 'native-summary',
+    api: '/vehicles/{vehicleID}/state, /security/latest',
+    status: 'implemented',
     evidence:
-      'Access routes are represented with typed route evidence; invite write actions remain visibly unavailable instead of being faked.',
+      'Native renders selected vehicle access state and keeps driver/invitation mutations visibly unavailable instead of faking command support.',
   },
   {
     id: 'live-map',
@@ -44,17 +58,59 @@ const vehicleReadinessItems: FleetRouteReadinessItem[] = [
     id: 'digital-twin',
     label: 'Digital twin readiness',
     route: '/digital-twin',
-    api: '/vehicles/{vehicleID}/state',
-    status: 'native-summary',
+    api: '/vehicles/{vehicleID}/state, /vehicle-config/latest',
+    status: 'implemented',
     evidence:
-      'The typed live state contract is surfaced as a native digital-twin summary with unsupported 3D rendering left unavailable.',
+      'Native renders digital-twin metadata, firmware, wheel/color/config, and live state while leaving unsupported 3D rendering unavailable.',
+  },
+  {
+    id: 'tire-pressure',
+    label: 'Tire pressure',
+    route: '/tire-pressure',
+    api: '/tire-pressure/latest',
+    status: 'implemented',
+    evidence:
+      'Native renders TPMS pressure cards from the typed latest endpoint with empty/error states for missing signal payloads.',
+  },
+  {
+    id: 'software-updates',
+    label: 'Software updates',
+    route: '/software-updates, /vehicle-systems/software',
+    api: '/software-updates, /vehicle-config/latest',
+    status: 'implemented',
+    evidence:
+      'Native renders firmware/version history and vehicle config while install and summarizer actions remain unavailable.',
+  },
+  {
+    id: 'climate-security-media',
+    label: 'Climate, security, and media systems',
+    route:
+      '/climate-control, /climate, /security-access, /guard-mode, /media-player',
+    api: '/climate/latest, /security/latest, /media/latest',
+    status: 'implemented',
+    evidence:
+      'Native renders cabin, guard/security, and now-playing state from typed latest endpoints without spoofing controls.',
+  },
+  {
+    id: 'safety-maintenance',
+    label: 'Safety settings and maintenance',
+    route: '/safety-settings, /maintenance',
+    api: '/safety/latest, /maintenance, /maintenance/records',
+    status: 'implemented',
+    evidence:
+      'Native renders read-only ADAS settings, deterministic maintenance items, and explicit unavailable write/AI states.',
   },
 ];
 
 export function VehicleFleetView() {
   const vehiclesQuery = useVehicles();
-  const vehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const vehicles = useMemo(
+    () => vehiclesQuery.data ?? [],
+    [vehiclesQuery.data],
+  );
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     if (vehicles.length === 0) {
@@ -69,9 +125,22 @@ export function VehicleFleetView() {
     }
   }, [selectedVehicleId, vehicles]);
 
-  const selectedVehicle = vehicles.find(vehicle => vehicle.id === selectedVehicleId) ?? null;
+  const selectedVehicle =
+    vehicles.find(vehicle => vehicle.id === selectedVehicleId) ?? null;
   const vehicleDetailQuery = useVehicle(selectedVehicleId);
   const vehicleStateQuery = useVehicleState(selectedVehicleId);
+  const tirePressureQuery = useTirePressureLatest(selectedVehicleId);
+  const climateQuery = useClimateLatest(selectedVehicleId);
+  const securityQuery = useSecurityLatest(selectedVehicleId);
+  const safetyQuery = useSafetyLatest(selectedVehicleId);
+  const mediaQuery = useMediaLatest(selectedVehicleId);
+  const vehicleConfigQuery = useVehicleConfigLatest(selectedVehicleId);
+  const softwareUpdatesQuery = useSoftwareUpdates({
+    vehicle_id: selectedVehicleId,
+    limit: 8,
+  });
+  const maintenanceItemsQuery = useMaintenanceItems();
+  const serviceRecordsQuery = useServiceRecords();
   const detailVehicle = vehicleDetailQuery.data ?? selectedVehicle;
   const liveState = vehicleStateQuery.data?.state;
 
@@ -104,9 +173,58 @@ export function VehicleFleetView() {
         isLoading={vehicleDetailQuery.isLoading || vehicleStateQuery.isLoading}
         hasError={Boolean(vehicleDetailQuery.error || vehicleStateQuery.error)}
       />
+      <VehicleSystemsSection
+        vehicle={detailVehicle}
+        liveState={liveState}
+        tirePressure={{
+          data: tirePressureQuery.data,
+          isLoading: tirePressureQuery.isLoading,
+          hasError: Boolean(tirePressureQuery.error),
+        }}
+        climate={{
+          data: climateQuery.data,
+          isLoading: climateQuery.isLoading,
+          hasError: Boolean(climateQuery.error),
+        }}
+        security={{
+          data: securityQuery.data,
+          isLoading: securityQuery.isLoading,
+          hasError: Boolean(securityQuery.error),
+        }}
+        safety={{
+          data: safetyQuery.data,
+          isLoading: safetyQuery.isLoading,
+          hasError: Boolean(safetyQuery.error),
+        }}
+        media={{
+          data: mediaQuery.data,
+          isLoading: mediaQuery.isLoading,
+          hasError: Boolean(mediaQuery.error),
+        }}
+        vehicleConfig={{
+          data: vehicleConfigQuery.data,
+          isLoading: vehicleConfigQuery.isLoading,
+          hasError: Boolean(vehicleConfigQuery.error),
+        }}
+        softwareUpdates={{
+          data: softwareUpdatesQuery.data,
+          isLoading: softwareUpdatesQuery.isLoading,
+          hasError: Boolean(softwareUpdatesQuery.error),
+        }}
+        maintenanceItems={{
+          data: maintenanceItemsQuery.data,
+          isLoading: maintenanceItemsQuery.isLoading,
+          hasError: Boolean(maintenanceItemsQuery.error),
+        }}
+        serviceRecords={{
+          data: serviceRecordsQuery.data,
+          isLoading: serviceRecordsQuery.isLoading,
+          hasError: Boolean(serviceRecordsQuery.error),
+        }}
+      />
       <FleetRouteReadiness
         title="Vehicle route readiness"
-        subtitle="Represented vehicle routes are typed and statused without hiding unavailable native actions."
+        subtitle="Vehicle and vehicle-system routes are typed, visible, and statused without hiding unavailable native actions."
         items={vehicleReadinessItems}
       />
     </View>
