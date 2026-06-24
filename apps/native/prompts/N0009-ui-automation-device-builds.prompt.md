@@ -60,3 +60,19 @@ STATUS=DONE
   - iOS: macOS host with `xcodebuild` missing; iOS builds require macOS and Xcode.
   - Windows: Visual C++ `vcvars` for `x64` missing; install the Desktop development with C++ workload.
   - macOS: macOS host with `xcodebuild` missing; macOS app builds require macOS and Xcode.
+
+## Attempt 6 Verification
+
+- `npm run gate:native` — passed.
+- `npm run typecheck` — passed via `gate:native`.
+- `npm run lint` — passed via `gate:native`.
+- `npm test -- --runInBand` — passed via `gate:native`; 12 suites, 47 tests.
+- `npm run test:windows -- --runInBand` — passed via `gate:native`; 12 suites, 47 tests.
+- `npm run check:packaging` — passed via `gate:native`.
+- Android bundle generated at `.bundle\android\index.android.bundle`.
+- Windows bundle generated at `.bundle\windows\index.windows.bundle`.
+- Device/build tooling unavailable on this host:
+  - Android: Android SDK missing; set `ANDROID_HOME`, `ANDROID_SDK_ROOT`, or `android\local.properties` `sdk.dir` before `assembleRelease`.
+  - iOS: macOS host with `xcodebuild` missing; iOS builds require macOS and Xcode.
+  - Windows: Visual C++ `vcvars` for `x64` missing; install the Desktop development with C++ workload.
+  - macOS: macOS host with `xcodebuild` missing; macOS app builds require macOS and Xcode.
