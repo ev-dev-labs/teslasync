@@ -7,6 +7,7 @@ import {
   getNativeWidgetDefinition,
   IMPLEMENTED_NATIVE_WIDGETS,
   NATIVE_WIDGET_REGISTRY,
+  PENDING_NATIVE_WIDGETS,
 } from '../src/widgets';
 import type {
   Alert,
@@ -246,7 +247,7 @@ function renderWithQueryClient(element: React.ReactElement) {
   );
 }
 
-test('native dashboard widget registry is typed with implemented statuses', () => {
+test('native dashboard widget registry is typed with implemented and pending statuses', () => {
   expect(IMPLEMENTED_NATIVE_WIDGETS.map(widget => widget.id)).toEqual([
     'vehicle-hero',
     'battery-health',
@@ -259,15 +260,23 @@ test('native dashboard widget registry is typed with implemented statuses', () =
     'live-power-flow',
     'telemetry-errors',
   ]);
-  expect(IMPLEMENTED_NATIVE_WIDGETS).toHaveLength(NATIVE_WIDGET_REGISTRY.length);
+  expect(PENDING_NATIVE_WIDGETS.length).toBeGreaterThan(0);
+  expect(IMPLEMENTED_NATIVE_WIDGETS.length + PENDING_NATIVE_WIDGETS.length).toBe(
+    NATIVE_WIDGET_REGISTRY.length,
+  );
 
   for (const widget of NATIVE_WIDGET_REGISTRY) {
-    expect(widget.status).toBe('implemented');
     expect(widget.webWidgetIds.length).toBeGreaterThan(0);
-    expect(widget.component).toEqual(expect.any(Function));
+    if (widget.status === 'implemented') {
+      expect(widget.component).toEqual(expect.any(Function));
+    } else {
+      expect(widget.pendingReason.length).toBeGreaterThan(0);
+      expect('component' in widget).toBe(false);
+    }
   }
 
   expect(getNativeWidgetDefinition('battery-cells')?.status).toBe('implemented');
+  expect(getNativeWidgetDefinition('maps-location-widgets')?.status).toBe('pending');
 });
 
 test('renders all implemented native dashboard widgets with API-backed content', async () => {
@@ -280,6 +289,7 @@ test('renders all implemented native dashboard widgets with API-backed content',
   const serialized = JSON.stringify(tree?.toJSON());
 
   expect(serialized).toContain('Native widget registry');
+  expect(serialized).toContain('Pending: Requires native map rendering');
   expect(serialized).toContain('Vehicle hero');
   expect(serialized).toContain('Roadrunner');
   expect(serialized).toContain('Battery and health');

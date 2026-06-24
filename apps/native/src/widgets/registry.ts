@@ -11,9 +11,10 @@ import { VehicleHeroWidget } from './VehicleHeroWidget';
 import type {
   ImplementedNativeWidgetDefinition,
   NativeWidgetDefinition,
+  PendingNativeWidgetDefinition,
 } from './types';
 
-export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
+const IMPLEMENTED_WIDGET_DEFINITIONS = [
   {
     id: 'vehicle-hero',
     title: 'Vehicle hero',
@@ -124,10 +125,237 @@ export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
     status: 'implemented',
     component: TelemetryErrorsWidget,
   },
-] as const;
+] as const satisfies readonly ImplementedNativeWidgetDefinition[];
+
+const PENDING_WIDGET_DEFINITIONS = [
+  {
+    id: 'vehicle-detail-widgets',
+    title: 'Vehicle detail widgets',
+    description: 'Digital twin, firmware history, odometer, specs, maintenance, warranty, and upgrades.',
+    category: 'vehicle',
+    icon: 'vehicle',
+    webWidgetIds: [
+      'vehicle-twin',
+      'digital-twin-mini',
+      'software-update-status',
+      'software-update-history',
+      'odometer-counter',
+      'drivetrain-health',
+      'motor-performance',
+      'motor-history',
+      'vehicle-specs',
+      'maintenance-tracker',
+      'warranty-status',
+      'subscriptions',
+      'vehicle-upgrades',
+      'vehicle-access',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Needs dedicated native telemetry/detail endpoints before these web-specific cards can be rendered without placeholders.',
+  },
+  {
+    id: 'range-forecast-widgets',
+    title: 'Range and battery forecasts',
+    description: 'Range estimates, range bar, projected range, and degradation forecast widgets.',
+    category: 'battery',
+    icon: 'range',
+    webWidgetIds: [
+      'range-estimate',
+      'range-bar',
+      'battery-degradation-trend',
+      'projected-range',
+      'battery-degradation-forecast',
+    ],
+    defaultSize: {cols: 2, rows: 3},
+    status: 'pending',
+    pendingReason:
+      'Forecast charts require native chart primitives and API-backed projection data before parity can be claimed.',
+  },
+  {
+    id: 'drive-analytics-widgets',
+    title: 'Drive analytics widgets',
+    description: 'Drive score, efficiency, speed profile, regen, route efficiency, coach, and telemetry replay.',
+    category: 'driving',
+    icon: 'analytics',
+    webWidgetIds: [
+      'drive-score',
+      'drive-score-gauge',
+      'drive-efficiency-chart',
+      'speed-heatmap',
+      'driving-dynamics',
+      'speed-profile',
+      'regen-efficiency',
+      'route-efficiency',
+      'driving-coach',
+      'drive-telemetry',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Requires native chart/replay components and route drill-through interactions beyond the dashboard summary.',
+  },
+  {
+    id: 'charging-planning-widgets',
+    title: 'Charging planning widgets',
+    description: 'Live charge status, session charts, costs, schedules, optimizers, wall connector, and plans.',
+    category: 'charging',
+    icon: 'charging',
+    webWidgetIds: [
+      'charge-status-live',
+      'charge-session-chart',
+      'charge-cost-tracker',
+      'charging-schedule',
+      'cost-forecast',
+      'charging-optimizer',
+      'wall-connector',
+      'charging-telemetry',
+      'supercharger-history',
+      'charge-plans',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Needs command-safe native controls and richer charge telemetry charts before implementing interactive planning parity.',
+  },
+  {
+    id: 'energy-site-widgets',
+    title: 'Energy site widgets',
+    description: 'Vampire drain, sleep, solar, site info, backup history, power history, and energy stats.',
+    category: 'energy',
+    icon: 'powerShare',
+    webWidgetIds: [
+      'vampire-drain',
+      'sleep-efficiency',
+      'solar-production',
+      'energy-site-info',
+      'backup-history',
+      'power-flow-history',
+      'energy-stats',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Requires native charting for historical energy-series views and Tesla Energy site data surfaces.',
+  },
+  {
+    id: 'climate-security-media-widgets',
+    title: 'Climate, security, and media widgets',
+    description: 'Climate status/history, weather, security, sentry/guard mode, and media playback summaries.',
+    category: 'climate',
+    icon: 'climate',
+    webWidgetIds: [
+      'climate-status',
+      'climate-control-panel',
+      'climate-history',
+      'weather-at-car',
+      'security-status',
+      'sentry-event-log',
+      'guard-mode',
+      'media-now-playing',
+      'media-history',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Needs command authorization and native media/security drill-through before exposing these controls.',
+  },
+  {
+    id: 'maps-location-widgets',
+    title: 'Maps and location widgets',
+    description: 'Live map, heatmap, favorites, geofences, and destination ETA.',
+    category: 'maps',
+    icon: 'map',
+    webWidgetIds: [
+      'location-map',
+      'position-heatmap',
+      'location-favorites',
+      'geofence',
+      'destination-eta',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Requires native map rendering and location privacy controls rather than a WebView or copied web map.',
+  },
+  {
+    id: 'automation-admin-widgets',
+    title: 'Automation and admin widgets',
+    description: 'Setup checklist, API usage, audit log, backups, exports, automations, and command history.',
+    category: 'automation',
+    icon: 'workflow',
+    webWidgetIds: [
+      'onboarding-checklist',
+      'api-usage',
+      'audit-log',
+      'backup-monitor',
+      'export-status',
+      'dashboard-stats',
+      'automation-status',
+      'automation-history',
+      'command-quick-actions',
+      'command-history',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Requires command mutation flows, audit drill-through, and admin-specific native UX before rendering.',
+  },
+  {
+    id: 'fleet-analytics-widgets',
+    title: 'Fleet analytics widgets',
+    description: 'Fleet stats, analytics summary, lifetime review, weekly/monthly summaries, and cost breakdown.',
+    category: 'analytics',
+    icon: 'trends',
+    webWidgetIds: [
+      'fleet-stats',
+      'fleet-stats-bar',
+      'analytics-summary',
+      'lifetime-stats',
+      'year-review',
+      'weekly-summary-card',
+      'weekly-digest',
+      'monthly-mileage',
+      'mileage-stats',
+      'cost-breakdown',
+    ],
+    defaultSize: {cols: 2, rows: 4},
+    status: 'pending',
+    pendingReason:
+      'Requires native analytical chart components and larger-screen layout work before dashboard parity.',
+  },
+  {
+    id: 'tire-safety-widgets',
+    title: 'Tire and safety widgets',
+    description: 'Tire pressure visuals/history, safety features/history, and door/window status.',
+    category: 'tires',
+    icon: 'tirePressure',
+    webWidgetIds: [
+      'tire-pressure-visual',
+      'tire-pressure-history',
+      'safety-features',
+      'safety-history',
+      'door-window-status',
+    ],
+    defaultSize: {cols: 2, rows: 3},
+    status: 'pending',
+    pendingReason:
+      'Requires native visual state components backed by live signals before these can avoid placeholders.',
+  },
+] as const satisfies readonly PendingNativeWidgetDefinition[];
+
+export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
+  ...IMPLEMENTED_WIDGET_DEFINITIONS,
+  ...PENDING_WIDGET_DEFINITIONS,
+];
 
 export const IMPLEMENTED_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
   (widget): widget is ImplementedNativeWidgetDefinition => widget.status === 'implemented',
+);
+
+export const PENDING_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
+  (widget): widget is PendingNativeWidgetDefinition => widget.status === 'pending',
 );
 
 export function getNativeWidgetDefinition(widgetId: string): NativeWidgetDefinition | undefined {

@@ -8,8 +8,13 @@ import { AppButton } from '../components/ui/AppButton';
 import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { MetricCard } from '../components/ui/MetricCard';
+import { StatusPill } from '../components/ui/StatusPill';
 import { colors, spacing } from '../theme/tokens';
-import { IMPLEMENTED_NATIVE_WIDGETS, NATIVE_WIDGET_REGISTRY } from '../widgets';
+import {
+  IMPLEMENTED_NATIVE_WIDGETS,
+  NATIVE_WIDGET_REGISTRY,
+  PENDING_NATIVE_WIDGETS,
+} from '../widgets';
 
 export function DashboardScreen() {
   const queryClient = useQueryClient();
@@ -53,7 +58,7 @@ export function DashboardScreen() {
         <MetricCard
           label="Widgets"
           value={`${IMPLEMENTED_NATIVE_WIDGETS.length}/${NATIVE_WIDGET_REGISTRY.length}`}
-          helper="All widget concepts render native evidence"
+          helper={`${PENDING_NATIVE_WIDGETS.length} pending web widget groups tracked`}
           tone="accent"
         />
       </View>
@@ -66,10 +71,20 @@ export function DashboardScreen() {
         />
         <View style={styles.registryList}>
           {NATIVE_WIDGET_REGISTRY.map(widget => (
-            <View key={widget.id} style={styles.pendingWidget}>
-              <AppText weight="semibold">{widget.title}</AppText>
+            <View key={widget.id} style={styles.registryItem}>
+              <View style={styles.registryItemHeader}>
+                <AppText weight="semibold" style={styles.registryTitle}>
+                  {widget.title}
+                </AppText>
+                <StatusPill
+                  label={widget.status === 'implemented' ? 'Implemented' : 'Pending'}
+                  state={widget.status === 'implemented' ? 'online' : 'warning'}
+                />
+              </View>
               <AppText variant="caption" tone="muted">
-                Implemented: {widget.description}
+                {widget.status === 'implemented'
+                  ? `Implemented: ${widget.description}`
+                  : `Pending: ${widget.pendingReason}`}
               </AppText>
             </View>
           ))}
@@ -114,13 +129,23 @@ const styles = StyleSheet.create({
   registryList: {
     gap: spacing.sm,
   },
-  pendingWidget: {
+  registryItem: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
     padding: spacing.md,
     gap: spacing.xs,
     backgroundColor: colors.surfaceRaised,
+  },
+  registryItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  registryTitle: {
+    flex: 1,
+    minWidth: 0,
   },
   widgetGrid: {
     gap: spacing.lg,

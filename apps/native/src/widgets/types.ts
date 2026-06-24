@@ -3,15 +3,23 @@ import type { ComponentType } from 'react';
 import type { RouteId } from '../navigation/routes';
 import type { SemanticIconName } from '../components/icons/SemanticIcon';
 
-export type NativeWidgetStatus = 'implemented';
+export type NativeWidgetStatus = 'implemented' | 'pending';
 
 export type NativeWidgetCategory =
   | 'alerts'
+  | 'analytics'
+  | 'automation'
   | 'battery'
   | 'charging'
+  | 'climate'
   | 'driving'
+  | 'energy'
+  | 'maps'
+  | 'media'
   | 'navigation'
+  | 'security'
   | 'system'
+  | 'tires'
   | 'vehicle';
 
 export interface NativeWidgetSize {
@@ -39,4 +47,11 @@ export interface ImplementedNativeWidgetDefinition extends NativeWidgetDefinitio
   component: ComponentType<NativeWidgetProps>;
 }
 
-export type NativeWidgetDefinition = ImplementedNativeWidgetDefinition;
+export interface PendingNativeWidgetDefinition extends NativeWidgetDefinitionBase {
+  status: 'pending';
+  pendingReason: string;
+}
+
+export type NativeWidgetDefinition =
+  | ImplementedNativeWidgetDefinition
+  | PendingNativeWidgetDefinition;
