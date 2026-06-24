@@ -1,15 +1,19 @@
 import React, { type ReactNode } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
 
 import { colors } from '../../theme/tokens';
 
-interface GlassPanelProps {
+interface GlassPanelProps extends ViewProps {
   children: ReactNode;
-  style?: ViewStyle | ViewStyle[];
+  style?: StyleProp<ViewStyle>;
 }
 
-export function GlassPanel({children, style}: GlassPanelProps) {
-  return <View style={[styles.root, style]}>{children}</View>;
+export function GlassPanel({children, style, ...props}: GlassPanelProps) {
+  return (
+    <View {...props} style={[styles.root, style]}>
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
