@@ -2,10 +2,23 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { apiUrl } from '../api/client';
+import {
+  useAuthMode,
+  useAuthStatus,
+  useNotificationChannels,
+  useNotificationStats,
+  useQuietHours,
+  useSettings,
+  useSystemStatus,
+  useVersionInfo,
+} from '../api/hooks';
+import { KeyValueRow } from '../components/data/KeyValueRow';
+import { ScreenSection } from '../components/data/ScreenSection';
 import { EmptyState } from '../components/feedback/EmptyState';
 import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { StatusPill } from '../components/ui/StatusPill';
+import { formatBoolean, formatCount, formatDateTime } from '../lib/format';
 import { colors, spacing } from '../theme/tokens';
 
 const platformRows = [
@@ -16,6 +29,21 @@ const platformRows = [
 ];
 
 export function SettingsScreen() {
+  const settingsQuery = useSettings();
+  const authModeQuery = useAuthMode();
+  const authStatusQuery = useAuthStatus();
+  const notificationChannelsQuery = useNotificationChannels();
+  const notificationStatsQuery = useNotificationStats();
+  const quietHoursQuery = useQuietHours();
+  const systemStatusQuery = useSystemStatus();
+  const versionQuery = useVersionInfo();
+  const settings = settingsQuery.data;
+  const channels = notificationChannelsQuery.data ?? [];
+  const quietHours = quietHoursQuery.data ?? [];
+  const notificationStats = notificationStatsQuery.data;
+  const authMode = authModeQuery.data;
+  const systemOverall = systemStatusQuery.data?.overall ?? systemStatusQuery.data?.status ?? 'unknown';
+
   return (
     <View style={styles.root}>
       <GlassPanel style={styles.panel}>
@@ -53,12 +81,95 @@ export function SettingsScreen() {
         </View>
       </GlassPanel>
 
-      <GlassPanel style={styles.panel}>
+      <ScreenSection
+        title="User preferences"
+        subtitle="Read-only native settings parity from /settings using SI-safe display boundaries.">
+        {settingsQuery.error ? (
+          <EmptyState
+            title="Settings unavailable"
+            message="The settings endpoint could not be loaded; native editing remains disabled."
+          />
+        ) : settings ? (
+          <>
+            <KeyValueRow label="Length unit" value={settings.unit_of_length ?? '-'} />
+            <KeyValueRow label="Temperature unit" value={settings.unit_of_temp ?? '-'} />
+            <KeyValueRow label="Pressure unit" value={settings.unit_of_pressure ?? '-'} />
+            <KeyValueRow label="Theme" value={settings.theme ?? settings.mode ?? '-'} />
+            <KeyValueRow label="Language" value={settings.language ?? '-'} />
+            <KeyValueRow label="Locale" value={settings.locale ?? '-'} />
+            <KeyValueRow label="Timezone display" value={settings.tz_display_default ?? '-'} />
+            <KeyValueRow label="Decimal precision" value={settings.decimal_precision ?? '-'} />
+            <KeyValueRow label="API suspended" value={formatBoolean(settings.api_suspended)} />
+            <KeyValueRow label="Tab badge" value={formatBoolean(settings.tab_badge_enabled)} />
+          </>
+        ) : (
+          <EmptyState
+            title={settingsQuery.isLoading ? 'Loading settings' : 'No settings returned'}
+            message="Settings values will appear here when the backend returns the app preferences payload."
+          />
+        )}
         <EmptyState
-          title="Next parity slice"
-          message="Add auth/session handling, route manifest import, dashboard widgets, and native packaging gates."
+          title="Native settings editing unavailable"
+          message="This slice exposes production settings state only. Write actions stay disabled until native form validation and sudo gates are implemented."
         />
-      </GlassPanel>
+      </ScreenSection>
+
+      <ScreenSection
+        title="Auth and account state"
+        subtitle="Native settings reflects open-mode and forward-auth without persisting tokens.">
+        <StatusPill
+          label={authMode?.mode === 'forward_auth' ? 'ForwardAuth' : authMode?.mode === 'open' ? 'Open mode' : 'Unknown'}
+          state={authMode?.mode === 'forward_auth' ? 'online' : authMode?.mode === 'open' ? 'warning' : 'offline'}
+        />
+        <KeyValueRow label="Subject" value={authMode?.subject ?? 'not resolved'} />
+        <KeyValueRow label="Provider" value={authMode?.provider_hint ?? '-'} />
+        <KeyValueRow label="Tesla account" value={authStatusQuery.data?.authenticated ? 'connected' : 'not connected'} />
+        <KeyValueRow label="Tesla token expires" value={formatDateTime(authStatusQuery.data?.expires_at)} />
+        {authModeQuery.error || authStatusQuery.error ? (
+          <EmptyState
+            title="Auth state partially unavailable"
+            message="At least one auth endpoint returned an error; native controls remain disabled instead of assuming success."
+          />
+        ) : null}
+      </ScreenSection>
+
+      <ScreenSection title="Notification settings" subtitle="Channels, delivery stats, and quiet-hours status from /notifications.">
+        {notificationChannelsQuery.error || notificationStatsQuery.error || quietHoursQuery.error ? (
+          <EmptyState
+            title="Notification settings unavailable"
+            message="One or more notification endpoints could not be loaded from the API."
+          />
+        ) : (
+          <>
+            <KeyValueRow label="Channels" value={formatCount(channels.length)} />
+            <KeyValueRow label="Enabled channels" value={formatCount(notificationStats?.enabled_channels)} />
+            <KeyValueRow label="Sent notifications" value={formatCount(notificationStats?.sent)} />
+            <KeyValueRow label="Failed notifications" value={formatCount(notificationStats?.failed)} />
+            <KeyValueRow label="Pending notifications" value={formatCount(notificationStats?.pending)} />
+            <KeyValueRow label="Quiet-hours windows" value={formatCount(quietHours.length)} />
+          </>
+        )}
+      </ScreenSection>
+
+      <ScreenSection title="System contract" subtitle="Operational settings context from /system endpoints.">
+        <StatusPill
+          label={systemOverall}
+          state={systemOverall === 'healthy' ? 'online' : systemStatusQuery.error ? 'offline' : 'warning'}
+        />
+        <KeyValueRow label="Database" value={systemStatusQuery.data?.database?.status ?? '-'} />
+        <KeyValueRow label="MQTT" value={systemStatusQuery.data?.mqtt?.status ?? '-'} />
+        <KeyValueRow label="Tesla API" value={systemStatusQuery.data?.tesla_api?.status ?? '-'} />
+        <KeyValueRow label="Fleet telemetry" value={systemStatusQuery.data?.fleet_telemetry?.status ?? '-'} />
+        <KeyValueRow label="Chart version" value={versionQuery.data?.chart_version ?? '-'} />
+        <KeyValueRow label="Go runtime" value={versionQuery.data?.go_version ?? '-'} />
+        <KeyValueRow label="OS / arch" value={versionQuery.data ? `${versionQuery.data.os}/${versionQuery.data.arch}` : '-'} />
+        {systemStatusQuery.error || versionQuery.error ? (
+          <EmptyState
+            title="System metadata unavailable"
+            message="System endpoints could not be loaded from the native client."
+          />
+        ) : null}
+      </ScreenSection>
     </View>
   );
 }

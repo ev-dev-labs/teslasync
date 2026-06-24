@@ -51,3 +51,19 @@ export function formatPower(watts: number | null | undefined): string {
 
   return `${(watts / 1000).toFixed(1)} kW`;
 }
+
+export function formatBoolean(value: boolean | null | undefined): string {
+  if (value == null) {
+    return '-';
+  }
+
+  return value ? 'Enabled' : 'Disabled';
+}
+
+export function formatCount(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) {
+    return '-';
+  }
+
+  return new Intl.NumberFormat().format(value);
+}
