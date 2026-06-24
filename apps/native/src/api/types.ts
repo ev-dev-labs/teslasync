@@ -43,6 +43,62 @@ export interface Alert {
   created_at: string;
 }
 
+export type AlertRuleSeverity = 'info' | 'warn' | 'critical';
+export type AlertRuleOp =
+  | '='
+  | '!='
+  | '<'
+  | '<='
+  | '>'
+  | '>='
+  | 'changed'
+  | 'between'
+  | 'outside';
+export type AlertRuleTriggerMode = 'once' | 'repeat';
+export type AlertRuleKind = 'signal' | 'computed_metric';
+export type ComputedMetricOp =
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | '='
+  | '!='
+  | '%_change_>'
+  | '%_change_<';
+
+export interface AlertRule {
+  id: number;
+  name: string;
+  description?: string | null;
+  enabled: boolean;
+  vehicle_id?: number | null;
+  all_vehicles?: boolean;
+  vehicle_ids?: number[];
+  signal_name: string;
+  op: AlertRuleOp;
+  value_num?: number | null;
+  value_text?: string | null;
+  value_bool?: boolean | null;
+  value_min?: number | null;
+  value_max?: number | null;
+  severity: AlertRuleSeverity;
+  cooldown_min: number;
+  trigger_mode: AlertRuleTriggerMode;
+  snoozed_until?: string | null;
+  kind?: AlertRuleKind;
+  metric_id?: string | null;
+  metric_window?: string | null;
+  metric_threshold?: number | null;
+  metric_op?: ComputedMetricOp | null;
+  max_fires_per_resolution?: number | null;
+  escalation_after_min?: number | null;
+  escalation_severity?: AlertRuleSeverity | null;
+  msg_template?: string | null;
+  include_title?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export type NotificationChannelKind =
   | 'discord'
   | 'slack'
@@ -55,7 +111,9 @@ export type NotificationChannelKind =
 export interface NotificationChannel {
   id: number;
   name: string;
-  kind: NotificationChannelKind;
+  type?: NotificationChannelKind;
+  kind?: NotificationChannelKind;
+  config?: Record<string, string>;
   enabled: boolean;
   created_at: string;
   updated_at: string;

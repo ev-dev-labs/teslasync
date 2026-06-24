@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Platform,
   ScrollView,
@@ -22,6 +22,7 @@ import {
   type RouteId,
   type WebRouteDefinition,
 } from './navigation/routes';
+import { usePlatformIntegrationStatus } from './platform/status';
 import { AlertsScreen } from './screens/AlertsScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { ChargingScreen } from './screens/ChargingScreen';
@@ -33,12 +34,20 @@ import { SystemScreen } from './screens/SystemScreen';
 import { VehiclesScreen } from './screens/VehiclesScreen';
 import { colors, layout, shadows, spacing } from './theme/tokens';
 
-const routeGroups: RouteGroup[] = ['command', 'fleet', 'operations', 'platform'];
+const routeGroups: RouteGroup[] = [
+  'command',
+  'fleet',
+  'operations',
+  'platform',
+];
 
 export function AppRoot() {
   const scheme = useColorScheme();
   const [activeRoute, setActiveRoute] = useState<RouteId>('dashboard');
-  const activeMeta = routes.find(route => route.id === activeRoute) ?? routes[0];
+  const handledDeepLinkURL = useRef<string | null>(null);
+  const platformStatus = usePlatformIntegrationStatus();
+  const activeMeta =
+    routes.find(route => route.id === activeRoute) ?? routes[0];
   const activePendingRoutes = useMemo(
     () => getPendingRoutesForNativeTarget(activeRoute),
     [activeRoute],
@@ -63,9 +72,23 @@ export function AppRoot() {
       case 'auth':
         return <AuthScreen />;
       case 'settings':
-        return <SettingsScreen />;
+        return <SettingsScreen platformStatus={platformStatus} />;
     }
-  }, [activeRoute]);
+  }, [activeRoute, platformStatus]);
+
+  useEffect(() => {
+    const deepLink =
+      platformStatus.lastDeepLink ?? platformStatus.initialDeepLink;
+    if (
+      !deepLink?.matched ||
+      !deepLink.routeId ||
+      handledDeepLinkURL.current === deepLink.url
+    ) {
+      return;
+    }
+    handledDeepLinkURL.current = deepLink.url;
+    setActiveRoute(deepLink.routeId);
+  }, [platformStatus.initialDeepLink, platformStatus.lastDeepLink]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -117,6 +140,9 @@ export function AppRoot() {
             <AppText variant="caption" tone="muted">
               {routeParitySummary.total} web routes tracked
             </AppText>
+            <AppText variant="caption" tone="muted">
+              lifecycle: {platformStatus.appState}
+            </AppText>
           </View>
         </GlassPanel>
 
@@ -129,7 +155,8 @@ export function AppRoot() {
             <GlassPanel style={styles.statusCard}>
               <AppText variant="caption">Native route parity</AppText>
               <AppText weight="semibold" tone="accent">
-                {routeParitySummary.implemented}/{routeParitySummary.total} implemented
+                {routeParitySummary.implemented}/{routeParitySummary.total}{' '}
+                implemented
               </AppText>
               <AppText variant="caption" tone="muted">
                 {routeParitySummary.pending} pending routes mapped
@@ -139,9 +166,13 @@ export function AppRoot() {
 
           <ScrollView
             contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled">
+            keyboardShouldPersistTaps="handled"
+          >
             {screen}
-            <RouteParityPanel route={activeMeta} pendingRoutes={activePendingRoutes} />
+            <RouteParityPanel
+              route={activeMeta}
+              pendingRoutes={activePendingRoutes}
+            />
           </ScrollView>
         </View>
       </View>
@@ -154,7 +185,7 @@ interface RouteParityPanelProps {
   pendingRoutes: WebRouteDefinition[];
 }
 
-function RouteParityPanel({route, pendingRoutes}: RouteParityPanelProps) {
+function RouteParityPanel({ route, pendingRoutes }: RouteParityPanelProps) {
   return (
     <GlassPanel style={styles.routePanel}>
       <View style={styles.parityHeader}>
@@ -163,7 +194,8 @@ function RouteParityPanel({route, pendingRoutes}: RouteParityPanelProps) {
             Route parity status
           </AppText>
           <AppText tone="secondary">
-            {route.label} owns {route.parity.total} web routes from web/src/App.tsx.
+            {route.label} owns {route.parity.total} web routes from
+            web/src/App.tsx.
           </AppText>
         </View>
         <View style={styles.parityStats}>
@@ -179,7 +211,10 @@ function RouteParityPanel({route, pendingRoutes}: RouteParityPanelProps) {
             <AppText variant="caption" tone="muted">
               Pending
             </AppText>
-            <AppText weight="bold" tone={route.parity.pending === 0 ? 'accent' : 'danger'}>
+            <AppText
+              weight="bold"
+              tone={route.parity.pending === 0 ? 'accent' : 'danger'}
+            >
               {route.parity.pending}
             </AppText>
           </View>
@@ -187,7 +222,9 @@ function RouteParityPanel({route, pendingRoutes}: RouteParityPanelProps) {
       </View>
 
       {pendingRoutes.length === 0 ? (
-        <AppText tone="secondary">No pending web routes are mapped to this native target.</AppText>
+        <AppText tone="secondary">
+          No pending web routes are mapped to this native target.
+        </AppText>
       ) : (
         <View style={styles.pendingList}>
           {pendingRoutes.map(pendingRoute => (
@@ -198,7 +235,11 @@ function RouteParityPanel({route, pendingRoutes}: RouteParityPanelProps) {
                   {pendingRoute.webPath}
                 </AppText>
               </View>
-              <AppText variant="caption" tone="muted" style={styles.pendingEvidence}>
+              <AppText
+                variant="caption"
+                tone="muted"
+                style={styles.pendingEvidence}
+              >
                 {pendingRoute.evidence}
               </AppText>
             </View>

@@ -9,6 +9,7 @@ import {
 } from './client';
 import type {
   Alert,
+  AlertRule,
   ActiveSessionsResponse,
   AppSettings,
   AuditLogEntry,
@@ -113,6 +114,7 @@ export const apiKeys = {
     ['signals', id, 'available'] as const,
   liveSignals: (id: number | string) => ['signals', id, 'live'] as const,
   alerts: ['alerts'] as const,
+  alertRules: ['alerts', 'rules'] as const,
   systemStatus: ['system', 'status'] as const,
   systemHealth: ['system', 'health'] as const,
   systemVersion: ['system', 'version'] as const,
@@ -275,6 +277,14 @@ export function useAlerts() {
     queryKey: apiKeys.alerts,
     queryFn: ({ signal }) =>
       request<Alert[]>(buildQueryPath('/alerts', { limit: 10 }), { signal }),
+  });
+}
+
+export function useAlertRules() {
+  return useQuery({
+    queryKey: apiKeys.alertRules,
+    queryFn: ({ signal }) => request<AlertRule[]>('/alerts/rules', { signal }),
+    staleTime: 30_000,
   });
 }
 

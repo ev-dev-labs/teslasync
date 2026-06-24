@@ -68,15 +68,21 @@ const redirectRouteEvidence =
   'Pending redirect parity: web/src/App.tsx redirects this route, but native deep-link redirect handling is not implemented in N0001.';
 
 const implementedEvidenceByTarget: Record<RouteId, string> = {
-  dashboard: 'Implemented: DashboardScreen renders the native shell for this command route.',
-  vehicles: 'Implemented: VehiclesScreen renders API-backed native vehicle cards.',
-  charging: 'Implemented: ChargingScreen renders API-backed native charging sessions.',
+  dashboard:
+    'Implemented: DashboardScreen renders the native shell for this command route.',
+  vehicles:
+    'Implemented: VehiclesScreen renders API-backed native vehicle cards.',
+  charging:
+    'Implemented: ChargingScreen renders API-backed native charging sessions.',
   driving: 'Implemented: DrivingScreen renders API-backed native drive rows.',
-  energy: 'Implemented: EnergyScreen renders API-backed native vehicle energy data.',
-  alerts: 'Implemented: AlertsScreen renders the native notification inbox surface.',
+  energy:
+    'Implemented: EnergyScreen renders API-backed native vehicle energy data.',
+  alerts:
+    'Implemented: AlertsScreen renders the native notification inbox surface.',
   system: 'Implemented: SystemScreen renders API-backed native system status.',
   auth: 'Implemented: AuthScreen renders the native identity contract surface.',
-  settings: 'Implemented: SettingsScreen renders native platform and API contract settings.',
+  settings:
+    'Implemented: SettingsScreen renders native platform and API contract settings.',
 };
 
 function normalizeWebPath(sourcePath: string) {
@@ -113,7 +119,8 @@ const nativeRoutes = [
     group: 'fleet',
     label: 'Vehicles',
     shortDescription: 'Garage state',
-    description: 'Native vehicle cards, health state, and route-ready telemetry shells.',
+    description:
+      'Native vehicle cards, health state, and route-ready telemetry shells.',
     icon: 'V',
   },
   {
@@ -121,7 +128,8 @@ const nativeRoutes = [
     group: 'fleet',
     label: 'Charging',
     shortDescription: 'Sessions',
-    description: 'Charging sessions, energy added, cost-ready states, and live session shells.',
+    description:
+      'Charging sessions, energy added, cost-ready states, and live session shells.',
     icon: 'C',
   },
   {
@@ -129,7 +137,8 @@ const nativeRoutes = [
     group: 'fleet',
     label: 'Driving',
     shortDescription: 'Trips',
-    description: 'Recent drives, distance, energy, speed, scoring, and replay-ready metadata.',
+    description:
+      'Recent drives, distance, energy, speed, scoring, and replay-ready metadata.',
     icon: 'R',
   },
   {
@@ -137,7 +146,8 @@ const nativeRoutes = [
     group: 'operations',
     label: 'Energy',
     shortDescription: 'Battery',
-    description: 'Battery health, energy usage, sleep efficiency, and range intelligence.',
+    description:
+      'Battery health, energy usage, sleep efficiency, and range intelligence.',
     icon: 'E',
   },
   {
@@ -145,7 +155,8 @@ const nativeRoutes = [
     group: 'operations',
     label: 'Alerts',
     shortDescription: 'Inbox',
-    description: 'Notification inbox, alert severity, unread state, and escalation surfaces.',
+    description:
+      'Notification inbox, alert severity, unread state, and escalation surfaces.',
     icon: 'A',
   },
   {
@@ -153,7 +164,8 @@ const nativeRoutes = [
     group: 'platform',
     label: 'System',
     shortDescription: 'Ops',
-    description: 'Backend status, service health, version, and operational readiness.',
+    description:
+      'Backend status, service health, version, and operational readiness.',
     icon: 'O',
   },
   {
@@ -161,7 +173,8 @@ const nativeRoutes = [
     group: 'platform',
     label: 'Auth',
     shortDescription: 'Identity',
-    description: 'Forward-auth/open-mode state, subject, capabilities, and account readiness.',
+    description:
+      'Forward-auth/open-mode state, subject, capabilities, and account readiness.',
     icon: 'I',
   },
   {
@@ -169,7 +182,8 @@ const nativeRoutes = [
     group: 'platform',
     label: 'Settings',
     shortDescription: 'Platform',
-    description: 'API base, platform support, and React Native parity milestones.',
+    description:
+      'API base, platform support, and React Native parity milestones.',
     icon: 'S',
   },
 ] as const satisfies readonly NativeRouteDefinition[];
@@ -294,7 +308,8 @@ export const webRouteManifest = [
     label: 'Battery',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders API-backed native battery metrics from /vehicles/{vehicleID}/battery.',
+    evidence:
+      'Implemented: EnergyScreen renders API-backed native battery metrics from /vehicles/{vehicleID}/battery.',
   }),
   webRoute({
     id: 'battery-health',
@@ -303,7 +318,8 @@ export const webRouteManifest = [
     label: 'Battery Health',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders battery health trend, capacity, degradation, and range summaries.',
+    evidence:
+      'Implemented: EnergyScreen renders battery health trend, capacity, degradation, and range summaries.',
   }),
   webRoute({
     id: 'drives',
@@ -328,7 +344,8 @@ export const webRouteManifest = [
     label: 'Analytics',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders native fleet analytics summaries from /analytics/fleet.',
+    evidence:
+      'Implemented: EnergyScreen renders native fleet analytics summaries from /analytics/fleet.',
   }),
   webRoute({
     id: 'commands',
@@ -383,8 +400,10 @@ export const webRouteManifest = [
     sourcePath: 'alerts',
     group: 'operations',
     label: 'Legacy Alerts Redirect',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders the legacy /alerts compatibility feed alongside notification inbox data.',
   }),
   webRoute({
     id: 'alert-studio',
@@ -399,16 +418,20 @@ export const webRouteManifest = [
     sourcePath: 'alert-rules',
     group: 'operations',
     label: 'Legacy Alert Rules Redirect',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders read-only alert rule inventory from /alerts/rules.',
   }),
   webRoute({
     id: 'notifications',
     sourcePath: 'notifications',
     group: 'operations',
     label: 'Notifications',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders notification stats, inbox, rules, channels, quiet hours, and native push availability.',
   }),
   webRoute({
     id: 'notifications-inbox',
@@ -431,48 +454,60 @@ export const webRouteManifest = [
     sourcePath: 'notifications/alerts',
     group: 'operations',
     label: 'Notification Alerts',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders active alert severity and read state from /alerts.',
   }),
   webRoute({
     id: 'notifications-channels',
     sourcePath: 'notifications/channels',
     group: 'operations',
     label: 'Notification Channels',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders read-only delivery channel state from /notifications.',
   }),
   webRoute({
     id: 'notifications-webhooks',
     sourcePath: 'notifications/webhooks',
     group: 'operations',
     label: 'Notification Webhooks',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders webhook-capable notification channels without exposing secret config values.',
   }),
   webRoute({
     id: 'notifications-browser',
     sourcePath: 'notifications/browser',
     group: 'operations',
     label: 'Browser Notifications',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders native push registration as unavailable, so browser/push parity is visible without fake success.',
   }),
   webRoute({
     id: 'notifications-quiet-hours',
     sourcePath: 'notifications/quiet-hours',
     group: 'operations',
     label: 'Notification Quiet Hours',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders quiet-hours windows from /notifications/quiet-hours.',
   }),
   webRoute({
     id: 'notifications-rules',
     sourcePath: 'notifications/rules',
     group: 'operations',
     label: 'Notification Rules',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'alerts',
+    evidence:
+      'Implemented: AlertsScreen renders alert notification rules from /alerts/rules.',
   }),
   webRoute({
     id: 'notifications-studio',
@@ -665,7 +700,8 @@ export const webRouteManifest = [
     label: 'Efficiency',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders fleet and vehicle efficiency metrics from energy analytics routes.',
+    evidence:
+      'Implemented: EnergyScreen renders fleet and vehicle efficiency metrics from energy analytics routes.',
   }),
   webRoute({
     id: 'trips',
@@ -814,7 +850,8 @@ export const webRouteManifest = [
     label: 'Fleet Telemetry Coverage',
     implementationStatus: 'implemented',
     nativeTarget: 'system',
-    evidence: 'Implemented: SystemScreen renders Fleet Telemetry coverage from /tesla/fleet-telemetry/coverage.',
+    evidence:
+      'Implemented: SystemScreen renders Fleet Telemetry coverage from /tesla/fleet-telemetry/coverage.',
   }),
   webRoute({
     id: 'admin-dlq',
@@ -847,7 +884,8 @@ export const webRouteManifest = [
     label: 'Live Signal Inspector',
     implementationStatus: 'implemented',
     nativeTarget: 'system',
-    evidence: 'Implemented: SystemScreen renders live signal diagnostics from /signals/{vehicleID}/live.',
+    evidence:
+      'Implemented: SystemScreen renders live signal diagnostics from /signals/{vehicleID}/live.',
   }),
   webRoute({
     id: 'admin-schema-drift',
@@ -896,7 +934,8 @@ export const webRouteManifest = [
     label: 'Audit Log',
     implementationStatus: 'implemented',
     nativeTarget: 'system',
-    evidence: 'Implemented: SystemScreen renders recent audit rows from /system/audit.',
+    evidence:
+      'Implemented: SystemScreen renders recent audit rows from /system/audit.',
   }),
   webRoute({
     id: 'admin-gdpr-exports',
@@ -1009,7 +1048,8 @@ export const webRouteManifest = [
     label: 'Signals Workspace',
     implementationStatus: 'implemented',
     nativeTarget: 'system',
-    evidence: 'Implemented: SystemScreen renders signal catalog and live state diagnostics for the selected vehicle.',
+    evidence:
+      'Implemented: SystemScreen renders signal catalog and live state diagnostics for the selected vehicle.',
   }),
   webRoute({
     id: 'signal-explorer',
@@ -1018,7 +1058,8 @@ export const webRouteManifest = [
     label: 'Signal Explorer',
     implementationStatus: 'implemented',
     nativeTarget: 'system',
-    evidence: 'Implemented: SystemScreen renders available signal catalog categories from /signals/{vehicleID}/available.',
+    evidence:
+      'Implemented: SystemScreen renders available signal catalog categories from /signals/{vehicleID}/available.',
   }),
   webRoute({
     id: 'signal-log',
@@ -1035,7 +1076,8 @@ export const webRouteManifest = [
     label: 'Live Monitor',
     implementationStatus: 'implemented',
     nativeTarget: 'system',
-    evidence: 'Implemented: SystemScreen renders live signal source and freshness metadata without WebView embedding.',
+    evidence:
+      'Implemented: SystemScreen renders live signal source and freshness metadata without WebView embedding.',
   }),
   webRoute({
     id: 'state-debugger',
@@ -1332,7 +1374,8 @@ export const webRouteManifest = [
     label: 'Temperature Impact',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders temperature impact buckets from /analytics/temperature-impact.',
+    evidence:
+      'Implemented: EnergyScreen renders temperature impact buckets from /analytics/temperature-impact.',
   }),
   webRoute({
     id: 'route-efficiency',
@@ -1341,7 +1384,8 @@ export const webRouteManifest = [
     label: 'Route Efficiency',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders route efficiency rows from /analytics/route-efficiency.',
+    evidence:
+      'Implemented: EnergyScreen renders route efficiency rows from /analytics/route-efficiency.',
   }),
   webRoute({
     id: 'regen-efficiency',
@@ -1350,7 +1394,8 @@ export const webRouteManifest = [
     label: 'Regen Efficiency',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders regen recovery and ratio metrics from /analytics/regen.',
+    evidence:
+      'Implemented: EnergyScreen renders regen recovery and ratio metrics from /analytics/regen.',
   }),
   webRoute({
     id: 'battery-degradation',
@@ -1359,7 +1404,8 @@ export const webRouteManifest = [
     label: 'Battery Degradation',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders predictive battery degradation analytics from /analytics/battery-degradation.',
+    evidence:
+      'Implemented: EnergyScreen renders predictive battery degradation analytics from /analytics/battery-degradation.',
   }),
   webRoute({
     id: 'tco',
@@ -1368,7 +1414,8 @@ export const webRouteManifest = [
     label: 'True Cost of Ownership',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders TCO savings metrics and monthly savings summary from /analytics/tco.',
+    evidence:
+      'Implemented: EnergyScreen renders TCO savings metrics and monthly savings summary from /analytics/tco.',
   }),
   webRoute({
     id: 'analytics-tco',
@@ -1377,7 +1424,8 @@ export const webRouteManifest = [
     label: 'Analytics TCO',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders the analytics TCO route via /analytics/tco.',
+    evidence:
+      'Implemented: EnergyScreen renders the analytics TCO route via /analytics/tco.',
   }),
   webRoute({
     id: 'vehicle-comparison',
@@ -1394,7 +1442,8 @@ export const webRouteManifest = [
     label: 'Sleep Efficiency',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders sleep efficiency metrics from /analytics/sleep.',
+    evidence:
+      'Implemented: EnergyScreen renders sleep efficiency metrics from /analytics/sleep.',
   }),
   webRoute({
     id: 'charging-heatmap',
@@ -1411,7 +1460,8 @@ export const webRouteManifest = [
     label: 'Speed Profile',
     implementationStatus: 'implemented',
     nativeTarget: 'energy',
-    evidence: 'Implemented: EnergyScreen renders speed profile chart summaries from /analytics/speed-profile.',
+    evidence:
+      'Implemented: EnergyScreen renders speed profile chart summaries from /analytics/speed-profile.',
   }),
   webRoute({
     id: 'tesla-account',
@@ -1455,7 +1505,9 @@ export const webRouteManifest = [
   }),
 ] as const satisfies readonly WebRouteDefinition[];
 
-function summarizeRoutes(routeList: readonly WebRouteDefinition[]): RouteParitySummary {
+function summarizeRoutes(
+  routeList: readonly WebRouteDefinition[],
+): RouteParitySummary {
   const implemented = routeList.filter(
     route => route.implementationStatus === 'implemented',
   ).length;
@@ -1492,7 +1544,9 @@ export const routes: RouteDefinition[] = nativeRoutes.map(route => {
 
   return {
     ...route,
-    webPaths: targetRoutes.map(webRouteDefinition => webRouteDefinition.webPath),
+    webPaths: targetRoutes.map(
+      webRouteDefinition => webRouteDefinition.webPath,
+    ),
     parity: summarizeRoutes(targetRoutes),
   };
 });
