@@ -8,6 +8,8 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
+    "test:ui": "jest __tests__/NativeUiAutomation.test.tsx --runInBand",
+    "test:platform": "npm test -- --runInBand && npm run test:windows -- --runInBand",
     "typecheck": "tsc --noEmit",
     "windows": "npx @react-native-community/cli run-windows",
     "macos": "react-native run-macos",
@@ -21,7 +23,13 @@
     "package:macos": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\package-native.ps1 -Platform macos",
     "package:all": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\package-native.ps1 -Platform all",
     "check:packaging": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\check-packaging.ps1",
-    "test:windows": "jest --config jest.config.windows.js"
+    "test:windows": "jest --config jest.config.windows.js",
+    "gate:android": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run-device-build-gates.ps1 -Platform android",
+    "gate:ios": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run-device-build-gates.ps1 -Platform ios",
+    "gate:windows": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run-device-build-gates.ps1 -Platform windows",
+    "gate:macos": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run-device-build-gates.ps1 -Platform macos",
+    "gate:device": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run-device-build-gates.ps1 -Platform all",
+    "gate:native": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run-device-build-gates.ps1 -Platform all -RunQualityGates"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.1",
