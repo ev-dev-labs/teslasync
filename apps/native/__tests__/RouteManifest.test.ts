@@ -112,6 +112,9 @@ test('derives honest native shell parity counters and keeps old-web deletion blo
   const pendingRoutes = webRouteManifest.filter(
     route => route.implementationStatus !== 'implemented',
   );
+  const literalPendingRoutes = webRouteManifest.filter(
+    route => route.implementationStatus === 'pending',
+  );
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
@@ -121,6 +124,7 @@ test('derives honest native shell parity counters and keeps old-web deletion blo
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
   expect(implementedRoutes.length).toBeGreaterThan(0);
   expect(pendingRoutes.length).toBeGreaterThan(0);
+  expect(literalPendingRoutes).toHaveLength(0);
   expect(implementedRoutes.length + pendingRoutes.length).toBe(
     EXPECTED_WEB_ROUTE_COUNT,
   );
@@ -230,8 +234,8 @@ test('marks notification platform routes with implemented or honest unavailable 
   }
 });
 
-test('keeps unported web routes visible as pending rather than success-shaped', () => {
-  const pendingRouteIds = [
+test('keeps unported web routes visible as native summaries rather than success-shaped', () => {
+  const nativeSummaryRouteIds = [
     'api-playground',
     'admin-slow-queries',
     'fleet-api',
@@ -239,10 +243,10 @@ test('keeps unported web routes visible as pending rather than success-shaped', 
     'vehicle-comparison',
   ];
 
-  for (const routeId of pendingRouteIds) {
+  for (const routeId of nativeSummaryRouteIds) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
-    expect(route?.implementationStatus).toBe('pending');
-    expect(route?.evidence).toMatch(/^Pending: /);
+    expect(route?.implementationStatus).toBe('native-summary');
+    expect(route?.evidence).toMatch(/^Native summary: /);
     expect(route?.deletionReadiness.status).toBe('blocked');
   }
 });

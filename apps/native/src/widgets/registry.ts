@@ -24,7 +24,7 @@ type ParityEvidenceWidgetDefinition = Omit<
 function parityEvidenceWidget(
   definition: ParityEvidenceWidgetDefinition,
 ): ImplementedNativeWidgetDefinition {
-  const {capabilities, ...widgetDefinition} = definition;
+  const { capabilities, ...widgetDefinition } = definition;
 
   return {
     ...widgetDefinition,
@@ -40,77 +40,92 @@ const IMPLEMENTED_WIDGET_DEFINITIONS = [
   {
     id: 'vehicle-hero',
     title: 'Vehicle hero',
-    description: 'Vehicle identity, state badge, battery, speed, power, VIN, and firmware.',
+    description:
+      'Vehicle identity, state badge, battery, speed, power, VIN, and firmware.',
     category: 'vehicle',
     icon: 'vehicle',
     webWidgetIds: ['vehicle-hero', 'vehicle-hero-card', 'watch-summary'],
-    defaultSize: {cols: 2, rows: 3},
+    defaultSize: { cols: 2, rows: 3 },
     status: 'implemented',
     component: VehicleHeroWidget,
   },
   {
     id: 'battery-health',
     title: 'Battery and health',
-    description: 'Battery gauge, charging state, health score, capacity, cycles, and range.',
+    description:
+      'Battery gauge, charging state, health score, capacity, cycles, and range.',
     category: 'battery',
     icon: 'battery',
-    webWidgetIds: ['battery-gauge', 'battery-radial-gauge', 'battery-health-analytics'],
-    defaultSize: {cols: 2, rows: 3},
+    webWidgetIds: [
+      'battery-gauge',
+      'battery-radial-gauge',
+      'battery-health-analytics',
+    ],
+    defaultSize: { cols: 2, rows: 3 },
     status: 'implemented',
     component: BatteryHealthWidget,
   },
   {
     id: 'alert-feed',
     title: 'Alert feed',
-    description: 'Recent alerts with severity, unread state, timestamp, and message text.',
+    description:
+      'Recent alerts with severity, unread state, timestamp, and message text.',
     category: 'alerts',
     icon: 'notifications',
     webWidgetIds: ['alert-feed', 'notification-stats'],
-    defaultSize: {cols: 2, rows: 3},
+    defaultSize: { cols: 2, rows: 3 },
     status: 'implemented',
     component: AlertFeedWidget,
   },
   {
     id: 'quick-nav',
     title: 'Quick navigation',
-    description: 'Native shortcuts for garage, charging, drives, and system surfaces.',
+    description:
+      'Native shortcuts for garage, charging, drives, and system surfaces.',
     category: 'navigation',
     icon: 'mapPinned',
     webWidgetIds: ['quick-nav'],
-    defaultSize: {cols: 2, rows: 2},
+    defaultSize: { cols: 2, rows: 2 },
     status: 'implemented',
     component: QuickNavWidget,
   },
   {
     id: 'recent-drives',
     title: 'Recent drives',
-    description: 'Last five drives with distance, duration, energy, SOC delta, and score.',
+    description:
+      'Last five drives with distance, duration, energy, SOC delta, and score.',
     category: 'driving',
     icon: 'drives',
     webWidgetIds: ['recent-drives', 'recent-drives-list', 'trip-summary'],
-    defaultSize: {cols: 2, rows: 3},
+    defaultSize: { cols: 2, rows: 3 },
     status: 'implemented',
     component: RecentDrivesWidget,
   },
   {
     id: 'charging-summary',
     title: 'Charging summary',
-    description: 'Latest charging sessions, energy total, peak power, duration, and SOC.',
+    description:
+      'Latest charging sessions, energy total, peak power, duration, and SOC.',
     category: 'charging',
     icon: 'charging',
-    webWidgetIds: ['charging-session-detail', 'charge-history', 'charge-status'],
-    defaultSize: {cols: 2, rows: 3},
+    webWidgetIds: [
+      'charging-session-detail',
+      'charge-history',
+      'charge-status',
+    ],
+    defaultSize: { cols: 2, rows: 3 },
     status: 'implemented',
     component: ChargingSummaryWidget,
   },
   {
     id: 'system-status',
     title: 'System status',
-    description: 'Backend status, health components, version, and service-mode summary.',
+    description:
+      'Backend status, health components, version, and service-mode summary.',
     category: 'system',
     icon: 'server',
     webWidgetIds: ['system-health', 'uptime-monitor', 'version-info'],
-    defaultSize: {cols: 2, rows: 3},
+    defaultSize: { cols: 2, rows: 3 },
     status: 'implemented',
     component: SystemStatusWidget,
   },
@@ -121,7 +136,7 @@ const IMPLEMENTED_WIDGET_DEFINITIONS = [
     category: 'battery',
     icon: 'cpu',
     webWidgetIds: ['battery-cells'],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     status: 'implemented',
     component: BatteryCellsWidget,
   },
@@ -132,7 +147,7 @@ const IMPLEMENTED_WIDGET_DEFINITIONS = [
     category: 'battery',
     icon: 'powerShare',
     webWidgetIds: ['live-power-flow', 'energy-flow', 'energy-flow-animated'],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     status: 'implemented',
     component: LivePowerFlowWidget,
   },
@@ -143,13 +158,61 @@ const IMPLEMENTED_WIDGET_DEFINITIONS = [
     category: 'system',
     icon: 'bug',
     webWidgetIds: ['telemetry-errors', 'signal-health'],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     status: 'implemented',
     component: TelemetryErrorsWidget,
   },
 ] as const satisfies readonly ImplementedNativeWidgetDefinition[];
 
 const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
+  parityEvidenceWidget({
+    id: 'auth-account-widgets',
+    title: 'Auth and account widgets',
+    description:
+      'Forward-auth mode, Tesla account connection, TOTP, active sessions, privacy/activity, onboarding, and API key routes are represented by native Auth readiness evidence.',
+    category: 'auth',
+    icon: 'userCheck',
+    webWidgetIds: [
+      'auth-mode-card',
+      'tesla-account-connection',
+      'account-sessions',
+      'account-2fa',
+      'account-privacy',
+      'api-keys',
+      'onboarding',
+      'me-activity',
+    ],
+    defaultSize: { cols: 2, rows: 4 },
+    capabilities: [
+      'Forward-auth and open-mode state',
+      'Tesla auth handoff without embedded login',
+      'TOTP/session readiness with disabled unsafe actions',
+    ],
+  }),
+  parityEvidenceWidget({
+    id: 'settings-platform-widgets',
+    title: 'Settings and platform widgets',
+    description:
+      'Unit preferences, theme, locale, notification settings, Helix, safety, gas price, and platform launch/deep-link routes are represented by native Settings evidence.',
+    category: 'settings',
+    icon: 'preferences',
+    webWidgetIds: [
+      'unit-preferences',
+      'theme-settings',
+      'notification-settings',
+      'safety-settings',
+      'helix-integration',
+      'gas-price-settings',
+      'platform-capabilities',
+      'api-contract',
+    ],
+    defaultSize: { cols: 2, rows: 4 },
+    capabilities: [
+      'Settings read-only API contract',
+      'Platform capability and deep-link evidence',
+      'Disabled native write actions until validation gates exist',
+    ],
+  }),
   parityEvidenceWidget({
     id: 'vehicle-detail-widgets',
     title: 'Vehicle detail widgets',
@@ -173,7 +236,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'vehicle-upgrades',
       'vehicle-access',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Vehicle detail and live-state summaries',
       'Access, firmware, and maintenance route mapping',
@@ -194,7 +257,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'projected-range',
       'battery-degradation-forecast',
     ],
-    defaultSize: {cols: 2, rows: 3},
+    defaultSize: { cols: 2, rows: 3 },
     capabilities: [
       'Battery health and range summary',
       'Degradation forecast evidence',
@@ -220,7 +283,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'driving-coach',
       'drive-telemetry',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Drive detail and route replay summaries',
       'Efficiency, speed, and regen analytics',
@@ -246,7 +309,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'supercharger-history',
       'charge-plans',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Charging sessions and telemetry curve evidence',
       'Cost and schedule route mapping',
@@ -269,7 +332,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'power-flow-history',
       'energy-stats',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Energy products and power-flow parity',
       'Sleep and vampire-drain analytics',
@@ -294,7 +357,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'media-now-playing',
       'media-history',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Climate and cabin route evidence',
       'Security and guard-mode route evidence',
@@ -315,7 +378,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'geofence',
       'destination-eta',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Native map-summary primitive',
       'Location and geofence route mapping',
@@ -341,7 +404,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'command-quick-actions',
       'command-history',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Commands and automation readiness',
       'Audit, backup, repair, and export evidence',
@@ -367,7 +430,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'mileage-stats',
       'cost-breakdown',
     ],
-    defaultSize: {cols: 2, rows: 4},
+    defaultSize: { cols: 2, rows: 4 },
     capabilities: [
       'Fleet analytics route coverage',
       'Lifetime and review route evidence',
@@ -388,7 +451,7 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'safety-history',
       'door-window-status',
     ],
-    defaultSize: {cols: 2, rows: 3},
+    defaultSize: { cols: 2, rows: 3 },
     capabilities: [
       'Tire pressure route evidence',
       'Safety settings route evidence',
@@ -403,13 +466,16 @@ export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
 ];
 
 export const IMPLEMENTED_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
-  (widget): widget is ImplementedNativeWidgetDefinition => widget.status === 'implemented',
+  (widget): widget is ImplementedNativeWidgetDefinition =>
+    widget.status === 'implemented',
 );
 
 export const PENDING_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
   widget => widget.status === 'pending',
 );
 
-export function getNativeWidgetDefinition(widgetId: string): NativeWidgetDefinition | undefined {
+export function getNativeWidgetDefinition(
+  widgetId: string,
+): NativeWidgetDefinition | undefined {
   return NATIVE_WIDGET_REGISTRY.find(widget => widget.id === widgetId);
 }

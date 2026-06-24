@@ -143,22 +143,22 @@ const systemStatus: SystemStatus = {
   healthy: true,
   version: 'test-build',
   uptime: '4h',
-  database: {status: 'healthy'},
-  mqtt: {status: 'healthy'},
-  tesla_api: {status: 'healthy'},
-  fleet_telemetry: {status: 'healthy'},
+  database: { status: 'healthy' },
+  mqtt: { status: 'healthy' },
+  tesla_api: { status: 'healthy' },
+  fleet_telemetry: { status: 'healthy' },
 };
 
 const systemHealth: SystemHealth = {
   status: 'healthy',
   healthy: true,
   generated_at: '2026-06-23T21:00:00Z',
-  service_mode: {mode: 'normal'},
+  service_mode: { mode: 'normal' },
   components: {
-    database: {status: 'healthy'},
-    mqtt: {status: 'healthy'},
-    tesla_api: {status: 'healthy'},
-    fleet_telemetry: {status: 'healthy'},
+    database: { status: 'healthy' },
+    mqtt: { status: 'healthy' },
+    tesla_api: { status: 'healthy' },
+    fleet_telemetry: { status: 'healthy' },
   },
 };
 
@@ -204,11 +204,11 @@ const telemetryError = {
 };
 
 function query<T>(data: T): QueryState<T> {
-  return {data, isLoading: false, isFetching: false, error: null};
+  return { data, isLoading: false, isFetching: false, error: null };
 }
 
 function loadingQuery<T>(): QueryState<T> {
-  return {data: undefined, isLoading: true, isFetching: true, error: null};
+  return { data: undefined, isLoading: true, isFetching: true, error: null };
 }
 
 function failedQuery<T>(message: string): QueryState<T> {
@@ -239,7 +239,7 @@ beforeEach(() => {
 
 function renderWithQueryClient(element: React.ReactElement) {
   const queryClient = new QueryClient({
-    defaultOptions: {queries: {retry: false}},
+    defaultOptions: { queries: { retry: false } },
   });
 
   return ReactTestRenderer.create(
@@ -259,6 +259,8 @@ test('native dashboard widget registry is typed with implemented parity statuses
     'battery-cells',
     'live-power-flow',
     'telemetry-errors',
+    'auth-account-widgets',
+    'settings-platform-widgets',
     'vehicle-detail-widgets',
     'range-forecast-widgets',
     'drive-analytics-widgets',
@@ -271,9 +273,9 @@ test('native dashboard widget registry is typed with implemented parity statuses
     'tire-safety-widgets',
   ]);
   expect(PENDING_NATIVE_WIDGETS).toHaveLength(0);
-  expect(IMPLEMENTED_NATIVE_WIDGETS.length + PENDING_NATIVE_WIDGETS.length).toBe(
-    NATIVE_WIDGET_REGISTRY.length,
-  );
+  expect(
+    IMPLEMENTED_NATIVE_WIDGETS.length + PENDING_NATIVE_WIDGETS.length,
+  ).toBe(NATIVE_WIDGET_REGISTRY.length);
 
   for (const widget of NATIVE_WIDGET_REGISTRY) {
     expect(widget.webWidgetIds.length).toBeGreaterThan(0);
@@ -284,8 +286,12 @@ test('native dashboard widget registry is typed with implemented parity statuses
     expect(widget.component).toEqual(expect.any(Function));
   }
 
-  expect(getNativeWidgetDefinition('battery-cells')?.status).toBe('implemented');
-  expect(getNativeWidgetDefinition('maps-location-widgets')?.status).toBe('implemented');
+  expect(getNativeWidgetDefinition('battery-cells')?.status).toBe(
+    'implemented',
+  );
+  expect(getNativeWidgetDefinition('maps-location-widgets')?.status).toBe(
+    'implemented',
+  );
 });
 
 test('renders all implemented native dashboard widgets with API-backed content', async () => {
@@ -299,6 +305,11 @@ test('renders all implemented native dashboard widgets with API-backed content',
 
   expect(serialized).toContain('Native widget registry');
   expect(serialized).toContain('All web widget groups implemented');
+  expect(serialized).toContain('Dashboard route readiness');
+  expect(serialized).toContain('Quick stats and glance');
+  expect(serialized).toContain('Search and route command');
+  expect(serialized).toContain('Auth and account widgets');
+  expect(serialized).toContain('Settings and platform widgets');
   expect(serialized).toContain('Maps and location widgets');
   expect(serialized).toContain('Implemented parity');
   expect(serialized).toContain('Vehicle hero');
@@ -362,16 +373,26 @@ test('keeps implemented widget shells visible while dashboard data is loading', 
 });
 
 test('renders widget empty and API error states instead of hiding dashboard regions', async () => {
-  mockUseVehicles.mockReturnValue(failedQuery<Vehicle[]>('vehicles unavailable'));
-  mockUseVehicleState.mockReturnValue(failedQuery<VehicleStateResponse>('state unavailable'));
-  mockUseBatteryHealth.mockReturnValue(failedQuery<BatteryHealth>('battery unavailable'));
+  mockUseVehicles.mockReturnValue(
+    failedQuery<Vehicle[]>('vehicles unavailable'),
+  );
+  mockUseVehicleState.mockReturnValue(
+    failedQuery<VehicleStateResponse>('state unavailable'),
+  );
+  mockUseBatteryHealth.mockReturnValue(
+    failedQuery<BatteryHealth>('battery unavailable'),
+  );
   mockUseAlerts.mockReturnValue(failedQuery<Alert[]>('alerts unavailable'));
   mockUseDrives.mockReturnValue(failedQuery<Drive[]>('drives unavailable'));
   mockUseChargingSessions.mockReturnValue(
     failedQuery<ChargingSession[]>('charging unavailable'),
   );
-  mockUseSystemStatus.mockReturnValue(failedQuery<SystemStatus>('status unavailable'));
-  mockUseSystemHealth.mockReturnValue(failedQuery<SystemHealth>('health unavailable'));
+  mockUseSystemStatus.mockReturnValue(
+    failedQuery<SystemStatus>('status unavailable'),
+  );
+  mockUseSystemHealth.mockReturnValue(
+    failedQuery<SystemHealth>('health unavailable'),
+  );
   mockUseVehicleEnergy.mockReturnValue(
     failedQuery<typeof vehicleEnergy>('energy unavailable'),
   );

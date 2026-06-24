@@ -4,6 +4,10 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { useAlerts, useSystemStatus, useVehicles } from '../api/hooks';
 import { SectionHeader } from '../components/data/SectionHeader';
+import {
+  RouteReadinessPanel,
+  type RouteReadinessItem,
+} from '../components/data/RouteReadinessPanel';
 import { AppButton } from '../components/ui/AppButton';
 import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
@@ -21,17 +25,61 @@ interface DashboardScreenProps {
   onNavigate?: (route: RouteId) => void;
 }
 
-export function DashboardScreen({onNavigate}: DashboardScreenProps) {
+const dashboardReadinessItems: RouteReadinessItem[] = [
+  {
+    id: 'quick-stats',
+    label: 'Quick stats and glance',
+    route: '/quick-stats, /glance',
+    api: '/vehicles, /alerts, /system/status',
+    status: 'native-summary',
+    evidence:
+      'Dashboard metrics render API-backed fleet, alert, system, and widget counts while dedicated quick-stat route parity remains deletion-blocked.',
+  },
+  {
+    id: 'search',
+    label: 'Search and route command',
+    route: '/search',
+    api: 'typed route manifest',
+    status: 'native-summary',
+    evidence:
+      'The native shell resolves web paths through the typed route manifest; full global data search is not claimed in this slice.',
+  },
+  {
+    id: 'analytics-summaries',
+    label: 'Statistics, lifetime, weekly, and comparison summaries',
+    route: '/statistics, /lifetime-stats, /weekly-digest, /period-compare',
+    api: '/analytics/fleet plus mapped analytics routes',
+    status: 'native-summary',
+    evidence:
+      'Dashboard widgets expose route-level evidence for analytics summaries without fabricating aggregate data not returned by the API.',
+  },
+  {
+    id: 'assistant-explore',
+    label: 'Explore, watch, chatbot, and anomaly routes',
+    route: '/explore, /watch, /chatbot, /anomaly-detection',
+    api: 'native route/widget registry',
+    status: 'native-summary',
+    evidence:
+      'Unsupported command surfaces stay visible as native summaries; no browser shell, WebView, or fake assistant response is embedded.',
+  },
+];
+
+export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
   const queryClient = useQueryClient();
   const vehiclesQuery = useVehicles();
   const alertsQuery = useAlerts();
   const systemQuery = useSystemStatus();
-  const vehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
+  const vehicles = useMemo(
+    () => vehiclesQuery.data ?? [],
+    [vehiclesQuery.data],
+  );
   const alerts = useMemo(() => alertsQuery.data ?? [], [alertsQuery.data]);
   const healthyVehicles = vehicles.filter(vehicle => vehicle.healthy).length;
   const unreadAlerts = alerts.filter(alert => !alert.is_read).length;
   const isRefreshing =
-    vehiclesQuery.isFetching || alertsQuery.isFetching || systemQuery.isFetching;
+    vehiclesQuery.isFetching ||
+    alertsQuery.isFetching ||
+    systemQuery.isFetching;
 
   const refresh = () => {
     queryClient.invalidateQueries();
@@ -46,18 +94,29 @@ export function DashboardScreen({onNavigate}: DashboardScreenProps) {
           label="Vehicles"
           value={vehicles.length}
           helper={`${healthyVehicles} healthy`}
-          tone={healthyVehicles === vehicles.length && vehicles.length > 0 ? 'accent' : 'neutral'}
+          tone={
+            healthyVehicles === vehicles.length && vehicles.length > 0
+              ? 'accent'
+              : 'neutral'
+          }
         />
         <MetricCard
           label="Unread alerts"
           value={unreadAlerts}
-          helper={alertsQuery.error ? 'Alert API unavailable' : 'Latest fleet events'}
+          helper={
+            alertsQuery.error ? 'Alert API unavailable' : 'Latest fleet events'
+          }
           tone={unreadAlerts > 0 ? 'danger' : 'accent'}
         />
         <MetricCard
           label="System"
-          value={systemQuery.data?.status ?? (systemQuery.data?.healthy ? 'healthy' : '—')}
-          helper={systemQuery.error ? 'Status endpoint unavailable' : 'Backend health'}
+          value={
+            systemQuery.data?.status ??
+            (systemQuery.data?.healthy ? 'healthy' : '—')
+          }
+          helper={
+            systemQuery.error ? 'Status endpoint unavailable' : 'Backend health'
+          }
           tone={systemQuery.data?.healthy ? 'accent' : 'neutral'}
         />
         <MetricCard
@@ -86,7 +145,11 @@ export function DashboardScreen({onNavigate}: DashboardScreenProps) {
                   {widget.title}
                 </AppText>
                 <StatusPill
-                  label={widget.status === 'implemented' ? 'Implemented' : 'Unresolved'}
+                  label={
+                    widget.status === 'implemented'
+                      ? 'Implemented'
+                      : 'Unresolved'
+                  }
                   state={widget.status === 'implemented' ? 'online' : 'warning'}
                 />
               </View>
@@ -99,10 +162,20 @@ export function DashboardScreen({onNavigate}: DashboardScreenProps) {
           ))}
         </View>
         <View style={styles.actions}>
-          <AppButton label={isRefreshing ? 'Refreshing...' : 'Refresh all widgets'} onPress={refresh} />
+          <AppButton
+            label={isRefreshing ? 'Refreshing...' : 'Refresh all widgets'}
+            onPress={refresh}
+          />
           <AppButton label="API /api/v1" onPress={refresh} variant="ghost" />
         </View>
       </GlassPanel>
+
+      <RouteReadinessPanel
+        title="Dashboard route readiness"
+        subtitle="Command/dashboard web routes are visible as React Native summaries until dedicated deletion-ready parity exists."
+        items={dashboardReadinessItems}
+        testID="dashboard-route-readiness"
+      />
 
       <View style={styles.widgetGrid}>
         {IMPLEMENTED_NATIVE_WIDGETS.map(widget => {

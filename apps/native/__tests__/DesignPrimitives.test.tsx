@@ -6,6 +6,7 @@ import { ChartSummary } from '../src/components/charts/ChartSummary';
 import { MiniBarChart } from '../src/components/charts/MiniBarChart';
 import { ListRow } from '../src/components/data/ListRow';
 import { MetricGrid } from '../src/components/data/MetricGrid';
+import { RouteReadinessPanel } from '../src/components/data/RouteReadinessPanel';
 import { SectionHeader } from '../src/components/data/SectionHeader';
 import {
   getSemanticIconDefinition,
@@ -249,7 +250,10 @@ test('renders semantic icons with accessible labels unless decorative', async ()
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(
       <View>
-        <SemanticIcon name="batteryCharging" accessibilityLabel="Battery charging status" />
+        <SemanticIcon
+          name="batteryCharging"
+          accessibilityLabel="Battery charging status"
+        />
         <SemanticIcon name="warning" decorative />
       </View>,
     );
@@ -301,6 +305,29 @@ test('renders premium primitives with accessible summaries', async () => {
           icon="vehicle"
           onPress={() => undefined}
         />
+        <RouteReadinessPanel
+          title="Route readiness"
+          subtitle="Shared native route status panel"
+          items={[
+            {
+              id: 'implemented',
+              label: 'Implemented route',
+              route: '/vehicles',
+              api: '/vehicles',
+              status: 'implemented',
+              evidence: 'Native route renders API-backed content.',
+            },
+            {
+              id: 'summary',
+              label: 'Summary route',
+              route: '/api-playground',
+              api: 'admin-only API routes',
+              status: 'native-summary',
+              evidence:
+                'Native summary is visible without claiming final parity.',
+            },
+          ]}
+        />
         <ChartSummary
           title="Energy by day"
           subtitle="Native bar summary"
@@ -308,8 +335,8 @@ test('renders premium primitives with accessible summaries', async () => {
           metricValue="42.0 kWh"
           emptyLabel="Energy data is not available."
           data={[
-            {id: 'mon', label: 'Mon', value: 12, formattedValue: '12 kWh'},
-            {id: 'tue', label: 'Tue', value: 30, formattedValue: '30 kWh'},
+            { id: 'mon', label: 'Mon', value: 12, formattedValue: '12 kWh' },
+            { id: 'tue', label: 'Tue', value: 30, formattedValue: '30 kWh' },
           ]}
         />
         <MapRouteSummary
@@ -321,9 +348,9 @@ test('renders premium primitives with accessible summaries', async () => {
           durationLabel="38 min"
           emptyLabel="Route geometry is not available."
           points={[
-            {latitude: 37.2, longitude: -122.1},
-            {latitude: 37.4, longitude: -121.9},
-            {latitude: 37.6, longitude: -121.8},
+            { latitude: 37.2, longitude: -122.1 },
+            { latitude: 37.4, longitude: -121.9 },
+            { latitude: 37.6, longitude: -121.8 },
           ]}
         />
       </View>,
@@ -335,6 +362,8 @@ test('renders premium primitives with accessible summaries', async () => {
   expect(serialized).toContain('Fleet overview');
   expect(serialized).toContain('Vehicles online');
   expect(serialized).toContain('Roadrunner, Model Y Performance, online');
+  expect(serialized).toContain('Route readiness');
+  expect(serialized).toContain('Native summary is visible');
   expect(serialized).toContain('Energy by day chart summary with 2 points');
   expect(serialized).toContain('Drive route route summary from Home to Office');
 });
@@ -352,7 +381,11 @@ test('renders native chart and map empty states without web embedding', async ()
           emptyLabel="No charge data is available."
           data={[]}
         />
-        <MiniBarChart title="Speed bands" values={[]} emptyLabel="No speed bands are available." />
+        <MiniBarChart
+          title="Speed bands"
+          values={[]}
+          emptyLabel="No speed bands are available."
+        />
         <MapRouteSummary
           title="Empty route"
           startLabel="Unknown start"
@@ -378,9 +411,9 @@ test('renders native chart and map empty states without web embedding', async ()
 test('computes route bounds from native route points', () => {
   expect(
     getRouteBounds([
-      {latitude: 37.2, longitude: -122.1},
-      {latitude: 37.6, longitude: -121.8},
-      {latitude: 37.4, longitude: -122.3},
+      { latitude: 37.2, longitude: -122.1 },
+      { latitude: 37.6, longitude: -121.8 },
+      { latitude: 37.4, longitude: -122.3 },
     ]),
   ).toEqual({
     minLatitude: 37.2,
@@ -392,9 +425,9 @@ test('computes route bounds from native route points', () => {
 
 test('projects native route coordinates into normalized map space', () => {
   const points = [
-    {latitude: 37.2, longitude: -122.3, label: 'start'},
-    {latitude: 37.4, longitude: -122.05, label: 'mid'},
-    {latitude: 37.6, longitude: -121.8, label: 'end'},
+    { latitude: 37.2, longitude: -122.3, label: 'start' },
+    { latitude: 37.4, longitude: -122.05, label: 'mid' },
+    { latitude: 37.6, longitude: -121.8, label: 'end' },
   ];
   const bounds = getRouteBounds(points);
 
@@ -403,29 +436,32 @@ test('projects native route coordinates into normalized map space', () => {
   const projected = projectRoutePoints(points, bounds!);
 
   expect(projected).toHaveLength(3);
-  expect(projected[0]).toMatchObject({x: 0, y: 1});
+  expect(projected[0]).toMatchObject({ x: 0, y: 1 });
   expect(projected[1].x).toBeCloseTo(0.5);
   expect(projected[1].y).toBeCloseTo(0.5);
-  expect(projected[2]).toMatchObject({x: 1, y: 0});
+  expect(projected[2]).toMatchObject({ x: 1, y: 0 });
 });
 
 test('samples route points without losing start and end anchors', () => {
   const sampled = sampleRoutePoints(
-    Array.from({length: 9}, (_, index) => ({latitude: index, longitude: index})),
+    Array.from({ length: 9 }, (_, index) => ({
+      latitude: index,
+      longitude: index,
+    })),
     4,
   );
 
   expect(sampled).toHaveLength(4);
-  expect(sampled[0]).toEqual({latitude: 0, longitude: 0});
-  expect(sampled[sampled.length - 1]).toEqual({latitude: 8, longitude: 8});
+  expect(sampled[0]).toEqual({ latitude: 0, longitude: 0 });
+  expect(sampled[sampled.length - 1]).toEqual({ latitude: 8, longitude: 8 });
 });
 
 test('builds native route line segments from projected points', () => {
   const segments = getRouteSegments(
     [
-      {latitude: 37.2, longitude: -122.3, x: 0, y: 0},
-      {latitude: 37.2, longitude: -121.8, x: 1, y: 0},
-      {latitude: 37.6, longitude: -121.8, x: 1, y: 1},
+      { latitude: 37.2, longitude: -122.3, x: 0, y: 0 },
+      { latitude: 37.2, longitude: -121.8, x: 1, y: 0 },
+      { latitude: 37.6, longitude: -121.8, x: 1, y: 1 },
     ],
     100,
     50,

@@ -9,6 +9,7 @@ export type NativeWidgetCategory =
   | 'alerts'
   | 'analytics'
   | 'automation'
+  | 'auth'
   | 'battery'
   | 'charging'
   | 'climate'
@@ -18,6 +19,7 @@ export type NativeWidgetCategory =
   | 'media'
   | 'navigation'
   | 'security'
+  | 'settings'
   | 'system'
   | 'tires'
   | 'vehicle';
@@ -42,12 +44,14 @@ interface NativeWidgetDefinitionBase {
   defaultSize: NativeWidgetSize;
 }
 
-export interface ImplementedNativeWidgetDefinition extends NativeWidgetDefinitionBase {
+export interface ImplementedNativeWidgetDefinition
+  extends NativeWidgetDefinitionBase {
   status: 'implemented';
   component: ComponentType<NativeWidgetProps>;
 }
 
-export interface PendingNativeWidgetDefinition extends NativeWidgetDefinitionBase {
+export interface PendingNativeWidgetDefinition
+  extends NativeWidgetDefinitionBase {
   status: 'pending';
   pendingReason: string;
 }

@@ -1,94 +1,11 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import {
+  RouteReadinessPanel,
+  type RouteReadinessItem,
+  type RouteReadinessStatus,
+} from '../../components/data/RouteReadinessPanel';
 
-import { SectionHeader } from '../../components/data/SectionHeader';
-import { AppText } from '../../components/ui/AppText';
-import { PremiumCard } from '../../components/ui/PremiumCard';
-import { StatusPill } from '../../components/ui/StatusPill';
-import { colors, spacing } from '../../theme/tokens';
+export type OperationsRouteReadinessStatus = RouteReadinessStatus;
 
-export type OperationsRouteReadinessStatus =
-  | 'implemented'
-  | 'native-summary';
+export type OperationsRouteReadinessItem = RouteReadinessItem;
 
-export interface OperationsRouteReadinessItem {
-  id: string;
-  label: string;
-  route: string;
-  api: string;
-  status: OperationsRouteReadinessStatus;
-  evidence: string;
-}
-
-interface OperationsRouteReadinessProps {
-  title: string;
-  subtitle: string;
-  items: OperationsRouteReadinessItem[];
-}
-
-function statusCopy(status: OperationsRouteReadinessStatus) {
-  switch (status) {
-    case 'implemented':
-      return { label: 'Implemented', state: 'online' as const };
-    case 'native-summary':
-      return { label: 'Native summary', state: 'warning' as const };
-  }
-}
-
-export function OperationsRouteReadiness({
-  title,
-  subtitle,
-  items,
-}: OperationsRouteReadinessProps) {
-  return (
-    <PremiumCard testID="operations-route-readiness">
-      <SectionHeader title={title} subtitle={subtitle} icon="drillThrough" />
-      <View style={styles.list}>
-        {items.map(item => {
-          const status = statusCopy(item.status);
-
-          return (
-            <View key={item.id} style={styles.item}>
-              <View style={styles.itemHeader}>
-                <View style={styles.copy}>
-                  <AppText weight="semibold">{item.label}</AppText>
-                  <AppText variant="caption" tone="muted">
-                    {item.route}
-                    {' -> '}
-                    {item.api}
-                  </AppText>
-                </View>
-                <StatusPill label={status.label} state={status.state} />
-              </View>
-              <AppText tone="secondary">{item.evidence}</AppText>
-            </View>
-          );
-        })}
-      </View>
-    </PremiumCard>
-  );
-}
-
-const styles = StyleSheet.create({
-  list: {
-    gap: spacing.sm,
-  },
-  item: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 18,
-    padding: spacing.md,
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceRaised,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  copy: {
-    flex: 1,
-    minWidth: 0,
-    gap: spacing.xs,
-  },
-});
+export const OperationsRouteReadiness = RouteReadinessPanel;
