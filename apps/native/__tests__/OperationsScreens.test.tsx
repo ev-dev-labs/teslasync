@@ -20,9 +20,28 @@ const vehicle = {
   updated_at: '2026-06-23T20:00:00Z',
 };
 
+const vehicleState = {
+  vehicle_id: 42,
+  state: 'charging',
+  latitude: 37.42,
+  longitude: -122.08,
+  speed_mps: 0,
+  power_w: 7200,
+  battery_level: 78,
+  is_charging: true,
+  is_locked: true,
+  software_version: '2026.20.1',
+};
+
 jest.mock('../src/api/hooks', () => ({
   useVehicles: () => ({
     data: [vehicle],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useVehicleState: () => ({
+    data: { state: vehicleState, live: true },
     isLoading: false,
     isFetching: false,
     error: null,
@@ -128,6 +147,23 @@ jest.mock('../src/api/hooks', () => ({
       period_days: 30,
       state_distribution: [{ state: 'asleep', count: 12, total_minutes: 4200 }],
       sleep_efficiency_pct: 91.2,
+      sentry_off_drain_rate: 0.12,
+      sentry_extra_drain_rate: 0.23,
+      sentry_extra_monthly_cost: 6.4,
+      recent_events: [
+        {
+          id: 11,
+          start_date: '2026-06-22T00:00:00Z',
+          end_date: '2026-06-22T07:00:00Z',
+          duration_hours: 7,
+          battery_lost: 1.2,
+          drain_rate: 0.17,
+          sentry_mode: false,
+          outside_temp: 16,
+          start_battery: 82,
+          end_battery: 80.8,
+        },
+      ],
       total_events: 12,
     },
     isLoading: false,
@@ -163,6 +199,13 @@ jest.mock('../src/api/hooks', () => ({
       battery_capacity_wh: 79000,
       capacity_source: 'model',
       monthly_trend: [{ month: '2026-06', avg_health: 94, avg_capacity: 97.9 }],
+      prediction: {
+        slope_per_year: -1.1,
+        years_to_80_pct: 12,
+        predicted_date: '2038-06-01',
+        has_enough_data: true,
+        projection_points: [{ month: '2027-01', health: 93.1 }],
+      },
       snapshots: [
         {
           id: 1,
@@ -214,7 +257,9 @@ jest.mock('../src/api/hooks', () => ({
           avg_temp: 24,
         },
       ],
-      vampire_drain: [],
+      vampire_drain: [
+        { temp_bucket: '10-20 C', avg_drain_rate: 0.15, event_count: 4 },
+      ],
       monthly_trend: [],
     },
     isLoading: false,
@@ -425,14 +470,20 @@ test('renders energy, battery, analytics, and route readiness surfaces', async (
   expect(serialized).toContain('Battery cell diagnostics');
   expect(serialized).toContain('Cell temperature snapshots');
   expect(serialized).toContain('Fast charging');
+  expect(serialized).toContain('Projected range analytics');
+  expect(serialized).toContain('Range projection summary');
   expect(serialized).toContain('Fleet energy analytics');
   expect(serialized).toContain('Ownership, sleep, and regen');
+  expect(serialized).toContain('Vampire drain analytics');
+  expect(serialized).toContain('Vampire drain trend');
   expect(serialized).toContain('Driving energy analytics');
   expect(serialized).toContain('Battery degradation analytics');
   expect(serialized).toContain('Speed profile distribution');
   expect(serialized).toContain('Universal chart primitive');
   expect(serialized).toContain('Accessible chart data table');
-  expect(serialized).toContain('Energy product parity evidence');
+  expect(serialized).toContain('Energy flow and power flow');
+  expect(serialized).toContain('Energy flow summary');
+  expect(serialized).toContain('Energy products route');
   expect(serialized).toContain('Energy products and power flow');
   expect(serialized).toContain('No WebView');
   expect(serialized).toContain('Roadrunner');

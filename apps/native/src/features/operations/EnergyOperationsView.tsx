@@ -12,6 +12,7 @@ import {
   useTCOAnalytics,
   useTemperatureImpact,
   useVehicleEnergy,
+  useVehicleState,
   useVehicles,
 } from '../../api/hooks';
 import type {
@@ -40,6 +41,7 @@ import {
 import { ScreenSection } from '../../components/data/ScreenSection';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { spacing } from '../../theme/tokens';
+import { EnergyFlowPowerSection } from './EnergyFlowPowerSection';
 import {
   formatCount,
   formatCurrency,
@@ -60,6 +62,8 @@ import {
   OperationsRouteReadiness,
   type OperationsRouteReadinessItem,
 } from './OperationsRouteReadiness';
+import { RangeProjectionSection } from './RangeProjectionSection';
+import { VampireDrainAnalyticsSection } from './VampireDrainAnalyticsSection';
 
 const energyReadinessItems: OperationsRouteReadinessItem[] = [
   {
@@ -94,9 +98,27 @@ const energyReadinessItems: OperationsRouteReadinessItem[] = [
     label: 'Battery cell diagnostics',
     route: '/battery-cells',
     api: '/analytics/battery-degradation snapshots',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
       'Native renders cell-temperature and battery-risk evidence from degradation snapshots without fabricating per-cell telemetry.',
+  },
+  {
+    id: 'projected-range',
+    label: 'Projected range analytics',
+    route: '/projected-range, /analytics/range',
+    api: '/vehicles/{vehicleID}/battery, /analytics/battery-degradation',
+    status: 'implemented',
+    evidence:
+      'Native renders current range, original range, projection trends, and analytics/range evidence from battery/degradation data.',
+  },
+  {
+    id: 'vampire-drain',
+    label: 'Vampire drain analytics',
+    route: '/vampire-drain',
+    api: '/analytics/sleep, /analytics/temperature-impact',
+    status: 'implemented',
+    evidence:
+      'Native renders sleep-event drain, sentry comparison, and temperature drain buckets without inferring fake idle loss.',
   },
   {
     id: 'ownership',
@@ -120,10 +142,10 @@ const energyReadinessItems: OperationsRouteReadinessItem[] = [
     id: 'energy-products',
     label: 'Energy products and power flow',
     route: '/energy-products, /energy-flow, /power-flow',
-    api: '/tesla/energy-sites and live power-flow routes',
-    status: 'native-summary',
+    api: '/vehicles/{vehicleID}/energy, /vehicles/{vehicleID}/state, /analytics/regen',
+    status: 'implemented',
     evidence:
-      'Tesla Energy product routes render native summary/unavailable evidence; live site data is not fabricated.',
+      'Native renders vehicle energy-flow and live power-flow summaries while explicitly marking Tesla Energy site inventory unavailable.',
   },
 ];
 
@@ -175,6 +197,7 @@ export function EnergyOperationsView() {
   const selectedVehicle = vehicles[0] ?? null;
   const selectedVehicleId = selectedVehicle?.id ?? null;
 
+  const stateQuery = useVehicleState(selectedVehicleId);
   const energyQuery = useVehicleEnergy(selectedVehicleId, 30);
   const batteryQuery = useBatteryHealth(selectedVehicleId);
   const fleetQuery = useFleetAnalytics({ days: 30 });
@@ -212,6 +235,20 @@ export function EnergyOperationsView() {
         isLoading={degradationQuery.isLoading}
         hasError={Boolean(degradationQuery.error)}
       />
+      <RangeProjectionSection
+        vehicle={selectedVehicle}
+        battery={batteryQuery.data}
+        degradation={degradationQuery.data}
+        energy={energyQuery.data}
+        isLoading={
+          batteryQuery.isLoading ||
+          degradationQuery.isLoading ||
+          energyQuery.isLoading
+        }
+        hasError={Boolean(
+          batteryQuery.error || degradationQuery.error || energyQuery.error,
+        )}
+      />
       <FleetEnergyAnalyticsSection
         fleet={fleetQuery.data}
         isLoading={fleetQuery.isLoading}
@@ -229,6 +266,13 @@ export function EnergyOperationsView() {
           tcoQuery.error || sleepQuery.error || regenQuery.error,
         )}
       />
+      <VampireDrainAnalyticsSection
+        vehicle={selectedVehicle}
+        sleep={sleepQuery.data}
+        temperature={temperatureQuery.data}
+        isLoading={sleepQuery.isLoading || temperatureQuery.isLoading}
+        hasError={Boolean(sleepQuery.error || temperatureQuery.error)}
+      />
       <DrivingEnergyAnalyticsSection
         vehicle={selectedVehicle}
         speed={speedQuery.data}
@@ -243,10 +287,21 @@ export function EnergyOperationsView() {
           speedQuery.error || temperatureQuery.error || routeQuery.error,
         )}
       />
-      <EnergyProductReadinessSection />
+      <EnergyFlowPowerSection
+        vehicle={selectedVehicle}
+        state={stateQuery.data?.state}
+        energy={energyQuery.data}
+        regen={regenQuery.data}
+        isLoading={
+          stateQuery.isLoading || energyQuery.isLoading || regenQuery.isLoading
+        }
+        hasError={Boolean(
+          stateQuery.error || energyQuery.error || regenQuery.error,
+        )}
+      />
       <OperationsRouteReadiness
         title="Energy and analytics route readiness"
-        subtitle="N0006 route parity remains explicit about implemented native summaries and unavailable product routes."
+        subtitle="N0006 route parity renders implemented native energy, battery, range, vampire-drain, and power-flow evidence without fake analytics."
         items={energyReadinessItems}
       />
     </View>
@@ -1129,54 +1184,6 @@ function DrivingEnergyAnalyticsSection({
           </View>
         </View>
       )}
-    </ScreenSection>
-  );
-}
-
-const energyProductRows = [
-  {
-    id: 'energy-products',
-    title: 'Energy products',
-    subtitle:
-      'Tesla Energy site inventory is not exposed by the native API contract yet.',
-    meta: 'Native summary',
-    icon: 'home' as const,
-  },
-  {
-    id: 'energy-flow',
-    title: 'Energy flow',
-    subtitle:
-      'Live site flow requires API-backed Tesla Energy site data before parity can be implemented.',
-    meta: 'No fake flow',
-    icon: 'workflow' as const,
-  },
-  {
-    id: 'power-flow',
-    title: 'Power flow',
-    subtitle:
-      'Power-flow animation remains represented as explicit unavailable evidence, not WebView embedding.',
-    meta: 'No WebView',
-    icon: 'power' as const,
-  },
-];
-
-function EnergyProductReadinessSection() {
-  return (
-    <ScreenSection
-      title="Energy product parity evidence"
-      subtitle="Energy-site routes stay visible as native summary rows until real Tesla Energy site endpoints exist."
-    >
-      <View style={styles.list}>
-        {energyProductRows.map(row => (
-          <ListRow
-            key={row.id}
-            title={row.title}
-            subtitle={row.subtitle}
-            meta={row.meta}
-            icon={row.icon}
-          />
-        ))}
-      </View>
     </ScreenSection>
   );
 }

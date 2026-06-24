@@ -1,14 +1,17 @@
-import React, {useMemo} from 'react';
-import {View} from 'react-native';
+import React, { useMemo } from 'react';
+import { View } from 'react-native';
 
-import type {ChargeTelemetryReading, ChargingSession} from '../../api/types';
-import {ChartSummary, type ChartSummaryDatum} from '../../components/charts/ChartSummary';
-import {KeyValueRow} from '../../components/data/KeyValueRow';
-import {MetricGrid} from '../../components/data/MetricGrid';
-import {ScreenSection} from '../../components/data/ScreenSection';
-import {StatusPill} from '../../components/ui/StatusPill';
-import {FleetMessage} from './FleetMessage';
-import {fleetStyles} from './fleetStyles';
+import type { ChargeTelemetryReading, ChargingSession } from '../../api/types';
+import {
+  ChartSummary,
+  type ChartSummaryDatum,
+} from '../../components/charts/ChartSummary';
+import { KeyValueRow } from '../../components/data/KeyValueRow';
+import { MetricGrid } from '../../components/data/MetricGrid';
+import { ScreenSection } from '../../components/data/ScreenSection';
+import { StatusPill } from '../../components/ui/StatusPill';
+import { FleetMessage } from './FleetMessage';
+import { fleetStyles } from './fleetStyles';
 import {
   formatChargingDuration,
   formatCost,
@@ -35,7 +38,10 @@ export function ChargingDetailSection({
   const chartData = useMemo<ChartSummaryDatum[]>(
     () =>
       telemetry.slice(-8).map((reading, index) => {
-        const powerW = Math.max(reading.ac_charging_power_w ?? 0, reading.dc_charging_power_w ?? 0);
+        const powerW = Math.max(
+          reading.ac_charging_power_w ?? 0,
+          reading.dc_charging_power_w ?? 0,
+        );
 
         return {
           id: `${reading.ts}:${index}`,
@@ -52,7 +58,8 @@ export function ChargingDetailSection({
   return (
     <ScreenSection
       title="Charge detail and telemetry"
-      subtitle="Selected /charging/:id detail plus native charging-curve summary from telemetry readings.">
+      subtitle="Selected /charging/:id detail plus native charging-curve and charging-curves summaries from telemetry readings."
+    >
       {!session && isLoading ? (
         <FleetMessage
           title="Loading charge detail"
@@ -70,10 +77,22 @@ export function ChargingDetailSection({
         <View style={fleetStyles.detailStack}>
           <View style={fleetStyles.detailHeader}>
             <View style={fleetStyles.detailCopy}>
-              <KeyValueRow label="Started" value={formatDateTime(session.started_at)} />
-              <KeyValueRow label="Ended" value={formatDateTime(session.ended_at)} />
-              <KeyValueRow label="Duration" value={formatChargingDuration(session)} />
-              <KeyValueRow label="Detail endpoint" value={`/charging/${session.id}`} />
+              <KeyValueRow
+                label="Started"
+                value={formatDateTime(session.started_at)}
+              />
+              <KeyValueRow
+                label="Ended"
+                value={formatDateTime(session.ended_at)}
+              />
+              <KeyValueRow
+                label="Duration"
+                value={formatChargingDuration(session)}
+              />
+              <KeyValueRow
+                label="Detail endpoint"
+                value={`/charging/${session.id}`}
+              />
               <KeyValueRow
                 label="Telemetry endpoint"
                 value={`/charging/${session.id}/telemetry`}
@@ -84,8 +103,16 @@ export function ChargingDetailSection({
               />
             </View>
             <StatusPill
-              label={session.live ? 'Live' : session.ended_at ? 'Complete' : 'Open'}
-              state={session.live ? 'online' : session.ended_at ? 'online' : 'warning'}
+              label={
+                session.live ? 'Live' : session.ended_at ? 'Complete' : 'Open'
+              }
+              state={
+                session.live
+                  ? 'online'
+                  : session.ended_at
+                  ? 'online'
+                  : 'warning'
+              }
             />
           </View>
           <MetricGrid
@@ -119,7 +146,7 @@ export function ChargingDetailSection({
           />
           <ChartSummary
             title="Charging curve summary"
-            subtitle="Native bar summary from /charging/:id/telemetry without embedding the web chart."
+            subtitle="Native bar summary for charging-curve and charging-curves routes from /charging/:id/telemetry without embedding the web chart."
             metricLabel="Latest charger power"
             metricValue={formatPower(
               Math.max(
@@ -134,6 +161,8 @@ export function ChargingDetailSection({
                 : 'Charge telemetry has no power readings for this session.'
             }
             icon="trends"
+            sourceLabel="Charging telemetry rendered as a React Native chart primitive with an accessible data table"
+            dataTableLabel="Charging curve telemetry"
           />
           {hasDetailError || hasTelemetryError ? (
             <FleetMessage

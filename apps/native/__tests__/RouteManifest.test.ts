@@ -194,10 +194,47 @@ test('marks implemented energy analytics and diagnostics routes with evidence', 
 
   for (const routeId of ['energy-products', 'energy-flow', 'power-flow']) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
-    expect(route?.implementationStatus).toBe('native-summary');
+    expect(route?.implementationStatus).toBe('implemented');
     expect(route?.deletionReadiness.status).toBe('blocked');
-    expect(route?.evidence).toMatch(/^Native summary: /);
+    expect(route?.evidence).toMatch(/^Implemented: /);
   }
+});
+
+test('marks R0003 charging and energy native-summary routes implemented', () => {
+  const implementedRouteIds = [
+    'charging-curve',
+    'charging-curves',
+    'charging-vampire-drain',
+    'cost-analysis',
+    'charging-costs',
+    'tesla-charging-history',
+    'tesla-charging-sessions',
+    'smart-charge',
+    'charging-schedule',
+    'powershare',
+    'charging-heatmap',
+    'energy-flow',
+    'power-flow',
+    'energy-products',
+    'battery-cells',
+    'vampire-drain',
+    'projected-range',
+    'analytics-range',
+  ];
+
+  for (const routeId of implementedRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
+    expect(route?.deletionReadiness.status).toBe('blocked');
+  }
+
+  expect(
+    routes.find(route => route.id === 'charging')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(10);
+  expect(
+    routes.find(route => route.id === 'energy')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(15);
 });
 
 test('marks R0001 command, shared, onboarding, live, search, and fallback routes implemented', () => {

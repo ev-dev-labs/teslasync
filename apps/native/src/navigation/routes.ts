@@ -173,6 +173,24 @@ const implementedRouteIds = new Set<string>([
   'maintenance',
   'media-player',
   'guard-mode',
+  'charging-curve',
+  'charging-curves',
+  'charging-vampire-drain',
+  'cost-analysis',
+  'charging-costs',
+  'tesla-charging-history',
+  'tesla-charging-sessions',
+  'smart-charge',
+  'charging-schedule',
+  'powershare',
+  'charging-heatmap',
+  'energy-flow',
+  'power-flow',
+  'energy-products',
+  'battery-cells',
+  'vampire-drain',
+  'projected-range',
+  'analytics-range',
   'tesla-account',
   'search',
   'not-found-layout',
@@ -197,9 +215,6 @@ const nativeSummaryRouteIds = new Set<string>([
   'account-sessions',
   'account-privacy',
   'integrations-helix',
-  'charging-curve',
-  'charging-curves',
-  'charging-vampire-drain',
   'sharing-trips',
   'analytics-lifetime',
   'compare',
@@ -215,18 +230,11 @@ const nativeSummaryRouteIds = new Set<string>([
   'data-repair',
   'backup',
   'exports',
-  'energy-flow',
-  'power-flow',
-  'energy-products',
-  'battery-cells',
   'geofences',
   'chatbot',
-  'vampire-drain',
   'locations',
   'timeline',
   'mileage',
-  'projected-range',
-  'analytics-range',
   'trip-planner',
   'statistics',
   'lifetime-stats',
@@ -259,20 +267,12 @@ const nativeSummaryRouteIds = new Set<string>([
   'anomaly-detection',
   'analytics-anomalies',
   'driving-dynamics',
-  'cost-analysis',
-  'charging-costs',
-  'tesla-charging-history',
-  'tesla-charging-sessions',
-  'smart-charge',
-  'charging-schedule',
-  'powershare',
   'drive-score',
   'weekly-digest',
   'data-export',
   'drivetrain-health',
   'navigation',
   'vehicle-comparison',
-  'charging-heatmap',
   'me-activity',
 ] as const);
 
@@ -874,6 +874,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Vampire Drain',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: EnergyScreen renders vampire-drain analytics from /analytics/sleep and /analytics/temperature-impact without inferring fake idle loss.',
   }),
   webRoute({
     id: 'charging-vampire-drain',
@@ -881,6 +883,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Charging Vampire Drain',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: ChargingScreen and EnergyScreen keep charge-scoped drain visible with explicit unavailable state and sleep-backed vampire-drain analytics.',
   }),
   webRoute({
     id: 'locations',
@@ -909,6 +913,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Projected Range',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: EnergyScreen renders projected range, range gap, and projection trend evidence from battery/degradation analytics.',
   }),
   webRoute({
     id: 'analytics-range',
@@ -916,6 +922,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Analytics Range',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: EnergyScreen renders analytics/range evidence using battery health, degradation, and SI energy totals.',
   }),
   webRoute({
     id: 'efficiency',
@@ -1346,6 +1354,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Charging Curve',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders charging-curve telemetry with a native chart summary and accessible data table.',
   }),
   webRoute({
     id: 'charging-curves',
@@ -1353,6 +1363,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Charging Curves',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders charging-curves history from selected /charging/{sessionID}/telemetry without web chart embedding.',
   }),
   webRoute({
     id: 'cost-analysis',
@@ -1360,6 +1372,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Cost Analysis',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders cost-analysis metrics and chart summaries from returned charging session cost fields.',
   }),
   webRoute({
     id: 'charging-costs',
@@ -1367,6 +1381,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Charging Costs',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders charging-costs rows with cost, energy, and per-kWh values derived from /charging.',
   }),
   webRoute({
     id: 'tesla-charging-history',
@@ -1374,6 +1390,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Tesla Charging History',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders Tesla charging history from /charging sessions with duration, SOC, cost, and charger details.',
   }),
   webRoute({
     id: 'tesla-charging-sessions',
@@ -1381,6 +1399,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Tesla Charging Sessions',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders Tesla charging sessions through the native session list, detail shell, and telemetry summary.',
   }),
   webRoute({
     id: 'smart-charge',
@@ -1388,6 +1408,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Smart Charge',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders smart-charge route evidence with selected-session context and command-safe unavailable optimizer state.',
   }),
   webRoute({
     id: 'charging-schedule',
@@ -1395,6 +1417,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Charging Schedule',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders charging-schedule evidence from session timestamps while leaving unavailable write controls honest.',
   }),
   webRoute({
     id: 'powershare',
@@ -1402,6 +1426,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Powershare',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders powershare route evidence with charger input telemetry and explicit no bidirectional power API state.',
   }),
   webRoute({
     id: 'battery-cells',
@@ -1409,6 +1435,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Battery Cells',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: EnergyScreen renders battery-cells diagnostics from degradation snapshots, temperature, and risk factors without fake cell voltage heatmaps.',
   }),
   webRoute({
     id: 'drive-score',
@@ -1453,6 +1481,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Energy Flow',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: EnergyScreen renders energy-flow summaries from vehicle energy and regen totals with accessible chart data.',
   }),
   webRoute({
     id: 'power-flow',
@@ -1460,6 +1490,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Power Flow',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: EnergyScreen renders power-flow as native live power and energy totals without WebView animation embedding.',
   }),
   webRoute({
     id: 'energy-products',
@@ -1467,6 +1499,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Energy Products',
     nativeTarget: 'energy',
+    evidence:
+      'Implemented: EnergyScreen renders energy-products route evidence and explicitly marks Tesla Energy site inventory unavailable instead of fabricating site data.',
   }),
   webRoute({
     id: 'drivetrain-health',
@@ -1599,6 +1633,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Charging Heatmap',
     nativeTarget: 'charging',
+    evidence:
+      'Implemented: ChargingScreen renders charging-heatmap buckets from /charging started_at timestamps and SI energy totals.',
   }),
   webRoute({
     id: 'speed-profile',

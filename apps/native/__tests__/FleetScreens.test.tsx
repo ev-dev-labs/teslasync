@@ -428,6 +428,12 @@ test('renders charging sessions, detail, telemetry chart, and readiness sections
   expect(serialized).toContain('/charging/9/telemetry');
   expect(serialized).toContain('Charging curve summary');
   expect(serialized).toContain('Latest charger power');
+  expect(serialized).toContain('Charging cost analysis');
+  expect(serialized).toContain('Charging action route evidence');
+  expect(serialized).toContain('Smart charge route');
+  expect(serialized).toContain('Powershare route');
+  expect(serialized).toContain('Charging heatmap');
+  expect(serialized).toContain('Charging heatmap energy');
   expect(serialized).toContain('Charging vampire drain');
 });
 
@@ -487,6 +493,8 @@ test('renders empty states without hiding detail or readiness sections', async (
   expect(vehiclesSerialized).toContain('Vehicle route readiness');
   expect(chargingSerialized).toContain('No charging sessions');
   expect(chargingSerialized).toContain('No selected charging session');
+  expect(chargingSerialized).toContain('No charging cost rows');
+  expect(chargingSerialized).toContain('No charging heatmap buckets');
   expect(chargingSerialized).toContain('Charging route readiness');
   expect(drivingSerialized).toContain('No drives returned');
   expect(drivingSerialized).toContain('No selected trip');
@@ -525,6 +533,8 @@ test('renders API error states without inventing fleet data', async () => {
   expect(vehiclesSerialized).toContain('Software update history unavailable');
   expect(vehiclesSerialized).toContain('Maintenance schedule unavailable');
   expect(chargingSerialized).toContain('Charging API unavailable');
+  expect(chargingSerialized).toContain('Charging cost API unavailable');
+  expect(chargingSerialized).toContain('Charging heatmap unavailable');
   expect(drivingSerialized).toContain('Drive API unavailable');
   expect(drivingSerialized).toContain('Trip source API unavailable');
 });
