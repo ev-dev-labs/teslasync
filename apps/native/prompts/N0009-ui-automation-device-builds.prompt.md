@@ -41,3 +41,22 @@ Run typecheck, lint, Jest, platform Jest, Android/Windows bundles, and available
 
 Commit message: `test(apps): add native UI automation gates`
 
+## Status
+
+STATUS=DONE
+
+## Attempt 4 Verification
+
+- `npm run typecheck` — passed.
+- `npm run lint` — passed.
+- `npm test -- --runInBand` — passed; 12 suites, 44 tests.
+- `npm run test:windows -- --runInBand` — passed; 12 suites, 44 tests.
+- `npm run gate:device` — passed host-available gates:
+  - `npm run check:packaging` passed.
+  - Android bundle generated at `.bundle\android\index.android.bundle`.
+  - Windows bundle generated at `.bundle\windows\index.windows.bundle`.
+- Device/build tooling unavailable on this host:
+  - Android: Android SDK missing; set `ANDROID_HOME`, `ANDROID_SDK_ROOT`, or `android\local.properties` `sdk.dir` before `assembleRelease`.
+  - iOS: macOS host with `xcodebuild` missing; iOS builds require macOS and Xcode.
+  - Windows: Visual C++ `vcvars` for `x64` missing; install the Desktop development with C++ workload.
+  - macOS: macOS host with `xcodebuild` missing; macOS app builds require macOS and Xcode.
