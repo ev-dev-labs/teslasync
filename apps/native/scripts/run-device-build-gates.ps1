@@ -2,7 +2,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("all", "android", "ios", "windows", "macos")]
+    [ValidateSet("all", "web", "android", "ios", "windows", "macos")]
     [string]$Platform = "all",
 
     [ValidateSet("Debug", "Release")]
@@ -193,6 +193,10 @@ function Invoke-PackageScript {
     Invoke-External -FilePath "pwsh" -Arguments $arguments
 }
 
+function Invoke-WebGate {
+    Invoke-NpmScript "package:web"
+}
+
 function Invoke-AndroidGate {
     Invoke-NpmScript "bundle:android"
 
@@ -290,18 +294,20 @@ if ($RunQualityGates) {
     Invoke-NpmScript "lint"
     Invoke-NpmScript "test" @("--runInBand")
     Invoke-NpmScript "test:windows" @("--runInBand")
+    Invoke-NpmScript "test:ui"
 }
 
 Invoke-NpmScript "check:packaging"
 
 $targets = if ($Platform -eq "all") {
-    @("android", "ios", "windows", "macos")
+    @("web", "android", "ios", "windows", "macos")
 } else {
     @($Platform)
 }
 
 foreach ($target in $targets) {
     switch ($target) {
+        "web" { Invoke-WebGate }
         "android" { Invoke-AndroidGate }
         "ios" { Invoke-IosGate }
         "windows" { Invoke-WindowsGate }

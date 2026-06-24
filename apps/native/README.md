@@ -19,9 +19,11 @@ npm run typecheck
 npm test
 npm run web:dev
 npm run web:build
+npm run web:package
 npm run bundle:android
 npm run bundle:windows
 npm run check:packaging
+npm run gate:web
 npm run android
 npm run ios
 npm run windows
@@ -36,13 +38,14 @@ Packaging entrypoints are scripted so CI can run the same commands locally:
 
 ```powershell
 cd apps\native
+npm run package:web
 npm run package:android
 npm run package:ios
 npm run package:windows
 npm run package:macos
 ```
 
-`npm run check:packaging` verifies the Android, iOS, Windows, and macOS project/package entrypoints, confirms `react-native-macos` 0.81.x is installed, and checks that `npx react-native config` registers the generated macOS Xcode project with `build-macos` and `run-macos` commands. Android release packaging builds both APK and AAB artifacts when the Android SDK is available.
+`npm run package:web` runs the RN web Vite production build and archives `.web-build` to `.packages\web\teslasync-native-web.zip`. `npm run check:packaging` verifies the RN web, Android, iOS, Windows, and macOS project/package entrypoints, confirms `react-native-macos` 0.81.x is installed, and checks that `npx react-native config` registers the generated macOS Xcode project with `build-macos` and `run-macos` commands. Android release packaging builds both APK and AAB artifacts when the Android SDK is available.
 
 Signing secrets are never committed. Android release signing is enabled only when `ANDROID_UPLOAD_STORE_FILE`, `ANDROID_UPLOAD_STORE_PASSWORD`, `ANDROID_UPLOAD_KEY_ALIAS`, and `ANDROID_UPLOAD_KEY_PASSWORD` are present. Windows MSIX signing is enabled only when `WINDOWS_PACKAGE_CERTIFICATE_KEY_FILE` is present, with optional `WINDOWS_PACKAGE_CERTIFICATE_PASSWORD`. iOS and macOS package scripts run only on macOS hosts with Xcode and CocoaPods; they use unsigned local builds unless `IOS_DEVELOPMENT_TEAM`, or `MACOS_DEVELOPMENT_TEAM` plus `MACOS_CODE_SIGN_IDENTITY`, are provided by the environment.
 

@@ -129,10 +129,13 @@ function Read-ReactNativeConfig {
 $packageJson = Get-Content (Join-Path $NativeRoot "package.json") -Raw | ConvertFrom-Json
 $scriptNames = @($packageJson.scripts.PSObject.Properties.Name)
 $requiredScripts = @(
+    "web:build",
+    "web:package",
     "bundle:android",
     "bundle:ios",
     "bundle:windows",
     "bundle:macos",
+    "package:web",
     "package:android",
     "package:ios",
     "package:windows",
@@ -146,6 +149,7 @@ foreach ($script in $requiredScripts) {
 }
 
 $requiredPaths = @(
+    "vite.config.mts",
     "android\app\build.gradle",
     "ios\TeslaSyncNative.xcodeproj\project.pbxproj",
     "windows\TeslaSyncNative.Package\TeslaSyncNative.Package.wapproj",
@@ -159,6 +163,9 @@ $requiredPaths = @(
 foreach ($relativePath in $requiredPaths) {
     Assert-Condition (Test-Path (Join-Path $NativeRoot $relativePath)) "Missing packaging path: $relativePath"
 }
+
+$viteConfig = Get-Content (Join-Path $NativeRoot "vite.config.mts") -Raw
+Assert-Condition ($viteConfig -match "outDir:\s*'\.web-build'") "RN web Vite build must emit to .web-build for packaging."
 
 $rnConfig = Read-ReactNativeConfig
 $registeredPlatforms = @($rnConfig.project.PSObject.Properties.Name)
@@ -208,6 +215,7 @@ $forbiddenSigningFiles = @(
 Assert-Condition ($forbiddenSigningFiles.Count -eq 0) "Signing material is tracked in git: $($forbiddenSigningFiles -join ', ')"
 
 Write-Host "[packaging] Static packaging checks passed."
+Write-Host "[packaging] RN web package script: package:web -> .packages\web\teslasync-native-web.zip"
 Write-Host "[packaging] React Native version: $($rnConfig.reactNativeVersion)"
 Write-Host "[packaging] React Native config platforms: $($registeredPlatforms -join ', ')"
 Write-Host "[packaging] react-native-macos version: $($rnMacOSPackage.version)"

@@ -2,7 +2,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("all", "android", "ios", "windows", "macos")]
+    [ValidateSet("all", "web", "android", "ios", "windows", "macos")]
     [string]$Platform = "all",
 
     [ValidateSet("Debug", "Release")]
@@ -167,6 +167,31 @@ function Resolve-AndroidSdk {
     }
 
     return $null
+}
+
+function Invoke-WebPackage {
+    Invoke-NpmScript "web:build"
+
+    $webBuildRoot = Join-Path $NativeRoot ".web-build"
+    if (-not (Test-Path (Join-Path $webBuildRoot "index.html"))) {
+        throw "RN web build output is missing index.html under $webBuildRoot"
+    }
+
+    $packageRoot = Join-Path $NativeRoot ".packages\web"
+    New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
+
+    $zipPath = Join-Path $packageRoot "teslasync-native-web.zip"
+    if (Test-Path $zipPath) {
+        Remove-Item $zipPath -Force
+    }
+
+    $webBuildItems = @(Get-ChildItem -LiteralPath $webBuildRoot -Force)
+    if ($webBuildItems.Count -eq 0) {
+        throw "RN web build output is empty under $webBuildRoot"
+    }
+
+    Compress-Archive -Path $webBuildItems.FullName -DestinationPath $zipPath -CompressionLevel Optimal -Force
+    Write-Host "[web] Package artifact: $zipPath"
 }
 
 function Invoke-AndroidPackage {
@@ -355,13 +380,14 @@ function Invoke-MacOSPackage {
 }
 
 $platforms = if ($Platform -eq "all") {
-    @("android", "ios", "windows", "macos")
+    @("web", "android", "ios", "windows", "macos")
 } else {
     @($Platform)
 }
 
 foreach ($target in $platforms) {
     switch ($target) {
+        "web" { Invoke-WebPackage }
         "android" { Invoke-AndroidPackage }
         "ios" { Invoke-IosPackage }
         "windows" { Invoke-WindowsPackage }
