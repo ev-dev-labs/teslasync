@@ -14,6 +14,7 @@ import type {
   BatteryHealth,
   ChargingSession,
   Drive,
+  FleetAnalytics,
   SystemHealth,
   SystemStatus,
   Vehicle,
@@ -37,6 +38,7 @@ const mockUseSystemStatus = jest.fn();
 const mockUseSystemHealth = jest.fn();
 const mockUseVehicleEnergy = jest.fn();
 const mockUseBatteryDegradationAnalytics = jest.fn();
+const mockUseFleetAnalytics = jest.fn();
 const mockUseFleetTelemetryErrorVINs = jest.fn();
 const mockUseFleetTelemetryErrors = jest.fn();
 
@@ -52,6 +54,7 @@ jest.mock('../src/api/hooks', () => ({
   useVehicleEnergy: (...args: unknown[]) => mockUseVehicleEnergy(...args),
   useBatteryDegradationAnalytics: (...args: unknown[]) =>
     mockUseBatteryDegradationAnalytics(...args),
+  useFleetAnalytics: (...args: unknown[]) => mockUseFleetAnalytics(...args),
   useFleetTelemetryErrorVINs: (...args: unknown[]) =>
     mockUseFleetTelemetryErrorVINs(...args),
   useFleetTelemetryErrors: (...args: unknown[]) =>
@@ -184,6 +187,36 @@ const batteryDegradation = {
   stress_level: 'Low',
 };
 
+const fleetAnalytics: FleetAnalytics = {
+  period_days: 30,
+  total_vehicles: 1,
+  total_distance_km: 24.4,
+  total_drives: 1,
+  total_charging_sessions: 1,
+  total_cost: 4.72,
+  avg_efficiency_wh_km: 209,
+  vehicle_comparison: [
+    {
+      id: 1,
+      name: 'Roadrunner',
+      distance: 24.4,
+      energy: 5.1,
+      efficiency: 209,
+      drives: 1,
+    },
+  ],
+  drive_analytics: {
+    daily_trend: [
+      {
+        date: '2026-06-23',
+        drives: 1,
+        distance: 24.4,
+        efficiency: 209,
+      },
+    ],
+  },
+};
+
 const telemetryErrorVIN = {
   id: 1,
   vin: '5YJTESLASYNC0001',
@@ -233,6 +266,7 @@ beforeEach(() => {
   mockUseSystemHealth.mockReturnValue(query(systemHealth));
   mockUseVehicleEnergy.mockReturnValue(query(vehicleEnergy));
   mockUseBatteryDegradationAnalytics.mockReturnValue(query(batteryDegradation));
+  mockUseFleetAnalytics.mockReturnValue(query(fleetAnalytics));
   mockUseFleetTelemetryErrorVINs.mockReturnValue(query([telemetryErrorVIN]));
   mockUseFleetTelemetryErrors.mockReturnValue(query([telemetryError]));
 });
@@ -309,6 +343,10 @@ test('renders all implemented native dashboard widgets with API-backed content',
   expect(serialized).toContain('Dashboard chart parity');
   expect(serialized).toContain('Accessible chart data table');
   expect(serialized).toContain('Dashboard route readiness');
+  expect(serialized).toContain('R0004 dashboard analytics routes');
+  expect(serialized).toContain('Period compare and lifetime trend');
+  expect(serialized).toContain('Analytics lifetime redirect');
+  expect(serialized).toContain('Compare redirects');
   expect(serialized).toContain('Quick stats and glance');
   expect(serialized).toContain('Search and route command');
   expect(serialized).toContain('R0001 command route surfaces');
@@ -357,6 +395,7 @@ test('keeps implemented widget shells visible while dashboard data is loading', 
   mockUseBatteryDegradationAnalytics.mockReturnValue(
     loadingQuery<typeof batteryDegradation>(),
   );
+  mockUseFleetAnalytics.mockReturnValue(loadingQuery<FleetAnalytics>());
   mockUseFleetTelemetryErrorVINs.mockReturnValue(
     loadingQuery<Array<typeof telemetryErrorVIN>>(),
   );
@@ -385,6 +424,7 @@ test('keeps implemented widget shells visible while dashboard data is loading', 
   expect(serialized).toContain('Loading battery cell context');
   expect(serialized).toContain('Loading power-flow context');
   expect(serialized).toContain('Loading telemetry errors');
+  expect(serialized).toContain('Loading comparison rows');
 });
 
 test('renders widget empty and API error states instead of hiding dashboard regions', async () => {
@@ -413,6 +453,9 @@ test('renders widget empty and API error states instead of hiding dashboard regi
   );
   mockUseBatteryDegradationAnalytics.mockReturnValue(
     failedQuery<typeof batteryDegradation>('degradation unavailable'),
+  );
+  mockUseFleetAnalytics.mockReturnValue(
+    failedQuery<FleetAnalytics>('fleet analytics unavailable'),
   );
   mockUseFleetTelemetryErrorVINs.mockReturnValue(
     failedQuery<Array<typeof telemetryErrorVIN>>('telemetry VINs unavailable'),

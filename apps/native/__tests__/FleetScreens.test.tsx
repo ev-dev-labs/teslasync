@@ -219,6 +219,109 @@ const driveTelemetry = [
   },
 ];
 
+const trip = {
+  id: 11,
+  vehicle_id: 1,
+  name: 'Morning commute',
+  start_date: '2026-06-23',
+  end_date: '2026-06-23',
+  started_at: '2026-06-23T18:00:00Z',
+  ended_at: '2026-06-23T18:32:00Z',
+  total_distance_m: 24400,
+  total_energy_wh: 5100,
+  total_duration_s: 1920,
+  total_cost: 0,
+  drive_count: 1,
+  charge_count: 0,
+  created_at: '2026-06-23T18:40:00Z',
+  auto_generated: true,
+};
+
+const dailyMileage = {
+  id: 1,
+  vehicle_id: 1,
+  date: '2026-06-23',
+  distance_km: 24.4,
+  odometer_start: 12000,
+  odometer_end: 12024.4,
+  drive_count: 1,
+  energy_used_kwh: 5.1,
+};
+
+const monthlyMileage = {
+  month: '2026-06',
+  distance: 24.4,
+  drives: 1,
+  energy: 5.1,
+  odometer: 12024.4,
+};
+
+const mileageStats = {
+  total_distance: 24.4,
+  avg_daily: 24.4,
+  max_daily: 24.4,
+  total_energy: 5.1,
+  total_drives: 1,
+  days_tracked: 1,
+};
+
+const visitedLocation = {
+  id: 5,
+  vehicle_id: 1,
+  address_id: 44,
+  address_name: 'Office',
+  visit_count: 7,
+  total_duration_s: 14400,
+  last_visited: '2026-06-23T18:32:00Z',
+  created_at: '2026-06-01T00:00:00Z',
+};
+
+const geofence = {
+  id: 2,
+  name: 'Home zone',
+  polygon_wkt:
+    'POLYGON((-122.08 37.42,-122.07 37.42,-122.08 37.43,-122.08 37.42))',
+  category: null,
+  enabled: true,
+  alert_on_entry: true,
+  alert_on_exit: true,
+  latitude: 37.42,
+  longitude: -122.08,
+  radius: 250,
+  created_at: '2026-06-01T00:00:00Z',
+  updated_at: '2026-06-02T00:00:00Z',
+};
+
+const fleetAnalytics = {
+  period_days: 30,
+  total_vehicles: 1,
+  total_distance_km: 24.4,
+  total_drives: 1,
+  total_charging_sessions: 1,
+  total_cost: 4.72,
+  avg_efficiency_wh_km: 209,
+  vehicle_comparison: [
+    {
+      id: 1,
+      name: 'Roadrunner',
+      distance: 24.4,
+      energy: 5.1,
+      efficiency: 209,
+      drives: 1,
+    },
+  ],
+  drive_analytics: {
+    daily_trend: [
+      {
+        date: '2026-06-23',
+        drives: 1,
+        distance: 24.4,
+        efficiency: 209,
+      },
+    ],
+  },
+};
+
 let mockVehiclesData: (typeof vehicle)[] | undefined;
 let mockVehicleDetailData: typeof vehicle | undefined;
 let mockVehicleStateData:
@@ -230,6 +333,13 @@ let mockChargeTelemetryData: typeof chargeTelemetry | undefined;
 let mockDrivesData: (typeof drive)[] | undefined;
 let mockDriveData: typeof drive | undefined;
 let mockDriveTelemetryData: typeof driveTelemetry | undefined;
+let mockTripsData: (typeof trip)[] | undefined;
+let mockDailyMileageData: (typeof dailyMileage)[] | undefined;
+let mockMonthlyMileageData: (typeof monthlyMileage)[] | undefined;
+let mockMileageStatsData: typeof mileageStats | undefined;
+let mockLocationsData: (typeof visitedLocation)[] | undefined;
+let mockGeofencesData: (typeof geofence)[] | undefined;
+let mockFleetAnalyticsData: typeof fleetAnalytics | undefined;
 let mockTirePressureData: typeof tirePressure | undefined;
 let mockClimateData: typeof climate | undefined;
 let mockSecurityData: typeof security | undefined;
@@ -254,6 +364,13 @@ beforeEach(() => {
   mockDrivesData = [drive];
   mockDriveData = drive;
   mockDriveTelemetryData = driveTelemetry;
+  mockTripsData = [trip];
+  mockDailyMileageData = [dailyMileage];
+  mockMonthlyMileageData = [monthlyMileage];
+  mockMileageStatsData = mileageStats;
+  mockLocationsData = [visitedLocation];
+  mockGeofencesData = [geofence];
+  mockFleetAnalyticsData = fleetAnalytics;
   mockTirePressureData = tirePressure;
   mockClimateData = climate;
   mockSecurityData = security;
@@ -378,6 +495,48 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: mockDrivesError,
   }),
+  useTrips: () => ({
+    data: mockTripsData,
+    isLoading: false,
+    isFetching: false,
+    error: mockDrivesError,
+  }),
+  useDailyMileage: (vehicleId: number | null) => ({
+    data: vehicleId ? mockDailyMileageData : [],
+    isLoading: false,
+    isFetching: false,
+    error: mockDrivesError,
+  }),
+  useMonthlyMileage: (vehicleId: number | null) => ({
+    data: vehicleId ? mockMonthlyMileageData : [],
+    isLoading: false,
+    isFetching: false,
+    error: mockDrivesError,
+  }),
+  useMileageStats: (vehicleId: number | null) => ({
+    data: vehicleId ? mockMileageStatsData : undefined,
+    isLoading: false,
+    isFetching: false,
+    error: mockDrivesError,
+  }),
+  useLocations: (vehicleId: number | null) => ({
+    data: vehicleId ? mockLocationsData : [],
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useGeofences: () => ({
+    data: mockGeofencesData,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
+  useFleetAnalytics: () => ({
+    data: mockFleetAnalyticsData,
+    isLoading: false,
+    isFetching: false,
+    error: mockVehicleSystemsError,
+  }),
 }));
 
 async function render(element: React.ReactElement) {
@@ -415,6 +574,13 @@ test('renders vehicle list, detail, and route readiness sections', async () => {
   expect(serialized).toContain('295 kPa');
   expect(serialized).toContain('Electric Feel');
   expect(serialized).toContain('Tire Rotation');
+  expect(serialized).toContain('R0004 locations and fleet comparison routes');
+  expect(serialized).toContain('Visited locations summary');
+  expect(serialized).toContain('Geofence radius summary');
+  expect(serialized).toContain('Office');
+  expect(serialized).toContain('Home zone');
+  expect(serialized).toContain('Drivetrain health');
+  expect(serialized).toContain('Vehicle comparison');
   expect(serialized).toContain('Native renders selected vehicle access state');
 });
 
@@ -455,6 +621,12 @@ test('renders drive list, trip detail, route replay, and readiness sections', as
   expect(serialized).toContain('Shared drive token route surface');
   expect(serialized).toContain('Shared drive token resolver');
   expect(serialized).toContain('Token route pattern');
+  expect(serialized).toContain('R0004 driving analytics routes');
+  expect(serialized).toContain('Mileage route summary');
+  expect(serialized).toContain('Driving dynamics summary');
+  expect(serialized).toContain('Morning commute');
+  expect(serialized).toContain('Trip planner route');
+  expect(serialized).toContain('Navigation route');
   expect(serialized).toContain('Trips list parity');
 });
 
@@ -468,6 +640,10 @@ test('renders empty states without hiding detail or readiness sections', async (
   mockDrivesData = [];
   mockDriveData = undefined;
   mockDriveTelemetryData = [];
+  mockTripsData = [];
+  mockDailyMileageData = [];
+  mockMonthlyMileageData = [];
+  mockMileageStatsData = undefined;
   mockTirePressureData = undefined;
   mockClimateData = undefined;
   mockSecurityData = undefined;
@@ -477,6 +653,9 @@ test('renders empty states without hiding detail or readiness sections', async (
   mockSoftwareUpdatesData = [];
   mockMaintenanceItemsData = [];
   mockServiceRecordsData = [];
+  mockLocationsData = [];
+  mockGeofencesData = [];
+  mockFleetAnalyticsData = undefined;
 
   const vehiclesSerialized = await render(<VehiclesScreen />);
   const chargingSerialized = await render(<ChargingScreen />);
@@ -490,6 +669,8 @@ test('renders empty states without hiding detail or readiness sections', async (
   expect(vehiclesSerialized).toContain('No media payload');
   expect(vehiclesSerialized).toContain('No software update history');
   expect(vehiclesSerialized).toContain('No maintenance items');
+  expect(vehiclesSerialized).toContain('No visited locations');
+  expect(vehiclesSerialized).toContain('No analytics comparison rows');
   expect(vehiclesSerialized).toContain('Vehicle route readiness');
   expect(chargingSerialized).toContain('No charging sessions');
   expect(chargingSerialized).toContain('No selected charging session');
@@ -500,6 +681,7 @@ test('renders empty states without hiding detail or readiness sections', async (
   expect(drivingSerialized).toContain('No selected trip');
   expect(drivingSerialized).toContain('No selected drive');
   expect(drivingSerialized).toContain('No replay drive selected');
+  expect(drivingSerialized).toContain('No trips returned');
   expect(drivingSerialized).toContain('Driving and trips route readiness');
 });
 
@@ -507,6 +689,10 @@ test('renders API error states without inventing fleet data', async () => {
   mockVehiclesData = [];
   mockChargingSessionsData = [];
   mockDrivesData = [];
+  mockTripsData = [];
+  mockDailyMileageData = [];
+  mockMonthlyMileageData = [];
+  mockMileageStatsData = undefined;
   mockVehiclesError = new Error('vehicle API failed');
   mockChargingError = new Error('charging API failed');
   mockDrivesError = new Error('drive API failed');
@@ -520,6 +706,9 @@ test('renders API error states without inventing fleet data', async () => {
   mockSoftwareUpdatesData = [];
   mockMaintenanceItemsData = [];
   mockServiceRecordsData = [];
+  mockLocationsData = [];
+  mockGeofencesData = [];
+  mockFleetAnalyticsData = undefined;
 
   const vehiclesSerialized = await render(<VehiclesScreen />);
   const chargingSerialized = await render(<ChargingScreen />);
@@ -532,9 +721,15 @@ test('renders API error states without inventing fleet data', async () => {
   expect(vehiclesSerialized).toContain('Media payload unavailable');
   expect(vehiclesSerialized).toContain('Software update history unavailable');
   expect(vehiclesSerialized).toContain('Maintenance schedule unavailable');
+  expect(vehiclesSerialized).toContain(
+    'Location rows will appear when /locations is reachable.',
+  );
   expect(chargingSerialized).toContain('Charging API unavailable');
   expect(chargingSerialized).toContain('Charging cost API unavailable');
   expect(chargingSerialized).toContain('Charging heatmap unavailable');
   expect(drivingSerialized).toContain('Drive API unavailable');
   expect(drivingSerialized).toContain('Trip source API unavailable');
+  expect(drivingSerialized).toContain(
+    'Trip sharing and timeline rows will appear when /trips is reachable.',
+  );
 });

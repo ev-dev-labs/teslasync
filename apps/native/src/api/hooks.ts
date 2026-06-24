@@ -22,6 +22,7 @@ import type {
   ChargeTelemetryReading,
   ChargingSession,
   ClimateLatest,
+  DailyMileage,
   Drive,
   DriveTelemetryReading,
   EnergyStats,
@@ -29,9 +30,12 @@ import type {
   FleetTelemetryCoverageResponse,
   FleetTelemetryError,
   FleetTelemetryErrorVIN,
+  Geofence,
   LiveSignalsResponse,
   MaintenanceItem,
   MediaLatest,
+  MileageStats,
+  MonthlyMileage,
   NotificationChannel,
   NotificationLog,
   NotificationStats,
@@ -55,9 +59,11 @@ import type {
   TemperatureImpactData,
   TOTPSudoToken,
   TirePressureLatest,
+  Trip,
   Vehicle,
   VehicleConfigLatest,
   VehicleStateResponse,
+  VisitedLocation,
   VersionInfo,
 } from './types';
 
@@ -79,6 +85,12 @@ export interface DateRangeOptions extends VehicleListOptions {
 
 export interface AnalyticsOptions extends DateRangeOptions {
   days?: number;
+}
+
+export interface TripListOptions extends DateRangeOptions {}
+
+export interface MileageListOptions extends ListOptions {
+  vehicle_id?: number | string | null;
 }
 
 export interface NotificationFilters extends ListOptions {
@@ -143,6 +155,13 @@ export const apiKeys = {
   drives: (options: DateRangeOptions) => ['drives', options] as const,
   drive: (id: number | string) => ['drive', id] as const,
   driveTelemetry: (id: number | string) => ['drive', id, 'telemetry'] as const,
+  trips: (options: TripListOptions) => ['trips', options] as const,
+  dailyMileage: (id: number | string, options: MileageListOptions) =>
+    ['mileage', 'daily', id, options] as const,
+  monthlyMileage: (id: number | string) => ['mileage', 'monthly', id] as const,
+  mileageStats: (id: number | string) => ['mileage', 'stats', id] as const,
+  locations: (options: MileageListOptions) => ['locations', options] as const,
+  geofences: ['geofences'] as const,
   charging: (options: DateRangeOptions) => ['charging', options] as const,
   chargingSession: (id: number | string) => ['charging', id] as const,
   chargeTelemetry: (id: number | string) =>
@@ -203,6 +222,43 @@ export function buildDriveListPath(options: DateRangeOptions = {}): string {
 
 export function buildChargingListPath(options: DateRangeOptions = {}): string {
   return listPath('/charging', options);
+}
+
+export function buildTripListPath(options: TripListOptions = {}): string {
+  return listPath('/trips', options);
+}
+
+export function buildDailyMileagePath(
+  vehicleId: number | string,
+  options: MileageListOptions = { limit: 30 },
+): string {
+  return buildQueryPath('/mileage/daily', {
+    vehicle_id: vehicleId,
+    limit: options.limit,
+    offset: options.offset,
+  });
+}
+
+export function buildMonthlyMileagePath(vehicleId: number | string): string {
+  return buildQueryPath('/mileage/monthly', { vehicle_id: vehicleId });
+}
+
+export function buildMileageStatsPath(vehicleId: number | string): string {
+  return buildQueryPath('/mileage/stats', { vehicle_id: vehicleId });
+}
+
+export function buildLocationsPath(
+  options: MileageListOptions = { limit: 20 },
+): string {
+  return buildQueryPath('/locations', {
+    vehicle_id: options.vehicle_id ?? undefined,
+    limit: options.limit,
+    offset: options.offset,
+  });
+}
+
+export function buildGeofencesPath(): string {
+  return '/geofences';
 }
 
 export function buildVehicleEnergyPath(
@@ -671,6 +727,82 @@ export function useDriveTelemetry(driveId: number | string | null) {
         signal,
       }),
     enabled: isPositiveId(driveId),
+  });
+}
+
+export function useTrips(options: TripListOptions = { limit: 20 }) {
+  return useQuery({
+    queryKey: apiKeys.trips(options),
+    queryFn: ({ signal }) =>
+      request<Trip[]>(buildTripListPath(options), { signal }),
+  });
+}
+
+export function useDailyMileage(
+  vehicleId: number | string | null,
+  options: MileageListOptions = { limit: 30 },
+) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.dailyMileage(vehicleId, options)
+      : ['mileage', 'daily', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<DailyMileage[]>(buildDailyMileagePath(vehicleId!, options), {
+        signal,
+      }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 60_000,
+  });
+}
+
+export function useMonthlyMileage(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.monthlyMileage(vehicleId)
+      : ['mileage', 'monthly', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<MonthlyMileage[]>(buildMonthlyMileagePath(vehicleId!), {
+        signal,
+      }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 60_000,
+  });
+}
+
+export function useMileageStats(vehicleId: number | string | null) {
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.mileageStats(vehicleId)
+      : ['mileage', 'stats', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<MileageStats>(buildMileageStatsPath(vehicleId!), { signal }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 60_000,
+  });
+}
+
+export function useLocations(
+  vehicleId: number | string | null,
+  options: MileageListOptions = { limit: 20 },
+) {
+  const queryOptions = { ...options, vehicle_id: vehicleId };
+  return useQuery({
+    queryKey: isPositiveId(vehicleId)
+      ? apiKeys.locations(queryOptions)
+      : ['locations', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<VisitedLocation[]>(buildLocationsPath(queryOptions), { signal }),
+    enabled: isPositiveId(vehicleId),
+    staleTime: 60_000,
+  });
+}
+
+export function useGeofences() {
+  return useQuery({
+    queryKey: apiKeys.geofences,
+    queryFn: ({ signal }) =>
+      request<Geofence[]>(buildGeofencesPath(), { signal }),
+    staleTime: 60_000,
   });
 }
 

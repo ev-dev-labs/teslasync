@@ -237,6 +237,46 @@ test('marks R0003 charging and energy native-summary routes implemented', () => 
   ).toBeGreaterThanOrEqual(15);
 });
 
+test('marks R0004 driving and analytics route summaries implemented', () => {
+  const implementedRouteIds = [
+    'sharing-trips',
+    'analytics-lifetime',
+    'compare',
+    'analytics-compare',
+    'timeline',
+    'mileage',
+    'trip-planner',
+    'statistics',
+    'lifetime-stats',
+    'period-compare',
+    'driving-dynamics',
+    'drive-score',
+    'weekly-digest',
+    'drivetrain-health',
+    'navigation',
+    'vehicle-comparison',
+    'geofences',
+    'locations',
+  ];
+
+  for (const routeId of implementedRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
+    expect(route?.deletionReadiness.status).toBe('blocked');
+  }
+
+  expect(
+    routes.find(route => route.id === 'dashboard')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(12);
+  expect(
+    routes.find(route => route.id === 'driving')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(12);
+  expect(
+    routes.find(route => route.id === 'vehicles')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(19);
+});
+
 test('marks R0001 command, shared, onboarding, live, search, and fallback routes implemented', () => {
   const implementedRouteIds = [
     'quick-stats',
@@ -340,7 +380,7 @@ test('keeps unported web routes visible as native summaries rather than success-
     'admin-slow-queries',
     'fleet-api',
     'gas-price',
-    'vehicle-comparison',
+    'chatbot',
   ];
 
   for (const routeId of nativeSummaryRouteIds) {

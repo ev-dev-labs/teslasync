@@ -3,6 +3,9 @@ import { View } from 'react-native';
 
 import {
   useClimateLatest,
+  useFleetAnalytics,
+  useGeofences,
+  useLocations,
   useMaintenanceItems,
   useMediaLatest,
   useSafetyLatest,
@@ -24,6 +27,7 @@ import { LiveVehicleRouteSection } from './LiveVehicleRouteSection';
 import { VehicleDetailSection } from './VehicleDetailSection';
 import { VehicleFleetOverviewSection } from './VehicleFleetOverviewSection';
 import { VehicleListSection } from './VehicleListSection';
+import { VehicleLocationAnalyticsSection } from './VehicleLocationAnalyticsSection';
 import { VehicleSystemsSection } from './VehicleSystemsSection';
 
 const vehicleReadinessItems: FleetRouteReadinessItem[] = [
@@ -100,6 +104,42 @@ const vehicleReadinessItems: FleetRouteReadinessItem[] = [
     evidence:
       'Native renders read-only ADAS settings, deterministic maintenance items, and explicit unavailable write/AI states.',
   },
+  {
+    id: 'locations',
+    label: 'Locations',
+    route: '/locations',
+    api: '/locations?vehicle_id={vehicleID}',
+    status: 'implemented',
+    evidence:
+      'Native renders visited location rows with visit counts, duration, and last-visited metadata from /locations.',
+  },
+  {
+    id: 'geofences',
+    label: 'Geofences',
+    route: '/geofences',
+    api: '/geofences',
+    status: 'implemented',
+    evidence:
+      'Native renders geofence centroid, radius, enabled state, and alert flags from /geofences without embedding a browser map.',
+  },
+  {
+    id: 'drivetrain-health',
+    label: 'Drivetrain health',
+    route: '/drivetrain-health',
+    api: '/vehicles/{vehicleID}/state, /maintenance',
+    status: 'implemented',
+    evidence:
+      'Native renders drivetrain health from live speed/power/state and maintenance status without fabricating diagnostics.',
+  },
+  {
+    id: 'vehicle-comparison',
+    label: 'Vehicle comparison',
+    route: '/vehicle-comparison',
+    api: '/analytics/fleet, /vehicles',
+    status: 'implemented',
+    evidence:
+      'Native renders vehicle comparison rows from /analytics/fleet and real vehicle metadata when analytics rows are absent.',
+  },
 ];
 
 export function VehicleFleetView() {
@@ -135,6 +175,9 @@ export function VehicleFleetView() {
   const safetyQuery = useSafetyLatest(selectedVehicleId);
   const mediaQuery = useMediaLatest(selectedVehicleId);
   const vehicleConfigQuery = useVehicleConfigLatest(selectedVehicleId);
+  const locationsQuery = useLocations(selectedVehicleId, { limit: 20 });
+  const geofencesQuery = useGeofences();
+  const fleetAnalyticsQuery = useFleetAnalytics({ days: 30 });
   const softwareUpdatesQuery = useSoftwareUpdates({
     vehicle_id: selectedVehicleId,
     limit: 8,
@@ -222,9 +265,32 @@ export function VehicleFleetView() {
           hasError: Boolean(serviceRecordsQuery.error),
         }}
       />
+      <VehicleLocationAnalyticsSection
+        fleet={fleetAnalyticsQuery.data}
+        geofences={geofencesQuery.data ?? []}
+        hasError={Boolean(
+          vehicleStateQuery.error ||
+            locationsQuery.error ||
+            geofencesQuery.error ||
+            fleetAnalyticsQuery.error ||
+            maintenanceItemsQuery.error,
+        )}
+        isLoading={
+          vehicleStateQuery.isLoading ||
+          locationsQuery.isLoading ||
+          geofencesQuery.isLoading ||
+          fleetAnalyticsQuery.isLoading ||
+          maintenanceItemsQuery.isLoading
+        }
+        liveState={liveState}
+        locations={locationsQuery.data ?? []}
+        maintenanceItems={maintenanceItemsQuery.data ?? []}
+        vehicle={detailVehicle}
+        vehicles={vehicles}
+      />
       <FleetRouteReadiness
         title="Vehicle route readiness"
-        subtitle="Vehicle and vehicle-system routes are typed, visible, and statused without hiding unavailable native actions."
+        subtitle="Vehicle, location, geofence, drivetrain, comparison, and vehicle-system routes are typed, visible, and statused without hiding unavailable native actions."
         items={vehicleReadinessItems}
       />
     </View>

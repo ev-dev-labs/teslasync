@@ -2,7 +2,13 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { useAlerts, useSystemStatus, useVehicles } from '../api/hooks';
+import {
+  useAlerts,
+  useDrives,
+  useFleetAnalytics,
+  useSystemStatus,
+  useVehicles,
+} from '../api/hooks';
 import { SectionHeader } from '../components/data/SectionHeader';
 import {
   RouteReadinessPanel,
@@ -18,6 +24,7 @@ import { GlassPanel } from '../components/ui/GlassPanel';
 import { MetricCard } from '../components/ui/MetricCard';
 import { StatusPill } from '../components/ui/StatusPill';
 import { CommandDashboardRoutesSurface } from '../features/command/CommandDashboardRoutesSurface';
+import { R0004DashboardAnalyticsSection } from '../features/command/R0004DashboardAnalyticsSection';
 import type { RouteId } from '../navigation/routes';
 import { colors, spacing } from '../theme/tokens';
 import {
@@ -54,9 +61,9 @@ const dashboardReadinessItems: RouteReadinessItem[] = [
     label: 'Statistics, lifetime, weekly, and comparison summaries',
     route: '/statistics, /lifetime-stats, /weekly-digest, /period-compare',
     api: '/analytics/fleet plus mapped analytics routes',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
-      'Dashboard widgets expose route-level evidence for analytics summaries without fabricating aggregate data not returned by the API.',
+      'R0004DashboardAnalyticsSection renders /analytics/fleet and /drives summaries, comparison rows, redirects, and empty states without fabricating aggregate data.',
   },
   {
     id: 'assistant-explore',
@@ -74,11 +81,14 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
   const vehiclesQuery = useVehicles();
   const alertsQuery = useAlerts();
   const systemQuery = useSystemStatus();
+  const drivesQuery = useDrives({ limit: 20 });
+  const fleetAnalyticsQuery = useFleetAnalytics({ days: 30 });
   const vehicles = useMemo(
     () => vehiclesQuery.data ?? [],
     [vehiclesQuery.data],
   );
   const alerts = useMemo(() => alertsQuery.data ?? [], [alertsQuery.data]);
+  const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
   const healthyVehicles = vehicles.filter(vehicle => vehicle.healthy).length;
   const unreadAlerts = alerts.filter(alert => !alert.is_read).length;
   const dashboardChartData = useMemo<ChartSummaryDatum[]>(
@@ -183,7 +193,9 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
 
       <CommandDashboardRoutesSurface
         alerts={alerts}
-        hasError={Boolean(vehiclesQuery.error || alertsQuery.error || systemQuery.error)}
+        hasError={Boolean(
+          vehiclesQuery.error || alertsQuery.error || systemQuery.error,
+        )}
         isLoading={
           vehiclesQuery.isLoading ||
           alertsQuery.isLoading ||
@@ -191,6 +203,13 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
         }
         systemStatus={systemQuery.data}
         vehicles={vehicles}
+      />
+
+      <R0004DashboardAnalyticsSection
+        drives={drives}
+        fleet={fleetAnalyticsQuery.data}
+        hasError={Boolean(drivesQuery.error || fleetAnalyticsQuery.error)}
+        isLoading={drivesQuery.isLoading || fleetAnalyticsQuery.isLoading}
       />
 
       <GlassPanel style={styles.registryPanel}>

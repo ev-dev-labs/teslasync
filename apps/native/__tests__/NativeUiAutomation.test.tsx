@@ -38,6 +38,10 @@ const mockUseVersionInfo = jest.fn();
 const mockUseDrives = jest.fn();
 const mockUseDrive = jest.fn();
 const mockUseDriveTelemetry = jest.fn();
+const mockUseTrips = jest.fn();
+const mockUseDailyMileage = jest.fn();
+const mockUseMonthlyMileage = jest.fn();
+const mockUseMileageStats = jest.fn();
 const mockUseChargingSessions = jest.fn();
 const mockUseChargingSession = jest.fn();
 const mockUseChargeTelemetry = jest.fn();
@@ -51,6 +55,8 @@ const mockUseBatteryDegradationAnalytics = jest.fn();
 const mockUseSpeedProfile = jest.fn();
 const mockUseTemperatureImpact = jest.fn();
 const mockUseRouteEfficiency = jest.fn();
+const mockUseLocations = jest.fn();
+const mockUseGeofences = jest.fn();
 const mockUseFleetTelemetryCoverage = jest.fn();
 const mockUseFleetTelemetryErrorVINs = jest.fn();
 const mockUseFleetTelemetryErrors = jest.fn();
@@ -135,6 +141,10 @@ jest.mock('../src/api/hooks', () => ({
   useDrives: (...args: unknown[]) => mockUseDrives(...args),
   useDrive: (...args: unknown[]) => mockUseDrive(...args),
   useDriveTelemetry: (...args: unknown[]) => mockUseDriveTelemetry(...args),
+  useTrips: (...args: unknown[]) => mockUseTrips(...args),
+  useDailyMileage: (...args: unknown[]) => mockUseDailyMileage(...args),
+  useMonthlyMileage: (...args: unknown[]) => mockUseMonthlyMileage(...args),
+  useMileageStats: (...args: unknown[]) => mockUseMileageStats(...args),
   useChargingSessions: (...args: unknown[]) => mockUseChargingSessions(...args),
   useChargingSession: (...args: unknown[]) => mockUseChargingSession(...args),
   useChargeTelemetry: (...args: unknown[]) => mockUseChargeTelemetry(...args),
@@ -150,6 +160,8 @@ jest.mock('../src/api/hooks', () => ({
   useTemperatureImpact: (...args: unknown[]) =>
     mockUseTemperatureImpact(...args),
   useRouteEfficiency: (...args: unknown[]) => mockUseRouteEfficiency(...args),
+  useLocations: (...args: unknown[]) => mockUseLocations(...args),
+  useGeofences: (...args: unknown[]) => mockUseGeofences(...args),
   useFleetTelemetryCoverage: (...args: unknown[]) =>
     mockUseFleetTelemetryCoverage(...args),
   useFleetTelemetryErrorVINs: (...args: unknown[]) =>
@@ -423,6 +435,10 @@ beforeEach(() => {
   mockUseDrives.mockReturnValue(query([]));
   mockUseDrive.mockReturnValue(emptyQuery());
   mockUseDriveTelemetry.mockReturnValue(query([]));
+  mockUseTrips.mockReturnValue(query([]));
+  mockUseDailyMileage.mockReturnValue(query([]));
+  mockUseMonthlyMileage.mockReturnValue(query([]));
+  mockUseMileageStats.mockReturnValue(emptyQuery());
   mockUseChargingSessions.mockReturnValue(query([]));
   mockUseChargingSession.mockReturnValue(emptyQuery());
   mockUseChargeTelemetry.mockReturnValue(query([]));
@@ -446,6 +462,8 @@ beforeEach(() => {
   mockUseSpeedProfile.mockReturnValue(emptyQuery());
   mockUseTemperatureImpact.mockReturnValue(emptyQuery());
   mockUseRouteEfficiency.mockReturnValue(emptyQuery());
+  mockUseLocations.mockReturnValue(query([]));
+  mockUseGeofences.mockReturnValue(query([]));
   mockUseFleetTelemetryCoverage.mockReturnValue(
     query({
       categories: [],

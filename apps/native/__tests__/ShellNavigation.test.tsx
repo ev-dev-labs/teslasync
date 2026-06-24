@@ -147,6 +147,48 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: null,
   }),
+  useTrips: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useDailyMileage: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useMonthlyMileage: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useMileageStats: () => ({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useFleetAnalytics: () => ({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useLocations: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useGeofences: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
   useChargingSessions: () => ({
     data: [],
     isLoading: false,

@@ -419,6 +419,80 @@ export interface DriveTelemetryReading {
   created_at: string;
 }
 
+export interface Trip {
+  id: number;
+  vehicle_id: number;
+  name: string | null;
+  start_date: string;
+  end_date: string | null;
+  started_at: string;
+  ended_at: string | null;
+  total_distance_m: number;
+  total_energy_wh: number;
+  total_duration_s: number;
+  total_cost: number;
+  drive_count: number;
+  charge_count: number;
+  created_at: string;
+  created_by_user?: number | null;
+  auto_generated?: boolean;
+  notes?: string | null;
+}
+
+export interface DailyMileage {
+  id: number;
+  vehicle_id: number;
+  date: string;
+  distance_km: number;
+  odometer_start: number;
+  odometer_end: number;
+  drive_count: number;
+  energy_used_kwh: number;
+}
+
+export interface MonthlyMileage {
+  month: string;
+  distance: number;
+  drives: number;
+  energy: number;
+  odometer: number;
+}
+
+export interface MileageStats {
+  total_distance: number;
+  avg_daily: number;
+  max_daily: number;
+  total_energy: number;
+  total_drives: number;
+  days_tracked: number;
+}
+
+export interface VisitedLocation {
+  id: number;
+  vehicle_id: number;
+  address_id?: number | null;
+  address_name: string;
+  visit_count: number;
+  total_duration_s: number;
+  last_visited: string | null;
+  created_at: string;
+}
+
+export interface Geofence {
+  id: number;
+  name: string;
+  polygon_wkt?: string;
+  category?: string | null;
+  enabled: boolean;
+  alert_on_entry: boolean;
+  alert_on_exit: boolean;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface ChargingSession {
   id: number;
   vehicle_id: number;

@@ -195,6 +195,24 @@ const implementedRouteIds = new Set<string>([
   'search',
   'not-found-layout',
   'not-found-root',
+  'sharing-trips',
+  'analytics-lifetime',
+  'compare',
+  'analytics-compare',
+  'geofences',
+  'locations',
+  'timeline',
+  'mileage',
+  'trip-planner',
+  'statistics',
+  'lifetime-stats',
+  'period-compare',
+  'driving-dynamics',
+  'drive-score',
+  'weekly-digest',
+  'drivetrain-health',
+  'navigation',
+  'vehicle-comparison',
 ] as const);
 
 const nativeSummaryRouteIds = new Set<string>([
@@ -215,10 +233,6 @@ const nativeSummaryRouteIds = new Set<string>([
   'account-sessions',
   'account-privacy',
   'integrations-helix',
-  'sharing-trips',
-  'analytics-lifetime',
-  'compare',
-  'analytics-compare',
   'admin',
   'admin-dlq',
   'api-logs',
@@ -230,19 +244,11 @@ const nativeSummaryRouteIds = new Set<string>([
   'data-repair',
   'backup',
   'exports',
-  'geofences',
   'chatbot',
-  'locations',
-  'timeline',
-  'mileage',
-  'trip-planner',
-  'statistics',
-  'lifetime-stats',
   'system-status-incidents-id',
   'docs-status-api',
   'roadmap',
   'api-keys',
-  'period-compare',
   'admin-feedback',
   'admin-flags',
   'admin-ingest-xray',
@@ -266,13 +272,7 @@ const nativeSummaryRouteIds = new Set<string>([
   'mqtt-inspector',
   'anomaly-detection',
   'analytics-anomalies',
-  'driving-dynamics',
-  'drive-score',
-  'weekly-digest',
   'data-export',
-  'drivetrain-health',
-  'navigation',
-  'vehicle-comparison',
   'me-activity',
 ] as const);
 
@@ -770,6 +770,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Geofences',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders geofence centroid, radius, enabled state, and alert flags from /geofences with native chart/list summaries.',
   }),
   webRoute({
     id: 'settings',
@@ -892,6 +894,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Locations',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders visited-location counts, duration, last-visited metadata, and live coordinates from /locations and /vehicles/{vehicleID}/state.',
   }),
   webRoute({
     id: 'timeline',
@@ -899,6 +903,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Timeline',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders trip and drive chronology from /trips and /drives without fake trip rows.',
   }),
   webRoute({
     id: 'mileage',
@@ -906,6 +912,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Mileage',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders mileage charts and totals from /mileage/daily, /mileage/monthly, /mileage/stats, and real /drives fallback rows.',
   }),
   webRoute({
     id: 'projected-range',
@@ -954,6 +962,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Sharing Trips',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders real /trips rows and selected drive telemetry context while keeping share-link creation unavailable instead of fabricating public links.',
   }),
   webRoute({
     id: 'trip-planner',
@@ -961,6 +971,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Trip Planner',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders trip-planner inputs from /trips, /drives, and /drives/{driveID}/telemetry without fake destinations or WebView maps.',
   }),
   webRoute({
     id: 'statistics',
@@ -968,6 +980,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Statistics',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders statistics summaries from /analytics/fleet and /drives with native MetricGrid and ChartSummary primitives.',
   }),
   webRoute({
     id: 'lifetime-stats',
@@ -975,6 +989,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Lifetime Stats',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders lifetime distance, energy, cost, and trend summaries from /analytics/fleet plus real returned drive rows.',
   }),
   webRoute({
     id: 'analytics-lifetime',
@@ -982,7 +998,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Analytics Lifetime Redirect',
     nativeTarget: 'dashboard',
-    evidence: redirectRouteEvidence,
+    evidence:
+      'Implemented: The analytics/lifetime redirect is represented by the native lifetime-stats dashboard summary and typed route manifest redirect evidence.',
   }),
   webRoute({
     id: 'system-status',
@@ -1025,7 +1042,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Compare Redirect',
     nativeTarget: 'dashboard',
-    evidence: redirectRouteEvidence,
+    evidence:
+      'Implemented: The compare redirect is represented by the native period-compare dashboard summary and typed route manifest redirect evidence.',
   }),
   webRoute({
     id: 'analytics-compare',
@@ -1033,7 +1051,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Analytics Compare Redirect',
     nativeTarget: 'dashboard',
-    evidence: redirectRouteEvidence,
+    evidence:
+      'Implemented: The analytics/compare redirect is represented by the native period-compare dashboard summary and typed route manifest redirect evidence.',
   }),
   webRoute({
     id: 'period-compare',
@@ -1041,6 +1060,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Period Compare',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders period comparison trend data from /analytics/fleet drive_analytics.daily_trend with real /drives fallback rows.',
   }),
   webRoute({
     id: 'admin',
@@ -1320,6 +1341,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Driving Dynamics',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders driving dynamics from /drives/{driveID}/telemetry speed and power samples with accessible chart data.',
   }),
   webRoute({
     id: 'climate-control',
@@ -1444,6 +1467,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Drive Score',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders selected and average drive scores from returned /drives score fields only.',
   }),
   webRoute({
     id: 'weekly-digest',
@@ -1451,6 +1476,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Weekly Digest',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders weekly digest counts using a seven-day window anchored to the latest returned /drives row.',
   }),
   webRoute({
     id: 'maintenance',
@@ -1508,6 +1535,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Drivetrain Health',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders drivetrain health from live speed, power, state, vehicle health, and maintenance status without fabricated diagnostics.',
   }),
   webRoute({
     id: 'media-player',
@@ -1542,6 +1571,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Navigation',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders native navigation and route summaries from /drives/{driveID}/telemetry with no WebView map embedding.',
   }),
   webRoute({
     id: 'data-repair',
@@ -1617,6 +1648,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Vehicle Comparison',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders vehicle comparison rows from /analytics/fleet and real /vehicles metadata fallback when comparison rows are absent.',
   }),
   webRoute({
     id: 'sleep-efficiency',
