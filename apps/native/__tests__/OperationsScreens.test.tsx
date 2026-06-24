@@ -163,6 +163,26 @@ jest.mock('../src/api/hooks', () => ({
       battery_capacity_wh: 79000,
       capacity_source: 'model',
       monthly_trend: [{ month: '2026-06', avg_health: 94, avg_capacity: 97.9 }],
+      snapshots: [
+        {
+          id: 1,
+          health_score: 94,
+          capacity_wh: 79000,
+          degradation_pct: 2.1,
+          est_range_km: 505,
+          cycle_count: 88,
+          avg_cell_temp_c: 24.5,
+          created_at: '2026-06-23T20:00:00Z',
+        },
+      ],
+      risk_factors: [
+        {
+          factor: 'Fast charging',
+          severity: 'low',
+          value: '8.2%',
+          threshold: '20%',
+        },
+      ],
       recommendations: ['Keep daily charge limit below 90%.'],
     },
     isLoading: false,
@@ -402,12 +422,17 @@ test('renders energy, battery, analytics, and route readiness surfaces', async (
 
   expect(serialized).toContain('Energy and battery overview');
   expect(serialized).toContain('Battery health and degradation');
+  expect(serialized).toContain('Battery cell diagnostics');
+  expect(serialized).toContain('Cell temperature snapshots');
+  expect(serialized).toContain('Fast charging');
   expect(serialized).toContain('Fleet energy analytics');
   expect(serialized).toContain('Ownership, sleep, and regen');
   expect(serialized).toContain('Driving energy analytics');
   expect(serialized).toContain('Battery degradation analytics');
   expect(serialized).toContain('Speed profile distribution');
+  expect(serialized).toContain('Energy product parity evidence');
   expect(serialized).toContain('Energy products and power flow');
+  expect(serialized).toContain('No WebView');
   expect(serialized).toContain('Roadrunner');
 });
 
@@ -418,6 +443,9 @@ test('renders system, telemetry, audit, and live signal diagnostics', async () =
   expect(serialized).toContain('Version and audit trail');
   expect(serialized).toContain('Fleet Telemetry diagnostics');
   expect(serialized).toContain('Live signal diagnostics');
+  expect(serialized).toContain('Admin operations readiness');
+  expect(serialized).toContain('Commands and automations');
+  expect(serialized).toContain('Repair, backup, and exports');
   expect(serialized).toContain('Fleet Telemetry coverage');
   expect(serialized).toContain('Audit log diagnostics');
   expect(serialized).toContain('BatteryLevel');

@@ -191,6 +191,10 @@ export function buildVehicleEnergyPath(
   return buildQueryPath(`/vehicles/${vehicleId}/energy`, { days });
 }
 
+export function buildBatteryHealthPath(vehicleId: number | string): string {
+  return `/vehicles/${vehicleId}/battery`;
+}
+
 export function buildFleetAnalyticsPath(
   options: AnalyticsOptions = { days: 30 },
 ): string {
@@ -206,6 +210,42 @@ function buildAnalyticsVehiclePath(
   vehicleId: number | string,
 ): string {
   return buildQueryPath(path, { vehicle_id: vehicleId });
+}
+
+export function buildTCOAnalyticsPath(vehicleId: number | string): string {
+  return buildAnalyticsVehiclePath('/analytics/tco', vehicleId);
+}
+
+export function buildSleepAnalyticsPath(
+  vehicleId: number | string,
+  days = 30,
+): string {
+  return buildQueryPath('/analytics/sleep', {
+    vehicle_id: vehicleId,
+    days,
+  });
+}
+
+export function buildRegenAnalyticsPath(vehicleId: number | string): string {
+  return buildAnalyticsVehiclePath('/analytics/regen', vehicleId);
+}
+
+export function buildBatteryDegradationAnalyticsPath(
+  vehicleId: number | string,
+): string {
+  return buildAnalyticsVehiclePath('/analytics/battery-degradation', vehicleId);
+}
+
+export function buildSpeedProfilePath(vehicleId: number | string): string {
+  return buildAnalyticsVehiclePath('/analytics/speed-profile', vehicleId);
+}
+
+export function buildTemperatureImpactPath(vehicleId: number | string): string {
+  return buildAnalyticsVehiclePath('/analytics/temperature-impact', vehicleId);
+}
+
+export function buildRouteEfficiencyPath(vehicleId: number | string): string {
+  return buildAnalyticsVehiclePath('/analytics/route-efficiency', vehicleId);
 }
 
 export function buildSystemAuditPath(
@@ -299,6 +339,28 @@ export function buildSystemVersionPath(): string {
 
 export function buildRateLimitStatusPath(): string {
   return '/system/rate-limits';
+}
+
+export function buildFleetTelemetryCoveragePath(): string {
+  return '/tesla/fleet-telemetry/coverage';
+}
+
+export function buildFleetTelemetryErrorVINsPath(): string {
+  return '/tesla/fleet-telemetry/error-vins';
+}
+
+export function buildFleetTelemetryErrorsPath(vin?: string): string {
+  return buildQueryPath('/tesla/fleet-telemetry/errors', {
+    vin: vin?.trim() ? vin : undefined,
+  });
+}
+
+export function buildAvailableSignalsPath(vehicleId: number | string): string {
+  return `/signals/${vehicleId}/available`;
+}
+
+export function buildLiveSignalsPath(vehicleId: number | string): string {
+  return `/signals/${vehicleId}/live`;
 }
 
 export function buildVehiclePath(vehicleId: number | string): string {
@@ -493,7 +555,7 @@ export function useBatteryHealth(vehicleId: number | string | null) {
       ? apiKeys.batteryHealth(vehicleId)
       : ['vehicles', 'battery', 'disabled'],
     queryFn: ({ signal }) =>
-      request<BatteryHealth>(`/vehicles/${vehicleId}/battery`, { signal }),
+      request<BatteryHealth>(buildBatteryHealthPath(vehicleId!), { signal }),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -513,10 +575,7 @@ export function useTCOAnalytics(vehicleId: number | string | null) {
       ? apiKeys.tcoAnalytics(vehicleId)
       : ['analytics', 'tco', 'disabled'],
     queryFn: ({ signal }) =>
-      request<TCOAnalytics>(
-        buildAnalyticsVehiclePath('/analytics/tco', vehicleId!),
-        { signal },
-      ),
+      request<TCOAnalytics>(buildTCOAnalyticsPath(vehicleId!), { signal }),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -530,13 +589,9 @@ export function useSleepAnalytics(
       ? apiKeys.sleepAnalytics(vehicleId, days)
       : ['analytics', 'sleep', 'disabled'],
     queryFn: ({ signal }) =>
-      request<SleepAnalytics>(
-        buildQueryPath('/analytics/sleep', {
-          vehicle_id: vehicleId!,
-          days,
-        }),
-        { signal },
-      ),
+      request<SleepAnalytics>(buildSleepAnalyticsPath(vehicleId!, days), {
+        signal,
+      }),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -547,10 +602,7 @@ export function useRegenAnalytics(vehicleId: number | string | null) {
       ? apiKeys.regenAnalytics(vehicleId)
       : ['analytics', 'regen', 'disabled'],
     queryFn: ({ signal }) =>
-      request<RegenAnalytics>(
-        buildAnalyticsVehiclePath('/analytics/regen', vehicleId!),
-        { signal },
-      ),
+      request<RegenAnalytics>(buildRegenAnalyticsPath(vehicleId!), { signal }),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -564,7 +616,7 @@ export function useBatteryDegradationAnalytics(
       : ['analytics', 'battery-degradation', 'disabled'],
     queryFn: ({ signal }) =>
       request<BatteryDegradationAnalytics>(
-        buildAnalyticsVehiclePath('/analytics/battery-degradation', vehicleId!),
+        buildBatteryDegradationAnalyticsPath(vehicleId!),
         { signal },
       ),
     enabled: isPositiveId(vehicleId),
@@ -577,10 +629,7 @@ export function useSpeedProfile(vehicleId: number | string | null) {
       ? apiKeys.speedProfile(vehicleId)
       : ['analytics', 'speed-profile', 'disabled'],
     queryFn: ({ signal }) =>
-      request<SpeedProfileData>(
-        buildAnalyticsVehiclePath('/analytics/speed-profile', vehicleId!),
-        { signal },
-      ),
+      request<SpeedProfileData>(buildSpeedProfilePath(vehicleId!), { signal }),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -592,7 +641,7 @@ export function useTemperatureImpact(vehicleId: number | string | null) {
       : ['analytics', 'temperature-impact', 'disabled'],
     queryFn: ({ signal }) =>
       request<TemperatureImpactData>(
-        buildAnalyticsVehiclePath('/analytics/temperature-impact', vehicleId!),
+        buildTemperatureImpactPath(vehicleId!),
         { signal },
       ),
     enabled: isPositiveId(vehicleId),
@@ -606,7 +655,7 @@ export function useRouteEfficiency(vehicleId: number | string | null) {
       : ['analytics', 'route-efficiency', 'disabled'],
     queryFn: ({ signal }) =>
       request<RouteEfficiencyData>(
-        buildAnalyticsVehiclePath('/analytics/route-efficiency', vehicleId!),
+        buildRouteEfficiencyPath(vehicleId!),
         { signal },
       ),
     enabled: isPositiveId(vehicleId),
@@ -618,7 +667,7 @@ export function useFleetTelemetryCoverage() {
     queryKey: apiKeys.fleetTelemetryCoverage,
     queryFn: async ({ signal }): Promise<FleetTelemetryCoverageResponse> => {
       const payload = await request<FleetTelemetryCoverageResponse>(
-        '/tesla/fleet-telemetry/coverage',
+        buildFleetTelemetryCoveragePath(),
         { signal },
       );
       return {
@@ -635,7 +684,7 @@ export function useFleetTelemetryErrorVINs() {
   return useQuery({
     queryKey: apiKeys.fleetTelemetryErrorVINs,
     queryFn: ({ signal }) =>
-      request<FleetTelemetryErrorVIN[]>('/tesla/fleet-telemetry/error-vins', {
+      request<FleetTelemetryErrorVIN[]>(buildFleetTelemetryErrorVINsPath(), {
         signal,
       }),
     staleTime: 60_000,
@@ -646,12 +695,9 @@ export function useFleetTelemetryErrors(vin?: string) {
   return useQuery({
     queryKey: apiKeys.fleetTelemetryErrors(vin),
     queryFn: ({ signal }) =>
-      request<FleetTelemetryError[]>(
-        buildQueryPath('/tesla/fleet-telemetry/errors', {
-          vin: vin?.trim() ? vin : undefined,
-        }),
-        { signal },
-      ),
+      request<FleetTelemetryError[]>(buildFleetTelemetryErrorsPath(vin), {
+        signal,
+      }),
     staleTime: 60_000,
   });
 }
@@ -671,7 +717,7 @@ export function useAvailableSignals(vehicleId: number | string | null) {
       ? apiKeys.availableSignals(vehicleId)
       : ['signals', 'available', 'disabled'],
     queryFn: ({ signal }) =>
-      request<AvailableSignalsResponse>(`/signals/${vehicleId}/available`, {
+      request<AvailableSignalsResponse>(buildAvailableSignalsPath(vehicleId!), {
         signal,
       }),
     enabled: isPositiveId(vehicleId),
@@ -685,7 +731,9 @@ export function useLiveSignals(vehicleId: number | string | null) {
       ? apiKeys.liveSignals(vehicleId)
       : ['signals', 'live', 'disabled'],
     queryFn: ({ signal }) =>
-      request<LiveSignalsResponse>(`/signals/${vehicleId}/live`, { signal }),
+      request<LiveSignalsResponse>(buildLiveSignalsPath(vehicleId!), {
+        signal,
+      }),
     enabled: isPositiveId(vehicleId),
     staleTime: 5_000,
   });

@@ -8,21 +8,35 @@ import {
   buildChargeTelemetryPath,
   buildChargingSessionPath,
   buildChargingListPath,
+  buildAvailableSignalsPath,
+  buildBatteryDegradationAnalyticsPath,
+  buildBatteryHealthPath,
   buildDriveDetailPath,
   buildDriveListPath,
   buildDriveTelemetryPath,
+  buildFleetAnalyticsPath,
+  buildFleetTelemetryCoveragePath,
+  buildFleetTelemetryErrorsPath,
+  buildFleetTelemetryErrorVINsPath,
+  buildLiveSignalsPath,
   buildNotificationLogsPath,
   buildNotificationChannelsPath,
   buildNotificationStatsPath,
   buildQuietHoursPath,
   buildRateLimitStatusPath,
+  buildRegenAnalyticsPath,
+  buildRouteEfficiencyPath,
   buildRevokeAllOtherSessionsPath,
   buildSessionPath,
   buildSessionsPath,
   buildSettingsPath,
+  buildSleepAnalyticsPath,
+  buildSpeedProfilePath,
   buildSystemHealthPath,
   buildSystemStatusPath,
   buildSystemVersionPath,
+  buildTCOAnalyticsPath,
+  buildTemperatureImpactPath,
   buildTOTPBackupCodesPath,
   buildTOTPEnrollPath,
   buildTOTPSudoPath,
@@ -69,6 +83,7 @@ describe('native API URL construction', () => {
       }),
     ).toBe('/charging?vehicle_id=42&start=2026-06-01&end=2026-06-23');
     expect(buildVehicleEnergyPath(42, 14)).toBe('/vehicles/42/energy?days=14');
+    expect(buildBatteryHealthPath(42)).toBe('/vehicles/42/battery');
     expect(buildVehiclePath(42)).toBe('/vehicles/42');
     expect(buildVehicleStatePath(42)).toBe('/vehicles/42/state');
     expect(buildDriveDetailPath(3)).toBe('/drives/3');
@@ -86,6 +101,51 @@ describe('native API URL construction', () => {
     ).toBe(
       '/notifications/logs?vehicle_id=42%2C43&rule_id=7&read=false&group_key=abc123&limit=10',
     );
+  });
+
+  test('builds typed N0006 analytics, telemetry, and signal paths', () => {
+    expect(buildFleetAnalyticsPath({ days: 14 })).toBe(
+      '/analytics/fleet?days=14',
+    );
+    expect(
+      buildFleetAnalyticsPath({
+        start: '2026-06-01',
+        end: '2026-06-23',
+      }),
+    ).toBe('/analytics/fleet?start=2026-06-01&end=2026-06-23');
+    expect(buildTCOAnalyticsPath(42)).toBe('/analytics/tco?vehicle_id=42');
+    expect(buildSleepAnalyticsPath(42, 7)).toBe(
+      '/analytics/sleep?vehicle_id=42&days=7',
+    );
+    expect(buildRegenAnalyticsPath(42)).toBe(
+      '/analytics/regen?vehicle_id=42',
+    );
+    expect(buildBatteryDegradationAnalyticsPath(42)).toBe(
+      '/analytics/battery-degradation?vehicle_id=42',
+    );
+    expect(buildSpeedProfilePath(42)).toBe(
+      '/analytics/speed-profile?vehicle_id=42',
+    );
+    expect(buildTemperatureImpactPath(42)).toBe(
+      '/analytics/temperature-impact?vehicle_id=42',
+    );
+    expect(buildRouteEfficiencyPath(42)).toBe(
+      '/analytics/route-efficiency?vehicle_id=42',
+    );
+    expect(buildFleetTelemetryCoveragePath()).toBe(
+      '/tesla/fleet-telemetry/coverage',
+    );
+    expect(buildFleetTelemetryErrorVINsPath()).toBe(
+      '/tesla/fleet-telemetry/error-vins',
+    );
+    expect(buildFleetTelemetryErrorsPath('5YJTESLASYNC0001')).toBe(
+      '/tesla/fleet-telemetry/errors?vin=5YJTESLASYNC0001',
+    );
+    expect(buildFleetTelemetryErrorsPath('   ')).toBe(
+      '/tesla/fleet-telemetry/errors',
+    );
+    expect(buildAvailableSignalsPath(42)).toBe('/signals/42/available');
+    expect(buildLiveSignalsPath(42)).toBe('/signals/42/live');
   });
 
   test('builds auth, settings, notification, and system paths without api prefix', () => {

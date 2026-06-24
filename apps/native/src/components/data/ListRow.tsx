@@ -33,6 +33,8 @@ export function ListRow({
   accessibilityLabel,
   style,
 }: ListRowProps) {
+  const label =
+    accessibilityLabel ?? [title, subtitle, meta].filter(Boolean).join(', ');
   const content = (
     <>
       {icon ? <SemanticIcon name={icon} decorative /> : null}
@@ -57,7 +59,7 @@ export function ListRow({
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel ?? [title, subtitle, meta].filter(Boolean).join(', ')}
+        accessibilityLabel={label}
         onPress={onPress}
         style={({pressed}) => [styles.root, pressed && styles.pressed, style]}>
         {content}
@@ -65,7 +67,15 @@ export function ListRow({
     );
   }
 
-  return <View style={[styles.root, style]}>{content}</View>;
+  return (
+    <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={label}
+      style={[styles.root, style]}>
+      {content}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

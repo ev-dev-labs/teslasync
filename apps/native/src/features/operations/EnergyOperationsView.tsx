@@ -90,6 +90,15 @@ const energyReadinessItems: OperationsRouteReadinessItem[] = [
       'Native renders predictive degradation metrics, stress level, and recommendation tables.',
   },
   {
+    id: 'battery-cells',
+    label: 'Battery cell diagnostics',
+    route: '/battery-cells',
+    api: '/analytics/battery-degradation snapshots',
+    status: 'native-summary',
+    evidence:
+      'Native renders cell-temperature and battery-risk evidence from degradation snapshots without fabricating per-cell telemetry.',
+  },
+  {
     id: 'ownership',
     label: 'TCO, sleep, and regen analytics',
     route: '/tco, /analytics/tco, /sleep-efficiency, /regen-efficiency',
@@ -197,6 +206,12 @@ export function EnergyOperationsView() {
         isLoading={batteryQuery.isLoading || degradationQuery.isLoading}
         hasError={Boolean(batteryQuery.error || degradationQuery.error)}
       />
+      <BatteryCellDiagnosticsSection
+        vehicle={selectedVehicle}
+        degradation={degradationQuery.data}
+        isLoading={degradationQuery.isLoading}
+        hasError={Boolean(degradationQuery.error)}
+      />
       <FleetEnergyAnalyticsSection
         fleet={fleetQuery.data}
         isLoading={fleetQuery.isLoading}
@@ -228,6 +243,7 @@ export function EnergyOperationsView() {
           speedQuery.error || temperatureQuery.error || routeQuery.error,
         )}
       />
+      <EnergyProductReadinessSection />
       <OperationsRouteReadiness
         title="Energy and analytics route readiness"
         subtitle="N0006 route parity remains explicit about implemented native summaries and unavailable product routes."
@@ -534,6 +550,138 @@ function BatteryHealthSection({
                   title={`Recommendation ${index + 1}`}
                   subtitle={recommendation}
                   icon="lightbulb"
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+    </ScreenSection>
+  );
+}
+
+interface BatteryCellDiagnosticsSectionProps {
+  vehicle: Vehicle | null;
+  degradation: BatteryDegradationAnalytics | undefined;
+  isLoading: boolean;
+  hasError: boolean;
+}
+
+function BatteryCellDiagnosticsSection({
+  vehicle,
+  degradation,
+  isLoading,
+  hasError,
+}: BatteryCellDiagnosticsSectionProps) {
+  const snapshots = useMemo(
+    () => degradation?.snapshots ?? [],
+    [degradation?.snapshots],
+  );
+  const riskFactors = degradation?.risk_factors ?? [];
+  const cellTrend = useMemo<ChartSummaryDatum[]>(
+    () =>
+      snapshots.slice(-8).map(snapshot => ({
+        id: String(snapshot.id),
+        label: formatShortDate(snapshot.created_at),
+        value: snapshot.avg_cell_temp_c,
+        formattedValue: formatTemperatureC(snapshot.avg_cell_temp_c),
+        icon: 'batteryWarning' as const,
+      })),
+    [snapshots],
+  );
+
+  return (
+    <ScreenSection
+      title="Battery cell diagnostics"
+      subtitle="Native battery-cell route evidence uses returned degradation snapshots and risk factors only."
+    >
+      {!vehicle ? (
+        <OperationsMessage
+          title="Battery cell diagnostics waiting for a vehicle"
+          message="Battery cell route parity requires the selected vehicle before reading degradation snapshots."
+          tone="empty"
+          icon="batteryWarning"
+        />
+      ) : isLoading && !degradation ? (
+        <OperationsMessage
+          title="Loading battery cell diagnostics"
+          message="Fetching /analytics/battery-degradation for snapshot-backed cell temperature evidence."
+          tone="loading"
+          icon="loading"
+        />
+      ) : hasError && !degradation ? (
+        <OperationsMessage
+          title="Battery cell diagnostics unavailable"
+          message="Cell-temperature summaries will render when battery degradation analytics recover."
+          tone="error"
+          icon="warning"
+        />
+      ) : (
+        <View style={styles.stack}>
+          <MetricGrid
+            items={[
+              {
+                id: 'cell-temperature',
+                label: 'Cell temp',
+                value: formatTemperatureC(degradation?.current_temp),
+                helper: 'Current pack/cell temperature from analytics',
+                tone: 'warning',
+                icon: 'batteryWarning',
+              },
+              {
+                id: 'snapshot-count',
+                label: 'Snapshots',
+                value: formatCount(snapshots.length),
+                helper: 'Battery degradation snapshot rows',
+                tone: snapshots.length > 0 ? 'accent' : 'neutral',
+                icon: 'history',
+              },
+              {
+                id: 'risk-factors',
+                label: 'Risk factors',
+                value: formatCount(riskFactors.length),
+                helper: 'Backend-provided battery risk rows',
+                tone: riskFactors.length > 0 ? 'warning' : 'success',
+                icon: 'warning',
+              },
+              {
+                id: 'battery-range',
+                label: 'Est. range',
+                value: formatDistanceKm(degradation?.current_range),
+                helper: 'Current range estimate',
+                tone: 'success',
+                icon: 'range',
+              },
+            ]}
+          />
+          <ChartSummary
+            title="Cell temperature snapshots"
+            subtitle="Accessible native summary of returned avg_cell_temp_c snapshot points."
+            metricLabel="Current cell temp"
+            metricValue={formatTemperatureC(degradation?.current_temp)}
+            data={cellTrend}
+            emptyLabel="Cell temperature snapshots will appear when degradation analytics returns snapshot history."
+            icon="batteryWarning"
+          />
+          {riskFactors.length === 0 ? (
+            <OperationsMessage
+              title="No battery risk factors returned"
+              message="Risk factor rows will appear here when /analytics/battery-degradation returns them."
+              tone="empty"
+              icon="success"
+            />
+          ) : (
+            <View style={styles.list}>
+              {riskFactors.slice(0, 5).map(risk => (
+                <ListRow
+                  key={risk.factor}
+                  title={risk.factor}
+                  subtitle={`Threshold ${risk.threshold ?? '-'}`}
+                  meta={risk.severity}
+                  icon="warning"
+                  detail={
+                    <KeyValueRow label="Returned value" value={risk.value} />
+                  }
                 />
               ))}
             </View>
@@ -981,6 +1129,54 @@ function DrivingEnergyAnalyticsSection({
           </View>
         </View>
       )}
+    </ScreenSection>
+  );
+}
+
+const energyProductRows = [
+  {
+    id: 'energy-products',
+    title: 'Energy products',
+    subtitle:
+      'Tesla Energy site inventory is not exposed by the native API contract yet.',
+    meta: 'Native summary',
+    icon: 'home' as const,
+  },
+  {
+    id: 'energy-flow',
+    title: 'Energy flow',
+    subtitle:
+      'Live site flow requires API-backed Tesla Energy site data before parity can be implemented.',
+    meta: 'No fake flow',
+    icon: 'workflow' as const,
+  },
+  {
+    id: 'power-flow',
+    title: 'Power flow',
+    subtitle:
+      'Power-flow animation remains represented as explicit unavailable evidence, not WebView embedding.',
+    meta: 'No WebView',
+    icon: 'power' as const,
+  },
+];
+
+function EnergyProductReadinessSection() {
+  return (
+    <ScreenSection
+      title="Energy product parity evidence"
+      subtitle="Energy-site routes stay visible as native summary rows until real Tesla Energy site endpoints exist."
+    >
+      <View style={styles.list}>
+        {energyProductRows.map(row => (
+          <ListRow
+            key={row.id}
+            title={row.title}
+            subtitle={row.subtitle}
+            meta={row.meta}
+            icon={row.icon}
+          />
+        ))}
+      </View>
     </ScreenSection>
   );
 }

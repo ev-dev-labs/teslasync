@@ -250,12 +250,69 @@ export function SystemOperationsView() {
           availableSignalsQuery.error || liveSignalsQuery.error,
         )}
       />
+      <AdminOperationsReadinessSection />
       <OperationsRouteReadiness
         title="System, telemetry, and diagnostics route readiness"
         subtitle="N0006 exposes implemented diagnostic surfaces and leaves high-risk admin tools visibly unavailable."
         items={systemReadinessItems}
       />
     </View>
+  );
+}
+
+const adminOperationRows = [
+  {
+    id: 'commands',
+    title: 'Commands and automations',
+    subtitle:
+      'Command history and automation editors remain unavailable in native until command-safe confirmation gates exist.',
+    meta: '/commands',
+    icon: 'terminal' as const,
+  },
+  {
+    id: 'repair-backup',
+    title: 'Repair, backup, and exports',
+    subtitle:
+      'Data repair, backup, GDPR export, and archive actions are visible as read-only readiness evidence.',
+    meta: '/backup',
+    icon: 'databaseBackup' as const,
+  },
+  {
+    id: 'dlq-api-logs',
+    title: 'DLQ and API logs',
+    subtitle:
+      'Fleet Telemetry error summaries are implemented; full DLQ/API log inspectors are not claimed.',
+    meta: '/admin/dlq',
+    icon: 'bug' as const,
+  },
+  {
+    id: 'power-tools',
+    title: 'Power tools',
+    subtitle:
+      'SQL, Grafana, and dashboard power tools are intentionally not embedded or proxied by native screens.',
+    meta: '/power/sql',
+    icon: 'monitor' as const,
+  },
+];
+
+function AdminOperationsReadinessSection() {
+  return (
+    <ScreenSection
+      title="Admin operations readiness"
+      subtitle="High-risk system/ops web routes stay visible without fake success states or browser embedding."
+    >
+      <View style={styles.list}>
+        {adminOperationRows.map(row => (
+          <ListRow
+            key={row.id}
+            title={row.title}
+            subtitle={row.subtitle}
+            meta={row.meta}
+            icon={row.icon}
+          />
+        ))}
+      </View>
+    </ScreenSection>
   );
 }
 
