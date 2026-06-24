@@ -17,6 +17,10 @@ import type {
 } from '../api/types';
 import { KeyValueRow } from '../components/data/KeyValueRow';
 import { ListRow } from '../components/data/ListRow';
+import {
+  RouteReadinessPanel,
+  type RouteReadinessItem,
+} from '../components/data/RouteReadinessPanel';
 import { ScreenSection } from '../components/data/ScreenSection';
 import { EmptyState } from '../components/feedback/EmptyState';
 import { AppText } from '../components/ui/AppText';
@@ -34,6 +38,54 @@ const weekdayLabels = [
   'Fri',
   'Sat',
 ] as const;
+
+const notificationRouteItems: RouteReadinessItem[] = [
+  {
+    id: 'alert-studio',
+    label: 'Legacy alert studio redirect',
+    route: '/alert-studio',
+    api: '/alerts/rules, /notifications, write endpoints disabled',
+    status: 'implemented',
+    evidence:
+      'Native renders rule inventory, delivery channel context, and disabled studio actions instead of allowing unvalidated rule writes.',
+  },
+  {
+    id: 'alert-rules',
+    label: 'Legacy alert rules redirect',
+    route: '/alert-rules',
+    api: '/alerts/rules',
+    status: 'implemented',
+    evidence:
+      'Native renders alert rules read-only with severity, trigger, vehicle target, cooldown, and snooze metadata.',
+  },
+  {
+    id: 'notifications-browser',
+    label: 'Browser and push notifications',
+    route: '/notifications/browser',
+    api: '/notifications/stats, native push unavailable',
+    status: 'implemented',
+    evidence:
+      'Native exposes in-app delivery stats and explicitly marks APNs, FCM, WNS, badge, and browser push registration unavailable.',
+  },
+  {
+    id: 'notifications-rules',
+    label: 'Notification rules',
+    route: '/notifications/rules',
+    api: '/alerts/rules',
+    status: 'implemented',
+    evidence:
+      'Native maps notification rule parity to the API-backed alert rule inventory while create, edit, snooze, and test sends stay disabled.',
+  },
+  {
+    id: 'notifications-studio',
+    label: 'Notification studio',
+    route: '/notifications/studio',
+    api: '/notifications, /notifications/logs, write endpoints disabled',
+    status: 'implemented',
+    evidence:
+      'Native renders studio readiness with no fake notification success; test sends and channel mutations remain unavailable.',
+  },
+];
 
 function statusState(
   value: string | null | undefined,
@@ -417,6 +469,13 @@ export function AlertsScreen() {
           message="Native write actions remain disabled instead of faking alert-studio or notification-studio parity without form validation, sudo confirmation, and test-send gates."
         />
       </ScreenSection>
+
+      <RouteReadinessPanel
+        title="Notification route readiness"
+        subtitle="R0005 notification and alert redirects are represented by API-backed native summaries with unsafe write actions unavailable."
+        items={notificationRouteItems}
+        testID="notification-route-readiness"
+      />
 
       <ScreenSection
         title="Delivery channels"

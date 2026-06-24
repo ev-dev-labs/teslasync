@@ -248,6 +248,87 @@ export interface AlertRule {
   updated_at: string;
 }
 
+export interface AutomationConflict {
+  automation_id: number;
+  automation_name: string;
+  reason: string;
+  severity: 'warning' | 'info' | string;
+}
+
+export interface Automation {
+  id: number;
+  name: string;
+  description?: string | null;
+  enabled: boolean;
+  vehicle_id?: number | null;
+  next_fire_time?: string | null;
+  conflicts?: AutomationConflict[];
+  auto_disabled?: boolean;
+  auto_disabled_reason?: string | null;
+  execution_count?: number;
+  failure_count?: number;
+  consecutive_failures?: number;
+  last_triggered_at?: string | null;
+  last_success_at?: string | null;
+  last_failure_at?: string | null;
+  notify_on_run?: boolean;
+  notify_on_failure?: boolean;
+  stop_on_failure?: boolean;
+  preset_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AutomationHistoryStatus =
+  | 'running'
+  | 'success'
+  | 'partial'
+  | 'failed'
+  | 'skipped'
+  | 'cancelled'
+  | 'test'
+  | 'undo'
+  | string;
+
+export interface AutomationHistory {
+  id: number;
+  automation_id: number;
+  automation_name: string;
+  vehicle_id: number | null;
+  triggered_at: string;
+  completed_at: string | null;
+  duration_ms: number | null;
+  trigger_type: string;
+  trigger_snapshot: Record<string, unknown> | null;
+  conditions_met: boolean;
+  conditions_snapshot: Record<string, unknown>[] | null;
+  actions_executed: Record<string, unknown>[] | null;
+  actions_total: number;
+  actions_succeeded: number;
+  actions_failed: number;
+  status: AutomationHistoryStatus;
+  error: string | null;
+  fsm_state: string | null;
+  created_at: string;
+}
+
+export interface AutomationHistoryStats {
+  total_executions: number;
+  succeeded: number;
+  failed: number;
+  partial: number;
+  success_rate: number;
+  avg_duration_ms: number;
+}
+
+export interface AutomationHistoryListResponse {
+  items: AutomationHistory[];
+  total: number;
+  limit: number;
+  offset: number;
+  summary?: AutomationHistoryStats | null;
+}
+
 export type NotificationChannelKind =
   | 'discord'
   | 'slack'
@@ -1041,6 +1122,10 @@ export interface AppSettings {
   time_format_default?: 'relative' | 'absolute';
   chart_palette?: 'cb_safe' | 'neon';
   ai_mode?: 'off' | 'local' | 'cloud';
+  ai_features?: Record<string, boolean>;
+  ai_features_archived?: Record<string, boolean> | null;
+  ai_provider_config?: Record<string, unknown> | null;
+  ai_cost_cap_cents?: number | null;
 }
 
 export type UnknownApiObject = Record<string, unknown>;

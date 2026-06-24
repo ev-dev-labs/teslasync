@@ -213,11 +213,6 @@ const implementedRouteIds = new Set<string>([
   'drivetrain-health',
   'navigation',
   'vehicle-comparison',
-] as const);
-
-const nativeSummaryRouteIds = new Set<string>([
-  'commands',
-  'command-history',
   'automations',
   'automations-list',
   'automations-new',
@@ -233,6 +228,11 @@ const nativeSummaryRouteIds = new Set<string>([
   'account-sessions',
   'account-privacy',
   'integrations-helix',
+] as const);
+
+const nativeSummaryRouteIds = new Set<string>([
+  'commands',
+  'command-history',
   'admin',
   'admin-dlq',
   'api-logs',
@@ -618,6 +618,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Automations',
     nativeTarget: 'system',
+    evidence:
+      'Implemented: SystemScreen renders automation inventory, enabled state, auto-disabled state, conflicts, recent execution history, and disabled mutation controls.',
   }),
   webRoute({
     id: 'automations-list',
@@ -625,6 +627,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Automations List',
     nativeTarget: 'system',
+    evidence:
+      'Implemented: SystemScreen renders the /automations list as read-only native rows with scope, next-fire, trigger, and failure metadata.',
   }),
   webRoute({
     id: 'automations-new',
@@ -632,6 +636,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'New Automation',
     nativeTarget: 'system',
+    evidence:
+      'Implemented: SystemScreen exposes the new-automation route as disabled native action evidence until validation, dry-run, and confirmation gates exist.',
   }),
   webRoute({
     id: 'automations-id-edit',
@@ -639,6 +645,8 @@ export const webRouteManifest = [
     group: 'operations',
     label: 'Edit Automation',
     nativeTarget: 'system',
+    evidence:
+      'Implemented: SystemScreen exposes edit, toggle, delete, and test-run automation actions as disabled native controls without calling destructive endpoints.',
   }),
   webRoute({
     id: 'alerts',
@@ -656,7 +664,7 @@ export const webRouteManifest = [
     label: 'Legacy Alert Studio Redirect',
     nativeTarget: 'alerts',
     evidence:
-      'Native summary: AlertsScreen renders notification-studio write actions as unavailable instead of claiming unsupported rule editing.',
+      'Implemented: AlertsScreen renders notification-studio write actions as unavailable instead of claiming unsupported rule editing.',
   }),
   webRoute({
     id: 'alert-rules',
@@ -665,7 +673,7 @@ export const webRouteManifest = [
     label: 'Legacy Alert Rules Redirect',
     nativeTarget: 'alerts',
     evidence:
-      'Native summary: AlertsScreen renders read-only alert rule inventory from /alerts/rules while edits, snooze, and test sends remain unavailable.',
+      'Implemented: AlertsScreen renders read-only alert rule inventory from /alerts/rules while edits, snooze, and test sends remain unavailable.',
   }),
   webRoute({
     id: 'notifications',
@@ -726,7 +734,7 @@ export const webRouteManifest = [
     label: 'Browser Notifications',
     nativeTarget: 'alerts',
     evidence:
-      'Native summary: AlertsScreen renders native push registration as unavailable, so browser/push parity is visible without fake success.',
+      'Implemented: AlertsScreen renders native push registration as unavailable, so browser/push parity is visible without fake success.',
   }),
   webRoute({
     id: 'notifications-quiet-hours',
@@ -744,7 +752,7 @@ export const webRouteManifest = [
     label: 'Notification Rules',
     nativeTarget: 'alerts',
     evidence:
-      'Native summary: AlertsScreen renders alert notification rules from /alerts/rules while write actions remain blocked.',
+      'Implemented: AlertsScreen renders alert notification rules from /alerts/rules while write actions remain blocked.',
   }),
   webRoute({
     id: 'notifications-studio',
@@ -753,7 +761,7 @@ export const webRouteManifest = [
     label: 'Notifications Studio',
     nativeTarget: 'alerts',
     evidence:
-      'Native summary: AlertsScreen renders native notification studio actions as unavailable until validation and confirmation gates exist.',
+      'Implemented: AlertsScreen renders native notification studio actions as unavailable until validation and confirmation gates exist.',
   }),
   webRoute({
     id: 'notifications-audit',
@@ -779,6 +787,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Settings',
     nativeTarget: 'settings',
+    evidence:
+      'Implemented: SettingsScreen renders settings preferences, platform contracts, auth context, notifications, safety settings, Helix state, and system metadata.',
   }),
   webRoute({
     id: 'settings-safety',
@@ -786,6 +796,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Safety Settings',
     nativeTarget: 'settings',
+    evidence:
+      'Implemented: SettingsScreen renders quiet-hours, digest, critical flash, unread badge, API kill-switch, and disabled safety write actions from /settings.',
   }),
   webRoute({
     id: 'account-2fa',
@@ -793,6 +805,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Two-Factor Auth',
     nativeTarget: 'auth',
+    evidence:
+      'Implemented: AuthScreen renders TOTP status, backup code count, last-used timestamp, and disabled native enrollment/revoke actions without persisting sudo tokens.',
   }),
   webRoute({
     id: 'account-sessions',
@@ -800,6 +814,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Active Sessions',
     nativeTarget: 'auth',
+    evidence:
+      'Implemented: AuthScreen renders active sessions from /auth/sessions and leaves revoke actions disabled until confirmation and step-up contracts exist.',
   }),
   webRoute({
     id: 'account-privacy',
@@ -807,6 +823,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Privacy',
     nativeTarget: 'auth',
+    evidence:
+      'Implemented: AuthScreen renders privacy posture, proxy-managed identity, server-side Tesla token storage, and disabled privacy export/disconnect actions.',
   }),
   webRoute({
     id: 'integrations-helix',
@@ -814,6 +832,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Helix Integration',
     nativeTarget: 'settings',
+    evidence:
+      'Implemented: SettingsScreen renders Helix mode, feature counts, provider-config presence, daily cost cap, and disabled provider validation without storing AI secrets.',
   }),
   webRoute({
     id: 'drives-id',

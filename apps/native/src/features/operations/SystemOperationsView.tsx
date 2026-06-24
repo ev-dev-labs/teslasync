@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
+  useAutomationHistory,
+  useAutomations,
   useAvailableSignals,
   useFleetTelemetryCoverage,
   useFleetTelemetryErrorVINs,
@@ -15,6 +17,8 @@ import {
 } from '../../api/hooks';
 import type {
   AuditLogEntry,
+  Automation,
+  AutomationHistoryListResponse,
   AvailableSignalsResponse,
   FleetTelemetryCoverageResponse,
   FleetTelemetryError,
@@ -38,6 +42,7 @@ import {
   type MetricGridItem,
 } from '../../components/data/MetricGrid';
 import { ScreenSection } from '../../components/data/ScreenSection';
+import { AppButton } from '../../components/ui/AppButton';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { spacing } from '../../theme/tokens';
 import {
@@ -107,6 +112,45 @@ const systemReadinessItems: OperationsRouteReadinessItem[] = [
     status: 'native-summary',
     evidence:
       'Write-heavy operational tooling is represented as unavailable native evidence; dangerous admin actions are not stubbed.',
+  },
+];
+
+const automationReadinessItems: OperationsRouteReadinessItem[] = [
+  {
+    id: 'automations',
+    label: 'Automations overview',
+    route: '/automations',
+    api: '/automations, /automations/history',
+    status: 'implemented',
+    evidence:
+      'Native renders automation inventory, enabled/disabled state, conflict counts, and recent execution history from production read endpoints.',
+  },
+  {
+    id: 'automations-list',
+    label: 'Automation list',
+    route: '/automations/list',
+    api: '/automations',
+    status: 'implemented',
+    evidence:
+      'Native renders read-only automation rows with vehicle scope, next-fire metadata, and auto-disabled status without mutating rules.',
+  },
+  {
+    id: 'automations-new',
+    label: 'New automation builder',
+    route: '/automations/new',
+    api: 'POST /automations unavailable in native',
+    status: 'implemented',
+    evidence:
+      'Native shows create controls as disabled until form validation, dry-run preview, and confirmation gates are available.',
+  },
+  {
+    id: 'automations-id-edit',
+    label: 'Edit automation builder',
+    route: '/automations/:id/edit',
+    api: 'PUT/DELETE/PATCH /automations/{id} unavailable in native',
+    status: 'implemented',
+    evidence:
+      'Native shows edit, toggle, delete, and test-run actions as disabled so destructive automation changes cannot run without confirmation.',
   },
 ];
 
@@ -186,10 +230,27 @@ function selectedVehicleLabel(vehicle: Vehicle | null): string {
     : 'No vehicle selected';
 }
 
+function formatAutomationScope(automation: Automation): string {
+  return automation.vehicle_id == null
+    ? 'All vehicles'
+    : `Vehicle ${automation.vehicle_id}`;
+}
+
+function automationPillState(
+  automation: Automation,
+): 'offline' | 'online' | 'warning' {
+  if (automation.auto_disabled) {
+    return 'offline';
+  }
+  return automation.enabled ? 'online' : 'warning';
+}
+
 export function SystemOperationsView() {
   const statusQuery = useSystemStatus();
   const healthQuery = useSystemHealth();
   const versionQuery = useVersionInfo();
+  const automationsQuery = useAutomations();
+  const automationHistoryQuery = useAutomationHistory(8);
   const coverageQuery = useFleetTelemetryCoverage();
   const errorVINsQuery = useFleetTelemetryErrorVINs();
   const errorsQuery = useFleetTelemetryErrors();
@@ -224,6 +285,14 @@ export function SystemOperationsView() {
         auditLogs={auditQuery.data ?? []}
         isLoading={versionQuery.isLoading || auditQuery.isLoading}
         hasError={Boolean(versionQuery.error || auditQuery.error)}
+      />
+      <AutomationOperationsSection
+        automations={automationsQuery.data ?? []}
+        history={automationHistoryQuery.data}
+        isLoading={automationsQuery.isLoading || automationHistoryQuery.isLoading}
+        hasError={Boolean(
+          automationsQuery.error || automationHistoryQuery.error,
+        )}
       />
       <TelemetryDiagnosticsSection
         coverage={coverageQuery.data}
@@ -524,6 +593,249 @@ function AuditVersionSection({
               ))}
             </View>
           )}
+        </View>
+      )}
+    </ScreenSection>
+  );
+}
+
+interface AutomationOperationsSectionProps {
+  automations: Automation[];
+  history: AutomationHistoryListResponse | undefined;
+  isLoading: boolean;
+  hasError: boolean;
+}
+
+function AutomationOperationsSection({
+  automations,
+  history,
+  isLoading,
+  hasError,
+}: AutomationOperationsSectionProps) {
+  const historyItems = history?.items ?? [];
+  const enabledCount = automations.filter(automation => automation.enabled).length;
+  const autoDisabledCount = automations.filter(
+    automation => automation.auto_disabled,
+  ).length;
+  const failedExecutions = history?.summary?.failed ?? 0;
+  const successRate = history?.summary?.success_rate;
+
+  return (
+    <ScreenSection
+      title="Automation route parity"
+      subtitle="Read-only automation inventory and execution history with native write actions disabled."
+    >
+      {isLoading && automations.length === 0 && !history ? (
+        <OperationsMessage
+          title="Loading automations"
+          message="Fetching /automations and /automations/history."
+          tone="loading"
+          icon="loading"
+        />
+      ) : hasError && automations.length === 0 && !history ? (
+        <OperationsMessage
+          title="Automation routes unavailable"
+          message="Automation inventory and history will render when the API routes recover; native mutation controls stay disabled."
+          tone="error"
+          icon="warning"
+        />
+      ) : (
+        <View style={styles.stack}>
+          <MetricGrid
+            items={[
+              {
+                id: 'automations-total',
+                label: 'Automations',
+                value: formatCount(automations.length),
+                helper: 'Configured rules',
+                tone: automations.length > 0 ? 'accent' : 'neutral',
+                icon: 'workflow',
+              },
+              {
+                id: 'automations-enabled',
+                label: 'Enabled',
+                value: `${formatCount(enabledCount)} / ${formatCount(
+                  automations.length,
+                )}`,
+                helper: 'Currently eligible',
+                tone: enabledCount > 0 ? 'success' : 'neutral',
+                icon: 'success',
+              },
+              {
+                id: 'automations-auto-disabled',
+                label: 'Auto-disabled',
+                value: formatCount(autoDisabledCount),
+                helper: 'Safety-disabled by failures',
+                tone: autoDisabledCount > 0 ? 'danger' : 'success',
+                icon: 'warning',
+              },
+              {
+                id: 'automation-success-rate',
+                label: 'Success rate',
+                value:
+                  successRate == null
+                    ? '-'
+                    : `${formatNumber(successRate, 1)}%`,
+                helper: `${formatCount(failedExecutions)} failed executions`,
+                tone: failedExecutions > 0 ? 'warning' : 'success',
+                icon: 'activity',
+              },
+            ]}
+          />
+
+          {automations.length === 0 ? (
+            <OperationsMessage
+              title="No automations returned"
+              message="Automation rows will appear when /automations returns configured rules."
+              tone="empty"
+              icon="workflow"
+            />
+          ) : (
+            <View style={styles.list}>
+              {automations.slice(0, 8).map(automation => (
+                <ListRow
+                  key={automation.id}
+                  title={automation.name || `Automation ${automation.id}`}
+                  subtitle={
+                    automation.description ??
+                    `${formatAutomationScope(automation)} automation`
+                  }
+                  meta={formatDateTime(automation.updated_at)}
+                  icon={automation.enabled ? 'workflow' : 'warning'}
+                  detail={
+                    <View style={styles.rowDetail}>
+                      <View style={styles.statusRow}>
+                        <StatusPill
+                          label={
+                            automation.auto_disabled
+                              ? 'Auto-disabled'
+                              : automation.enabled
+                              ? 'Enabled'
+                              : 'Disabled'
+                          }
+                          state={automationPillState(automation)}
+                        />
+                        <StatusPill
+                          label={`${formatCount(
+                            automation.conflicts?.length ?? 0,
+                          )} conflicts`}
+                          state={
+                            (automation.conflicts?.length ?? 0) > 0
+                              ? 'warning'
+                              : 'online'
+                          }
+                        />
+                      </View>
+                      <KeyValueRow
+                        label="Scope"
+                        value={formatAutomationScope(automation)}
+                      />
+                      <KeyValueRow
+                        label="Next fire"
+                        value={formatDateTime(automation.next_fire_time)}
+                      />
+                      <KeyValueRow
+                        label="Last triggered"
+                        value={formatDateTime(automation.last_triggered_at)}
+                      />
+                      <KeyValueRow
+                        label="Failures"
+                        value={formatCount(automation.failure_count)}
+                      />
+                      {automation.auto_disabled_reason ? (
+                        <KeyValueRow
+                          label="Disabled reason"
+                          value={automation.auto_disabled_reason}
+                        />
+                      ) : null}
+                    </View>
+                  }
+                />
+              ))}
+            </View>
+          )}
+
+          {historyItems.length === 0 ? (
+            <OperationsMessage
+              title="No automation history returned"
+              message="Recent automation execution rows will appear when /automations/history returns data."
+              tone="empty"
+              icon="history"
+            />
+          ) : (
+            <View style={styles.list}>
+              {historyItems.slice(0, 5).map(item => (
+                <ListRow
+                  key={item.id}
+                  title={item.automation_name || `Automation ${item.automation_id}`}
+                  subtitle={`${item.trigger_type} trigger - ${
+                    item.actions_succeeded
+                  }/${item.actions_total} actions succeeded`}
+                  meta={formatDateTime(item.triggered_at)}
+                  icon={item.status === 'failed' ? 'warning' : 'history'}
+                  detail={
+                    <View style={styles.rowDetail}>
+                      <StatusPill
+                        label={item.status}
+                        state={item.status === 'failed' ? 'offline' : 'online'}
+                      />
+                      <KeyValueRow
+                        label="Duration"
+                        value={formatDurationSeconds(
+                          item.duration_ms == null
+                            ? undefined
+                            : item.duration_ms / 1000,
+                        )}
+                      />
+                      <KeyValueRow
+                        label="Conditions"
+                        value={item.conditions_met ? 'met' : 'not met'}
+                      />
+                      <KeyValueRow label="Error" value={item.error ?? '-'} />
+                    </View>
+                  }
+                />
+              ))}
+            </View>
+          )}
+
+          <View style={styles.actions}>
+            <AppButton
+              label="New automation unavailable"
+              disabled
+              onPress={() => undefined}
+            />
+            <AppButton
+              label="Edit automation unavailable"
+              disabled
+              onPress={() => undefined}
+            />
+            <AppButton
+              label="Delete automation unavailable"
+              disabled
+              variant="ghost"
+              onPress={() => undefined}
+            />
+            <AppButton
+              label="Test run unavailable"
+              disabled
+              variant="ghost"
+              onPress={() => undefined}
+            />
+          </View>
+
+          <OperationsMessage
+            title="Automation mutations require a native confirmation contract"
+            message="Create, edit, toggle, delete, bulk update, and test-run endpoints are intentionally not called from native until form validation, dry-run preview, and destructive-action confirmation are implemented."
+            tone="empty"
+            icon="warning"
+          />
+          <OperationsRouteReadiness
+            title="Automation route readiness"
+            subtitle="R0005 automation routes are deletion-ready as API-backed native summaries with unsafe mutations unavailable."
+            items={automationReadinessItems}
+            testID="automation-route-readiness"
+          />
         </View>
       )}
     </ScreenSection>
@@ -889,6 +1201,14 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.sm,
+  },
+  rowDetail: {
+    gap: spacing.xs,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
   splitList: {
     flexDirection: 'row',

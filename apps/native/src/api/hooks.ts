@@ -13,6 +13,8 @@ import type {
   ActiveSessionsResponse,
   AppSettings,
   AuditLogEntry,
+  Automation,
+  AutomationHistoryListResponse,
   AuthModeResponse,
   AuthStatus,
   AuthUrlResponse,
@@ -148,6 +150,9 @@ export const apiKeys = {
   liveSignals: (id: number | string) => ['signals', id, 'live'] as const,
   alerts: ['alerts'] as const,
   alertRules: ['alerts', 'rules'] as const,
+  automations: ['automations'] as const,
+  automationHistory: (limit: number) =>
+    ['automations', 'history', limit] as const,
   systemStatus: ['system', 'status'] as const,
   systemHealth: ['system', 'health'] as const,
   systemVersion: ['system', 'version'] as const,
@@ -332,6 +337,14 @@ export function buildSystemAuditPath(
     limit: options.limit,
     offset: options.offset,
   });
+}
+
+export function buildAutomationsPath(): string {
+  return '/automations';
+}
+
+export function buildAutomationHistoryPath(limit = 10): string {
+  return buildQueryPath('/automations/history', { limit });
 }
 
 export function buildAuthModePath(): string {
@@ -658,6 +671,27 @@ export function useAlertRules() {
   return useQuery({
     queryKey: apiKeys.alertRules,
     queryFn: ({ signal }) => request<AlertRule[]>('/alerts/rules', { signal }),
+    staleTime: 30_000,
+  });
+}
+
+export function useAutomations() {
+  return useQuery({
+    queryKey: apiKeys.automations,
+    queryFn: ({ signal }) =>
+      request<Automation[]>(buildAutomationsPath(), { signal }),
+    staleTime: 30_000,
+  });
+}
+
+export function useAutomationHistory(limit = 10) {
+  return useQuery({
+    queryKey: apiKeys.automationHistory(limit),
+    queryFn: ({ signal }) =>
+      request<AutomationHistoryListResponse>(
+        buildAutomationHistoryPath(limit),
+        { signal },
+      ),
     staleTime: 30_000,
   });
 }

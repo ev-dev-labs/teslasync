@@ -287,6 +287,67 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: null,
   }),
+  useAutomations: () => ({
+    data: [
+      {
+        id: 7,
+        name: 'Charge reminder automation',
+        description: 'Notify when a scheduled charge is missed.',
+        enabled: true,
+        vehicle_id: 42,
+        next_fire_time: '2026-06-24T07:00:00Z',
+        conflicts: [],
+        auto_disabled: false,
+        failure_count: 0,
+        created_at: '2026-06-20T00:00:00Z',
+        updated_at: '2026-06-23T00:00:00Z',
+      },
+    ],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useAutomationHistory: () => ({
+    data: {
+      items: [
+        {
+          id: 13,
+          automation_id: 7,
+          automation_name: 'Charge reminder automation',
+          vehicle_id: 42,
+          triggered_at: '2026-06-23T07:00:00Z',
+          completed_at: '2026-06-23T07:00:01Z',
+          duration_ms: 1000,
+          trigger_type: 'schedule',
+          trigger_snapshot: null,
+          conditions_met: true,
+          conditions_snapshot: null,
+          actions_executed: null,
+          actions_total: 1,
+          actions_succeeded: 1,
+          actions_failed: 0,
+          status: 'success',
+          error: null,
+          fsm_state: null,
+          created_at: '2026-06-23T07:00:01Z',
+        },
+      ],
+      total: 1,
+      limit: 8,
+      offset: 0,
+      summary: {
+        total_executions: 1,
+        succeeded: 1,
+        failed: 0,
+        partial: 0,
+        success_rate: 100,
+        avg_duration_ms: 1000,
+      },
+    },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
   useSystemStatus: () => ({
     data: {
       status: 'healthy',
@@ -501,6 +562,11 @@ test('renders system, telemetry, audit, and live signal diagnostics', async () =
   expect(serialized).toContain('R0001 not-found route evidence');
   expect(serialized).toContain('Layout Not Found route');
   expect(serialized).toContain('Root Not Found route');
+  expect(serialized).toContain('Automation route parity');
+  expect(serialized).toContain('Charge reminder automation');
+  expect(serialized).toContain('Automation route readiness');
+  expect(serialized).toContain('New automation unavailable');
+  expect(serialized).toContain('Delete automation unavailable');
   expect(serialized).toContain('Commands and automations');
   expect(serialized).toContain('Repair, backup, and exports');
   expect(serialized).toContain('Fleet Telemetry coverage');

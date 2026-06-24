@@ -13,8 +13,13 @@ import {
   useVersionInfo,
 } from '../api/hooks';
 import { KeyValueRow } from '../components/data/KeyValueRow';
+import {
+  RouteReadinessPanel,
+  type RouteReadinessItem,
+} from '../components/data/RouteReadinessPanel';
 import { ScreenSection } from '../components/data/ScreenSection';
 import { EmptyState } from '../components/feedback/EmptyState';
+import { AppButton } from '../components/ui/AppButton';
 import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { StatusPill } from '../components/ui/StatusPill';
@@ -29,6 +34,36 @@ import { colors, spacing } from '../theme/tokens';
 interface SettingsScreenProps {
   platformStatus?: PlatformIntegrationStatus;
 }
+
+const settingsRouteItems: RouteReadinessItem[] = [
+  {
+    id: 'settings',
+    label: 'Settings',
+    route: '/settings',
+    api: '/settings, /system/auth-mode, /system/status',
+    status: 'implemented',
+    evidence:
+      'Native renders user preferences, API contract, auth context, notification settings, and system metadata from production endpoints.',
+  },
+  {
+    id: 'settings-safety',
+    label: 'Safety settings',
+    route: '/settings/safety',
+    api: '/settings',
+    status: 'implemented',
+    evidence:
+      'Native renders quiet-hours, digest, critical flash, tab badge, and API kill-switch state as read-only safety settings.',
+  },
+  {
+    id: 'integrations-helix',
+    label: 'Helix integration',
+    route: '/integrations/helix',
+    api: '/settings',
+    status: 'implemented',
+    evidence:
+      'Native renders Helix mode, feature-selection count, provider-config presence, and cost-cap state without validating providers or storing AI secrets.',
+  },
+];
 
 function capabilityPillState(
   state: PlatformCapabilityState,
@@ -51,6 +86,13 @@ function formatDeepLinkSummary(
   return link.matched && link.routeId
     ? `${link.webPath} -> ${link.routeId}`
     : `${link.webPath} -> unmatched`;
+}
+
+function formatCostCap(cents: number | null | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) {
+    return '-';
+  }
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 export function SettingsScreen({ platformStatus }: SettingsScreenProps) {
@@ -237,6 +279,71 @@ export function SettingsScreen({ platformStatus }: SettingsScreenProps) {
       </ScreenSection>
 
       <ScreenSection
+        title="Safety settings"
+        subtitle="Read-only notification safety settings from /settings; native write actions stay disabled."
+      >
+        {settings ? (
+          <>
+            <KeyValueRow
+              label="Quiet hours"
+              value={formatBoolean(settings.quiet_hours_enabled)}
+            />
+            <KeyValueRow
+              label="Quiet-hours start"
+              value={settings.quiet_hours_start ?? '-'}
+            />
+            <KeyValueRow
+              label="Quiet-hours end"
+              value={settings.quiet_hours_end ?? '-'}
+            />
+            <KeyValueRow
+              label="Alert digest mode"
+              value={settings.alert_digest_mode ?? 'instant'}
+            />
+            <KeyValueRow
+              label="Critical-alert tab flash"
+              value={formatBoolean(settings.critical_flash_enabled)}
+            />
+            <KeyValueRow
+              label="Unread tab badge"
+              value={formatBoolean(settings.tab_badge_enabled)}
+            />
+            <KeyValueRow
+              label="API kill-switch"
+              value={settings.api_suspended ? 'suspended' : 'active'}
+            />
+          </>
+        ) : (
+          <EmptyState
+            title={
+              settingsQuery.isLoading
+                ? 'Loading safety settings'
+                : 'Safety settings unavailable'
+            }
+            message="Safety settings will appear when /settings returns preference data."
+          />
+        )}
+        <View style={styles.actions}>
+          <AppButton
+            label="Edit safety settings unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+          <AppButton
+            label="Ask Helix unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+        </View>
+        <EmptyState
+          title="Native safety setting writes unavailable"
+          message="Quiet hours, digest, tab signalling, API suspension, and Helix explanations stay read-only until native validation and confirmation gates are implemented."
+        />
+      </ScreenSection>
+
+      <ScreenSection
         title="Auth and account state"
         subtitle="Native settings reflects open-mode and forward-auth without persisting tokens."
       >
@@ -321,6 +428,78 @@ export function SettingsScreen({ platformStatus }: SettingsScreenProps) {
       </ScreenSection>
 
       <ScreenSection
+        title="Helix integration"
+        subtitle="Optional AI integration state from settings; provider validation and secret entry are disabled in native."
+      >
+        {settings ? (
+          <>
+            <StatusPill
+              label={settings.ai_mode ?? 'off'}
+              state={
+                settings.ai_mode && settings.ai_mode !== 'off'
+                  ? 'warning'
+                  : 'online'
+              }
+            />
+            <KeyValueRow
+              label="Enabled feature toggles"
+              value={formatCount(
+                Object.values(settings.ai_features ?? {}).filter(Boolean)
+                  .length,
+              )}
+            />
+            <KeyValueRow
+              label="Archived feature toggles"
+              value={formatCount(
+                Object.values(settings.ai_features_archived ?? {}).filter(
+                  Boolean,
+                ).length,
+              )}
+            />
+            <KeyValueRow
+              label="Provider config"
+              value={
+                settings.ai_provider_config &&
+                Object.keys(settings.ai_provider_config).length > 0
+                  ? 'configured'
+                  : 'not configured'
+              }
+            />
+            <KeyValueRow
+              label="Daily cost cap"
+              value={formatCostCap(settings.ai_cost_cap_cents)}
+            />
+          </>
+        ) : (
+          <EmptyState
+            title={
+              settingsQuery.isLoading
+                ? 'Loading Helix settings'
+                : 'Helix settings unavailable'
+            }
+            message="Helix settings will appear when /settings returns the AI integration payload."
+          />
+        )}
+        <View style={styles.actions}>
+          <AppButton
+            label="Save Helix settings unavailable"
+            disabled
+            onPress={() => undefined}
+          />
+          <AppButton
+            label="Validate provider unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+        </View>
+        <EmptyState
+          title="Native Helix writes unavailable"
+          message="Native does not accept provider secrets, validate external AI providers, restore archived feature selections, or claim Helix calls until secure native forms are implemented."
+        />
+      </ScreenSection>
+
+      <ScreenSection
         title="System contract"
         subtitle="Operational settings context from /system endpoints."
       >
@@ -373,6 +552,13 @@ export function SettingsScreen({ platformStatus }: SettingsScreenProps) {
           />
         ) : null}
       </ScreenSection>
+
+      <RouteReadinessPanel
+        title="Settings route readiness"
+        subtitle="R0005 settings and integration routes render API-backed native summaries without unsafe writes or secret persistence."
+        items={settingsRouteItems}
+        testID="settings-route-readiness"
+      />
     </View>
   );
 }
@@ -419,6 +605,11 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     gap: spacing.sm,
     paddingTop: spacing.md,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
   codeBox: {
     borderWidth: 1,

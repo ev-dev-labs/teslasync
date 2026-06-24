@@ -63,6 +63,8 @@ const mockUseFleetTelemetryErrors = jest.fn();
 const mockUseSystemAudit = jest.fn();
 const mockUseAvailableSignals = jest.fn();
 const mockUseLiveSignals = jest.fn();
+const mockUseAutomations = jest.fn();
+const mockUseAutomationHistory = jest.fn();
 const mockUseAuthMode = jest.fn();
 const mockUseAuthStatus = jest.fn();
 const mockUseAuthURL = jest.fn();
@@ -171,6 +173,9 @@ jest.mock('../src/api/hooks', () => ({
   useSystemAudit: (...args: unknown[]) => mockUseSystemAudit(...args),
   useAvailableSignals: (...args: unknown[]) => mockUseAvailableSignals(...args),
   useLiveSignals: (...args: unknown[]) => mockUseLiveSignals(...args),
+  useAutomations: (...args: unknown[]) => mockUseAutomations(...args),
+  useAutomationHistory: (...args: unknown[]) =>
+    mockUseAutomationHistory(...args),
   useAuthMode: (...args: unknown[]) => mockUseAuthMode(...args),
   useAuthStatus: (...args: unknown[]) => mockUseAuthStatus(...args),
   useAuthURL: (...args: unknown[]) => mockUseAuthURL(...args),
@@ -474,6 +479,38 @@ beforeEach(() => {
   mockUseFleetTelemetryErrorVINs.mockReturnValue(query([]));
   mockUseFleetTelemetryErrors.mockReturnValue(query([]));
   mockUseSystemAudit.mockReturnValue(query([]));
+  mockUseAutomations.mockReturnValue(
+    query([
+      {
+        id: 7,
+        name: 'Charge reminder automation',
+        description: 'Notify when a scheduled charge is missed.',
+        enabled: true,
+        vehicle_id: 42,
+        conflicts: [],
+        auto_disabled: false,
+        failure_count: 0,
+        created_at: '2026-06-20T00:00:00Z',
+        updated_at: '2026-06-23T00:00:00Z',
+      },
+    ]),
+  );
+  mockUseAutomationHistory.mockReturnValue(
+    query({
+      items: [],
+      total: 0,
+      limit: 8,
+      offset: 0,
+      summary: {
+        total_executions: 0,
+        succeeded: 0,
+        failed: 0,
+        partial: 0,
+        success_rate: 0,
+        avg_duration_ms: 0,
+      },
+    }),
+  );
   mockUseAvailableSignals.mockReturnValue(
     query({ vehicle_id: 1, signals: [], count: 0 }),
   );

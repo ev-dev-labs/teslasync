@@ -5,6 +5,8 @@ import {
   buildAuthRefreshPath,
   buildAuthStatusPath,
   buildAuthUrlPath,
+  buildAutomationHistoryPath,
+  buildAutomationsPath,
   buildChargeTelemetryPath,
   buildChargingSessionPath,
   buildChargingListPath,
@@ -167,6 +169,8 @@ describe('native API URL construction', () => {
       '/auth/totp/backup-codes/regenerate',
     );
     expect(buildSettingsPath()).toBe('/settings');
+    expect(buildAutomationsPath()).toBe('/automations');
+    expect(buildAutomationHistoryPath(8)).toBe('/automations/history?limit=8');
     expect(buildNotificationChannelsPath()).toBe('/notifications');
     expect(buildNotificationStatsPath()).toBe('/notifications/stats');
     expect(buildQuietHoursPath()).toBe('/notifications/quiet-hours');

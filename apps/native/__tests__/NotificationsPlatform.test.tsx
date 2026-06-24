@@ -203,6 +203,9 @@ test('renders native notification inbox, rules, channels, quiet hours, and unava
   expect(serialized).toContain('Charge interrupted');
   expect(serialized).toContain('Native rule editing unavailable');
   expect(serialized).toContain('Native notification studio unavailable');
+  expect(serialized).toContain('Notification route readiness');
+  expect(serialized).toContain('Legacy alert studio redirect');
+  expect(serialized).toContain('Browser and push notifications');
   expect(serialized).toContain('Push token registration unavailable');
 });
 

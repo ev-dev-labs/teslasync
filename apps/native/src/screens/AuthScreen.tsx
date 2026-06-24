@@ -42,6 +42,36 @@ const onboardingRouteItems: RouteReadinessItem[] = [
   },
 ];
 
+const accountRouteItems: RouteReadinessItem[] = [
+  {
+    id: 'account-2fa',
+    label: 'Two-factor authentication',
+    route: '/account/2fa',
+    api: '/auth/totp',
+    status: 'implemented',
+    evidence:
+      'Native renders TOTP enrollment status, backup-code count, and last-use metadata while enrollment/revoke/rotation actions remain disabled.',
+  },
+  {
+    id: 'account-sessions',
+    label: 'Active sessions',
+    route: '/account/sessions',
+    api: '/auth/sessions',
+    status: 'implemented',
+    evidence:
+      'Native renders current and other sessions when forward-auth exposes session_list, but revoke actions remain unavailable without confirmation.',
+  },
+  {
+    id: 'account-privacy',
+    label: 'Account privacy',
+    route: '/account/privacy',
+    api: '/system/auth-mode, /auth/status',
+    status: 'implemented',
+    evidence:
+      'Native renders identity mode, provider, Tesla account state, token-storage posture, and disabled privacy export/revoke controls.',
+  },
+];
+
 export function AuthScreen() {
   const authModeQuery = useAuthMode();
   const authStatusQuery = useAuthStatus();
@@ -187,6 +217,18 @@ export function AuthScreen() {
             message="Forward-auth is available, but the backend did not return tracked sessions for this subject."
           />
         )}
+        <View style={styles.actions}>
+          <AppButton
+            label="Revoke other sessions unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+        </View>
+        <EmptyState
+          title="Native session revocation unavailable"
+          message="Session revoke actions remain disabled until native destructive-action confirmation and step-up reauth are implemented."
+        />
       </ScreenSection>
 
       <ScreenSection title="TOTP step-up" subtitle="Native parity reports enrollment state without persisting sudo tokens.">
@@ -221,11 +263,66 @@ export function AuthScreen() {
         )}
       </ScreenSection>
 
+      <ScreenSection
+        title="Account privacy"
+        subtitle="Native account parity is explicit about proxy-managed identity, Tesla credential storage, and unavailable privacy actions.">
+        <KeyValueRow
+          label="Identity token storage"
+          value="Disabled - uses proxy session"
+        />
+        <KeyValueRow
+          label="Tesla refresh token"
+          value="Server-side only"
+        />
+        <KeyValueRow
+          label="Sudo token persistence"
+          value="None on device"
+        />
+        <KeyValueRow
+          label="Forward-auth provider"
+          value={authMode?.provider_hint ?? '-'}
+        />
+        <KeyValueRow
+          label="Subject"
+          value={authMode?.subject ?? 'not resolved'}
+        />
+        <KeyValueRow
+          label="Tesla account"
+          value={
+            authStatusQuery.data?.authenticated ? 'connected' : 'not connected'
+          }
+        />
+        <View style={styles.actions}>
+          <AppButton
+            label="Privacy export unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+          <AppButton
+            label="Disconnect Tesla unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+        </View>
+        <EmptyState
+          title="Native privacy actions unavailable"
+          message="Privacy export, account deletion, disconnect, and session-revoke actions are intentionally disabled until native confirmation and audit contracts are implemented."
+        />
+      </ScreenSection>
+
       <RouteReadinessPanel
         title="Onboarding route readiness"
         subtitle="The R0001 onboarding route is implemented by the native Auth surface with explicit unavailable states for unsafe actions."
         items={onboardingRouteItems}
         testID="onboarding-route-readiness"
+      />
+      <RouteReadinessPanel
+        title="Account route readiness"
+        subtitle="R0005 account routes are represented by native auth, session, TOTP, and privacy evidence without persisting insecure tokens."
+        items={accountRouteItems}
+        testID="account-route-readiness"
       />
     </View>
   );

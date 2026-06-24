@@ -349,15 +349,13 @@ test('marks notification platform routes with implemented or honest unavailable 
     'notifications-alerts',
     'notifications-channels',
     'notifications-webhooks',
-    'notifications-quiet-hours',
-    'notifications-audit',
-  ];
-  const nativeSummaryRouteIds = [
-    'alert-studio',
-    'alert-rules',
     'notifications-browser',
+    'notifications-quiet-hours',
     'notifications-rules',
     'notifications-studio',
+    'notifications-audit',
+    'alert-studio',
+    'alert-rules',
   ];
 
   for (const routeId of implementedRouteIds) {
@@ -365,13 +363,43 @@ test('marks notification platform routes with implemented or honest unavailable 
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
   }
+});
 
-  for (const routeId of nativeSummaryRouteIds) {
+test('marks R0005 notification auth settings and integration routes implemented', () => {
+  const implementedRouteIds = [
+    'automations',
+    'automations-list',
+    'automations-new',
+    'automations-id-edit',
+    'alert-studio',
+    'alert-rules',
+    'notifications-browser',
+    'notifications-rules',
+    'notifications-studio',
+    'settings',
+    'settings-safety',
+    'account-2fa',
+    'account-sessions',
+    'account-privacy',
+    'integrations-helix',
+  ];
+
+  for (const routeId of implementedRouteIds) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
-    expect(route?.implementationStatus).toBe('native-summary');
-    expect(route?.evidence).toMatch(/^Native summary: /);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
     expect(route?.deletionReadiness.canDeleteWebRoute).toBe(false);
   }
+
+  expect(
+    routes.find(route => route.id === 'alerts')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(14);
+  expect(
+    routes.find(route => route.id === 'settings')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(3);
+  expect(
+    routes.find(route => route.id === 'auth')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(4);
 });
 
 test('keeps unported web routes visible as native summaries rather than success-shaped', () => {
