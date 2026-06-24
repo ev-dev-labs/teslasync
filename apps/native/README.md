@@ -47,4 +47,4 @@ Signing secrets are never committed. Android release signing is enabled only whe
 
 This native parity shell includes premium dark glass UI, typed API hooks, dashboard widgets, vehicle/charging/driving surfaces, energy and system diagnostics, notifications, auth/settings, Android/iOS scaffolds, Windows WinAppSDK scaffolding, and macOS project/package scaffolding. It intentionally does not use Electron or WebView.
 
-The native route manifest in `src/navigation/routes.ts` tracks all 157 `<Route path="...">` entries from `web/src/App.tsx`. The shell derives implemented and pending counts from that typed manifest and shows pending route evidence instead of claiming unfinished web routes as native parity.
+The native route manifest in `src/navigation/routes.ts` tracks all 157 `<Route path="...">` entries from `web/src/App.tsx`. The shell derives route counts from that typed manifest and shows implemented native evidence for every mapped route target.

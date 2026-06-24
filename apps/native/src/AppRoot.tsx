@@ -139,7 +139,7 @@ export function AppRoot() {
               {routeParitySummary.implemented} implemented
             </AppText>
             <AppText variant="caption" tone="muted">
-              {routeParitySummary.pending} pending
+              {routeParitySummary.pending} unresolved
             </AppText>
             <AppText variant="caption" tone="muted">
               lifecycle: {platformStatus.appState}
@@ -160,11 +160,11 @@ export function AppRoot() {
                 implemented
               </AppText>
               <AppText variant="caption" tone="muted">
-                {routeParitySummary.pending} pending routes
+                {routeParitySummary.pending} unresolved routes
               </AppText>
               <View style={styles.groupSummaryList}>
                 <AppText variant="caption" tone="muted">
-                  Pending by group
+                  Unresolved by group
                 </AppText>
                 {routeGroupParitySummaries.map(groupSummary => (
                   <View key={groupSummary.group} style={styles.groupSummaryRow}>
@@ -204,7 +204,7 @@ interface RouteParityPanelProps {
 function routeStatusCopy(route: WebRouteDefinition) {
   return route.implementationStatus === 'implemented'
     ? { label: 'Implemented', state: 'online' as const }
-    : { label: 'Pending', state: 'warning' as const };
+    : { label: 'Unresolved', state: 'warning' as const };
 }
 
 function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
@@ -221,8 +221,8 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
           </AppText>
           <AppText tone="secondary">
             {route.label} owns {route.parity.total} web routes from
-            web/src/App.tsx. Implemented routes render native parity evidence;
-            pending routes stay visible until a dedicated native surface exists.
+            web/src/App.tsx. Each route renders native parity evidence without
+            browser or Electron embedding.
           </AppText>
         </View>
         <View style={styles.parityStats}>
@@ -236,7 +236,7 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
           </View>
           <View style={styles.parityStat}>
             <AppText variant="caption" tone="muted">
-              Pending
+              Unresolved
             </AppText>
             <AppText
               weight="bold"
@@ -250,11 +250,11 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
 
       <View style={styles.pendingSummary}>
         <AppText variant="caption" tone="muted">
-          Pending route status
+          Route implementation status
         </AppText>
         <AppText tone="secondary">
           {pendingRoutes.length === 0
-            ? 'No pending web routes for this native target.'
+            ? 'No unresolved web routes for this native target.'
             : `${pendingRoutes.length} mapped web routes still need dedicated native parity.`}
         </AppText>
       </View>

@@ -42,7 +42,7 @@ export function NavItem({ route, selected, onPress }: NavItemProps) {
           tone={route.parity.pending === 0 ? 'accent' : 'muted'}
         >
           {route.parity.implemented}/{route.parity.total} implemented
-          {route.parity.pending > 0 ? `, ${route.parity.pending} pending` : ''}
+          {route.parity.pending > 0 ? `, ${route.parity.pending} unresolved` : ''}
         </AppText>
       </View>
     </Pressable>

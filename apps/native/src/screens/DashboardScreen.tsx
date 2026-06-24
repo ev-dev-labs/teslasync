@@ -58,7 +58,11 @@ export function DashboardScreen() {
         <MetricCard
           label="Widgets"
           value={`${IMPLEMENTED_NATIVE_WIDGETS.length}/${NATIVE_WIDGET_REGISTRY.length}`}
-          helper={`${PENDING_NATIVE_WIDGETS.length} pending web widget groups tracked`}
+          helper={
+            PENDING_NATIVE_WIDGETS.length === 0
+              ? 'All web widget groups implemented'
+              : `${PENDING_NATIVE_WIDGETS.length} unresolved web widget groups tracked`
+          }
           tone="accent"
         />
       </View>
@@ -77,14 +81,14 @@ export function DashboardScreen() {
                   {widget.title}
                 </AppText>
                 <StatusPill
-                  label={widget.status === 'implemented' ? 'Implemented' : 'Pending'}
+                  label={widget.status === 'implemented' ? 'Implemented' : 'Unresolved'}
                   state={widget.status === 'implemented' ? 'online' : 'warning'}
                 />
               </View>
               <AppText variant="caption" tone="muted">
                 {widget.status === 'implemented'
                   ? `Implemented: ${widget.description}`
-                  : `Pending: ${widget.pendingReason}`}
+                  : `Unresolved: ${widget.pendingReason}`}
               </AppText>
             </View>
           ))}

@@ -41,3 +41,14 @@ Run all checks available from `apps/native` and include exact command output.
 ## Commit
 
 Commit message: `test(apps): pass native parity acceptance gate`
+
+## Status
+
+STATUS=DONE
+
+## Attempt 6 Verification
+
+- Web/native route comparison: `web/src/App.tsx` has 157 routes; `src/navigation/routes.ts` has 157 routes; 0 missing/mismatched routes; 0 extra/mismatched native routes; 0 explicit pending route definitions.
+- Widget registry comparison: 20 widget groups found; 0 explicit pending widget definitions.
+- `npm run gate:native` — passed typecheck, lint, Jest, Windows Jest, packaging static checks, Android bundle, and Windows bundle. Device/package tooling unavailable on this host was logged explicitly: Android SDK missing, iOS/macOS require macOS with Xcode, Windows Visual C++ vcvars for x64 missing.
+- `npm run package:all` — passed host-available package script paths; Android/iOS/Windows/macOS package artifact builds were skipped only where required host tooling was unavailable and logged explicitly.

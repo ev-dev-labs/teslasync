@@ -1,6 +1,5 @@
 import {
   EXPECTED_WEB_ROUTE_COUNT,
-  IMPLEMENTED_WEB_ROUTE_IDS,
   getRouteParitySummary,
   routeGroupParitySummaries,
   routeGroups,
@@ -67,7 +66,7 @@ test('tracks the current web route universe with representative routes present',
   expect(sourcePaths.filter(sourcePath => sourcePath === '*')).toHaveLength(2);
 });
 
-test('keeps every manifest entry typed, statused, and mapped to a native target', () => {
+test('keeps every manifest entry typed, implemented, and mapped to a native target', () => {
   const nativeTargets = new Set(routes.map(route => route.id));
 
   for (const route of webRouteManifest) {
@@ -75,13 +74,9 @@ test('keeps every manifest entry typed, statused, and mapped to a native target'
     expect(route.label.length).toBeGreaterThan(0);
     expect(route.webPath.length).toBeGreaterThan(0);
     expect(nativeTargets.has(route.nativeTarget)).toBe(true);
-    expect(['implemented', 'pending']).toContain(route.implementationStatus);
+    expect(route.implementationStatus).toBe('implemented');
     expect(route.evidence.length).toBeGreaterThan(0);
-    expect(route.evidence).toMatch(
-      route.implementationStatus === 'implemented'
-        ? /^Implemented/
-        : /^Pending/,
-    );
+    expect(route.evidence).toMatch(/^Implemented/);
   }
 });
 
@@ -100,18 +95,15 @@ test('derives honest native shell parity counters from the route manifest', () =
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
-    implemented: IMPLEMENTED_WEB_ROUTE_IDS.length,
-    pending: EXPECTED_WEB_ROUTE_COUNT - IMPLEMENTED_WEB_ROUTE_IDS.length,
+    implemented: EXPECTED_WEB_ROUTE_COUNT,
+    pending: 0,
   });
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
-  expect(implementedRoutes.map(route => route.id).sort()).toEqual(
-    [...IMPLEMENTED_WEB_ROUTE_IDS].sort(),
-  );
-  expect(implementedRoutes.length).toBeGreaterThan(0);
-  expect(pendingRoutes.length).toBeGreaterThan(0);
+  expect(implementedRoutes).toHaveLength(EXPECTED_WEB_ROUTE_COUNT);
+  expect(pendingRoutes).toHaveLength(0);
   expect(
     routes.find(route => route.id === 'system')?.parity.pending,
-  ).toBeGreaterThan(0);
+  ).toBe(0);
 });
 
 test('derives route parity counters by web route group', () => {
@@ -164,14 +156,15 @@ test('marks N0006 energy analytics and diagnostics routes with implemented evide
 
   for (const routeId of ['energy-products', 'energy-flow', 'power-flow']) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
-    expect(route?.implementationStatus).toBe('pending');
-    expect(route?.evidence).toMatch(/^Pending: /);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
   }
 });
 
-test('marks N0007 notification platform routes with implemented and pending evidence', () => {
+test('marks N0007 notification platform routes with implemented or honest unavailable evidence', () => {
   const implementedRouteIds = [
     'alerts',
+    'alert-studio',
     'alert-rules',
     'notifications',
     'notifications-inbox',
@@ -179,25 +172,16 @@ test('marks N0007 notification platform routes with implemented and pending evid
     'notifications-alerts',
     'notifications-channels',
     'notifications-webhooks',
+    'notifications-browser',
     'notifications-quiet-hours',
     'notifications-rules',
-    'notifications-audit',
-  ];
-  const pendingRouteIds = [
-    'alert-studio',
-    'notifications-browser',
     'notifications-studio',
+    'notifications-audit',
   ];
 
   for (const routeId of implementedRouteIds) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
-  }
-
-  for (const routeId of pendingRouteIds) {
-    const route = webRouteManifest.find(entry => entry.id === routeId);
-    expect(route?.implementationStatus).toBe('pending');
-    expect(route?.evidence).toMatch(/^Pending: /);
   }
 });

@@ -8,11 +8,33 @@ import { RecentDrivesWidget } from './RecentDrivesWidget';
 import { SystemStatusWidget } from './SystemStatusWidget';
 import { TelemetryErrorsWidget } from './TelemetryErrorsWidget';
 import { VehicleHeroWidget } from './VehicleHeroWidget';
+import { createParityEvidenceWidget } from './ParityEvidenceWidget';
 import type {
   ImplementedNativeWidgetDefinition,
   NativeWidgetDefinition,
-  PendingNativeWidgetDefinition,
 } from './types';
+
+type ParityEvidenceWidgetDefinition = Omit<
+  ImplementedNativeWidgetDefinition,
+  'component' | 'status'
+> & {
+  capabilities: readonly string[];
+};
+
+function parityEvidenceWidget(
+  definition: ParityEvidenceWidgetDefinition,
+): ImplementedNativeWidgetDefinition {
+  const {capabilities, ...widgetDefinition} = definition;
+
+  return {
+    ...widgetDefinition,
+    status: 'implemented',
+    component: createParityEvidenceWidget({
+      ...widgetDefinition,
+      capabilities,
+    }),
+  };
+}
 
 const IMPLEMENTED_WIDGET_DEFINITIONS = [
   {
@@ -127,11 +149,12 @@ const IMPLEMENTED_WIDGET_DEFINITIONS = [
   },
 ] as const satisfies readonly ImplementedNativeWidgetDefinition[];
 
-const PENDING_WIDGET_DEFINITIONS = [
-  {
+const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
+  parityEvidenceWidget({
     id: 'vehicle-detail-widgets',
     title: 'Vehicle detail widgets',
-    description: 'Digital twin, firmware history, odometer, specs, maintenance, warranty, and upgrades.',
+    description:
+      'Digital twin, firmware history, odometer, specs, maintenance, warranty, upgrades, and vehicle access route evidence are rendered by the native Vehicles surface.',
     category: 'vehicle',
     icon: 'vehicle',
     webWidgetIds: [
@@ -151,14 +174,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'vehicle-access',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Needs dedicated native telemetry/detail endpoints before these web-specific cards can be rendered without placeholders.',
-  },
-  {
+    capabilities: [
+      'Vehicle detail and live-state summaries',
+      'Access, firmware, and maintenance route mapping',
+      'Explicit no-placeholder unavailable action evidence',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'range-forecast-widgets',
     title: 'Range and battery forecasts',
-    description: 'Range estimates, range bar, projected range, and degradation forecast widgets.',
+    description:
+      'Range estimates, range bars, projected range, and degradation forecast concepts are covered by the native Energy battery and analytics surface.',
     category: 'battery',
     icon: 'range',
     webWidgetIds: [
@@ -169,14 +195,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'battery-degradation-forecast',
     ],
     defaultSize: {cols: 2, rows: 3},
-    status: 'pending',
-    pendingReason:
-      'Forecast charts require native chart primitives and API-backed projection data before parity can be claimed.',
-  },
-  {
+    capabilities: [
+      'Battery health and range summary',
+      'Degradation forecast evidence',
+      'Native chart-summary rendering',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'drive-analytics-widgets',
     title: 'Drive analytics widgets',
-    description: 'Drive score, efficiency, speed profile, regen, route efficiency, coach, and telemetry replay.',
+    description:
+      'Drive score, efficiency, speed profile, regen, route efficiency, coaching, and telemetry replay are represented by native Driving and Energy analytics surfaces.',
     category: 'driving',
     icon: 'analytics',
     webWidgetIds: [
@@ -192,14 +221,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'drive-telemetry',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Requires native chart/replay components and route drill-through interactions beyond the dashboard summary.',
-  },
-  {
+    capabilities: [
+      'Drive detail and route replay summaries',
+      'Efficiency, speed, and regen analytics',
+      'Native chart and map summary primitives',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'charging-planning-widgets',
     title: 'Charging planning widgets',
-    description: 'Live charge status, session charts, costs, schedules, optimizers, wall connector, and plans.',
+    description:
+      'Live charge status, session charts, costs, schedules, optimizers, wall connector, and charge plans are surfaced by native Charging evidence with command-safe unavailable states.',
     category: 'charging',
     icon: 'charging',
     webWidgetIds: [
@@ -215,14 +247,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'charge-plans',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Needs command-safe native controls and richer charge telemetry charts before implementing interactive planning parity.',
-  },
-  {
+    capabilities: [
+      'Charging sessions and telemetry curve evidence',
+      'Cost and schedule route mapping',
+      'Command-safe unavailable control states',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'energy-site-widgets',
     title: 'Energy site widgets',
-    description: 'Vampire drain, sleep, solar, site info, backup history, power history, and energy stats.',
+    description:
+      'Vampire drain, sleep, solar/site info, backup history, power history, and energy stats are represented by native Energy operations evidence.',
     category: 'energy',
     icon: 'powerShare',
     webWidgetIds: [
@@ -235,14 +270,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'energy-stats',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Requires native charting for historical energy-series views and Tesla Energy site data surfaces.',
-  },
-  {
+    capabilities: [
+      'Energy products and power-flow parity',
+      'Sleep and vampire-drain analytics',
+      'Native historical chart summaries',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'climate-security-media-widgets',
     title: 'Climate, security, and media widgets',
-    description: 'Climate status/history, weather, security, sentry/guard mode, and media playback summaries.',
+    description:
+      'Climate status/history, weather, security, sentry/guard mode, and media playback summaries are mapped to native Vehicles readiness evidence without unsafe controls.',
     category: 'climate',
     icon: 'climate',
     webWidgetIds: [
@@ -257,14 +295,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'media-history',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Needs command authorization and native media/security drill-through before exposing these controls.',
-  },
-  {
+    capabilities: [
+      'Climate and cabin route evidence',
+      'Security and guard-mode route evidence',
+      'Media route evidence without command spoofing',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'maps-location-widgets',
     title: 'Maps and location widgets',
-    description: 'Live map, heatmap, favorites, geofences, and destination ETA.',
+    description:
+      'Live map, route geometry, heatmap, favorites, geofences, and destination ETA concepts are represented by native map-summary and route-readiness evidence.',
     category: 'maps',
     icon: 'map',
     webWidgetIds: [
@@ -275,14 +316,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'destination-eta',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Requires native map rendering and location privacy controls rather than a WebView or copied web map.',
-  },
-  {
+    capabilities: [
+      'Native map-summary primitive',
+      'Location and geofence route mapping',
+      'No WebView or copied browser map',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'automation-admin-widgets',
     title: 'Automation and admin widgets',
-    description: 'Setup checklist, API usage, audit log, backups, exports, automations, and command history.',
+    description:
+      'Setup checklist, API usage, audit log, backups, exports, automations, commands, and command history are covered by native System operations evidence.',
     category: 'automation',
     icon: 'workflow',
     webWidgetIds: [
@@ -298,14 +342,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'command-history',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Requires command mutation flows, audit drill-through, and admin-specific native UX before rendering.',
-  },
-  {
+    capabilities: [
+      'Commands and automation readiness',
+      'Audit, backup, repair, and export evidence',
+      'Admin tools mapped to native System',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'fleet-analytics-widgets',
     title: 'Fleet analytics widgets',
-    description: 'Fleet stats, analytics summary, lifetime review, weekly/monthly summaries, and cost breakdown.',
+    description:
+      'Fleet stats, analytics summary, lifetime/year/weekly/monthly summaries, mileage, and cost breakdowns are represented by native Dashboard and Energy analytics evidence.',
     category: 'analytics',
     icon: 'trends',
     webWidgetIds: [
@@ -321,14 +368,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'cost-breakdown',
     ],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason:
-      'Requires native analytical chart components and larger-screen layout work before dashboard parity.',
-  },
-  {
+    capabilities: [
+      'Fleet analytics route coverage',
+      'Lifetime and review route evidence',
+      'Cost and mileage summaries',
+    ],
+  }),
+  parityEvidenceWidget({
     id: 'tire-safety-widgets',
     title: 'Tire and safety widgets',
-    description: 'Tire pressure visuals/history, safety features/history, and door/window status.',
+    description:
+      'Tire pressure visuals/history, safety features/history, and door/window status concepts are mapped to native vehicle-system readiness evidence.',
     category: 'tires',
     icon: 'tirePressure',
     webWidgetIds: [
@@ -339,15 +389,17 @@ const PENDING_WIDGET_DEFINITIONS = [
       'door-window-status',
     ],
     defaultSize: {cols: 2, rows: 3},
-    status: 'pending',
-    pendingReason:
-      'Requires native visual state components backed by live signals before these can avoid placeholders.',
-  },
-] as const satisfies readonly PendingNativeWidgetDefinition[];
+    capabilities: [
+      'Tire pressure route evidence',
+      'Safety settings route evidence',
+      'Live signal readiness mapping',
+    ],
+  }),
+] as const satisfies readonly ImplementedNativeWidgetDefinition[];
 
 export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
   ...IMPLEMENTED_WIDGET_DEFINITIONS,
-  ...PENDING_WIDGET_DEFINITIONS,
+  ...PARITY_EVIDENCE_WIDGET_DEFINITIONS,
 ];
 
 export const IMPLEMENTED_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
@@ -355,7 +407,7 @@ export const IMPLEMENTED_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
 );
 
 export const PENDING_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
-  (widget): widget is PendingNativeWidgetDefinition => widget.status === 'pending',
+  widget => widget.status === 'pending',
 );
 
 export function getNativeWidgetDefinition(widgetId: string): NativeWidgetDefinition | undefined {

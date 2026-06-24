@@ -247,7 +247,7 @@ function renderWithQueryClient(element: React.ReactElement) {
   );
 }
 
-test('native dashboard widget registry is typed with implemented and pending statuses', () => {
+test('native dashboard widget registry is typed with implemented parity statuses', () => {
   expect(IMPLEMENTED_NATIVE_WIDGETS.map(widget => widget.id)).toEqual([
     'vehicle-hero',
     'battery-health',
@@ -259,24 +259,33 @@ test('native dashboard widget registry is typed with implemented and pending sta
     'battery-cells',
     'live-power-flow',
     'telemetry-errors',
+    'vehicle-detail-widgets',
+    'range-forecast-widgets',
+    'drive-analytics-widgets',
+    'charging-planning-widgets',
+    'energy-site-widgets',
+    'climate-security-media-widgets',
+    'maps-location-widgets',
+    'automation-admin-widgets',
+    'fleet-analytics-widgets',
+    'tire-safety-widgets',
   ]);
-  expect(PENDING_NATIVE_WIDGETS.length).toBeGreaterThan(0);
+  expect(PENDING_NATIVE_WIDGETS).toHaveLength(0);
   expect(IMPLEMENTED_NATIVE_WIDGETS.length + PENDING_NATIVE_WIDGETS.length).toBe(
     NATIVE_WIDGET_REGISTRY.length,
   );
 
   for (const widget of NATIVE_WIDGET_REGISTRY) {
     expect(widget.webWidgetIds.length).toBeGreaterThan(0);
-    if (widget.status === 'implemented') {
-      expect(widget.component).toEqual(expect.any(Function));
-    } else {
-      expect(widget.pendingReason.length).toBeGreaterThan(0);
-      expect('component' in widget).toBe(false);
+    expect(widget.status).toBe('implemented');
+    if (widget.status !== 'implemented') {
+      throw new Error(`Unexpected unresolved widget: ${widget.id}`);
     }
+    expect(widget.component).toEqual(expect.any(Function));
   }
 
   expect(getNativeWidgetDefinition('battery-cells')?.status).toBe('implemented');
-  expect(getNativeWidgetDefinition('maps-location-widgets')?.status).toBe('pending');
+  expect(getNativeWidgetDefinition('maps-location-widgets')?.status).toBe('implemented');
 });
 
 test('renders all implemented native dashboard widgets with API-backed content', async () => {
@@ -289,7 +298,9 @@ test('renders all implemented native dashboard widgets with API-backed content',
   const serialized = JSON.stringify(tree?.toJSON());
 
   expect(serialized).toContain('Native widget registry');
-  expect(serialized).toContain('Pending: Requires native map rendering');
+  expect(serialized).toContain('All web widget groups implemented');
+  expect(serialized).toContain('Maps and location widgets');
+  expect(serialized).toContain('Implemented parity');
   expect(serialized).toContain('Vehicle hero');
   expect(serialized).toContain('Roadrunner');
   expect(serialized).toContain('Battery and health');

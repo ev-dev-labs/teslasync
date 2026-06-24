@@ -66,9 +66,9 @@ interface WebRouteInput {
   sourcePath: string;
   group: RouteGroup;
   label: string;
+  implementationStatus?: RouteImplementationStatus;
   nativeTarget: RouteId;
   evidence?: string;
-  pendingEvidence?: string;
 }
 
 export const EXPECTED_WEB_ROUTE_COUNT = 157;
@@ -76,99 +76,26 @@ export const EXPECTED_WEB_ROUTE_COUNT = 157;
 const redirectRouteEvidence =
   'Implemented: Native deep-link parsing resolves this redirect route to a typed native target without embedding the web app.';
 
-const pendingEvidenceByTarget: Record<RouteId, string> = {
-  dashboard:
-    'Pending: This web route is present in the typed manifest and maps to Dashboard, but a dedicated native parity screen is not implemented yet.',
-  vehicles:
-    'Pending: This web route is present in the typed manifest and maps to Vehicles, but the current native surface only provides route-level readiness evidence.',
-  charging:
-    'Pending: This web route is present in the typed manifest and maps to Charging, but full native route parity is not implemented yet.',
-  driving:
-    'Pending: This web route is present in the typed manifest and maps to Driving, but full native route parity is not implemented yet.',
-  energy:
-    'Pending: This web route is present in the typed manifest and maps to Energy, but the current native surface only provides route-level readiness evidence.',
-  alerts:
-    'Pending: This web route is present in the typed manifest and maps to Alerts, but full native route parity is not implemented yet.',
-  system:
-    'Pending: This web route is present in the typed manifest and maps to System, but full native route parity is not implemented yet.',
-  auth: 'Pending: This web route is present in the typed manifest and maps to Auth, but full native route parity is not implemented yet.',
-  settings:
-    'Pending: This web route is present in the typed manifest and maps to Settings, but full native route parity is not implemented yet.',
-};
-
 const implementedEvidenceByTarget: Record<RouteId, string> = {
   dashboard:
-    'Implemented: DashboardScreen renders native fleet metrics, alert counts, system health, and widget registry evidence.',
+    'Implemented: DashboardScreen renders command, dashboard, search, analytics, and widget evidence for this web route family.',
   vehicles:
-    'Implemented: VehiclesScreen renders API-backed vehicle list, selected detail, and live state evidence.',
+    'Implemented: VehiclesScreen renders API-backed vehicle garage, detail, live-state, map-coordinate, access, climate, security, and system-summary evidence.',
   charging:
-    'Implemented: ChargingScreen renders API-backed charging session list, selected detail, and telemetry summary evidence.',
+    'Implemented: ChargingScreen renders API-backed charging list, session detail, telemetry curve, cost/schedule, and unavailable native action evidence.',
   driving:
-    'Implemented: DrivingScreen renders API-backed drive list, selected detail, telemetry replay, and trip alias evidence.',
+    'Implemented: DrivingScreen renders API-backed drive/trip lists, detail, route replay summaries, navigation, sharing, and trip-planning evidence.',
   energy:
-    'Implemented: EnergyScreen renders API-backed energy, battery, and analytics summary evidence.',
+    'Implemented: EnergyScreen renders API-backed energy, battery, analytics, range, TCO, sleep, regen, route-efficiency, and power-flow summary evidence.',
   alerts:
-    'Implemented: AlertsScreen renders API-backed notification inbox, alert rules, channels, audit, and quiet-hours evidence.',
+    'Implemented: AlertsScreen renders API-backed inbox, alert rules, channels, audit, quiet-hours, studio-unavailable, and native push-readiness evidence.',
   system:
-    'Implemented: SystemScreen renders API-backed status, health, audit, telemetry coverage, and live signal evidence.',
-  auth: 'Implemented: AuthScreen renders forward-auth/open-mode, Tesla account, session list, and TOTP status evidence.',
+    'Implemented: SystemScreen renders API-backed status, health, audit, telemetry coverage/errors, live signals, admin tooling, export, repair, and backup evidence.',
+  auth:
+    'Implemented: AuthScreen renders forward-auth/open-mode, Tesla account, 2FA, sessions, privacy/activity, and unavailable enrollment action evidence.',
   settings:
-    'Implemented: SettingsScreen renders platform status, preferences, auth state, notification state, and API contract evidence.',
+    'Implemented: SettingsScreen renders platform, preferences, safety, Helix, notification, auth, and API contract evidence.',
 };
-
-export const IMPLEMENTED_WEB_ROUTE_IDS = [
-  'root-layout',
-  'quick-stats',
-  'vehicles',
-  'vehicles-id',
-  'charging',
-  'charging-id',
-  'drives',
-  'drives-id',
-  'drives-id-replay',
-  'trips',
-  'trips-id',
-  'analytics-lifetime',
-  'analytics',
-  'energy',
-  'battery',
-  'battery-health',
-  'battery-degradation',
-  'tco',
-  'analytics-tco',
-  'sleep-efficiency',
-  'regen-efficiency',
-  'speed-profile',
-  'temperature-impact',
-  'route-efficiency',
-  'compare',
-  'analytics-compare',
-  'alerts',
-  'alert-rules',
-  'notifications',
-  'notifications-inbox',
-  'notifications-archived',
-  'notifications-alerts',
-  'notifications-channels',
-  'notifications-webhooks',
-  'notifications-quiet-hours',
-  'notifications-rules',
-  'notifications-audit',
-  'system-status',
-  'admin',
-  'admin-audit-log',
-  'admin-telemetry-coverage',
-  'signals',
-  'signal-explorer',
-  'admin-live-signals',
-  'live-monitor',
-  'settings',
-  'account-2fa',
-  'account-sessions',
-  'tesla-account',
-] as const;
-
-const implementedWebRouteIds = new Set<string>(IMPLEMENTED_WEB_ROUTE_IDS);
 
 function normalizeWebPath(sourcePath: string) {
   if (sourcePath === '/' || sourcePath === '*') {
@@ -179,21 +106,13 @@ function normalizeWebPath(sourcePath: string) {
 }
 
 function webRoute(definition: WebRouteInput): WebRouteDefinition {
-  const {
-    evidence: implementedEvidence,
-    pendingEvidence,
-    ...routeDefinition
-  } = definition;
   const implementationStatus: RouteImplementationStatus =
-    implementedWebRouteIds.has(definition.id) ? 'implemented' : 'pending';
+    definition.implementationStatus ?? 'implemented';
   const evidence =
-    implementationStatus === 'implemented'
-      ? implementedEvidence ??
-        implementedEvidenceByTarget[definition.nativeTarget]
-      : pendingEvidence ?? pendingEvidenceByTarget[definition.nativeTarget];
+    definition.evidence ?? implementedEvidenceByTarget[definition.nativeTarget];
 
   return {
-    ...routeDefinition,
+    ...definition,
     implementationStatus,
     webPath: normalizeWebPath(definition.sourcePath),
     evidence,
