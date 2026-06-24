@@ -217,6 +217,90 @@ export function buildSystemAuditPath(
   });
 }
 
+export function buildAuthModePath(): string {
+  return '/system/auth-mode';
+}
+
+export function buildAuthStatusPath(): string {
+  return '/auth/status';
+}
+
+export function buildAuthUrlPath(): string {
+  return '/auth/url';
+}
+
+export function buildAuthRefreshPath(): string {
+  return '/auth/refresh';
+}
+
+export function buildAuthDisconnectPath(): string {
+  return '/auth/disconnect';
+}
+
+export function buildSessionsPath(): string {
+  return '/auth/sessions';
+}
+
+export function buildSessionPath(sessionId: string): string {
+  return `/auth/sessions/${encodeURIComponent(sessionId)}`;
+}
+
+export function buildRevokeAllOtherSessionsPath(): string {
+  return '/auth/sessions/all-others';
+}
+
+export function buildTOTPStatusPath(): string {
+  return '/auth/totp';
+}
+
+export function buildTOTPEnrollPath(): string {
+  return '/auth/totp/enroll';
+}
+
+export function buildTOTPVerifyPath(): string {
+  return '/auth/totp/verify';
+}
+
+export function buildTOTPSudoPath(): string {
+  return '/auth/totp/sudo';
+}
+
+export function buildTOTPBackupCodesPath(): string {
+  return '/auth/totp/backup-codes/regenerate';
+}
+
+export function buildSettingsPath(): string {
+  return '/settings';
+}
+
+export function buildNotificationChannelsPath(): string {
+  return '/notifications';
+}
+
+export function buildNotificationStatsPath(): string {
+  return '/notifications/stats';
+}
+
+export function buildQuietHoursPath(): string {
+  return '/notifications/quiet-hours';
+}
+
+export function buildSystemStatusPath(): string {
+  return '/system/status';
+}
+
+export function buildSystemHealthPath(): string {
+  return '/system/health';
+}
+
+export function buildSystemVersionPath(): string {
+  return '/system/version';
+}
+
+export function buildRateLimitStatusPath(): string {
+  return '/system/rate-limits';
+}
+
 export function buildVehiclePath(vehicleId: number | string): string {
   return `/vehicles/${vehicleId}`;
 }
@@ -292,7 +376,7 @@ export function useSystemStatus() {
   return useQuery({
     queryKey: apiKeys.systemStatus,
     queryFn: ({ signal }) =>
-      request<SystemStatus>('/system/status', { signal }),
+      request<SystemStatus>(buildSystemStatusPath(), { signal }),
     staleTime: 15_000,
   });
 }
@@ -301,7 +385,7 @@ export function useSystemHealth() {
   return useQuery({
     queryKey: apiKeys.systemHealth,
     queryFn: ({ signal }) =>
-      request<SystemHealth>('/system/health', { signal }),
+      request<SystemHealth>(buildSystemHealthPath(), { signal }),
     staleTime: 15_000,
   });
 }
@@ -310,7 +394,7 @@ export function useVersionInfo() {
   return useQuery({
     queryKey: apiKeys.systemVersion,
     queryFn: ({ signal }) =>
-      request<VersionInfo>('/system/version', { signal }),
+      request<VersionInfo>(buildSystemVersionPath(), { signal }),
     staleTime: 60_000,
   });
 }
@@ -319,7 +403,7 @@ export function useRateLimitStatus() {
   return useQuery({
     queryKey: apiKeys.rateLimits,
     queryFn: ({ signal }) =>
-      request<RateLimitStatusResponse>('/system/rate-limits', { signal }),
+      request<RateLimitStatusResponse>(buildRateLimitStatusPath(), { signal }),
     staleTime: 15_000,
   });
 }
@@ -611,7 +695,7 @@ export function useAuthMode() {
   return useQuery<AuthModeResponse, ApiError>({
     queryKey: apiKeys.authMode,
     queryFn: ({ signal }) =>
-      request<AuthModeResponse>('/system/auth-mode', { signal }),
+      request<AuthModeResponse>(buildAuthModePath(), { signal }),
     staleTime: 5 * 60_000,
     refetchInterval: false,
   });
@@ -620,7 +704,8 @@ export function useAuthMode() {
 export function useAuthStatus() {
   return useQuery<AuthStatus, ApiError>({
     queryKey: apiKeys.authStatus,
-    queryFn: ({ signal }) => request<AuthStatus>('/auth/status', { signal }),
+    queryFn: ({ signal }) =>
+      request<AuthStatus>(buildAuthStatusPath(), { signal }),
     staleTime: 30_000,
   });
 }
@@ -628,7 +713,8 @@ export function useAuthStatus() {
 export function useSettings() {
   return useQuery({
     queryKey: apiKeys.settings,
-    queryFn: ({ signal }) => request<AppSettings>('/settings', { signal }),
+    queryFn: ({ signal }) =>
+      request<AppSettings>(buildSettingsPath(), { signal }),
   });
 }
 
@@ -636,7 +722,7 @@ export function useSaveSettings() {
   const queryClient = useQueryClient();
   return useMutation<AppSettings, ApiError, AppSettings>({
     mutationFn: settings =>
-      request<AppSettings>('/settings', {
+      request<AppSettings>(buildSettingsPath(), {
         method: 'PUT',
         body: JSON.stringify(settings),
       }),
@@ -647,14 +733,15 @@ export function useSaveSettings() {
 
 export function useAuthURL() {
   return useMutation<AuthUrlResponse, ApiError, void>({
-    mutationFn: () => request<AuthUrlResponse>('/auth/url', { method: 'POST' }),
+    mutationFn: () =>
+      request<AuthUrlResponse>(buildAuthUrlPath(), { method: 'POST' }),
   });
 }
 
 export function useRefreshAuth() {
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, void>({
-    mutationFn: () => request<void>('/auth/refresh', { method: 'POST' }),
+    mutationFn: () => request<void>(buildAuthRefreshPath(), { method: 'POST' }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: apiKeys.authStatus }),
   });
@@ -663,7 +750,8 @@ export function useRefreshAuth() {
 export function useDisconnectAuth() {
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, void>({
-    mutationFn: () => request<void>('/auth/disconnect', { method: 'POST' }),
+    mutationFn: () =>
+      request<void>(buildAuthDisconnectPath(), { method: 'POST' }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: apiKeys.authStatus }),
   });
@@ -677,7 +765,7 @@ export function useSessions(options?: { enabled?: boolean }) {
         const payload = await request<{
           mode: 'session';
           sessions?: import('./types').ActiveSession[];
-        }>('/auth/sessions', { signal });
+        }>(buildSessionsPath(), { signal });
         return { mode: 'session', sessions: payload.sessions ?? [] };
       } catch (error) {
         if (isApiError(error) && error.code === AUTH_MODE_OPEN_CODE) {
@@ -696,7 +784,7 @@ export function useRevokeSession() {
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, string>({
     mutationFn: id =>
-      request<void>(`/auth/sessions/${encodeURIComponent(id)}`, {
+      request<void>(buildSessionPath(id), {
         method: 'DELETE',
       }),
     onSuccess: () =>
@@ -708,7 +796,7 @@ export function useRevokeAllOtherSessions() {
   const queryClient = useQueryClient();
   return useMutation<RevokeAllOthersResponse, ApiError, void>({
     mutationFn: () =>
-      request<RevokeAllOthersResponse>('/auth/sessions/all-others', {
+      request<RevokeAllOthersResponse>(buildRevokeAllOtherSessionsPath(), {
         method: 'DELETE',
       }),
     onSuccess: () =>
@@ -721,7 +809,7 @@ export function useTOTPStatus(options?: { enabled?: boolean }) {
     queryKey: apiKeys.totpStatus,
     queryFn: async ({ signal }) => {
       try {
-        return await request<TOTPStatus>('/auth/totp', { signal });
+        return await request<TOTPStatus>(buildTOTPStatusPath(), { signal });
       } catch (error) {
         if (isApiError(error) && error.code === AUTH_MODE_OPEN_CODE) {
           return { mode: 'open' };
@@ -739,7 +827,7 @@ export function useTOTPEnroll() {
   const queryClient = useQueryClient();
   return useMutation<TOTPEnrollment, ApiError, void>({
     mutationFn: () =>
-      request<TOTPEnrollment>('/auth/totp/enroll', { method: 'POST' }),
+      request<TOTPEnrollment>(buildTOTPEnrollPath(), { method: 'POST' }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: apiKeys.totpStatus }),
   });
@@ -749,7 +837,7 @@ export function useTOTPVerify() {
   const queryClient = useQueryClient();
   return useMutation<{ activated: boolean }, ApiError, { code: string }>({
     mutationFn: ({ code }) =>
-      request<{ activated: boolean }>('/auth/totp/verify', {
+      request<{ activated: boolean }>(buildTOTPVerifyPath(), {
         method: 'POST',
         body: JSON.stringify({ code }),
       }),
@@ -773,7 +861,7 @@ export function useTOTPStepUp() {
         body.backup_code = backup_code;
       }
 
-      const result = await request<TOTPSudoToken>('/auth/totp/sudo', {
+      const result = await request<TOTPSudoToken>(buildTOTPSudoPath(), {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -789,7 +877,8 @@ export function useTOTPStepUp() {
 export function useTOTPRevoke() {
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, void>({
-    mutationFn: () => request<void>('/auth/totp', { method: 'DELETE' }),
+    mutationFn: () =>
+      request<void>(buildTOTPStatusPath(), { method: 'DELETE' }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: apiKeys.totpStatus }),
   });
@@ -799,7 +888,7 @@ export function useTOTPRegenerateBackupCodes() {
   const queryClient = useQueryClient();
   return useMutation<TOTPBackupCodesResponse, ApiError, void>({
     mutationFn: () =>
-      request<TOTPBackupCodesResponse>('/auth/totp/backup-codes/regenerate', {
+      request<TOTPBackupCodesResponse>(buildTOTPBackupCodesPath(), {
         method: 'POST',
       }),
     onSuccess: () =>
@@ -811,7 +900,9 @@ export function useNotificationChannels() {
   return useQuery({
     queryKey: apiKeys.notificationChannels,
     queryFn: ({ signal }) =>
-      request<NotificationChannel[]>('/notifications', { signal }),
+      request<NotificationChannel[]>(buildNotificationChannelsPath(), {
+        signal,
+      }),
   });
 }
 
@@ -833,7 +924,7 @@ export function useNotificationStats() {
   return useQuery({
     queryKey: apiKeys.notificationStats,
     queryFn: ({ signal }) =>
-      request<NotificationStats>('/notifications/stats', { signal }),
+      request<NotificationStats>(buildNotificationStatsPath(), { signal }),
     staleTime: 30_000,
   });
 }
@@ -843,7 +934,7 @@ export function useQuietHours() {
     queryKey: apiKeys.quietHours,
     queryFn: async ({ signal }) => {
       const payload = await request<{ windows?: QuietHoursWindow[] }>(
-        '/notifications/quiet-hours',
+        buildQuietHoursPath(),
         { signal },
       );
       return payload.windows ?? [];

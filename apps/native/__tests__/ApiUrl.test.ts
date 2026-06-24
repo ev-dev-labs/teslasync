@@ -1,5 +1,10 @@
 import { apiUrl, buildQueryPath, request } from '../src/api/client';
 import {
+  buildAuthDisconnectPath,
+  buildAuthModePath,
+  buildAuthRefreshPath,
+  buildAuthStatusPath,
+  buildAuthUrlPath,
   buildChargeTelemetryPath,
   buildChargingSessionPath,
   buildChargingListPath,
@@ -7,6 +12,22 @@ import {
   buildDriveListPath,
   buildDriveTelemetryPath,
   buildNotificationLogsPath,
+  buildNotificationChannelsPath,
+  buildNotificationStatsPath,
+  buildQuietHoursPath,
+  buildRateLimitStatusPath,
+  buildRevokeAllOtherSessionsPath,
+  buildSessionPath,
+  buildSessionsPath,
+  buildSettingsPath,
+  buildSystemHealthPath,
+  buildSystemStatusPath,
+  buildSystemVersionPath,
+  buildTOTPBackupCodesPath,
+  buildTOTPEnrollPath,
+  buildTOTPSudoPath,
+  buildTOTPStatusPath,
+  buildTOTPVerifyPath,
   buildVehiclePath,
   buildVehicleEnergyPath,
   buildVehicleStatePath,
@@ -25,18 +46,28 @@ describe('native API URL construction', () => {
   });
 
   test('client adds a single api prefix for relative hook paths', () => {
-    expect(apiUrl('/vehicles')).toBe('https://teslasync.example.test/api/v1/vehicles');
-    expect(apiUrl('vehicles')).toBe('https://teslasync.example.test/api/v1/vehicles');
-    expect(apiUrl('/api/v1/vehicles')).toBe('https://teslasync.example.test/api/v1/vehicles');
+    expect(apiUrl('/vehicles')).toBe(
+      'https://teslasync.example.test/api/v1/vehicles',
+    );
+    expect(apiUrl('vehicles')).toBe(
+      'https://teslasync.example.test/api/v1/vehicles',
+    );
+    expect(apiUrl('/api/v1/vehicles')).toBe(
+      'https://teslasync.example.test/api/v1/vehicles',
+    );
   });
 
   test('serializes hook query params with backend snake_case names', () => {
-    expect(buildDriveListPath({vehicle_id: 42, limit: 20, offset: 5})).toBe(
+    expect(buildDriveListPath({ vehicle_id: 42, limit: 20, offset: 5 })).toBe(
       '/drives?vehicle_id=42&limit=20&offset=5',
     );
-    expect(buildChargingListPath({vehicle_id: 42, start: '2026-06-01', end: '2026-06-23'})).toBe(
-      '/charging?vehicle_id=42&start=2026-06-01&end=2026-06-23',
-    );
+    expect(
+      buildChargingListPath({
+        vehicle_id: 42,
+        start: '2026-06-01',
+        end: '2026-06-23',
+      }),
+    ).toBe('/charging?vehicle_id=42&start=2026-06-01&end=2026-06-23');
     expect(buildVehicleEnergyPath(42, 14)).toBe('/vehicles/42/energy?days=14');
     expect(buildVehiclePath(42)).toBe('/vehicles/42');
     expect(buildVehicleStatePath(42)).toBe('/vehicles/42/state');
@@ -52,21 +83,54 @@ describe('native API URL construction', () => {
         group_key: 'abc123',
         limit: 10,
       }),
-    ).toBe('/notifications/logs?vehicle_id=42%2C43&rule_id=7&read=false&group_key=abc123&limit=10');
-  });
-
-  test('omits nullish query params without inventing defaults', () => {
-    expect(buildQueryPath('/system/status', {vehicle_id: null, limit: undefined})).toBe(
-      '/system/status',
+    ).toBe(
+      '/notifications/logs?vehicle_id=42%2C43&rule_id=7&read=false&group_key=abc123&limit=10',
     );
   });
 
+  test('builds auth, settings, notification, and system paths without api prefix', () => {
+    expect(buildAuthModePath()).toBe('/system/auth-mode');
+    expect(buildAuthStatusPath()).toBe('/auth/status');
+    expect(buildAuthUrlPath()).toBe('/auth/url');
+    expect(buildAuthRefreshPath()).toBe('/auth/refresh');
+    expect(buildAuthDisconnectPath()).toBe('/auth/disconnect');
+    expect(buildSessionsPath()).toBe('/auth/sessions');
+    expect(buildSessionPath('session/id with spaces')).toBe(
+      '/auth/sessions/session%2Fid%20with%20spaces',
+    );
+    expect(buildRevokeAllOtherSessionsPath()).toBe('/auth/sessions/all-others');
+    expect(buildTOTPStatusPath()).toBe('/auth/totp');
+    expect(buildTOTPEnrollPath()).toBe('/auth/totp/enroll');
+    expect(buildTOTPVerifyPath()).toBe('/auth/totp/verify');
+    expect(buildTOTPSudoPath()).toBe('/auth/totp/sudo');
+    expect(buildTOTPBackupCodesPath()).toBe(
+      '/auth/totp/backup-codes/regenerate',
+    );
+    expect(buildSettingsPath()).toBe('/settings');
+    expect(buildNotificationChannelsPath()).toBe('/notifications');
+    expect(buildNotificationStatsPath()).toBe('/notifications/stats');
+    expect(buildQuietHoursPath()).toBe('/notifications/quiet-hours');
+    expect(buildSystemStatusPath()).toBe('/system/status');
+    expect(buildSystemHealthPath()).toBe('/system/health');
+    expect(buildSystemVersionPath()).toBe('/system/version');
+    expect(buildRateLimitStatusPath()).toBe('/system/rate-limits');
+  });
+
+  test('omits nullish query params without inventing defaults', () => {
+    expect(
+      buildQueryPath('/system/status', { vehicle_id: null, limit: undefined }),
+    ).toBe('/system/status');
+  });
+
   test('includes proxy cookies for forward-auth API calls without adding a token header', async () => {
-    const response = new Response(JSON.stringify({mode: 'open'}), {
+    const response = new Response(JSON.stringify({ mode: 'open' }), {
       status: 200,
-      headers: {'content-type': 'application/json'},
+      headers: { 'content-type': 'application/json' },
     });
-    const mockFetch = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
+    const mockFetch = jest.fn<
+      ReturnType<typeof fetch>,
+      Parameters<typeof fetch>
+    >();
     mockFetch.mockResolvedValue(response);
     globalThis.fetch = mockFetch as typeof fetch;
 
