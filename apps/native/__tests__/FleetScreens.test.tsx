@@ -249,7 +249,10 @@ test('renders drive list, trip detail, route replay, and readiness sections', as
   expect(serialized).toContain('/drives/3/telemetry');
   expect(serialized).toContain('Drive detail shell');
   expect(serialized).toContain('Drive route route summary from Home to Office');
+  expect(serialized).toContain('Native parity status');
+  expect(serialized).toContain('Route summary ready');
   expect(serialized).toContain('Replay speed summary');
+  expect(serialized).toContain('Accessible chart data table');
   expect(serialized).toContain('Trips list parity');
 });
 

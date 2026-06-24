@@ -305,6 +305,9 @@ test('renders all implemented native dashboard widgets with API-backed content',
 
   expect(serialized).toContain('Native widget registry');
   expect(serialized).toContain('All web widget groups implemented');
+  expect(serialized).toContain('Dashboard parity chart');
+  expect(serialized).toContain('Dashboard chart parity');
+  expect(serialized).toContain('Accessible chart data table');
   expect(serialized).toContain('Dashboard route readiness');
   expect(serialized).toContain('Quick stats and glance');
   expect(serialized).toContain('Search and route command');
@@ -324,6 +327,9 @@ test('renders all implemented native dashboard widgets with API-backed content',
   expect(serialized).toContain('Battery cells');
   expect(serialized).toContain('Live power flow');
   expect(serialized).toContain('Telemetry errors');
+  expect(serialized).toContain('Media playback parity');
+  expect(serialized).toContain('Media data alternative');
+  expect(serialized).toContain('No media playback payload is exposed');
   expect(serialized).toContain('Cell heatmap');
   expect(serialized).toContain('Animated diagram');
   expect(serialized).toContain('Telemetry payload recovered after retry.');

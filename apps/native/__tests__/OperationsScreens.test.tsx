@@ -430,6 +430,8 @@ test('renders energy, battery, analytics, and route readiness surfaces', async (
   expect(serialized).toContain('Driving energy analytics');
   expect(serialized).toContain('Battery degradation analytics');
   expect(serialized).toContain('Speed profile distribution');
+  expect(serialized).toContain('Universal chart primitive');
+  expect(serialized).toContain('Accessible chart data table');
   expect(serialized).toContain('Energy product parity evidence');
   expect(serialized).toContain('Energy products and power flow');
   expect(serialized).toContain('No WebView');

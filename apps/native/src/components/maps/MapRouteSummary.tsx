@@ -13,6 +13,7 @@ import { SectionHeader } from '../data/SectionHeader';
 import { EmptyState } from '../feedback/EmptyState';
 import { AppText } from '../ui/AppText';
 import { PremiumCard } from '../ui/PremiumCard';
+import { StatusPill } from '../ui/StatusPill';
 
 export interface RoutePoint {
   latitude: number;
@@ -53,6 +54,8 @@ interface MapRouteSummaryProps {
   durationLabel: string;
   points: RoutePoint[];
   emptyLabel: string;
+  parityStatusLabel?: string;
+  parityDescription?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -168,6 +171,8 @@ export function MapRouteSummary({
   durationLabel,
   points,
   emptyLabel,
+  parityStatusLabel,
+  parityDescription = 'Route geometry is drawn with React Native views and exposed as a coordinate summary.',
   style,
 }: MapRouteSummaryProps) {
   const validPoints = useMemo(
@@ -194,6 +199,7 @@ export function MapRouteSummary({
     () => getRouteSegments(projectedPath, canvasSize.width, canvasSize.height),
     [canvasSize.height, canvasSize.width, projectedPath],
   );
+  const hasRouteGeometry = validPoints.length >= 2 && bounds != null;
   const handleCanvasLayout = useCallback((event: LayoutChangeEvent) => {
     const {width, height} = event.nativeEvent.layout;
 
@@ -207,11 +213,29 @@ export function MapRouteSummary({
       <SectionHeader
         title={title}
         subtitle={subtitle}
-        eyebrow="Native route summary"
+        eyebrow="Universal route primitive"
         icon="mapPinned"
+        trailing={
+          <StatusPill
+            label={
+              hasRouteGeometry
+                ? parityStatusLabel ?? 'Route summary ready'
+                : 'Route summary unavailable'
+            }
+            state={hasRouteGeometry ? 'online' : 'warning'}
+          />
+        }
       />
+      <View style={styles.parityBanner}>
+        <AppText variant="caption" tone="accent" weight="semibold">
+          Native parity status
+        </AppText>
+        <AppText variant="caption" tone="secondary">
+          {parityDescription}
+        </AppText>
+      </View>
 
-      {validPoints.length < 2 || bounds == null ? (
+      {!hasRouteGeometry ? (
         <EmptyState title="No route geometry" message={emptyLabel} />
       ) : (
         <>
@@ -397,6 +421,14 @@ const styles = StyleSheet.create({
   },
   endpointRight: {
     alignItems: 'flex-end',
+  },
+  parityBanner: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: spacing.md,
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceRaised,
   },
   metricRow: {
     flexDirection: 'row',

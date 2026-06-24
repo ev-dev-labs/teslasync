@@ -22,6 +22,7 @@ import {
   projectRoutePoints,
   sampleRoutePoints,
 } from '../src/components/maps/MapRouteSummary';
+import { MediaParitySummary } from '../src/components/media/MediaParitySummary';
 
 const webIntentIconLabels = [
   'severityCritical',
@@ -339,6 +340,14 @@ test('renders premium primitives with accessible summaries', async () => {
             { id: 'tue', label: 'Tue', value: 30, formattedValue: '30 kWh' },
           ]}
         />
+        <MiniBarChart
+          title="Speed bands"
+          values={[
+            { label: 'Low', value: 4 },
+            { label: 'Cruise', value: 12 },
+          ]}
+          emptyLabel="No speed bands are available."
+        />
         <MapRouteSummary
           title="Drive route"
           subtitle="Native route summary"
@@ -353,7 +362,20 @@ test('renders premium primitives with accessible summaries', async () => {
             { latitude: 37.6, longitude: -121.8 },
           ]}
         />
-      </View>,
+       <MediaParitySummary
+         title="Media playback parity"
+         subtitle="Native media route summary"
+         sourceLabel="/media/latest typed route evidence"
+         emptyLabel="No media payload is exposed yet."
+         capabilities={[
+           {
+             id: 'now-playing',
+             label: 'Now-playing summary',
+             detail: 'Ready for typed media payloads.',
+           },
+         ]}
+       />
+     </View>,
     );
   });
 
@@ -364,8 +386,16 @@ test('renders premium primitives with accessible summaries', async () => {
   expect(serialized).toContain('Roadrunner, Model Y Performance, online');
   expect(serialized).toContain('Route readiness');
   expect(serialized).toContain('Native summary is visible');
+  expect(serialized).toContain('Universal chart primitive');
+  expect(serialized).toContain('Accessible chart data table');
   expect(serialized).toContain('Energy by day chart summary with 2 points');
+  expect(serialized).toContain('Speed bands mini bar chart with 2 rows');
+  expect(serialized).toContain('Native parity status');
+  expect(serialized).toContain('Route summary ready');
   expect(serialized).toContain('Drive route route summary from Home to Office');
+  expect(serialized).toContain('Universal media primitive');
+  expect(serialized).toContain('Media data alternative');
+  expect(serialized).toContain('No media payload is exposed yet.');
 });
 
 test('renders native chart and map empty states without web embedding', async () => {
@@ -404,6 +434,7 @@ test('renders native chart and map empty states without web embedding', async ()
   expect(serialized).toContain('No charge data is available.');
   expect(serialized).toContain('No speed bands are available.');
   expect(serialized).toContain('No route points are available.');
+  expect(serialized).toContain('Route summary unavailable');
   expect(serialized).not.toContain('WebView');
   expect(serialized).not.toContain('Electron');
 });

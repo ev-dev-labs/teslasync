@@ -8,6 +8,10 @@ import {
   RouteReadinessPanel,
   type RouteReadinessItem,
 } from '../components/data/RouteReadinessPanel';
+import {
+  ChartSummary,
+  type ChartSummaryDatum,
+} from '../components/charts/ChartSummary';
 import { AppButton } from '../components/ui/AppButton';
 import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
@@ -76,6 +80,39 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
   const alerts = useMemo(() => alertsQuery.data ?? [], [alertsQuery.data]);
   const healthyVehicles = vehicles.filter(vehicle => vehicle.healthy).length;
   const unreadAlerts = alerts.filter(alert => !alert.is_read).length;
+  const dashboardChartData = useMemo<ChartSummaryDatum[]>(
+    () => [
+      {
+        id: 'vehicles',
+        label: 'Vehicles',
+        value: vehicles.length,
+        formattedValue: String(vehicles.length),
+        icon: 'vehicle',
+      },
+      {
+        id: 'healthy',
+        label: 'Healthy',
+        value: healthyVehicles,
+        formattedValue: String(healthyVehicles),
+        icon: 'success',
+      },
+      {
+        id: 'alerts',
+        label: 'Unread alerts',
+        value: unreadAlerts,
+        formattedValue: String(unreadAlerts),
+        icon: 'notifications',
+      },
+      {
+        id: 'widgets',
+        label: 'Native widgets',
+        value: IMPLEMENTED_NATIVE_WIDGETS.length,
+        formattedValue: `${IMPLEMENTED_NATIVE_WIDGETS.length}/${NATIVE_WIDGET_REGISTRY.length}`,
+        icon: 'layoutDashboard',
+      },
+    ],
+    [healthyVehicles, unreadAlerts, vehicles.length],
+  );
   const isRefreshing =
     vehiclesQuery.isFetching ||
     alertsQuery.isFetching ||
@@ -130,6 +167,18 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
           tone="accent"
         />
       </View>
+
+      <ChartSummary
+        title="Dashboard parity chart"
+        subtitle="Universal native chart primitive summarizing dashboard route inputs without web-only libraries."
+        metricLabel="Implemented widgets"
+        metricValue={`${IMPLEMENTED_NATIVE_WIDGETS.length}/${NATIVE_WIDGET_REGISTRY.length}`}
+        data={dashboardChartData}
+        emptyLabel="Dashboard chart values will appear when native route inputs resolve."
+        icon="layoutDashboard"
+        sourceLabel="/vehicles, /alerts, /system/status, and native widget registry"
+        parityStatusLabel="Dashboard chart parity"
+      />
 
       <GlassPanel style={styles.registryPanel}>
         <SectionHeader

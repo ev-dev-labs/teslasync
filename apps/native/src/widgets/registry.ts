@@ -8,7 +8,10 @@ import { RecentDrivesWidget } from './RecentDrivesWidget';
 import { SystemStatusWidget } from './SystemStatusWidget';
 import { TelemetryErrorsWidget } from './TelemetryErrorsWidget';
 import { VehicleHeroWidget } from './VehicleHeroWidget';
-import { createParityEvidenceWidget } from './ParityEvidenceWidget';
+import {
+  createParityEvidenceWidget,
+  type ParityEvidenceWidgetConfig,
+} from './ParityEvidenceWidget';
 import type {
   ImplementedNativeWidgetDefinition,
   NativeWidgetDefinition,
@@ -18,13 +21,14 @@ type ParityEvidenceWidgetDefinition = Omit<
   ImplementedNativeWidgetDefinition,
   'component' | 'status'
 > & {
-  capabilities: readonly string[];
+  capabilities: ParityEvidenceWidgetConfig['capabilities'];
+  mediaSummary?: ParityEvidenceWidgetConfig['mediaSummary'];
 };
 
 function parityEvidenceWidget(
   definition: ParityEvidenceWidgetDefinition,
 ): ImplementedNativeWidgetDefinition {
-  const { capabilities, ...widgetDefinition } = definition;
+  const { capabilities, mediaSummary, ...widgetDefinition } = definition;
 
   return {
     ...widgetDefinition,
@@ -32,6 +36,7 @@ function parityEvidenceWidget(
     component: createParityEvidenceWidget({
       ...widgetDefinition,
       capabilities,
+      mediaSummary,
     }),
   };
 }
@@ -363,6 +368,32 @@ const PARITY_EVIDENCE_WIDGET_DEFINITIONS = [
       'Security and guard-mode route evidence',
       'Media route evidence without command spoofing',
     ],
+    mediaSummary: {
+      sourceLabel:
+        'Media now-playing and history widgets are tracked as native route evidence until typed media API payloads exist.',
+      emptyLabel:
+        'No media playback payload is exposed by the current native API contract, so the app shows capability evidence instead of spoofing controls.',
+      capabilities: [
+        {
+          id: 'media-now-playing',
+          label: 'Now-playing summary',
+          detail:
+            'Ready for typed media payloads; no browser player or unsafe command bridge is embedded.',
+        },
+        {
+          id: 'media-history',
+          label: 'Playback history summary',
+          detail:
+            'History rows remain visible as parity evidence until backend media history exists.',
+        },
+        {
+          id: 'media-controls',
+          label: 'Safe control boundary',
+          detail:
+            'Native parity does not fabricate play, pause, seek, or source commands without supported API routes.',
+        },
+      ],
+    },
   }),
   parityEvidenceWidget({
     id: 'maps-location-widgets',
