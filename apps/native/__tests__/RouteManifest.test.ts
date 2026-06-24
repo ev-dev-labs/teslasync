@@ -1,6 +1,7 @@
 import {
   EXPECTED_WEB_ROUTE_COUNT,
   getRouteParitySummary,
+  oldWebDeletionReadiness,
   routeGroupParitySummaries,
   routeGroups,
   routes,
@@ -66,7 +67,9 @@ test('tracks the current web route universe with representative routes present',
   expect(sourcePaths.filter(sourcePath => sourcePath === '*')).toHaveLength(2);
 });
 
-test('keeps every manifest entry typed, implemented, and mapped to a native target', () => {
+const nativeStatuses = ['implemented', 'native-summary', 'pending'] as const;
+
+test('keeps every manifest entry typed, statused, deletion-blocked, and mapped to a native target', () => {
   const nativeTargets = new Set(routes.map(route => route.id));
 
   for (const route of webRouteManifest) {
@@ -74,13 +77,30 @@ test('keeps every manifest entry typed, implemented, and mapped to a native targ
     expect(route.label.length).toBeGreaterThan(0);
     expect(route.webPath.length).toBeGreaterThan(0);
     expect(nativeTargets.has(route.nativeTarget)).toBe(true);
-    expect(route.implementationStatus).toBe('implemented');
+    expect(route.webImplementationStatus).toBe('implemented');
+    expect(route.nativeImplementationStatus).toBe(route.implementationStatus);
+    expect(nativeStatuses).toContain(route.nativeImplementationStatus);
     expect(route.evidence.length).toBeGreaterThan(0);
-    expect(route.evidence).toMatch(/^Implemented/);
+    expect(route.deletionReadiness).toEqual(
+      expect.objectContaining({
+        status: 'blocked',
+        canDeleteWebRoute: false,
+        finalParityGateRequired: true,
+      }),
+    );
+    expect(route.deletionReadiness.blocker.length).toBeGreaterThan(0);
+
+    if (route.nativeImplementationStatus === 'implemented') {
+      expect(route.evidence).toMatch(/^Implemented:/);
+    } else if (route.nativeImplementationStatus === 'native-summary') {
+      expect(route.evidence).toMatch(/^Native summary:/);
+    } else {
+      expect(route.evidence).toMatch(/^Pending:/);
+    }
   }
 });
 
-test('derives honest native shell parity counters from the route manifest', () => {
+test('derives honest native shell parity counters and keeps old-web deletion blocked', () => {
   const summary = getRouteParitySummary();
   const nativeTotal = routes.reduce(
     (total, route) => total + route.parity.total,
@@ -90,20 +110,34 @@ test('derives honest native shell parity counters from the route manifest', () =
     route => route.implementationStatus === 'implemented',
   );
   const pendingRoutes = webRouteManifest.filter(
-    route => route.implementationStatus === 'pending',
+    route => route.implementationStatus !== 'implemented',
   );
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
-    implemented: EXPECTED_WEB_ROUTE_COUNT,
-    pending: 0,
+    implemented: implementedRoutes.length,
+    pending: pendingRoutes.length,
   });
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
-  expect(implementedRoutes).toHaveLength(EXPECTED_WEB_ROUTE_COUNT);
-  expect(pendingRoutes).toHaveLength(0);
+  expect(implementedRoutes.length).toBeGreaterThan(0);
+  expect(pendingRoutes.length).toBeGreaterThan(0);
+  expect(implementedRoutes.length + pendingRoutes.length).toBe(
+    EXPECTED_WEB_ROUTE_COUNT,
+  );
+  expect(oldWebDeletionReadiness).toEqual(
+    expect.objectContaining({
+      status: 'blocked',
+      canDeleteOldWeb: false,
+      finalParityGateRequired: true,
+      totalRoutes: EXPECTED_WEB_ROUTE_COUNT,
+      implementedRoutes: implementedRoutes.length,
+      unresolvedRoutes: pendingRoutes.length,
+    }),
+  );
+  expect(oldWebDeletionReadiness.blocker).toContain('final parity gate');
   expect(
     routes.find(route => route.id === 'system')?.parity.pending,
-  ).toBe(0);
+  ).toBeGreaterThan(0);
 });
 
 test('derives route parity counters by web route group', () => {
@@ -127,7 +161,7 @@ test('derives route parity counters by web route group', () => {
   }
 });
 
-test('marks N0006 energy analytics and diagnostics routes with implemented evidence', () => {
+test('marks implemented energy analytics and diagnostics routes with evidence', () => {
   const implementedRouteIds = [
     'battery',
     'battery-health',
@@ -156,32 +190,59 @@ test('marks N0006 energy analytics and diagnostics routes with implemented evide
 
   for (const routeId of ['energy-products', 'energy-flow', 'power-flow']) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
-    expect(route?.implementationStatus).toBe('implemented');
-    expect(route?.evidence).toMatch(/^Implemented: /);
+    expect(route?.implementationStatus).toBe('native-summary');
+    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.evidence).toMatch(/^Native summary: /);
   }
 });
 
-test('marks N0007 notification platform routes with implemented or honest unavailable evidence', () => {
+test('marks notification platform routes with implemented or honest unavailable evidence', () => {
   const implementedRouteIds = [
     'alerts',
-    'alert-studio',
-    'alert-rules',
     'notifications',
     'notifications-inbox',
     'notifications-archived',
     'notifications-alerts',
     'notifications-channels',
     'notifications-webhooks',
-    'notifications-browser',
     'notifications-quiet-hours',
+    'notifications-audit',
+  ];
+  const nativeSummaryRouteIds = [
+    'alert-studio',
+    'alert-rules',
+    'notifications-browser',
     'notifications-rules',
     'notifications-studio',
-    'notifications-audit',
   ];
 
   for (const routeId of implementedRouteIds) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
+  }
+
+  for (const routeId of nativeSummaryRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('native-summary');
+    expect(route?.evidence).toMatch(/^Native summary: /);
+    expect(route?.deletionReadiness.canDeleteWebRoute).toBe(false);
+  }
+});
+
+test('keeps unported web routes visible as pending rather than success-shaped', () => {
+  const pendingRouteIds = [
+    'api-playground',
+    'admin-slow-queries',
+    'fleet-api',
+    'gas-price',
+    'vehicle-comparison',
+  ];
+
+  for (const routeId of pendingRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('pending');
+    expect(route?.evidence).toMatch(/^Pending: /);
+    expect(route?.deletionReadiness.status).toBe('blocked');
   }
 });

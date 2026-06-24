@@ -15,6 +15,7 @@ import { StatusPill } from './components/ui/StatusPill';
 import { NavItem } from './components/navigation/NavItem';
 import {
   getRoutesForNativeTarget,
+  oldWebDeletionReadiness,
   routeGroupParitySummaries,
   routeGroupLabels,
   routeGroups,
@@ -142,6 +143,9 @@ export function AppRoot() {
               {routeParitySummary.pending} unresolved
             </AppText>
             <AppText variant="caption" tone="muted">
+              old web deletion: {oldWebDeletionReadiness.status}
+            </AppText>
+            <AppText variant="caption" tone="muted">
               lifecycle: {platformStatus.appState}
             </AppText>
           </View>
@@ -161,6 +165,9 @@ export function AppRoot() {
               </AppText>
               <AppText variant="caption" tone="muted">
                 {routeParitySummary.pending} unresolved routes
+              </AppText>
+              <AppText variant="caption" tone="muted">
+                Old-web deletion remains blocked until the final parity gate.
               </AppText>
               <View style={styles.groupSummaryList}>
                 <AppText variant="caption" tone="muted">
@@ -202,14 +209,19 @@ interface RouteParityPanelProps {
 }
 
 function routeStatusCopy(route: WebRouteDefinition) {
-  return route.implementationStatus === 'implemented'
-    ? { label: 'Implemented', state: 'online' as const }
-    : { label: 'Unresolved', state: 'warning' as const };
+  switch (route.nativeImplementationStatus) {
+    case 'implemented':
+      return { label: 'Implemented', state: 'online' as const };
+    case 'native-summary':
+      return { label: 'Native summary', state: 'warning' as const };
+    case 'pending':
+      return { label: 'Pending', state: 'warning' as const };
+  }
 }
 
 function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
   const pendingRoutes = mappedRoutes.filter(
-    mappedRoute => mappedRoute.implementationStatus === 'pending',
+    mappedRoute => mappedRoute.nativeImplementationStatus !== 'implemented',
   );
 
   return (
@@ -222,7 +234,8 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
           <AppText tone="secondary">
             {route.label} owns {route.parity.total} web routes from
             web/src/App.tsx. Each route renders native parity evidence without
-            browser or Electron embedding.
+            browser or Electron embedding, and old-web deletion stays blocked
+            until the final parity gate.
           </AppText>
         </View>
         <View style={styles.parityStats}>
@@ -278,14 +291,20 @@ function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
                   <AppText variant="caption" tone="muted">
                     {mappedRoute.webPath}
                   </AppText>
+                  <AppText variant="caption" tone="muted">
+                    Web {mappedRoute.webImplementationStatus}; native{' '}
+                    {mappedRoute.nativeImplementationStatus}; deletion{' '}
+                    {mappedRoute.deletionReadiness.status}
+                  </AppText>
                 </View>
-                <AppText
-                  variant="caption"
-                  tone="muted"
-                  style={styles.routeEvidence}
-                >
-                  {mappedRoute.evidence}
-                </AppText>
+                <View style={styles.routeEvidence}>
+                  <AppText variant="caption" tone="muted">
+                    {mappedRoute.evidence}
+                  </AppText>
+                  <AppText variant="caption" tone="muted">
+                    Deletion blocked: {mappedRoute.deletionReadiness.blocker}
+                  </AppText>
+                </View>
               </View>
             );
           })}

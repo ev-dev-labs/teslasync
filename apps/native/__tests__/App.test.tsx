@@ -162,7 +162,10 @@ test('renders the TeslaSync native shell', async () => {
   expect(serialized).toContain('Driving');
   expect(serialized).toContain('Auth');
   expect(serialized).toContain('Native route parity');
+  expect(serialized).toContain('old web deletion: ');
+  expect(serialized).toContain('blocked');
   expect(serialized).toContain('Unresolved by group');
   expect(serialized).toContain('Route implementation status');
   expect(serialized).toContain('Route parity evidence');
+  expect(serialized).toContain('final parity gate');
 });

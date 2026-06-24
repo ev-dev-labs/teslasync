@@ -10,7 +10,12 @@ export type RouteId =
   | 'settings';
 
 export type RouteGroup = 'command' | 'fleet' | 'operations' | 'platform';
-export type RouteImplementationStatus = 'implemented' | 'pending';
+export type RouteImplementationStatus =
+  | 'implemented'
+  | 'native-summary'
+  | 'pending';
+export type WebRouteImplementationStatus = 'implemented';
+export type OldWebDeletionStatus = 'blocked';
 
 export const routeGroups = [
   'command',
@@ -41,15 +46,25 @@ export interface RouteDefinition {
   parity: RouteParitySummary;
 }
 
+export interface RouteDeletionReadiness {
+  status: OldWebDeletionStatus;
+  canDeleteWebRoute: false;
+  finalParityGateRequired: true;
+  blocker: string;
+}
+
 export interface WebRouteDefinition {
   id: string;
   sourcePath: string;
   webPath: string;
   group: RouteGroup;
   label: string;
+  webImplementationStatus: WebRouteImplementationStatus;
+  nativeImplementationStatus: RouteImplementationStatus;
   implementationStatus: RouteImplementationStatus;
   nativeTarget: RouteId;
   evidence: string;
+  deletionReadiness: RouteDeletionReadiness;
 }
 
 interface NativeRouteDefinition {
@@ -67,14 +82,16 @@ interface WebRouteInput {
   group: RouteGroup;
   label: string;
   implementationStatus?: RouteImplementationStatus;
+  nativeImplementationStatus?: RouteImplementationStatus;
   nativeTarget: RouteId;
   evidence?: string;
+  deletionBlocker?: string;
 }
 
 export const EXPECTED_WEB_ROUTE_COUNT = 157;
 
 const redirectRouteEvidence =
-  'Implemented: Native deep-link parsing resolves this redirect route to a typed native target without embedding the web app.';
+  'Native summary: Native deep-link parsing resolves this redirect route to a typed native target without embedding the web app; destination-specific parity remains gated.';
 
 const implementedEvidenceByTarget: Record<RouteId, string> = {
   dashboard:
@@ -97,6 +114,99 @@ const implementedEvidenceByTarget: Record<RouteId, string> = {
     'Implemented: SettingsScreen renders platform, preferences, safety, Helix, notification, auth, and API contract evidence.',
 };
 
+const implementedRouteIds = new Set<string>([
+  'vehicles',
+  'vehicles-id',
+  'charging',
+  'charging-id',
+  'drives',
+  'drives-id',
+  'drives-id-replay',
+  'trips',
+  'trips-id',
+  'energy',
+  'battery',
+  'battery-health',
+  'analytics',
+  'efficiency',
+  'battery-degradation',
+  'tco',
+  'analytics-tco',
+  'sleep-efficiency',
+  'temperature-impact',
+  'route-efficiency',
+  'regen-efficiency',
+  'speed-profile',
+  'alerts',
+  'notifications',
+  'notifications-inbox',
+  'notifications-archived',
+  'notifications-alerts',
+  'notifications-channels',
+  'notifications-webhooks',
+  'notifications-quiet-hours',
+  'notifications-audit',
+  'system-status',
+  'admin-telemetry-coverage',
+  'admin-live-signals',
+  'admin-audit-log',
+  'signals',
+  'signal-explorer',
+  'live-monitor',
+  'tesla-account',
+] as const);
+
+const nativeSummaryRouteIds = new Set<string>([
+  'year-review-year',
+  'shared-drive-token',
+  'root-layout',
+  'live',
+  'vehicles-id-access',
+  'digital-twin',
+  'commands',
+  'command-history',
+  'automations',
+  'automations-list',
+  'automations-new',
+  'automations-id-edit',
+  'alert-studio',
+  'alert-rules',
+  'notifications-browser',
+  'notifications-rules',
+  'notifications-studio',
+  'settings',
+  'settings-safety',
+  'account-2fa',
+  'account-sessions',
+  'account-privacy',
+  'integrations-helix',
+  'charging-curve',
+  'charging-curves',
+  'charging-vampire-drain',
+  'sharing-trips',
+  'analytics-lifetime',
+  'compare',
+  'analytics-compare',
+  'admin',
+  'admin-dlq',
+  'api-logs',
+  'dev-tools',
+  'power-sql',
+  'power-grafana',
+  'power-dashboards',
+  'signal-log',
+  'data-repair',
+  'backup',
+  'exports',
+  'energy-flow',
+  'power-flow',
+  'energy-products',
+  'battery-cells',
+  'safety-settings',
+  'not-found-layout',
+  'not-found-root',
+] as const);
+
 function normalizeWebPath(sourcePath: string) {
   if (sourcePath === '/' || sourcePath === '*') {
     return sourcePath;
@@ -105,17 +215,72 @@ function normalizeWebPath(sourcePath: string) {
   return `/${sourcePath}`;
 }
 
+function nativeStatusForRoute(
+  definition: WebRouteInput,
+): RouteImplementationStatus {
+  if (definition.nativeImplementationStatus) {
+    return definition.nativeImplementationStatus;
+  }
+  if (definition.implementationStatus) {
+    return definition.implementationStatus;
+  }
+  if (implementedRouteIds.has(definition.id)) {
+    return 'implemented';
+  }
+  if (nativeSummaryRouteIds.has(definition.id)) {
+    return 'native-summary';
+  }
+  return 'pending';
+}
+
+function defaultEvidenceForRoute(
+  definition: WebRouteInput,
+  status: RouteImplementationStatus,
+) {
+  if (status === 'implemented') {
+    return implementedEvidenceByTarget[definition.nativeTarget];
+  }
+  if (status === 'native-summary') {
+    return `Native summary: ${definition.label} is mapped to the ${definition.nativeTarget} native route with visible readiness evidence, but dedicated deletion-ready parity is still pending.`;
+  }
+  return `Pending: ${definition.label} is tracked from web/src/App.tsx and mapped to the ${definition.nativeTarget} native route, but dedicated React Native parity has not been implemented yet.`;
+}
+
+function deletionReadinessForRoute(
+  definition: WebRouteInput,
+  status: RouteImplementationStatus,
+): RouteDeletionReadiness {
+  const blocker =
+    definition.deletionBlocker ??
+    (status === 'implemented'
+      ? 'Old-web deletion remains blocked until the final parity gate validates this route across native targets.'
+      : `${definition.label} is ${status}; old-web deletion remains blocked until dedicated native parity and the final parity gate are complete.`);
+
+  return {
+    status: 'blocked',
+    canDeleteWebRoute: false,
+    finalParityGateRequired: true,
+    blocker,
+  };
+}
+
 function webRoute(definition: WebRouteInput): WebRouteDefinition {
-  const implementationStatus: RouteImplementationStatus =
-    definition.implementationStatus ?? 'implemented';
+  const nativeImplementationStatus = nativeStatusForRoute(definition);
   const evidence =
-    definition.evidence ?? implementedEvidenceByTarget[definition.nativeTarget];
+    definition.evidence ??
+    defaultEvidenceForRoute(definition, nativeImplementationStatus);
 
   return {
     ...definition,
-    implementationStatus,
+    webImplementationStatus: 'implemented',
+    nativeImplementationStatus,
+    implementationStatus: nativeImplementationStatus,
     webPath: normalizeWebPath(definition.sourcePath),
     evidence,
+    deletionReadiness: deletionReadinessForRoute(
+      definition,
+      nativeImplementationStatus,
+    ),
   };
 }
 
@@ -400,7 +565,7 @@ export const webRouteManifest = [
     label: 'Legacy Alert Studio Redirect',
     nativeTarget: 'alerts',
     evidence:
-      'Implemented: AlertsScreen renders native notification-studio write actions as unavailable instead of claiming unsupported rule editing.',
+      'Native summary: AlertsScreen renders notification-studio write actions as unavailable instead of claiming unsupported rule editing.',
   }),
   webRoute({
     id: 'alert-rules',
@@ -409,7 +574,7 @@ export const webRouteManifest = [
     label: 'Legacy Alert Rules Redirect',
     nativeTarget: 'alerts',
     evidence:
-      'Implemented: AlertsScreen renders read-only alert rule inventory from /alerts/rules.',
+      'Native summary: AlertsScreen renders read-only alert rule inventory from /alerts/rules while edits, snooze, and test sends remain unavailable.',
   }),
   webRoute({
     id: 'notifications',
@@ -470,7 +635,7 @@ export const webRouteManifest = [
     label: 'Browser Notifications',
     nativeTarget: 'alerts',
     evidence:
-      'Implemented: AlertsScreen renders native push registration as unavailable, so browser/push parity is visible without fake success.',
+      'Native summary: AlertsScreen renders native push registration as unavailable, so browser/push parity is visible without fake success.',
   }),
   webRoute({
     id: 'notifications-quiet-hours',
@@ -488,7 +653,7 @@ export const webRouteManifest = [
     label: 'Notification Rules',
     nativeTarget: 'alerts',
     evidence:
-      'Implemented: AlertsScreen renders alert notification rules from /alerts/rules.',
+      'Native summary: AlertsScreen renders alert notification rules from /alerts/rules while write actions remain blocked.',
   }),
   webRoute({
     id: 'notifications-studio',
@@ -497,7 +662,7 @@ export const webRouteManifest = [
     label: 'Notifications Studio',
     nativeTarget: 'alerts',
     evidence:
-      'Implemented: AlertsScreen renders native notification studio actions as unavailable until validation and confirmation gates exist.',
+      'Native summary: AlertsScreen renders native notification studio actions as unavailable until validation and confirmation gates exist.',
   }),
   webRoute({
     id: 'notifications-audit',
@@ -1403,6 +1568,17 @@ export function getRouteParitySummary() {
 }
 
 export const routeParitySummary = getRouteParitySummary();
+
+export const oldWebDeletionReadiness = {
+  status: 'blocked',
+  canDeleteOldWeb: false,
+  finalParityGateRequired: true,
+  totalRoutes: routeParitySummary.total,
+  implementedRoutes: routeParitySummary.implemented,
+  unresolvedRoutes: routeParitySummary.pending,
+  blocker:
+    'Old-web deletion is blocked until every web/src/App.tsx route has dedicated React Native parity and the final parity gate passes.',
+} as const;
 
 export const routes: RouteDefinition[] = nativeRoutes.map(route => {
   const targetRoutes = getRoutesForNativeTarget(route.id);
