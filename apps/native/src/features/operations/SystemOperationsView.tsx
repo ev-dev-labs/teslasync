@@ -51,6 +51,7 @@ import {
   OperationsRouteReadiness,
   type OperationsRouteReadinessItem,
 } from './OperationsRouteReadiness';
+import { NotFoundRouteSection } from './NotFoundRouteSection';
 
 const systemReadinessItems: OperationsRouteReadinessItem[] = [
   {
@@ -251,6 +252,7 @@ export function SystemOperationsView() {
         )}
       />
       <AdminOperationsReadinessSection />
+      <NotFoundRouteSection />
       <OperationsRouteReadiness
         title="System, telemetry, and diagnostics route readiness"
         subtitle="N0006 exposes implemented diagnostic surfaces and leaves high-risk admin tools visibly unavailable."

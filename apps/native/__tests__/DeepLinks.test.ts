@@ -60,6 +60,23 @@ describe('native deep-link route parsing', () => {
     expect(parsed.reason).toMatch(/^Native summary:/);
   });
 
+  test('maps shared-drive token links to implemented native driving parity', () => {
+    const parsed = parseDeepLink('teslasync://s/public-drive-token');
+
+    expect(parsed).toEqual(
+      expect.objectContaining({
+        matched: true,
+        sourcePath: 's/public-drive-token',
+        webPath: '/s/:token',
+        routeId: 'driving',
+        label: 'Shared Drive',
+        implementationStatus: 'implemented',
+        params: {token: 'public-drive-token'},
+      }),
+    );
+    expect(parsed.reason).toMatch(/^Implemented:/);
+  });
+
   test('returns unmatched status for unknown paths instead of redirecting silently', () => {
     const parsed = parseDeepLink('teslasync://not-a-route');
 

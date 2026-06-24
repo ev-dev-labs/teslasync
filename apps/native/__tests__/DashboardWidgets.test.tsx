@@ -311,6 +311,15 @@ test('renders all implemented native dashboard widgets with API-backed content',
   expect(serialized).toContain('Dashboard route readiness');
   expect(serialized).toContain('Quick stats and glance');
   expect(serialized).toContain('Search and route command');
+  expect(serialized).toContain('R0001 command route surfaces');
+  expect(serialized).toContain('R0001 command route evidence');
+  expect(serialized).toContain('Quick Stats route');
+  expect(serialized).toContain('Glance route');
+  expect(serialized).toContain('Year Review route');
+  expect(serialized).toContain('Watch Face route');
+  expect(serialized).toContain('Root Shell route');
+  expect(serialized).toContain('Explore route');
+  expect(serialized).toContain('Search route');
   expect(serialized).toContain('Auth and account widgets');
   expect(serialized).toContain('Settings and platform widgets');
   expect(serialized).toContain('Maps and location widgets');

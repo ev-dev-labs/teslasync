@@ -17,6 +17,7 @@ import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { MetricCard } from '../components/ui/MetricCard';
 import { StatusPill } from '../components/ui/StatusPill';
+import { CommandDashboardRoutesSurface } from '../features/command/CommandDashboardRoutesSurface';
 import type { RouteId } from '../navigation/routes';
 import { colors, spacing } from '../theme/tokens';
 import {
@@ -35,18 +36,18 @@ const dashboardReadinessItems: RouteReadinessItem[] = [
     label: 'Quick stats and glance',
     route: '/quick-stats, /glance',
     api: '/vehicles, /alerts, /system/status',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
-      'Dashboard metrics render API-backed fleet, alert, system, and widget counts while dedicated quick-stat route parity remains deletion-blocked.',
+      'Dashboard metrics render API-backed fleet, alert, system, and widget counts through the R0001 command route surface.',
   },
   {
     id: 'search',
     label: 'Search and route command',
     route: '/search',
     api: 'typed route manifest',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
-      'The native shell resolves web paths through the typed route manifest; full global data search is not claimed in this slice.',
+      'The native shell resolves route ids and web paths through RouteSearchPanel and the typed route manifest.',
   },
   {
     id: 'analytics-summaries',
@@ -62,9 +63,9 @@ const dashboardReadinessItems: RouteReadinessItem[] = [
     label: 'Explore, watch, chatbot, and anomaly routes',
     route: '/explore, /watch, /chatbot, /anomaly-detection',
     api: 'native route/widget registry',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
-      'Unsupported command surfaces stay visible as native summaries; no browser shell, WebView, or fake assistant response is embedded.',
+      'Explore and watch render native widget/vehicle evidence; assistant and anomaly routes remain separately tracked outside R0001.',
   },
 ];
 
@@ -180,6 +181,18 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
         parityStatusLabel="Dashboard chart parity"
       />
 
+      <CommandDashboardRoutesSurface
+        alerts={alerts}
+        hasError={Boolean(vehiclesQuery.error || alertsQuery.error || systemQuery.error)}
+        isLoading={
+          vehiclesQuery.isLoading ||
+          alertsQuery.isLoading ||
+          systemQuery.isLoading
+        }
+        systemStatus={systemQuery.data}
+        vehicles={vehicles}
+      />
+
       <GlassPanel style={styles.registryPanel}>
         <SectionHeader
           title="Native widget registry"
@@ -221,7 +234,7 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
 
       <RouteReadinessPanel
         title="Dashboard route readiness"
-        subtitle="Command/dashboard web routes are visible as React Native summaries until dedicated deletion-ready parity exists."
+        subtitle="Command/dashboard web routes have visible React Native evidence and stay blocked only by the final parity gate."
         items={dashboardReadinessItems}
         testID="dashboard-route-readiness"
       />

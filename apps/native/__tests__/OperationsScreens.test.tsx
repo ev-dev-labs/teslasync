@@ -446,6 +446,10 @@ test('renders system, telemetry, audit, and live signal diagnostics', async () =
   expect(serialized).toContain('Fleet Telemetry diagnostics');
   expect(serialized).toContain('Live signal diagnostics');
   expect(serialized).toContain('Admin operations readiness');
+  expect(serialized).toContain('Not-found route surfaces');
+  expect(serialized).toContain('R0001 not-found route evidence');
+  expect(serialized).toContain('Layout Not Found route');
+  expect(serialized).toContain('Root Not Found route');
   expect(serialized).toContain('Commands and automations');
   expect(serialized).toContain('Repair, backup, and exports');
   expect(serialized).toContain('Fleet Telemetry coverage');

@@ -7,6 +7,7 @@ import {
   type FleetRouteReadinessItem,
 } from './FleetRouteReadiness';
 import {fleetStyles} from './fleetStyles';
+import {LiveVehicleRouteSection} from './LiveVehicleRouteSection';
 import {VehicleDetailSection} from './VehicleDetailSection';
 import {VehicleFleetOverviewSection} from './VehicleFleetOverviewSection';
 import {VehicleListSection} from './VehicleListSection';
@@ -35,9 +36,9 @@ const vehicleReadinessItems: FleetRouteReadinessItem[] = [
     label: 'Live map coordinates',
     route: '/live',
     api: '/vehicles/{vehicleID}/state',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
-      'Native displays live coordinates when telemetry is present; full map interaction is represented without WebView embedding.',
+      'Native renders a dedicated live map route surface with selected vehicle state, coordinates, speed, power, and explicit empty/error states.',
   },
   {
     id: 'digital-twin',
@@ -96,6 +97,12 @@ export function VehicleFleetView() {
         isLoading={vehicleDetailQuery.isLoading || vehicleStateQuery.isLoading}
         hasDetailError={Boolean(vehicleDetailQuery.error)}
         hasStateError={Boolean(vehicleStateQuery.error)}
+      />
+      <LiveVehicleRouteSection
+        vehicle={detailVehicle}
+        liveState={liveState}
+        isLoading={vehicleDetailQuery.isLoading || vehicleStateQuery.isLoading}
+        hasError={Boolean(vehicleDetailQuery.error || vehicleStateQuery.error)}
       />
       <FleetRouteReadiness
         title="Vehicle route readiness"

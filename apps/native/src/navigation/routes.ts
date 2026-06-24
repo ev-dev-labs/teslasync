@@ -114,6 +114,15 @@ const implementedEvidenceByTarget: Record<RouteId, string> = {
 };
 
 const implementedRouteIds = new Set<string>([
+  'quick-stats',
+  'glance',
+  'year-review-year',
+  'shared-drive-token',
+  'watch',
+  'onboarding',
+  'root-layout',
+  'explore',
+  'live',
   'vehicles',
   'vehicles-id',
   'charging',
@@ -153,18 +162,12 @@ const implementedRouteIds = new Set<string>([
   'signal-explorer',
   'live-monitor',
   'tesla-account',
+  'search',
+  'not-found-layout',
+  'not-found-root',
 ] as const);
 
 const nativeSummaryRouteIds = new Set<string>([
-  'quick-stats',
-  'glance',
-  'year-review-year',
-  'shared-drive-token',
-  'watch',
-  'onboarding',
-  'root-layout',
-  'explore',
-  'live',
   'vehicles-id-access',
   'digital-twin',
   'commands',
@@ -207,8 +210,6 @@ const nativeSummaryRouteIds = new Set<string>([
   'energy-products',
   'battery-cells',
   'safety-settings',
-  'not-found-layout',
-  'not-found-root',
   'geofences',
   'chatbot',
   'tire-pressure',
@@ -273,7 +274,6 @@ const nativeSummaryRouteIds = new Set<string>([
   'vehicle-comparison',
   'charging-heatmap',
   'me-activity',
-  'search',
 ] as const);
 
 function normalizeWebPath(sourcePath: string) {
@@ -443,6 +443,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Quick Stats',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders the R0001 quick-stats native surface from /vehicles, /alerts, /system/status, and the widget registry.',
   }),
   webRoute({
     id: 'glance',
@@ -450,6 +452,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Glance',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders glance metrics, chart summary, loading states, and route evidence with React Native primitives.',
   }),
   webRoute({
     id: 'year-review-year',
@@ -457,6 +461,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Year Review',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders year-review route evidence through native dashboard analytics/widget coverage without fabricating annual totals.',
   }),
   webRoute({
     id: 'shared-drive-token',
@@ -464,6 +470,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Shared Drive',
     nativeTarget: 'driving',
+    evidence:
+      'Implemented: DrivingScreen renders a read-only shared-drive token route surface from selected drive and telemetry data without fake token payloads.',
   }),
   webRoute({
     id: 'watch',
@@ -471,6 +479,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Watch Face',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders watch-face parity through the native vehicle hero/watch summary widget and R0001 command route evidence.',
   }),
   webRoute({
     id: 'onboarding',
@@ -478,6 +488,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Onboarding',
     nativeTarget: 'auth',
+    evidence:
+      'Implemented: AuthScreen renders onboarding route readiness from auth mode, Tesla account handoff, sessions, and TOTP capability evidence.',
   }),
   webRoute({
     id: 'root-layout',
@@ -485,6 +497,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Root Shell',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: AppRoot and DashboardScreen render the root shell, route search, status panel, and parity evidence without WebView or Electron embedding.',
   }),
   webRoute({
     id: 'explore',
@@ -492,6 +506,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Explore',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: DashboardScreen renders explore route evidence through the native widget registry and command surface instead of a browser shell.',
   }),
   webRoute({
     id: 'live',
@@ -499,6 +515,8 @@ export const webRouteManifest = [
     group: 'fleet',
     label: 'Live Map',
     nativeTarget: 'vehicles',
+    evidence:
+      'Implemented: VehiclesScreen renders a dedicated /live native route surface from /vehicles/{vehicleID}/state coordinates, speed, and power.',
   }),
   webRoute({
     id: 'vehicles',
@@ -1587,6 +1605,8 @@ export const webRouteManifest = [
     group: 'command',
     label: 'Search',
     nativeTarget: 'dashboard',
+    evidence:
+      'Implemented: ShellNavigation renders RouteSearchPanel, resolving route ids and web paths from the typed route manifest.',
   }),
   webRoute({
     id: 'not-found-layout',
@@ -1594,6 +1614,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Layout Not Found',
     nativeTarget: 'system',
+    evidence:
+      'Implemented: SystemScreen renders native not-found route diagnostics for unmatched layout-level paths without redirecting into the web fallback.',
   }),
   webRoute({
     id: 'not-found-root',
@@ -1601,6 +1623,8 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Root Not Found',
     nativeTarget: 'system',
+    evidence:
+      'Implemented: SystemScreen renders native root fallback diagnostics and route readiness evidence for unmatched paths.',
   }),
 ] as const satisfies readonly WebRouteDefinition[];
 

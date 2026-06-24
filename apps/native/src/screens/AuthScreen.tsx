@@ -10,6 +10,10 @@ import {
 } from '../api/hooks';
 import type { AuthModeCapabilities } from '../api/types';
 import { KeyValueRow } from '../components/data/KeyValueRow';
+import {
+  RouteReadinessPanel,
+  type RouteReadinessItem,
+} from '../components/data/RouteReadinessPanel';
 import { ScreenSection } from '../components/data/ScreenSection';
 import { EmptyState } from '../components/feedback/EmptyState';
 import { AppButton } from '../components/ui/AppButton';
@@ -25,6 +29,18 @@ const closedCapabilities: AuthModeCapabilities = {
   impersonation: false,
   rbac: false,
 };
+
+const onboardingRouteItems: RouteReadinessItem[] = [
+  {
+    id: 'onboarding',
+    label: 'Onboarding route',
+    route: '/onboarding',
+    api: '/system/auth-mode, /auth/status, /auth/url',
+    status: 'implemented',
+    evidence:
+      'Native onboarding renders identity mode, Tesla account handoff, capability, session, and TOTP readiness without storing tokens or embedding login pages.',
+  },
+];
 
 export function AuthScreen() {
   const authModeQuery = useAuthMode();
@@ -204,6 +220,13 @@ export function AuthScreen() {
           />
         )}
       </ScreenSection>
+
+      <RouteReadinessPanel
+        title="Onboarding route readiness"
+        subtitle="The R0001 onboarding route is implemented by the native Auth surface with explicit unavailable states for unsafe actions."
+        items={onboardingRouteItems}
+        testID="onboarding-route-readiness"
+      />
     </View>
   );
 }

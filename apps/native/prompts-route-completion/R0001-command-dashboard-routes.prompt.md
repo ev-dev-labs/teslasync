@@ -14,3 +14,4 @@ Gate: from `apps/native`, run typecheck, lint, Jest, Windows Jest, Android bundl
 
 Commit: `feat(apps): complete universal command route parity`
 
+STATUS=DONE

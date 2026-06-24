@@ -11,6 +11,7 @@ import {
   type FleetRouteReadinessItem,
 } from './FleetRouteReadiness';
 import {fleetStyles} from './fleetStyles';
+import {SharedDriveTokenSection} from './SharedDriveTokenSection';
 import {TripSummarySection} from './TripSummarySection';
 
 const drivingReadinessItems: FleetRouteReadinessItem[] = [
@@ -46,6 +47,15 @@ const drivingReadinessItems: FleetRouteReadinessItem[] = [
     api: '/drives/{driveID}, /drives/{driveID}/telemetry',
     status: 'implemented',
     evidence: 'Trip detail parity is represented by the selected drive detail and telemetry summary.',
+  },
+  {
+    id: 'shared-drive-token',
+    label: 'Shared drive token route',
+    route: '/s/:token',
+    api: '/drives/{driveID}, /drives/{driveID}/telemetry',
+    status: 'implemented',
+    evidence:
+      'Native renders a read-only shared-drive token surface from real drive and telemetry data without fabricating token payloads.',
   },
   {
     id: 'sharing-trips',
@@ -112,6 +122,12 @@ export function DrivingFleetView() {
         telemetry={telemetry}
         isLoading={telemetryQuery.isLoading}
         hasError={Boolean(telemetryQuery.error)}
+      />
+      <SharedDriveTokenSection
+        drive={detailDrive}
+        telemetry={telemetry}
+        isLoading={drivesQuery.isLoading || detailQuery.isLoading}
+        hasError={Boolean(drivesQuery.error || detailQuery.error || telemetryQuery.error)}
       />
       <FleetRouteReadiness
         title="Driving and trips route readiness"

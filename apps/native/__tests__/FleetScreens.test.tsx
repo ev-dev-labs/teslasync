@@ -221,7 +221,10 @@ test('renders vehicle list, detail, and route readiness sections', async () => {
   expect(serialized).toContain('37.4200, -122.0800');
   expect(serialized).toContain('"/vehicles/1"');
   expect(serialized).toContain('/vehicles/1/state');
+  expect(serialized).toContain('Live map route surface');
+  expect(serialized).toContain('Live route parser');
   expect(serialized).toContain('Live map coordinates');
+  expect(serialized).toContain('dedicated live map route surface');
   expect(serialized).toContain('Access routes are represented with typed route evidence');
 });
 
@@ -253,6 +256,9 @@ test('renders drive list, trip detail, route replay, and readiness sections', as
   expect(serialized).toContain('Route summary ready');
   expect(serialized).toContain('Replay speed summary');
   expect(serialized).toContain('Accessible chart data table');
+  expect(serialized).toContain('Shared drive token route surface');
+  expect(serialized).toContain('Shared drive token resolver');
+  expect(serialized).toContain('Token route pattern');
   expect(serialized).toContain('Trips list parity');
 });
 

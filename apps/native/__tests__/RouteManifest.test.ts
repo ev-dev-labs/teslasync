@@ -200,6 +200,34 @@ test('marks implemented energy analytics and diagnostics routes with evidence', 
   }
 });
 
+test('marks R0001 command, shared, onboarding, live, search, and fallback routes implemented', () => {
+  const implementedRouteIds = [
+    'quick-stats',
+    'glance',
+    'year-review-year',
+    'shared-drive-token',
+    'watch',
+    'onboarding',
+    'root-layout',
+    'explore',
+    'live',
+    'search',
+    'not-found-layout',
+    'not-found-root',
+  ];
+
+  for (const routeId of implementedRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
+    expect(route?.deletionReadiness.status).toBe('blocked');
+  }
+
+  expect(routes.find(route => route.id === 'dashboard')?.parity.implemented).toBeGreaterThanOrEqual(7);
+  expect(routes.find(route => route.id === 'driving')?.parity.implemented).toBeGreaterThanOrEqual(5);
+  expect(routes.find(route => route.id === 'vehicles')?.parity.implemented).toBeGreaterThanOrEqual(3);
+});
+
 test('marks notification platform routes with implemented or honest unavailable evidence', () => {
   const implementedRouteIds = [
     'alerts',
