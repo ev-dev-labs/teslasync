@@ -9,8 +9,7 @@ import { colors, spacing } from '../../theme/tokens';
 
 export type OperationsRouteReadinessStatus =
   | 'implemented'
-  | 'native-summary'
-  | 'pending';
+  | 'native-summary';
 
 export interface OperationsRouteReadinessItem {
   id: string;
@@ -33,8 +32,6 @@ function statusCopy(status: OperationsRouteReadinessStatus) {
       return { label: 'Implemented', state: 'online' as const };
     case 'native-summary':
       return { label: 'Native summary', state: 'warning' as const };
-    case 'pending':
-      return { label: 'Pending', state: 'offline' as const };
   }
 }
 

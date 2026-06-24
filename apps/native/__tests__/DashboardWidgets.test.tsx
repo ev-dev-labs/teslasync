@@ -7,7 +7,6 @@ import {
   getNativeWidgetDefinition,
   IMPLEMENTED_NATIVE_WIDGETS,
   NATIVE_WIDGET_REGISTRY,
-  PENDING_NATIVE_WIDGETS,
 } from '../src/widgets';
 import type {
   Alert,
@@ -35,6 +34,10 @@ const mockUseDrives = jest.fn();
 const mockUseChargingSessions = jest.fn();
 const mockUseSystemStatus = jest.fn();
 const mockUseSystemHealth = jest.fn();
+const mockUseVehicleEnergy = jest.fn();
+const mockUseBatteryDegradationAnalytics = jest.fn();
+const mockUseFleetTelemetryErrorVINs = jest.fn();
+const mockUseFleetTelemetryErrors = jest.fn();
 
 jest.mock('../src/api/hooks', () => ({
   useVehicles: (...args: unknown[]) => mockUseVehicles(...args),
@@ -45,6 +48,13 @@ jest.mock('../src/api/hooks', () => ({
   useChargingSessions: (...args: unknown[]) => mockUseChargingSessions(...args),
   useSystemStatus: (...args: unknown[]) => mockUseSystemStatus(...args),
   useSystemHealth: (...args: unknown[]) => mockUseSystemHealth(...args),
+  useVehicleEnergy: (...args: unknown[]) => mockUseVehicleEnergy(...args),
+  useBatteryDegradationAnalytics: (...args: unknown[]) =>
+    mockUseBatteryDegradationAnalytics(...args),
+  useFleetTelemetryErrorVINs: (...args: unknown[]) =>
+    mockUseFleetTelemetryErrorVINs(...args),
+  useFleetTelemetryErrors: (...args: unknown[]) =>
+    mockUseFleetTelemetryErrors(...args),
 }));
 
 const vehicle: Vehicle = {
@@ -151,6 +161,47 @@ const systemHealth: SystemHealth = {
   },
 };
 
+const vehicleEnergy = {
+  vehicle_id: 1,
+  period_days: 30,
+  total_energy_used_wh: 152000,
+  total_energy_charged_wh: 165000,
+  total_wh: 165000,
+  total_cost: 48.25,
+  total_distance_m: 820000,
+  avg_efficiency_wh_per_m: 0.185,
+  co2_saved_kg: 42,
+  daily_breakdown: [],
+};
+
+const batteryDegradation = {
+  vehicle_id: 1,
+  current_health: 93,
+  current_capacity: 97.6,
+  current_degradation: 2.4,
+  current_temp: 24.5,
+  stress_level: 'Low',
+};
+
+const telemetryErrorVIN = {
+  id: 1,
+  vin: '5YJTESLASYNC0001',
+  active: false,
+  first_seen_at: '2026-06-01T00:00:00Z',
+  last_seen_at: '2026-06-02T00:00:00Z',
+  resolved_at: '2026-06-02T01:00:00Z',
+};
+
+const telemetryError = {
+  id: 1,
+  vin: '5YJTESLASYNC0001',
+  error_code: 'Recovered',
+  error_message: 'Telemetry payload recovered after retry.',
+  reported_at: '2026-06-02T00:00:00Z',
+  tesla_updated_at: null,
+  fetched_at: '2026-06-02T00:01:00Z',
+};
+
 function query<T>(data: T): QueryState<T> {
   return {data, isLoading: false, isFetching: false, error: null};
 }
@@ -179,6 +230,10 @@ beforeEach(() => {
   mockUseChargingSessions.mockReturnValue(query([chargingSession]));
   mockUseSystemStatus.mockReturnValue(query(systemStatus));
   mockUseSystemHealth.mockReturnValue(query(systemHealth));
+  mockUseVehicleEnergy.mockReturnValue(query(vehicleEnergy));
+  mockUseBatteryDegradationAnalytics.mockReturnValue(query(batteryDegradation));
+  mockUseFleetTelemetryErrorVINs.mockReturnValue(query([telemetryErrorVIN]));
+  mockUseFleetTelemetryErrors.mockReturnValue(query([telemetryError]));
 });
 
 function renderWithQueryClient(element: React.ReactElement) {
@@ -191,7 +246,7 @@ function renderWithQueryClient(element: React.ReactElement) {
   );
 }
 
-test('native dashboard widget registry is typed with implemented and pending statuses', () => {
+test('native dashboard widget registry is typed with implemented statuses', () => {
   expect(IMPLEMENTED_NATIVE_WIDGETS.map(widget => widget.id)).toEqual([
     'vehicle-hero',
     'battery-health',
@@ -200,20 +255,19 @@ test('native dashboard widget registry is typed with implemented and pending sta
     'recent-drives',
     'charging-summary',
     'system-status',
+    'battery-cells',
+    'live-power-flow',
+    'telemetry-errors',
   ]);
-  expect(PENDING_NATIVE_WIDGETS.length).toBeGreaterThan(0);
+  expect(IMPLEMENTED_NATIVE_WIDGETS).toHaveLength(NATIVE_WIDGET_REGISTRY.length);
 
   for (const widget of NATIVE_WIDGET_REGISTRY) {
-    expect(['implemented', 'pending']).toContain(widget.status);
+    expect(widget.status).toBe('implemented');
     expect(widget.webWidgetIds.length).toBeGreaterThan(0);
-    if (widget.status === 'implemented') {
-      expect(widget.component).toEqual(expect.any(Function));
-    } else {
-      expect(widget.pendingReason.length).toBeGreaterThan(0);
-    }
+    expect(widget.component).toEqual(expect.any(Function));
   }
 
-  expect(getNativeWidgetDefinition('battery-cells')?.status).toBe('pending');
+  expect(getNativeWidgetDefinition('battery-cells')?.status).toBe('implemented');
 });
 
 test('renders all implemented native dashboard widgets with API-backed content', async () => {
@@ -235,7 +289,12 @@ test('renders all implemented native dashboard widgets with API-backed content',
   expect(serialized).toContain('Recent drives');
   expect(serialized).toContain('Charging summary');
   expect(serialized).toContain('System status');
-  expect(serialized).toContain('Requires a native cell heatmap primitive');
+  expect(serialized).toContain('Battery cells');
+  expect(serialized).toContain('Live power flow');
+  expect(serialized).toContain('Telemetry errors');
+  expect(serialized).toContain('Cell heatmap');
+  expect(serialized).toContain('Animated diagram');
+  expect(serialized).toContain('Telemetry payload recovered after retry.');
 });
 
 test('keeps implemented widget shells visible while dashboard data is loading', async () => {
@@ -247,6 +306,16 @@ test('keeps implemented widget shells visible while dashboard data is loading', 
   mockUseChargingSessions.mockReturnValue(loadingQuery<ChargingSession[]>());
   mockUseSystemStatus.mockReturnValue(loadingQuery<SystemStatus>());
   mockUseSystemHealth.mockReturnValue(loadingQuery<SystemHealth>());
+  mockUseVehicleEnergy.mockReturnValue(loadingQuery<typeof vehicleEnergy>());
+  mockUseBatteryDegradationAnalytics.mockReturnValue(
+    loadingQuery<typeof batteryDegradation>(),
+  );
+  mockUseFleetTelemetryErrorVINs.mockReturnValue(
+    loadingQuery<Array<typeof telemetryErrorVIN>>(),
+  );
+  mockUseFleetTelemetryErrors.mockReturnValue(
+    loadingQuery<Array<typeof telemetryError>>(),
+  );
 
   let tree: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -266,6 +335,9 @@ test('keeps implemented widget shells visible while dashboard data is loading', 
   expect(serialized).toContain('Loading drives');
   expect(serialized).toContain('Loading charging');
   expect(serialized).toContain('Loading system status');
+  expect(serialized).toContain('Loading battery cell context');
+  expect(serialized).toContain('Loading power-flow context');
+  expect(serialized).toContain('Loading telemetry errors');
 });
 
 test('renders widget empty and API error states instead of hiding dashboard regions', async () => {
@@ -279,6 +351,18 @@ test('renders widget empty and API error states instead of hiding dashboard regi
   );
   mockUseSystemStatus.mockReturnValue(failedQuery<SystemStatus>('status unavailable'));
   mockUseSystemHealth.mockReturnValue(failedQuery<SystemHealth>('health unavailable'));
+  mockUseVehicleEnergy.mockReturnValue(
+    failedQuery<typeof vehicleEnergy>('energy unavailable'),
+  );
+  mockUseBatteryDegradationAnalytics.mockReturnValue(
+    failedQuery<typeof batteryDegradation>('degradation unavailable'),
+  );
+  mockUseFleetTelemetryErrorVINs.mockReturnValue(
+    failedQuery<Array<typeof telemetryErrorVIN>>('telemetry VINs unavailable'),
+  );
+  mockUseFleetTelemetryErrors.mockReturnValue(
+    failedQuery<Array<typeof telemetryError>>('telemetry errors unavailable'),
+  );
 
   let tree: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -298,4 +382,7 @@ test('renders widget empty and API error states instead of hiding dashboard regi
   expect(serialized).toContain('Drive API unavailable');
   expect(serialized).toContain('Charging API unavailable');
   expect(serialized).toContain('System API unavailable');
+  expect(serialized).toContain('No battery cell vehicle');
+  expect(serialized).toContain('No power-flow vehicle');
+  expect(serialized).toContain('Telemetry error APIs unavailable');
 });

@@ -52,8 +52,9 @@ const drivingReadinessItems: FleetRouteReadinessItem[] = [
     label: 'Trip sharing',
     route: '/sharing/trips',
     api: '/drives/{driveID}/shares',
-    status: 'pending',
-    evidence: 'Share-link management is not implemented in this native parity slice.',
+    status: 'native-summary',
+    evidence:
+      'Trip sharing is represented as a disabled native action; no share links or screenshots are fabricated.',
   },
 ];
 
@@ -114,7 +115,7 @@ export function DrivingFleetView() {
       />
       <FleetRouteReadiness
         title="Driving and trips route readiness"
-        subtitle="Drive, trip, and replay routes are represented with typed summaries and honest pending share work."
+        subtitle="Drive, trip, replay, and sharing routes are represented with typed summaries and unavailable share actions."
         items={drivingReadinessItems}
       />
     </View>

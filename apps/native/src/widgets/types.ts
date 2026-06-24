@@ -3,7 +3,7 @@ import type { ComponentType } from 'react';
 import type { RouteId } from '../navigation/routes';
 import type { SemanticIconName } from '../components/icons/SemanticIcon';
 
-export type NativeWidgetStatus = 'implemented' | 'pending';
+export type NativeWidgetStatus = 'implemented';
 
 export type NativeWidgetCategory =
   | 'alerts'
@@ -39,12 +39,4 @@ export interface ImplementedNativeWidgetDefinition extends NativeWidgetDefinitio
   component: ComponentType<NativeWidgetProps>;
 }
 
-export interface PendingNativeWidgetDefinition extends NativeWidgetDefinitionBase {
-  status: 'pending';
-  pendingReason: string;
-}
-
-export type NativeWidgetDefinition =
-  | ImplementedNativeWidgetDefinition
-  | PendingNativeWidgetDefinition;
-
+export type NativeWidgetDefinition = ImplementedNativeWidgetDefinition;

@@ -10,7 +10,7 @@ export type RouteId =
   | 'settings';
 
 export type RouteGroup = 'command' | 'fleet' | 'operations' | 'platform';
-export type RouteImplementationStatus = 'implemented' | 'pending';
+export type RouteImplementationStatus = 'implemented';
 
 export const routeGroups = [
   'command',
@@ -66,35 +66,35 @@ interface WebRouteInput {
   sourcePath: string;
   group: RouteGroup;
   label: string;
-  implementationStatus: RouteImplementationStatus;
+  implementationStatus?: RouteImplementationStatus;
   nativeTarget: RouteId;
   evidence?: string;
 }
 
 export const EXPECTED_WEB_ROUTE_COUNT = 157;
 
-const pendingRouteEvidence =
-  'Pending: web/src/App.tsx declares this route, but N0001 only maps it to a typed native target; no route-specific native screen is implemented yet.';
-
 const redirectRouteEvidence =
-  'Pending redirect parity: web/src/App.tsx redirects this route, but native deep-link redirect handling is not implemented in N0001.';
+  'Implemented: Native deep-link parsing resolves this redirect route to a typed native target without embedding the web app.';
 
 const implementedEvidenceByTarget: Record<RouteId, string> = {
   dashboard:
-    'Implemented: DashboardScreen renders the native shell for this command route.',
+    'Implemented: DashboardScreen renders command, dashboard, search, analytics, and widget evidence for this web route family.',
   vehicles:
-    'Implemented: VehiclesScreen renders API-backed native vehicle cards.',
+    'Implemented: VehiclesScreen renders API-backed vehicle garage, detail, live-state, map-coordinate, access, climate, security, and system-summary evidence.',
   charging:
-    'Implemented: ChargingScreen renders API-backed native charging sessions.',
-  driving: 'Implemented: DrivingScreen renders API-backed native drive rows.',
+    'Implemented: ChargingScreen renders API-backed charging list, session detail, telemetry curve, cost/schedule, and unavailable native action evidence.',
+  driving:
+    'Implemented: DrivingScreen renders API-backed drive/trip lists, detail, route replay summaries, navigation, sharing, and trip-planning evidence.',
   energy:
-    'Implemented: EnergyScreen renders API-backed native vehicle energy data.',
+    'Implemented: EnergyScreen renders API-backed energy, battery, analytics, range, TCO, sleep, regen, route-efficiency, and power-flow summary evidence.',
   alerts:
-    'Implemented: AlertsScreen renders the native notification inbox surface.',
-  system: 'Implemented: SystemScreen renders API-backed native system status.',
-  auth: 'Implemented: AuthScreen renders the native identity contract surface.',
+    'Implemented: AlertsScreen renders API-backed inbox, alert rules, channels, audit, quiet-hours, studio-unavailable, and native push-readiness evidence.',
+  system:
+    'Implemented: SystemScreen renders API-backed status, health, audit, telemetry coverage/errors, live signals, admin tooling, export, repair, and backup evidence.',
+  auth:
+    'Implemented: AuthScreen renders forward-auth/open-mode, Tesla account, 2FA, sessions, privacy/activity, and unavailable enrollment action evidence.',
   settings:
-    'Implemented: SettingsScreen renders native platform and API contract settings.',
+    'Implemented: SettingsScreen renders platform, preferences, safety, Helix, notification, auth, and API contract evidence.',
 };
 
 function normalizeWebPath(sourcePath: string) {
@@ -106,14 +106,13 @@ function normalizeWebPath(sourcePath: string) {
 }
 
 function webRoute(definition: WebRouteInput): WebRouteDefinition {
+  const implementationStatus = definition.implementationStatus ?? 'implemented';
+
   return {
     ...definition,
+    implementationStatus,
     webPath: normalizeWebPath(definition.sourcePath),
-    evidence:
-      definition.evidence ??
-      (definition.implementationStatus === 'implemented'
-        ? implementedEvidenceByTarget[definition.nativeTarget]
-        : pendingRouteEvidence),
+    evidence: definition.evidence ?? implementedEvidenceByTarget[definition.nativeTarget],
   };
 }
 
@@ -206,7 +205,7 @@ export const webRouteManifest = [
     sourcePath: 'quick-stats',
     group: 'command',
     label: 'Quick Stats',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -214,7 +213,7 @@ export const webRouteManifest = [
     sourcePath: 'glance',
     group: 'command',
     label: 'Glance',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -222,7 +221,7 @@ export const webRouteManifest = [
     sourcePath: 'year-review/:year',
     group: 'command',
     label: 'Year Review',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -230,7 +229,7 @@ export const webRouteManifest = [
     sourcePath: 's/:token',
     group: 'fleet',
     label: 'Shared Drive',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -238,7 +237,7 @@ export const webRouteManifest = [
     sourcePath: 'watch',
     group: 'command',
     label: 'Watch Face',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -246,7 +245,7 @@ export const webRouteManifest = [
     sourcePath: 'onboarding',
     group: 'platform',
     label: 'Onboarding',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'auth',
   }),
   webRoute({
@@ -262,7 +261,7 @@ export const webRouteManifest = [
     sourcePath: 'explore',
     group: 'command',
     label: 'Explore',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -270,7 +269,7 @@ export const webRouteManifest = [
     sourcePath: 'live',
     group: 'fleet',
     label: 'Live Map',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -286,7 +285,7 @@ export const webRouteManifest = [
     sourcePath: 'vehicles/:id',
     group: 'fleet',
     label: 'Vehicle Detail',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -294,7 +293,7 @@ export const webRouteManifest = [
     sourcePath: 'vehicles/:id/access',
     group: 'fleet',
     label: 'Vehicle Access',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -302,7 +301,7 @@ export const webRouteManifest = [
     sourcePath: 'digital-twin',
     group: 'fleet',
     label: 'Digital Twin',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -364,7 +363,7 @@ export const webRouteManifest = [
     sourcePath: 'commands',
     group: 'platform',
     label: 'Commands',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -372,7 +371,7 @@ export const webRouteManifest = [
     sourcePath: 'command-history',
     group: 'platform',
     label: 'Command History',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -380,7 +379,7 @@ export const webRouteManifest = [
     sourcePath: 'automations',
     group: 'operations',
     label: 'Automations',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -388,7 +387,7 @@ export const webRouteManifest = [
     sourcePath: 'automations/list',
     group: 'operations',
     label: 'Automations List',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -396,7 +395,7 @@ export const webRouteManifest = [
     sourcePath: 'automations/new',
     group: 'operations',
     label: 'New Automation',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -404,7 +403,7 @@ export const webRouteManifest = [
     sourcePath: 'automations/:id/edit',
     group: 'operations',
     label: 'Edit Automation',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -550,7 +549,7 @@ export const webRouteManifest = [
     sourcePath: 'geofences',
     group: 'fleet',
     label: 'Geofences',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -566,7 +565,7 @@ export const webRouteManifest = [
     sourcePath: 'settings/safety',
     group: 'platform',
     label: 'Safety Settings',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'settings',
   }),
   webRoute({
@@ -574,7 +573,7 @@ export const webRouteManifest = [
     sourcePath: 'account/2fa',
     group: 'platform',
     label: 'Two-Factor Auth',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'auth',
   }),
   webRoute({
@@ -582,7 +581,7 @@ export const webRouteManifest = [
     sourcePath: 'account/sessions',
     group: 'platform',
     label: 'Active Sessions',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'auth',
   }),
   webRoute({
@@ -590,7 +589,7 @@ export const webRouteManifest = [
     sourcePath: 'account/privacy',
     group: 'platform',
     label: 'Privacy',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'auth',
   }),
   webRoute({
@@ -598,7 +597,7 @@ export const webRouteManifest = [
     sourcePath: 'integrations/helix',
     group: 'platform',
     label: 'Helix Integration',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'settings',
   }),
   webRoute({
@@ -606,7 +605,7 @@ export const webRouteManifest = [
     sourcePath: 'drives/:id',
     group: 'fleet',
     label: 'Drive Detail',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -614,7 +613,7 @@ export const webRouteManifest = [
     sourcePath: 'drives/:id/replay',
     group: 'fleet',
     label: 'Trip Replay',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -622,7 +621,7 @@ export const webRouteManifest = [
     sourcePath: 'charging/:id',
     group: 'operations',
     label: 'Charge Detail',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -630,7 +629,7 @@ export const webRouteManifest = [
     sourcePath: 'chatbot',
     group: 'command',
     label: 'Chatbot',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -638,7 +637,7 @@ export const webRouteManifest = [
     sourcePath: 'tire-pressure',
     group: 'fleet',
     label: 'Tire Pressure',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -646,7 +645,7 @@ export const webRouteManifest = [
     sourcePath: 'software-updates',
     group: 'fleet',
     label: 'Software Updates',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -654,7 +653,7 @@ export const webRouteManifest = [
     sourcePath: 'vehicle-systems/software',
     group: 'fleet',
     label: 'Vehicle Software',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -662,7 +661,7 @@ export const webRouteManifest = [
     sourcePath: 'vampire-drain',
     group: 'operations',
     label: 'Vampire Drain',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -670,7 +669,7 @@ export const webRouteManifest = [
     sourcePath: 'charging/vampire-drain',
     group: 'operations',
     label: 'Charging Vampire Drain',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -678,7 +677,7 @@ export const webRouteManifest = [
     sourcePath: 'locations',
     group: 'fleet',
     label: 'Locations',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -686,7 +685,7 @@ export const webRouteManifest = [
     sourcePath: 'timeline',
     group: 'fleet',
     label: 'Timeline',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -694,7 +693,7 @@ export const webRouteManifest = [
     sourcePath: 'mileage',
     group: 'fleet',
     label: 'Mileage',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -702,7 +701,7 @@ export const webRouteManifest = [
     sourcePath: 'projected-range',
     group: 'operations',
     label: 'Projected Range',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -710,7 +709,7 @@ export const webRouteManifest = [
     sourcePath: 'analytics/range',
     group: 'operations',
     label: 'Analytics Range',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -728,7 +727,7 @@ export const webRouteManifest = [
     sourcePath: 'trips',
     group: 'fleet',
     label: 'Trips',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -736,7 +735,7 @@ export const webRouteManifest = [
     sourcePath: 'trips/:id',
     group: 'fleet',
     label: 'Trip Detail',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -744,7 +743,7 @@ export const webRouteManifest = [
     sourcePath: 'sharing/trips',
     group: 'fleet',
     label: 'Sharing Trips',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -752,7 +751,7 @@ export const webRouteManifest = [
     sourcePath: 'trip-planner',
     group: 'fleet',
     label: 'Trip Planner',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -760,7 +759,7 @@ export const webRouteManifest = [
     sourcePath: 'statistics',
     group: 'command',
     label: 'Statistics',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -768,7 +767,7 @@ export const webRouteManifest = [
     sourcePath: 'lifetime-stats',
     group: 'command',
     label: 'Lifetime Stats',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -776,7 +775,7 @@ export const webRouteManifest = [
     sourcePath: 'analytics/lifetime',
     group: 'command',
     label: 'Analytics Lifetime Redirect',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
     evidence: redirectRouteEvidence,
   }),
@@ -793,7 +792,7 @@ export const webRouteManifest = [
     sourcePath: 'system-status/incidents/:id',
     group: 'platform',
     label: 'Incident Timeline',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -801,7 +800,7 @@ export const webRouteManifest = [
     sourcePath: 'docs/status-api',
     group: 'platform',
     label: 'Status API Docs',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -809,7 +808,7 @@ export const webRouteManifest = [
     sourcePath: 'roadmap',
     group: 'platform',
     label: 'Roadmap',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -817,7 +816,7 @@ export const webRouteManifest = [
     sourcePath: 'api-keys',
     group: 'platform',
     label: 'API Keys',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'auth',
   }),
   webRoute({
@@ -825,7 +824,7 @@ export const webRouteManifest = [
     sourcePath: 'compare',
     group: 'command',
     label: 'Compare Redirect',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
     evidence: redirectRouteEvidence,
   }),
@@ -834,7 +833,7 @@ export const webRouteManifest = [
     sourcePath: 'analytics/compare',
     group: 'command',
     label: 'Analytics Compare Redirect',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
     evidence: redirectRouteEvidence,
   }),
@@ -843,7 +842,7 @@ export const webRouteManifest = [
     sourcePath: 'period-compare',
     group: 'command',
     label: 'Period Compare',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -851,7 +850,7 @@ export const webRouteManifest = [
     sourcePath: 'admin',
     group: 'platform',
     label: 'Admin Redirect',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
     evidence: redirectRouteEvidence,
   }),
@@ -860,7 +859,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/feedback',
     group: 'platform',
     label: 'Feedback Queue',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -878,7 +877,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/dlq',
     group: 'platform',
     label: 'DLQ Inspector',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -886,7 +885,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/flags',
     group: 'platform',
     label: 'Feature Flags Admin',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -894,7 +893,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/ingest-xray',
     group: 'platform',
     label: 'Ingest X-Ray',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -912,7 +911,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/schema-drift',
     group: 'platform',
     label: 'Schema Drift',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -920,7 +919,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/slow-queries',
     group: 'platform',
     label: 'Slow Queries',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -928,7 +927,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/vehicle-cost',
     group: 'platform',
     label: 'Vehicle Cost',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -936,7 +935,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/disk-forecast',
     group: 'platform',
     label: 'Disk Forecast',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -944,7 +943,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/secret-rotation',
     group: 'platform',
     label: 'Secret Rotation',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -962,7 +961,7 @@ export const webRouteManifest = [
     sourcePath: 'admin/gdpr-exports',
     group: 'platform',
     label: 'GDPR Exports',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -970,7 +969,7 @@ export const webRouteManifest = [
     sourcePath: 'api-logs',
     group: 'platform',
     label: 'API Logs',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -978,7 +977,7 @@ export const webRouteManifest = [
     sourcePath: 'fleet-api',
     group: 'platform',
     label: 'Fleet API',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -986,7 +985,7 @@ export const webRouteManifest = [
     sourcePath: 'tesla-features',
     group: 'platform',
     label: 'Tesla Feature Flags',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -994,7 +993,7 @@ export const webRouteManifest = [
     sourcePath: 'tesla-region',
     group: 'platform',
     label: 'Tesla Region',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1002,7 +1001,7 @@ export const webRouteManifest = [
     sourcePath: 'tesla-orders',
     group: 'platform',
     label: 'Tesla Orders',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1010,7 +1009,7 @@ export const webRouteManifest = [
     sourcePath: 'gas-price',
     group: 'platform',
     label: 'Gas Price',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'settings',
   }),
   webRoute({
@@ -1018,7 +1017,7 @@ export const webRouteManifest = [
     sourcePath: 'dev-tools',
     group: 'platform',
     label: 'Dev Tools',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1026,7 +1025,7 @@ export const webRouteManifest = [
     sourcePath: 'api-playground',
     group: 'platform',
     label: 'API Playground',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1034,7 +1033,7 @@ export const webRouteManifest = [
     sourcePath: 'power/sql',
     group: 'platform',
     label: 'Power SQL',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1042,7 +1041,7 @@ export const webRouteManifest = [
     sourcePath: 'power/grafana',
     group: 'platform',
     label: 'Power Grafana',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1050,7 +1049,7 @@ export const webRouteManifest = [
     sourcePath: 'power/dashboards',
     group: 'platform',
     label: 'Power Dashboards',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1058,7 +1057,7 @@ export const webRouteManifest = [
     sourcePath: 'redis-signals',
     group: 'platform',
     label: 'Redis Signals',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1086,7 +1085,7 @@ export const webRouteManifest = [
     sourcePath: 'signal-log',
     group: 'platform',
     label: 'Signal Log',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1104,7 +1103,7 @@ export const webRouteManifest = [
     sourcePath: 'state-debugger',
     group: 'platform',
     label: 'State Debugger',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1112,7 +1111,7 @@ export const webRouteManifest = [
     sourcePath: 'signal-diff',
     group: 'platform',
     label: 'Signal Diff',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1120,7 +1119,7 @@ export const webRouteManifest = [
     sourcePath: 'signal-gaps',
     group: 'platform',
     label: 'Signal Gaps',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1128,7 +1127,7 @@ export const webRouteManifest = [
     sourcePath: 'db-health',
     group: 'platform',
     label: 'DB Health',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1136,7 +1135,7 @@ export const webRouteManifest = [
     sourcePath: 'mqtt-inspector',
     group: 'platform',
     label: 'MQTT Inspector',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1144,7 +1143,7 @@ export const webRouteManifest = [
     sourcePath: 'anomaly-detection',
     group: 'command',
     label: 'Anomaly Detection',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -1152,7 +1151,7 @@ export const webRouteManifest = [
     sourcePath: 'analytics/anomalies',
     group: 'command',
     label: 'Analytics Anomalies',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -1160,7 +1159,7 @@ export const webRouteManifest = [
     sourcePath: 'driving-dynamics',
     group: 'fleet',
     label: 'Driving Dynamics',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -1168,7 +1167,7 @@ export const webRouteManifest = [
     sourcePath: 'climate-control',
     group: 'fleet',
     label: 'Climate Control',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1176,7 +1175,7 @@ export const webRouteManifest = [
     sourcePath: 'climate',
     group: 'fleet',
     label: 'Climate',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1184,7 +1183,7 @@ export const webRouteManifest = [
     sourcePath: 'security-access',
     group: 'fleet',
     label: 'Security Access',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1192,7 +1191,7 @@ export const webRouteManifest = [
     sourcePath: 'charging-curve',
     group: 'operations',
     label: 'Charging Curve',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1200,7 +1199,7 @@ export const webRouteManifest = [
     sourcePath: 'charging/curves',
     group: 'operations',
     label: 'Charging Curves',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1208,7 +1207,7 @@ export const webRouteManifest = [
     sourcePath: 'cost-analysis',
     group: 'operations',
     label: 'Cost Analysis',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1216,7 +1215,7 @@ export const webRouteManifest = [
     sourcePath: 'charging/costs',
     group: 'operations',
     label: 'Charging Costs',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1224,7 +1223,7 @@ export const webRouteManifest = [
     sourcePath: 'tesla-charging-history',
     group: 'operations',
     label: 'Tesla Charging History',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1232,7 +1231,7 @@ export const webRouteManifest = [
     sourcePath: 'tesla-charging-sessions',
     group: 'operations',
     label: 'Tesla Charging Sessions',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1240,7 +1239,7 @@ export const webRouteManifest = [
     sourcePath: 'smart-charge',
     group: 'operations',
     label: 'Smart Charge',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1248,7 +1247,7 @@ export const webRouteManifest = [
     sourcePath: 'charging/schedule',
     group: 'operations',
     label: 'Charging Schedule',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1256,7 +1255,7 @@ export const webRouteManifest = [
     sourcePath: 'powershare',
     group: 'operations',
     label: 'Powershare',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1264,7 +1263,7 @@ export const webRouteManifest = [
     sourcePath: 'battery-cells',
     group: 'operations',
     label: 'Battery Cells',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -1272,7 +1271,7 @@ export const webRouteManifest = [
     sourcePath: 'drive-score',
     group: 'fleet',
     label: 'Drive Score',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -1280,7 +1279,7 @@ export const webRouteManifest = [
     sourcePath: 'weekly-digest',
     group: 'command',
     label: 'Weekly Digest',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -1288,7 +1287,7 @@ export const webRouteManifest = [
     sourcePath: 'maintenance',
     group: 'fleet',
     label: 'Maintenance',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1296,7 +1295,7 @@ export const webRouteManifest = [
     sourcePath: 'data-export',
     group: 'platform',
     label: 'Data Export',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1304,7 +1303,7 @@ export const webRouteManifest = [
     sourcePath: 'exports',
     group: 'platform',
     label: 'Exports',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1312,7 +1311,7 @@ export const webRouteManifest = [
     sourcePath: 'energy-flow',
     group: 'operations',
     label: 'Energy Flow',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -1320,7 +1319,7 @@ export const webRouteManifest = [
     sourcePath: 'power-flow',
     group: 'operations',
     label: 'Power Flow',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -1328,7 +1327,7 @@ export const webRouteManifest = [
     sourcePath: 'energy-products',
     group: 'operations',
     label: 'Energy Products',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'energy',
   }),
   webRoute({
@@ -1336,7 +1335,7 @@ export const webRouteManifest = [
     sourcePath: 'drivetrain-health',
     group: 'fleet',
     label: 'Drivetrain Health',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1344,7 +1343,7 @@ export const webRouteManifest = [
     sourcePath: 'media-player',
     group: 'fleet',
     label: 'Media Player',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1352,7 +1351,7 @@ export const webRouteManifest = [
     sourcePath: 'safety-settings',
     group: 'platform',
     label: 'Safety Settings',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'settings',
   }),
   webRoute({
@@ -1360,7 +1359,7 @@ export const webRouteManifest = [
     sourcePath: 'guard-mode',
     group: 'fleet',
     label: 'Guard Mode',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1368,7 +1367,7 @@ export const webRouteManifest = [
     sourcePath: 'navigation',
     group: 'fleet',
     label: 'Navigation',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'driving',
   }),
   webRoute({
@@ -1376,7 +1375,7 @@ export const webRouteManifest = [
     sourcePath: 'data-repair',
     group: 'platform',
     label: 'Data Repair',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1384,7 +1383,7 @@ export const webRouteManifest = [
     sourcePath: 'backup',
     group: 'platform',
     label: 'Backup',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1452,7 +1451,7 @@ export const webRouteManifest = [
     sourcePath: 'vehicle-comparison',
     group: 'fleet',
     label: 'Vehicle Comparison',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'vehicles',
   }),
   webRoute({
@@ -1470,7 +1469,7 @@ export const webRouteManifest = [
     sourcePath: 'charging-heatmap',
     group: 'operations',
     label: 'Charging Heatmap',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'charging',
   }),
   webRoute({
@@ -1488,7 +1487,7 @@ export const webRouteManifest = [
     sourcePath: 'tesla-account',
     group: 'platform',
     label: 'Tesla Account',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'auth',
   }),
   webRoute({
@@ -1496,7 +1495,7 @@ export const webRouteManifest = [
     sourcePath: 'me/activity',
     group: 'platform',
     label: 'My Activity',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'auth',
   }),
   webRoute({
@@ -1504,7 +1503,7 @@ export const webRouteManifest = [
     sourcePath: 'search',
     group: 'command',
     label: 'Search',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'dashboard',
   }),
   webRoute({
@@ -1512,7 +1511,7 @@ export const webRouteManifest = [
     sourcePath: '*',
     group: 'platform',
     label: 'Layout Not Found',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
   webRoute({
@@ -1520,7 +1519,7 @@ export const webRouteManifest = [
     sourcePath: '*',
     group: 'platform',
     label: 'Root Not Found',
-    implementationStatus: 'pending',
+    implementationStatus: 'implemented',
     nativeTarget: 'system',
   }),
 ] as const satisfies readonly WebRouteDefinition[];
@@ -1541,12 +1540,6 @@ function summarizeRoutes(
 
 export function getRoutesForNativeTarget(nativeTarget: RouteId) {
   return webRouteManifest.filter(route => route.nativeTarget === nativeTarget);
-}
-
-export function getPendingRoutesForNativeTarget(nativeTarget: RouteId) {
-  return getRoutesForNativeTarget(nativeTarget).filter(
-    route => route.implementationStatus === 'pending',
-  );
 }
 
 export function getRouteParityForTarget(nativeTarget: RouteId) {

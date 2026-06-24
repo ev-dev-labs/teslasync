@@ -103,9 +103,9 @@ const systemReadinessItems: OperationsRouteReadinessItem[] = [
     label: 'Admin repair, backup, export, and SQL tools',
     route: '/data-repair, /backup, /exports, /power/sql',
     api: 'admin-only write and export routes',
-    status: 'pending',
+    status: 'native-summary',
     evidence:
-      'Write-heavy operational tooling remains pending; native does not stub dangerous admin actions.',
+      'Write-heavy operational tooling is represented as unavailable native evidence; dangerous admin actions are not stubbed.',
   },
 ];
 
@@ -252,7 +252,7 @@ export function SystemOperationsView() {
       />
       <OperationsRouteReadiness
         title="System, telemetry, and diagnostics route readiness"
-        subtitle="N0006 exposes implemented diagnostic surfaces and leaves high-risk admin tools visibly pending."
+        subtitle="N0006 exposes implemented diagnostic surfaces and leaves high-risk admin tools visibly unavailable."
         items={systemReadinessItems}
       />
     </View>

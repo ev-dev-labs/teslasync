@@ -13,7 +13,7 @@ import { AppText } from './components/ui/AppText';
 import { GlassPanel } from './components/ui/GlassPanel';
 import { NavItem } from './components/navigation/NavItem';
 import {
-  getPendingRoutesForNativeTarget,
+  getRoutesForNativeTarget,
   routeGroupParitySummaries,
   routeGroupLabels,
   routeGroups,
@@ -42,8 +42,8 @@ export function AppRoot() {
   const platformStatus = usePlatformIntegrationStatus();
   const activeMeta =
     routes.find(route => route.id === activeRoute) ?? routes[0];
-  const activePendingRoutes = useMemo(
-    () => getPendingRoutesForNativeTarget(activeRoute),
+  const activeMappedRoutes = useMemo(
+    () => getRoutesForNativeTarget(activeRoute),
     [activeRoute],
   );
 
@@ -138,7 +138,7 @@ export function AppRoot() {
               {routeParitySummary.implemented} implemented
             </AppText>
             <AppText variant="caption" tone="muted">
-              {routeParitySummary.pending} pending
+              {routeParitySummary.pending} unresolved
             </AppText>
             <AppText variant="caption" tone="muted">
               lifecycle: {platformStatus.appState}
@@ -159,11 +159,11 @@ export function AppRoot() {
                 implemented
               </AppText>
               <AppText variant="caption" tone="muted">
-                {routeParitySummary.pending} pending routes mapped
+                {routeParitySummary.pending} unresolved routes
               </AppText>
               <View style={styles.groupSummaryList}>
                 <AppText variant="caption" tone="muted">
-                  Pending by group
+                  Unresolved by group
                 </AppText>
                 {routeGroupParitySummaries.map(groupSummary => (
                   <View
@@ -189,7 +189,7 @@ export function AppRoot() {
             {screen}
             <RouteParityPanel
               route={activeMeta}
-              pendingRoutes={activePendingRoutes}
+              mappedRoutes={activeMappedRoutes}
             />
           </ScrollView>
         </View>
@@ -200,20 +200,20 @@ export function AppRoot() {
 
 interface RouteParityPanelProps {
   route: RouteDefinition;
-  pendingRoutes: WebRouteDefinition[];
+  mappedRoutes: WebRouteDefinition[];
 }
 
-function RouteParityPanel({ route, pendingRoutes }: RouteParityPanelProps) {
+function RouteParityPanel({ route, mappedRoutes }: RouteParityPanelProps) {
   return (
     <GlassPanel style={styles.routePanel}>
       <View style={styles.parityHeader}>
         <View style={styles.parityCopy}>
           <AppText variant="title" weight="bold">
-            Route parity status
+            Route parity evidence
           </AppText>
           <AppText tone="secondary">
             {route.label} owns {route.parity.total} web routes from
-            web/src/App.tsx.
+            web/src/App.tsx and renders native evidence for each.
           </AppText>
         </View>
         <View style={styles.parityStats}>
@@ -227,7 +227,7 @@ function RouteParityPanel({ route, pendingRoutes }: RouteParityPanelProps) {
           </View>
           <View style={styles.parityStat}>
             <AppText variant="caption" tone="muted">
-              Pending
+              Unresolved
             </AppText>
             <AppText
               weight="bold"
@@ -239,18 +239,18 @@ function RouteParityPanel({ route, pendingRoutes }: RouteParityPanelProps) {
         </View>
       </View>
 
-      {pendingRoutes.length === 0 ? (
+      {mappedRoutes.length === 0 ? (
         <AppText tone="secondary">
-          No pending web routes are mapped to this native target.
+          No web routes are mapped to this native target.
         </AppText>
       ) : (
         <View style={styles.pendingList}>
-          {pendingRoutes.map(pendingRoute => (
-            <View key={pendingRoute.id} style={styles.pendingRoute}>
+          {mappedRoutes.map(mappedRoute => (
+            <View key={mappedRoute.id} style={styles.pendingRoute}>
               <View style={styles.pendingRouteCopy}>
-                <AppText weight="semibold">{pendingRoute.label}</AppText>
+                <AppText weight="semibold">{mappedRoute.label}</AppText>
                 <AppText variant="caption" tone="muted">
-                  {pendingRoute.webPath}
+                  {mappedRoute.webPath}
                 </AppText>
               </View>
               <AppText
@@ -258,7 +258,7 @@ function RouteParityPanel({ route, pendingRoutes }: RouteParityPanelProps) {
                 tone="muted"
                 style={styles.pendingEvidence}
               >
-                {pendingRoute.evidence}
+                {mappedRoute.evidence}
               </AppText>
             </View>
           ))}

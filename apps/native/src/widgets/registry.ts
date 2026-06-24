@@ -1,14 +1,16 @@
 import { AlertFeedWidget } from './AlertFeedWidget';
+import { BatteryCellsWidget } from './BatteryCellsWidget';
 import { BatteryHealthWidget } from './BatteryHealthWidget';
 import { ChargingSummaryWidget } from './ChargingSummaryWidget';
+import { LivePowerFlowWidget } from './LivePowerFlowWidget';
 import { QuickNavWidget } from './QuickNavWidget';
 import { RecentDrivesWidget } from './RecentDrivesWidget';
 import { SystemStatusWidget } from './SystemStatusWidget';
+import { TelemetryErrorsWidget } from './TelemetryErrorsWidget';
 import { VehicleHeroWidget } from './VehicleHeroWidget';
 import type {
   ImplementedNativeWidgetDefinition,
   NativeWidgetDefinition,
-  PendingNativeWidgetDefinition,
 } from './types';
 
 export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
@@ -97,8 +99,8 @@ export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
     icon: 'cpu',
     webWidgetIds: ['battery-cells'],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason: 'Requires a native cell heatmap primitive and battery-cell API coverage.',
+    status: 'implemented',
+    component: BatteryCellsWidget,
   },
   {
     id: 'live-power-flow',
@@ -108,8 +110,8 @@ export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
     icon: 'powerShare',
     webWidgetIds: ['live-power-flow', 'energy-flow', 'energy-flow-animated'],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason: 'Requires native animation primitives for the web power-flow diagram.',
+    status: 'implemented',
+    component: LivePowerFlowWidget,
   },
   {
     id: 'telemetry-errors',
@@ -119,17 +121,13 @@ export const NATIVE_WIDGET_REGISTRY: readonly NativeWidgetDefinition[] = [
     icon: 'bug',
     webWidgetIds: ['telemetry-errors', 'signal-health'],
     defaultSize: {cols: 2, rows: 4},
-    status: 'pending',
-    pendingReason: 'Requires native telemetry diagnostics screens and error detail drill-through.',
+    status: 'implemented',
+    component: TelemetryErrorsWidget,
   },
 ] as const;
 
 export const IMPLEMENTED_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
   (widget): widget is ImplementedNativeWidgetDefinition => widget.status === 'implemented',
-);
-
-export const PENDING_NATIVE_WIDGETS = NATIVE_WIDGET_REGISTRY.filter(
-  (widget): widget is PendingNativeWidgetDefinition => widget.status === 'pending',
 );
 
 export function getNativeWidgetDefinition(widgetId: string): NativeWidgetDefinition | undefined {

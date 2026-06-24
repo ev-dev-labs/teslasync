@@ -103,6 +103,24 @@ jest.mock('../src/api/hooks', () => ({
     isFetching: false,
     error: null,
   }),
+  useBatteryDegradationAnalytics: () => ({
+    data: {},
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useFleetTelemetryErrorVINs: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+  useFleetTelemetryErrors: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
   useAuthMode: () => ({
     data: {mode: 'open', subject: null, capabilities: {}},
     isLoading: false,
@@ -144,6 +162,6 @@ test('renders the TeslaSync native shell', async () => {
   expect(serialized).toContain('Driving');
   expect(serialized).toContain('Auth');
   expect(serialized).toContain('Native route parity');
-  expect(serialized).toContain('Pending by group');
-  expect(serialized).toContain('Route parity status');
+  expect(serialized).toContain('Unresolved by group');
+  expect(serialized).toContain('Route parity evidence');
 });

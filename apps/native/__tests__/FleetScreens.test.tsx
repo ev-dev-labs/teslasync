@@ -222,7 +222,7 @@ test('renders vehicle list, detail, and route readiness sections', async () => {
   expect(serialized).toContain('"/vehicles/1"');
   expect(serialized).toContain('/vehicles/1/state');
   expect(serialized).toContain('Live map coordinates');
-  expect(serialized).toContain('Access routes are mapped and named here');
+  expect(serialized).toContain('Access routes are represented with typed route evidence');
 });
 
 test('renders charging sessions, detail, telemetry chart, and readiness sections', async () => {

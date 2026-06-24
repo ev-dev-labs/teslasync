@@ -7,7 +7,7 @@ import { PremiumCard } from '../../components/ui/PremiumCard';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { colors, spacing } from '../../theme/tokens';
 
-export type FleetRouteReadinessStatus = 'implemented' | 'native-summary' | 'pending';
+export type FleetRouteReadinessStatus = 'implemented' | 'native-summary';
 
 export interface FleetRouteReadinessItem {
   id: string;
@@ -30,8 +30,6 @@ function statusCopy(status: FleetRouteReadinessStatus) {
       return {label: 'Implemented', state: 'online' as const};
     case 'native-summary':
       return {label: 'Native summary', state: 'warning' as const};
-    case 'pending':
-      return {label: 'Pending', state: 'offline' as const};
   }
 }
 

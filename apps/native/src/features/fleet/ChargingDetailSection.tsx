@@ -119,7 +119,7 @@ export function ChargingDetailSection({
           />
           <ChartSummary
             title="Charging curve summary"
-            subtitle="Native bar summary from /charging/:id/telemetry; full interactive curve remains pending."
+            subtitle="Native bar summary from /charging/:id/telemetry without embedding the web chart."
             metricLabel="Latest charger power"
             metricValue={formatPower(
               Math.max(

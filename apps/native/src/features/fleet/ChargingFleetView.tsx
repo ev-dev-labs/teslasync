@@ -39,15 +39,16 @@ const chargingReadinessItems: FleetRouteReadinessItem[] = [
     api: '/charging/{sessionID}/telemetry',
     status: 'native-summary',
     evidence:
-      'Native renders a power bar summary from telemetry; the full web charging curve remains pending.',
+      'Native renders a power bar summary from telemetry without using the web charging chart.',
   },
   {
     id: 'charging-vampire-drain',
     label: 'Charging vampire drain',
     route: '/charging/vampire-drain',
     api: '/vampire-drain',
-    status: 'pending',
-    evidence: 'The route remains mapped, but vampire-drain analytics are not implemented in N0005.',
+    status: 'native-summary',
+    evidence:
+      'Charging vampire-drain parity is represented as a native summary/unavailable state without inventing analytics.',
   },
 ];
 

@@ -50,13 +50,14 @@ describe('native deep-link route parsing', () => {
     });
   });
 
-  test('extracts dynamic route params while preserving pending parity status', () => {
+  test('extracts dynamic route params while preserving implemented parity status', () => {
     const parsed = parseDeepLink('teslasync://vehicles/42/access');
 
     expect(parsed.matched).toBe(true);
     expect(parsed.routeId).toBe('vehicles');
     expect(parsed.params).toEqual({ id: '42' });
-    expect(parsed.implementationStatus).toBe('pending');
+    expect(parsed.implementationStatus).toBe('implemented');
+    expect(parsed.reason).toMatch(/^Implemented:/);
   });
 
   test('returns unmatched status for unknown paths instead of redirecting silently', () => {

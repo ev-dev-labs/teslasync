@@ -439,7 +439,7 @@ test('drives shell navigation through every native route button', async () => {
     const rendered = serialize(tree);
     expect(rendered).toContain(route.label);
     expect(rendered).toContain(route.description);
-    expect(rendered).toContain('Route parity status');
+    expect(rendered).toContain('Route parity evidence');
   }
 });
 

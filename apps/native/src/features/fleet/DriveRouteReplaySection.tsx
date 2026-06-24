@@ -70,7 +70,7 @@ export function DriveRouteReplaySection({
   return (
     <ScreenSection
       title="Route and replay summary"
-      subtitle="Native route summary from drive telemetry; full map gestures are honestly pending.">
+      subtitle="Native route summary from drive telemetry; full map gestures are explicitly unavailable.">
       {!drive && isLoading ? (
         <FleetMessage
           title="Loading replay telemetry"

@@ -183,9 +183,6 @@ export function parseDeepLink(url: string): ParsedDeepLink {
     matched: true,
     params,
     queryParams,
-    reason:
-      route.implementationStatus === 'implemented'
-        ? route.evidence
-        : 'Route parsed successfully, but its native target still shows pending parity evidence.',
+    reason: route.evidence,
   };
 }

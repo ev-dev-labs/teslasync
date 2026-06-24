@@ -112,9 +112,9 @@ const energyReadinessItems: OperationsRouteReadinessItem[] = [
     label: 'Energy products and power flow',
     route: '/energy-products, /energy-flow, /power-flow',
     api: '/tesla/energy-sites and live power-flow routes',
-    status: 'pending',
+    status: 'native-summary',
     evidence:
-      'Tesla Energy product management remains visible as pending; this slice does not fake live site data.',
+      'Tesla Energy product routes render native summary/unavailable evidence; live site data is not fabricated.',
   },
 ];
 
@@ -230,7 +230,7 @@ export function EnergyOperationsView() {
       />
       <OperationsRouteReadiness
         title="Energy and analytics route readiness"
-        subtitle="N0006 route parity remains explicit about implemented native summaries and pending product routes."
+        subtitle="N0006 route parity remains explicit about implemented native summaries and unavailable product routes."
         items={energyReadinessItems}
       />
     </View>

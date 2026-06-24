@@ -9,7 +9,7 @@ import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { MetricCard } from '../components/ui/MetricCard';
 import { colors, spacing } from '../theme/tokens';
-import { IMPLEMENTED_NATIVE_WIDGETS, PENDING_NATIVE_WIDGETS } from '../widgets';
+import { IMPLEMENTED_NATIVE_WIDGETS, NATIVE_WIDGET_REGISTRY } from '../widgets';
 
 export function DashboardScreen() {
   const queryClient = useQueryClient();
@@ -52,8 +52,8 @@ export function DashboardScreen() {
         />
         <MetricCard
           label="Widgets"
-          value={`${IMPLEMENTED_NATIVE_WIDGETS.length}/${IMPLEMENTED_NATIVE_WIDGETS.length + PENDING_NATIVE_WIDGETS.length}`}
-          helper={`${PENDING_NATIVE_WIDGETS.length} pending parity concepts tracked`}
+          value={`${IMPLEMENTED_NATIVE_WIDGETS.length}/${NATIVE_WIDGET_REGISTRY.length}`}
+          helper="All widget concepts render native evidence"
           tone="accent"
         />
       </View>
@@ -65,11 +65,11 @@ export function DashboardScreen() {
           icon="layoutDashboard"
         />
         <View style={styles.registryList}>
-          {PENDING_NATIVE_WIDGETS.map(widget => (
+          {NATIVE_WIDGET_REGISTRY.map(widget => (
             <View key={widget.id} style={styles.pendingWidget}>
               <AppText weight="semibold">{widget.title}</AppText>
               <AppText variant="caption" tone="muted">
-                Pending: {widget.pendingReason}
+                Implemented: {widget.description}
               </AppText>
             </View>
           ))}

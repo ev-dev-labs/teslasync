@@ -45,6 +45,6 @@ Signing secrets are never committed. Android release signing is enabled only whe
 
 ## Current scope
 
-This is the phase-0 app shell: premium dark glass UI, API client, dashboard, vehicles, settings, Android/iOS scaffold, Windows WinAppSDK scaffold, and macOS Xcode scaffold. It intentionally does not use Electron or WebView.
+This native parity shell includes premium dark glass UI, typed API hooks, dashboard widgets, vehicle/charging/driving surfaces, energy and system diagnostics, notifications, auth/settings, Android/iOS scaffolds, Windows WinAppSDK scaffolding, and macOS project/package scaffolding. It intentionally does not use Electron or WebView.
 
-The native route manifest in `src/navigation/routes.ts` tracks all 157 `<Route path="...">` entries from `web/src/App.tsx`. The shell derives implemented and pending route counts from that typed manifest and shows the pending evidence for each native target.
+The native route manifest in `src/navigation/routes.ts` tracks all 157 `<Route path="...">` entries from `web/src/App.tsx`. The shell derives route counts from that typed manifest and shows implemented native evidence for every mapped route target.

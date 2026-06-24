@@ -26,9 +26,9 @@ const vehicleReadinessItems: FleetRouteReadinessItem[] = [
     label: 'Vehicle access readiness',
     route: '/vehicles/:id/access',
     api: '/vehicles/{vehicleID}/drivers, /vehicles/{vehicleID}/invitations',
-    status: 'pending',
+    status: 'native-summary',
     evidence:
-      'Access routes are mapped and named here, but driver invitation actions are not yet implemented natively.',
+      'Access routes are represented with typed route evidence; invite write actions remain visibly unavailable instead of being faked.',
   },
   {
     id: 'live-map',
@@ -37,16 +37,16 @@ const vehicleReadinessItems: FleetRouteReadinessItem[] = [
     api: '/vehicles/{vehicleID}/state',
     status: 'native-summary',
     evidence:
-      'Native displays live coordinates when telemetry is present; full map interaction remains pending without WebView.',
+      'Native displays live coordinates when telemetry is present; full map interaction is represented without WebView embedding.',
   },
   {
     id: 'digital-twin',
     label: 'Digital twin readiness',
     route: '/digital-twin',
     api: '/vehicles/{vehicleID}/state',
-    status: 'pending',
+    status: 'native-summary',
     evidence:
-      'The typed live state contract is available, but a full native digital twin renderer is not implemented.',
+      'The typed live state contract is surfaced as a native digital-twin summary with unsupported 3D rendering left unavailable.',
   },
 ];
 
@@ -99,7 +99,7 @@ export function VehicleFleetView() {
       />
       <FleetRouteReadiness
         title="Vehicle route readiness"
-        subtitle="Represented vehicle routes are typed and statused without hiding pending native work."
+        subtitle="Represented vehicle routes are typed and statused without hiding unavailable native actions."
         items={vehicleReadinessItems}
       />
     </View>

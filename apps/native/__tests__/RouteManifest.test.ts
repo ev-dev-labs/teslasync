@@ -64,7 +64,7 @@ test('tracks the current web route universe with representative routes present',
   expect(sourcePaths.filter(sourcePath => sourcePath === '*')).toHaveLength(2);
 });
 
-test('keeps every manifest entry typed and mapped to a native target', () => {
+test('keeps every manifest entry typed, implemented, and mapped to a native target', () => {
   const nativeTargets = new Set(routes.map(route => route.id));
 
   for (const route of webRouteManifest) {
@@ -72,16 +72,13 @@ test('keeps every manifest entry typed and mapped to a native target', () => {
     expect(route.label.length).toBeGreaterThan(0);
     expect(route.webPath.length).toBeGreaterThan(0);
     expect(nativeTargets.has(route.nativeTarget)).toBe(true);
+    expect(route.implementationStatus).toBe('implemented');
     expect(route.evidence.length).toBeGreaterThan(0);
-    expect(route.evidence).toMatch(
-      route.implementationStatus === 'implemented'
-        ? /^Implemented/
-        : /^Pending/,
-    );
+    expect(route.evidence).toMatch(/^Implemented/);
   }
 });
 
-test('derives native shell parity counters from the route manifest', () => {
+test('derives complete native shell parity counters from the route manifest', () => {
   const summary = getRouteParitySummary();
   const nativeTotal = routes.reduce(
     (total, route) => total + route.parity.total,
@@ -90,13 +87,13 @@ test('derives native shell parity counters from the route manifest', () => {
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
-    implemented: 39,
-    pending: EXPECTED_WEB_ROUTE_COUNT - 39,
+    implemented: EXPECTED_WEB_ROUTE_COUNT,
+    pending: 0,
   });
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
   expect(
     routes.find(route => route.id === 'system')?.parity.pending,
-  ).toBeGreaterThan(0);
+  ).toBe(0);
 });
 
 test('derives route parity counters by web route group', () => {
