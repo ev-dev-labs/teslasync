@@ -27,7 +27,7 @@ import type {
   TOTPStatus,
   TOTPSudoToken,
   Vehicle,
-  VehicleState,
+  VehicleStateResponse,
   VersionInfo,
 } from './types';
 
@@ -133,6 +133,30 @@ export function buildVehicleEnergyPath(vehicleId: number | string, days = 30): s
   return buildQueryPath(`/vehicles/${vehicleId}/energy`, {days});
 }
 
+export function buildVehiclePath(vehicleId: number | string): string {
+  return `/vehicles/${vehicleId}`;
+}
+
+export function buildVehicleStatePath(vehicleId: number | string): string {
+  return `/vehicles/${vehicleId}/state`;
+}
+
+export function buildDriveDetailPath(driveId: number | string): string {
+  return `/drives/${driveId}`;
+}
+
+export function buildDriveTelemetryPath(driveId: number | string): string {
+  return `/drives/${driveId}/telemetry`;
+}
+
+export function buildChargingSessionPath(sessionId: number | string): string {
+  return `/charging/${sessionId}`;
+}
+
+export function buildChargeTelemetryPath(sessionId: number | string): string {
+  return `/charging/${sessionId}/telemetry`;
+}
+
 export function useVehicles() {
   return useQuery({
     queryKey: apiKeys.vehicles,
@@ -143,7 +167,7 @@ export function useVehicles() {
 export function useVehicle(vehicleId: number | string | null) {
   return useQuery({
     queryKey: isPositiveId(vehicleId) ? apiKeys.vehicle(vehicleId) : ['vehicles', 'disabled'],
-    queryFn: ({signal}) => request<Vehicle>(`/vehicles/${vehicleId}`, {signal}),
+    queryFn: ({signal}) => request<Vehicle>(buildVehiclePath(vehicleId!), {signal}),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -151,7 +175,7 @@ export function useVehicle(vehicleId: number | string | null) {
 export function useVehicleState(vehicleId: number | string | null) {
   return useQuery({
     queryKey: isPositiveId(vehicleId) ? apiKeys.vehicleState(vehicleId) : ['vehicles', 'state', 'disabled'],
-    queryFn: ({signal}) => request<{state: VehicleState; live?: boolean}>(`/vehicles/${vehicleId}/state`, {signal}),
+    queryFn: ({signal}) => request<VehicleStateResponse>(buildVehicleStatePath(vehicleId!), {signal}),
     enabled: isPositiveId(vehicleId),
   });
 }
@@ -205,7 +229,7 @@ export function useDrives(options: DateRangeOptions = {limit: 20}) {
 export function useDrive(driveId: number | string | null) {
   return useQuery({
     queryKey: isPositiveId(driveId) ? apiKeys.drive(driveId) : ['drive', 'disabled'],
-    queryFn: ({signal}) => request<Drive>(`/drives/${driveId}`, {signal}),
+    queryFn: ({signal}) => request<Drive>(buildDriveDetailPath(driveId!), {signal}),
     enabled: isPositiveId(driveId),
   });
 }
@@ -213,7 +237,7 @@ export function useDrive(driveId: number | string | null) {
 export function useDriveTelemetry(driveId: number | string | null) {
   return useQuery({
     queryKey: isPositiveId(driveId) ? apiKeys.driveTelemetry(driveId) : ['drive', 'telemetry', 'disabled'],
-    queryFn: ({signal}) => request<DriveTelemetryReading[]>(`/drives/${driveId}/telemetry`, {signal}),
+    queryFn: ({signal}) => request<DriveTelemetryReading[]>(buildDriveTelemetryPath(driveId!), {signal}),
     enabled: isPositiveId(driveId),
   });
 }
@@ -228,7 +252,7 @@ export function useChargingSessions(options: DateRangeOptions = {limit: 20}) {
 export function useChargingSession(sessionId: number | string | null) {
   return useQuery({
     queryKey: isPositiveId(sessionId) ? apiKeys.chargingSession(sessionId) : ['charging', 'disabled'],
-    queryFn: ({signal}) => request<ChargingSession>(`/charging/${sessionId}`, {signal}),
+    queryFn: ({signal}) => request<ChargingSession>(buildChargingSessionPath(sessionId!), {signal}),
     enabled: isPositiveId(sessionId),
   });
 }
@@ -236,7 +260,7 @@ export function useChargingSession(sessionId: number | string | null) {
 export function useChargeTelemetry(sessionId: number | string | null) {
   return useQuery({
     queryKey: isPositiveId(sessionId) ? apiKeys.chargeTelemetry(sessionId) : ['charging', 'telemetry', 'disabled'],
-    queryFn: ({signal}) => request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`, {signal}),
+    queryFn: ({signal}) => request<ChargeTelemetryReading[]>(buildChargeTelemetryPath(sessionId!), {signal}),
     enabled: isPositiveId(sessionId),
   });
 }

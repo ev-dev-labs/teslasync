@@ -1,9 +1,15 @@
 import { apiUrl, buildQueryPath } from '../src/api/client';
 import {
+  buildChargeTelemetryPath,
+  buildChargingSessionPath,
   buildChargingListPath,
+  buildDriveDetailPath,
   buildDriveListPath,
+  buildDriveTelemetryPath,
   buildNotificationLogsPath,
+  buildVehiclePath,
   buildVehicleEnergyPath,
+  buildVehicleStatePath,
 } from '../src/api/hooks';
 
 describe('native API URL construction', () => {
@@ -29,6 +35,12 @@ describe('native API URL construction', () => {
       '/charging?vehicle_id=42&start=2026-06-01&end=2026-06-23',
     );
     expect(buildVehicleEnergyPath(42, 14)).toBe('/vehicles/42/energy?days=14');
+    expect(buildVehiclePath(42)).toBe('/vehicles/42');
+    expect(buildVehicleStatePath(42)).toBe('/vehicles/42/state');
+    expect(buildDriveDetailPath(3)).toBe('/drives/3');
+    expect(buildDriveTelemetryPath(3)).toBe('/drives/3/telemetry');
+    expect(buildChargingSessionPath(9)).toBe('/charging/9');
+    expect(buildChargeTelemetryPath(9)).toBe('/charging/9/telemetry');
     expect(
       buildNotificationLogsPath({
         vehicle_id: [42, 43],

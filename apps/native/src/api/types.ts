@@ -27,6 +27,11 @@ export interface VehicleState {
   software_version?: string | null;
 }
 
+export interface VehicleStateResponse {
+  state: VehicleState;
+  live?: boolean;
+}
+
 export interface Alert {
   id: number;
   vehicle_id?: number | null;
