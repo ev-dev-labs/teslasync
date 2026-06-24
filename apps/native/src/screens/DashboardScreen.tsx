@@ -9,6 +9,7 @@ import { AppText } from '../components/ui/AppText';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { MetricCard } from '../components/ui/MetricCard';
 import { StatusPill } from '../components/ui/StatusPill';
+import type { RouteId } from '../navigation/routes';
 import { colors, spacing } from '../theme/tokens';
 import {
   IMPLEMENTED_NATIVE_WIDGETS,
@@ -16,7 +17,11 @@ import {
   PENDING_NATIVE_WIDGETS,
 } from '../widgets';
 
-export function DashboardScreen() {
+interface DashboardScreenProps {
+  onNavigate?: (route: RouteId) => void;
+}
+
+export function DashboardScreen({onNavigate}: DashboardScreenProps) {
   const queryClient = useQueryClient();
   const vehiclesQuery = useVehicles();
   const alertsQuery = useAlerts();
@@ -102,7 +107,13 @@ export function DashboardScreen() {
       <View style={styles.widgetGrid}>
         {IMPLEMENTED_NATIVE_WIDGETS.map(widget => {
           const Widget = widget.component;
-          return <Widget key={widget.id} vehicleId={selectedVehicleId} />;
+          return (
+            <Widget
+              key={widget.id}
+              vehicleId={selectedVehicleId}
+              onNavigate={onNavigate}
+            />
+          );
         })}
       </View>
     </View>

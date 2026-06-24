@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { RouteDefinition } from '../../navigation/routes';
@@ -6,23 +6,38 @@ import { colors, spacing } from '../../theme/tokens';
 import { AppText } from '../ui/AppText';
 
 interface NavItemProps {
+  compact?: boolean;
   route: RouteDefinition;
   selected: boolean;
   onPress: () => void;
 }
 
-export function NavItem({ route, selected, onPress }: NavItemProps) {
+export function NavItem({
+  compact = false,
+  route,
+  selected,
+  onPress,
+}: NavItemProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <Pressable
+      accessibilityHint={`Switches to the ${route.label} native route.`}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={route.label}
+      focusable
+      onBlur={() => setFocused(false)}
+      onFocus={() => setFocused(true)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.root,
+        compact && styles.compactRoot,
         selected && styles.selected,
+        focused && styles.focused,
         pressed && styles.pressed,
       ]}
+      testID={`nav-item-${route.id}`}
     >
       <View style={[styles.icon, selected && styles.selectedIcon]}>
         <AppText
@@ -34,9 +49,11 @@ export function NavItem({ route, selected, onPress }: NavItemProps) {
       </View>
       <View style={styles.copy}>
         <AppText weight="semibold">{route.label}</AppText>
-        <AppText variant="caption" tone="muted">
-          {route.shortDescription}
-        </AppText>
+        {!compact ? (
+          <AppText variant="caption" tone="muted">
+            {route.shortDescription}
+          </AppText>
+        ) : null}
         <AppText
           variant="caption"
           tone={route.parity.pending === 0 ? 'accent' : 'muted'}
@@ -59,9 +76,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
+  compactRoot: {
+    minWidth: 188,
+  },
   selected: {
     borderColor: colors.borderAccent,
     backgroundColor: colors.surfaceSelected,
+  },
+  focused: {
+    borderColor: colors.accent,
   },
   pressed: {
     opacity: 0.82,
