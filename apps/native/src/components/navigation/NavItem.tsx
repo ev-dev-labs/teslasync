@@ -33,6 +33,9 @@ export function NavItem({route, selected, onPress}: NavItemProps) {
         <AppText variant="caption" tone="muted">
           {route.shortDescription}
         </AppText>
+        <AppText variant="caption" tone={route.parity.pending === 0 ? 'accent' : 'muted'}>
+          {route.parity.implemented}/{route.parity.total} implemented
+        </AppText>
       </View>
     </Pressable>
   );

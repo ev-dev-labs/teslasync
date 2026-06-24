@@ -97,4 +97,6 @@ test('renders the TeslaSync native shell', async () => {
   expect(serialized).toContain('Charging');
   expect(serialized).toContain('Driving');
   expect(serialized).toContain('Auth');
+  expect(serialized).toContain('Native route parity');
+  expect(serialized).toContain('Route parity status');
 });

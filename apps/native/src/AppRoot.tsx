@@ -12,7 +12,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from './components/ui/AppText';
 import { GlassPanel } from './components/ui/GlassPanel';
 import { NavItem } from './components/navigation/NavItem';
-import { routeGroupLabels, routes, type RouteGroup, type RouteId } from './navigation/routes';
+import {
+  getPendingRoutesForNativeTarget,
+  routeGroupLabels,
+  routeParitySummary,
+  routes,
+  type RouteDefinition,
+  type RouteGroup,
+  type RouteId,
+  type WebRouteDefinition,
+} from './navigation/routes';
 import { AlertsScreen } from './screens/AlertsScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { ChargingScreen } from './screens/ChargingScreen';
@@ -30,6 +39,10 @@ export function AppRoot() {
   const scheme = useColorScheme();
   const [activeRoute, setActiveRoute] = useState<RouteId>('dashboard');
   const activeMeta = routes.find(route => route.id === activeRoute) ?? routes[0];
+  const activePendingRoutes = useMemo(
+    () => getPendingRoutesForNativeTarget(activeRoute),
+    [activeRoute],
+  );
 
   const screen = useMemo(() => {
     switch (activeRoute) {
@@ -101,6 +114,9 @@ export function AppRoot() {
             <AppText variant="caption" tone="muted">
               {Platform.OS}
             </AppText>
+            <AppText variant="caption" tone="muted">
+              {routeParitySummary.total} web routes tracked
+            </AppText>
           </View>
         </GlassPanel>
 
@@ -111,9 +127,12 @@ export function AppRoot() {
               <AppText tone="secondary">{activeMeta.description}</AppText>
             </View>
             <GlassPanel style={styles.statusCard}>
-              <AppText variant="caption">Native parity track</AppText>
+              <AppText variant="caption">Native route parity</AppText>
               <AppText weight="semibold" tone="accent">
-                {activeMeta.webPaths.length} web routes mapped
+                {routeParitySummary.implemented}/{routeParitySummary.total} implemented
+              </AppText>
+              <AppText variant="caption" tone="muted">
+                {routeParitySummary.pending} pending routes mapped
               </AppText>
             </GlassPanel>
           </View>
@@ -122,10 +141,71 @@ export function AppRoot() {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled">
             {screen}
+            <RouteParityPanel route={activeMeta} pendingRoutes={activePendingRoutes} />
           </ScrollView>
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+interface RouteParityPanelProps {
+  route: RouteDefinition;
+  pendingRoutes: WebRouteDefinition[];
+}
+
+function RouteParityPanel({route, pendingRoutes}: RouteParityPanelProps) {
+  return (
+    <GlassPanel style={styles.routePanel}>
+      <View style={styles.parityHeader}>
+        <View style={styles.parityCopy}>
+          <AppText variant="title" weight="bold">
+            Route parity status
+          </AppText>
+          <AppText tone="secondary">
+            {route.label} owns {route.parity.total} web routes from web/src/App.tsx.
+          </AppText>
+        </View>
+        <View style={styles.parityStats}>
+          <View style={styles.parityStat}>
+            <AppText variant="caption" tone="muted">
+              Implemented
+            </AppText>
+            <AppText weight="bold" tone="accent">
+              {route.parity.implemented}
+            </AppText>
+          </View>
+          <View style={styles.parityStat}>
+            <AppText variant="caption" tone="muted">
+              Pending
+            </AppText>
+            <AppText weight="bold" tone={route.parity.pending === 0 ? 'accent' : 'danger'}>
+              {route.parity.pending}
+            </AppText>
+          </View>
+        </View>
+      </View>
+
+      {pendingRoutes.length === 0 ? (
+        <AppText tone="secondary">No pending web routes are mapped to this native target.</AppText>
+      ) : (
+        <View style={styles.pendingList}>
+          {pendingRoutes.map(pendingRoute => (
+            <View key={pendingRoute.id} style={styles.pendingRoute}>
+              <View style={styles.pendingRouteCopy}>
+                <AppText weight="semibold">{pendingRoute.label}</AppText>
+                <AppText variant="caption" tone="muted">
+                  {pendingRoute.webPath}
+                </AppText>
+              </View>
+              <AppText variant="caption" tone="muted" style={styles.pendingEvidence}>
+                {pendingRoute.evidence}
+              </AppText>
+            </View>
+          ))}
+        </View>
+      )}
+    </GlassPanel>
   );
 }
 
@@ -209,9 +289,55 @@ const styles = StyleSheet.create({
   statusCard: {
     minWidth: 220,
     padding: spacing.md,
+    gap: spacing.xs,
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
     gap: spacing.lg,
+  },
+  routePanel: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  parityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.lg,
+  },
+  parityCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
+  parityStats: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  parityStat: {
+    minWidth: 96,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: spacing.md,
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceRaised,
+  },
+  pendingList: {
+    gap: spacing.sm,
+  },
+  pendingRoute: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  pendingRouteCopy: {
+    minWidth: 180,
+    gap: spacing.xs,
+  },
+  pendingEvidence: {
+    flex: 1,
   },
 });

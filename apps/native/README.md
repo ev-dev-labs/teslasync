@@ -25,3 +25,5 @@ The native API client auto-adds `/api/v1`, so app code must call paths like `/ve
 ## Current scope
 
 This is the phase-0 app shell: premium dark glass UI, API client, dashboard, vehicles, settings, Android/iOS scaffold, and Windows WinAppSDK scaffold. It intentionally does not use Electron or WebView.
+
+The native route manifest in `src/navigation/routes.ts` tracks all 157 `<Route path="...">` entries from `web/src/App.tsx`. The shell derives implemented and pending route counts from that typed manifest and shows the pending evidence for each native target.
