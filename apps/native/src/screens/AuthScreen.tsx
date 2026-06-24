@@ -71,6 +71,15 @@ const accountRouteItems: RouteReadinessItem[] = [
       'Native renders identity mode, provider, Tesla account state, token-storage posture, and disabled privacy export/revoke controls.',
   },
   {
+    id: 'me-activity',
+    label: 'My activity',
+    route: '/me/activity',
+    api: '/auth/sessions, /auth/status, /system/auth-mode',
+    status: 'implemented',
+    evidence:
+      'Native renders account activity through forward-auth subject, active sessions, Tesla auth state, and proxy-managed privacy posture without storing identity tokens.',
+  },
+  {
     id: 'api-keys',
     label: 'API keys',
     route: '/api-keys',

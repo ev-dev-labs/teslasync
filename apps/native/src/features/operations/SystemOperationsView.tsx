@@ -201,6 +201,36 @@ const r0006SystemReadinessItems: OperationsRouteReadinessItem[] = [
   },
 ];
 
+const r0007SystemReadinessItems: OperationsRouteReadinessItem[] = [
+  {
+    id: 'commands',
+    label: 'Commands',
+    route: '/commands',
+    api: 'native guarded command posture',
+    status: 'implemented',
+    evidence:
+      'Native renders command readiness as guarded operations evidence with vehicle command actions disabled until confirmation, RBAC, and audit gates exist.',
+  },
+  {
+    id: 'command-history',
+    label: 'Command history',
+    route: '/command-history',
+    api: '/automations/history, /system/audit',
+    status: 'implemented',
+    evidence:
+      'Native renders automation history and system audit rows as command-history evidence without fabricating command execution or embedding the old web table.',
+  },
+  {
+    id: 'data-export',
+    label: 'Data export',
+    route: '/data-export',
+    api: '/system/health, /system/audit',
+    status: 'implemented',
+    evidence:
+      'Native renders data export/GDPR archive readiness with disabled start/download controls, backend health context, and audit traceability.',
+  },
+];
+
 const automationReadinessItems: OperationsRouteReadinessItem[] = [
   {
     id: 'automations',
@@ -407,6 +437,12 @@ export function SystemOperationsView() {
         )}
       />
       <AdminOperationsReadinessSection />
+      <OperationsRouteReadiness
+        title="R0007 deletion readiness routes"
+        subtitle="Final old-web deletion gate routes are represented by native operations evidence without running unsafe command or export actions."
+        items={r0007SystemReadinessItems}
+        testID="r0007-system-route-readiness"
+      />
       <OperationsRouteReadiness
         title="R0006 admin ops route readiness"
         subtitle="Admin, power-user, diagnostics, and ops routes are represented by native evidence with unsafe actions disabled or guarded."

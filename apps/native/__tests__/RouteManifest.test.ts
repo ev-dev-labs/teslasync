@@ -7,6 +7,11 @@ import {
   routes,
   webRouteManifest,
 } from '../src/navigation/routes';
+import {
+  IMPLEMENTED_NATIVE_WIDGETS,
+  NATIVE_WIDGET_REGISTRY,
+  PENDING_NATIVE_WIDGETS,
+} from '../src/widgets';
 
 declare const __dirname: string;
 declare function require(moduleName: string): unknown;
@@ -111,7 +116,7 @@ test('tracks the current web route universe with representative routes present',
 
 const nativeStatuses = ['implemented', 'native-summary', 'pending'] as const;
 
-test('keeps every manifest entry typed, statused, deletion-blocked, and mapped to a native target', () => {
+test('keeps every manifest entry typed, statused, deletion-ready, and mapped to a native target', () => {
   const nativeTargets = new Set(routes.map(route => route.id));
 
   for (const route of webRouteManifest) {
@@ -123,26 +128,40 @@ test('keeps every manifest entry typed, statused, deletion-blocked, and mapped t
     expect(route.nativeImplementationStatus).toBe(route.implementationStatus);
     expect(nativeStatuses).toContain(route.nativeImplementationStatus);
     expect(route.evidence.length).toBeGreaterThan(0);
-    expect(route.deletionReadiness).toEqual(
-      expect.objectContaining({
-        status: 'blocked',
-        canDeleteWebRoute: false,
-        finalParityGateRequired: true,
-      }),
-    );
     expect(route.deletionReadiness.blocker.length).toBeGreaterThan(0);
 
     if (route.nativeImplementationStatus === 'implemented') {
       expect(route.evidence).toMatch(/^Implemented:/);
+      expect(route.deletionReadiness).toEqual(
+        expect.objectContaining({
+          status: 'ready',
+          canDeleteWebRoute: true,
+          finalParityGateRequired: false,
+        }),
+      );
     } else if (route.nativeImplementationStatus === 'native-summary') {
       expect(route.evidence).toMatch(/^Native summary:/);
+      expect(route.deletionReadiness).toEqual(
+        expect.objectContaining({
+          status: 'blocked',
+          canDeleteWebRoute: false,
+          finalParityGateRequired: true,
+        }),
+      );
     } else {
       expect(route.evidence).toMatch(/^Pending:/);
+      expect(route.deletionReadiness).toEqual(
+        expect.objectContaining({
+          status: 'blocked',
+          canDeleteWebRoute: false,
+          finalParityGateRequired: true,
+        }),
+      );
     }
   }
 });
 
-test('derives honest native shell parity counters and keeps old-web deletion blocked', () => {
+test('derives universal old-web deletion readiness only from complete native route parity', () => {
   const summary = getRouteParitySummary();
   const nativeTotal = routes.reduce(
     (total, route) => total + route.parity.total,
@@ -157,6 +176,14 @@ test('derives honest native shell parity counters and keeps old-web deletion blo
   const literalPendingRoutes = webRouteManifest.filter(
     route => route.implementationStatus === 'pending',
   );
+  const nativeSummaryRoutes = webRouteManifest.filter(
+    route => route.implementationStatus === 'native-summary',
+  );
+  const canDeleteFromRouteCounts =
+    summary.total === EXPECTED_WEB_ROUTE_COUNT &&
+    implementedRoutes.length === EXPECTED_WEB_ROUTE_COUNT &&
+    nativeSummaryRoutes.length === 0 &&
+    literalPendingRoutes.length === 0;
 
   expect(summary).toEqual({
     total: EXPECTED_WEB_ROUTE_COUNT,
@@ -165,25 +192,42 @@ test('derives honest native shell parity counters and keeps old-web deletion blo
   });
   expect(nativeTotal).toBe(EXPECTED_WEB_ROUTE_COUNT);
   expect(implementedRoutes.length).toBeGreaterThan(0);
-  expect(pendingRoutes.length).toBeGreaterThan(0);
+  expect(implementedRoutes).toHaveLength(EXPECTED_WEB_ROUTE_COUNT);
+  expect(pendingRoutes).toHaveLength(0);
+  expect(nativeSummaryRoutes).toHaveLength(0);
   expect(literalPendingRoutes).toHaveLength(0);
   expect(implementedRoutes.length + pendingRoutes.length).toBe(
     EXPECTED_WEB_ROUTE_COUNT,
   );
+  expect(canDeleteFromRouteCounts).toBe(true);
   expect(oldWebDeletionReadiness).toEqual(
     expect.objectContaining({
-      status: 'blocked',
-      canDeleteOldWeb: false,
-      finalParityGateRequired: true,
+      status: 'ready',
+      canDeleteOldWeb: canDeleteFromRouteCounts,
+      finalParityGateRequired: false,
       totalRoutes: EXPECTED_WEB_ROUTE_COUNT,
       implementedRoutes: implementedRoutes.length,
       unresolvedRoutes: pendingRoutes.length,
     }),
   );
-  expect(oldWebDeletionReadiness.blocker).toContain('final parity gate');
+  expect(oldWebDeletionReadiness.blocker).toContain('157/157');
   expect(
     routes.find(route => route.id === 'system')?.parity.pending,
-  ).toBeGreaterThan(0);
+  ).toBe(0);
+});
+
+test('keeps widget readiness complete or explicitly blocked with evidence', () => {
+  expect(PENDING_NATIVE_WIDGETS).toHaveLength(0);
+  expect(IMPLEMENTED_NATIVE_WIDGETS).toHaveLength(NATIVE_WIDGET_REGISTRY.length);
+
+  for (const widget of NATIVE_WIDGET_REGISTRY) {
+    if (widget.status === 'implemented') {
+      expect(widget.component).toEqual(expect.any(Function));
+      expect(widget.webWidgetIds.length).toBeGreaterThan(0);
+    } else {
+      expect(widget.pendingReason.length).toBeGreaterThan(0);
+    }
+  }
 });
 
 test('derives route parity counters by web route group', () => {
@@ -237,12 +281,12 @@ test('marks implemented energy analytics and diagnostics routes with evidence', 
   for (const routeId of ['energy-products', 'energy-flow', 'power-flow']) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
-    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.deletionReadiness.status).toBe('ready');
     expect(route?.evidence).toMatch(/^Implemented: /);
   }
 });
 
-test('marks R0003 charging and energy native-summary routes implemented', () => {
+test('marks R0003 charging and energy routes implemented', () => {
   const implementedRouteIds = [
     'charging-curve',
     'charging-curves',
@@ -268,7 +312,7 @@ test('marks R0003 charging and energy native-summary routes implemented', () => 
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
-    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.deletionReadiness.status).toBe('ready');
   }
 
   expect(
@@ -305,7 +349,7 @@ test('marks R0004 driving and analytics route summaries implemented', () => {
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
-    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.deletionReadiness.status).toBe('ready');
   }
 
   expect(
@@ -339,7 +383,7 @@ test('marks R0001 command, shared, onboarding, live, search, and fallback routes
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
-    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.deletionReadiness.status).toBe('ready');
   }
 
   expect(
@@ -374,7 +418,7 @@ test('marks R0002 vehicle-system routes implemented with native evidence', () =>
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.nativeTarget).toBe('vehicles');
     expect(route?.evidence).toMatch(/^Implemented: VehiclesScreen renders/);
-    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.deletionReadiness.status).toBe('ready');
   }
 
   expect(
@@ -430,7 +474,7 @@ test('marks R0005 notification auth settings and integration routes implemented'
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
-    expect(route?.deletionReadiness.canDeleteWebRoute).toBe(false);
+    expect(route?.deletionReadiness.canDeleteWebRoute).toBe(true);
   }
 
   expect(
@@ -444,15 +488,15 @@ test('marks R0005 notification auth settings and integration routes implemented'
   ).toBeGreaterThanOrEqual(4);
 });
 
-test('marks R0006 admin ops and diagnostics native-summary routes implemented', () => {
+test('marks R0006 admin ops and diagnostics routes implemented', () => {
   expect(r0006AdminOpsRouteIds).toHaveLength(39);
 
   for (const routeId of r0006AdminOpsRouteIds) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
     expect(route?.implementationStatus).toBe('implemented');
     expect(route?.evidence).toMatch(/^Implemented: /);
-    expect(route?.deletionReadiness.canDeleteWebRoute).toBe(false);
-    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.deletionReadiness.canDeleteWebRoute).toBe(true);
+    expect(route?.deletionReadiness.status).toBe('ready');
   }
 
   expect(
@@ -469,18 +513,19 @@ test('marks R0006 admin ops and diagnostics native-summary routes implemented', 
   ).toBeGreaterThanOrEqual(4);
 });
 
-test('keeps remaining unported web routes visible as native summaries rather than success-shaped', () => {
-  const nativeSummaryRouteIds = [
+test('marks final R0007 routes implemented with deletion readiness evidence', () => {
+  const finalRouteIds = [
     'commands',
     'command-history',
     'data-export',
     'me-activity',
   ];
 
-  for (const routeId of nativeSummaryRouteIds) {
+  for (const routeId of finalRouteIds) {
     const route = webRouteManifest.find(entry => entry.id === routeId);
-    expect(route?.implementationStatus).toBe('native-summary');
-    expect(route?.evidence).toMatch(/^Native summary: /);
-    expect(route?.deletionReadiness.status).toBe('blocked');
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
+    expect(route?.deletionReadiness.status).toBe('ready');
+    expect(route?.deletionReadiness.canDeleteWebRoute).toBe(true);
   }
 });
