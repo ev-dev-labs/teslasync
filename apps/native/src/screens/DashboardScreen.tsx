@@ -68,11 +68,11 @@ const dashboardReadinessItems: RouteReadinessItem[] = [
   {
     id: 'assistant-explore',
     label: 'Explore, watch, chatbot, and anomaly routes',
-    route: '/explore, /watch, /chatbot, /anomaly-detection',
+    route: '/explore, /watch, /chatbot, /anomaly-detection, /analytics/anomalies',
     api: 'native route/widget registry',
     status: 'implemented',
     evidence:
-      'Explore and watch render native widget/vehicle evidence; assistant and anomaly routes remain separately tracked outside R0001.',
+      'Native renders command, widget, analytics, and telemetry-error evidence while chatbot prompts and anomaly model execution remain unavailable instead of fabricating AI results.',
   },
 ];
 

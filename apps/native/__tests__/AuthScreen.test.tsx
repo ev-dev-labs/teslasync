@@ -85,6 +85,8 @@ test('renders explicit open-mode unavailable state', () => {
   expect(serialized).toContain('Sessions unavailable');
   expect(serialized).toContain('TOTP unavailable');
   expect(serialized).toContain('Account privacy');
+  expect(serialized).toContain('API key management');
+  expect(serialized).toContain('Native API key actions unavailable');
   expect(serialized).toContain('Native privacy actions unavailable');
   expect(serialized).toContain('Account route readiness');
   expect(serialized).toContain('Onboarding route readiness');
@@ -152,6 +154,8 @@ test('renders forward-auth subject, sessions, and TOTP state', () => {
   expect(serialized).toContain('Enrolled');
   expect(serialized).toContain('Native enrollment actions unavailable');
   expect(serialized).toContain('Privacy export unavailable');
+  expect(serialized).toContain('Create API key unavailable');
+  expect(serialized).toContain('API keys');
   expect(serialized).toContain('Account route readiness');
   expect(serialized).toContain('Onboarding route readiness');
   expect(mockUseSessions).toHaveBeenCalledWith({enabled: true});

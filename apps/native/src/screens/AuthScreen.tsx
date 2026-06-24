@@ -70,6 +70,15 @@ const accountRouteItems: RouteReadinessItem[] = [
     evidence:
       'Native renders identity mode, provider, Tesla account state, token-storage posture, and disabled privacy export/revoke controls.',
   },
+  {
+    id: 'api-keys',
+    label: 'API keys',
+    route: '/api-keys',
+    api: '/system/auth-mode, /system/audit',
+    status: 'implemented',
+    evidence:
+      'Native renders API key management posture with create, rotate, revoke, and copy-secret actions disabled so secrets are not generated or stored on device.',
+  },
 ];
 
 export function AuthScreen() {
@@ -261,6 +270,46 @@ export function AuthScreen() {
             message="Open-mode deployments cannot enroll per-user TOTP."
           />
         )}
+      </ScreenSection>
+
+      <ScreenSection
+        title="API key management"
+        subtitle="Native exposes the API-key route as guarded readiness evidence without generating or storing secrets.">
+        <KeyValueRow
+          label="API key storage"
+          value="Server-side only"
+        />
+        <KeyValueRow
+          label="Native secret persistence"
+          value="Disabled"
+        />
+        <KeyValueRow
+          label="Required guard"
+          value="RBAC, sudo reauth, audit, and one-time secret display"
+        />
+        <View style={styles.actions}>
+          <AppButton
+            label="Create API key unavailable"
+            disabled
+            onPress={() => undefined}
+          />
+          <AppButton
+            label="Rotate API key unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+          <AppButton
+            label="Revoke API key unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+        </View>
+        <EmptyState
+          title="Native API key actions unavailable"
+          message="API key create, rotate, revoke, and copy-secret flows remain disabled until native RBAC, sudo, audit, and one-time secret display contracts are implemented."
+        />
       </ScreenSection>
 
       <ScreenSection

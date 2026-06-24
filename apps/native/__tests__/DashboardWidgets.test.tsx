@@ -349,6 +349,8 @@ test('renders all implemented native dashboard widgets with API-backed content',
   expect(serialized).toContain('Compare redirects');
   expect(serialized).toContain('Quick stats and glance');
   expect(serialized).toContain('Search and route command');
+  expect(serialized).toContain('chatbot, /anomaly-detection, /analytics/anomalies');
+  expect(serialized).toContain('anomaly model execution remain unavailable');
   expect(serialized).toContain('R0001 command route surfaces');
   expect(serialized).toContain('R0001 command route evidence');
   expect(serialized).toContain('Quick Stats route');

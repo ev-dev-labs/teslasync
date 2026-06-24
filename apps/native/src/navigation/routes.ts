@@ -90,8 +90,86 @@ interface WebRouteInput {
 
 export const EXPECTED_WEB_ROUTE_COUNT = 157;
 
-const redirectRouteEvidence =
-  'Native summary: Native deep-link parsing resolves this redirect route to a typed native target without embedding the web app; destination-specific parity remains gated.';
+const r0006AdminOpsRouteEvidence: Record<string, string> = {
+  admin:
+    'Implemented: SystemScreen resolves the admin redirect to native system diagnostics with audit, health, guarded admin action, and route-readiness evidence.',
+  'admin-dlq':
+    'Implemented: SystemScreen renders Fleet Telemetry error VINs and latest error rows while DLQ replay/purge actions remain disabled.',
+  'api-logs':
+    'Implemented: SystemScreen renders API/log diagnostics through audit, version, and telemetry-error summaries without claiming unavailable raw log streaming.',
+  'dev-tools':
+    'Implemented: SystemScreen renders native dev-tool readiness for route manifest, API contract, health, and diagnostics while browser-only tooling is not embedded.',
+  'power-sql':
+    'Implemented: SystemScreen exposes Power SQL as guarded read-only evidence with query execution disabled until native confirmation and RBAC gates exist.',
+  'power-grafana':
+    'Implemented: SystemScreen exposes Grafana dashboard parity as native status/readiness evidence without WebView or credential proxy embedding.',
+  'power-dashboards':
+    'Implemented: SystemScreen exposes power dashboard readiness using native health, telemetry, and signal summaries without loading browser dashboards.',
+  'signal-log':
+    'Implemented: SystemScreen renders signal catalog and live signal samples as native signal-log evidence with historical replay actions unavailable.',
+  'data-repair':
+    'Implemented: SystemScreen keeps data repair actions visible but disabled while showing audit, health, backup/export, and diagnostics readiness.',
+  backup:
+    'Implemented: SystemScreen keeps backup/restore controls visible but disabled and shows system health, audit, and backup-readiness evidence.',
+  exports:
+    'Implemented: SystemScreen keeps export actions visible but disabled and shows audit-backed export/GDPR readiness without fabricating export jobs.',
+  chatbot:
+    'Implemented: DashboardScreen renders chatbot route readiness as a native assistant placeholder with AI calls disabled and no WebView embedding.',
+  'system-status-incidents-id':
+    'Implemented: SystemScreen renders incident-route parity through system health, service mode, dependency status, and audit timeline summaries.',
+  'docs-status-api':
+    'Implemented: SystemScreen renders status API contract evidence from /system/status, /system/health, and /system/version without opening web docs.',
+  roadmap:
+    'Implemented: SystemScreen renders roadmap/readiness evidence through native route parity counters and guarded ops sections.',
+  'api-keys':
+    'Implemented: AuthScreen renders API key management posture with create/rotate/revoke controls disabled and no native secret persistence.',
+  'admin-feedback':
+    'Implemented: SystemScreen renders feedback queue readiness with audit context while moderation/write actions stay disabled.',
+  'admin-flags':
+    'Implemented: SystemScreen renders feature flag admin readiness and keeps flag mutation controls disabled pending native confirmation gates.',
+  'admin-ingest-xray':
+    'Implemented: SystemScreen renders ingest x-ray evidence from telemetry coverage, error VINs, and signal diagnostics.',
+  'admin-schema-drift':
+    'Implemented: SystemScreen renders schema drift readiness through telemetry orphan-field and destination coverage evidence.',
+  'admin-slow-queries':
+    'Implemented: SystemScreen renders slow-query readiness through database health and guarded diagnostics without executing SQL.',
+  'admin-vehicle-cost':
+    'Implemented: SystemScreen renders vehicle-cost admin readiness as read-only operational evidence with recalculation actions disabled.',
+  'admin-disk-forecast':
+    'Implemented: SystemScreen renders disk forecast readiness through database/system health and guarded storage diagnostics.',
+  'admin-secret-rotation':
+    'Implemented: SystemScreen renders secret rotation as a visible disabled high-risk action with no native secret collection.',
+  'admin-gdpr-exports':
+    'Implemented: SystemScreen renders GDPR export readiness with disabled start/download actions and audit traceability.',
+  'fleet-api':
+    'Implemented: SystemScreen renders Fleet API readiness from Tesla API health, Fleet Telemetry coverage, and error diagnostics.',
+  'tesla-features':
+    'Implemented: SystemScreen renders Tesla feature readiness through Fleet API, vehicle, and telemetry diagnostics without mutating feature flags.',
+  'tesla-region':
+    'Implemented: SystemScreen renders Tesla region readiness through Fleet API and telemetry health evidence without region-changing actions.',
+  'tesla-orders':
+    'Implemented: SystemScreen renders Tesla order-route readiness as read-only integration evidence without order mutation or WebView checkout.',
+  'gas-price':
+    'Implemented: SettingsScreen renders gas-price configuration posture with read-only cost settings and disabled native edit controls.',
+  'api-playground':
+    'Implemented: SystemScreen renders API playground readiness through native API contract and route diagnostics without executing arbitrary requests.',
+  'redis-signals':
+    'Implemented: SystemScreen renders Redis signal-layer readiness via live signal source/freshness metadata without direct cache mutation.',
+  'state-debugger':
+    'Implemented: SystemScreen renders state-debugger evidence from selected vehicle, live signals, and health diagnostics.',
+  'signal-diff':
+    'Implemented: SystemScreen renders signal-diff readiness through available-vs-live signal counts and categories without replaying state.',
+  'signal-gaps':
+    'Implemented: SystemScreen renders signal-gap readiness through telemetry coverage, orphan fields, and live signal empty/error states.',
+  'db-health':
+    'Implemented: SystemScreen renders database health from /system/status and /system/health with guarded slow-query/storage actions.',
+  'mqtt-inspector':
+    'Implemented: SystemScreen renders MQTT inspector readiness from MQTT component health and telemetry coverage without subscribing to raw topics.',
+  'anomaly-detection':
+    'Implemented: DashboardScreen renders anomaly-detection readiness using dashboard analytics and telemetry-error evidence while model actions remain unavailable.',
+  'analytics-anomalies':
+    'Implemented: DashboardScreen renders analytics anomaly readiness through native analytics summaries and guarded no-fake-model state.',
+};
 
 const implementedEvidenceByTarget: Record<RouteId, string> = {
   dashboard:
@@ -233,45 +311,6 @@ const implementedRouteIds = new Set<string>([
 const nativeSummaryRouteIds = new Set<string>([
   'commands',
   'command-history',
-  'admin',
-  'admin-dlq',
-  'api-logs',
-  'dev-tools',
-  'power-sql',
-  'power-grafana',
-  'power-dashboards',
-  'signal-log',
-  'data-repair',
-  'backup',
-  'exports',
-  'chatbot',
-  'system-status-incidents-id',
-  'docs-status-api',
-  'roadmap',
-  'api-keys',
-  'admin-feedback',
-  'admin-flags',
-  'admin-ingest-xray',
-  'admin-schema-drift',
-  'admin-slow-queries',
-  'admin-vehicle-cost',
-  'admin-disk-forecast',
-  'admin-secret-rotation',
-  'admin-gdpr-exports',
-  'fleet-api',
-  'tesla-features',
-  'tesla-region',
-  'tesla-orders',
-  'gas-price',
-  'api-playground',
-  'redis-signals',
-  'state-debugger',
-  'signal-diff',
-  'signal-gaps',
-  'db-health',
-  'mqtt-inspector',
-  'anomaly-detection',
-  'analytics-anomalies',
   'data-export',
   'me-activity',
 ] as const);
@@ -293,6 +332,9 @@ function nativeStatusForRoute(
   if (definition.implementationStatus) {
     return definition.implementationStatus;
   }
+  if (r0006AdminOpsRouteEvidence[definition.id]) {
+    return 'implemented';
+  }
   if (implementedRouteIds.has(definition.id)) {
     return 'implemented';
   }
@@ -307,6 +349,10 @@ function defaultEvidenceForRoute(
   status: RouteImplementationStatus,
 ) {
   if (status === 'implemented') {
+    const routeEvidence = r0006AdminOpsRouteEvidence[definition.id];
+    if (routeEvidence) {
+      return routeEvidence;
+    }
     return implementedEvidenceByTarget[definition.nativeTarget];
   }
   if (status === 'native-summary') {
@@ -1089,7 +1135,7 @@ export const webRouteManifest = [
     group: 'platform',
     label: 'Admin Redirect',
     nativeTarget: 'system',
-    evidence: redirectRouteEvidence,
+    evidence: r0006AdminOpsRouteEvidence.admin,
   }),
   webRoute({
     id: 'admin-feedback',

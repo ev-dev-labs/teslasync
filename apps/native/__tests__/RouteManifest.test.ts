@@ -53,6 +53,48 @@ const representativeSourcePaths = [
   'me/activity',
 ];
 
+const r0006AdminOpsRouteIds = [
+  'admin',
+  'admin-dlq',
+  'api-logs',
+  'dev-tools',
+  'power-sql',
+  'power-grafana',
+  'power-dashboards',
+  'signal-log',
+  'data-repair',
+  'backup',
+  'exports',
+  'chatbot',
+  'system-status-incidents-id',
+  'docs-status-api',
+  'roadmap',
+  'api-keys',
+  'admin-feedback',
+  'admin-flags',
+  'admin-ingest-xray',
+  'admin-schema-drift',
+  'admin-slow-queries',
+  'admin-vehicle-cost',
+  'admin-disk-forecast',
+  'admin-secret-rotation',
+  'admin-gdpr-exports',
+  'fleet-api',
+  'tesla-features',
+  'tesla-region',
+  'tesla-orders',
+  'gas-price',
+  'api-playground',
+  'redis-signals',
+  'state-debugger',
+  'signal-diff',
+  'signal-gaps',
+  'db-health',
+  'mqtt-inspector',
+  'anomaly-detection',
+  'analytics-anomalies',
+] as const;
+
 test('tracks the current web route universe with representative routes present', () => {
   const sourcePaths = webRouteManifest.map(route => route.sourcePath);
   const appRoutePaths = extractWebRoutePaths(appSource);
@@ -402,13 +444,37 @@ test('marks R0005 notification auth settings and integration routes implemented'
   ).toBeGreaterThanOrEqual(4);
 });
 
-test('keeps unported web routes visible as native summaries rather than success-shaped', () => {
+test('marks R0006 admin ops and diagnostics native-summary routes implemented', () => {
+  expect(r0006AdminOpsRouteIds).toHaveLength(39);
+
+  for (const routeId of r0006AdminOpsRouteIds) {
+    const route = webRouteManifest.find(entry => entry.id === routeId);
+    expect(route?.implementationStatus).toBe('implemented');
+    expect(route?.evidence).toMatch(/^Implemented: /);
+    expect(route?.deletionReadiness.canDeleteWebRoute).toBe(false);
+    expect(route?.deletionReadiness.status).toBe('blocked');
+  }
+
+  expect(
+    routes.find(route => route.id === 'system')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(31);
+  expect(
+    routes.find(route => route.id === 'dashboard')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(14);
+  expect(
+    routes.find(route => route.id === 'auth')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(5);
+  expect(
+    routes.find(route => route.id === 'settings')?.parity.implemented,
+  ).toBeGreaterThanOrEqual(4);
+});
+
+test('keeps remaining unported web routes visible as native summaries rather than success-shaped', () => {
   const nativeSummaryRouteIds = [
-    'api-playground',
-    'admin-slow-queries',
-    'fleet-api',
-    'gas-price',
-    'chatbot',
+    'commands',
+    'command-history',
+    'data-export',
+    'me-activity',
   ];
 
   for (const routeId of nativeSummaryRouteIds) {

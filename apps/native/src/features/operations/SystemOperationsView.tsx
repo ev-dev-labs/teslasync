@@ -91,9 +91,9 @@ const systemReadinessItems: OperationsRouteReadinessItem[] = [
     label: 'Fleet Telemetry errors',
     route: '/admin/dlq, /api-logs',
     api: '/tesla/fleet-telemetry/error-vins, /tesla/fleet-telemetry/errors',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
-      'Native summarizes telemetry error VINs and latest errors without claiming full DLQ/API log parity.',
+      'Native renders telemetry error VINs and latest errors; replay, purge, and raw log-stream actions stay disabled.',
   },
   {
     id: 'live-signals',
@@ -109,9 +109,95 @@ const systemReadinessItems: OperationsRouteReadinessItem[] = [
     label: 'Admin repair, backup, export, and SQL tools',
     route: '/data-repair, /backup, /exports, /power/sql',
     api: 'admin-only write and export routes',
-    status: 'native-summary',
+    status: 'implemented',
     evidence:
-      'Write-heavy operational tooling is represented as unavailable native evidence; dangerous admin actions are not stubbed.',
+      'Write-heavy operational tooling is visible with disabled native actions and no fake success paths.',
+  },
+];
+
+const r0006SystemReadinessItems: OperationsRouteReadinessItem[] = [
+  {
+    id: 'admin-status-docs-roadmap',
+    label: 'Admin redirect, incidents, status docs, and roadmap',
+    route: '/admin, /system-status/incidents/:id, /docs/status-api, /roadmap',
+    api: '/system/status, /system/health, /system/version, /system/audit',
+    status: 'implemented',
+    evidence:
+      'Native resolves admin/status/documentation routes to system health, version, audit, and route parity evidence without browser embedding.',
+  },
+  {
+    id: 'admin-feedback-flags',
+    label: 'Admin feedback and feature flags',
+    route: '/admin/feedback, /admin/flags',
+    api: '/system/audit plus guarded admin writes unavailable',
+    status: 'implemented',
+    evidence:
+      'Feedback queue and feature flag routes remain visible as audit-backed readiness; moderation and flag mutations are disabled.',
+  },
+  {
+    id: 'admin-ingest-drift-slow',
+    label: 'Ingest x-ray, schema drift, and slow queries',
+    route: '/admin/ingest-xray, /admin/schema-drift, /admin/slow-queries',
+    api: '/tesla/fleet-telemetry/coverage, /system/health',
+    status: 'implemented',
+    evidence:
+      'Telemetry coverage, orphan-field drift, destination totals, and database health provide native diagnostics without executing SQL.',
+  },
+  {
+    id: 'admin-cost-storage-secret-gdpr',
+    label: 'Vehicle cost, disk forecast, secret rotation, and GDPR exports',
+    route:
+      '/admin/vehicle-cost, /admin/disk-forecast, /admin/secret-rotation, /admin/gdpr-exports',
+    api: '/system/status, /system/audit',
+    status: 'implemented',
+    evidence:
+      'High-risk cost recalculation, storage forecasting, secret rotation, and GDPR export actions are visible but disabled and audit-scoped.',
+  },
+  {
+    id: 'data-ops',
+    label: 'Data repair, backup, and exports',
+    route: '/data-repair, /backup, /exports',
+    api: '/system/health, /system/audit',
+    status: 'implemented',
+    evidence:
+      'Repair, backup, restore, archive, and export operations are represented by native readiness rows and disabled action buttons.',
+  },
+  {
+    id: 'power-tools',
+    label: 'Power SQL, Grafana, and dashboards',
+    route: '/power/sql, /power/grafana, /power/dashboards',
+    api: '/system/status, /system/health',
+    status: 'implemented',
+    evidence:
+      'Power-user tools are represented by native health/readiness summaries; SQL execution and Grafana/dashboard embedding are not available.',
+  },
+  {
+    id: 'tesla-platform',
+    label: 'Fleet API, Tesla features, region, and orders',
+    route: '/fleet-api, /tesla-features, /tesla-region, /tesla-orders',
+    api: '/system/status, /tesla/fleet-telemetry/coverage',
+    status: 'implemented',
+    evidence:
+      'Tesla integration routes render Fleet API health, telemetry coverage, and error context while order/feature mutations remain guarded.',
+  },
+  {
+    id: 'dev-api-db-tools',
+    label: 'Dev tools, API playground, and DB health',
+    route: '/dev-tools, /api-playground, /db-health',
+    api: '/system/status, /system/health, /system/version',
+    status: 'implemented',
+    evidence:
+      'Native shows route manifest, API contract, version, and database health evidence without arbitrary request execution.',
+  },
+  {
+    id: 'signal-state-mqtt-tools',
+    label: 'Signal log, Redis, state diff/gaps, and MQTT inspector',
+    route:
+      '/signal-log, /redis-signals, /state-debugger, /signal-diff, /signal-gaps, /mqtt-inspector',
+    api: '/signals/{vehicleID}/available, /signals/{vehicleID}/live',
+    status: 'implemented',
+    evidence:
+      'Signal catalog, live samples, source layer, freshness, and MQTT health are rendered natively while replay/cache/topic mutations remain disabled.',
   },
 ];
 
@@ -321,6 +407,12 @@ export function SystemOperationsView() {
         )}
       />
       <AdminOperationsReadinessSection />
+      <OperationsRouteReadiness
+        title="R0006 admin ops route readiness"
+        subtitle="Admin, power-user, diagnostics, and ops routes are represented by native evidence with unsafe actions disabled or guarded."
+        items={r0006SystemReadinessItems}
+        testID="r0006-admin-ops-route-readiness"
+      />
       <NotFoundRouteSection />
       <OperationsRouteReadiness
         title="System, telemetry, and diagnostics route readiness"
@@ -366,6 +458,39 @@ const adminOperationRows = [
   },
 ];
 
+const guardedAdminActions = [
+  {
+    id: 'dlq-replay',
+    label: 'Replay DLQ unavailable',
+    variant: 'ghost' as const,
+  },
+  {
+    id: 'sql-execute',
+    label: 'Execute SQL unavailable',
+    variant: 'primary' as const,
+  },
+  {
+    id: 'data-repair',
+    label: 'Run data repair unavailable',
+    variant: 'ghost' as const,
+  },
+  {
+    id: 'backup-restore',
+    label: 'Restore backup unavailable',
+    variant: 'ghost' as const,
+  },
+  {
+    id: 'secret-rotation',
+    label: 'Rotate secrets unavailable',
+    variant: 'ghost' as const,
+  },
+  {
+    id: 'gdpr-export',
+    label: 'Start GDPR export unavailable',
+    variant: 'ghost' as const,
+  },
+];
+
 function AdminOperationsReadinessSection() {
   return (
     <ScreenSection
@@ -383,6 +508,23 @@ function AdminOperationsReadinessSection() {
           />
         ))}
       </View>
+      <View style={styles.actions}>
+        {guardedAdminActions.map(action => (
+          <AppButton
+            key={action.id}
+            label={action.label}
+            disabled
+            variant={action.variant}
+            onPress={() => undefined}
+          />
+        ))}
+      </View>
+      <OperationsMessage
+        title="Dangerous admin actions are guarded"
+        message="DLQ replay, SQL execution, repair, restore, secret rotation, and GDPR export actions are visible for parity but disabled until native RBAC, sudo, dry-run, and confirmation contracts exist."
+        tone="notice"
+        icon="locked"
+      />
     </ScreenSection>
   );
 }

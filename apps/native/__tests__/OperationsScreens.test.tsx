@@ -558,6 +558,12 @@ test('renders system, telemetry, audit, and live signal diagnostics', async () =
   expect(serialized).toContain('Fleet Telemetry diagnostics');
   expect(serialized).toContain('Live signal diagnostics');
   expect(serialized).toContain('Admin operations readiness');
+  expect(serialized).toContain('R0006 admin ops route readiness');
+  expect(serialized).toContain('Power SQL, Grafana, and dashboards');
+  expect(serialized).toContain('Signal log, Redis, state diff/gaps, and MQTT inspector');
+  expect(serialized).toContain('Dangerous admin actions are guarded');
+  expect(serialized).toContain('Execute SQL unavailable');
+  expect(serialized).toContain('Rotate secrets unavailable');
   expect(serialized).toContain('Not-found route surfaces');
   expect(serialized).toContain('R0001 not-found route evidence');
   expect(serialized).toContain('Layout Not Found route');

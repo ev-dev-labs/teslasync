@@ -63,6 +63,15 @@ const settingsRouteItems: RouteReadinessItem[] = [
     evidence:
       'Native renders Helix mode, feature-selection count, provider-config presence, and cost-cap state without validating providers or storing AI secrets.',
   },
+  {
+    id: 'gas-price',
+    label: 'Gas price',
+    route: '/gas-price',
+    api: '/settings, /analytics/tco',
+    status: 'implemented',
+    evidence:
+      'Native renders cost-setting posture and keeps gas price edits disabled until settings validation and confirmation gates are available.',
+  },
 ];
 
 function capabilityPillState(
@@ -340,6 +349,62 @@ export function SettingsScreen({ platformStatus }: SettingsScreenProps) {
         <EmptyState
           title="Native safety setting writes unavailable"
           message="Quiet hours, digest, tab signalling, API suspension, and Helix explanations stay read-only until native validation and confirmation gates are implemented."
+        />
+      </ScreenSection>
+
+      <ScreenSection
+        title="Gas price configuration"
+        subtitle="Cost-comparison inputs are visible without fabricating local gas-price data or enabling unsafe writes."
+      >
+        {settings ? (
+          <>
+            <KeyValueRow
+              label="Base electricity cost"
+              value={formatCostCap(
+                settings.base_cost_per_kwh == null
+                  ? null
+                  : settings.base_cost_per_kwh * 100,
+              )}
+            />
+            <KeyValueRow
+              label="Currency"
+              value={settings.currency_symbol ?? '-'}
+            />
+            <KeyValueRow
+              label="Locale"
+              value={settings.locale ?? '-'}
+            />
+            <KeyValueRow
+              label="Gas price source"
+              value="Server analytics/settings only"
+            />
+          </>
+        ) : (
+          <EmptyState
+            title={
+              settingsQuery.isLoading
+                ? 'Loading gas price settings'
+                : 'Gas price settings unavailable'
+            }
+            message="Gas price configuration will appear when settings or TCO analytics expose server-side cost inputs."
+          />
+        )}
+        <View style={styles.actions}>
+          <AppButton
+            label="Edit gas price unavailable"
+            disabled
+            onPress={() => undefined}
+          />
+          <AppButton
+            label="Reset gas price unavailable"
+            disabled
+            variant="ghost"
+            onPress={() => undefined}
+          />
+        </View>
+        <EmptyState
+          title="Native gas price writes unavailable"
+          message="Gas price edits remain disabled until native validation, audit, and settings persistence flows are implemented."
         />
       </ScreenSection>
 
