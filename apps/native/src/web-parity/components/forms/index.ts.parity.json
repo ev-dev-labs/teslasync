@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/forms/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/forms/index.ts",
+  "sourceLineCount": 32,
+  "coveredLineCount": 32,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 32 source lines line by line before editing. The web file is a pure barrel that re-exports 17 form modules; the native port preserves that public-API surface while honouring the file-by-file conversion order (only ComboboxMulti has a native parity module so far).",
+    "L3 (export {ComboboxMulti, type ComboboxMultiProps} from './ComboboxMulti') is actively re-exported because apps/native/src/web-parity/components/forms/ComboboxMulti.tsx exists and exports both ComboboxMulti and ComboboxMultiProps<T> verbatim; the inline `type` modifier satisfies isolatedModules.",
+    "L1 ActiveFilterChips, L2 Combobox, L4-8 CurrencyInput, L9 DatePresetChips, L10 DateRangeFilter, L11 RangePicker, L12 FilterBar, L13 FormField, L14 FormSection, L15 PillFilterBar, L16 SearchInput, L17 TagInput, L18-23 TreeSelect, L24 UnitInput, L25 VehicleSelect, L26-32 VehicleMultiSelect are each preserved as a forward-declaration comment that mirrors the exact web export names/types. They are not active re-exports because their native parity modules are not converted yet and `export ... from './Missing'` would break `tsc --noEmit`. No consumer imports the forms barrel yet (verified via grep), so the deferred exports break nothing.",
+    "Mirrors the established native barrel convention (web-parity/components/charts/index.ts) by adding an exported `nativeFormsBarrelCapabilities` const that records ported vs pending modules and the deferral reason, making the unavailable state explicit and programmatically inspectable per conversion contract rule 7.",
+    "No DOM, browser HTML, Recharts, Leaflet, or old web UI components are imported; the file is type/re-export only and RN-safe. Each source line is therefore considered and represented (active re-export for ComboboxMulti, faithful forward-declaration for the remaining 16 modules).",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles (jest)."
+  ]
+}
