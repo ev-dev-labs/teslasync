@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/_toastHelpers.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/_toastHelpers.ts",
+  "sourceLineCount": 51,
+  "coveredLineCount": 51,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 51 source lines and ported the useMutationToast public API with success/error helpers intact.",
+    "Replaced web-only react-i18next and in-house Toast imports with React Native Alert feedback plus fallback interpolation for i18n defaultValue intent.",
+    "Preserved error detail extraction semantics for Error, null/undefined, and other unknown error shapes; documented unavailable native toast queue/i18n provider capabilities."
+  ]
+}
