@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AICabinTemperatureImpactNarrative.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AICabinTemperatureImpactNarrative.tsx",
+  "sourceLineCount": 90,
+  "coveredLineCount": 90,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 90-line source before editing; covered the header contract comments, optional string-or-number vehicleId prop, numeric coercion, stable snake_case vehicle_id body memo, /ai/climate/temperature-impact/narrate stream setup, finite positive vehicle input guard, translated card labels, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved POST /api/v1/ai/climate/temperature-impact/narrate, stream state names, cyan Helix badge visual intent, Ask Helix CTA with Narrate impact accessibility context, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams.",
+    "No unit conversion was required because the source delegates all deterministic temperature-impact units to the surrounding analytics page and only sends vehicle_id for narration."
+  ]
+}
