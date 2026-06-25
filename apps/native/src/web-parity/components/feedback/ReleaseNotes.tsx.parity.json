@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/feedback/ReleaseNotes.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/ReleaseNotes.tsx",
+  "sourceLineCount": 124,
+  "coveredLineCount": 124,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 124 source lines line by line before editing and preserved the default-exported ReleaseNotes({ limit = 3 }) component, the `releases = CHANGELOG.slice(0, limit)` derivation, and the `expanded` state initialised to `releases[0]?.version ?? null` with identical isExpanded toggle logic (setExpanded(isExpanded ? null : release.version)).",
+    "Ported the BADGE_VARIANT (latest->success, stable->info, beta->warning), BADGE_KEY, BADGE_FALLBACK, ICON_TINT (emerald-300/cyan-300/amber-300) and DOT_TINT (emerald/cyan/amber/rose/purple/rose-400/60) tables verbatim, mapping the web Tailwind/CSS-var classes onto native theme tokens (success/accent/warning/danger/violet); info has no distinct native blue token so it maps to accent, matching the sibling ChangelogModal parity port.",
+    "Converted the web GlassPanel/Badge + div/button/span/p/ul/li markup, Tailwind/CSS-var classes and the cn() helper (L1-12, L75-122) to React Native View/Pressable/AppText primitives with a StyleSheet and native tokens, reusing the existing native ../../../components/ui/GlassPanel and inlining the Badge as a BADGE_PALETTE chip; no DOM elements, lucide-react, Recharts, Leaflet, or web UI components are imported.",
+    "lucide-react Gift / ChevronUp / ChevronDown (L2, L87, L96-100) became monochrome BMP glyph markers preserving visual intent: Gift -> '\\u2605' star tinted by ICON_TINT[badge], ChevronUp -> '\\u25b4', ChevronDown -> '\\u25be'. All three are decorative (web aria-hidden) so they carry accessibilityElementsHidden + importantForAccessibility=no-hide-descendants while the Pressable announces accessibilityRole=button + accessibilityState.expanded (web aria-expanded).",
+    "Preserved i18n intent: react-i18next useTranslation (L3, L71) became a local useNativeTranslationFallback returning the English fallback; every t(key, fallback) call keeps its original key + fallback (changelog.badges.latest/stable/beta and changelog.releaseNotes.heading \"What's New\"). Neither web call site passes interpolation options, so no {{count}} handling is required.",
+    "The generated CHANGELOG data and the ChangelogBadge/ChangelogChangeType/ChangelogEntry types (L6-11) are supplied by the existing byte-identical native copy at apps/native/src/web-parity/generated/changelog.ts, imported via relative path exactly as the web component imports @/generated/changelog — no browser-only behaviour is involved, so the port is a faithful 1:1 with no unavailable state.",
+    "Verified with cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
