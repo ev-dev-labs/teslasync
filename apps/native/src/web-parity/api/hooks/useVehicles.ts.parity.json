@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useVehicles.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useVehicles.ts",
+  "sourceLineCount": 450,
+  "coveredLineCount": 450,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete 450-line source hook line by line before editing and preserved every exported key, hook, query key, enabled gate, select transform, polling interval, stale time, mutation path, toast fallback, request body, raw async fetch helper, and API path without adding /api/v1.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client, Alert-backed mutation toast bridge, local TanStack Query invalidation, and no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI imports.",
+    "Inlined Vehicle, VehicleState, Position, telemetry/latest DTOs, safeArray, timing constants, and query-broadcast shim because the native parity layer does not expose the web @/types/vehicle, ../types, @/lib/safeArray, @/lib/constants, or @/lib/queryBroadcast aliases.",
+    "The source vehicle state hook depends on URL-mounted useAsOfDate; native has no browser URL state, so this conversion explicitly exposes live-state-only as-of capability while keeping the same /vehicles/{id}/state path shape for live reads."
+  ]
+}
