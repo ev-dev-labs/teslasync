@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useLocations.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useLocations.ts",
+  "sourceLineCount": 86,
+  "coveredLineCount": 86,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 86 source lines and ported each exported query key, query hook, mutation hook, API path, enabled condition, cache invalidation, toast key, and result interface to native-compatible TypeScript.",
+    "Inlined the legacy Location and Geofence interfaces, safeArray guard, and query-broadcast shim because the native parity layer does not expose the web @/types/location, @/lib/safeArray, or @/lib/queryBroadcast aliases.",
+    "Replaced browser cross-tab queryBroadcast behavior with local TanStack Query invalidation and documented queryBroadcastAvailable=false in the native capability export; no DOM, web UI, Recharts, or Leaflet imports are used."
+  ]
+}
