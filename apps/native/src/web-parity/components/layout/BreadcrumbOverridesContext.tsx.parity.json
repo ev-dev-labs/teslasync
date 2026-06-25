@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/layout/BreadcrumbOverridesContext.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/BreadcrumbOverridesContext.tsx",
+  "sourceLineCount": 115,
+  "coveredLineCount": 115,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 115 source lines line by line; this file is pure React context/state logic (createContext, useState, useCallback, useMemo, useEffect, useRef, useContext) with no DOM elements, browser globals, Recharts, Leaflet, or web-UI imports, so it ports 1:1 to React Native unchanged.",
+    "Preserved every exported identifier and runtime behavior exactly: BreadcrumbOverrideMap type (L14), BreadcrumbOverridesContextValue interface with overrides/register/unregister (L16-26), the module-level BreadcrumbOverridesContext and nextId counter (L28-30), BreadcrumbOverridesProvider with the registration Map merge logic (L32-77), useBreadcrumbOverrides (L79-82), and useSetBreadcrumbOverrides with JSON.stringify-based stable serialisation, ref-tracked id allocation, and effect register/unregister cleanup (L91-115).",
+    "Map/Object.entries/JSON.stringify/JSON.parse are all standard JS available in the React Native (Hermes) runtime, so no native-safe fallback was required; the Context.Provider JSX (L72-76) renders identically in React Native.",
+    "Added an explicit React default import because the native tsconfig uses jsx:react-native (classic transform requiring React in scope) and applied .prettierrc (singleQuote, arrowParens:avoid, trailingComma:all) formatting; doc-comment wording was localised from web 'Pages'/'Layout' to native 'Screens'/'shell' while keeping all i18n-free comments and all code identifiers byte-for-byte equivalent."
+  ]
+}
