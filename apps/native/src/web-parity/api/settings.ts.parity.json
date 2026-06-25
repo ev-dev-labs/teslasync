@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/settings.ts",
+  "outputPath": "apps/native/src/web-parity/api/settings.ts",
+  "sourceLineCount": 125,
+  "coveredLineCount": 125,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and ported every exported settings, geofence, alert, notification, gas-price, and map-config API function.",
+    "Source is non-visual API/type code; native output uses the React Native-safe request client and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "Preserved all function names, parameter names, default limit/offset values, request methods, JSON request bodies, snake_case payload fields, and endpoint paths without adding an /api/v1 prefix.",
+    "Recreated the source type contracts used by this module locally so the file remains native-compatible without the web-only @/api/types and @/types/notifications aliases."
+  ]
+}
