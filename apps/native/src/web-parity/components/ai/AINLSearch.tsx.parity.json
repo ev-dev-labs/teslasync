@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AINLSearch.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AINLSearch.tsx",
+  "sourceLineCount": 49,
+  "coveredLineCount": 49,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the file comments, prompt state name, prompt memo body, POST /ai/search/query stream URL, no-op onEvent, translated card labels, canStart guard, input slot, feature wrapper, and display names.",
+    "Converted the web Textarea/onChange event to a native multiline TextInput with native tokens while preserving rows=3 intent, placeholder text, trimmed prompt validation, and the native parity AIFeatureCard stream contract.",
+    "Recreated the AI feature gating and native-safe SSE stream behavior locally for the nl-search feature; when React Native fetch does not expose a readable stream, the component surfaces the explicit unavailable error instead of importing browser-only streaming code."
+  ]
+}
