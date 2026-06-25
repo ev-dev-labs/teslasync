@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIFeedbackQueueTriage.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIFeedbackQueueTriage.tsx",
+  "sourceLineCount": 145,
+  "coveredLineCount": 145,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 145-line source with line numbers before editing; comments, props, feature gating, disabled semantics, POST path, request body, and prose-only/manual-write safety contract were considered.",
+    "Converted web AIFeatureCard/withAiFeature/useAiStream usage to React Native-safe code using View, the native parity AIFeatureCard, native AI feature registry gating, native settings, and apiUrl('/ai/feedback/triage/draft') so /api/v1 prefix behavior is preserved.",
+    "Preserved feedbackId validation, stable {feedback_id} body with disabled placeholder id 0, unconditional stream hook call, state names, SSE delta accumulation, double-submit no-op while streaming, i18n fallback intent, Helix badge/title/description/button labels, and propose-only/manual-controls-remain-authoritative behavior."
+  ]
+}
