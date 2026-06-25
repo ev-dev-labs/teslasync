@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/ChartBrush.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartBrush.tsx",
+  "sourceLineCount": 50,
+  "coveredLineCount": 50,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 50-line source file line by line before editing and preserved the ChartBrushProps API, dataKey default of time, startIndex/endIndex passthrough, height default of 28, and onChange range callback shape.",
+    "Replaced the Recharts Brush import with React Native Pressable/View/AppText primitives, preserving the web brush token values for stroke, fill, traveller width, and height without importing DOM modules, Recharts, Leaflet, or web UI components.",
+    "The web-only Recharts requirement that Brush be mounted inside a chart for drag/sync wiring is unavailable in native chart containers, so this port renders an explicit native range preview and documents the unavailable drag/sync behavior while tapping emits the current range."
+  ]
+}
