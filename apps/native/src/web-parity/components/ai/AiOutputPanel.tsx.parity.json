@@ -1,0 +1,11 @@
+{
+  "sourcePath": "web/src/components/ai/AiOutputPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AiOutputPanel.tsx",
+  "sourceLineCount": 86,
+  "coveredLineCount": 86,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full source with line numbers before editing; covered the lifecycle comments, exported props, idle-hidden/done-visible behavior, error branch, pendingChild override semantics, default thinking indicator, plain text rendering, test id, and displayName.",
+    "Converted DOM div/p/span, Tailwind classes, react-i18next, SVG HelixMark, and web AIThinkingIndicator usage to React Native View/AppText/StyleSheet primitives, native token colors/spacing, fallback translation intent, native accessibility roles, and a decorative native Helix mark."
+  ]
+}
