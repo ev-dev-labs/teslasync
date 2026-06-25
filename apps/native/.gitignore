@@ -105,3 +105,6 @@ loop-logs/
 universal-loop-logs/
 .route-completion-loop-state/
 route-completion-loop-logs/
+.visual-parity-loop-state/
+visual-parity-loop-logs/
+visual-parity-artifacts/
