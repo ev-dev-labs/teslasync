@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/chartDefaults.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/chartDefaults.tsx",
+  "sourceLineCount": 30,
+  "coveredLineCount": 30,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 30-line source file line by line before editing and preserved the AREA_DEFAULTS keys and literal values for type, dot, connectNulls, strokeWidth, and animationDuration.",
+    "Converted the Recharts-only <defs>/<linearGradient>/<stop> helper into a native-safe inert View marker that can be rendered in JSX without DOM, SVG, Recharts, Leaflet, or web UI imports.",
+    "Preserved gradient id, color, default opacity, top stop, and 95% tail stop semantics through createAreaGradientDescriptor, and documented that actual SVG area fills are unavailable without a native SVG chart backend."
+  ]
+}
