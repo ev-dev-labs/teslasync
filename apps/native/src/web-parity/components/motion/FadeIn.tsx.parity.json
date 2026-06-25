@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/motion/FadeIn.tsx",
+  "outputPath": "apps/native/src/web-parity/components/motion/FadeIn.tsx",
+  "sourceLineCount": 23,
+  "coveredLineCount": 23,
+  "notes": [
+    "Read all 23 source lines with line numbers before porting. Covered: the framer-motion `motion` import (L1), the `ReactNode` type import (L2), the `useMotionPreference` hook import (L3), the JSDoc describing fade-in + slide-up + prefers-reduced-motion behaviour (L5-10), the exported `FadeIn` signature with `{ children, delay = 0, className = '' }` and prop types (L11), the `useMotionPreference(400)` call yielding `{ reduce, durationMs }` (L12), the returned `motion.div` (L13-14), `initial={reduce ? false : { opacity: 0, y: 12 }}` (L15), `animate={{ opacity: 1, y: 0 }}` (L16), `transition={{ duration: durationMs / 1000, delay: reduce ? 0 : delay, ease: 'easeOut' }}` (L17), `className={className}` (L18), `{children}` (L19), and the closing JSX/function braces (L20-23).",
+    "Converted framer-motion <motion.div> to a React Native Animated.View driven by a single 0->1 Animated.Value. opacity maps 0->1 and translateY interpolates 12->0, reproducing the web `initial={opacity:0,y:12}` -> `animate={opacity:1,y:0}` slide-up. The `useMotionPreference(400)` wrapper (which itself wraps framer's useReducedMotion and returns durationMs=0 when reduced) is reimplemented inline: DEFAULT_DURATION_MS=400 plus a native AccessibilityInfo-backed useReduceMotion() hook (isReduceMotionEnabled + reduceMotionChanged listener), matching the sibling Skeleton/AIThinkingIndicator parity ports.",
+    "Preserved behaviour and intent: easeOut maps to Easing.bezier(0,0,0.58,1) (framer's exact 'easeOut' curve); duration stays 400ms; the `delay` prop keeps its framer seconds unit (documented) and is converted to ms via delay*1000 for Animated.timing's delay; default delay=0. When reduce motion is on, the effect snaps progress to 1 and animatedStyle is null so the element renders at its final state with no animation, mirroring the web `initial={false}` path; the animation is stopped on cleanup/dep-change.",
+    "Browser-only concerns handled natively: the DOM-only `className` string prop has no native analog and is replaced by `style?: StyleProp<ViewStyle>` (composed onto the Animated.View) plus an optional `testID`. No DOM modules, browser HTML elements, framer-motion, Recharts, Leaflet, or old web UI components were imported; no API paths, i18n strings, or unit conversions exist in this purely-visual component."
+  ],
+  "conversionStatus": "converted"
+}
