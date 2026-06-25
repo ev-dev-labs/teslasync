@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/charts/ChartExportMenu.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartExportMenu.tsx",
+  "sourceLineCount": 222,
+  "coveredLineCount": 222,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 222 source lines line by line before editing and preserved the ChartExportMenu public props, open state, close callback, trigger labels, CSV/PNG/SVG/copy callbacks, disabled gate, busy gate, and clipboard outcome handling.",
+    "Converted the web div/Button/button menu and lucide Copy/Download/FileImage/FileSpreadsheet/Image icons to React Native View/Pressable/Modal primitives with TeslaSync AppText, SemanticIcon glyphs, and native design tokens.",
+    "Replaced document mousedown/Escape listeners with a transparent native Modal backdrop and onRequestClose so outside dismissal and hardware-back dismissal remain native-safe without browser globals.",
+    "The web optional toast provider has no native equivalent in this parity tree, so clipboard copied/fallback/failed outcomes are surfaced through an inline accessible notice while keeping the same i18n keys and fallback messages.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported by the native output."
+  ]
+}
