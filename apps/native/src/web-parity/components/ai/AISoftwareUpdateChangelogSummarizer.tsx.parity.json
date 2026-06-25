@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AISoftwareUpdateChangelogSummarizer.tsx",
+  "sourceLineCount": 164,
+  "coveredLineCount": 164,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete line-numbered source before editing; all 164 source lines covering the ADR/HX comments, vehicleId prop contract, numericVehicleId/body/haveInputs state names, stream setup, translated card copy, empty hint, feature wrapper, and display names were considered.",
+    "Preserved the software-update-changelog-summarizer feature id, native equivalent of withAiFeature gating, POST /api/v1/ai/software-updates/summarize via apiUrl('/ai/software-updates/summarize'), snake_case vehicle_id request body, and double-submit no-op stream behavior.",
+    "Converted DOM/web dependencies (react-i18next, web AIFeatureCard, web useAiStream, and DOM wrapper) to React Native-safe View primitives, the existing native AIFeatureCard, fallback translation intent, settings-backed AI feature gating, and explicit SSE-unavailable error handling when React Native fetch lacks a readable body."
+  ]
+}
