@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AIChargingCurveFingerprintClustering.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIChargingCurveFingerprintClustering.tsx",
+  "sourceLineCount": 137,
+  "coveredLineCount": 137,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 137-line source before editing; covered the AI-off/header contract comments, optional string-or-number vehicleId prop, numeric coercion, stable snake_case vehicle_id body memo, /ai/charging/curves/clusters/explain stream setup, finite positive vehicle input guard, translated card labels, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved POST /api/v1/ai/charging/curves/clusters/explain, stream state names, cyan Helix badge visual intent, Ask Helix CTA with Explain clusters accessibility context, double-submit protection, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams.",
+    "Mapped the web hover/title privacy explanation to a native accessibility hint so the per-feature redaction and deterministic cluster-bucketing contract remains available without browser tooltip behavior; no unit conversion was required because the component only sends vehicle_id for narration."
+  ]
+}
