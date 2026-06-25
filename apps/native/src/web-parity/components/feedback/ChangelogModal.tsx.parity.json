@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/feedback/ChangelogModal.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/ChangelogModal.tsx",
+  "sourceLineCount": 277,
+  "coveredLineCount": 277,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 277 source lines line by line before editing and preserved the ChangelogModal component, the internal ChangelogModalEntry component, every state name (open, acknowledged, expanded), AUTO_SHOW_DELAY_MS, the visibleEntries/isFirstVisit derivations, and the handleClose/handleGotIt/handleViewFull control flow (acknowledged gating which path writes the seen-version stamp).",
+    "Converted the web Modal/Button/Badge + div/p/span/button/ul/li markup, Tailwind/CSS-var classes, and cn() helper to React Native Modal/View/Pressable/ScrollView/AppText primitives with StyleSheet styles and native theme tokens; no DOM elements, Recharts, Leaflet, or web UI components are imported.",
+    "Ported the SECTION_ORDER/SECTION_KEY/SECTION_FALLBACK/SECTION_DOT and BADGE_VARIANT/BADGE_KEY/BADGE_FALLBACK tables verbatim, mapping the web bg-{emerald,cyan,amber,rose,purple}-400/70 dots and success/info/warning badge variants onto colors.success/accent/warning/danger/violet, and re-grouping changes so empty sections still do not render.",
+    "Preserved i18n intent: every t(key, fallback[, {count}]) call keeps its original key and English fallback (changelog.modal.title/subtitleFirstVisit/subtitleSinceLastVisit/viewFull/gotIt, changelog.sections.*, changelog.badges.*) via a native fallback helper that interpolates {{count}}.",
+    "Browser-only behavior in the imported @/hooks/useChangelog and @/generated/changelog was made native-safe and documented inline: localStorage + useSyncExternalStore cross-tab storage events become an in-process useSyncExternalStore store with the same UseChangelogResult contract (cross-restart persistence intentionally unavailable; setChangelogOnboardingCompleted replaces the teslasync-onboarded flag), the window CustomEvent OPEN_CHANGELOG_MODAL_EVENT bus becomes a module listener set (openChangelogModal/subscribeOpenChangelog), document.querySelector('[data-tour-active]') becomes the inert isTourOverlayActive() guard, window.setTimeout/clearTimeout map to setTimeout/clearTimeout, and window.open(releases) maps to Linking.openURL.",
+    "compareVersions semver logic was ported verbatim (numeric MAJOR.MINOR.PATCH with pre-release sorting before release and lexicographic fallback). The generated CHANGELOG/LATEST_VERSION data the component renders is supplied by a byte-identical native copy at apps/native/src/web-parity/generated/changelog.ts (browser-free data + types), imported via relative path exactly as the web component imports @/generated/changelog.",
+    "Verified with cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
