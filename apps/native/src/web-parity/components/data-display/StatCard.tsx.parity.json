@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/components/data-display/StatCard.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/StatCard.tsx",
+  "sourceLineCount": 49,
+  "coveredLineCount": 49,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-3 imports: web Card -> native GlassPanel card shell; web Skeleton -> inlined reduced-motion-aware StatSkeleton pulse block (no native Skeleton parity component exists); cn dropped (no className concatenation, className retained but ignored on native).",
+    "L5-14 StatCardProps: ported faithfully -- label, value (string|number), unit?, icon? (React.ReactNode -> native ReactNode), trend? ({direction 'up'|'down'|'flat', value, positive?} -> StatCardTrend), sublabel?, loading?, className?; added native style?/testID? ergonomics and exported StatCardTrendDirection/StatCardTrend types.",
+    "L16 signature/destructure: prop names preserved; className aliased to _className (ignored on native).",
+    "L17-24 loading branch: GlassPanel card with two StatSkeletons -- Skeleton width=60% height=16 and width=40% height=32 with mt-2 (className) reproduced via marginTop spacing.sm; animate-pulse reproduced via Animated opacity loop with AccessibilityInfo reduce-motion fallback.",
+    "L26-31 card + header row: GlassPanel with flex-col gap-1 (column + spacing.xs gap); header is flex items-center justify-between with label (text-sm font-medium text-[var(--text-muted)] -> AppText tone muted, fontSize 14 weight 500) and optional icon (text-muted span -> View wrapping the native node).",
+    "L32-35 value row: flex items-baseline gap-1 -> row alignItems baseline gap spacing.xs; value text-2xl font-bold -> fontSize 24 fontWeight 700 textPrimary; optional unit text-sm text-muted -> AppText tone muted fontSize 14.",
+    "L36-43 trend block: conditional; color logic preserved exactly (positive -> success/green-600, flat -> textMuted, else danger/red-600); arrow glyphs preserved (up \\u2191, down \\u2193, else \\u2014 em dash); rendered as a row of two AppText (arrow + value) at text-xs (fontSize 12).",
+    "L44-46 sublabel: conditional text-xs text-muted -> AppText tone muted fontSize 12.",
+    "L47-49 closing: GlassPanel close; StatCard exported with displayName; trendArrow/trendColor helpers extracted to mirror the inline web ternaries.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, or web UI components imported; uses React Native primitives, existing native GlassPanel/AppText, and theme tokens only.",
+    "Verification: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
