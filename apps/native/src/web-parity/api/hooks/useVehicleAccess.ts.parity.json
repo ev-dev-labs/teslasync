@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useVehicleAccess.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useVehicleAccess.ts",
+  "sourceLineCount": 108,
+  "coveredLineCount": 108,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 108 source lines before editing and ported every query key, query hook, mutation hook, endpoint path, request method, request body shape, enabled guard, stale time, safe-array selection, cache invalidation, and toast key/fallback.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client and native mutation toast bridge with no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI imports.",
+    "Inlined VehicleDriver, VehicleInvitation, safeArray, and STALE_TIMES.STANDARD because the native parity layer does not expose the web ../types, @/lib/safeArray, or @/lib/constants aliases.",
+    "No unit-conversion or visual/i18n rendering behavior exists in this source hook; i18n intent is preserved through the original mutation toast keys and fallback strings."
+  ]
+}
