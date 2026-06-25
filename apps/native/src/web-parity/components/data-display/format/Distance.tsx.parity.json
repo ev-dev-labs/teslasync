@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Distance.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Distance.tsx",
+  "sourceLineCount": 44,
+  "coveredLineCount": 44,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 44 source lines with numbered output before editing. L1-3 imports (useUnits/fmtNumber/convertDistanceFromSI) are replaced by the native useSettings query plus inlined derive/convert/format helpers, matching the self-contained native-parity convention used by ComparisonHeader and Avatar; no DOM, Recharts, Leaflet, or web UI modules are imported.",
+    "L5-13 DistanceProps (miles, km, precision, className) preserved verbatim; native-only optional style/testID/data-testid/accessibilityLabel added for parity with sibling ports. L15-18 doc comment intent preserved (respects metric/imperial preference and exposes the raw caller value).",
+    "L19-22 component signature: useUnits().unitPrefs.distance is reproduced by deriveDistanceUnit(settings.unit_of_length === 'mi' ? 'mi' : 'km') and toDistanceDisplay via inlined convertDistanceFromSI (METERS_PER_MILE=1609.344, METERS_PER_KM=1000, identical to web lib).",
+    "L24-32 miles/km branch preserved exactly: miles*1609.344 and km*1000 produce SI meters (web's misnamed sourceMiles), with the raw `${value.toFixed(2)} unit` label retained and surfaced as accessibilityHint (the native analogue of the web `title` attribute).",
+    "L34-36 null case renders an em-dash (U+2014) via AppText instead of <span>. L38-43 fmtNumber(convertDistanceFromSI(...), precision) reproduced with locale-aware Intl.NumberFormat honoring settings.decimal_precision/locale (precision ?? settings ?? 2) and a toFixed fallback; output text `${display} ${distanceUnit}` matches web. L44 closing brace covered.",
+    "i18n intent preserved: the web source has no translated strings (only numeric output, the literal unit symbols mi/km, and an em-dash placeholder), so no t() calls are introduced. useSettings is undefined-safe, defaulting to km / precision 2 / en-US during load."
+  ]
+}
