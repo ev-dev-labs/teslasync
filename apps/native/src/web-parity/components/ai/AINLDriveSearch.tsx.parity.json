@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AINLDriveSearch.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AINLDriveSearch.tsx",
+  "sourceLineCount": 50,
+  "coveredLineCount": 50,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the file comments, prompt state name, prompt memo body, POST /ai/drives/search stream URL, no-op onEvent, translated card labels, canStart guard, input slot, feature wrapper, and display names.",
+    "Converted web-only Textarea/onChange event usage to a native multiline TextInput using native tokens while preserving rows=3 intent, placeholder text, trimmed prompt validation, and the native parity AIFeatureCard stream contract.",
+    "Recreated the AI feature gating and native-safe SSE stream behavior locally for the nl-drive-search-replay feature; when React Native fetch does not expose a readable stream, the component surfaces the explicit unavailable error instead of importing browser-only streaming code."
+  ]
+}
