@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AIQuietHoursSuggestion.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIQuietHoursSuggestion.tsx",
+  "sourceLineCount": 298,
+  "coveredLineCount": 298,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete line-numbered source before editing; the wiring contract comments, proposal/interface types, empty request body memoization, tool_result validation, cleanup effect, busy/apply guards, preview rows, and withAiFeature export were all considered.",
+    "Converted DOM-only AIFeatureCard/Button/div/ul/li usage to React Native AIFeatureCard, View, Pressable, AppText, StyleSheet, and native TeslaSync colors/spacing while preserving the quiet-hours-suggestion feature gate and root/suggest/apply test IDs.",
+    "Preserved POST /api/v1/ai/settings/quiet-hours/draft through apiUrl('/ai/settings/quiet-hours/draft'), stream state names, unmount cancellation, proposal reset before suggesting, and the apply-only QuietHoursWindowInput patch with enabled/start_local/end_local/timezone/weekdays/bypass_severities.",
+    "Native fetch runtimes without readable SSE stream support surface an explicit stream error instead of silently pretending Helix streaming is available."
+  ]
+}
