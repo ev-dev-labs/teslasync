@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/components/feedback/GotoIndicator.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/GotoIndicator.tsx",
+  "sourceLineCount": 22,
+  "coveredLineCount": 22,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 22 source lines with numbered output before editing. L1 `import { useTranslation } from 'react-i18next'` is replaced by a self-contained `useNativeTranslationFallback` hook (native parity has no i18n runtime), preserving the key/fallback intent of the single `t('shortcuts.goto', 'Go to...')` call. L2/L6/L9/L11 blank lines carried over.",
+    "L3-L5 `interface GotoIndicatorProps { visible: boolean }` preserved verbatim (exported here as `GotoIndicatorProps` with JSDoc noting the parent passes `shortcutMode === 'goto'`).",
+    "L7 `export function GotoIndicator({ visible }: GotoIndicatorProps)` preserved (named export, same destructured prop). L8 `const { t } = useTranslation()` becomes `const t = useNativeTranslationFallback()`.",
+    "L10 `if (!visible) return null` preserved exactly as the early guard, keeping the parent-driven visibility contract.",
+    "L12-L15 the `fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999]` overlay + `px-4 py-2 rounded-xl bg-[var(--surface-overlay)] backdrop-blur-xl border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] shadow-2xl animate-in ...` pill is ported to a bottom-anchored `position:absolute, bottom:80, left:0, right:0, alignItems:center, zIndex:9999` overlay wrapping a row `pill` View: rounded-xl=borderRadius 12, px-4/py-2=paddingHorizontal 16(spacing.md)/paddingVertical 8(spacing.sm), bg=--surface-overlay rgba(0,0,0,0.6), 1px border=--border-subtle rgba(255,255,255,0.06), shadow-2xl=shadows.panel token. RN has no `position:fixed` (→absolute), no CSS `backdrop-blur-xl` (the translucent overlay fill stands in), and no `animate-in fade-in slide-in-from-bottom-4 duration-normal` keyframe entrance (omitted; final resting state preserved) — all documented in the file header + here. text-sm(14px) drives the prompt/'+' size; text-primary is inherited-only and never visibly rendered (children override it), so it is intentionally not bound to a node.",
+    "L16 prompt `<span className=\"text-[var(--text-muted)] mr-2\">{t('shortcuts.goto','Go to...')}</span>` → <AppText style={prompt}> with color --text-muted #8a95a6, fontSize 14, marginRight 8(spacing.sm); same i18n key/fallback.",
+    "L17 & L19 the two `<kbd class=\"px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-xs font-mono text-[var(--text-secondary)]\">g</kbd>` / `?` key-caps → a `kbd` View (bg --surface-2 #151621, rounded 4, px 6/py 2) wrapping a `kbdText` AppText (color --text-secondary #9ca3af, text-xs=12px, Platform-selected monospace fontFamily mirroring MetricBar/ChartTooltip).",
+    "L18 separator `<span className=\"text-[var(--text-muted)] mx-1\">+</span>` → <AppText style={plus}> color --text-muted, fontSize 14, marginHorizontal 4(spacing.xs). Container gap intentionally omitted so the exact web spacing (prompt mr-2=8, '+' mx-1=4 each side, kbds no margin) is reproduced via margins alone.",
+    "L20-L22 closing `</div>`/`)`/`}` map to the closing View/return/function braces. Native-safe adaptations: react-i18next → English-fallback hook; keyboard chord (a web-only input concept) ported as the equivalent visual indicator gated by the same `visible` prop; a11y added via accessibilityLiveRegion='polite' on the transient overlay and an accessibilityLabel ('Go to... g + ?') + role='text' on the non-interactive pill (pointerEvents box-none/none so the overlay never intercepts touches). No DOM, no react-i18next, no Recharts/Leaflet, and no web UI components are imported."
+  ]
+}
