@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/analytics.ts",
+  "outputPath": "apps/native/src/web-parity/api/analytics.ts",
+  "sourceLineCount": 111,
+  "coveredLineCount": 111,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and ported every exported analytics API function.",
+    "Source is non-visual API/type code; the native output uses the React Native-safe request client and imports no DOM, browser HTML, Recharts, Leaflet, or web UI modules.",
+    "Preserved endpoint paths, query parameter names, defaults, URLSearchParams behavior, SI/legacy response field names, and response type shapes needed by this module."
+  ]
+}
