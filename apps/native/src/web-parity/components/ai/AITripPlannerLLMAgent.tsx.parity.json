@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AITripPlannerLLMAgent.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AITripPlannerLLMAgent.tsx",
+  "sourceLineCount": 98,
+  "coveredLineCount": 98,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the streaming endpoint comments, TripLocationLike and InnerSectionProps, numeric vehicle id coercion, memoized request body, input guard, AIFeatureCard props, withAiFeature('trip-planner-llm-agent') wrapper, and display names.",
+    "Preserved POST /api/v1/ai/trips/plan/draft via the native apiUrl helper, snake_case request fields, default SOC/speed-factor values, origin/destination fallback coordinates and names, and the Draft a plan with Helix i18n intent.",
+    "Converted web-only useTranslation, withAiFeature, and useAiStream dependencies to native-safe fallback translation, AI settings gating, React Native View wrapping, the existing native AIFeatureCard, and an explicit stream-unavailable error when React Native fetch lacks readable SSE support."
+  ]
+}
