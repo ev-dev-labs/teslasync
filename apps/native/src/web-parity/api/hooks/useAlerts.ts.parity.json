@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useAlerts.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useAlerts.ts",
+  "sourceLineCount": 57,
+  "coveredLineCount": 57,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source shim line by line before editing; preserved its alert-domain import surface, including alertKeys, all alert hooks, alert DTO type exports, acknowledgment/comment inputs, and message-template helper re-exports.",
+    "The web shim delegates to useNotifications.ts, which does not exist yet in the native web-parity tree, so the native output implements the alert-specific TanStack Query hooks directly with the same API paths and mutation names instead of importing a missing module.",
+    "Mirrored the web alert-detail, alert-rule input, computed-metric, snooze, and test request DTOs locally because the native shared api/types file currently exposes only a subset of the web notification contract.",
+    "Source is non-visual API/type code; the native output imports only TanStack Query, the native parity request client, local DTO types, and the native-safe mutation feedback helper with no DOM modules, HTML elements, Recharts, Leaflet, or web UI components."
+  ]
+}
