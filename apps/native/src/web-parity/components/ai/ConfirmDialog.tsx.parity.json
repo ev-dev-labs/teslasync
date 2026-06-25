@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/ConfirmDialog.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/ConfirmDialog.tsx",
+  "sourceLineCount": 135,
+  "coveredLineCount": 135,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 135-line source line by line before editing and preserved the AiToolPreview and AiConfirmDialogProps contracts, open/loading state names, confirm/cancel callbacks, tool metadata, args null handling, and JSON.stringify(args ?? {}, null, 2) preview.",
+    "Converted web Modal/Button/div/p/pre markup, Tailwind classes, data-testid attributes, and react-i18next usage to React Native Modal/View/Pressable/ScrollView/ActivityIndicator/AppText primitives, native tokens, testID attributes, and fallback translation keys.",
+    "Preserved the AI safety flow: no automatic action, no cancel/backdrop close while loading, disabled actions during continuation POST, confirm spinner, explicit Approve/Cancel affordances, and verbatim tool name/argument display."
+  ]
+}
