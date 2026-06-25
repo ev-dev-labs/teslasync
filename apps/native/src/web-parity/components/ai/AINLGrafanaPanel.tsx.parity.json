@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AINLGrafanaPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AINLGrafanaPanel.tsx",
+  "sourceLineCount": 219,
+  "coveredLineCount": 219,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the file comments, Grafana draft DTO interfaces, onApply prop contract, parser validation, prompt/draft state names, trimmed prompt memo body, tool_result capture, draft/apply guards, feature wrapper, and display names.",
+    "Converted web Textarea/Button/div usage to native TextInput/Pressable/View with native TeslaSync tokens while preserving the prompt placeholder, rows=2 intent, explicit Apply to editor action, accessibility label/hint intent, and Helix AIFeatureCard visual scaffold.",
+    "Preserved the POST /ai/power/grafana-panel/draft stream URL and draft_grafana_panel tool-result behavior using the established native AI stream shim; if React Native fetch cannot expose a readable stream body, the component surfaces the explicit unavailable error rather than importing browser-only streaming code."
+  ]
+}
