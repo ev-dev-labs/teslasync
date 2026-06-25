@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AIBatteryHealthForecastNarrative.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIBatteryHealthForecastNarrative.tsx",
+  "sourceLineCount": 96,
+  "coveredLineCount": 96,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 96-line source before editing; covered the header contract comments, optional string-or-number vehicleId prop, numeric coercion, stable body memo with snake_case vehicle_id, /ai/battery/health/narrate stream setup, finite positive vehicle input guard, translated card labels, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved POST /api/v1/ai/battery/health/narrate, stream state names, cyan Helix badge visual intent, Ask Helix CTA with Narrate forecast accessibility context, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams.",
+    "Mapped the web hover/title privacy explanation to a native accessibility hint so the redaction and deterministic-forecast contract remains available without browser tooltip behavior."
+  ]
+}
