@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/charging.ts",
+  "outputPath": "apps/native/src/web-parity/api/charging.ts",
+  "sourceLineCount": 16,
+  "coveredLineCount": 16,
+  "conversionStatus": "converted",
+  "notes": [
+    "Source imports were mapped to the native shared API client and shared charging types.",
+    "Charging session list, detail, and telemetry exports preserve names, defaults, query parameters, and API paths.",
+    "No visual, DOM-only, browser-only, unit conversion, or unavailable behavior was present in the source file."
+  ]
+}
