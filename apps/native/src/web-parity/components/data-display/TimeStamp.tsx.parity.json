@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/data-display/TimeStamp.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/TimeStamp.tsx",
+  "sourceLineCount": 64,
+  "coveredLineCount": 64,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 64-line source with numbered lines before editing. L1-4 imports (Tooltip, useDateFormat, useTimeFormatPreference, TzMode) are reproduced natively: Tooltip becomes an accessibilityHint affordance, useDateFormat's formatDateTime/formatRelative are inlined, useTimeFormatPreference is ported via the native useSettings hook, and TzMode is inlined from @/lib/timezone.",
+    "L6 TimeStampFormat ('relative'|'absolute'|'auto') and L8-26 TimeStampProps (value, format, in, className) are preserved verbatim; style + testID are added for native parity consumers and className is retained-but-ignored per the sibling Duration/Speed ports.",
+    "L28-41 component JSDoc intent is preserved and adapted — the hover tooltip that shows the alternate format becomes accessibilityHint (the native tooltip analog), and the locale/IANA-timezone honoring described there is implemented via settings.locale + resolveTimezone(settings.tz_display_default | in prop).",
+    "L42 signature, L43 useTimeFormatPreference call, and L44 useDateFormat(mode) destructure of formatDateTime/formatRelative are reproduced; tz/locale are resolved from native useSettings (tz_display_default, timezone_user, locale). The web vehicle-tz source (useSelectedVehicle) has no native parity surface, so 'vehicle' mode falls back to the user/browser zone — identical to the web fallback when a vehicle has not yet been polled.",
+    "L46-48 null branch and L50-53 Date-parse + Number.isNaN(getTime()) guard render the '—' placeholder via AppText with no accessibilityHint, matching the web's tooltip-less placeholder span.",
+    "L55-57 effective/primary/secondary selection logic is preserved verbatim; L59-63 Tooltip(content=secondary) + span(primary) become an AppText with accessibilityHint={secondary} and body {primary}. L64-65 close the component.",
+    "browserTimezone, resolveTimezone, intlOpts, intlLocale, formatDateTime, formatDate, and formatRelative are inlined verbatim from @/lib/timezone and @/lib/dateFormat (formatRelative falls back to formatDate past 7 days, exactly as in the web lib). No DOM elements, Tooltip UI component, Recharts, Leaflet, or browser-only modules are imported; only React Native primitives (AppText) and the native useSettings hook are used.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), and npm test -- --runInBand --detectOpenHandles (jest) all pass."
+  ]
+}
