@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIRangePrediction.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIRangePrediction.tsx",
+  "sourceLineCount": 67,
+  "coveredLineCount": 67,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the ML2 comments, InnerSection props, useMemo body, useAiStream path, translated labels, withAiFeature('range-prediction-model') wrapper, and display names.",
+    "Preserved the default 14-day learning request body {vehicle_id, days}, vehicleId start guard, POST /api/v1/ai/ml/range/train through the native apiUrl helper, and the range projection propose-only narration intent.",
+    "Converted web-only AIFeatureCard/withAiFeature/useAiStream dependencies to native-safe View gating, the existing native AIFeatureCard, and an explicit unavailable error when React Native fetch cannot expose readable SSE streaming."
+  ]
+}
