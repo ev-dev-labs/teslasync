@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/RadialGauge.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/RadialGauge.tsx",
+  "sourceLineCount": 67,
+  "coveredLineCount": 67,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read source lines 1-67 line by line and preserved the RadialGauge export, prop names, defaults, numeric clamp variables, precision fallback, unit rendering, and label rendering.",
+    "Replaced DOM div/span and SVG circle strokeDasharray/strokeDashoffset with React Native View/AppText primitives and a segmented circular ring that keeps the same track, colored progress arc, centered value, and label visual intent.",
+    "Kept className as a native no-op compatibility prop, mapped web data-testid to testID, avoided DOM-only modules/Recharts/Leaflet, and added a max <= 0 guard so native styles never receive invalid progress values."
+  ]
+}
