@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIInboxAutoCategorization.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIInboxAutoCategorization.tsx",
+  "sourceLineCount": 287,
+  "coveredLineCount": 287,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full source with line numbers before editing; comments, props, feature gating, stream URL, optional request body fields, proposal state, cleanup scope, apply semantics, and visual preview were considered.",
+    "Converted DOM/Button/withAiFeature/useAiStream usage to React Native-safe Pressable/View/AppText, native token styling, local native AI feature gating via settings, and apiUrl('/ai/alerts/inbox/categorize') so the /api/v1 POST path is preserved without DOM-only imports.",
+    "Preserved CategoryBucket validation, state names, stream states, cancel-on-unmount and scope-change behavior, empty optional field omission, de-duplicated sorted rule_id application, i18n fallback keys, Helix card copy, test IDs, and review-before-applying category chips."
+  ]
+}
