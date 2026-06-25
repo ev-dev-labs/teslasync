@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/data-display/PlaybackSpeedMenu.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/PlaybackSpeedMenu.tsx",
+  "sourceLineCount": 59,
+  "coveredLineCount": 59,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 59 source lines with numbered output before editing. Imports L1-4 (react-i18next useTranslation, lucide ChevronDown, web @/components/ui/Button, ReplaySpeed type from @/hooks/useTripReplay) are all DOM/web-only and were replaced: useTranslation -> native English-default fallback t(); ChevronDown -> muted text caret U+25BE; Button -> a React Native Pressable styled as a ghost/sm button via AppText + theme tokens; ReplaySpeed -> locally mirrored literal-union type because useTripReplay is not in the native parity layer.",
+    "Constants section L6-10: REPLAY_SPEEDS: ReplaySpeed[] = [1,10,25,50,100] ported verbatim (kept the section banner comments L6-8).",
+    "L12-18 shiftSpeed(current, delta) ported byte-for-byte (indexOf, safeIdx -1 guard, Math.max/Math.min clamp to REPLAY_SPEEDS.length-1, return slot). L20-24 nextSpeed(current) ported byte-for-byte (indexOf + (idx+1) % length wrap). JSDoc comments L12 and L20 preserved.",
+    "Component section L26-34: PlaybackSpeedMenuProps { speed, onChange, className? } preserved; className kept for source parity but unused (_className) since RN has no CSS class names, and native-safe style/testID/accessibilityLabel extension points were added per the data-display parity convention.",
+    "L36-40 doc comment intent preserved: click cycles to next speed; right-click cycles backwards. L41-42 useTranslation()/t kept as a call-site shaped fallback. L43-58 JSX <Button> tree mapped to <Pressable>: L47 onClick -> onPress={() => onChange(nextSpeed(speed))}; L48-51 onContextMenu preventDefault + shiftSpeed(speed,-1) -> onLongPress={() => onChange(shiftSpeed(speed,-1))} as the native touch equivalent of right-click (no context-menu gesture exists in RN); L52 aria-label -> accessibilityLabel via t('replay.controls.speed','Playback speed'); L53 className default (flex items-center gap-0.5 px-2 text-xs font-mono) -> styles.root (row, alignItems center, alignSelf flex-start, paddingHorizontal spacing.sm = px-2, paddingVertical spacing.xs) + caret marginLeft 2 = gap-0.5 + AppText variant=caption = text-xs + fontFamily monospace = font-mono.",
+    "L55 {speed}x rendered as an AppText caption with monospace family; L56 ChevronDown h-3/w-3 opacity-50 rendered as an AppText caret glyph U+25BE at opacity 0.5; current speed is exposed to assistive tech via accessibilityValue while the Pressable is accessible as a single button. L57-59 closing tags covered. No DOM modules, HTML elements, Recharts, Leaflet, lucide, or web UI components were imported."
+  ]
+}
