@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'node:path';
 
 const resolverExtensions = [
   '.web.tsx',
@@ -22,7 +23,13 @@ export default defineConfig(({ mode }) => ({
     ),
   },
   resolve: {
-    alias: [{ find: /^react-native$/, replacement: 'react-native-web' }],
+    alias: [
+      { find: /^react-native$/, replacement: 'react-native-web' },
+      {
+        find: /^react-native-safe-area-context$/,
+        replacement: path.resolve(__dirname, 'src/platform/safeAreaContext.web.tsx'),
+      },
+    ],
     extensions: resolverExtensions,
   },
   build: {
