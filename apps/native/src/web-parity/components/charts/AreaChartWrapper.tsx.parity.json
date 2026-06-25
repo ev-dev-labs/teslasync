@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/AreaChartWrapper.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/AreaChartWrapper.tsx",
+  "sourceLineCount": 93,
+  "coveredLineCount": 93,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and preserved the data, xKey, series, height, xFormatter, yFormatter, and className compatibility props while forwarding refs to a native View instead of an HTMLDivElement.",
+    "Converted the Recharts ResponsiveContainer/AreaChart/Area/XAxis/YAxis/CartesianGrid rendering into React Native View/AppText primitives with native TeslaSync tokens, layered filled series, grid lines, x/y tick formatting, series colors, and width/height visual intent.",
+    "Recharts hover Tooltip has no native touch equivalent in this dependency set, so the formatter/name mapping is represented by an always-visible latest-value summary using the same series labels and yFormatter output."
+  ]
+}
