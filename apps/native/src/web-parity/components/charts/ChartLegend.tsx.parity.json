@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/charts/ChartLegend.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartLegend.tsx",
+  "sourceLineCount": 105,
+  "coveredLineCount": 105,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 105 source lines line by line before editing and preserved the LegendPayloadEntry dataKey fallback logic, ChartLegendToggleSource toggle/isHidden surface, ChartLegendProps state/wrapperStyle/verticalAlign/align props, and ChartLegend export.",
+    "Converted the Recharts Legend formatter/onClick behavior to React Native View/Pressable/AppText primitives so supplied native legend payload entries can still toggle hidden series and render the 40% opacity plus line-through hidden state.",
+    "Kept context fallback through useChartHiddenSeries so ChartContainer chartKey state still drives legends when no explicit state prop is supplied.",
+    "Recharts auto-generated legend payload and DOM span data attributes are unavailable in React Native; the port documents this by exposing a native-only payload prop and rendering an explicit unavailable message when no payload is provided."
+  ]
+}
