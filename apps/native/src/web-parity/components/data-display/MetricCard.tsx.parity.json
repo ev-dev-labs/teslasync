@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/MetricCard.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/MetricCard.tsx",
+  "sourceLineCount": 81,
+  "coveredLineCount": 81,
+  "notes": [
+    "Read the full 81-line numbered source before editing; covered the MetricCardDelta wrapper type (Omit<DeltaProps,'current'> + nullable current), the MetricCardProps contract (label, value, icon, color default 'cyan', change, delta, subtitle, className, help), the neonColorMap[color] lookup, numericValue/deltaCurrent computation (lines 43-45), and every JSX slot: card shell (line 47), label row + truncate + HelpTooltip with the 'More info about {label}' aria fallback (50-59), value (60), subtitle (61), legacy change pill with up/down arrow + emerald-300/rose-300 (62-66), delta slot rendering <Delta {...delta} current={deltaCurrent}> (67-71), and the neon icon chip with c.bg/c.ring/c.text (73-77).",
+    "Converted DOM div/p/span + Tailwind classes to React Native View/AppText/StyleSheet primitives and native theme tokens; dropped the web-only cn() helper. neonColorMap was ported from web/src/lib/tokens.ts using the exact tailwind.config.js neon hues (cyan #00f0ff, green #10b981, red #ef4444, purple #a855f7, amber #f59e0b, blue #4f46e5) with bg=neon/10, ring=neon/20 (→ border), text=300-level tint; .metric-label eyebrow reproduced as 10px medium uppercase wide-tracked muted text.",
+    "Delta and HelpTooltip are sibling web components without their own native parity ports yet, so both are reproduced inline as native-safe local components preserving the public prop shapes (DeltaProps, HelpTooltipProps, NeonColor, MetricUnit, Direction, MetricSemantic) and visual intent. HelpTooltip: native has no hover/focus popover, so resolved i18n text (i18nKey→defaultValue, else text) is exposed via accessibilityLabel + accessibilityHint instead of a Tooltip; placement/className inert; renders null when empty (web parity). Delta: direction colour (success/danger == emerald-400/rose-400, neutral/zero muted), arrow sign, percent/absolute/both formatting, comparedTo, loading skeleton (testID delta-skeleton) and missing-input em-dash (testID delta-empty) preserved; the metric-id registry, useUnits()/useFormatting() unit+currency preference resolution are reduced to a static suffix map + '$' default and unknown string ids resolve to 'neutral'.",
+    "No DOM-only modules, lucide-react, react-i18next, recharts, leaflet, or web UI components imported; icon ReactNode is rendered as-is, with string icons tinted by the neon text colour. Verified via cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ],
+  "conversionStatus": "converted"
+}
