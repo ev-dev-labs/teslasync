@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useSettingsReset.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSettingsReset.ts",
+  "sourceLineCount": 117,
+  "coveredLineCount": 117,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 117 source lines before editing and preserved settingsResetKeys, SettingsResetSectionResult, SettingsResetResult, useResetSection, useResetAllSettings, SudoCanceledError re-export, request paths, POST methods, JSON bodies, cache writes, global invalidation, and toast keys/fallbacks.",
+    "Source is non-visual TanStack Query API hook code; the native output uses the native web-parity request client and Alert-backed mutation toast bridge with no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI imports.",
+    "SUDO_REQUIRED behavior remains delegated to the native request client's challenge-provider flow, matching the source interceptor semantics while staying React Native safe.",
+    "The reset hooks intentionally invalidate all cached queries without filters because settings reset can affect multiple independent settings, alert, geofence, automation, dashboard, and quiet-hours caches."
+  ]
+}
