@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/data-display/TransitionArrow.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/TransitionArrow.tsx",
+  "sourceLineCount": 9,
+  "coveredLineCount": 9,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 9 source lines with numbered output before editing.",
+    "L1 function signature {from, to}: {from: string; to: string} preserved as TransitionArrowProps (plus optional native style/testID following the existing parity-port convention).",
+    "L3 outer <span className='font-mono text-xs'> -> parent AppText with fontFamily 'monospace' (repo-standard) and variant='caption' for the text-xs (12px) sizing.",
+    "L4 <span text-[var(--text-secondary)]>{from} -> nested AppText tone='secondary'; L6 <span text-[var(--text-primary)]>{to} -> nested AppText tone='primary'; the --text-* CSS vars map to native theme tones.",
+    "L5 <span text-[var(--text-muted)] mx-1>→ -> nested AppText tone='muted' rendering the \\u2192 arrow; the mx-1 horizontal margin (unsupported on inline RN Text) is reproduced as surrounding spaces, and the full transition is exposed via accessibilityLabel.",
+    "L2/L7-L9 JSX return/closing tags mapped to the AppText tree; no DOM spans, Tailwind, CSS vars, Recharts, Leaflet, or old web UI components imported."
+  ]
+}
