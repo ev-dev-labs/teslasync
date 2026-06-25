@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/feedback/AlertBanner.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/AlertBanner.tsx",
+  "sourceLineCount": 55,
+  "coveredLineCount": 55,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 55 source lines with line numbers before porting. Covered: the react/lucide-react/cn imports (L1-3), the AlertBannerProps interface incl. variant union/title/children/onClose/icon and HTMLAttributes spread (L5-11), the neon-token alertVariantMap with border/bg/text/titleText per variant (L13-18), the usage doc comment (L20-38), and the render function with icon slot, title, children, and close button (L39-55).",
+    "Converted DOM-only <div>/<p>/<button> + lucide <X/> + cn() Tailwind classes to React Native View/AppText/Pressable with StyleSheet and theme tokens. Preserved the four-variant taxonomy info/success/warning/danger mapped to accent/success/warning/danger tokens (surface bg + border + fg), with title/icon at full color and body text + close glyph at ~80% opacity to mirror text-neon-*/80 vs text-neon-*.",
+    "Preserved prop names (variant, title, children, onClose, icon) and behavior: icon/title/onClose are conditionally rendered exactly as the source guards (icon &&, title &&, onClose &&), children spacing (mt-0.5) applied only when a title is present, and string-vs-node children handled like the SeverityBadge port. The lucide X icon is replaced by the canonical '✕' glyph since native ships no SVG icon set.",
+    "DOM-only HTMLAttributes spread (className/id/data-*) has no native analog and was replaced by native-friendly style?:StyleProp<ViewStyle> and testID props; close button exposes accessibilityRole='button' + accessibilityLabel='Dismiss'. No browser-only modules, web UI imports, charts, maps, API paths, or unit conversions were introduced."
+  ]
+}
