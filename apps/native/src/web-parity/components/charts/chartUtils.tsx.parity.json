@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/chartUtils.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/chartUtils.tsx",
+  "sourceLineCount": 21,
+  "coveredLineCount": 21,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line and preserved the public chart utility exports: CHART_COLORS, NEON_COLORS, axisTick, axisTickSm, chartGrid, safe, fmt, chartAnimation, chartMargin, and chartMarginLabeled.",
+    "Replaced the DOM/Recharts imports with React Native primitives and native tokens; copied the source chart palettes and mapped chartTokens axis/grid colors to native theme colors.",
+    "Converted the Recharts-only CartesianGrid element into a native-safe inert View plus chartGridDescriptor metadata documenting the unavailable SVG grid backend."
+  ]
+}
