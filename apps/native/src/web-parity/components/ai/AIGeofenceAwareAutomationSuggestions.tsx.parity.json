@@ -1,0 +1,11 @@
+{
+  "sourcePath": "web/src/components/ai/AIGeofenceAwareAutomationSuggestions.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIGeofenceAwareAutomationSuggestions.tsx",
+  "sourceLineCount": 302,
+  "coveredLineCount": 302,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 302 source lines with line numbers before editing; covered the AI streaming contract comments, AutomationDraft and prop types, normalization guard, vehicle_id plus prompt body, draft_automation_graph tool_result parsing, vehicleId cleanup reset, busy/canStart guards, apply callback, AI card render, prompt input, proposal preview, and withAiFeature wrapping.",
+    "Converted DOM-only AIFeatureCard, Button, Textarea, div, and span usage to React Native TextInput, View, Pressable, AppText, native tokens, the native parity AIFeatureCard, settings-backed AI feature gating, and a native-safe SSE stream implementation that preserves POST /ai/geofences/automations/draft and reports an explicit unavailable error when readable streaming is unavailable."
+  ]
+}
