@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIPredictiveMaintenance.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIPredictiveMaintenance.tsx",
+  "sourceLineCount": 163,
+  "coveredLineCount": 163,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all source lines before editing; the trailing blank line shown by the reader was considered while preserving the requested 163-line source count.",
+    "Preserved the predictive-maintenance feature gate, vehicleId/haveScope/body state names, POST body shape {vehicle_id}, and /ai/maintenance/predict stream endpoint.",
+    "Replaced web-only react-i18next/HOC/hook imports with native-safe fallback translation, settings-gated feature wrapper, native fetch SSE handling, and the shared native AIFeatureCard visual shell."
+  ]
+}
