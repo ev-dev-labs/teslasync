@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/components/layout/Grid.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/Grid.tsx",
+  "sourceLineCount": 32,
+  "coveredLineCount": 32,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 32 source lines with line numbers before editing. L1 `import { type ReactNode } from 'react'` is preserved (ReactNode still types `children`). L2 `import { cn } from '@/lib/cn'` is dropped: `cn` is a web-only className concatenator with no native analog; class composition becomes React Native style-array composition instead.",
+    "L4-9 `GridProps` interface ported faithfully: `cols` (default/sm/md/lg/xl) is kept as the exported `GridColumns` interface, `gap?: number` and `children: ReactNode` are kept verbatim, and the L8 `className?: string` escape hatch becomes the conventional native `style?: StyleProp<ViewStyle>` prop (same convention as the already-ported MetricGrid).",
+    "L11-14 `colsMap` (number -> Tailwind `grid-cols-N` class string) has no native equivalent — React Native has no CSS grid or utility classes — so it is subsumed by direct numeric column handling: the resolved column count drives an equal-width flexbox cell layout. Those lines are considered and intentionally not reproduced as a class map.",
+    "L16 signature with defaults `cols = { default: 1 }` and `gap = 4` is preserved exactly on the native `Grid({cols = {default: 1}, gap = 4, children, style})`.",
+    "L17-28 the single `<div className={cn('grid', …)}>` becomes a `<View>` running the flexbox engine: L20 `grid` -> `flexDirection: 'row'` + `flexWrap: 'wrap'`; L21-24 the responsive `grid-cols-*` cascade (default -> sm -> md -> lg) is resolved by `resolveColumnCount` against `useWindowDimensions().width` using the same Tailwind breakpoints (sm 640 / md 768 / lg 1024px), matching the web's viewport-based media queries.",
+    "Rule 3 behavior preservation for the latent `xl` field: the web template (L22-24) only ever emits `sm:`/`md:`/`lg:` classes and never an `xl:` class, so `cols.xl` is accepted for API parity but intentionally not applied — replicating the web component's actual rendered behavior rather than a hypothetical fixed version.",
+    "L25 `gap-${gap}` -> the RN flexbox `gap` property in pixels via Tailwind's 0.25rem (4px) spacing unit (`gap * 4`), so the default `gap=4` yields 16px exactly like web `gap-4` (1rem). RN 0.71+ supports flexbox `gap`; this app is on react-native 0.81.6. L26 `className` passthrough -> the `style` prop composed in the `[styles.root, {gap}, style]` array.",
+    "L29 `{children}` -> `React.Children.toArray(children)` mapped into equal-width cells; exact cell width = (measured container width - gap*(cols-1)) / cols via `onLayout`, with a `100%`/percentage fallback for a single column or the pre-measurement first frame so N columns align precisely and the grid is never blank. L30-32 closing tags/brace -> the closing `</View>` and component return.",
+    "Rule 4/5 compliance: no DOM elements, Tailwind classes, Recharts, Leaflet, or old web UI components are imported — only React Native primitives (View, StyleSheet, useWindowDimensions) and React hooks. Added `Grid.displayName` and a `default export` for parity with sibling native ports (PageLoader, MetricGrid) without altering the named export.",
+    "Verified via gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
