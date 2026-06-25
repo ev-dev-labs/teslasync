@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/api/hooks/useFSM.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useFSM.ts",
+  "sourceLineCount": 83,
+  "coveredLineCount": 83,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete source hook line by line before editing and preserved fsmKeys.stats, fsmKeys.transitions, useFSMStats, useFSMTransitions, enabled gates, FAST polling, query key members, and the exact /fsm/stats and /fsm/transitions API paths without adding /api/v1.",
+    "Inlined the FSMTransition, ActiveSubFSM, FSMStats, FSMTransitionResponse, and FSMType DTOs from web/src/types/fsm/ui-types.ts because the native parity hook cannot import the web @/types/fsm alias.",
+    "Preserved the RFC3339 calendar-window behavior: start/end are only sent as a pair, each instant is encodeURIComponent-encoded, the all-FSM filter omits fsm_name, and the query keeps snake_case vehicle_id and per_page parameters.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client, forwards TanStack Query AbortSignal values, and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "No unit conversion or i18n behavior exists in this source hook; native consumers receive raw API data with snake_case fields preserved by the parity client."
+  ]
+}
