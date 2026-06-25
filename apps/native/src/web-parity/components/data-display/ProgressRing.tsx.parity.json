@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/ProgressRing.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/ProgressRing.tsx",
+  "sourceLineCount": 103,
+  "coveredLineCount": 103,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read source lines 1-103 line by line and preserved the ProgressRing named export, forwardRef, and every prop with its default: value, max=100, size=48, strokeWidth=4, color='#3b82f6', label, centerLabel, centerSubLabel, className (now a native no-op compatibility prop replacing the dropped cn import).",
+    "Preserved the geometry math verbatim (radius=(size-strokeWidth)/2, center=size/2, circumference=2*PI*radius, clamp of value to [0,max], offset, hasCenter, mainSize=max(10,round(size*0.32)), subSize=max(8,round(size*0.18))); a max<=0 guard derives a safe progress fraction so native styles never receive NaN.",
+    "Replaced the DOM div/svg/circle stroke-dasharray/stroke-dashoffset track + progress arc with the RadialGauge-style segmented native View ring: 72 positioned segments, leading active arc tinted with `color`, remaining track in colors.border (the native dark-theme analogue of text-gray-200/dark:text-gray-700).",
+    "Ported the centered overlay (aria-hidden -> accessibilityElementsHidden + importantForAccessibility=no-hide-descendants): centerLabel as semibold tabular-nums primary text at mainSize, centerSubLabel as uppercase tracking-wide muted text at subSize with mt-0.5; ReactNode values render directly, string/number values wrap in AppText. The legacy `label` renders below as a medium muted caption (text-xs font-medium text-muted).",
+    "No DOM/Recharts/Leaflet/web-UI imports; uses React Native View/AppText/StyleSheet + native colors/spacing tokens. CSS transition-all/duration-slow has no native animation equivalent and is intentionally a static render; data-testid is mapped to testID."
+  ]
+}
