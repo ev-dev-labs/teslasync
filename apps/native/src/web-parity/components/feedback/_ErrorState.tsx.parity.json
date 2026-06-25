@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/feedback/_ErrorState.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/_ErrorState.tsx",
+  "sourceLineCount": 74,
+  "coveredLineCount": 74,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 74 source lines with numbered output before editing and preserved the ErrorStateProps public shape (Icon, title, message, action, role, ariaLive, compact, className) plus the default props role='alert', ariaLive='assertive', and compact=false.",
+    "L1-L3 imports: the React ReactNode type is preserved; lucide-react's LucideIcon (a DOM/SVG-web type) is replaced by an exported native ErrorStateIconProps {color,size} contract that parity call sites (QueryError/ErrorDisplay) pass, and lib/cn className composition is replaced by React Native StyleSheet array composition.",
+    "L40-L72 layout: the rose-tinted card (rounded-xl border-rose-500/20 bg-rose-500/5), icon badge (rounded-lg bg-rose-500/10), title (font-medium text-rose-300 text-sm/xs), message (text-rose-300/70 text-xs/[11px]), flex row with gap, and the right-aligned optional action are reproduced with View/AppText primitives, the danger token for the rose hue, and a local rose-500/rose-300 alpha ramp for the 0.05/0.10/0.20/0.70 translucency stops the token set does not expose.",
+    "Compact variant padding/margin/gap/icon-size deltas (p-3/p-4, mb-3/mb-6, gap-2/gap-3, h-3.5/h-4) are preserved via paired *Compact/*Regular styles; web role/aria-live accessibility maps to native accessibilityRole='alert' (undefined for status) and accessibilityLiveRegion, and the decorative icon (aria-hidden) is wrapped in an accessibility-hidden View.",
+    "Native-only unavailable behavior documented: CSS backdrop-blur-sm has no React Native primitive and is omitted (visual-only, non-blocking). className is accepted but ignored on native; native style override plus testID/testId/data-testid aliases are added for parity consumers, mirroring sibling parity ports."
+  ]
+}
