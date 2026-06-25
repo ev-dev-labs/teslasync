@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/AnnotationList.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/AnnotationList.tsx",
+  "sourceLineCount": 54,
+  "coveredLineCount": 54,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 54-line source line by line before editing and preserved the annotations/onRemove props, empty-list null return, annotation map keyed by id, label, optional description, timestamp, and onRemove(ann.id) callback behavior.",
+    "Converted the web div/span/Button/lucide/Tailwind implementation to React Native View/Pressable/AppText primitives with native TeslaSync colors and spacing while retaining annotation category colors from the web source.",
+    "Preserved i18n intent by carrying annotation.listTitle and annotation.remove translation keys through a native-safe fallback t() helper; mobile keeps the remove affordance visible because hover opacity is unavailable on touch devices."
+  ]
+}
