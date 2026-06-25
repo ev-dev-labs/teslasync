@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AICostForecastNarration.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AICostForecastNarration.tsx",
+  "sourceLineCount": 149,
+  "coveredLineCount": 149,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 149-line source before editing; covered the full header contract comments, optional string-or-number vehicleId, optional months horizon, finite positive vehicle guard, stable body memo with snake_case vehicle_id plus optional months, stream route, translated labels, feature wrapper, and display names.",
+    "Converted DOM-only AIFeatureCard, withAiFeature, useTranslation, and useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe translation fallback, settings-backed AI feature gating, and a fetch ReadableStream SSE consumer.",
+    "Preserved POST /api/v1/ai/charging/costs/forecast/narrate through the native apiUrl helper, AI stream lifecycle state names, double-submit no-op semantics, Helix cyan badge visual intent, Ask Helix CTA with Narrate forecast accessible context, and streamed output/error rendering.",
+    "Mapped the web hover/title privacy explanation to a native accessibility hint and documented the native unavailable state when React Native fetch cannot expose a readable SSE body."
+  ]
+}
