@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -426,8 +426,15 @@ function isExpandedSection(route: VisualRouteMeta, section: ShellSection) {
   );
 }
 
-export function ShellVisualParityFrame() {
-  const route = useMemo(() => routeFromPath(currentPathname()), []);
+interface ShellVisualParityFrameProps {
+  visualPathname?: string;
+}
+
+export function ShellVisualParityFrame({
+  visualPathname,
+}: ShellVisualParityFrameProps = {}) {
+  const pathname = visualPathname ?? currentPathname();
+  const route = routeFromPath(pathname);
 
   return (
     <View style={styles.root} testID="visual-parity-shell-v0002">

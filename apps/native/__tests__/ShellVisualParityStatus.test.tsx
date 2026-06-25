@@ -7,18 +7,16 @@ import {
   VISUAL_PARITY_STORAGE_KEY,
 } from '../src/visual-parity/visualParityMode';
 
-const originalLocation = (
-  globalThis as { location?: { pathname?: string } }
-).location;
-
-function setVisualPath(pathname: string) {
-  Object.defineProperty(globalThis, 'location', {
-    configurable: true,
-    value: { pathname },
-  });
-}
+let activeTree: ReactTestRenderer.ReactTestRenderer | undefined;
 
 async function render(element: React.ReactElement) {
+  if (activeTree) {
+    await ReactTestRenderer.act(async () => {
+      activeTree?.unmount();
+    });
+    activeTree = undefined;
+  }
+
   let tree: ReactTestRenderer.ReactTestRenderer | undefined;
 
   await ReactTestRenderer.act(async () => {
@@ -29,14 +27,17 @@ async function render(element: React.ReactElement) {
     throw new Error('React test renderer did not create a tree.');
   }
 
+  activeTree = tree;
   return tree;
 }
 
-afterEach(() => {
-  Object.defineProperty(globalThis, 'location', {
-    configurable: true,
-    value: originalLocation,
-  });
+afterEach(async () => {
+  if (activeTree) {
+    await ReactTestRenderer.act(async () => {
+      activeTree?.unmount();
+    });
+    activeTree = undefined;
+  }
 });
 
 test('enables the V0002 visual parity shell from the capture storage flag', () => {
@@ -55,8 +56,7 @@ test('enables the V0002 visual parity shell from the capture storage flag', () =
 });
 
 test('renders the shell/dashboard parity frame without browser embedding', async () => {
-  setVisualPath('/');
-  const tree = await render(<ShellVisualParityFrame />);
+  const tree = await render(<ShellVisualParityFrame visualPathname="/" />);
   const serialized = JSON.stringify(tree.toJSON());
 
   expect(
@@ -72,16 +72,18 @@ test('renders the shell/dashboard parity frame without browser embedding', async
 });
 
 test('renders route-specific visual status surfaces for shell comparison', async () => {
-  setVisualPath('/vehicles');
-  const vehicleTree = await render(<ShellVisualParityFrame />);
+  const vehicleTree = await render(
+    <ShellVisualParityFrame visualPathname="/vehicles" />,
+  );
   const vehicleJson = JSON.stringify(vehicleTree.toJSON());
 
   expect(vehicleJson).toContain('Fleet');
   expect(vehicleJson).toContain('My Vehicles');
   expect(vehicleJson).toContain('VEHICLES');
 
-  setVisualPath('/system-status');
-  const systemTree = await render(<ShellVisualParityFrame />);
+  const systemTree = await render(
+    <ShellVisualParityFrame visualPathname="/system-status" />,
+  );
   const systemJson = JSON.stringify(systemTree.toJSON());
 
   expect(systemJson).toContain('System Status');

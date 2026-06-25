@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useImpersonation.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useImpersonation.ts",
+  "sourceLineCount": 216,
+  "coveredLineCount": 216,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 216-line source hook line by line before editing and ported every export, query key, helper, query option, endpoint path, mutation body, cache write, invalidation, and toast fallback.",
+    "Source is non-visual API hook/type code; native output uses TanStack Query plus the React Native-safe parity request client and Alert-backed mutation toast bridge.",
+    "The native parity API type registry does not currently expose the impersonation contracts, so the source @/api/types exports are represented as equivalent local exported TypeScript types."
+  ]
+}
