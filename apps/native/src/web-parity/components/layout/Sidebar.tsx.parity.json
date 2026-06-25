@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/components/layout/Sidebar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/Sidebar.tsx",
+  "sourceLineCount": 62,
+  "coveredLineCount": 62,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 62 numbered source lines before editing. The web file is a pure, non-visual data/types module: it exports the SidebarNavEntry interface plus three nav-entry constants and a frozen registry array consumed by Layout and the command palette. No JSX, no React state, no browser API, no fetch — the only web-only surface is the lucide-react icon component reference on each entry.",
+    "Header comment intent (L1-3) preserved at the top of the native file. The shared-source-of-truth rationale ('lets the command palette and admin index share the same source of truth') is kept verbatim.",
+    "L5-6 imports converted: `import type { ComponentType, SVGProps } from 'react'` + `import { Activity, ScrollText, ShieldCheck } from 'lucide-react'` are both DOM/web-only (SVGProps is a DOM type; lucide-react renders SVG). Replaced by `import type { SemanticIconName } from '../../../components/icons/SemanticIcon'` — the native icon contract already used by Layout's NavItem. Type-only import keeps this a pure data module with no runtime icon dependency.",
+    "SidebarNavEntry interface (L13-28) ported field-for-field: `to` (L14-15), `i18nKey` (L16-17), `defaultLabel` (L18-19), and `section: 'admin' | 'infrastructure' | 'tools'` (L22-27) are verbatim. The `icon` field (L20-21) changes type from `ComponentType<SVGProps<SVGSVGElement>>` to `SemanticIconName`; the doc comment notes the lucide->SemanticIcon adaptation.",
+    "DIAGNOSTIC_NAV_ENTRY (L30-37): to '/diagnostic', i18nKey 'diagnostic.title', defaultLabel 'System diagnostic', section 'infrastructure' all verbatim; icon Activity -> 'activity' (matches Layout SECTION_ICON_STYLES Diagnostics icon precedent).",
+    "LIVE_LOGS_NAV_ENTRY (L39-46): to '/live-logs', i18nKey 'liveLogs.title', defaultLabel 'Live logs', section 'infrastructure' all verbatim; icon ScrollText -> 'fileText' (a lined text document — the nearest SemanticIcon glyph to the lucide scroll-of-text, preserving the log-viewer visual intent; no 'scrollText' glyph exists in the native set).",
+    "RBAC_NAV_ENTRY (L48-55): to '/admin/rbac', i18nKey 'rbac.title', defaultLabel 'RBAC matrix', section 'admin' all verbatim; icon ShieldCheck -> 'securityCheck' (shield-with-check, exact intent match).",
+    "SIDEBAR_NAV_ENTRIES (L57-62): the `readonly SidebarNavEntry[]` registry referencing the three constants in the same order (DIAGNOSTIC, LIVE_LOGS, RBAC) is preserved verbatim.",
+    "No DOM-only modules, browser HTML elements, react, react-router-dom, framer-motion, lucide-react, Recharts, Leaflet, or old web @/components/ui imports in the native output — only a type-only import of SemanticIconName. Added __tests__/SidebarNavEntries.test.ts validating registry integrity: entry count/order, each entry's to/i18nKey/defaultLabel/section/icon, that every icon is a valid SemanticIconName, and that SIDEBAR_NAV_ENTRIES references the three exported constants.",
+    "Gates run from apps/native: `npm run typecheck` (tsc --noEmit) exit 0; `npm run lint -- --quiet` (eslint .) exit 0; `npm test -- --runInBand --detectOpenHandles` all suites passed including the new SidebarNavEntries suite."
+  ]
+}
