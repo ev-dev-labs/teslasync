@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/feedback/DraftRecoveryBanner.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/DraftRecoveryBanner.tsx",
+  "sourceLineCount": 99,
+  "coveredLineCount": 99,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 99 source lines with numbered output before editing. L1-L6 imports: useState is preserved from react; lucide-react Info (L2) becomes the native SemanticIcon name='info' (accent/cyan glyph, decorative); react-i18next useTranslation (L3) becomes a native useNativeTranslationFallback hook returning the English fallback with {{var}} interpolation; the web AlertBanner (L4) and web UI Button (L5) have no native parity port yet so their info-variant chrome and the two size='sm' affordances are recreated inline with View/Pressable/AppText (mirroring _ErrorState/ConfirmDialog); @/lib/dateFormat formatRelativeTime (L6) is ported verbatim as a local helper.",
+    "L8-L23 DraftRecoveryBannerProps interface is preserved exactly (hasDraft, draftSavedAt: Date | null, onRestore?, onDiscard, itemNoun?) with the original JSDoc; L25-L39 component doc comment is carried over.",
+    "L40-L50 signature + state preserved: same destructured props, const t, const [dismissed, setDismissed] = useState(false), and the early `if (!hasDraft || dismissed) return null` guard returning null.",
+    "L52-L61 copy logic preserved byte-for-byte: `when` is formatRelativeTime(draftSavedAt) or t('draft.unknownTime','a moment ago'); `message` branches on itemNoun between t('draft.restoredItem','{{noun}} draft restored from {{when}}.',{noun,when}) and t('draft.restored','Draft restored from {{when}}.',{when}) -- i18n keys, fallback strings, and interpolation variables identical, applied via the native interpolate() helper.",
+    "L63-L71 handlers preserved: handleRestore calls setDismissed(true) then onRestore?.(); handleDiscard calls setDismissed(true) then onDiscard().",
+    "L73-L98 render preserved as visual intent: AlertBanner variant='info' becomes a neon-cyan (#00f0ff) translucent rounded-xl bordered row (bg /5, border /20) with a leading info icon (mt-0.5); the flex-wrap items-center gap-3 content row holds the flex-1 min-w-0 message (text-xs, neon-cyan/80) and a shrink-0 gap-2 actions row with the ghost 'Use draft' and secondary 'Discard draft' buttons wired to handleRestore/handleDiscard; L99 closing brace handled.",
+    "Native-safe adaptations documented: the lucide Info inline glyph is shown via SemanticIcon (a small bordered badge) since that is the repo's icon primitive; the i18n runtime is unavailable so fallback English strings are used with react-i18next-equivalent {{var}} interpolation; no DOM, lucide-react, recharts, leaflet, or web UI components are imported, and an accessibilityLiveRegion='polite' plus button roles are added for native a11y."
+  ]
+}
