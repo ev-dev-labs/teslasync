@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/forms/DateRangeFilter.tsx",
+  "outputPath": "apps/native/src/web-parity/components/forms/DateRangeFilter.tsx",
+  "sourceLineCount": 114,
+  "coveredLineCount": 114,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 114 source lines with line numbers before porting. Imports (L1-6): useMemo kept; useTranslation(react-i18next, L2) -> local fallback useTranslation returning English fallbacks (native ships no i18n runtime); lucide Calendar (L3) omitted because its web class is `hidden sm:block` (hidden on phone-sized viewports, which is the native target); Button (L4) -> internal Pressable Apply button; DatePresetChips (L5) -> inline chip row; datePresets DEFAULT_PRESET_IDS/matchPresetId (L6) -> faithful inline DOM-free copy of the full DATE_PRESETS table + DEFAULT_PRESET_IDS + matchPresetId.",
+    "DateRangeFilterProps (L8-36) ported verbatim: startDate, endDate, onStartDateChange, onEndDateChange, onRangeChange (with its atomic-update doc intent), onApply, presets (default true), presetIds (default DEFAULT_PRESET_IDS). The deprecation + usage doc comments (L13-29, L38-52) are preserved as JSDoc on the exported function.",
+    "Component body (L53-78): same destructured signature + defaults; const {t}=useTranslation() (L63) preserved literally; activeId via useMemo(matchPresetId(startDate,endDate),[startDate,endDate]) (L65-68) preserved; handlePreset (L70-78) preserved exactly -- onRangeChange branch vs onStartDateChange+onEndDateChange fallback, then onApply?.().",
+    "Render (L80-112): the flex-wrap row (L81) -> View styles.root; the rounded ring date surface (L82) -> View styles.dateSurface (surfaceRaised bg + border, flexBasis 100% mirroring the web `w-full` mobile layout); the two <input type=date> (L84-98) -> controlled <TextInput> (value/onChangeText, YYYY-MM-DD placeholder, numeric keyboard) keeping aria-label -> accessibilityLabel for date.range.start/end; the '->' span (L91) -> AppText arrow glyph; the Apply <Button> guarded by onApply (L100-104) -> Pressable styles.applyButton; the <DatePresetChips> guarded by presets (L105-111) -> inline chip row filtering DATE_PRESETS by presetIds with the activeId primary/ghost highlight and aria-pressed -> accessibilityState.selected. Function close (L113-114) complete.",
+    "Browser-only affordance documented: <input type=date>'s OS calendar overlay has no native analog without a date-picker dependency; the controlled TextInput is the native-safe substitute preserving the date-string value/onChange contract. No DOM elements, lucide-react, Recharts, Leaflet, old web UI imports, API paths, or unit conversions were introduced; styling uses StyleSheet + existing theme tokens and AppText only.",
+    "Covered by __tests__/DateRangeFilter.test.tsx: controlled values, onChangeText wiring, onApply gating + press, onRangeChange-vs-onStart/onEnd branch, active-preset highlight, presetIds override, and presets=false toggle."
+  ]
+}
