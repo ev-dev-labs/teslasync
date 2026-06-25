@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useSearch.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSearch.ts",
+  "sourceLineCount": 52,
+  "coveredLineCount": 52,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 52-line source file line by line before editing and preserved the import intent, SEARCH_MIN_QUERY_LENGTH constant, searchKeys.global factory, UseGlobalSearchOptions shape, and useGlobalSearch hook.",
+    "Ported the global search URL construction with q, optional comma-joined types, optional positive limit, /search endpoint, AbortSignal forwarding, enabled guard, FAST stale time, and previous-data placeholder behavior; native uses URLSearchParams.append for one-write keys because this React Native TS lib lacks set().",
+    "Inlined SearchHitType, SearchHit, SearchResponse, and STALE_TIMES.FAST because the native parity layer does not expose the web ../types or @/lib/constants aliases; this source is non-visual API/type code with no unit conversion or i18n behavior.",
+    "Native output imports only TanStack Query and the React Native-safe parity request client; it imports no DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI components."
+  ]
+}
