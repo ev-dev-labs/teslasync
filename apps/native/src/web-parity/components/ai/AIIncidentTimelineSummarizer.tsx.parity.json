@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIIncidentTimelineSummarizer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIIncidentTimelineSummarizer.tsx",
+  "sourceLineCount": 150,
+  "coveredLineCount": 150,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the header ADR/render-contract comments, optional incidentId prop, numeric ID guard, stable empty body memo, placeholder incident URL, unconditional stream hook setup, translated card labels, feature-gated export, and display names.",
+    "Converted web AIFeatureCard/withAiFeature/useAiStream wiring to React Native-safe View-based feature gating, native settings feature checks, native apiUrl('/ai/system/incidents/{id}/summarize') POST streaming, and the existing native AIFeatureCard.",
+    "Preserved stream state names, double-submit no-op behavior while streaming, disabled Summarize affordance until a positive incident ID exists, /api/v1 path intent through the native API client, and explicit unavailable-state errors when React Native fetch lacks a readable SSE response body."
+  ]
+}
