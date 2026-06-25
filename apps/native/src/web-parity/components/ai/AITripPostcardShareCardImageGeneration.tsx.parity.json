@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AITripPostcardShareCardImageGeneration.tsx",
+  "sourceLineCount": 125,
+  "coveredLineCount": 125,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the header contract comments, InnerSection props, numeric trip guard, memoized {trip_id, style_hint} body, useAiStream endpoint, translated card labels, withAiFeature wrapper, and display names.",
+    "Preserved POST /api/v1/ai/share-cards/trip-image/draft through the native apiUrl helper, snake_case request fields, non-empty trimmed style_hint handling, no-trip disabled action state, and Helix propose-only share-card privacy wording.",
+    "Converted web-only useTranslation, withAiFeature, and useAiStream dependencies to native-safe fallback translation, AI settings gating, React Native View wrapping, the existing native AIFeatureCard, and an explicit stream-unavailable error when React Native fetch lacks readable SSE support."
+  ]
+}
