@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AILifetimeStatsQA.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AILifetimeStatsQA.tsx",
+  "sourceLineCount": 137,
+  "coveredLineCount": 137,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full source with line numbers before editing; covered the file header contract, hook ordering requirement, MaxQuestionChars cap, optional vehicleId handling, body shape, stream URL, i18n keys, and displayName exports.",
+    "Converted web-only Textarea/onChange event usage to a native multiline TextInput using native tokens while preserving question state name, trimmed question validation, maxLength=1024, and disabled Ask semantics through canStart.",
+    "Preserved the lifetime-stats-qa feature gate with the generated native AI_FEATURES registry and a native-safe SSE useAiStream that posts to /api/v1/ai/analytics/lifetime/qa, accumulates delta text, exposes idle/streaming/paused-confirm/done/error states, and reports explicit unavailable state when native fetch lacks a readable stream."
+  ]
+}
