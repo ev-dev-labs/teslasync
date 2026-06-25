@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/charts/ChartContainer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartContainer.tsx",
+  "sourceLineCount": 643,
+  "coveredLineCount": 643,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 643 source lines line by line before editing and preserved the ChartContainer public props, render-prop children shape, annotation config, ChartDataRow/ChartDataColumn types, ChartContainer export, useChartLabelAnchor hook, and textAnchorForDir export.",
+    "Converted the visual container, header, loading, empty, chart body, marker row, annotation list/popover flow, fallback data table, and error-boundary behavior to React Native View/Pressable/ScrollView/ActivityIndicator/AppText/EmptyState primitives using native tokens.",
+    "Kept annotation fetching, create, and delete behavior wired to the native parity useAnnotations hooks with the same /annotations API paths and snake_case request payload fields.",
+    "Replaced web localStorage and URL query state with native-safe in-memory hidden annotation and hidden-series state so the same hidden, toggle, isHidden, and reset semantics are available without browser globals.",
+    "Browser-only PNG/SVG/clipboard export, CSV file download, and Fullscreen API behavior are represented by explicit native unavailable notices; CSV serialization is still computed from exportData to preserve export data handling without DOM download APIs."
+  ]
+}
