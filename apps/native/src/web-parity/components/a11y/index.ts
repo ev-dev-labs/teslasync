@@ -1,6 +1,5 @@
-import React, {useEffect, useRef, useState, type ReactNode} from 'react';
+import React, {type ReactNode} from 'react';
 import {
-  AccessibilityInfo,
   StyleSheet,
   Text,
   View,
@@ -13,6 +12,11 @@ import {
 } from 'react-native';
 
 export {AnnouncerRegion} from './AnnouncerRegion';
+export {
+  RouteAnnouncer,
+  nativeRouteAnnouncerCapabilities,
+  type RouteAnnouncerProps,
+} from './RouteAnnouncer';
 
 type AnnouncerPriority = 'polite' | 'assertive';
 type NativeHiddenElement = 'text' | 'view';
@@ -100,62 +104,6 @@ export function VisuallyHidden<T extends NativeHiddenElement = 'text'>(
       style: hiddenStyle,
     } as TextProps,
     children,
-  );
-}
-
-export const nativeRouteAnnouncerCapabilities = {
-  reactRouterLocationAvailable: false,
-  documentTitleAvailable: false,
-  nativeTitlePropsSupported: true,
-} as const;
-
-export interface RouteAnnouncerProps {
-  delayMs?: number;
-  pathname?: string;
-  title?: string;
-}
-
-const DEFAULT_ANNOUNCE_DELAY_MS = 100;
-
-export function RouteAnnouncer({
-  delayMs = DEFAULT_ANNOUNCE_DELAY_MS,
-  pathname,
-  title,
-}: RouteAnnouncerProps = {}) {
-  const [message, setMessage] = useState('');
-  const firstRender = useRef(true);
-  const counter = useRef(0);
-
-  useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return undefined;
-    }
-
-    const id = setTimeout(() => {
-      if (!title) {
-        setMessage('');
-        return;
-      }
-
-      counter.current = (counter.current + 1) % 4;
-      const padding = '\u200B'.repeat(counter.current);
-      const nextMessage = `${title}${padding}`;
-      setMessage(nextMessage);
-      AccessibilityInfo.announceForAccessibility(nextMessage);
-    }, delayMs);
-
-    return () => clearTimeout(id);
-  }, [pathname, title, delayMs]);
-
-  return React.createElement(
-    VisuallyHidden,
-    {
-      liveRegion: true,
-      priority: 'polite',
-      testID: 'route-announcer',
-    },
-    message,
   );
 }
 

@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/a11y/RouteAnnouncer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/a11y/RouteAnnouncer.tsx",
+  "sourceLineCount": 109,
+  "coveredLineCount": 109,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 109 source lines line by line; preserved the RouteAnnouncerProps delayMs API, DEFAULT_ANNOUNCE_DELAY_MS, message/firstRender/counter state names, delayed route-change effect, cleanup, empty-title clearing, duplicate-announcement zero-width-space padding, polite priority, and route-announcer testID.",
+    "React Native has no react-router useLocation, document.title, DOM aria-live region, or VisuallyHidden span, so the native output accepts pathname/title props, uses global timers, renders a hidden Text live region, and calls AccessibilityInfo.announceForAccessibility while documenting those unavailable browser capabilities.",
+    "The first-render double-speak guard and 100 ms title-settle delay are preserved for native navigation shells; the conversion imports only React and React Native primitives and no DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components."
+  ]
+}
