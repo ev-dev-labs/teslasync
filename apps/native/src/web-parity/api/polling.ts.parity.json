@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/polling.ts",
+  "outputPath": "apps/native/src/web-parity/api/polling.ts",
+  "sourceLineCount": 60,
+  "coveredLineCount": 60,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and ported every exported polling API type and function.",
+    "Source is non-visual API/type code; native output uses the React Native-safe request client and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "Preserved PollEngineStatus, VehiclePollingStatus, PollDecision, PredictionInfo, and CostSnapshot field names exactly, including snake_case API response fields and nullable prediction/last_decision shapes.",
+    "Preserved getPollingStatus/getPollingDecisions/getPollingSavings/getPollingPredictions names, defaults, encodeURIComponent VIN handling, optional predictions VIN query behavior, and /polling endpoint paths without adding /api/v1."
+  ]
+}
