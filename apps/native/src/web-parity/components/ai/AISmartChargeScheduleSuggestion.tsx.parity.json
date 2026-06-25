@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AISmartChargeScheduleSuggestion.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AISmartChargeScheduleSuggestion.tsx",
+  "sourceLineCount": 94,
+  "coveredLineCount": 94,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete line-numbered source before editing; all 94 source lines covering header comments, props, defaults, memoized body construction, stream hook usage, input gating, translated card labels, feature wrapper, and display names were considered.",
+    "Preserved the smart-charge-schedule-suggestion feature id, vehicleId/targetSoc/currentSoc/departBy/ratePlanId/maxAmps/batteryCapacityKwh/chargerVoltage/preferOffPeak prop names, numericVehicleId/body/haveInputs state names, ISO depart_by normalization, and exact request defaults.",
+    "Preserved POST /api/v1/ai/charging/schedule/draft through native apiUrl('/ai/charging/schedule/draft'), snake_case request body fields, stream lifecycle state names, double-submit no-op behavior while streaming, and Helix card visual intent via the native AIFeatureCard.",
+    "Converted web-only react-i18next, withAiFeature, and useAiStream dependencies to native-safe fallback translation, settings-backed AI feature gating, React Native View primitives, and explicit SSE-unavailable error handling when React Native fetch cannot expose a readable stream."
+  ]
+}
