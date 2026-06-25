@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/layout/LayoutBreadcrumbs.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/LayoutBreadcrumbs.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines line by line. L1-L3 imports (Breadcrumbs, useBreadcrumbs, useBreadcrumbOverrides) are not yet ported and depend on react-router + a web React context, so their behavior is inlined natively rather than re-imported. L5-L14 doc comment (role, override sourcing, useBreadcrumbs parent-chain resolution, <=1-item self-suppression) is preserved verbatim in the header comment. L15 component signature + className prop -> LayoutBreadcrumbs with a style/testID pass-through. L16 useBreadcrumbOverrides() + L17 useBreadcrumbs(overrides) -> native-safe `items` prop supplied by the navigation shell (which owns route/params/override resolution). L18 <Breadcrumbs items className /> -> inlined breadcrumb row. L19 closing brace.",
+    "Inlined the dependency <Breadcrumbs> render faithfully: leading Home link, ChevronRight separators, link-vs-current-text crumbs, the items.length <= 1 self-suppression (returns null), and per-item truncation (numberOfLines=1 + maxWidth 200). The current/last crumb uses the secondary tone + medium weight; links use the muted tone, mirroring the web --text-secondary / --text-muted treatment.",
+    "Native-safe substitutions documented via nativeLayoutBreadcrumbsCapabilities: react-router route resolution (useBreadcrumbs) and the BreadcrumbOverridesContext (useBreadcrumbOverrides) are unavailable, so the shell passes the resolved BreadcrumbItem[] in. lucide Home/ChevronRight become text glyphs; PrefetchLink router navigation becomes an onNavigate(href) callback; react-i18next useTranslation becomes an inline English-fallback t() preserving the a11y.breadcrumb and a11y.breadcrumbHome i18n intent. The web overflow-x-auto scrollbar-none row becomes a horizontal ScrollView with the indicator hidden; the responsive hidden-sm middle-item collapse + ellipsis has no RN media-query analogue so all crumbs render (the web sm-and-wider behavior).",
+    "Imports only React and React Native primitives plus the shared AppText component and theme tokens; no DOM-only modules, browser HTML elements, Recharts, Leaflet, lucide, react-router, or old web UI components are referenced. Verified with cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
