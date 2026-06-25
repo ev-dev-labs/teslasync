@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Power.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Power.tsx",
+  "sourceLineCount": 38,
+  "coveredLineCount": 38,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 38 source lines with numbered output before editing; covered the fmtNumber import (L1), PowerProps surface kw/w/precision/className/unit incl. JSDoc (L3-L12), the auto-pick JSDoc (L14-L17), the Power export signature (L18), sourceKw init (L19), the kw finite branch (L20-L21), the w/1000 fallback branch (L22-L24), the null em-dash guard (L26-L28), the useW unit-selection logic (L30), the value scale-to-W computation (L31), the fmtNumber display call (L32), and the returned span with title + display + W/kW suffix (L33-L37).",
+    "Converted the DOM span elements to React Native AppText primitives; kept className as an accepted no-op compatibility prop and added native style, testID, and data-testid passthroughs mirroring the sibling Current.tsx port.",
+    "Recreated locale-aware fixed-precision fmtNumber locally (default precision 2 matching the web global) and mapped the web title tooltip to accessibilityLabel using the same sourceKw.toFixed(3) kW canonical evidence string; the auto/forced W-vs-kW unit selection and W*1000/kW scaling are preserved exactly."
+  ]
+}
