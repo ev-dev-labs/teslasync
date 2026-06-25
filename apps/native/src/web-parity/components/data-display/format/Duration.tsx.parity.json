@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Duration.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Duration.tsx",
+  "sourceLineCount": 47,
+  "coveredLineCount": 47,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 47-line source with numbered lines before editing; covered the four formatDuration* imports (L1-6), the DurationVariant union export (L8), the DurationProps interface (L10-14), the JSDoc intent (L16-19), the null/non-finite early-return em-dash branch (L21-23), the variant switch over long/compact/clock/short+default (L25-40), and the span render exposing the raw ms via title (L42-46).",
+    "The web source imports formatDurationMs/MsLong/MsCompact/Clock from @/lib/dateFormat, which has no native parity equivalent; the four pure DOM-free formatters plus their FALLBACK, isFiniteNumber, and formatRoundedInt dependencies are inlined verbatim so byte-for-byte output behavior (ms/s/m strings, '1m 05s' rollover, 'm:ss' clock, '—' fallback, ms<=0 and ms<0 guards) is preserved. They are kept module-local to mirror the source's public surface (only Duration + DurationVariant are exported).",
+    "Converted the DOM <span className title> to React Native AppText: className is retained on DurationProps for source compatibility but ignored on native (destructured as _className), a native style?:StyleProp<TextStyle> and testID are added for parity consumers, and the raw-millisecond title tooltip is mapped to accessibilityHint on the value branch while the null branch renders the bare em-dash with no hint, matching the source which sets title only on the value span.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; only React, react-native type-only StyleProp/TextStyle, and the existing apps/native AppText primitive are used. toLocaleString('en-US', ...) in formatRoundedInt matches the existing native Intl usage in src/lib/format.ts and is RN/Hermes-safe."
+  ]
+}
