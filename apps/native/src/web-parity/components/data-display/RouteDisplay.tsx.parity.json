@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/RouteDisplay.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/RouteDisplay.tsx",
+  "sourceLineCount": 131,
+  "coveredLineCount": 131,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 131-line numbered source before editing. Ported the RouteEndpoint interface (address/lat/lon, L5-12) and RouteDisplayProps (start, end, roundTripThresholdM=100, showIcon=true, className, testId; L14-29) verbatim, plus native-safe additions (style, testID, data-testid, accessibilityLabel) consistent with sibling data-display ports.",
+    "L1 useTranslation(react-i18next) -> useNativeTranslationFallback hook returning the fallback string, preserving the i18n keys/fallbacks 'route.noLocationData'='No location data' and 'route.roundTrip'='round trip'. L3 cn helper -> React Native style arrays. L2 lucide-react MapPin -> a View-drawn MapPinGlyph (rotated teardrop outline + centered hole) matching the decorative h-2.5 w-2.5 shrink-0 opacity-60 intent.",
+    "Ported haversineMeters verbatim (L31-43: R=6_371_000, toRad, dLat/dLon/lat1/lat2, x, 2*R*asin(min(1,sqrt(x)))) and endpointLabel verbatim (L45-57: trimmed address preferred, '📍 lat, lon' coord fallback with toFixed(2), null otherwise) as an exported function.",
+    "Preserved the RouteDisplay round-trip detection (L80-97): startLabel/endLabel, hasCoords type guard, addressesMatch, coordsClose via haversine < roundTripThresholdM, isExplicitSingle=!end, isRoundTrip, and the three body branches (L99-117): no-location placeholder (opacity-60), round-trip line with optional ' ↻ round trip' dim suffix only when !isExplicitSingle, and 'start → end' with noLocation fallbacks.",
+    "L119-130 root <div> (text-[11px], text-[var(--text-secondary)], flex items-center gap-1, truncate) -> RN View row with gap 4 + AppText tone='secondary' fontSize 11 numberOfLines={1}; truncate maps to numberOfLines/flexShrink, opacity-60 -> opacity 0.6 (dim style + icon box). The icon is accessibilityElementsHidden and a computed summary string drives the View's accessibilityLabel since native has no inline DOM truncation/title. No DOM-only, Recharts, Leaflet, or web UI imports remain."
+  ]
+}
