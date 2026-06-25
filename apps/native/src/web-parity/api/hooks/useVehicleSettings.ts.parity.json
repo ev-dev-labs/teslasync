@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useVehicleSettings.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useVehicleSettings.ts",
+  "sourceLineCount": 133,
+  "coveredLineCount": 133,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 133 source lines before editing and preserved the exported query key namespace, GET hook, PUT mutation, DELETE mutation, typed setting value union, effective setting response shape, toast keys/fallbacks, cache invalidation targets, stale time, enabled guard, RFC3339 forwarding expectation, and single-key selector behavior.",
+    "Source is non-visual TanStack Query API/type code; the native output uses the React Native-safe parity request client and native mutation toast bridge with no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI imports.",
+    "Inlined EffectiveSetting, VehicleSettingValue, VehicleSettingsResponse, and a local invalidateAndBroadcast shim because the native parity layer does not expose the web @/api/types or browser BroadcastChannel query-broadcast dependency.",
+    "Native cross-tab queryBroadcast is unavailable, so broadcast invalidation is represented as local TanStack Query invalidation and explicitly documented via nativeVehicleSettingsHookCapabilities.queryBroadcastAvailable=false."
+  ]
+}
