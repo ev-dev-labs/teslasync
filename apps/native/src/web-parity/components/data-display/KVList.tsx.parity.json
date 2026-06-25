@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/KVList.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/KVList.tsx",
+  "sourceLineCount": 29,
+  "coveredLineCount": 29,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 29 source lines with numbered lines before editing. L1 `cn` import + L16-19 `cn(...)` class merge are dropped because Tailwind/clsx has no native equivalent; the class intent (divide-y dividers, 2-col grid, justify-between rows) is reproduced with StyleSheet + theme tokens, and the L11 `className` prop is kept on KVListProps (as `_className`) for source compatibility but ignored on native.",
+    "Preserved the public API exactly: L3-6 KVItem ({label: string, value: React.ReactNode}) and L8-12 KVListProps ({items, columns?: 1|2, className?}) are exported, and L14 default `columns = 1` is kept. ReactNode `value` is honored — string/number values render in AppText (L24 text intent) while element values render as-is in a right-aligned value slot, since native text cannot be a bare child.",
+    "L15-20 `<dl>` → root View; L18 `columns === 2 && 'grid grid-cols-2 gap-x-6'` → twoCol flexDirection:row + flexWrap with width:50% cells and alternating 12px left/right padding to recreate the 24px column gutter; default 1-col is a flex column. L17 `divide-y divide-gray-200 dark:divide-gray-700` → hairline top border (colors.border) on every row except the first, matching the literal DOM-order divide-y semantics.",
+    "L21-26 items.map → row Views; L22 `flex justify-between py-2` → flexDirection:row, justifyContent:space-between, alignItems:center, paddingVertical:8, gap:12; L22 `key={item.label}` kept but suffixed with the map index for duplicate-label safety (no behavior change). L23 `dt` muted small label → AppText colors.textMuted fontSize 14; L24 `dd` `text-sm font-medium text-gray-900 dark:text-gray-100` → AppText colors.textPrimary fontWeight 500 fontSize 14, right-aligned for the justify-between layout.",
+    "L27-29 close the dl/map/function — mirrored by the closing root View, displayName, and StyleSheet.create. Added native-only style/testID/data-testid/accessibilityLabel props (consistent with the sibling Delta/Avatar/AnimatedNumber parity ports) plus per-row text accessibilityLabel ('label: value') so the dt/dd pairing remains screen-reader legible. No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported."
+  ]
+}
