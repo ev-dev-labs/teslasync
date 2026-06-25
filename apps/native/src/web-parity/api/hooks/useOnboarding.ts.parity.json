@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useOnboarding.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useOnboarding.ts",
+  "sourceLineCount": 50,
+  "coveredLineCount": 50,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 50-line source hook line by line before editing and preserved the OnboardingStatus response shape, onboardingKeys.status query key, useOnboardingStatus export, /onboarding/status API path, AbortSignal forwarding, retry count, staleTime, and polling stop condition.",
+    "Ported this non-visual API hook to native-compatible TypeScript using the existing native web-parity request client; it imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "No unit conversion, i18n rendering, or visual behavior exists in the source hook; raw API field names and first-run gate semantics remain unchanged."
+  ]
+}
