@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useSettings.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSettings.ts",
+  "sourceLineCount": 343,
+  "coveredLineCount": 343,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 343 source lines before editing and preserved every exported hook, settingsKeys member, request path, query parameter, mutation method, request body, retry/refetch/staleTime setting, and cache invalidation from the web source.",
+    "Ported this non-visual TanStack Query API hook to native-compatible TypeScript with the native web-parity request client and Alert-backed mutation toast helper; no DOM modules, browser elements, Recharts, Leaflet, or web UI components are imported.",
+    "Inlined the web AppSettings, GasPriceStatus, PollingConfig, safeArray, timing constants, JSON headers, and invalidateAndBroadcast helper because the native parity layer does not expose the web @/api/types, @/lib/safeArray, @/lib/constants, or @/lib/queryBroadcast aliases.",
+    "Native cross-tab queryBroadcast is unavailable, so broadcast invalidation is preserved as local TanStack Query invalidation and documented via nativeSettingsHookCapabilities.queryBroadcastAvailable=false."
+  ]
+}
