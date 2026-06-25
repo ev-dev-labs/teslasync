@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AIMLChargingCurveClustering.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIMLChargingCurveClustering.tsx",
+  "sourceLineCount": 85,
+  "coveredLineCount": 85,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 85-line source before editing; covered the ML3 clustering contract comments, optional numeric vehicleId prop, stable snake_case vehicle_id/lookback_days body memo, /ai/ml/charging-curves/cluster stream setup, translated card labels, vehicleId start guard, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useTranslation/useAiStream usage to React Native-safe View rendering, native AIFeatureCard, native settings-backed AI feature gating, and a fetch ReadableStream SSE consumer.",
+    "Preserved POST /api/v1/ai/ml/charging-curves/cluster, stream state names, 90-day learning window, Helix badge/CTA visual intent, double-submit protection, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams.",
+    "No unit conversion was required because the component only sends SI-neutral request controls: vehicle_id and lookback_days."
+  ]
+}
