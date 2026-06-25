@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/Sparkline.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/Sparkline.tsx",
+  "sourceLineCount": 21,
+  "coveredLineCount": 21,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 21-line source file line by line and preserved the exported Sparkline component, data/color/height/width props, defaults, and empty-data null behavior.",
+    "Recreated the source min/max/range point projection in React Native and kept non-empty single-point input visible with a native dot instead of producing invalid SVG coordinates.",
+    "Converted the SVG polyline stroke, drop-shadow, and filled gradient area into native View line segments, native shadows, and translucent area strips without importing DOM, SVG, Recharts, or web UI modules."
+  ]
+}
