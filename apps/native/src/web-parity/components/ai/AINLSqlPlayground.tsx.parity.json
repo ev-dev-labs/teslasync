@@ -1,0 +1,11 @@
+{
+  "sourcePath": "web/src/components/ai/AINLSqlPlayground.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AINLSqlPlayground.tsx",
+  "sourceLineCount": 210,
+  "coveredLineCount": 210,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 210-line source before editing; preserved the nl-sql-playground feature gate, prompt/draft state names, trimmed prompt body, /ai/power/sql/draft stream path, draft_readonly_sql tool_result parsing, and propose-only onApply behavior.",
+    "Converted DOM-only Textarea/Button/div/AIFeatureCard/withAiFeature/useAiStream usage to React Native TextInput/Pressable/View plus the native parity AIFeatureCard, settings-backed AI feature gating, native apiUrl('/ai/power/sql/draft') POST streaming, and an explicit unavailable error if readable SSE is not exposed."
+  ]
+}
