@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useSystemDiagnostic.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSystemDiagnostic.ts",
+  "sourceLineCount": 81,
+  "coveredLineCount": 81,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 81 source lines line by line before editing and preserved the non-visual TanStack Query mutation/helper contract.",
+    "Ported diagnosticKeys, UseRunDiagnosticOptions, useRunDiagnostic, useLastDiagnostic, and formatDiagnosticReportText with the same /system/diagnostic POST path, optional endpoint override, diagnosticKeys.last cache write/read, toast error key/fallback, and plain-text report formatting.",
+    "Added the matching DiagnosticReport DTOs to the native shared API types and used the native web-parity request client plus native-safe mutation toast bridge; no DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported."
+  ]
+}

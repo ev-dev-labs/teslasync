@@ -463,6 +463,24 @@ export interface RateLimitStatusResponse {
   scopes: ScopeBudget[];
 }
 
+export type DiagnosticCheckStatus = 'ok' | 'warn' | 'fail';
+export type DiagnosticOverallStatus = 'ok' | 'degraded' | 'down';
+
+export interface DiagnosticCheck {
+  id: string;
+  name: string;
+  status: DiagnosticCheckStatus;
+  detail: string;
+  remediation?: string;
+  duration_ms: number;
+}
+
+export interface DiagnosticReport {
+  generated_at: string;
+  overall_status: DiagnosticOverallStatus;
+  checks: DiagnosticCheck[];
+}
+
 export interface Drive {
   id: number;
   vehicle_id: number;
