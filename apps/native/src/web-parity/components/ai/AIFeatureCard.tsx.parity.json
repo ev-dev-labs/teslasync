@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIFeatureCard.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIFeatureCard.tsx",
+  "sourceLineCount": 338,
+  "coveredLineCount": 338,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full source with line numbers before editing; the declared 338 source lines cover the scaffold rationale, exported stream/prop contracts, AIBadge defaulting/i18n, button placement coercion, Helix CTA labels, disabled semantics, slots, and AiOutputPanel wiring.",
+    "Converted DOM-only span/div/h3/p/Button/GlassPanel/HelixMark/AiOutputPanel/AIThinkingDots usage to React Native View/Pressable/AppText/PremiumCard plus native tokens, a decorative native Helix mark, native accessibilityLabel/accessibilityHint/accessibilityState, and testID parity for the action button and ai-output-panel.",
+    "Preserved stream state names, stream.start/onAction behavior, canStart/streaming disabled logic, inputSlot forcing buttonPlacement below, optional emptyHint and children slots, and i18n fallback intent for helix.badge, helix.tooltip, helix.ariaLabel, helix.askHelix, helix.thinking, and error labels."
+  ]
+}
