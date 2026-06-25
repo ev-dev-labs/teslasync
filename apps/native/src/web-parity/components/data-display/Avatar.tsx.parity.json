@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/data-display/Avatar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/Avatar.tsx",
+  "sourceLineCount": 259,
+  "coveredLineCount": 259,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 259-line source with numbered lines before editing; covered the exported AvatarSize, AvatarShape, AvatarStatus, AvatarKind, AvatarProps, SIZE_PX sizing, status colors, djb2 hashing, avatarColorIndex, avatarInitials, image failure state, deterministic fallback palette, bot/user glyph branch, status dot, and tooltip labeling intent.",
+    "Converted DOM span/img/lucide-react/User/Tailwind/Tooltip dependencies to React Native View/Image/AppText/StyleSheet primitives, native tokens, the existing native HelixMark parity component, testID aliases, and native accessibility labels without importing browser-only modules or web UI components.",
+    "React Native has no hover/focus Tooltip equivalent in the current native component set, so showTooltip is preserved as an accessibility hint and label exposure rather than a DOM tooltip; image onError still falls back to initials or glyphs."
+  ]
+}
