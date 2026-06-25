@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/ServiceStatus.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/ServiceStatus.tsx",
+  "sourceLineCount": 74,
+  "coveredLineCount": 74,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 74 numbered source lines before editing; covered both exports (ServiceStatusBanner L7-41, SystemHealthDot L44-74), the connStatus useState seeded from getConnectionStatus (L8), the onStatusChange subscribe/unsubscribe effect (L10-12), the isOffline derivation (L14), the offline-only conditional render (L18), the WifiOff icon + offline message (L34-35), and the useQuery system-status key/60s refetchInterval/retry:1 + overall->color/glow mapping (L45-72).",
+    "DOM/web deps replaced with native-safe equivalents: framer-motion motion.div/AnimatePresence height+opacity transition (L17-25,37-39) dropped (no animation lib in this native tree, matching sibling ports) and the conditional becomes an early `return null`; lucide-react WifiOff (L4,L34) becomes a ⚠ warning glyph in AppText; div/span become View/AppText with StyleSheet; Tailwind utility + inline-style rgba(239,68,68,*) banner colors and bg-neon-green/amber/red + shadow glow (L26-32,54-66,70) map to literal RN colors #f87171/#10b981/#f59e0b/#ef4444 and a coloured RN shadow; the span title (L71) becomes accessibilityLabel.",
+    "Data deps from ../../lib/resilience: getConnectionStatus + request imported from the existing web-parity api/client (../../api/client); no web-parity lib/resilience exists, so SystemStatus is defined locally as the minimal {overall} actually consumed and fetchSystemStatus wraps request('/system/status'), preserving the /system/status API path. onStatusChange has no client export, so it is exposed as an optional `subscribe` prop (React Native lacks window online/offline events) following the LiveIndicator controlled-status precedent; banner falls back to the getConnectionStatus() snapshot when no subscriber is wired.",
+    "Source has no i18n (hardcoded English offline message); preserved verbatim to keep intent. ServiceStatus is not part of the web data-display index barrel, so the native barrel is intentionally left unchanged for exact parity."
+  ]
+}
