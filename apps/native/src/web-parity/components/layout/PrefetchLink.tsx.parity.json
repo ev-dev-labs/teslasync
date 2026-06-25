@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/components/layout/PrefetchLink.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/PrefetchLink.tsx",
+  "sourceLineCount": 58,
+  "coveredLineCount": 58,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 58 source lines with line numbers before editing. L1 `import type { MouseEvent, FocusEvent } from 'react'` (React DOM event types) is dropped: native Pressable supplies its own event types, and the hover/focus handlers are contextually typed from `PressableProps` (`MouseEvent` for `onHoverIn`, `NativeSyntheticEvent<TargetedEvent>` for `onFocus`), so no DOM event import is needed.",
+    "L2 `import type { LinkProps } from 'react-router-dom'` is dropped — React Native has no DOM router. The `to` destination shape is preserved as a native `LinkTo = string | { pathname?: string }` (the exact subset `pathFromTo` reads) and the rest of `LinkProps`' anchor surface becomes React Native `PressableProps`.",
+    "L3 `import { GuardedLink } from '../feedback/GuardedLink'` is dropped: `GuardedLink` renders a DOM `<a>` via react-router and has no native parity port yet, so the link renders a React Native `Pressable` with `accessibilityRole=\"link\"`. Navigation stays the caller's `onPress` responsibility — the native analog of GuardedLink's click->router-navigate — exactly as the web `PrefetchLink` delegated the click to GuardedLink and never navigated itself.",
+    "L4 `import { prefetchRoute } from '@/lib/routePrefetch'` is replaced by an inlined native-safe no-op `prefetchRoute(path)`: prefetching a Vite-emitted code-split chunk is browser-only (no Vite chunks in RN; the destination screen is rendered by the in-process navigator), so it is a documented unavailable-state stub that keeps the hover/focus call-site shape identical to web L49/L53. `path` is referenced (`void path`) to stay lint-clean.",
+    "L6-29 the JSDoc is preserved as the file header: the hover/focus prefetch side-effect (not a click intercept), the use-this-for-shared-chrome guidance, the modifier-click / target=_blank passthrough (now the caller's onPress concern), and the deliberate NOT-forwardRef decision (L25-28) are all carried over — the native component is likewise a plain function component, not forwardRef.",
+    "L30 `export type PrefetchLinkProps = LinkProps` -> `export interface PrefetchLinkProps extends PressableProps { to: LinkTo }`, the native equivalent of inheriting the entire link/anchor prop surface plus the `to` destination.",
+    "L32-35 `pathFromTo(to)` is ported with identical logic and the same defensive `to?.pathname ?? ''` fallback (string -> string, object -> pathname-or-empty), kept module-private exactly like the web source.",
+    "L37-42 the destructured signature `{ to, onMouseEnter, onFocus, ...rest }` maps to `{ to, onHoverIn, onFocus, ...rest }`: web `onMouseEnter` (mouse hover) becomes native `onHoverIn` (Pressable's hover event), `onFocus` maps directly, and `...rest` continues to forward children, onPress, style, disabled, accessibility, and testID onto the rendered element just as web forwarded `...rest` to GuardedLink.",
+    "L43 `const path = pathFromTo(to)` preserved verbatim.",
+    "L44-47 `<GuardedLink to={to} {...rest} ...>` becomes `<Pressable accessibilityRole=\"link\" {...rest} ...>`; `to` is consumed by `pathFromTo` (not a Pressable prop, so destructured out) and `{...rest}` carries the remaining link props/children.",
+    "L48-51 the `onMouseEnter` wrapper (`prefetchRoute(path); onMouseEnter?.(e)`) is mirrored line-for-line on `onHoverIn` (`prefetchRoute(path); onHoverIn?.(event)`), preserving the hover prefetch side-effect plus caller-handler passthrough; optional chaining safely tolerates the `null` allowed by PressableProps.",
+    "L52-55 the `onFocus` wrapper (`prefetchRoute(path); onFocus?.(e)`) is mirrored on the native `onFocus`, preserving the focus prefetch side-effect plus passthrough. L56-58 closing tags/brace map to the closing `</Pressable>`/return; added `displayName` and a default export for parity with sibling native ports (e.g. Grid) without altering the named export.",
+    "Rule 4/5 compliance: no DOM elements, react-router-dom, Recharts, Leaflet, or old web UI components are imported — only the React Native `Pressable` primitive and React.",
+    "Verified via gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
