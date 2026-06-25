@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useAchievementUnlocks.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useAchievementUnlocks.ts",
+  "sourceLineCount": 71,
+  "coveredLineCount": 71,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 71 source lines before editing and preserved the useAchievementUnlocks hook name, recent queue state, dismiss callback, newest-first ordering, MAX_RECENT bound, and achievement.id de-dupe behavior.",
+    "Ported the AchievementUnlockedEvent payload shape and LifetimeAchievement fields into native-compatible TypeScript with the same snake_case SSE keys and achievement_unlocked event name.",
+    "Replaced the browser-only shared sseManager/EventSource dependency with a native-safe singleton that uses a host EventSource polyfill when available, targets /api/v1/events through the native apiUrl helper, and exposes realtimeStatus/unavailableReason when React Native cannot subscribe."
+  ]
+}
