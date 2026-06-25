@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/status/ActionItemsPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/components/status/ActionItemsPanel.tsx",
+  "sourceLineCount": 55,
+  "coveredLineCount": 55,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 55 source lines with line numbers before porting. Header JSDoc L1-6 (operator task list that NEVER hides; explicit 'Nothing right now ✅' empty state to distinguish healthy from broken) is preserved verbatim above the native function.",
+    "Imports L8-11: L8 `{ type ReactNode, Children } from 'react'` kept as-is (Children.toArray is a React API, not DOM, so it ports unchanged); L9 lucide-react <CheckCircle> dropped and replaced by a text-glyph '\\u2713' rendered as AppText (native app ships no lucide-react/SVG, matching SeverityBadge/NotificationBellPopover); L10 shared web GlassPanel -> native ../../../components/ui/GlassPanel; L11 cn() Tailwind composer dropped in favor of StyleSheet + theme tokens.",
+    "ActionItemsPanelProps L13-24 ported faithfully: title? (L15), children:ReactNode (L17), forceEmpty? (L19), emptyText? (L21) carried through with their source doc comments. DOM-only id (L22) is mapped to the native GlassPanel testID (closest current-state identity hook) and DOM-only className (L23) is replaced by the native `style: StyleProp<ViewStyle>` composition prop; both documented here.",
+    "Function signature + defaults L26-33 preserved exactly: title defaults to 'Needs your attention' (L27), forceEmpty defaults to false (L29), emptyText defaults to 'Nothing right now' (L30). The childArray / hasChildren logic L34-35 (`Children.toArray(children).filter(Boolean)` and `!forceEmpty && childArray.length > 0`) is copied verbatim.",
+    "Render L37-54: GlassPanel id+cn('p-4',className) (L38) -> native GlassPanel testID={id} style={[styles.panel(padding 16 = p-4), style]}; header flex items-center gap-2 mb-3 (L39) -> styles.header View (row, alignItems center, gap sm=8 = gap-2, marginBottom md=12 = mb-3); <h3 text-sm font-semibold text-[var(--text-primary)]> (L40) -> AppText weight=semibold fontSize 14/lineHeight 18 color textPrimary.",
+    "Empty-state branch L43-52 preserved: hasChildren ? space-y-2 children (L44) -> styles.items View gap sm=8 (space-y-2); else the green confirmation card (L46) ring-1 ring-green-400/20 bg-green-500/10 rounded-lg p-3 -> styles.empty View (borderWidth 1 + successBorder, successSurface bg, borderRadius 8, padding 12, row, gap md=12); <CheckCircle h-5 w-5 text-green-400 aria-hidden> (L47) -> AppText '\\u2713' fontSize 20 color success with accessibilityElementsHidden/importantForAccessibility=no (aria-hidden analog); empty text div text-sm font-medium text-[var(--text-primary)] (L48-50) -> AppText fontSize 14 fontWeight '500' color textPrimary. Function close L53-55 mirrored.",
+    "No DOM elements, lucide-react, Recharts, Leaflet, or old web UI components were imported into native output. No API paths, state names, or unit handling exist in this presentational component; i18n intent is preserved (literal default strings carried through unchanged, exactly as the source which uses raw English defaults). No browser-only behavior remained, so no unavailable state was required."
+  ]
+}
