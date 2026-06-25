@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useTOTP.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useTOTP.ts",
+  "sourceLineCount": 214,
+  "coveredLineCount": 214,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 214-line source hook line by line before editing and preserved its non-visual TOTP API hook behavior, constants, exported DTO type surface, and query-key registry.",
+    "Ported useTOTPStatus, useTOTPEnroll, useTOTPVerify, useTOTPStepUp, useTOTPRevoke, and useTOTPRegenerateBackupCodes to the native web-parity request client while preserving /auth/totp, /auth/totp/enroll, /auth/totp/verify, /auth/totp/sudo, and /auth/totp/backup-codes/regenerate paths, HTTP methods, body shapes, staleTime, enabled option, AUTH_MODE_OPEN normalization, and sudo-token caching.",
+    "Reused the native shared TOTP DTOs from apps/native/src/api/types.ts and replaced the browser queryBroadcast dependency with local TanStack Query invalidation plus Alert-backed mutation feedback; no DOM, browser HTML elements, Recharts, Leaflet, or web UI components are imported."
+  ]
+}
