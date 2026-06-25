@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/data-display/UserCell.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/UserCell.tsx",
+  "sourceLineCount": 70,
+  "coveredLineCount": 70,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 70 numbered source lines before editing; covered the doc comment intent (L6-14), the UserCellUser interface with id/name/email/avatarUrl (L15-20), the UserCellProps interface with user/showEmail/size/className (L22-28), the default props showEmail=false and size='sm' (L30), the empty-state guard for null/unattributed users rendering an em-dash with data-testid user-cell-empty (L33-39), the name -> email-local-part -> id -> avatar.unknown display-priority chain (L45-48), the container + Avatar wiring with userId/name/src/size/showTooltip (L50-61), and the name/email truncated text column gated by showEmail (L62-67).",
+    "Converted react-i18next useTranslation to the established useNativeTranslationFallback returning the same 'avatar.unknown'='Unknown user' fallback; replaced the @/lib/cn class-merge and Tailwind classes (inline-flex/items-center/gap-2/min-w-0/flex-col/text-sm/text-xs/truncate and text-[var(--text-primary|muted)]) with React Native View + AppText, native color tokens via tone primary/muted, columnGap 8 for gap-2, flexShrink/minWidth for min-w-0, and numberOfLines=1 for truncate.",
+    "Reused the existing native parity Avatar component and its AvatarSize type (no DOM, Recharts, Leaflet, lucide-react, or web UI imports); preserved data-testid hooks via testID aliases (user-cell, user-cell-empty) and kept the className prop accepted-but-ignored for source compatibility."
+  ]
+}
