@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Current.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Current.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines with numbered line output before editing; covered the fmtNumber import intent, CurrentProps amps/precision/className surface, finite-value guard, em dash fallback, exact amperage title string, formatted visible value, A suffix, and named Current export.",
+    "Converted the DOM span elements to React Native AppText primitives and kept className as an accepted no-op compatibility prop while adding native style, testID, and data-testid passthroughs.",
+    "Recreated locale-aware fixed-precision number formatting locally for native compatibility and mapped the web title tooltip to accessibilityLabel with the same amps.toFixed(3) A evidence string."
+  ]
+}
