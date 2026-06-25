@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AiLimitBanner.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AiLimitBanner.tsx",
+  "sourceLineCount": 269,
+  "coveredLineCount": 269,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full source with line numbers before editing; the declared 269 source lines cover the ADR invariant comments, controlled props, null render guard, retry countdown effect, AlertBanner variant mapping, action visibility gates, and reason title/description taxonomy.",
+    "Converted DOM-only AlertBanner/div/p/Button/data-* usage to React Native PremiumCard/View/AppText/Pressable/testID while preserving info/onRetry/onUseBaseline/onDismiss prop names, retryAfterS countdown state, baseline fallback button behavior, retry readiness gating, and alert accessibility intent.",
+    "Preserved i18n keys and English fallbacks through a native-safe translation fallback; no browser-only modules, web UI imports, API paths, charts, maps, or unit conversions were introduced."
+  ]
+}
