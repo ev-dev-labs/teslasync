@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Voltage.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Voltage.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines line by line before editing.",
+    "L1 (import fmtNumber from @/lib/numberFormat): no native numberFormat lib exists, so fmtNumber is ported inline with the web no-settings defaults (en-US, precision 2) plus the safeNumber guard, matching sibling data-display/Delta.tsx and the format/index.ts barrel.",
+    "L2/L8/L19 blank lines: structure preserved.",
+    "L3-7 (interface VoltageProps with volts?, precision?, className?): preserved verbatim; className is retained for source compatibility but ignored on native (aliased to _className), and native-safe style/testID/accessibilityLabel props are added.",
+    "L9 (doc comment 'Voltage renderer with locale-aware number formatting.'): preserved on the ported function.",
+    "L10 (function Voltage signature): ported; returns React.ReactElement.",
+    "L11 (guard volts == null || !Number.isFinite(volts)): ported identically.",
+    "L12 (<span className>—</span> for missing input): rendered as <AppText>—</AppText> (EM_DASH); the DOM span and className are replaced by the native AppText primitive.",
+    "L13 closes the guard branch.",
+    "L14-17 (<span title={`${volts.toFixed(3)} V`}>{fmtNumber(volts, precision)} V</span>): rendered as <AppText> whose children are `${fmtNumber(volts, precision)} V`; the web hover title is mapped to accessibilityLabel (default `${volts.toFixed(3)} V`, overridable), since React Native has no hover tooltip.",
+    "L18 closes the function.",
+    "Native-safe substitutions: no DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI components are imported; only react and react-native types plus the shared AppText primitive are used."
+  ]
+}
