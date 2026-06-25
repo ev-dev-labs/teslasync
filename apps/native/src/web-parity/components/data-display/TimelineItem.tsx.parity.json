@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/data-display/TimelineItem.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/TimelineItem.tsx",
+  "sourceLineCount": 38,
+  "coveredLineCount": 38,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 38 numbered source lines before editing. Imports L1-2 (type ReactNode from react, Link from react-router-dom) were remapped: ReactNode is kept (native import L6) while the DOM-only react-router-dom Link is replaced by a React Native Pressable with onPress; no DOM/Recharts/Leaflet/web-UI module is imported.",
+    "Props signature L6-8 (icon, title, subtitle, time, color, isLast, href) is preserved one-for-one in TimelineItemProps and the destructure; native-only additions onPress (the in-app nav callback that stands in for <Link to>), style, and testID are appended without changing the web surface. The JSDoc intent from L4-5 (activity-feed row that becomes a navigable link when href is set) is carried into the file header comment.",
+    "body JSX L9-26 ported faithfully: gutter column L11 (flex flex-col items-center -> styles.gutter alignItems center); icon box L12-17 (h-8 w-8 rounded-lg items-center justify-center shrink-0 -> styles.iconBox 32x32 borderRadius 8 centered) keeps the dynamic backgroundColor `${color}15` inline; {icon} L16 rendered verbatim; connector L18 (!isLast && w-px flex-1 bg-[var(--surface-2)] mt-1 -> {!isLast ? <View styles.connector width 1 flex 1 backgroundColor colors.surfaceRaised marginTop 4/> : null}); content column L20 (pb-4 min-w-0 flex-1 -> styles.content paddingBottom 16 minWidth 0 flex 1).",
+    "Text rows L21-23 mapped to AppText: title L21 (text-sm font-medium text-[var(--text-primary)] truncate -> AppText variant body weight semibold numberOfLines 1, default primary tone); subtitle L22 rendered only when present (text-xs text-[var(--text-muted)] mt-0.5 -> AppText variant caption tone muted marginTop 2); time L23 (text-[10px] text-gray-600 mt-1 -> AppText variant caption tone muted marginTop 4).",
+    "href branch L27-36 (Link to=href with hover:bg-white/[0.04], focus-visible outline ring and transition-colors) becomes a Pressable with accessibilityRole link, accessibilityValue text=href (href preserved for drill-through parity), onPress, and a pressed-opacity affordance standing in for the DOM hover/focus-visible ring which React Native does not provide. Non-href branch L37 (flex gap-3 wrapper) maps to a plain View; the flexDirection row + gap 12 layout lives on the shared body row so both branches render identically. Closing brace L38 accounted for.",
+    "Native adaptation documented per contract: react-router-dom routing and CSS currentColor tinting (the wrapper `color` on L14 that an SVG icon would inherit) are DOM-only and have no cascade path to an opaque React Native ReactNode icon, so the wrapper color is intentionally omitted and navigation is delegated to the optional onPress prop while href stays on the props for accessibility/parity.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) clean, npm run lint -- --quiet clean, npm test -- --runInBand --detectOpenHandles green."
+  ]
+}
