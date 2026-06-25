@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/DriveScore.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/DriveScore.tsx",
+  "sourceLineCount": 148,
+  "coveredLineCount": 148,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read source lines 1-148 line by line before editing and preserved the DriveLike SI/camelCase field contract, computeDriveScore heuristic, clamp math, battery/default handling, durationHours contract reference, rounded total and component scores, and getScoreColor thresholds.",
+    "Converted the GlassPanel/div/svg/circle/motion/span/Tailwind implementation to native GlassPanel/View/AppText/StyleSheet primitives using existing native tokens, exact web semantic score colors, native accessibility labels, and testID/data-testid compatibility.",
+    "Recreated the post-animation circular score gauge with native positioned segments because React Native has no built-in SVG strokeDasharray/framer-motion support; preserved circumference/dashOffset-derived progress, centered score label, colored glow intent, and all four breakdown bars with original i18n keys and fallback strings.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; the component remains fully native-safe while preserving behavior and visual intent."
+  ]
+}
