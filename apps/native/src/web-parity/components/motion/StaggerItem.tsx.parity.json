@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/motion/StaggerItem.tsx",
+  "outputPath": "apps/native/src/web-parity/components/motion/StaggerItem.tsx",
+  "sourceLineCount": 23,
+  "coveredLineCount": 23,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 23 source lines before editing. L1-3 imports (framer-motion `motion`, React `ReactNode`, and `useMotionPreference` from @/hooks) are replaced with React Native primitives (Animated, AccessibilityInfo, Easing) and an inlined native `useMotionPreference` mirroring the web hook's `{ reduce, durationMs }` contract — framer-motion and DOM modules are never imported into native output.",
+    "L5-9 doc comment intent (stagger child that respects prefers-reduced-motion and renders final state when reduced) is preserved verbatim in the component JSDoc. L10 signature `StaggerItem({ children, className })` is preserved; `className` is accepted for source parity but ignored on native (renamed `_className`), and native-ergonomic `delayMs`/`style`/`testID` are added (delayMs lets a native container reproduce the parent's framer `staggerChildren` orchestration that has no RN variant-context equivalent).",
+    "L11 `useMotionPreference(350)` is preserved exactly (same call + destructured `reduce`/`durationMs` state names). L13-21 `motion.div` with hidden/show variants (hidden = reduce ? {opacity:1,y:0} : {opacity:0,y:15}; show = {opacity:1,y:0, transition.duration durationMs/1000}) is reproduced via an Animated.Value driven 0->1: opacity 0->1 and translateY 15->0; reduce starts/holds at the final state (opacity 1, y 0) with no animation. Web divides durationMs by 1000 because framer uses seconds — RN Animated uses milliseconds, so durationMs is passed directly.",
+    "Easing.out(Easing.ease) is chosen for the entrance (framer leaves ease default; matches sibling FadeIn's easeOut intent). L18 className -> RN style array; L20 `{children}` rendered inside Animated.View; L22-23 closing returns preserved. No Recharts/Leaflet/Tailwind/web UI imports; visual intent (fade + 15px slide-up, reduced-motion-safe) is kept."
+  ]
+}
