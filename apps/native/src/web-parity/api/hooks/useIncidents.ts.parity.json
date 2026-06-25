@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/api/hooks/useIncidents.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useIncidents.ts",
+  "sourceLineCount": 171,
+  "coveredLineCount": 171,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 171-line source file line by line before editing and ported every exported incident DTO, payload type, API client function, cache key factory, invalidation helper, query hook, and mutation hook.",
+    "Preserved the source API path base /status/incidents without an /api/v1 prefix, including active=1 and limit query parameters, detail, updates, PATCH, POST, and DELETE endpoints.",
+    "Adapted URLSearchParams.set to append because the React Native TypeScript surface exposes append; each key is still emitted at most once, preserving the source query string behavior.",
+    "Source is non-visual API/type code; native output uses the React Native-safe parity request client, forwards TanStack Query AbortSignal values, preserves the 30-second list refetch interval, and keeps hook/function names and raw API response shapes unchanged.",
+    "No unit conversion, browser-only behavior, DOM elements, Recharts, Leaflet, or web UI components exist in this source hook, so no unavailable native state is required."
+  ]
+}
