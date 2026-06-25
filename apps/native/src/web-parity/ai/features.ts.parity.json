@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/ai/features.ts",
+  "outputPath": "apps/native/src/web-parity/ai/features.ts",
+  "sourceLineCount": 719,
+  "coveredLineCount": 719,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 719 source lines before editing and mirrored the generated AI feature registry into native TypeScript.",
+    "Source is non-visual utility/type code; no DOM, browser HTML, Recharts, Leaflet, or web UI imports were present or introduced.",
+    "Preserved AiFeatureId, AiFeatureMeta, AI_FEATURES, AI_FEATURE_IDS, and isKnownAiFeature behavior while formatting with the native app Prettier config."
+  ]
+}
