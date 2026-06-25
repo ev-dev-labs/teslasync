@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIDriveCoaching.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIDriveCoaching.tsx",
+  "sourceLineCount": 81,
+  "coveredLineCount": 81,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 81-line source before editing; covered the header comments, optional driveId prop, URL memo with encodeURIComponent and /ai/drives/0/coach fallback, empty body memo, stream setup, translated card labels, canStart guard, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream/useTranslation usage to React Native View/Pressable/AppText/PremiumCard primitives plus native-safe fallback translations and settings-backed AI feature gating.",
+    "Preserved POST /api/v1/ai/drives/{driveID}/coach via native apiUrl('/ai/drives/{driveID}/coach'), the empty JSON body, stream state names, drive coaching visual intent, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams."
+  ]
+}
