@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIVehiclePaintPreview.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIVehiclePaintPreview.tsx",
+  "sourceLineCount": 126,
+  "coveredLineCount": 126,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete line-numbered source before editing; covered the file contract comments, InnerSection props, numericVehicleId guard, memoized style_hint body, post-prefix URL path selection, no-op onEvent, haveInputs disabled state, card labels, feature wrapper, and display names.",
+    "Preserved the vehicle-paint-preview AI feature id, generated native testID, POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft endpoint through native apiUrl(url), empty vehicle fallback path, trimmed optional styleHint behavior, and propose-only paint-preview privacy wording.",
+    "Converted web-only useTranslation, withAiFeature, and useAiStream dependencies to native-safe fallback translation, settings-backed AI feature gating, React Native View primitives, the native AIFeatureCard stream contract, and explicit SSE-unavailable error handling when React Native fetch lacks a readable stream."
+  ]
+}
