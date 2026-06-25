@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AINLAlertBuilder.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AINLAlertBuilder.tsx",
+  "sourceLineCount": 56,
+  "coveredLineCount": 56,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the file comments, optional vehicleId prop, prompt state name, vehicle_id plus prompt memo body, POST /ai/alerts/rules/draft stream URL, no-op onEvent, translated card labels, canStart guard, input slot, feature wrapper, and display names.",
+    "Converted web-only Textarea/onChange event usage to a native multiline TextInput using native tokens while preserving rows=3 intent, placeholder text, trimmed prompt validation, vehicleId null check semantics, and the native parity AIFeatureCard stream contract.",
+    "Recreated the AI feature gating and native-safe SSE stream behavior locally for the nl-alert-builder feature; when React Native fetch does not expose a readable stream, the component surfaces the explicit unavailable error instead of importing browser-only streaming code."
+  ]
+}
