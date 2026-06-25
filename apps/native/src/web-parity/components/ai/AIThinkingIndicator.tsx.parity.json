@@ -1,0 +1,11 @@
+{
+  "sourcePath": "web/src/components/ai/AIThinkingIndicator.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIThinkingIndicator.tsx",
+  "sourceLineCount": 100,
+  "coveredLineCount": 100,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full source with numbered lines before editing; covered the documentation intent, optional label prop, helix.thinking fallback, exported AIThinkingIndicator and AIThinkingDots, displayName assignments, status/live-region semantics, and ai-thinking-indicator test id.",
+    "Converted DOM div/span, Tailwind flex/motion/shimmer classes, CSS prefers-reduced-motion handling, and web HelixMark usage to React Native View/Animated.View/AppText/StyleSheet primitives, native tokens, AccessibilityInfo reduced-motion support, and a decorative native Helix mark."
+  ]
+}
