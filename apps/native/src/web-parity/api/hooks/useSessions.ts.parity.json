@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useSessions.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSessions.ts",
+  "sourceLineCount": 133,
+  "coveredLineCount": 133,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 133-line source hook line by line before editing and preserved the module's non-visual active-session/device-management contract.",
+    "Ported sessionKeys, AUTH_MODE_OPEN handling, useSessions, useRevokeSession, and useRevokeAllOtherSessions to the native web-parity API client while preserving /auth/sessions, /auth/sessions/:id, and /auth/sessions/all-others paths, DELETE methods, staleTime, enabled option, URL encoding, and toast key/fallback intent.",
+    "Reused the native shared ActiveSession, ActiveSessionsResponse, and RevokeAllOthersResponse DTOs from apps/native/src/api/types.ts so the snake_case API response shape remains faithful to the web source.",
+    "Replaced the browser cross-tab queryBroadcast dependency with local TanStack Query invalidation and documented queryBroadcastAvailable=false in nativeSessionHookCapabilities; sudo-gated behavior remains delegated to the native request client's registered sudo challenge provider."
+  ]
+}
