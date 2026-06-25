@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIAutoTripNameSuggestion.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIAutoTripNameSuggestion.tsx",
+  "sourceLineCount": 43,
+  "coveredLineCount": 43,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 43-line source before editing; covered the header comments, tripId prop, URL memo with encodeURIComponent and /ai/trips/0/name/draft fallback, empty body memo, stream setup, translated card labels, canStart guard, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved POST /api/v1/ai/trips/{tripID}/name/draft via native apiUrl('/ai/trips/{tripID}/name/draft'), the empty JSON body, stream state names, propose-only visual intent, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams."
+  ]
+}
