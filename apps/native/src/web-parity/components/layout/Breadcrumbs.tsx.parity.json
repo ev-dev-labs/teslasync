@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/components/layout/Breadcrumbs.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/Breadcrumbs.tsx",
+  "sourceLineCount": 87,
+  "coveredLineCount": 87,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 87 source lines with numbered output before editing.",
+    "L1 `import { Fragment } from 'react'`: preserved verbatim (also adds useCallback for the t-shim).",
+    "L2 `import { PrefetchLink } from './PrefetchLink'`: react-router navigation + hover-prefetch link is browser-only; replaced by a native Pressable (accessibilityRole='link') whose onPress calls a new `onNavigate(path)` callback prop -- the same navigation pattern the native shell App.tsx uses for route items. Prefetch-on-hover has no native equivalent and is intentionally dropped.",
+    "L3 `import { ChevronRight, Home } from 'lucide-react'`: lucide is browser-only; Home becomes the `\\u2302` house glyph and ChevronRight becomes the `\\u203A` chevron glyph, both rendered in AppText (mirrors the native TransitionArrow/SortControl glyph approach).",
+    "L4 `import { useTranslation } from 'react-i18next'`: react-i18next is not a native dependency; replaced by a local useNativeTranslationFallback() t-shim returning the fallback copy verbatim, preserving the `a11y.breadcrumb`/`a11y.breadcrumbHome` keys + English fallbacks.",
+    "L5 `import { cn } from '@/lib/cn'`: Tailwind class-merge is web-only and dropped; `className` is retained on props for source compatibility (aliased to `_className`, ignored) with a native `style` override added instead.",
+    "L7-10 `export interface BreadcrumbItem { label: string; href?: string }` + the `// undefined = current page (no link)` comment: preserved verbatim.",
+    "L12-26 `BreadcrumbsProps` (items, className, homeHref + JSDoc, homeAriaLabel + JSDoc): all preserved verbatim; native-only `onNavigate?`, `style?`, and `testID?` props added (additive) and documented.",
+    "L28-33 `export function Breadcrumbs({ items, className, homeHref = '/', homeAriaLabel })`: signature + the `homeHref = '/'` default preserved (className aliased to `_className`; onNavigate/style/testID destructured alongside).",
+    "L34 `const { t } = useTranslation()` -> `const t = useNativeTranslationFallback()`; also reads useWindowDimensions to derive `isWide = width >= 640` for the responsive sm-breakpoint split.",
+    "L35 `if (items.length <= 1) return null;`: preserved verbatim (block form).",
+    "L37-41 `<nav aria-label={t('a11y.breadcrumb','Breadcrumb')} className='flex items-center gap-1 text-sm overflow-x-auto scrollbar-none'>`: -> horizontal ScrollView with accessibilityLabel=t('a11y.breadcrumb','Breadcrumb'), contentContainerStyle {flexDirection:'row', alignItems:'center', gap: spacing.xs (gap-1=4px)}, showsHorizontalScrollIndicator={false} (overflow-x-auto scrollbar-none), style override, testID default 'breadcrumbs'.",
+    "L42-48 home `<PrefetchLink to={homeHref} aria-label={homeAriaLabel ?? t('a11y.breadcrumbHome','Dashboard')}><Home className='h-3.5 w-3.5'/></PrefetchLink>`: -> accessible Pressable (accessibilityRole='link', accessibilityLabel keeps the exact `homeAriaLabel ?? t(...)` fallback, onPress=onNavigate?.(homeHref), testID='breadcrumb-home') rendering the `\\u2302` glyph at 14px (h-3.5); hover->secondary becomes the pressed colour change.",
+    "L50-53 `items.map((item, i) => { const isLast = i === items.length - 1; const isMiddle = i > 0 && !isLast;`: preserved verbatim; also derives `href`, `showLabel = !isMiddle || isWide`, `showEllipsis = isMiddle && !isWide`.",
+    "L55 `<Fragment key={i}>`: preserved verbatim (RN Fragment with key).",
+    "L56 `<ChevronRight className='h-3 w-3 text-[var(--text-muted)] shrink-0'/>`: -> decorative AppText (importantForAccessibility='no') rendering `\\u203A` at 12px (h-3) in textMuted; RN default flexShrink is 0 (shrink-0).",
+    "L57-66 span branch `{isLast || !item.href ? <span className=cn('truncate max-w-[200px]', isLast ? secondary+font-medium : muted, isMiddle && 'hidden sm:inline')>{item.label}</span>`: -> AppText numberOfLines={1} (truncate), maxWidth 200, tone secondary+fontWeight'500' when isLast else tone muted; gated by `showLabel` so middle labels hide on narrow screens (hidden sm:inline).",
+    "L67-77 link branch `: <PrefetchLink to={item.href} className=cn(muted hover:secondary 'truncate max-w-[200px]', isMiddle && 'hidden sm:inline')>{item.label}</PrefetchLink>`: -> accessible Pressable (accessibilityRole='link', accessibilityLabel=item.label, onPress=onNavigate?.(href) over the narrowed const href, testID `breadcrumb-link-${i}`) wrapping AppText numberOfLines={1} maxWidth 200 tone muted with pressed->secondary (hover->secondary); same `showLabel` gate for hidden sm:inline.",
+    "L78-81 `{isMiddle && <span className='text-[var(--text-muted)] sm:hidden' aria-hidden>…</span>}` + the `Collapsed indicator` comment: -> decorative AppText (importantForAccessibility='no' for aria-hidden) rendering `\\u2026` in textMuted, gated by `showEllipsis` (isMiddle && !isWide) to mirror sm:hidden (visible only on narrow screens).",
+    "L82-87 closing `</Fragment>`, map return, `</nav>`, map close, and function close: mapped to the Fragment/ScrollView closing tags and function close; Breadcrumbs.displayName added; no react-router, PrefetchLink, lucide, DOM nav/span, Tailwind, cn, Recharts, Leaflet, or web UI components imported.",
+    "Verification: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
