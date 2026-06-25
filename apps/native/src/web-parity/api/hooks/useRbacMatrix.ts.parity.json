@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useRbacMatrix.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useRbacMatrix.ts",
+  "sourceLineCount": 117,
+  "coveredLineCount": 117,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 117 source lines and ported the RBAC query, mutation, open-auth sentinel handling, exported query keys, type guard, and diffMatrices helper.",
+    "Recreated the source RBAC API contracts in the native hook because the native shared api/types barrel does not yet expose them.",
+    "Replaced web queryBroadcast with native-safe local QueryClient invalidation and documented queryBroadcastAvailable=false in the exported capability flag."
+  ]
+}

@@ -1,0 +1,157 @@
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type QueryKey,
+} from '@tanstack/react-query';
+
+import {isApiError, request, type ApiError} from '../client';
+import {useMutationToast} from './_toastHelpers';
+
+export interface RbacPermission {
+  id: string;
+  name: string;
+  category: string;
+}
+
+export interface RbacRole {
+  id: string;
+  name: string;
+}
+
+export type RbacMatrixResponse =
+  | RbacMatrixSessionResponse
+  | RbacMatrixOpenModeResponse;
+
+export interface RbacMatrixSessionResponse {
+  mode: 'session';
+  roles: RbacRole[];
+  permissions: RbacPermission[];
+  categories: string[];
+  matrix: Record<string, Record<string, boolean>>;
+  effective_for_me: Record<string, boolean>;
+  my_roles: string[];
+  groups_header_name?: string;
+}
+
+export interface RbacMatrixOpenModeResponse {
+  mode: 'open';
+}
+
+export interface RbacUpsertCell {
+  role_id: string;
+  permission_id: string;
+  allowed: boolean;
+}
+
+export interface RbacUpsertRequest {
+  cells: RbacUpsertCell[];
+}
+
+export const nativeRbacMatrixHookCapabilities = {
+  queryBroadcastAvailable: false,
+  localQueryInvalidation: true,
+  mutationFeedbackPrimitive: 'Alert.alert',
+} as const;
+
+const AUTH_MODE_OPEN_CODE = 'AUTH_MODE_OPEN';
+
+function invalidateAndBroadcast(
+  qc: QueryClient,
+  filters: {queryKey: QueryKey},
+): void {
+  void qc.invalidateQueries(filters);
+}
+
+export const rbacMatrixKeys = {
+  all: ['admin', 'rbac'] as const,
+  matrix: () => [...rbacMatrixKeys.all, 'matrix'] as const,
+};
+
+/**
+ * Fetches the RBAC matrix or `{mode: 'open'}` when forward-auth is disabled.
+ * Polling stays off because the matrix only changes through explicit edits.
+ */
+export function useRbacMatrix(options?: {enabled?: boolean}) {
+  return useQuery<RbacMatrixResponse, ApiError>({
+    queryKey: rbacMatrixKeys.matrix(),
+    queryFn: async ({signal}) => {
+      try {
+        return await request<RbacMatrixSessionResponse>('/admin/rbac/matrix', {
+          signal,
+        });
+      } catch (err) {
+        if (isApiError(err) && err.code === AUTH_MODE_OPEN_CODE) {
+          const open: RbacMatrixOpenModeResponse = {mode: 'open'};
+          return open;
+        }
+        throw err;
+      }
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * Persists changed (role, permission, allowed) cells and invalidates the matrix.
+ * Accepts the array directly; the backend treats an empty batch as a no-op.
+ */
+export function useUpsertRbacCells() {
+  const qc = useQueryClient();
+  const toast = useMutationToast();
+  return useMutation<void, ApiError, RbacUpsertCell[]>({
+    mutationFn: (cells: RbacUpsertCell[]) => {
+      const body: RbacUpsertRequest = {cells};
+      return request<void>('/admin/rbac/matrix', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+    },
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, {queryKey: rbacMatrixKeys.matrix()});
+      toast.success('rbac.toasts.saved', 'RBAC matrix updated.');
+    },
+    onError: err =>
+      toast.error(err, 'rbac.errors.save', 'Failed to save RBAC matrix'),
+  });
+}
+
+/** Narrows the synthetic `{mode: 'open'}` response from useRbacMatrix. */
+export function isRbacOpenMode(
+  data: RbacMatrixResponse | undefined,
+): data is RbacMatrixOpenModeResponse {
+  return data?.mode === 'open';
+}
+
+/** Returns cells whose allowed value changed between two matrix snapshots. */
+export function diffMatrices(
+  base: Record<string, Record<string, boolean>>,
+  draft: Record<string, Record<string, boolean>>,
+): RbacUpsertCell[] {
+  const cells: RbacUpsertCell[] = [];
+  const roleIDs = new Set<string>([...Object.keys(base), ...Object.keys(draft)]);
+  for (const roleID of roleIDs) {
+    const baseRow = base[roleID] ?? {};
+    const draftRow = draft[roleID] ?? {};
+    const permIDs = new Set<string>([
+      ...Object.keys(baseRow),
+      ...Object.keys(draftRow),
+    ]);
+    for (const permID of permIDs) {
+      const baseAllowed = baseRow[permID] ?? false;
+      const draftAllowed = draftRow[permID] ?? false;
+      if (baseAllowed !== draftAllowed) {
+        cells.push({
+          role_id: roleID,
+          permission_id: permID,
+          allowed: draftAllowed,
+        });
+      }
+    }
+  }
+  return cells;
+}
