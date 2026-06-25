@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useVehicleCommand.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useVehicleCommand.ts",
+  "sourceLineCount": 66,
+  "coveredLineCount": 66,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 66-line source hook line by line before editing and ported the CommandResult and SendCommandParams interfaces, POST /vehicles/{vehicleId}/command mutation body, success/error handling, auth-expired branch, and all cache invalidation keys.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client and Alert-backed mutation toast helper, with no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI imports.",
+    "The web-only document event used by queueTeslaMutation cannot exist in React Native, so the native hook explicitly reports documentEventBridgeAvailable=false and exposes a bounded in-memory queue plus drainQueuedTeslaCommandMutations for replay after native Tesla reconnect."
+  ]
+}
