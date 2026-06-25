@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/feedback/PageLoader.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/PageLoader.tsx",
+  "sourceLineCount": 10,
+  "coveredLineCount": 10,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 10 source lines with line numbers before editing: the `import { Spinner } from './Spinner'` (L1), the doc-comment describing the full-page Suspense-fallback loader (L3), the `export function PageLoader()` declaration (L4), the returned centering `div` with `flex items-center justify-center py-32` (L5-6), the `<Spinner size=\"lg\" />` (L7), and the closing tags + brace (L8-10).",
+    "Preserved behavior/intent exactly: still a named `export function PageLoader()` returning a single full-page centered loader sized as the large brand spinner; the doc-comment 'Full-page spinning loader, suitable as a React Suspense fallback' is carried over verbatim. Added a default export plus displayName for parity with the other native feedback ports (CookieConsentBanner) without changing the public named export.",
+    "Rule 7 native-safe adaptation: the web `Spinner` (L1, L7) is an SVG lightning-bolt that animates via CSS keyframes + drop-shadow glow and honors `prefers-reduced-motion` — all browser-only, and the web Spinner has not been ported to native — so the loader uses React Native's built-in ActivityIndicator (size 'large', color tokens.accent), matching the loading primitive already used by the ported ChartContainer. The web Spinner's role='status' / aria-label='Loading' semantics are preserved via accessibilityRole='progressbar' + accessibilityLabel='Loading'.",
+    "Visual intent of the L6 wrapper preserved: `div` + Tailwind `flex items-center justify-center py-32` -> React Native `View` with StyleSheet { alignItems:'center', justifyContent:'center', paddingVertical:128 } (py-32 = 8rem = 128px). No DOM elements, Tailwind classes, Recharts, Leaflet, or old web UI components imported; only react-native primitives and the existing native color tokens.",
+    "Verified via gates from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles."
+  ]
+}
