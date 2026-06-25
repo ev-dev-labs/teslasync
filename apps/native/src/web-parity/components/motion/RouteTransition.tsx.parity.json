@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/components/motion/RouteTransition.tsx",
+  "outputPath": "apps/native/src/web-parity/components/motion/RouteTransition.tsx",
+  "sourceLineCount": 92,
+  "coveredLineCount": 92,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 92 source lines before editing; this is a route page-transition wrapper that cross-fades content on pathname change.",
+    "Imports ported (source L1-4): framer-motion AnimatePresence/motion (L1) -> React Native Animated cross-fade; react useRef/ReactNode (L2) -> React/useRef/useState/useEffect with React.ReactNode types; react-router-dom matchPath/useLocation (L3) -> native matchRoutePattern() + a `pathname` prop (RouteAnnouncer precedent); useMotionPreference (L4) -> native useReduceMotion() backed by AccessibilityInfo plus a durationMs=120 default.",
+    "DEFAULT_SKIP_PATTERNS array (source L18-25) ported verbatim — all six patterns (/drives/:id, /drives/:id/replay, /charging/:id, /vehicles/:id, /vehicles/:id/access, /trips/:id) — and exported; the L6-17 doc comment intent is preserved above it.",
+    "RouteTransitionProps (source L27-37) preserved: children + skipPattern (default DEFAULT_SKIP_PATTERNS) with the L29-36 doc intent kept; added native-safe pathname and durationMs props (documented as the useLocation/useMotionPreference replacements).",
+    "Component doc (source L39-59) behaviour list preserved/adapted: 120ms ease-out fade + 4px y-translate (L46-47), mode=wait no-layering (L47-50), initial=false first-render skip (L51-52), re-key by pathname only (L53-54), reduced-motion no-op (L55-56), list-detail skip (L57-58).",
+    "Component body (source L60-76): useLocation (L61) -> pathname prop; useMotionPreference(120) reduce+durationMs (L62) -> useReduceMotion() + durationMs=120; prevPathRef (L63), prevPath/newPath (L65-66), matchesSkip via matchPath end:true (L68-69), skipForList (L71), effectiveDurationMs = reduce||skip?0:duration (L72), and prevPathRef.current=newPath written AFTER computing skipForList (L74-76) all preserved inside the pathname effect.",
+    "matchPath({path, end:true}, pathname) (source L69) reimplemented as matchRoutePattern()/compilePattern() following react-router v6 compilePath rules: escape regex specials, /:param -> /([^/]+), trailing-slash tolerant (\\/*$), case-insensitive (i flag) — covering all DEFAULT_SKIP_PATTERNS forms incl. nested /vehicles/:id/access and /drives/:id/replay.",
+    "framer JSX (source L78-90): AnimatePresence mode=wait initial=false + motion.div key/initial/animate/exit/transition/style -> a single Animated.View driving opacity+translateY; mode=wait is preserved by freezing the OUTGOING children (frozen/exiting state) during the exit fade (opacity 1->0, y 0->-4) then swapping to the incoming children at the trough and fading up (opacity 0->1, y 4->0); transition duration=effectiveDurationMs/ease easeOut -> Easing.out(Easing.ease) with duration in ms; style minHeight:'100%' (L86) -> styles.container flex:1.",
+    "{children} (source L88) rendered inside the Animated.View; closing L91-92 preserved. Reduced-motion/list-skip path collapses to an instant swap (effectiveDurationMs===0 -> opacity 1/y 0, no animation), matching the web reduce/skip no-op branches in initial/animate/exit.",
+    "nativeRouteTransitionCapabilities documents the unavailable browser surfaces (reactRouterLocationAvailable:false, framerMotionAvailable:false) and the native-safe equivalents that remain (reducedMotionAvailable:true, crossFadeAvailable:true).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, framer-motion, react-router, or old web UI components imported into native output; only react + react-native primitives used. Arrow bodies use prettier arrowParens:avoid; single quotes; trailing commas. Gates run: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
