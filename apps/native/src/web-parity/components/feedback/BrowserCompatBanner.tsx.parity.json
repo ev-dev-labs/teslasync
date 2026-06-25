@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/feedback/BrowserCompatBanner.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/BrowserCompatBanner.tsx",
+  "sourceLineCount": 101,
+  "coveredLineCount": 101,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 101 source lines with line numbers before editing; the declared lines cover the JSDoc rationale (L11-32), RECOMMENDED_BROWSERS_FALLBACK constant (L34-35), BrowserCompatBannerProps/testHookMissing seam (L37-44), component signature with default param (L46), missing/dismissed useState initializers (L49-52), testHookMissing useEffect (L56-60), handleDismiss useCallback (L62-65), the dismissed||missing.length===0 null guard (L67), featureList/title/body i18n derivation (L69-75), and the sticky banner JSX (L81-98) plus default export (L101).",
+    "Source is browser-only: imports lucide-react AlertTriangle, web AlertBanner, and @/lib/browserCompat (detectMissingFeatures/dismissCompatWarning/isCompatWarningDismissed) which probe BroadcastChannel/ResizeObserver/Intl.RelativeTimeFormat/CSS :has()/structuredClone and persist to localStorage. None exist in React Native, so per contract rule 7 a native-safe implementation was created with an explicit unavailable state.",
+    "Native-safe detectMissingFeatures() returns [] because browser-platform feature detection is not applicable to a native runtime (the app owns its JS engine), faithfully reproducing the web banner's hidden state on supported environments while the testHookMissing seam still renders the warning UI for specs.",
+    "Dismissal persistence: localStorage has no native equivalent, so the versioned storage key was replaced with an in-process module flag (resets on app restart) -- the same documented fallback the web helper uses under Safari private-mode/quota; isCompatWarningDismissed()/dismissCompatWarning() names and semantics preserved.",
+    "Preserved state names (missing, dismissed), props (testHookMissing default {}), behavior (re-detect effect, handleDismiss, null guard, featureList join, body interpolation), i18n keys (compat.banner.title/body/dismiss) and English copy including the Chrome >=110 recommendation, via a native translation fallback that interpolates {{features}}/{{recommendation}}.",
+    "Converted DOM div/AlertBanner/AlertTriangle/span/data-* to RN View/PremiumCard(tone=warning)/AppText/Pressable; role=status + aria-live=polite -> accessibilityLiveRegion=polite + accessible; data-missing -> accessibilityHint; testids browser-compat-banner and browser-compat-banner-body retained, plus a localized dismiss Pressable. No DOM-only modules, Recharts, Leaflet, or web UI components imported.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
