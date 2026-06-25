@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/forms/DatePresetChips.tsx",
+  "outputPath": "apps/native/src/web-parity/components/forms/DatePresetChips.tsx",
+  "sourceLineCount": 74,
+  "coveredLineCount": 74,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 74 numbered source lines before editing. Header docstring L1-9 (purpose + DateRangeFilter usage) is preserved in the native file header comment.",
+    "Imports L11-13: react-i18next useTranslation L11 -> inlined useNativeTranslationFallback() returning the web English fallback verbatim (no interpolation needed); @/components/ui/Button L12 -> inline Pressable + AppText chips (native AppButton has no size/aria-pressed surface), so no web UI/DOM module is imported; DATE_PRESETS/DEFAULT_PRESET_IDS L13 -> ported DOM-free web-parity lib/datePresets (faithful 1:1 logic port, all 159 source lines covered).",
+    "DatePresetSelection interface L15-19 ported one-for-one (id/start/end). DatePresetChipsProps L21-34 preserved: presetIds L23, activeId L25, onSelect L27, size 'sm'|'md' L29, ariaLabel L31; the web-only className pass-through L33 is mapped to a native style: StyleProp<ViewStyle> plus an optional testID (PlaybackControls convention).",
+    "Component signature + defaults L36-43 preserved (presetIds = DEFAULT_PRESET_IDS L37, size = 'sm' L40). Body L44-46 ported verbatim: useTranslation L44 -> native t, ids Set L45, DATE_PRESETS.filter(p => ids.has(p.id)) L46 keeping master-array order.",
+    "Wrapper div L49-53 -> View: flex flex-wrap items-center gap-1 L50 -> styles.row (flexDirection row, flexWrap wrap, alignItems center, gap spacing.xs=4) with className+style merged via [styles.row, style]; role=group + aria-label L51-52 -> View accessibilityLabel using the same ariaLabel ?? t('date.preset.label','Quick date range') fallback.",
+    "Chip map L54-71 -> Pressable per preset: active = p.id === activeId L55; variant primary/ghost L61 -> chipActive (accent fill) / chip Ghost (surface+border) styles; size L60 -> chipSm/chipMd + labelSm/labelMd padding+font scale; onClick resolve()+onSelect({id,start,end}) L62-65 -> onPress identical; aria-pressed L66 -> accessibilityState selected; label t(p.i18nKey, p.fallback) L68 rendered via AppText; type=button L59 has no native analogue (Pressable accessibilityRole=button). Closing JSX L72-74 ported.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) clean, npm run lint -- --quiet clean, npm test -- --runInBand --detectOpenHandles green."
+  ]
+}
