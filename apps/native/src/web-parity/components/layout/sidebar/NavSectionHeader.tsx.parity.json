@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/components/layout/sidebar/NavSectionHeader.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/sidebar/NavSectionHeader.tsx",
+  "sourceLineCount": 40,
+  "coveredLineCount": 40,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import type { ReactNode } from 'react'` -> preserved as `import React, {type ReactNode} from 'react'` (React imported for JSX per the native preset; ReactNode kept verbatim for the `action` slot type).",
+    "L2 `import { cn } from '@/lib/cn'` -> dropped; Tailwind class composition has no native analog and is replaced by a StyleSheet + a composable `style` prop (same pattern as the converted BottomTabBar).",
+    "L3 blank line -> preserved as structure.",
+    "L4-12 `NavSectionHeaderProps` interface -> preserved with the same name. `label: string` (L6) and `action?: ReactNode` (L8) kept verbatim; `id?: string` (L10) kept (now documented as feeding nativeID/accessibilityLabelledBy, the native analog of aria-labelledby); `className?: string` (L11) -> `style?: StyleProp<ViewStyle>` (web styling prop has no native analog). Added `testID?` for native test ergonomics. JSDoc on each field (L5/L7/L9) carried over.",
+    "L13 blank line -> preserved.",
+    "L14-25 component JSDoc (section-header intent + visual rules: 10px/600/uppercase/0.14em tracking, text-[var(--text-muted)], px-3 py-1 with no extra margin, flex-row-with-action behavior) -> preserved and restated on the native component, annotating 0.14em as 1.4px and the muted token mapping.",
+    "L26 `export function NavSectionHeader({ label, action, id, className })` -> preserved signature; `className` destructure swapped for `style` (+ testID). Component name and named export kept.",
+    "L27-28 `<div className={cn('flex items-center justify-between gap-2 px-3 py-1', className)}>` -> `<View style={[styles.row, style]}>`: flex->flexDirection:'row', items-center->alignItems:'center', justify-between->justifyContent:'space-between', gap-2->gap:8 (spacing.sm), px-3->paddingHorizontal:12 (spacing.md), py-1->paddingVertical:4 (spacing.xs); the `className` merge becomes the trailing `style` entry; testID forwarded.",
+    "L29-32 `<p id={id} className=\"text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]\">` -> `<AppText nativeID={id} style={styles.label}>`: text-[10px]->fontSize:10, font-semibold->fontWeight:'600', uppercase->textTransform:'uppercase', tracking-[0.14em]->letterSpacing:1.4 (0.14em x 10px), text-[var(--text-muted)]->color:colors.textMuted; lineHeight pinned to 14 to override AppText's body lineHeight and keep the tight px-3 py-1 rhythm; id->nativeID preserves the aria-labelledby linking hook.",
+    "L33 `{label}` -> rendered as the AppText child verbatim.",
+    "L34 closing `</p>` -> closing `</AppText>`.",
+    "L35 `{action}` -> rendered verbatim after the label (undefined renders nothing in RN; consumer owns wrapping any string action in <Text>, same contract as web).",
+    "L36-37 closing `</div>` + return paren -> closing `</View>` + return paren.",
+    "L38 closing brace of the function -> preserved; added `NavSectionHeader.displayName = 'NavSectionHeader'` for native ergonomics.",
+    "L39 blank line -> preserved.",
+    "L40 `export default NavSectionHeader` -> preserved verbatim.",
+    "Behavior, prop names (label/action/id), and visual intent (quiet 10px/600 uppercase muted label, space-between row with an optional right action, px-3 py-1 padding) preserved. The web-only cn() class merger and className prop are the only adaptations, and the id aria-labelledby hook maps to nativeID. No DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported."
+  ]
+}
