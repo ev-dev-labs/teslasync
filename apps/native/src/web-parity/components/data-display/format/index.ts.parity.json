@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/format/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/index.ts",
+  "sourceLineCount": 16,
+  "coveredLineCount": 16,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 16 source lines line by line before editing; the source is a barrel that re-exports DateTime + DateTimeVariant (L1-2), Distance (L3), Speed (L4), Temperature (L5), Pressure (L6), Energy (L7), Power (L8), Voltage (L9), Current (L10), Currency (L11), Percentage (L12), FormattedNumber (L13), Duration + DurationVariant (L14-15), and Range + useRangeLabel (L16).",
+    "Every exported name from all 16 lines is preserved. Because the native format/ sibling directory is empty (none of ./DateTime, ./Distance, ./Speed, ./Temperature, ./Pressure, ./Energy, ./Power, ./Voltage, ./Current, ./Currency, ./Percentage, ./Number, ./Duration, ./Range exist yet) and the web hook stack (useUnits/useFormatting/usePreferredRange/useSettings/react-i18next) plus @/lib SI+date helpers are not ported into the parity tree, the barrel is self-contained with inline native implementations — matching the established native charts barrel which defines components inline in a .ts file via React.createElement.",
+    "Behavior preserved faithfully: ported convertDistanceFromSI/convertSpeedFromSI/convertTempFromSI/convertPressureFromSI math and the miles->m, km->m, mph->m/s, km/h->m/s, F->C, bar->kPa, psi->kPa input bridges (L3-6); the Energy/Power auto Wh/W vs kWh/kW thresholding and 3-decimal canonical title (L7-8); Voltage/Current 3-decimal V/A titles (L9-10); Currency symbol prefix + fallback (L11); Percentage value-or-ratio*100 (L12); generic FormattedNumber with optional unit suffix (L13); Duration short/long/compact/clock variants over formatDurationMs* (L14-15); DateTime full/date/time/relative/short variants over ported dateFormat helpers and Range + useRangeLabel over a ported selectPreferredRange (L16).",
+    "Native-safe substitutions documented in nativeFormatBarrelCapabilities: no DOM (uses AppText/Text via React.createElement, .ts extension keeps JSX out like charts/index.ts); the web hover `title` is surfaced via accessibilityLabel; absent useUnits/useSettings means unit-aware renderers default to the web no-settings metric fallback (km, km/h, °C, bar) with an explicit unit override prop; absent react-i18next means useRangeLabel returns the English default label that web passed as the t() fallback; absent vehicle/user timezone provider means DateTime renders in the device timezone, honoring only in=\"utc\". No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI components are imported."
+  ]
+}
