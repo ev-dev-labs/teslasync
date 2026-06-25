@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIVoiceMode.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIVoiceMode.tsx",
+  "sourceLineCount": 551,
+  "coveredLineCount": 551,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 551-line source with line numbers before editing; covered the render contract comments, voice-mode feature gate, transcript draft key, session_id generation, sentence chunking, stream event handling, cleanup effects, mic/TTS controls, busy/canStart guards, AIFeatureCard wiring, test IDs, and display names.",
+    "Preserved the POST stream path /ai/voice/chat through native apiUrl('/ai/voice/chat'), request body keys message and session_id, stream state names idle/streaming/paused-confirm/done/error, transcript/listening/ttsEnabled/sttError/sessionId state names, draft clear-on-done/unmount behavior, and translated fallback intent for all user-visible strings.",
+    "Converted DOM-only div/span/p/Button/lucide/react-i18next/window SpeechRecognition/speechSynthesis/localStorage access to React Native View/Pressable/AppText/native tokens, settings-backed AI feature gating, globalThis storage when available, native-safe SSE parsing, and explicit unavailable hints for native STT/TTS because no native speech library is present."
+  ]
+}
