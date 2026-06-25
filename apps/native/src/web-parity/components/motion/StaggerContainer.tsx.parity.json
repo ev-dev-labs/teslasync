@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/motion/StaggerContainer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/motion/StaggerContainer.tsx",
+  "sourceLineCount": 26,
+  "coveredLineCount": 26,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 26-line source with numbered lines before editing: L1 framer-motion import, L2 ReactNode type import, L3 useMotionPreference hook import, L5-9 the doc comment describing staggered child entrance + reduced-motion no-op, L10 the StaggerContainer({children, className=''}) signature, L11 const {reduce}=useMotionPreference(), L12-23 the motion.div with initial='hidden'/animate='show' and variants {hidden:{}, show:{transition:{staggerChildren: reduce ? 0 : 0.06}}} plus className, L22 {children}, L24-26 closing/blank lines.",
+    "Framer-motion is DOM/browser-only (rule 4), so the motion.div + variant orchestration is reproduced natively (rule 7): each direct child from React.Children.toArray is wrapped in an Animated.View that fades + slides (opacity 0->1, translateY 8->0) with a per-child delay of index * 0.06s, preserving the exact web staggerChildren=0.06 constant via STAGGER_SECONDS.",
+    "useMotionPreference (framer-motion useReducedMotion) is replaced with a native useReduceMotion hook backed by AccessibilityInfo.isReduceMotionEnabled + reduceMotionChanged listener (the same pattern as the existing AnimatedMarker/ChartSkeleton ports); reduce -> staggerMs 0 and every child renders in its final state immediately, matching the web 'reduce ? 0' no-op so the doc comment's behavior (L5-9) is preserved.",
+    "Preserved the public API: children + className props (className kept as _className for source compatibility and intentionally unused because native styling flows through the added style escape hatch); kept the JSX child order ({children}) and added accessibilityLabel/testID/data-testid pass-throughs consistent with sibling native parity components. No DOM elements, Recharts, Leaflet, or old web UI components are imported."
+  ]
+}
