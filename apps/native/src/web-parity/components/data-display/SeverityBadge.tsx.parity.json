@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/SeverityBadge.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/SeverityBadge.tsx",
+  "sourceLineCount": 75,
+  "coveredLineCount": 75,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 75 numbered source lines before editing and preserved both exports: SeverityBadge (severity, showIcon=true default, size='md' default, className, children, title props) and SeverityIcon (severity, className props).",
+    "Lines 1-21 (lucide-react iconMap of Info/AlertTriangle/AlertOctagon/CheckCircle, cn + @/lib/tokens imports, sizeClasses sm/md text+px+py+gap, iconSizeClasses h-3/h-3.5) are covered by an in-file native severityTokens map, a text-glyph ICON_GLYPH map (no lucide/SVG exists in the native app), and a SIZE_CONFIG that reproduces the exact px-1.5/py-0.5/gap-1/h-3 (sm) and px-2/py-1/gap-1.5/h-3.5 (md) values; cn/className is accepted but ignored as Tailwind has no native target.",
+    "Lines 23-62 (SeverityBadgeProps + SeverityBadge body) are covered by a React Native View pill with flexDirection row, rounded-full borderRadius, token bg/border/fg, the optional decorative icon glyph (aria-hidden -> accessibilityElementsHidden), and the children ?? sev label semantics including non-text ReactNode passthrough; title maps to accessibilityLabel.",
+    "Lines 64-75 (SeverityIconProps + SeverityIcon) are covered by a standalone colored AppText glyph using normalizeSeverity + severityTokens.fg, with the Lucide icon rendered aria-hidden; normalizeSeverity is ported verbatim (warning->warn, error/fatal->critical, ok/success->success, info/warn/critical passthrough, default info).",
+    "Native-safe limitation: lucide-react vector icons are approximated with text glyphs (Info='i', AlertTriangle/AlertOctagon='!', CheckCircle=U+2713) because the native app has no lucide-react-native or react-native-svg dependency; color carries the severity meaning so the shared exclamation glyph for the two alert variants is intentional."
+  ]
+}
