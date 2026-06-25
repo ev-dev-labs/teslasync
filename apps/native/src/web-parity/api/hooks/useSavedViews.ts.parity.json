@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useSavedViews.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSavedViews.ts",
+  "sourceLineCount": 161,
+  "coveredLineCount": 161,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 161-line source hook line by line before editing and preserved savedViewsKeys, buildQuery, useSavedViews, create/update/delete/default mutation hooks, argument interfaces, and toast key/fallback intent.",
+    "Ported the non-visual TanStack Query API logic to the native web-parity request client while preserving /saved-views paths, route query parameter encoding, POST/PUT/DELETE methods, snake_case request bodies, optimistic delete updater, and 60-second STANDARD stale time.",
+    "Inlined SavedView response/input interfaces and a local invalidateAndBroadcast shim because the native parity layer has no shared web api/types or browser BroadcastChannel query-broadcast dependency; native invalidation remains local TanStack Query cache invalidation with Alert-backed mutation feedback."
+  ]
+}
