@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/data-display/MetricBar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/MetricBar.tsx",
+  "sourceLineCount": 38,
+  "coveredLineCount": 38,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 38 source lines with numbered output before editing; ported the exact prop shape {value, max, color, label, sublabel?} as MetricBarProps and added non-breaking optional className (ignored on native), style, and testID like sibling data-display ports.",
+    "Preserved the L20 pct = Math.min((value / max) * 100, 100) computation and the documented L4-16 sublabel policy: 'sublabel ?? fmtNumber(value)' uses ?? (not ||) so an explicit empty string suppresses the readout while undefined shows the formatted value.",
+    "Converted L1 framer-motion motion.div (L28-34: initial width 0, animate width pct%, duration 1, ease [0.16,1,0.3,1]) to an Animated.View whose width interpolates '0%'->`${pct}%` via Animated.timing duration 1000 + Easing.bezier(0.16,1,0.3,1); reduced-motion users get the final width with no tween.",
+    "Converted L2 fmtNumber import to an inlined locale-aware fmtNumber sourcing precision/locale from the native useSettings() hook (settings.decimal_precision / settings.locale), mirroring the established Percentage.tsx parity pattern for web's runtime-seeded numberFormat globals.",
+    "Converted L22-26 DOM div/span + Tailwind to View/AppText: label keeps text-xs + text-[var(--text-secondary)] via caption variant + colors.textSecondary; value keeps text-xs font-mono + inline color via caption variant, a Platform-selected monospace fontFamily, tabular-nums, and {color}.",
+    "Converted L27 track (h-2 rounded-full bg-[var(--surface-2)] overflow-hidden) to a height-8, borderRadius-999, colors.surfaceRaised, overflow-hidden View; L33 CSS linear-gradient + box-shadow glow collapse to a solid color fill plus a same-color native shadow/elevation because no gradient library is vendored in apps/native.",
+    "Added a finite-and-[0,100] guard on the animated width because React Native Animated layout interpolation rejects NaN/negative values that web's raw Math.min would otherwise emit when max is 0 or value < 0; common-case results are unchanged. No DOM, Recharts, Leaflet, framer-motion, or web UI imports remain."
+  ]
+}
