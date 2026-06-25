@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/client.ts",
+  "outputPath": "apps/native/src/web-parity/api/client.ts",
+  "sourceLineCount": 394,
+  "coveredLineCount": 394,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 394-line source file line by line before editing and mapped every export, helper, error type, sudo credential/provider path, token cache path, direct request path, and resilient fallback path.",
+    "Source is non-visual API utility code; the native output imports only React Native Platform, fetch-compatible globals, and no DOM-only modules, browser HTML, Recharts, Leaflet, or web UI components.",
+    "Preserved /api/v1 path normalization, apiUrl construction, Accept/Content-Type defaults, text/json/204 handling, SUDO_REQUIRED and AUTH_MODE_OPEN constants, SudoCanceledError semantics, in-memory sudo token expiry, one-shot sudo challenge replay, skipAuthRefresh behavior, and camelCaseKeys dual snake/camel response shape.",
+    "Browser-only resilience side effects from the web dependency (window/document/navigator reauth navigation and DOM events) are native-unavailable; the parity client keeps a native-safe retry/timeout/dedup fallback and exposes typed ApiError state for native UI handling."
+  ]
+}
