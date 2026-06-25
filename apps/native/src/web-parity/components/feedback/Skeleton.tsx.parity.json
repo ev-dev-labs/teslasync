@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/feedback/Skeleton.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/Skeleton.tsx",
+  "sourceLineCount": 36,
+  "coveredLineCount": 36,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 36 source lines with line numbers before porting. Covered: the cn import (L1), the SkeletonProps interface with width/height/rounded/lines/className (L3-9), the function signature with defaults height=16 and lines=1 (L11), the lines>1 multi-bar branch with the space-y-2 wrapper and Array.from({length:lines}).map bars (L12-23), the per-bar width logic i===lines-1?'60%':width??'100%' and height style (L19), the single-bar branch with the rounded-full vs rounded radius switch and width??'100%'/height (L26-34), and the closing braces (L35-36).",
+    "Converted DOM-only <div> + Tailwind animate-pulse/rounded/rounded-full/bg-gray-200 dark:bg-gray-700/space-y-2 classes + cn() composer to React Native View/Animated.View with StyleSheet and theme tokens. The CSS keyframe animate-pulse (opacity 1<->0.5, 2s ease-in-out) is reproduced with an Animated.loop sequence over a 2s cycle (two 1s inOut(quad) halves) interpolated to opacity [1,0.5]; the dark-only theme collapses the bg-gray-200 dark:bg-gray-700 pair to colors.surfaceRaised; space-y-2 becomes the lineGroup 8px gap; rounded=4px, rounded-full=pill radius.",
+    "Preserved prop names and exact behavior: defaults height=16 and lines=1; the lines>1 branch stacks `lines` bars where only the last is 60% wide and the rest use width??'100%' (precomputed as fallbackWidth to avoid mixed ?:/?? lint) and always the 4px rounded radius (the `rounded` prop is intentionally ignored in this branch, matching the source); the single-bar branch applies rounded-full vs rounded based on the `rounded` prop and width??'100%'. width/height are typed as RN DimensionValue (the only source widths are the percentage strings '100%' and '60%').",
+    "Browser-only concerns handled natively: the OS reduce-motion setting is honoured via AccessibilityInfo (steady 0.75 opacity, no animation) so the pulse never violates accessibility; the DOM-only `className` prop has no native analog and is replaced by native-friendly style?:StyleProp<ViewStyle> and an optional testID (default 'skeleton'). No DOM modules, browser HTML elements, Recharts, Leaflet, old web UI components, API paths, or unit conversions were introduced; the parity barrel re-exports this Skeleton and moves it from pending to available."
+  ]
+}

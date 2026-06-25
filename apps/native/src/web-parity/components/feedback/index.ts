@@ -12,12 +12,15 @@
 // `nativeFeedbackBarrelCapabilities.pending` with an explicit unavailable
 // reason so the gap stays discoverable and the source public API remains
 // documented, matching the capability-record convention used by the native
-// charts barrel.
+// charts barrel. EmptyState (web L2), Skeleton (web L7), and AlertBanner
+// (web L19) are the feedback primitives currently ported into this parity tree,
+// so they are the live re-exports.
 //
 // No DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI
 // components are imported.
 
 export { EmptyState } from './EmptyState';
+export { Skeleton } from './Skeleton';
 export { AlertBanner } from './AlertBanner';
 
 export const NATIVE_FEEDBACK_PENDING_REASON =
@@ -38,7 +41,7 @@ export const NATIVE_FEEDBACK_PENDING_REASON =
  * dropping the symbol.
  */
 export const nativeFeedbackBarrelCapabilities = {
-  available: ['EmptyState', 'AlertBanner'],
+  available: ['EmptyState', 'Skeleton', 'AlertBanner'],
   pending: {
     reason: NATIVE_FEEDBACK_PENDING_REASON,
     exports: [
@@ -47,7 +50,6 @@ export const nativeFeedbackBarrelCapabilities = {
       'ErrorBoundary',
       'SectionErrorBoundary',
       'PageErrorBoundary',
-      'Skeleton',
       'ChartSkeleton',
       'StatSkeleton',
       'PageHeaderSkeleton',
