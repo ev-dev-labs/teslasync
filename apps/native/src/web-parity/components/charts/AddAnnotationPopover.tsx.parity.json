@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/AddAnnotationPopover.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/AddAnnotationPopover.tsx",
+  "sourceLineCount": 182,
+  "coveredLineCount": 182,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 182-line source line by line before editing and preserved toDateInputValue/toIsoTimestamp UTC date normalization, state names label/category/description/editedDate, open/timestamp/editableDate props, and the onAdd(label, category, description, occurredAt) plus onCancel callback contract.",
+    "Converted the web Modal/form/Input/Button/button/lucide/Tailwind implementation to React Native Modal/View/ScrollView/TextInput/Pressable/AppText primitives with native tokens, annotation color parity, category pill selection, label/description max lengths, cancel/reset behavior, add/reset behavior, and disabled submit when the native editable date is invalid.",
+    "Preserved i18n intent by carrying each source translation key and fallback through a native-safe fallback t() helper, including category labels, field labels, placeholders, and action labels."
+  ]
+}
