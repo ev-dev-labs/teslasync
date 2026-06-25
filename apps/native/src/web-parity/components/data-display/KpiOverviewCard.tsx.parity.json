@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/components/data-display/KpiOverviewCard.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/KpiOverviewCard.tsx",
+  "sourceLineCount": 104,
+  "coveredLineCount": 104,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-4 imports: web ReactNode preserved; web GlassPanel + ComparisonHeader + cn replaced by native GlassPanel/AppText + theme tokens (cn unused in native, no className concatenation).",
+    "L6-35 component doc comment: ported as the file header + KpiOverviewCard JSDoc, preserving the 4-slot description (header, KPI grid, secondary fold-down line, footer).",
+    "L36-64 KpiOverviewCardProps: ported to native KpiOverviewCardProps -- header (now ComparisonHeaderConfig), kpis, secondary, footer all preserved; gridClassName retained for source compatibility and parsed for column count; className retained (ignored); testId preserved with native testID alias; id retained (web IntersectionObserver, unused on native).",
+    "L66-75 component signature/destructure: preserved prop names; added native style + testID + columns adaptations.",
+    "L76-81 GlassPanel + p-4/sm:p-5/space-y-4 + data-testid + id: native GlassPanel with padding+gap style (styles.panel) and testID; id is destructured to _id (no native IntersectionObserver).",
+    "L82 <ComparisonHeader {...header}>: web ComparisonHeader + Delta subsystem (lucide-react, useUnits/useFormatting/metricSemantics/Skeleton) is browser-only and absent in native, so it is inlined as ComparisonHeaderRow + HeaderDeltaChip; web Delta config (Omit<DeltaProps,'comparedTo'>) replaced by native-safe ComparisonHeaderDelta {value, direction, tone} pre-computed by the page.",
+    "L84-93 grid (grid-cols-2 sm:grid-cols-3 lg:grid-cols-6, gap-3/sm:gap-4, ${testId}-kpis): native flex-wrap grid via React.Children.toArray + per-cell percentage width from the parsed base grid-cols-N (default 2); gutter from spacing.md negative-margin technique; grid testID preserved as ${testId}-kpis.",
+    "L95-99 secondary (text-xs text-muted leading-relaxed, conditional): rendered only when truthy, muted caption AppText with relaxed line-height via renderNode.",
+    "L101 footer (conditional <div>): rendered only when truthy inside a View via renderNode.",
+    "L102-104 closing tags: native GlassPanel close; component exported plus displayName.",
+    "ComparisonHeader internals (web ComparisonHeader.tsx L52-76) faithfully reproduced: title uppercase/tracked semibold, period strip 'currentLabel \u00b7 comparisonLabel' (separator dimmed opacity-60), right-aligned delta+actions cluster.",
+    "Verification: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
