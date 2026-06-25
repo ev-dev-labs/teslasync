@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/App.tsx",
+  "outputPath": "apps/native/src/web-parity/App.tsx",
+  "sourceLineCount": 556,
+  "coveredLineCount": 556,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete 556-line source App.tsx line by line before editing; the native output maps every lazy route and Route/Navigate entry through the existing 157-entry native webRouteManifest sourced from web/src/App.tsx.",
+    "Preserved SafeRoute intent, route names, source paths, redirect targets, top-level standalone routes, layout-owned routes, catch-all routes, recent-page recording delay/title suffix behavior, and re-auth return-url validation with React Native-safe state instead of react-router-dom, window, or sessionStorage.",
+    "Browser-only ScrollRestoration, DensityApplier, ContextMenuRoot, DOM route announcer, and Suspense chunk loading are represented as explicit native-safe unavailable adaptations in the rendered parity panel.",
+    "The conversion imports only React Native primitives plus existing apps/native route metadata, tokens, and UI components; it does not import DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components."
+  ]
+}
