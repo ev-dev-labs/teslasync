@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AILogTraceSummarization.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AILogTraceSummarization.tsx",
+  "sourceLineCount": 170,
+  "coveredLineCount": 170,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 170-line source before editing; covered the header safety/render-contract comments, optional fromUnix/toUnix/vehicleId props, window validity guards, 24-hour cap, stable body memoization, unconditional stream hook, translated AIFeatureCard labels, feature-gated export, and display names.",
+    "Converted web withAiFeature/useAiStream wiring to React Native-safe View-based feature gating, native settings feature checks, native apiUrl('/ai/system/logs/summarize') POST streaming, and the existing native AIFeatureCard while preserving the /api/v1 endpoint intent.",
+    "Preserved stream state names, SSE delta accumulation into the shared output panel, double-submit no-op behavior while streaming, disabled Summarize affordance until a valid scoped window exists, optional positive vehicle_id body field, and explicit unavailable-state errors when React Native fetch lacks a readable SSE response body."
+  ]
+}
