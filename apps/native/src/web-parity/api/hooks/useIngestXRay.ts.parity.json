@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useIngestXRay.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useIngestXRay.ts",
+  "sourceLineCount": 118,
+  "coveredLineCount": 118,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 118-line web hook in full before editing and preserved the module intent, ingestXRayKeys shape, UseIngestXRayParams fields/defaults, enabled numeric vehicle guard, TanStack Query state names, retry/stale/refetch behavior, and formatValueKind mapping.",
+    "Preserved the API path without an /api/v1 prefix as /system/ingest-xray/{vehicleID}?window=...&bucket=...&limit=..., matching the backend route mounted under /api/v1/system/ingest-xray/{vehicleID}.",
+    "Inlined Ingest X-Ray DTOs from web/src/types/admin-diagnostics.ts plus INTERVALS.FAST, STALE_TIMES.REALTIME, and PAGINATION.DEFAULT_LIMIT because the native parity layer does not expose the web @/types/admin-diagnostics or @/lib/constants aliases.",
+    "Source is non-visual API/type hook code; native output uses the React Native-safe parity request client, forwards AbortSignal values, preserves raw API/unit behavior with no display conversion, and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components."
+  ]
+}
