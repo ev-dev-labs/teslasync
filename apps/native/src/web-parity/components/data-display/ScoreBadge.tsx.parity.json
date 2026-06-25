@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/data-display/ScoreBadge.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/ScoreBadge.tsx",
+  "sourceLineCount": 92,
+  "coveredLineCount": 92,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 92 numbered source lines before editing. Covered the imports (L1 useTranslation, L2 scoreScale helpers, L3 cn), the ScoreBadgeSize type (L5), CommonProps (L7-21: size/className/testId/ariaLabel), ScoreInputProps (L23-33: score/thresholds/grade?:never), GradeInputProps (L35-40: grade/score?:never/thresholds?:never), the ScoreBadgeProps union (L42), SIZE_CLASS (L44-48), the doc comment (L50-64), and the component body (L65-92: useTranslation L66, destructure with size default 'md' L67, info resolution via gradeInfo/numericToGrade L69-74, labelText ariaLabel ?? t('score.aria',...) L76, and the span render L78-90).",
+    "Converted the DOM <span> to a React Native AppText primitive: data-testid → testID, aria-label → accessibilityLabel, children = info.label preserved. The Tailwind utility intent is reproduced in StyleSheet — font-bold → fontWeight '700', leading-none → lineHeight equal to fontSize, tabular-nums → fontVariant ['tabular-nums'], and the dynamic style={{color: info.color}} → style color. inline-block is layout-irrelevant in RN and dropped.",
+    "SIZE_CLASS (sm text-xs / md text-xl / lg text-3xl) is mapped to its Tailwind px equivalents SIZE_FONT = {sm:12, md:20, lg:30}; lg honours the actual text-3xl=30px class (the L12 '≈28px' comment is approximate documentation, the class is the source of truth).",
+    "@/lib/scoreScale has no native parity port yet, so the exact subset ScoreBadge consumes (ScoreGrade, ScoreGradeInfo, GRADE_PALETTE with identical hexes #10b981/#00f0ff/#f59e0b/#ef4444/#b91c1c/#6b7280, DEFAULT_SCORE_THRESHOLDS, numericToGrade with lower-bound-inclusive highest-first matching, gradeInfo) is inlined verbatim to keep the palette in lock-step. averageGrade is intentionally not ported (unused by ScoreBadge).",
+    "react-i18next is a web dependency and is not imported; useTranslation is replaced by a native-safe useNativeTranslationFallback returning a t(key, defaultValue?, options?) function that resolves the English default and interpolates the {{grade}} token, exactly matching the web call t('score.aria','Score {{grade}}',{grade: info.label}). The web-only cn() class merge is dropped in favour of an array style + optional native style override.",
+    "No DOM-only modules, browser HTML elements, react-i18next, recharts, leaflet, or web UI components are imported. Added native style?: StyleProp<TextStyle> and a testID alias (className retained inert for source parity) per the established native data-display conventions. Verified via cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
