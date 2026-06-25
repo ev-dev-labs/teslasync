@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/vehicles.ts",
+  "outputPath": "apps/native/src/web-parity/api/vehicles.ts",
+  "sourceLineCount": 176,
+  "coveredLineCount": 176,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and ported every exported vehicle, vehicle-system, telemetry, software-update, and state timeline API function.",
+    "Source is non-visual API/type code; the native output uses the React Native-safe web-parity request client and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "Preserved exported names, response type intent, POST/DELETE method behavior, /vehicles plus vehicle-system endpoint paths, snake_case query parameters, default limit/offset/day values, and getVehicleState live-versus-cached normalization.",
+    "No browser-only behavior was required; the only native adaptation is explicit unknown-response narrowing in place of the source web file's permissive any response handling."
+  ]
+}
