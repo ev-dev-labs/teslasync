@@ -1,0 +1,11 @@
+{
+  "sourcePath": "web/src/components/ai/AIDigestNarration.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIDigestNarration.tsx",
+  "sourceLineCount": 57,
+  "coveredLineCount": 57,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the weekly digest narration comments, vehicleId prop, stable snake_case body with week_offset_weeks, /ai/digests/weekly/narrate stream setup, no-op event handler, translated card labels, vehicleId start guard, withAiFeature('digest-narration') wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream/useTranslation usage to React Native View/Pressable/AppText/PremiumCard primitives plus native-safe fallback translations, settings-backed AI feature gating, and an explicit unavailable error when React Native fetch lacks a readable SSE body."
+  ]
+}
