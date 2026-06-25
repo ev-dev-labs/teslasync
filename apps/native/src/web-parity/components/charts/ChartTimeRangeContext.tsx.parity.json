@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/ChartTimeRangeContext.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartTimeRangeContext.tsx",
+  "sourceLineCount": 166,
+  "coveredLineCount": 166,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 166 source lines line by line and preserved the ChartSyncContextValue, ChartTimeRangeProviderProps, ChartTimeRangeProvider, useChartSync, SyncedCursorProps, useSyncedCursor, and useSyncedReferenceLineX exports with the same state names and default syncMethod behavior.",
+    "Ported the cursor-sync dependency into a native-safe in-memory external store using useSyncExternalStore, preserving per-syncId position updates, no-op same-value updates, provider unmount cleanup, and null outside-provider behavior.",
+    "React Native has no Recharts sync bus or mouse event system, so the native port keeps the Recharts-compatible prop names for parity while documenting that native chart shims must supply activeLabel values from touch or gesture events."
+  ]
+}
