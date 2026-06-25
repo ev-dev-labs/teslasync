@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/forms/FormSection.tsx",
+  "outputPath": "apps/native/src/web-parity/components/forms/FormSection.tsx",
+  "sourceLineCount": 24,
+  "coveredLineCount": 24,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 24 numbered source lines before editing: the `import { type ReactNode } from 'react'` (L1) and `import { cn } from '../../lib/cn'` (L2); the FormSectionProps interface with title/description?/children/className? (L4-9); the doc-comment 'Labeled fieldset for grouping form controls with consistent spacing.' (L11) carried over verbatim; the named `export function FormSection({ title, description, children, className })` (L12); the outer `<div className={cn('glass-panel p-5 sm:p-6 space-y-4', className)}>` (L14); the header `<div>` (L15) with `<h3 className=\"section-title\">{title}</h3>` (L16) and the conditional `{description && <p className=\"mt-1 text-xs text-[var(--text-muted)]\">{description}</p>}` (L17); the body `<div className=\"space-y-4\">{children}</div>` (L19-21); and the closing tags + brace (L18, L22-24).",
+    "Preserved behavior/intent exactly: still a named `export function FormSection` taking the same title/description/children/className props, rendering a glass panel with a header (title + optional description) above a vertically-spaced body of children; description is still conditionally rendered only when truthy. Added a default export plus displayName for parity with the other native ports (PageLoader, BulkActionsToolbar) without changing the public named export.",
+    "Rule 5 native primitives: the `.glass-panel` <div> -> shared native GlassPanel (same 1px border / rounded radius / glass background); the inner header/body <div>s -> React Native <View>; `<h3 class=\"section-title\">` -> AppText weight=\"semibold\" (primary tone) styled to the web `.section-title` rule (text-lg=18px, font-semibold=600, tracking-tight => letterSpacing -0.45); `<p class=\"mt-1 text-xs text-[var(--text-muted)]\">` -> AppText variant=\"caption\" (12px) tone=\"muted\" with marginTop 4px (mt-1).",
+    "Spacing mapped from Tailwind to StyleSheet tokens: `p-5` (mobile base of `p-5 sm:p-6`) = 1.25rem = 20px => padding spacing.lg; `space-y-4` = 1rem = 16px vertical rhythm => `gap: 16` on both the panel root and the body View (RN gap replaces the web margin-between-siblings idiom).",
+    "Rule 7 native-safe adaptation: @/lib/cn (L2) and the Tailwind utility classes are browser/Tailwind-only and unavailable in native, so the optional `className` is accepted-but-ignored for source compatibility (destructured as `_className` per the BulkActionsToolbar convention) and a native `style?: StyleProp<ViewStyle>` override prop is added in its place. No DOM elements, Tailwind classes, cn helper, Recharts, Leaflet, or old web UI components are imported -- only react-native primitives, the shared native AppText/GlassPanel, and the existing theme spacing tokens.",
+    "Verified via gates from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles."
+  ]
+}
