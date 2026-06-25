@@ -78,10 +78,6 @@ export {
   type ChartLegendToggleSource,
 } from './ChartLegend';
 export {
-  SmallMultiplesChart,
-  type SmallMultiplesChartProps,
-} from './SmallMultiplesChart';
-export {
   TimeMarker,
   severityTokens,
   TIME_MARKER_NATIVE_LIMITATION,
