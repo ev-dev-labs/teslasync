@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIVampireDrainExplanation.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIVampireDrainExplanation.tsx",
+  "sourceLineCount": 150,
+  "coveredLineCount": 150,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the ADR/comment contract, optional vehicleId and lookbackDays props, numeric vehicle guard, request body shape, stream setup, translated card labels, feature wrapper, and display names.",
+    "Converted web-only react-i18next, withAiFeature, and useAiStream dependencies to native-safe fallback translations, View-based AI feature gating against the generated native registry, the native AIFeatureCard, and a native fetch SSE stream consumer.",
+    "Preserved POST /api/v1/ai/charging/vampire-drain/explain through apiUrl('/ai/charging/vampire-drain/explain'), snake_case vehicle_id/lookback_days body fields, stream state names, disabled Narrate behavior while vehicle input is unavailable or streaming, and explicit unavailable-state errors when React Native fetch cannot expose readable streams."
+  ]
+}
