@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/components/layout/PageContainer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/PageContainer.tsx",
+  "sourceLineCount": 128,
+  "coveredLineCount": 128,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-2,53 cn/className: web imports `cn` and accepts a Tailwind `className`; native drops `cn`, keeps `className` in the prop type for source-compat (renamed `_className`, ignored) and adds a native `style?: StyleProp<ViewStyle>` override applied to the root View.",
+    "L3,55-59,105 CopyLinkButton: web sibling uses window.location.href + navigator.clipboard (browser-only). Native reimplements a self-contained native-safe CopyLinkButton that preserves the affordance and the exact i18n keys (common.copyLink.action/label) but surfaces an explicit 'unavailable' hint on press since there is no DOM URL or clipboard binding.",
+    "L4,111-114 Spinner: web `<Spinner size=\"lg\">` brand SVG bolt -> RN `<ActivityIndicator color={colors.accent} size=\"large\">` centered with paddingVertical 80 (py-20) to match the loading branch.",
+    "L5,124 PageErrorBoundary: web sibling wraps `./ErrorBoundary`; native inlines an equivalent class boundary (getDerivedStateFromError + componentDidCatch) that logs the same `page:{name}` correlation channel and renders a retry fallback, isolating page render crashes from the shell.",
+    "L6,82 useSetBreadcrumbOverrides(breadcrumbLabels) ported 1:1 from the already-converted ./BreadcrumbOverridesContext native module.",
+    "L7-10,70,104 DataFreshness: imports DataFreshnessAuto + FreshnessQuery type from the existing ../data-display/DataFreshness native parity module; rendered in the header when `query` resolves.",
+    "L12-34 pickWorstQuery ported verbatim including the >=1-length invariant comment and non-null assertion fallback.",
+    "L36-71 PageContainerProps interface ported field-for-field (title, subtitle, actions, loading, error, empty, emptyMessage, breadcrumbLabels, children, className, copyLink, query) plus native-only style/testID; doc comments preserved.",
+    "L73-93 component signature + resolvedQuery IIFE (null/array/single normalization) ported exactly.",
+    "L95-109 header layout: web flex-col sm:flex-row + sm:justify-between mapped via useWindowDimensions() and a 640px SM_BREAKPOINT (headerNarrow column / headerWide row), title block flex-1 on wide, actions cluster wraps with DataFreshnessAuto+CopyLinkButton+actions in order.",
+    "L99-100 title `text-2xl font-bold tracking-tight` -> AppText variant=title weight=bold letterSpacing -0.3 accessibilityRole=header; subtitle `text-sm text-muted` -> AppText tone=muted fontSize 14.",
+    "L111-125 loading/error/empty/children branch order preserved exactly: ActivityIndicator -> danger-tinted error box with error.message -> centered muted empty text with `emptyMessage ?? `No ${title.toLowerCase()} found.`` (English fallback kept verbatim) -> PageErrorBoundary{children}.",
+    "L116-121 error/empty Tailwind colors mapped to native danger/muted theme tokens (colors.dangerSurface/dangerBorder/danger, tone=muted).",
+    "No DOM elements (div/h1/p/span/svg), Recharts, Leaflet, or web UI components imported; only react, react-native primitives, AppText, theme tokens, and existing parity siblings."
+  ]
+}
