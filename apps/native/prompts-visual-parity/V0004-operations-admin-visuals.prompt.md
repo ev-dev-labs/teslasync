@@ -25,3 +25,6 @@ Run typecheck, lint, Jest, RN web build, Android/Windows bundles, and visual com
 
 Commit message: `feat(apps): align operations visual parity`
 
+STATUS=DONE
+
+Visual gate: `energy`, `notifications-inbox`, `system-status`, `account-2fa`, and `settings` all scored at or above threshold `0.985`; minimum score `0.985247`.

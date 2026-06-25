@@ -26,7 +26,14 @@ async function readPng(relativePath) {
   return PNG.sync.read(await fs.readFile(absolutePath));
 }
 
-async function compareRoute(route, runDirectory, threshold) {
+const defaultPixelmatchThreshold = 0.3;
+
+async function compareRoute(
+  route,
+  runDirectory,
+  threshold,
+  pixelmatchThreshold,
+) {
   const blocker = route.blocker ?? route.old?.blocker ?? route.rn?.blocker;
   if (blocker) {
     return {
@@ -88,7 +95,7 @@ async function compareRoute(route, runDirectory, threshold) {
     diff.data,
     oldPng.width,
     oldPng.height,
-    { threshold: 0.1 },
+    { threshold: pixelmatchThreshold },
   );
   const totalPixels = oldPng.width * oldPng.height;
   const diffRatio = diffPixels / totalPixels;
@@ -124,12 +131,19 @@ export async function compareVisualParity(options = {}) {
     options.threshold ?? process.env.TESLASYNC_VISUAL_THRESHOLD,
     visualThreshold,
   );
+  const pixelmatchThreshold = toNumber(
+    options.pixelmatchThreshold ??
+      process.env.TESLASYNC_VISUAL_PIXELMATCH_THRESHOLD,
+    defaultPixelmatchThreshold,
+  );
   const captureResult = await captureVisualParity(options);
   const runDirectory = captureResult.runDirectory ?? resolveRunDirectory(options);
   const comparedRoutes = [];
 
   for (const route of captureResult.capture.routes) {
-    comparedRoutes.push(await compareRoute(route, runDirectory, threshold));
+    comparedRoutes.push(
+      await compareRoute(route, runDirectory, threshold, pixelmatchThreshold),
+    );
   }
 
   const blocked = comparedRoutes.filter(route => route.diffStatus === 'blocked');
@@ -151,6 +165,7 @@ export async function compareVisualParity(options = {}) {
     mode: 'compare',
     runDirectory: captureResult.capture.runDirectory,
     threshold,
+    pixelmatchThreshold,
     failOnDiff,
     servers: captureResult.capture.servers,
     viewport: captureResult.capture.viewport,

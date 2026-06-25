@@ -565,7 +565,13 @@ function RouteHeader({ route }: { route: VisualRouteMeta }) {
   }
 
   return (
-    <View style={[styles.routeHeader, singleLineHeader && styles.routeHeaderSingleLine]}>
+    <View
+      style={[
+        styles.routeHeader,
+        singleLineHeader && styles.routeHeaderSingleLine,
+        route.id === 'system' && styles.routeHeaderSystem,
+      ]}
+    >
       <View style={styles.routeHeaderCopy}>
         <Text style={styles.pageTitle}>{route.title}</Text>
         {route.subtitle ? <Text style={styles.pageSubtitle}>{route.subtitle}</Text> : null}
@@ -573,9 +579,8 @@ function RouteHeader({ route }: { route: VisualRouteMeta }) {
       {topActions ? <DashboardActions /> : null}
       {energyActions ? <EnergyActions /> : null}
       {tripsActions ? <TripsActions /> : null}
-      {notificationActions || accountActions ? (
-        <Text style={styles.headerActionText}>⌁  Copy link</Text>
-      ) : null}
+      {notificationActions ? <NotificationActions /> : null}
+      {accountActions ? <Text style={styles.headerActionText}>⌁  Copy link</Text> : null}
       {systemActions ? <SystemActions /> : null}
     </View>
   );
@@ -647,6 +652,15 @@ function SystemActions() {
         <Text style={styles.offlinePillText}>● ⌁ Offline · --</Text>
       </View>
       <Text style={styles.headerActionText}>⟳  Refresh</Text>
+    </View>
+  );
+}
+
+function NotificationActions() {
+  return (
+    <View style={styles.notificationHeaderActions}>
+      <Text style={styles.headerActionText}>⌁  Copy link</Text>
+      <Text style={styles.archiveText}>▱  View archived</Text>
     </View>
   );
 }
@@ -882,13 +896,34 @@ function EnergyBody() {
       </View>
       <View style={styles.energyChartRow}>
         <View style={styles.energyChartPanel}>
-          <Text style={styles.chartPanelTitle}>Energy & Cost Daily</Text>
+          <ChartPanelHeader title="Energy & Cost Daily" actions={['+', '⊙', '⇩']} />
           <Text style={styles.chartIcon}>↯</Text>
         </View>
         <View style={styles.energyChartPanel}>
-          <Text style={styles.chartPanelTitle}>Efficiency Trend</Text>
+          <ChartPanelHeader title="Efficiency Trend" actions={['⇩']} />
           <Text style={styles.chartIcon}>⌁</Text>
         </View>
+      </View>
+    </View>
+  );
+}
+
+function ChartPanelHeader({
+  title,
+  actions,
+}: {
+  title: string;
+  actions: string[];
+}) {
+  return (
+    <View style={styles.chartPanelHeader}>
+      <Text style={styles.chartPanelTitle}>{title}</Text>
+      <View style={styles.chartPanelActions}>
+        {actions.map(action => (
+          <Text key={action} style={styles.chartPanelActionText}>
+            {action}
+          </Text>
+        ))}
       </View>
     </View>
   );
@@ -924,10 +959,6 @@ function EnergySavings({ title, leaf = false }: { title: string; leaf?: boolean 
 function NotificationsBody() {
   return (
     <View style={styles.notificationsRoot}>
-      <View style={styles.notificationTopActions}>
-        <Text style={styles.headerActionText}>⌁  Copy link</Text>
-        <Text style={styles.archiveText}>▱  View archived</Text>
-      </View>
       <View style={styles.notificationFilters}>
         {['ⓘ Info', '△ Warn', 'ⓘ Critical'].map(label => (
           <View key={label} style={styles.smallChip}>
@@ -951,14 +982,18 @@ function NotificationsBody() {
       <View style={styles.notificationPanel}>
         <View style={styles.notificationPanelHeader}>
           <Text style={styles.mutedText}>0 notifications</Text>
-          <View style={styles.groupedPill}>
-            <Text style={styles.groupedText}>▧ Grouped</Text>
+          <View style={styles.notificationPanelToggles}>
+            <View style={styles.groupedPill}>
+              <Text style={styles.groupedText}>▧ Grouped</Text>
+            </View>
+            <Text style={styles.archiveText}>☷ Flat</Text>
           </View>
-          <Text style={styles.archiveText}>☷ Flat</Text>
         </View>
-        {[0, 1, 2, 3, 4].map(index => (
-          <SkeletonBar key={index} width="100%" />
-        ))}
+        <View style={styles.notificationSkeletonList}>
+          {[0, 1, 2, 3, 4].map(index => (
+            <SkeletonBar key={index} width="100%" />
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -970,19 +1005,40 @@ function SystemBody() {
       <View style={styles.systemHero}>
         <View style={styles.systemAvatar} />
         <View style={styles.systemHeroCopy}>
-          <SkeletonBlock width={312} />
+          <SkeletonBlock width={312} style={styles.systemHeroTitleSkeleton} />
           <SkeletonBlock width={208} />
         </View>
-        <SkeletonBlock width={120} />
+        <SkeletonBlock width={120} style={styles.systemHeroActionSkeleton} />
       </View>
       <View style={styles.systemTabs}>
         {[0, 1, 2, 3, 4, 5, 6, 7].map(index => (
           <SkeletonPill key={index} />
         ))}
       </View>
-      <SystemSkeletonPanel lines={6} />
-      <SystemSkeletonPanel lines={3} />
-      <SystemSkeletonPanel lines={6} />
+      <SystemSkeletonPanel
+        titleWidth={80}
+        lines={6}
+        rowHeight={44}
+        rowGap={4}
+        rowsTopMargin={8}
+        panelPadding={13}
+      />
+      <SystemSkeletonPanel
+        titleWidth={180}
+        lines={2}
+        rowHeight={32}
+        rowGap={8}
+        rowsTopMargin={8}
+        panelPadding={15}
+      />
+      <SystemSkeletonPanel
+        titleWidth={120}
+        lines={5}
+        rowHeight={28}
+        rowGap={12}
+        rowsTopMargin={12}
+        panelPadding={17}
+      />
     </View>
   );
 }
@@ -996,13 +1052,36 @@ function AccountLoadingBody() {
   );
 }
 
-function SystemSkeletonPanel({ lines }: { lines: number }) {
+function SystemSkeletonPanel({
+  titleWidth,
+  lines,
+  rowHeight,
+  rowGap,
+  rowsTopMargin,
+  panelPadding,
+}: {
+  titleWidth: number;
+  lines: number;
+  rowHeight: number;
+  rowGap: number;
+  rowsTopMargin: number;
+  panelPadding: number;
+}) {
   return (
-    <View style={styles.systemPanel}>
-      <SkeletonBlock width={lines > 4 ? 80 : 180} />
-      {Array.from({ length: lines }).map((_, index) => (
-        <SkeletonBlock key={index} width="100%" tall />
-      ))}
+    <View style={[styles.systemPanel, { padding: panelPadding }]}>
+      <SkeletonBlock
+        width={titleWidth}
+        style={styles.systemPanelTitleSkeleton}
+      />
+      <View style={{ marginTop: rowsTopMargin, gap: rowGap }}>
+        {Array.from({ length: lines }).map((_, index) => (
+          <SkeletonBlock
+            key={index}
+            width="100%"
+            style={{ height: rowHeight }}
+          />
+        ))}
+      </View>
     </View>
   );
 }
@@ -1055,10 +1134,10 @@ function FooterStatus() {
 
 const shell = {
   accent: '#22d3ee',
-  background: '#06070c',
+  background: '#09090f',
   border: 'rgba(148, 163, 184, 0.14)',
   muted: '#778199',
-  panel: 'rgba(18, 20, 31, 0.88)',
+  panel: '#151621',
   sidebar: '#0f111a',
   text: '#f8fafc',
   textSecondary: '#c7d2e1',
@@ -1069,6 +1148,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 1100,
     flexDirection: 'row',
+    position: 'relative',
     backgroundColor: shell.background,
   },
   backgroundOrb: {
@@ -1263,6 +1343,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 24,
   },
+  routeHeaderSystem: {
+    marginLeft: 48,
+  },
   routeHeaderSingleLine: {
     minHeight: 39,
   },
@@ -1288,7 +1371,7 @@ const styles = StyleSheet.create({
     color: shell.text,
     fontSize: 26,
     lineHeight: 32,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: -1.1,
   },
   pageSubtitle: {
@@ -1470,7 +1553,7 @@ const styles = StyleSheet.create({
   skeletonBar: {
     height: 16,
     borderRadius: 9,
-    backgroundColor: '#3b4656',
+    backgroundColor: '#374151',
   },
   driveDetailSkeleton: {
     paddingLeft: 16,
@@ -1589,7 +1672,7 @@ const styles = StyleSheet.create({
   datePillText: {
     color: '#f8fafc',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   savedViewsButton: {
     height: 34,
@@ -1601,10 +1684,10 @@ const styles = StyleSheet.create({
   savedViewsText: {
     color: '#f8fafc',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   energyRoot: {
-    paddingTop: 12,
+    paddingTop: 9,
     gap: 24,
   },
   energyHero: {
@@ -1633,7 +1716,7 @@ const styles = StyleSheet.create({
   },
   energyMetric: {
     flex: 1,
-    minHeight: 70,
+    minHeight: 69,
     borderRadius: 9,
     borderWidth: 1,
     borderColor: shell.border,
@@ -1645,14 +1728,14 @@ const styles = StyleSheet.create({
   energyMetricLabel: {
     color: '#70788b',
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 1.2,
   },
   energyMetricValue: {
     color: '#f8fafc',
     fontSize: 20,
     lineHeight: 25,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   textCyan: {
     color: '#22d3ee',
@@ -1670,7 +1753,7 @@ const styles = StyleSheet.create({
     color: '#f43f5e',
   },
   energyLifetime: {
-    minHeight: 190,
+    height: 190,
     borderRadius: 9,
     borderWidth: 1,
     borderColor: shell.border,
@@ -1681,7 +1764,7 @@ const styles = StyleSheet.create({
   panelTitle: {
     color: '#f8fafc',
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   energyLifetimeGrid: {
     flexDirection: 'row',
@@ -1699,12 +1782,12 @@ const styles = StyleSheet.create({
   energyMutedDash: {
     color: '#6f7788',
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   energyLargeGreen: {
     color: '#34d399',
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   mutedText: {
     color: '#8a93a5',
@@ -1716,7 +1799,7 @@ const styles = StyleSheet.create({
   },
   energySavings: {
     flex: 1,
-    minHeight: 164,
+    height: 165,
     borderRadius: 9,
     borderWidth: 1,
     borderColor: shell.border,
@@ -1744,7 +1827,7 @@ const styles = StyleSheet.create({
   energySavingsTitle: {
     color: '#a8b0bf',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   energySavingsValues: {
     flexDirection: 'row',
@@ -1754,7 +1837,7 @@ const styles = StyleSheet.create({
   textCyanLarge: {
     color: '#22d3ee',
     fontSize: 19,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   energyArrow: {
     color: '#7b8394',
@@ -1763,12 +1846,12 @@ const styles = StyleSheet.create({
   energyGrayValue: {
     color: '#9ca3af',
     fontSize: 19,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   energySavingLine: {
     color: '#5af0c4',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   energySavingBadge: {
     color: '#5af0c4',
@@ -1783,14 +1866,29 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: '#2d3950',
+    borderColor: '#374151',
     padding: 20,
-    backgroundColor: '#0f1623',
+    backgroundColor: '#111827',
+  },
+  chartPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   chartPanelTitle: {
     color: '#f8fafc',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
+  },
+  chartPanelActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 22,
+  },
+  chartPanelActionText: {
+    color: '#7d889d',
+    fontSize: 13,
   },
   chartIcon: {
     marginTop: 50,
@@ -1799,14 +1897,12 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   notificationsRoot: {
-    paddingTop: 3,
+    paddingTop: 10,
   },
-  notificationTopActions: {
-    position: 'absolute',
-    right: 27,
-    top: -72,
+  notificationHeaderActions: {
     flexDirection: 'row',
-    gap: 30,
+    gap: 34,
+    paddingTop: 6,
   },
   headerActionText: {
     color: shell.text,
@@ -1822,8 +1918,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
-    maxWidth: 850,
-    marginBottom: 14,
+    maxWidth: 900,
+    marginBottom: 17,
   },
   smallChip: {
     height: 28,
@@ -1885,9 +1981,18 @@ const styles = StyleSheet.create({
   notificationPanelHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     minHeight: 30,
     gap: 10,
+  },
+  notificationPanelToggles: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  notificationSkeletonList: {
+    marginTop: 9,
+    gap: 8,
   },
   groupedPill: {
     height: 28,
@@ -1908,7 +2013,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 21,
     paddingTop: 5,
-    marginRight: 116,
+    marginRight: 75,
   },
   offlinePill: {
     height: 26,
@@ -1927,7 +2032,7 @@ const styles = StyleSheet.create({
   systemRoot: {
     width: 768,
     alignSelf: 'center',
-    paddingTop: 2,
+    paddingTop: 8,
     gap: 20,
   },
   systemHero: {
@@ -1936,9 +2041,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: shell.border,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 16,
     paddingHorizontal: 20,
+    paddingTop: 20,
     backgroundColor: shell.panel,
   },
   systemAvatar: {
@@ -1951,10 +2057,16 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 9,
   },
+  systemHeroTitleSkeleton: {
+    height: 24,
+  },
+  systemHeroActionSkeleton: {
+    height: 36,
+  },
   skeletonBlock: {
     height: 14,
     borderRadius: 3,
-    backgroundColor: '#3b4656',
+    backgroundColor: '#374151',
   },
   skeletonTall: {
     height: 44,
@@ -1968,15 +2080,16 @@ const styles = StyleSheet.create({
     width: 92,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#3b4656',
+    backgroundColor: '#374151',
   },
   systemPanel: {
     borderRadius: 9,
     borderWidth: 1,
     borderColor: shell.border,
-    padding: 13,
-    gap: 6,
     backgroundColor: shell.panel,
+  },
+  systemPanelTitleSkeleton: {
+    height: 18,
   },
   accountPanel: {
     minHeight: 74,
@@ -2004,11 +2117,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    top: 1072,
+    zIndex: 100,
+    elevation: 100,
     height: 28,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(13, 16, 24, 0.95)',
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

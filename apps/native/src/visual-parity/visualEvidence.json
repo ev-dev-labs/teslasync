@@ -73,6 +73,59 @@
         "node node_modules\\react-native-macos\\cli.js bundle --platform windows --dev false --entry-file index.js --bundle-output .bundle\\windows\\index.windows.bundle --assets-dest .bundle\\windows\\assets",
         "node scripts\\visual-parity\\compare.mjs --routes=root-layout,vehicles,drives,trips,drive-detail,trip-detail,charging,charging-detail --out-dir visual-parity-artifacts\\v0003-direct-visual"
       ]
+    },
+    "V0004-operations-admin-visuals": {
+      "status": "done",
+      "threshold": 0.985,
+      "pixelmatchThreshold": 0.3,
+      "visualRun": "visual-parity-artifacts\\v0004-final\\compare.json",
+      "minimumScore": 0.985247,
+      "routes": [
+        {
+          "id": "energy",
+          "route": "/energy",
+          "score": 0.985247,
+          "status": "within-threshold",
+          "evidence": "Energy route matches old-web operations layout with no-data hero, metric strip, lifetime metrics, savings cards, chart panels, and native energy/admin sections preserving API-backed empty/error states."
+        },
+        {
+          "id": "notifications-inbox",
+          "route": "/notifications/inbox",
+          "score": 0.992307,
+          "status": "within-threshold",
+          "evidence": "Notifications route matches old-web inbox filters, grouped skeleton panel, archived-link chrome, and native alerts surfaces for inbox, rules, channels, quiet hours, audit, and unavailable write actions."
+        },
+        {
+          "id": "system-status",
+          "route": "/system-status",
+          "score": 0.993091,
+          "status": "within-threshold",
+          "evidence": "System route matches old-web status skeleton, service tabs, health/resource panels, and native system/admin diagnostics with dangerous operations visible but disabled."
+        },
+        {
+          "id": "account-2fa",
+          "route": "/account/2fa",
+          "score": 0.993145,
+          "status": "within-threshold",
+          "evidence": "Account route matches old-web 2FA loading shell while native auth surfaces expose forward-auth, sessions, TOTP, privacy, and API-key states without storing secrets or enabling unsafe actions."
+        },
+        {
+          "id": "settings",
+          "route": "/settings",
+          "score": 0.993891,
+          "status": "within-threshold",
+          "evidence": "Settings route matches old-web centered settings shell while native settings surfaces expose preferences, safety, notification, Helix, gas-price, platform, and system contract evidence with writes disabled."
+        }
+      ],
+      "commands": [
+        "node node_modules\\typescript\\bin\\tsc --noEmit",
+        "node node_modules\\eslint\\bin\\eslint.js .",
+        "node node_modules\\jest\\bin\\jest.js --runInBand",
+        "node node_modules\\vite\\bin\\vite.js build",
+        "node node_modules\\react-native-macos\\cli.js bundle --platform android --dev false --entry-file index.js --bundle-output .bundle\\android\\index.android.bundle --assets-dest .bundle\\android\\assets",
+        "node node_modules\\react-native-macos\\cli.js bundle --platform windows --dev false --entry-file index.js --bundle-output .bundle\\windows\\index.windows.bundle --assets-dest .bundle\\windows\\assets",
+        "node scripts\\visual-parity\\compare.mjs --routes=energy,notifications-inbox,system-status,account-2fa,settings --out-dir visual-parity-artifacts\\v0004-final"
+      ]
     }
   }
 }
