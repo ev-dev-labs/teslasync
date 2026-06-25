@@ -1,0 +1,28 @@
+{
+  "sourcePath": "web/src/components/layout/BottomTabBar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/BottomTabBar.tsx",
+  "sourceLineCount": 74,
+  "coveredLineCount": 74,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 PrefetchLink import -> dropped; react-router-dom <PrefetchLink> replaced by a Pressable + onNavigate(path) callback. Route-chunk prefetch is a web bundle concern with no native analog.",
+    "L2 useLocation import -> dropped; replaced by the `currentPath` prop (default '/').",
+    "L3 useTranslation import -> replaced by an inline English-default t(key, fallback) (no i18next provider in native).",
+    "L4 lucide-react icons (Home, Car, BatteryCharging, HeartPulse, MapPin) import -> dropped; native ships no SVG icon set, so each tab carries a text glyph (⌂ 🚗 ⚡ ♥ 📍).",
+    "L5 cn import -> dropped; Tailwind class composition replaced by StyleSheet + dynamic style arrays.",
+    "L6 LucideIcon type import -> dropped; the Tab.icon field becomes a `glyph` string.",
+    "L8-13 Tab interface -> preserved as a native Tab interface, with `icon: LucideIcon` swapped for `glyph: string`; path/i18nKey/fallback kept verbatim.",
+    "L15-19 TABS doc comment (top-5 routes, Dashboard→Drives→Charging→Battery→Map) -> preserved and extended with the glyph legend.",
+    "L20-26 TABS array -> preserved with identical paths, i18nKeys, and fallbacks; each lucide icon mapped to its glyph stand-in.",
+    "L28-29 BOTTOM_TAB_PATHS exported Set -> preserved verbatim (TABS.map(t => t.path)).",
+    "L31-33 BottomTabBar() + useLocation()/useTranslation() -> function preserved; useLocation -> currentPath prop, useTranslation -> inline t(); added onNavigate/bottomInset/style/testID native props.",
+    "L36-41 <nav> fixed bottom overlay (aria-label, z-50, lg:hidden, bg surface-overlay, backdrop-blur, border-t, flex/justify-around, h-14, safe-bottom) -> <View> with accessibilityRole=tablist + accessibilityLabel; position:absolute bottom/left/right + zIndex 50; surface token bg (blur omitted, no RN backdrop-blur); 1px top border rgba(255,255,255,0.06); row layout justify space-around; minHeight 56; paddingHorizontal 8; safe-bottom -> bottomInset paddingBottom; lg:hidden has no native analog (native is the mobile target, bar always shown).",
+    "L42-46 TABS.map + isActive logic (path==='/' exact vs startsWith) + const Icon -> preserved verbatim against currentPath; Icon resolved to tab.glyph.",
+    "L49-61 PrefetchLink (key/to/aria-label/aria-current/cn active vs muted+active classes) -> Pressable with key, onPress=onNavigate(tab.path), accessibilityRole=tab, accessibilityLabel=label, accessibilityState.selected (replacing aria-current=page); active=accent / press=textSecondary / idle=textMuted tint via function-children pressed state.",
+    "L62 <Icon h-5 w-5 + active drop-shadow glow> -> AppText glyph fontSize 20 with active textShadow glow; marked accessibilityElementsHidden (decorative).",
+    "L63-65 <span text-[10px] font-medium leading-tight> label -> AppText fontSize 10 / lineHeight 12 / semibold weight, tinted to match the active state.",
+    "L66-68 active underline indicator (absolute -bottom-0.5 h-0.5 w-4 rounded-full accent + shadow) -> absolutely-positioned 16x2 accent View with 999 radius, rendered only when active.",
+    "L69-74 closing PrefetchLink/map/nav/function -> mirrored by the Pressable/map/View close; added BottomTabBar.displayName and a default export for native ergonomics.",
+    "Behavior, state names (currentPath/isActive), route paths, i18n keys, and visual intent (accent active highlight, glow, underline indicator) preserved. No DOM, Recharts, Leaflet, or old web UI imports."
+  ]
+}
