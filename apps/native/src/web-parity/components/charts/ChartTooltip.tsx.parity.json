@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/charts/ChartTooltip.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartTooltip.tsx",
+  "sourceLineCount": 113,
+  "coveredLineCount": 113,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 113 source lines line by line before editing and preserved the TooltipPayload and ChartTooltipProps surfaces, including active, payload, label, valueFormatter, labelFormatter, unit, color/fill, and dataKey.",
+    "Ported the ISO timestamp heuristic, default label formatting, number formatting fallback, null inactive state, payload row mapping, name/value/unit rendering, and memoized ChartTooltip export to React Native-compatible TypeScript.",
+    "Converted the DOM div/p/span tooltip body into React Native View/AppText primitives with native tokens for elevated surface, border, rounded panel, shadow, label tone, marker dot, row spacing, and monospace value styling.",
+    "React Native has no direct role=\"tooltip\" or aria-live DOM node; this port uses accessibilityRole=\"summary\" with accessibilityLiveRegion=\"polite\" to preserve the screen-reader intent without importing DOM, Recharts, Leaflet, or web UI components."
+  ]
+}
