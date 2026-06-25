@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/forms/FilterBar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/forms/FilterBar.tsx",
+  "sourceLineCount": 22,
+  "coveredLineCount": 22,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 22 source lines with numbered output before editing.",
+    "L1 `import type { ReactNode } from 'react'` preserved verbatim for the children type.",
+    "L2 `import { cn } from '@/lib/cn'` dropped: the className-merge utility is web/Tailwind-only and unused on native; the className prop is retained but ignored per the parity-port convention.",
+    "L4-L7 FilterBarProps {children: ReactNode; className?: string} preserved; added optional native style/testID following the existing parity-port convention.",
+    "L9-L15 JSDoc describing the horizontal wrapping filter container carried over to the native component.",
+    "L16 `export function FilterBar({ children, className })` signature preserved (className aliased to _className as ignored on native).",
+    "L17-L21 JSX return: outer `<div className={cn('flex flex-wrap items-center gap-2', className)}>` -> RN <View> with styles {flexDirection:'row', flexWrap:'wrap', alignItems:'center', gap: spacing.sm} where gap-2 (8px) maps to spacing.sm; {children} rendered unchanged.",
+    "L22 closing brace mapped; no DOM div, Tailwind, cn, Recharts, Leaflet, or old web UI components imported."
+  ]
+}
