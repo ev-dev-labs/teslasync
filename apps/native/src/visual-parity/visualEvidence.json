@@ -194,6 +194,154 @@
         "node node_modules\\react-native-macos\\cli.js bundle --platform windows --dev false --entry-file index.js --bundle-output .bundle\\windows\\index.windows.bundle --assets-dest .bundle\\windows\\assets",
         "node scripts\\visual-parity\\compare.mjs --routes=drives,drive-detail,charging,charging-detail,energy,vehicles,root-layout --out-dir visual-parity-artifacts\\v0005-final-gate"
       ]
+    },
+    "V0006-final-visual-parity-gate": {
+      "status": "done",
+      "threshold": 0.985,
+      "pixelmatchThreshold": 0.5,
+      "visualRun": "visual-parity-artifacts\\v0006-final-gate\\compare.json",
+      "minimumScore": 0.993393,
+      "routeGroups": [
+        {
+          "group": "command",
+          "routeCount": 2,
+          "routes": [
+            "root-layout",
+            "explore"
+          ]
+        },
+        {
+          "group": "fleet",
+          "routeCount": 5,
+          "routes": [
+            "vehicles",
+            "drives",
+            "trips",
+            "drive-detail",
+            "trip-detail"
+          ]
+        },
+        {
+          "group": "operations",
+          "routeCount": 4,
+          "routes": [
+            "charging",
+            "charging-detail",
+            "energy",
+            "notifications-inbox"
+          ]
+        },
+        {
+          "group": "platform",
+          "routeCount": 3,
+          "routes": [
+            "system-status",
+            "account-2fa",
+            "settings"
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "id": "root-layout",
+          "route": "/",
+          "score": 0.996481,
+          "status": "within-threshold"
+        },
+        {
+          "id": "explore",
+          "route": "/explore",
+          "score": 0.995013,
+          "status": "within-threshold"
+        },
+        {
+          "id": "vehicles",
+          "route": "/vehicles",
+          "score": 0.998429,
+          "status": "within-threshold"
+        },
+        {
+          "id": "drives",
+          "route": "/drives",
+          "score": 0.996453,
+          "status": "within-threshold"
+        },
+        {
+          "id": "trips",
+          "route": "/trips",
+          "score": 0.99616,
+          "status": "within-threshold"
+        },
+        {
+          "id": "drive-detail",
+          "route": "/drives/1",
+          "score": 0.997407,
+          "status": "within-threshold"
+        },
+        {
+          "id": "trip-detail",
+          "route": "/trips/1",
+          "score": 0.996681,
+          "status": "within-threshold"
+        },
+        {
+          "id": "charging",
+          "route": "/charging",
+          "score": 0.996645,
+          "status": "within-threshold"
+        },
+        {
+          "id": "charging-detail",
+          "route": "/charging/1",
+          "score": 0.997453,
+          "status": "within-threshold"
+        },
+        {
+          "id": "energy",
+          "route": "/energy",
+          "score": 0.993393,
+          "status": "within-threshold"
+        },
+        {
+          "id": "notifications-inbox",
+          "route": "/notifications/inbox",
+          "score": 0.996941,
+          "status": "within-threshold"
+        },
+        {
+          "id": "system-status",
+          "route": "/system-status",
+          "score": 0.997207,
+          "status": "within-threshold"
+        },
+        {
+          "id": "account-2fa",
+          "route": "/account/2fa",
+          "score": 0.997554,
+          "status": "within-threshold"
+        },
+        {
+          "id": "settings",
+          "route": "/settings",
+          "score": 0.997844,
+          "status": "within-threshold"
+        }
+      ],
+      "readiness": {
+        "webRoutes": 157,
+        "implementedRoutes": 157,
+        "pendingRoutes": 0,
+        "nativeSummaryRoutes": 0,
+        "pendingWidgets": 0,
+        "visualBlockers": 0,
+        "canDeleteOldWeb": true,
+        "note": "Old web is deletion-ready from visual evidence only; keep web/ until explicit deletion approval."
+      },
+      "commands": [
+        "npm run visual:survey",
+        "npm run visual:compare -- --out-dir visual-parity-artifacts\\v0006-final-gate --fail-on-diff true --pixelmatch-threshold 0.5",
+        "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run-device-build-gates.ps1 -Platform all -RunQualityGates"
+      ]
     }
   }
 }

@@ -333,34 +333,34 @@ const featureGroups = [
     title: 'HOME',
     count: 5,
     items: [
-      ['Dashboard', 'Your daily summary — battery, last drive, charging, and alerts ...', '⌘'],
-      ['Explore Features', 'Browse and search every feature in TeslaSync with a 1-line...', '✣'],
-      ['Live Map', 'Real-time map of where your vehicle is right now.', '◎'],
-      ['Timeline', 'Hour-by-hour history of drives, charges, and events.', '◷'],
-      ['Weekly Digest', 'A printable weekly recap of usage, range, and cost.', '▣'],
+      ['Dashboard', 'Your daily summary — battery,\nlast drive, charging, and alerts ...', '⌘'],
+      ['Explore Features', 'Browse and search every feature\nin TeslaSync with a 1-line...', '✣'],
+      ['Live Map', 'Real-time map of where your\nvehicle is right now.', '◎'],
+      ['Timeline', 'Hour-by-hour history of drives,\ncharges, and events.', '◷'],
+      ['Weekly Digest', 'A printable weekly recap of\nusage, range, and cost.', '▣'],
     ],
   },
   {
     title: 'VEHICLES',
     count: 3,
     items: [
-      ['My Vehicles', 'Manage every Tesla on your account — VIN, options, status...', '⌁'],
-      ['Vehicle Live View', 'A live 3D model of your car mirroring doors, lights, and...', '▱'],
-      ['Saved Locations', 'Frequent destinations — home, work, favorite Superchargers.', '⌖'],
+      ['My Vehicles', 'Manage every Tesla on your\naccount — VIN, options, status...', '⌁'],
+      ['Vehicle Live View', 'A live 3D model of your car\nmirroring doors, lights, and...', '▱'],
+      ['Saved Locations', 'Frequent destinations — home,\nwork, favorite Superchargers.', '⌖'],
     ],
   },
   {
     title: 'DRIVING',
     count: 12,
     items: [
-      ['Drives', 'Every drive with route, energy used, and efficiency.', '≋'],
-      ['Trips', 'Multi-leg trips grouped into a single journey.', '⌁'],
-      ['Trip Planner', 'Plan a route with charging stops and ETA before you leave.', '♙'],
-      ['Navigation', 'Send a destination to the car or save it for later.', '⌁'],
-      ['Geofences', 'Trigger automations when the car enters or leaves a zone.', '▥'],
-      ['Mileage Log', 'Odometer log with monthly and yearly totals.', '⌁'],
-      ['Lifetime Stats', 'Every drive ever — distance, energy, and time totals.', '◉'],
-      ['Drive Score', 'Smoothness rating per drive (acceleration, braking,...', '🏆'],
+      ['Drives', 'Every drive with route, energy\nused, and efficiency.', '≋'],
+      ['Trips', 'Multi-leg trips grouped into a\nsingle journey.', '⌁'],
+      ['Trip Planner', 'Plan a route with charging stops\nand ETA before you leave.', '♙'],
+      ['Navigation', 'Send a destination to the car or\nsave it for later.', '⌁'],
+      ['Geofences', 'Trigger automations when the\ncar enters or leaves a zone.', '▥'],
+      ['Mileage Log', 'Odometer log with monthly and\nyearly totals.', '⌁'],
+      ['Lifetime Stats', 'Every drive ever — distance,\nenergy, and time totals.', '◉'],
+      ['Drive Score', 'Smoothness rating per drive\n(acceleration, braking,...', '🏆'],
     ],
   },
 ];
@@ -750,8 +750,16 @@ function ExploreBody() {
                   <Text style={styles.featureIconText}>{icon}</Text>
                 </View>
                 <View style={styles.featureCopy}>
-                  <Text style={styles.featureCardTitle}>{title}</Text>
-                  <Text style={styles.featureDescription}>{description}</Text>
+                  <Text numberOfLines={1} style={styles.featureCardTitle}>
+                    {title}
+                  </Text>
+                  <Text
+                    ellipsizeMode="tail"
+                    numberOfLines={2}
+                    style={styles.featureDescription}
+                  >
+                    {description}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -1143,6 +1151,8 @@ const shell = {
   textSecondary: '#c7d2e1',
 };
 
+const shellFontFamily = 'Inter, system-ui, -apple-system, sans-serif';
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -1186,18 +1196,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#25b7ff',
   },
   brandMarkText: {
+    fontFamily: shellFontFamily,
     color: '#ffffff',
     fontSize: 22,
     fontWeight: '800',
     lineHeight: 26,
   },
   brandText: {
+    fontFamily: shellFontFamily,
     flex: 1,
     color: shell.text,
     fontSize: 14,
     fontWeight: '800',
   },
   brandIcon: {
+    fontFamily: shellFontFamily,
     color: '#93a0b8',
     fontSize: 20,
   },
@@ -1214,11 +1227,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 12, 19, 0.42)',
   },
   searchIcon: {
+    fontFamily: shellFontFamily,
     color: '#7d889d',
     fontSize: 16,
     marginRight: 12,
   },
   searchText: {
+    fontFamily: shellFontFamily,
     flex: 1,
     color: '#8791a8',
     fontSize: 14,
@@ -1231,6 +1246,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   searchKeyText: {
+    fontFamily: shellFontFamily,
     color: '#68748a',
     fontSize: 11,
   },
@@ -1251,12 +1267,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sectionTitle: {
+    fontFamily: shellFontFamily,
     color: '#8090b5',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.2,
   },
   sectionCount: {
+    fontFamily: shellFontFamily,
     color: '#8090b5',
     fontSize: 10,
   },
@@ -1283,11 +1301,13 @@ const styles = StyleSheet.create({
     backgroundColor: shell.accent,
   },
   sidebarItemIcon: {
+    fontFamily: shellFontFamily,
     width: 17,
     color: '#7d889d',
     fontSize: 13,
   },
   sidebarItemText: {
+    fontFamily: shellFontFamily,
     color: '#c6d3ea',
     fontSize: 13,
     lineHeight: 18,
@@ -1318,12 +1338,14 @@ const styles = StyleSheet.create({
     paddingRight: 32,
   },
   jumpText: {
+    fontFamily: shellFontFamily,
     marginLeft: 33,
     marginTop: -4,
     color: '#596176',
     fontSize: 10,
   },
   jumpTextDetail: {
+    fontFamily: shellFontFamily,
     marginTop: -4,
     color: '#596176',
     fontSize: 10,
@@ -1359,15 +1381,18 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   breadcrumbMuted: {
+    fontFamily: shellFontFamily,
     color: '#778199',
     fontSize: 13,
   },
   breadcrumbText: {
+    fontFamily: shellFontFamily,
     color: '#c7d2e1',
     fontSize: 13,
     fontWeight: '700',
   },
   pageTitle: {
+    fontFamily: shellFontFamily,
     color: shell.text,
     fontSize: 26,
     lineHeight: 32,
@@ -1375,6 +1400,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1.1,
   },
   pageSubtitle: {
+    fontFamily: shellFontFamily,
     color: '#7f8799',
     fontSize: 15,
     lineHeight: 22,
@@ -1387,10 +1413,12 @@ const styles = StyleSheet.create({
     paddingTop: 7,
   },
   actionIcon: {
+    fontFamily: shellFontFamily,
     color: shell.text,
     fontSize: 14,
   },
   actionText: {
+    fontFamily: shellFontFamily,
     color: shell.text,
     fontSize: 12,
     fontWeight: '800',
@@ -1404,10 +1432,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unknownPillText: {
+    fontFamily: shellFontFamily,
     color: '#697285',
     fontSize: 12,
   },
   updatingText: {
+    fontFamily: shellFontFamily,
     color: '#00bdec',
     fontSize: 11,
   },
@@ -1417,6 +1447,7 @@ const styles = StyleSheet.create({
     paddingTop: 101,
   },
   centeredLogo: {
+    fontFamily: shellFontFamily,
     color: '#ffffff',
     fontSize: 60,
     lineHeight: 74,
@@ -1425,7 +1456,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 18,
   },
   exploreRoot: {
-    paddingTop: 20,
+    paddingTop: 17,
     gap: 34,
   },
   exploreFilterPanel: {
@@ -1447,6 +1478,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(7, 8, 13, 0.55)',
   },
   exploreSearchText: {
+    fontFamily: shellFontFamily,
     color: '#7d8799',
     fontSize: 14,
   },
@@ -1460,16 +1492,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.16)',
-    paddingHorizontal: 12,
+    paddingHorizontal: 15,
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.035)',
   },
   filterChipText: {
+    fontFamily: shellFontFamily,
     color: '#8d95a5',
     fontSize: 12,
   },
   featureGroup: {
-    gap: 13,
+    gap: 16,
+    paddingBottom: 5,
   },
   featureHeading: {
     flexDirection: 'row',
@@ -1477,12 +1511,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   featureTitle: {
+    fontFamily: shellFontFamily,
     color: '#9ca3af',
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
   featureCount: {
+    fontFamily: shellFontFamily,
     color: '#717b8f',
     fontSize: 12,
   },
@@ -1492,7 +1528,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   featureCard: {
-    width: '24%',
+    width: 271,
     minWidth: 260,
     height: 96,
     borderRadius: 9,
@@ -1501,12 +1537,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 16,
-    gap: 14,
+    paddingTop: 15,
+    gap: 12,
     backgroundColor: shell.panel,
   },
   featureIcon: {
-    width: 37,
-    height: 37,
+    width: 36,
+    height: 36,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: shell.border,
@@ -1515,24 +1552,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.72)',
   },
   featureIconText: {
+    fontFamily: shellFontFamily,
     color: shell.accent,
     fontSize: 16,
   },
   featureCopy: {
     flex: 1,
     minWidth: 0,
-    gap: 6,
+    gap: 4,
   },
   featureCardTitle: {
+    fontFamily: shellFontFamily,
     color: '#f8fafc',
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 20,
-    fontWeight: '900',
+    fontWeight: '500',
   },
   featureDescription: {
+    fontFamily: shellFontFamily,
     color: '#9ca3af',
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 19.5,
   },
   fleetSkeleton: {
     paddingTop: 0,
