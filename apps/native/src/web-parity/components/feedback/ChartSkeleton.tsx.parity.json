@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/feedback/ChartSkeleton.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/ChartSkeleton.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines with numbered view before editing.",
+    "L1 `import clsx`: dropped (no Tailwind class merging in native); container/bar classes mapped to StyleSheet + array style merge with the optional `style` prop.",
+    "L3 doc comment preserved verbatim on the exported ChartSkeleton.",
+    "L4 props `{ className = '', bars = 7 }` preserved: `className` retained for API parity but unused natively (renamed `_className`); `bars` default 7 kept; added native-safe `height`, `style`, `testID`/`data-testid`, `accessibilityLabel` extras.",
+    "L6 container `rounded-xl bg-white/[0.02] p-4 flex items-end gap-2` -> styles.root (borderRadius 12, rgba(255,255,255,0.02), padding 16, flexDirection row, alignItems flex-end, gap 8). Web has no explicit height; added default height 120 so percentage bar heights resolve (documented).",
+    "L7 `Array.from({ length: bars }).map((_, i) => ...)` preserved via useMemo keyed on barCount.",
+    "L8-15 bar div: `flex-1 rounded-t bg-white/[0.04] animate-skeleton-wave` -> Animated.View styles.bar (flex 1, borderTopLeft/Right 4, rgba(255,255,255,0.04)); inline height % formula `25 + sin(i*0.9)*20 + random()*30` preserved (clamped >=0); animationDelay `i*0.1s` -> delayMs i*100; skeletonWave keyframe (opacity 0.03->0.08->0.03, 1.8s ease-in-out infinite) reproduced with Animated.loop + Easing.inOut(sin) + opacity interpolation, with AccessibilityInfo reduced-motion fallback to static mid opacity.",
+    "L16-19 closing JSX/function preserved; added displayName and accessibility (role image, Loading chart label). No DOM/Recharts/Leaflet/web-UI imports."
+  ]
+}
