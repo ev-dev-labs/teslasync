@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/FreshnessIndicator.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/FreshnessIndicator.tsx",
+  "sourceLineCount": 124,
+  "coveredLineCount": 124,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 124-line numbered source before editing; ported FreshnessStatus, FreshnessIndicatorProps (timestamp/staleThreshold=120/offlineThreshold=600/showLabel=true/size='sm'), DOT_COLOR, DOT_SIZE, LABEL_SIZE, computeAge, getStatus, formatAge thresholds/labels, the FreshnessIndicator component, and the useIsStale hook returning {isStale,isOffline,ageLabel} with the same 120s/600s logic.",
+    "Resolved Tailwind tokens to literal values preserving visual intent: bg-neon-green #10b981, bg-neon-amber #f59e0b, bg-neon-red #ef4444, var(--surface-2) #151621; h-1.5/h-2 dot -> 6/8 dp; text-[10px]/text-xs label -> 10/12 dp; text-[var(--text-muted)] -> AppText tone='muted'.",
+    "Converted DOM span/title tooltip and Tailwind animate-pulse to React Native View/Animated.View/AppText/StyleSheet; the `title` timestamp tooltip is exposed via accessibilityHint and the relative label via accessibilityLabel since native has no hover tooltip.",
+    "animate-pulse (opacity 1->.5->1 over 2s) is reproduced with an Animated.loop opacity tween gated on status==='fresh' and the OS reduce-motion preference (AccessibilityInfo) as a native-safe enhancement; non-fresh statuses render a static dot.",
+    "Preserved the 10-second setInterval/setTick re-render cadence by extracting a shared useTenSecondTick hook used by both the component and useIsStale, keeping behavior identical to the duplicated web effects; formatAge English strings ('just now','Ns ago','Nm ago','Nh ago','—') kept verbatim since the source uses no i18n. No DOM-only, Recharts, Leaflet, or web UI imports."
+  ]
+}
