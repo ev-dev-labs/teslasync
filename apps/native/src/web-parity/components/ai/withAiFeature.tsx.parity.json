@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/withAiFeature.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/withAiFeature.tsx",
+  "sourceLineCount": 60,
+  "coveredLineCount": 60,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full line-numbered 60-line source before editing; covered the ADR-015 AI-off contract comments, registry validation, inner displayName lookup, settings-based feature gate, null rendering when off, feature marker wrapper, and returned HOC component.",
+    "Converted the DOM div/data-ai-feature/data-testid wrapper to React Native View with testID, nativeID, collapsable=false, and accessibilityLabel while preserving the first registered UI test id fallback.",
+    "Preserved the unknown feature module-load throw message, AI_FEATURES/AiFeatureId registry dependency, ai_mode plus ai_features opt-in semantics through the native settings hook, prop forwarding, and withAiFeature(feature, innerName) displayName."
+  ]
+}
