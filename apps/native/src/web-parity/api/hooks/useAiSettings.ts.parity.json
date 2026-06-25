@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useAiSettings.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useAiSettings.ts",
+  "sourceLineCount": 228,
+  "coveredLineCount": 228,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete 228-line source hook and preserved all exported validation request/result/reason types.",
+    "Ported useSaveAiSettings with the same settings-cache read, AI patch merge, full PUT /settings body, and toast feedback; native invalidates the local TanStack settings cache instead of using the web BroadcastChannel helper.",
+    "Ported useValidateAiProvider with the same POST /settings/ai/validate-config path, 422 failure-union shaping, reasonFromCode mapping, and non-validation error rethrow behavior."
+  ]
+}
