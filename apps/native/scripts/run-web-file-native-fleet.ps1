@@ -200,6 +200,20 @@ function Merge-WorkerCommits {
         Write-Host "MERGE worker $($Worker.Index): $commit"
         $pick = & git -C $RepoRoot cherry-pick $commit 2>&1
         if ($LASTEXITCODE -ne 0) {
+            # Distinguish a real content conflict from an empty/redundant cherry-pick
+            # (a commit whose changes are already present in $Branch). Empty picks must
+            # be skipped and the pointer advanced, otherwise the coordinator retries the
+            # same commit forever and starves the worker's later commits.
+            $unmerged = @(& git -C $RepoRoot diff --name-only --diff-filter=U 2>$null | Where-Object { $_ })
+            if ($unmerged.Count -eq 0) {
+                & git -C $RepoRoot cherry-pick --skip 2>$null | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    & git -C $RepoRoot cherry-pick --quit 2>$null | Out-Null
+                }
+                $Merged[$key] = $commit
+                Write-FleetEvent @{ event = "merge-empty-skipped"; worker = $Worker.Index; commit = $commit }
+                continue
+            }
             & git -C $RepoRoot cherry-pick --abort 2>$null | Out-Null
             Write-FleetEvent @{ event = "merge-conflict"; worker = $Worker.Index; commit = $commit; output = ($pick -join "`n") }
             Send-Discord "**Native parity fleet merge conflict**`nWorker: $($Worker.Index)`nCommit: $commit`nCoordinator left it unmerged for manual inspection."
