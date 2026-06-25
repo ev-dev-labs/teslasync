@@ -1,0 +1,28 @@
+{
+  "sourcePath": "web/src/components/layout/StatusBar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/layout/StatusBar.tsx",
+  "sourceLineCount": 200,
+  "coveredLineCount": 200,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-9 imports: web react hooks (useEffect/useState/useSyncExternalStore), react-i18next, the six ./status-bar/* segment children and `@/lib/cn` map to react (useCallback/useState/useSyncExternalStore), react-native primitives (View/Pressable/useWindowDimensions/StyleSheet), AppText + theme tokens, a local i18n fallback, and native-safe inline placeholder segments (the children are unported — NotionSidebar precedent).",
+    "L11-37 doc block: the StatusBar contract (28px footer, five segments, per-segment hooks, narrow-screen collapse, prefs hide/icon-only, print-hide, role=status/aria-live, color+icon pairing) is preserved in the native header comment and behaviour.",
+    "L39-43 StatusBarProps: `compact` + `className` ported; `className` kept for source-compat (renamed `_className`, ignored on native) plus native `style`/`testID` additions.",
+    "L45-55 StatusBar signature + prefs gate + iconOnly rule ported verbatim: `useStatusBarPrefs()`, `if (!prefs.enabled) return null`, `iconOnly = compact || prefs.iconOnly || isNarrow`, `useNarrowViewport()`.",
+    "L57-84 footer root: web `<footer role=status aria-live=polite data-role data-print-hide className=fixed ...>` -> RN `<View accessibilityRole=toolbar accessibilityLiveRegion=polite accessibilityLabel testID>`; fixed/z-55/border-t/bg surface mapped to absolute positioning + zIndex 55 + borderTop + colors.surface; data-role/data-print-hide are web print hooks and dropped (documented); aria-label statusBar.aria key referenced.",
+    "L73-80 responsive sizing: `px-3 lg:px-4`, `bottom-14 lg:bottom-0`, `h-6 lg:h-7` collapse to barNarrow (paddingHorizontal 12 / bottom 56 / height 24) vs barWide (16 / 0 / 28) selected by the 1024px breakpoint; backdrop-blur-xl has no native analog and is omitted.",
+    "L85-89 cluster 1: ConnectionSegment, Divider, LiveTelemetrySegment ported in order inside a flex row (gap-1 -> spacing.xs).",
+    "L90-102 cluster 2: BackgroundWorkSegment, ActiveVehicleSegment, Divider, HelpSegment, Divider, VersionSegment ported in exact order with the same divider placement; the L92-96 comment about conditional segments / stable dividers is preserved.",
+    "L86-101 the six children are unported (./status-bar/*); each is a native-safe inline placeholder keeping the slot + `iconOnly` + i18n short keys: ConnectionSegment renders the quiet 'unknown' default (muted dot + '?' + statusBar.connection.short 'API', aria statusBar.connection.aria/unknown); LiveTelemetrySegment renders 'unknown' (statusBar.live.unknown 'Idle', aria statusBar.live.aria); BackgroundWorkSegment + ActiveVehicleSegment return null exactly as the web does (no jobs / 0 vehicles); HelpSegment renders the three inert shortcuts/tour/bug buttons (shortcuts.openAria, tour.launcher.openAria, feedback.openAria); VersionSegment renders the 'v' + 'dev' chip (statusBar.version.aria). Web Link destinations /system-status and /signal-diff, the DOM CustomEvent launchers, and the provenance Modal/update-check belong to each child's own conversion.",
+    "L107-109 Divider: web `<span class='h-3 w-px bg-white/[0.08]' aria-hidden>` -> `<View accessibilityElementsHidden style={width:1,height:12,bg:rgba(255,255,255,0.08)}>`.",
+    "L111-127 useNarrowViewport: web `window.matchMedia('(max-width: 1023px)')` + change listener -> RN `useWindowDimensions().width < 1024` (LG_BREAKPOINT); the matchMedia subscription is replaced by RN's built-in dimension subscription, preserving the exact threshold.",
+    "L129-142 prefs store header + STORAGE_KEY + StatusBarPrefs + DEFAULTS ported verbatim; STORAGE_KEY is reused as the key for the injectable native storage seam.",
+    "L144-157 readPrefs: localStorage read -> optional injectable `StatusBarPrefsStorage.getItem(STORAGE_KEY)` with the same JSON.parse + boolean-narrowing + DEFAULTS fallback + try/catch; with no store wired it returns DEFAULTS (native has no localStorage).",
+    "L159-173 cachedPrefs/prefsListeners/emitPrefs/subscribePrefs/getPrefsSnapshot ported 1:1 (the in-process external-store machinery).",
+    "L175-182 the web cross-tab `window 'storage'` re-sync has no native analog; replaced by `setStatusBarPrefsStorage(storage)` which re-hydrates cachedPrefs from the new backend and emits — the documented native equivalent of external-change re-sync.",
+    "L184-187 useStatusBarPrefs: `useSyncExternalStore(subscribePrefs, getPrefsSnapshot, getPrefsSnapshot)` ported verbatim (third getServerSnapshot arg preserved).",
+    "L189-200 setStatusBarPrefs: merges next into cachedPrefs, persists via the optional store (localStorage.setItem -> prefsStorage.setItem) inside try/catch with the same 'change still applies this session' comment, then emitPrefs(); persistence is a documented no-op until a store is injected.",
+    "Help/Version affordances follow the sibling PageContainer CopyLinkButton pattern: Pressable button role + accessible label preserved, pressing surfaces an explicit 'unavailable on this device' accessibilityHint since the web DOM CustomEvent / Modal behaviour has no native runtime.",
+    "No DOM elements (footer/span/div/button/kbd/dl), react-router Link, Recharts, Leaflet, lucide-react, or web UI components (Tooltip/Modal/Button) imported; only react, react-native primitives, AppText, and theme tokens — StyleSheet keys alphabetized per the repo lint rule."
+  ]
+}
