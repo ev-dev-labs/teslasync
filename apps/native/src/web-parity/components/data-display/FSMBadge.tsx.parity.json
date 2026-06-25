@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/FSMBadge.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/FSMBadge.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines with numbered output before editing; L1 web Badge import from @/components/ui is replaced by native AppText + a self-contained themed pill View since no shared parity Badge exists yet, avoiding DOM/Tailwind imports.",
+    "L3-L14 FSM_COLORS map ported verbatim with identical keys (vehicle, drive_session, charge_session, command, notification, alert_cooldown, automation), the same BadgeVariant union (success|warning|info|danger|neutral), and unchanged labels (Vehicle, Drive, Charge, Command, Notify, Cooldown, Automation).",
+    "L16-L18 FSMBadge({type}) preserved including the L17 neutral fallback ({ variant: 'neutral', label: type }) for unknown types and the L18 Badge render mapping variant->surface/text color and label->pill text; the web variant color intent (info=cyan/accent, success, warning, danger, neutral) is reproduced with theme tokens.",
+    "L19 close preserved; rounded-full font-medium badge visual intent retained via borderRadius 999 and fontWeight 500. Optional native-only style/className(ignored)/testID props added for parity-consumer compatibility without changing the source { type } contract."
+  ]
+}
