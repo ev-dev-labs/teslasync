@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useDriving.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useDriving.ts",
+  "sourceLineCount": 313,
+  "coveredLineCount": 313,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete 313-line source hook line by line before editing and preserved every exported key, hook name, query key, enabled gate, retry flag, select transform, polling interval, staleTime, request body, and API path without adding /api/v1.",
+    "Source is non-visual API/type code; the native output uses the React Native-safe parity request client, native-safe URLSearchParams, Alert-backed mutation toast bridge, and no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI imports.",
+    "Inlined the web driving/admin diagnostic response types, safeArray guard, STALE_TIMES, and INTERVALS because the native parity layer does not expose the web @/types/driving, @/types/admin-diagnostics, @/api/types, @/lib/safeArray, or @/lib/constants aliases.",
+    "Adapted the web Toast dependency in usePlanTrip to the existing native Alert-backed useMutationToast helper while preserving success and error feedback semantics."
+  ]
+}
