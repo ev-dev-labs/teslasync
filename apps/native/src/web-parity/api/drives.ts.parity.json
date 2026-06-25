@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/drives.ts",
+  "outputPath": "apps/native/src/web-parity/api/drives.ts",
+  "sourceLineCount": 18,
+  "coveredLineCount": 18,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and ported every exported drives API function.",
+    "Source is non-visual API/type code; the native output uses the React Native-safe request client and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "Preserved getDrives/getDrive/getDrivePositions/getDriveTelemetry names, defaults, vehicle_id/limit/offset/start/end query behavior, and /drives endpoint paths; native URLSearchParams appends start/end only when provided, matching the source set calls because those keys are not pre-seeded.",
+    "Mapped Drive and DriveTelemetryReading to shared native API types and preserved the source Position response shape locally for the positions endpoint."
+  ]
+}
