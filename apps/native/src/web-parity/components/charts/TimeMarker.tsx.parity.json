@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/charts/TimeMarker.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/TimeMarker.tsx",
+  "sourceLineCount": 81,
+  "coveredLineCount": 81,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read source lines 1-81 line by line before editing and preserved the TimeMarkerProps API: x, severity, label, strokeDasharray, strokeWidth, ifOverflow, and yAxisId.",
+    "Lines 1-21 are covered by replacing the Recharts ReferenceLine dependency with a React Native absolute overlay marker and documenting the native chart positioning limitation.",
+    "Lines 22-60 are covered by matching the null/empty x render guard, default label of Alert, default stroke width of 2, default ifOverflow of extendDomain, severity normalization intent, and the web marker stroke colors.",
+    "Lines 61-81 are covered by rendering a native vertical marker with top label color, dashed-line approximation when strokeDasharray is provided, preserving accessibility text for the x value, and re-exporting severityTokens with the web token keys plus native color/surface values for chart color coordination."
+  ]
+}
