@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Energy.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Energy.tsx",
+  "sourceLineCount": 38,
+  "coveredLineCount": 38,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 38 source lines with numbered lines before editing; preserved the EnergyProps public shape (kwh, wh, precision, className, unit) and the exact value resolution: kwh wins when finite, else wh/1000, else null.",
+    "Preserved the null fallback (renders the em-dash '—') and the auto-unit logic verbatim: useWh = unit === 'Wh' || (unit !== 'kWh' && Math.abs(sourceKwh) < 1), value = useWh ? sourceKwh*1000 : sourceKwh, and the 'Wh'/'kWh' suffix selection.",
+    "Replaced the web `@/lib/numberFormat` fmtNumber import with an inlined native-safe fmtNumber/safeNumber (same toLocaleString min/maxFractionDigits behavior and en-US fallback), matching the existing charts parity files; DEFAULT_GLOBAL_PRECISION=2 mirrors the web module's default global precision since no settings store is wired into this layer.",
+    "Converted the DOM <span> output to the native AppText primitive; the browser-only `title` tooltip exposing the canonical `${sourceKwh.toFixed(3)} kWh` value is mapped to accessibilityLabel since React Native has no hover-title equivalent.",
+    "className has no meaning on native (no DOM/Tailwind) so it is accepted but ignored (renamed to _className), matching the Avatar/BulkActionsToolbar parity convention; added optional native-standard style (TextStyle) and testID escape hatches without altering behavior. No DOM, Recharts, Leaflet, or web UI components imported."
+  ]
+}
