@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useSharing.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSharing.ts",
+  "sourceLineCount": 77,
+  "coveredLineCount": 77,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 77-line source hook line by line before editing and preserved sharingKeys, Create/List/Revoke/Public shared-drive hooks, query key shapes, enabled gates, retry false, and SLOW stale-time behavior.",
+    "Ported the non-visual TanStack Query logic to the native web-parity API client with the same /drives/{driveId}/share, /drives/{driveId}/shares, /shares/{token}, and /share/{token} paths, request bodies, HTTP methods, AbortSignal forwarding, and cache invalidation intent.",
+    "Inlined the web sharing response/request interfaces and STALE_TIMES.SLOW because the native parity layer does not expose the web @/types/sharing or @/lib/constants aliases; web Toast feedback is represented with the existing React Native Alert-backed mutation toast helper."
+  ]
+}
