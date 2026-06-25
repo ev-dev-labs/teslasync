@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/data-display/InlineMetric.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/InlineMetric.tsx",
+  "sourceLineCount": 20,
+  "coveredLineCount": 20,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 20 source lines with numbered output before editing; covered the React/ReactNode import (L1), the cn helper import (L2), the InlineMetricProps interface (L4-9), the doc comment (L11), the function signature (L12), and the JSX span/icon/value/label tree (L13-19).",
+    "L1 ReactNode import preserved; L2 cn import dropped because React Native has no className/Tailwind class merging, so the className prop is accepted for source parity but unused (_className).",
+    "L4-9 props (icon/value/label?/className?) preserved verbatim and extended with native-safe style/testID/data-testid/accessibilityLabel extension points matching the existing data-display parity convention.",
+    "L14 container classes (inline-flex items-center gap-1 text-xs text-[var(--text-muted)]) mapped to styles.root (row + alignItems center + gap spacing.xs + alignSelf flex-start to emulate inline-flex shrink-to-content) plus AppText variant=caption (12px = text-xs) and tone=muted (var(--text-muted)).",
+    "L15 icon span (shrink-0 with [&>svg]:h-3/w-3) mapped to a flexShrink:0 wrapper View around the caller icon node; the per-child SVG 12px sizing cannot target arbitrary RN children, so the icon is expected to be pre-sized by the caller and the wrapper is hidden from accessibility.",
+    "L16 value span and L17 conditional label span mapped to AppText caption/muted nodes (label rendered only when truthy, matching the web && guard); value number is stringified for Text rendering and value+label compose the grouped accessibility label. No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI components were imported."
+  ]
+}
