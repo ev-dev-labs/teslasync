@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/ComparisonHeader.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/ComparisonHeader.tsx",
+  "sourceLineCount": 77,
+  "coveredLineCount": 77,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 77 source lines with numbered output before editing; covered the exported ComparisonHeaderProps shape, title/currentLabel/comparisonLabel/delta/actions/className/testId props, and the documented title/period/delta visual hierarchy.",
+    "Converted the web div/h3/p/span/Tailwind/cn implementation to React Native View/AppText/StyleSheet primitives using existing native tokens; className remains accepted for source compatibility while native style/testID/data-testid aliases provide native-safe extension points.",
+    "Preserved period-strip behavior by always rendering the current label, rendering the middle-dot separator only when comparisonLabel is truthy, and exposing the combined current/comparison label as a native accessibility label.",
+    "Preserved headline delta intent without importing the unavailable web Delta/lucide/Skeleton dependencies by inlining a native-safe Delta implementation with the same metric semantic registry, percent/absolute/both display handling, loading and empty states, directional arrows, and good/bad/neutral colors.",
+    "Mapped web heading and right-aligned action slots to native accessibilityRole header plus a trailing flex row, without importing DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components."
+  ]
+}
