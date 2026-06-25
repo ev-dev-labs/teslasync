@@ -1,0 +1,11 @@
+{
+  "sourcePath": "web/src/components/branding/HelixMark.tsx",
+  "outputPath": "apps/native/src/web-parity/components/branding/HelixMark.tsx",
+  "sourceLineCount": 91,
+  "coveredLineCount": 91,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full source with numbered lines before editing; covered the Helix branding documentation, canonical component location, double-helix visual, Lucide-like size/color/strokeWidth/absoluteStrokeWidth API, children slot, data-testid handling, aria-hidden intent, and displayName.",
+    "Converted SVG-only elements and lucide-react types to React Native View/StyleSheet primitives, native tokens, forwardRef<View>, web-compatible prop aliases, scalable strand/rung geometry, and a native-safe currentColor fallback to the TeslaSync accent token."
+  ]
+}
