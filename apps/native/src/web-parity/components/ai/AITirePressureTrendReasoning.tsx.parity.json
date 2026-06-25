@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AITirePressureTrendReasoning.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AITirePressureTrendReasoning.tsx",
+  "sourceLineCount": 142,
+  "coveredLineCount": 142,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source with line numbers before editing; covered the render-contract comments, optional vehicleId prop, numeric vehicle_id normalization, stable body memoization, stream setup, translated card labels, canStart guard, withAiFeature wrapping, and display names.",
+    "Converted web-only react-i18next/useAiStream/withAiFeature imports to native fallback translations, native AI feature gating against apps/native's generated AI registry, the native AIFeatureCard, and a native fetch SSE stream consumer.",
+    "Preserved POST /api/v1/ai/tire-pressure/trends/explain through apiUrl('/ai/tire-pressure/trends/explain'), request body shape {vehicle_id}, stream state names, double-submit coalescing, disabled-until-positive-vehicle behavior, and explicit unavailable-state errors when React Native fetch cannot expose readable streams."
+  ]
+}
