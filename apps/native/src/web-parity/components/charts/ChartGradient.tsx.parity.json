@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/charts/ChartGradient.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartGradient.tsx",
+  "sourceLineCount": 12,
+  "coveredLineCount": 12,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 12-line source file line by line before editing and preserved the ChartGradientBase and memoized ChartGradient exports.",
+    "Preserved the id, color, and opacity props, including the web default opacity of 0.3.",
+    "Converted the DOM/SVG-only <linearGradient> and two <stop> children into a native-safe inert View marker plus createChartGradientDescriptor metadata for the 0% opacity stop and 95% 0.02 tail stop.",
+    "Documented that actual SVG gradient rendering is unavailable in React Native without an SVG chart backend, while avoiding DOM modules, Recharts, Leaflet, and web UI imports."
+  ]
+}
