@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/ai/spaWiring.ts",
+  "outputPath": "apps/native/src/web-parity/ai/spaWiring.ts",
+  "sourceLineCount": 1008,
+  "coveredLineCount": 1008,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 1008 source lines before editing and mirrored the generated SPA wiring registry into native TypeScript.",
+    "Source is non-visual utility/type code; no DOM, browser HTML, Recharts, Leaflet, or web UI imports were present or introduced.",
+    "Preserved RenderContract, SPAWiringEntry, SPA_WIRING, SPA_WIRING_BY_ID, feature IDs, endpoint paths, methods, render contracts, and baseline handoff values."
+  ]
+}
