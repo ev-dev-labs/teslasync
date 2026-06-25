@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/components/maps/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/maps/index.ts",
+  "sourceLineCount": 38,
+  "coveredLineCount": 38,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 38 source lines line by line before porting; the source is a maps barrel that re-exports DOM-bound sibling components plus Leaflet/react-leaflet symbols.",
+    "Line 1 (import 'leaflet/dist/leaflet.css') is a browser stylesheet side-effect with no React Native equivalent; intentionally omitted and documented in nativeMapsBarrelCapabilities.leafletCss.",
+    "Lines 3-5 (MapLayerSwitcher, MapTileLayer, MapInvalidator, MapStyle, AnimatedMarker) are covered: MapStyle/MapTileLayerProps/AnimatedMarkerProps/MapLayerSwitcherProps ported faithfully, and the DOM-bound components become native-safe unavailable primitives.",
+    "Line 6 (vehicleIcon) is ported as a native-safe NativeMapIcon descriptor preserving the default color and 28px footprint intent in place of the Leaflet DivIcon.",
+    "Lines 7-11 (MarkerCluster, ClusterPoint, MarkerClusterProps) ported: types preserved with iconCreateFunction returning the native NativeMapIcon descriptor; component is a native-safe overlay placeholder.",
+    "Lines 12-19 (GeofenceDrawer, describeFence, DrawableGeofence, NewGeofence, GeofenceDrawerProps, GeofenceMode) covered: all types ported verbatim and describeFence ported as pure string logic identical to the web helper.",
+    "Lines 20-24 (RoutePlayback, PlaybackPoint, RoutePlaybackProps) covered: types ported faithfully and RoutePlayback is a native-safe overlay placeholder.",
+    "Line 25 (latLngBounds from leaflet) reimplemented as a pure native LatLngBounds class + latLngBounds factory (extend/contains/getCenter/pad/isValid/toBBoxString) computed without the DOM.",
+    "Line 26 (type LatLngExpression from leaflet) ported as a native-safe union (LatLngLiteral | LatLngTuple | [number,number,number]).",
+    "Line 27 comment preserved as a header comment describing the react-leaflet re-export section.",
+    "Lines 28-38 (MapContainer, Polyline, Marker, Popup, CircleMarker, Circle, Rectangle, FeatureGroup, useMap) covered: every react-leaflet symbol is replaced by a React Native-safe primitive (surface/overlay/leaf View placeholders) and useMap returns a no-op NativeLeafletMap stub; no Leaflet/react-leaflet/DOM imports remain.",
+    "No maps siblings exist yet under apps/native/src/web-parity/components/maps, so this barrel is intentionally self-contained with inline native-safe implementations (mirrors the charts barrel's library-replacement approach). Gates run: typecheck, lint --quiet, jest --runInBand."
+  ]
+}
