@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/feedback/CookieConsentBanner.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/CookieConsentBanner.tsx",
+  "sourceLineCount": 220,
+  "coveredLineCount": 220,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 220 source lines with line numbers before editing; the count covers the GDPR/CNIL doc-comment block (L1-31), the imports (L33-45), the CookieConsentBannerProps test-seam interface (L47-60), the component body with useVersionInfo gating, the reporter-requirement effect, the consent useState/subscribe effect, the requireConsent + consent!=='unknown' null guards, accept/decline handlers, the JSX tree, and the named + default exports (L62-220).",
+    "Preserved behavior and identifiers exactly: ConsentState tri-state, testHookRequireConsent/testHookConsentState seams, requireConsent = seam ?? Boolean(versionQuery.data?.require_cookie_consent), consent/showDetails state, getConsent/setConsent/subscribeConsent semantics, handleAccept/handleDecline, both null-render guards, the manage/hide-details toggle, and all i18n keys + English fallbacks (consent.banner.* and consent.category.*).",
+    "Rule 7 native-safe adaptation: the web deps @/lib/cookieConsent (window.localStorage + CustomEvents), @/lib/webVitalsReporter and @/lib/errorReporter are browser-only and not yet ported, so this file inlines an in-memory consent store and no-op reporter-requirement setters; documented that there is no cross-launch persistence so a fresh launch collapses to 'unknown' (correct GDPR re-prompt), while the server /system/version flag still governs whether the banner shows.",
+    "DOM/web-only constructs replaced with React Native primitives + existing native tokens/components: div/p/ul/li/button -> View/AppText/Pressable, lucide ShieldCheck -> SemanticIcon name='securityCheck' decorative (matches aria-hidden), shared web Button -> local ConsentAction Pressable preserving primary/ghost variants, Tailwind/CSS-var classes -> StyleSheet using colors/spacing tokens, fixed bottom overlay intent -> pointerEvents='box-none' overlay so taps pass through, and all data-testid values mapped to testID (cookie-consent-banner, cookie-consent-toggle-details, cookie-consent-details, cookie-consent-accept, cookie-consent-decline). aria-labelledby/aria-describedby preserved via an accessible title+body group; aria-expanded -> accessibilityState.expanded. No DOM modules, Recharts, Leaflet, or old web UI components imported.",
+    "Verified via gates from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles."
+  ]
+}
