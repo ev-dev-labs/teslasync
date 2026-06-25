@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/sseClient.ts",
+  "outputPath": "apps/native/src/web-parity/api/sseClient.ts",
+  "sourceLineCount": 287,
+  "coveredLineCount": 287,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 287 source lines before editing and preserved SSE_EVENTS_PATH, signal_change, SignalKind, SIValue, SignalEnvelope, parseEnvelope, SubscribeOptions, and subscribeSignals behavior.",
+    "Ported the non-visual SSE parsing, protomodel ValueKind normalization, typed primitive coercion, vehicle_id filtering, field filtering, parse-error callback, source-error callback, and cleanup semantics into native-compatible TypeScript.",
+    "Replaced browser-only direct EventSource construction with a native-safe global EventSource polyfill probe; relative API endpoints resolve through the native apiUrl helper, and missing EventSource reports an explicit unavailable error instead of pretending realtime SSE is connected."
+  ]
+}
