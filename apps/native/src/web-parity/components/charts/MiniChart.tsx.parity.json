@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/MiniChart.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/MiniChart.tsx",
+  "sourceLineCount": 44,
+  "coveredLineCount": 44,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 44-line source file line by line and preserved the exported MiniChart component, props, defaults, and data.length < 2 null behavior.",
+    "Recreated the source min/max/range/padding projection math for all data points, then rendered native rounded line segments instead of DOM div/svg/polyline.",
+    "Kept className as a no-op compatibility prop and mapped native ref/test identifiers to a React Native View without importing DOM, Recharts, or browser-only modules."
+  ]
+}
