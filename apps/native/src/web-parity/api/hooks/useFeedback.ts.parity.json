@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/api/hooks/useFeedback.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useFeedback.ts",
+  "sourceLineCount": 81,
+  "coveredLineCount": 81,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 81-line source file line by line before editing and ported the feedbackKeys factories, FeedbackListParams, buildQuery, useSubmitFeedback, useFeedbackList, and useUpdateFeedback.",
+    "Inlined the FeedbackEntry, FeedbackListResponse, FeedbackSubmitInput, FeedbackUpdateInput, FeedbackCategory, and FeedbackStatus DTOs from web/src/api/types.ts because the native parity layer has no shared web-parity api/types module for this hook.",
+    "Preserved the source API paths without an /api/v1 prefix: POST /feedback, GET /admin/feedback with status/category/limit/offset query parameters, and PATCH /admin/feedback/{id}.",
+    "Adapted buildQuery from URLSearchParams.set to append because the React Native TypeScript surface exposes append; each key is still emitted at most once, preserving the source query string behavior.",
+    "Source is non-visual API/type hook code; native output uses the React Native-safe parity request client, forwards TanStack Query AbortSignal values, preserves keepPreviousData placeholder behavior, and preserves mutation toast keys/fallbacks through the native Alert bridge.",
+    "No unit conversion, browser-only behavior, DOM elements, Recharts, Leaflet, or web UI components exist in this source hook; hook data remains raw API data for native consumers."
+  ]
+}
