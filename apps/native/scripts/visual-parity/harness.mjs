@@ -18,6 +18,8 @@ import {
   visualThreshold as defaultVisualThreshold,
 } from './routes.mjs';
 
+const visualParityStorageKey = 'teslasync:native:visual-parity-shell:v0002';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -131,6 +133,39 @@ export function routeUrl(baseUrl, routePath) {
 
 export function safeName(value) {
   return value.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '');
+}
+
+function splitRouteFilter(value) {
+  if (value === undefined || value === true || value === '') {
+    return [];
+  }
+  return String(value)
+    .split(',')
+    .map(route => route.trim())
+    .filter(Boolean);
+}
+
+export function selectedRoutes(options = {}) {
+  const routeFilters = [
+    ...splitRouteFilter(options.route),
+    ...splitRouteFilter(options.routes),
+    ...splitRouteFilter(process.env.TESLASYNC_VISUAL_ROUTES),
+  ];
+  if (routeFilters.length === 0) {
+    return representativeRoutes;
+  }
+
+  const wanted = new Set(routeFilters);
+  const selected = representativeRoutes.filter(
+    route => wanted.has(route.id) || wanted.has(route.route),
+  );
+  if (selected.length === 0) {
+    throw new VisualParityBlocker(
+      `No representative visual routes matched filter: ${routeFilters.join(', ')}`,
+    );
+  }
+
+  return selected;
 }
 
 async function canListen(port, host = defaultHost) {
@@ -362,7 +397,7 @@ async function screenshotMetadata(filePath) {
   };
 }
 
-async function createContext(browser) {
+async function createContext(browser, options = {}) {
   const context = await browser.newContext({
     colorScheme: 'dark',
     deviceScaleFactor: viewport.deviceScaleFactor,
@@ -376,6 +411,11 @@ async function createContext(browser) {
   await context.addInitScript(() => {
     window.localStorage.setItem('teslasync:onboarding:skipped:v1', '1');
   });
+  if (options.nativeVisualParityShell) {
+    await context.addInitScript(key => {
+      window.localStorage.setItem(key, '1');
+    }, visualParityStorageKey);
+  }
 
   return context;
 }
@@ -468,10 +508,14 @@ export async function captureVisualParity(options = {}) {
       headless: !toBoolean(options.headed, false),
     });
     const oldContext = await createContext(browser);
-    const nativeContext = await createContext(browser);
+    const nativeContext = await createContext(browser, {
+      nativeVisualParityShell: true,
+    });
     const routes = [];
 
-    for (const route of representativeRoutes) {
+    const routesToCapture = selectedRoutes(options);
+
+    for (const route of routesToCapture) {
       const fileName = `${safeName(route.id)}.png`;
       const oldScreenshot = path.join(
         runDirectory,
@@ -564,8 +608,9 @@ export async function captureVisualParity(options = {}) {
 }
 
 export function surveyVisualParity(options = {}) {
+  const routesToSurvey = selectedRoutes(options);
   const groups = new Map();
-  for (const route of representativeRoutes) {
+  for (const route of routesToSurvey) {
     const group = groups.get(route.group) ?? {
       group: route.group,
       routeCount: 0,
@@ -599,12 +644,12 @@ export function surveyVisualParity(options = {}) {
     viewport,
     threshold: visualThreshold,
     routeGroups: [...groups.values()],
-    routes: representativeRoutes,
+    routes: routesToSurvey,
     summary: {
-      routeCount: representativeRoutes.length,
+      routeCount: routesToSurvey.length,
       routeGroupCount: groups.size,
       coversOnlyHomePage:
-        representativeRoutes.length === 1 && representativeRoutes[0].route === '/',
+        routesToSurvey.length === 1 && routesToSurvey[0].route === '/',
     },
   };
 }

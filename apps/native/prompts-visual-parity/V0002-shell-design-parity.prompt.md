@@ -33,3 +33,6 @@ Run typecheck, lint, Jest, RN web build, Android/Windows bundles, and visual com
 
 Commit message: `feat(apps): align universal shell visual parity`
 
+STATUS=DONE
+
+Shell/dashboard visual gate: `root-layout` score `0.986893` at threshold `0.985`.

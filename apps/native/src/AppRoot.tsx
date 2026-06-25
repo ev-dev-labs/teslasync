@@ -29,11 +29,30 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { SystemScreen } from './screens/SystemScreen';
 import { VehiclesScreen } from './screens/VehiclesScreen';
 import { colors, spacing } from './theme/tokens';
+import { ShellVisualParityFrame } from './visual-parity/ShellVisualParityFrame';
+import { isVisualParityShellEnabled } from './visual-parity/visualParityMode';
 
 const COMPACT_SHELL_WIDTH = 760;
 
 export function AppRoot() {
   const scheme = useColorScheme();
+
+  if (isVisualParityShellEnabled()) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          barStyle={scheme === 'light' ? 'dark-content' : 'light-content'}
+          backgroundColor={colors.background}
+        />
+        <ShellVisualParityFrame />
+      </SafeAreaView>
+    );
+  }
+
+  return <InteractiveAppRoot scheme={scheme} />;
+}
+
+function InteractiveAppRoot({ scheme }: { scheme: ReturnType<typeof useColorScheme> }) {
   const dimensions = useWindowDimensions();
   const [activeRoute, setActiveRoute] = useState<RouteId>('dashboard');
   const handledDeepLinkURL = useRef<string | null>(null);
