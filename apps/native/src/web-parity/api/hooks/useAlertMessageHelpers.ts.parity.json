@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useAlertMessageHelpers.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useAlertMessageHelpers.ts",
+  "sourceLineCount": 95,
+  "coveredLineCount": 95,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 95-line source hook line by line before editing and ported all endpoint comments, query keys, hook names, arguments, enabled flag handling, cache staleTime intent, and mutation behavior.",
+    "Source is non-visual API hook/type code; the native output imports only React, TanStack Query, the native parity request client, and native API alert rule types, with no DOM modules, HTML elements, Recharts, Leaflet, or web UI components.",
+    "Mirrored the missing web AlertMessagePlaceholder, AlertMessagePreset, AlertMessagePreviewRequest, and AlertMessagePreviewResponse DTOs locally so the native file preserves the backend contract without modifying unrelated native type files."
+  ]
+}
