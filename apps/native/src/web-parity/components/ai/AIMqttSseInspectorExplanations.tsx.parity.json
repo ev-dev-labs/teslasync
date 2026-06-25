@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AIMqttSseInspectorExplanations.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIMqttSseInspectorExplanations.tsx",
+  "sourceLineCount": 175,
+  "coveredLineCount": 175,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full line-numbered source before editing; covered the safety comments, optional fromUnix/toUnix props, finite positive window guard, stable snake_case body memo, unconditional stream hook, translated AIFeatureCard labels, feature-gated export, and display names.",
+    "Converted web withAiFeature/useAiStream/useTranslation/AIFeatureCard wiring to React Native-safe View feature gating, native settings-backed AI feature checks, native apiUrl('/ai/system/streams/explain') POST streaming, and the existing native AIFeatureCard.",
+    "Preserved the /api/v1/ai/system/streams/explain endpoint intent, stream state names, delta accumulation, double-submit no-op while streaming, disabled Explain streams affordance until a valid time window exists, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams.",
+    "No unit conversion was required because the component only sends Unix-second request bounds as from_unix and to_unix."
+  ]
+}
