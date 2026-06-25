@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useAuthMode.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useAuthMode.ts",
+  "sourceLineCount": 97,
+  "coveredLineCount": 97,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 97-line source hook before editing; preserved its exported AuthModeResponse type surface, authModeKeys registry, AUTH_MODE_STALE_MS constant, useAuthMode, useIsForwardAuth, and useAuthSubject exports.",
+    "Kept the same /system/auth-mode API path, TanStack Query stale time, no polling, disabled window-focus refetch, safe false/null defaults while loading or errored, and forward_auth subject handling.",
+    "Source is non-visual API/type code; native output uses only TanStack Query, the native parity request client, and the shared native AuthModeResponse type with no DOM, browser UI, Recharts, Leaflet, or web components."
+  ]
+}
