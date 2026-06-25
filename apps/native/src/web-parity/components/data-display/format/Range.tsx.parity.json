@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Range.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Range.tsx",
+  "sourceLineCount": 44,
+  "coveredLineCount": 44,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 44 source lines with numbered output before editing. L1-3 imports (react-i18next useTranslation, useUnits, usePreferredRange/PreferredRangeFields) are replaced by the native useSettings query plus inlined selectPreferredRange + derive/convert/format helpers, matching the self-contained native-parity convention of the sibling Distance port; no DOM, react-i18next, Recharts, Leaflet, or web UI modules are imported.",
+    "L5-11 RangeProps (state: PreferredRangeFields|null|undefined, precision?, className?) preserved verbatim with the same doc comments; native-only optional style/testID/data-testid/accessibilityLabel added for parity with sibling ports. PreferredRangeFields (rated_range?, ideal_range? in SI metres) is inlined from @/lib/preferredRange.",
+    "L13-23 component doc comment intent preserved (respects distance-unit + preferred_range preferences; use on generic range surfaces, not dual comparison widgets). L24 signature: precision defaults to 0 (DEFAULT_PRECISION), exactly like web.",
+    "L25 useUnits().formatDistance is reproduced by deriveDistanceUnit(settings.unit_of_length === 'mi' ? 'mi' : 'km') + deriveLocale + derivePrecision(settings.decimal_precision) and a port of lib formatDistance (convertDistanceFromSI with METERS_PER_MILE=1609.344 / METERS_PER_KM=1000, resolvePrecision override→settings→distance-fallback=1, locale-aware Intl.NumberFormat with min=max digits and toFixed fallback). L26 usePreferredRange is reproduced by selectPreferredRange(state, settings.preferred_range) honoring useSettings().rangeType = s.preferred_range.",
+    "L28 meters == null branch renders the em-dash (U+2014) via AppText instead of <span className>. L30 returns formatDistance(meters, { precision }) as `${value} ${unit}` (e.g. '250 km' / '155 mi'); non-finite meters fall through to em-dash matching the lib's resolveEmpty. L31 closing brace covered.",
+    "L33-43 useRangeLabel(state) preserved: selectPreferredRange picks ratedRange/idealRange labelKey + 'Rated Range'/'Ideal Range' defaultLabel. Web's t('common.${labelKey}', defaultLabel) has no react-i18next provider in native (translationProviderAvailable=false per _toastHelpers), so the English fallback defaultLabel is returned directly, preserving i18n intent. L44 trailing blank line covered. useSettings is undefined-safe, defaulting to km / rated / en-US during load."
+  ]
+}
