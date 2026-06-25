@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Temperature.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Temperature.tsx",
+  "sourceLineCount": 43,
+  "coveredLineCount": 43,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 43 source lines with numbered lines before editing; preserved the TemperatureProps public shape (c, f, precision, className) and the exact value resolution: c wins when finite (label '<c.toFixed(1)> °C'), else f when finite (sourceC = (f-32)*5/9, label '<f.toFixed(1)> °F'), else null (L5-12, L23-31).",
+    "Preserved the user °C/°F preference behavior (L19-21): the web useUnits()->unitPrefs.temperature chain reads useSettings(); the native port reads the same preference from the native useSettings parity hook (web-parity/api/hooks/useSettings) and derives the unit via deriveTemperatureUnit mirroring web useUnits' deriveTemperature (unit_of_temp === 'F' ? '°F' : '°C', defaulting to °C while settings load).",
+    "Inlined convertTempFromSI verbatim from web lib/unitConversion.ts (identity for °C, (celsius*9)/5+32 for °F) instead of importing it, keeping the parity layer self-contained like the sibling Energy.tsx; toTemperatureDisplay wraps it exactly as the source did (L21, L37).",
+    "Replaced the web @/lib/numberFormat fmtNumber import (L2) with an inlined native-safe fmtNumber/safeNumber matching Energy.tsx (same toLocaleString min/maxFractionDigits behavior and en-US fallback); DEFAULT_GLOBAL_PRECISION=2 mirrors the web module's default global precision since no settings-driven global store is wired into this layer. The precision prop is still passed through to fmtNumber exactly as the source did (L37).",
+    "Converted the DOM <span> output (L33-42) to the native AppText primitive: the null branch renders the em-dash '—' (L34) and the value branch renders `${display}${tempUnit}` with no space between number and °unit (L40), matching the source. The browser-only `title` tooltip exposing the raw source value (L24, L27, L30, L39) is mapped to accessibilityLabel since React Native has no hover-title equivalent.",
+    "className has no meaning on native (no DOM/Tailwind) so it is accepted but ignored (destructured as _className), matching the Energy/Avatar parity convention; added optional native-standard style (TextStyle) and testID escape hatches without altering behavior. No DOM, Recharts, Leaflet, or web UI components imported; convertTempFromSI is a non-deprecated SI converter (unitConversion.ts L1-395)."
+  ]
+}
