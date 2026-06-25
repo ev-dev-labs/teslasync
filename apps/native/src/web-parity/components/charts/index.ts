@@ -85,6 +85,10 @@ export {
   type ChartLegendToggleSource,
 } from './ChartLegend';
 export {
+  SmallMultiplesChart,
+  type SmallMultiplesChartProps,
+} from './SmallMultiplesChart';
+export {
   ChartHiddenSeriesContext,
   ChartHiddenSeriesProvider,
   useChartHiddenSeries,
