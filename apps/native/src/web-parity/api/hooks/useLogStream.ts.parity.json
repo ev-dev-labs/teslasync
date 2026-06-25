@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useLogStream.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useLogStream.ts",
+  "sourceLineCount": 377,
+  "coveredLineCount": 377,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 377 source lines before editing and preserved LogStreamLevel, LogStreamEvent, UseLogStreamOptions, UseLogStreamResult, LOG_STREAM_MAX_EVENTS, LOG_STREAM_PATH, parseSSEChunk, buildLogEvent, buildLogStreamUrl, clear, pause, enabled, drop counting, and rolling-buffer behavior.",
+    "Ported the fetch-based SSE stream to native-compatible TypeScript by using the native apiUrl helper, global fetch injection, AbortController cleanup, global requestAnimationFrame batching when available, and a microtask fallback for tests or runtimes without frame scheduling.",
+    "Avoided DOM-only window and DOMException usage; when the React Native fetch runtime cannot expose a ReadableStream body or UTF-8 byte decoder support, the hook reports an explicit Error via its existing error state instead of silently pretending the stream is connected."
+  ]
+}
