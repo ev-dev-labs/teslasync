@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useSystemQueues.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSystemQueues.ts",
+  "sourceLineCount": 83,
+  "coveredLineCount": 83,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 83-line source hook line by line before editing and preserved the non-visual queue status and queue jobs API behavior.",
+    "Ported queueKeys, refetch/stale constants, default job limit, query option types, useQueueStatus, and useQueueJobs with the same query keys, retry count, intervals, stale times, enabled/options pass-through, API paths, worker encodeURIComponent handling, and limit query parameter.",
+    "Used the native web-parity request client plus native QueueStatusResponse and QueueJobsResponse DTOs; no DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported. Browser tab visibility comments were adapted to native app foreground/background intent."
+  ]
+}
