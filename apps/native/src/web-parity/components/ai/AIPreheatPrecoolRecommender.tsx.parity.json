@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/ai/AIPreheatPrecoolRecommender.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIPreheatPrecoolRecommender.tsx",
+  "sourceLineCount": 205,
+  "coveredLineCount": 205,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete line-numbered source before editing; the source comments, feature gate, hook ordering contract, disabled-state preconditions, and propose-only climate schedule narrative were considered.",
+    "Preserved the preheat-precool-recommender AI feature id, wrapper display names, native testID from the generated feature registry, vehicleId/currentCabinTempC/outsideTempC/targetCabinTempC/departBy prop names, numericVehicleId/target/body/haveInputs state names, and snake_case request body fields.",
+    "Preserved POST /api/v1/ai/climate/schedule/draft via native apiUrl('/ai/climate/schedule/draft'), stream lifecycle state names, double-submit no-op behavior while streaming, and accumulation of SSE delta text through the shared native AIFeatureCard output panel.",
+    "Converted web-only react-i18next/withAiFeature/useAiStream imports to native-safe fallback translation, settings-backed AI feature gating, React Native View primitives, and explicit SSE-unavailable error handling when React Native fetch cannot expose a readable stream.",
+    "No display unit conversion was added because the source sends Celsius values through the existing API contract and does not render converted measurement values directly."
+  ]
+}
