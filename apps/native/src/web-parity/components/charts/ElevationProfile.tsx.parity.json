@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/ElevationProfile.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ElevationProfile.tsx",
+  "sourceLineCount": 141,
+  "coveredLineCount": 141,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and preserved the ElevationDataPoint and ElevationProfile prop API, including currentIndex, onClickIndex, height, distanceUnit, and className compatibility.",
+    "Ported the elevation gain/loss memo, cursorDistance memo, empty-state copy, title/subtitle/aria i18n keys, distance/elevation formatting, meter and distance-unit labels, and tap-to-index behavior into React Native primitives.",
+    "Replaced Recharts ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, gradient fill, and ReferenceLine with native View/Pressable/AppText layers using existing ChartContainer, EmptyState, tokens, grid lines, area columns, metric summary, and a cursor reference line."
+  ]
+}
