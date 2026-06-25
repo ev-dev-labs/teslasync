@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/feedback/ErrorBoundary.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/ErrorBoundary.tsx",
+  "sourceLineCount": 218,
+  "coveredLineCount": 218,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 218 source lines line by line before editing and preserved the ErrorBoundary class component verbatim: the Props interface (children, fallback, inline, name, resetKey) and State interface (hasError, error, retryCount, lastResetKey), the constructor seed, static getDerivedStateFromError, static getDerivedStateFromProps (resetKey-driven auto-reset on route change including the lastResetKey-only update path), componentDidCatch, isChunkLoadError, handleRetry, and render — same control flow, same English copy, and the same network-vs-chunk-vs-generic branching plus the retryCount>=3 tooManyRetries gate.",
+    "Converted lucide-react icons (AlertTriangle/WifiOff/RefreshCw/Home) to glyph AppText markers in themed chips/buttons and the web ../ui/Button to a local Pressable-based ActionButton (glyph + label, primary/secondary, compact for the inline Retry); div/p/h2 + Tailwind/CSS-var classes became React Native View/AppText with StyleSheet styles and native tokens (tesla-red -> colors.danger/dangerSurface/dangerBorder, --text-primary/secondary/muted -> colors.textPrimary/textSecondary/textMuted, primary button -> colors.accent). No DOM elements, lucide, Recharts, Leaflet, or web UI components are imported.",
+    "Preserved i18n intent: the single web i18n.t('error.chunkLoad.body', 'A new version was deployed. Click Reload to load the latest assets.') call keeps its key + English fallback via a module-level nativeT(key, fallback); all other strings were literal English in the source and remain literal, exactly mirroring the web file.",
+    "Made @/lib/errorReporter#reportFrontendError native-safe: the web POSTs to /api/v1/web-errors via browser fetch/window/navigator, so native inlines a best-effort, never-throws reportFrontendError that retains the most-recent captures in an in-process ring (FEEDBACK_RING_SIZE=10), preserving the 'capture before recovery' ordering; backend wire delivery is intentionally unavailable in native parity.",
+    "Made the stale-chunk recovery native-safe: sessionStorage 'teslasync-chunk-reload' throttle became an in-process lastChunkReloadAt timestamp (60 s throttle, 5 s grace via setTimeout, with the re-check of this.state.hasError preserved); the web try/catch existed only to guard sessionStorage quota throws so it is unnecessary with an in-memory variable. window.location.reload() and window.location.href='/' have no native bundle-asset/global-navigator equivalent, so reloadApp() and goHome() clear the captured error to re-render children (cross-restart persistence intentionally unavailable). isChunkLoadError string-matching logic is ported verbatim.",
+    "Verified with cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
