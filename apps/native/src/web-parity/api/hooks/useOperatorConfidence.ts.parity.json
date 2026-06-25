@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useOperatorConfidence.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useOperatorConfidence.ts",
+  "sourceLineCount": 339,
+  "coveredLineCount": 339,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 339 source lines before editing and preserved every exported query key factory, hook name, default parameter, enabled flag, retry setting, staleTime, refetch interval, and refetch-in-background behavior.",
+    "Ported each API path without an /api/v1 double prefix: /admin/observability/schema-drift, /slow-queries with snake_case order_by, /vehicle-cost with encoded since, /disk-forecast, /secret-rotation, /admin/audit-log filters, /categories, /actions, /verify, and /admin/gdpr/exports/{id}.",
+    "Inlined the admin operator-confidence DTOs and shared INTERVALS/STALE_TIMES values because the native parity layer does not expose the web @/types/admin-operator-confidence or @/lib/constants aliases.",
+    "Preserved the per-hook httputil.Respond envelope unwrap and raw API/unit behavior; this is non-visual API code and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components."
+  ]
+}
