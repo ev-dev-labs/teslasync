@@ -1,0 +1,28 @@
+{
+  "sourcePath": "web/src/components/QueryBroadcastBridge.tsx",
+  "outputPath": "apps/native/src/web-parity/components/QueryBroadcastBridge.tsx",
+  "sourceLineCount": 31,
+  "coveredLineCount": 31,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { useEffect } from 'react'` preserved verbatim.",
+    "L2 `import { useQueryClient } from '@tanstack/react-query'` preserved — the package is a native dependency (apps/native/package.json).",
+    "L3 `import { subscribe } from '@/lib/broadcast'` replaced by a native-safe in-process `subscribeToQueryInvalidations`; the web bus's BroadcastChannel + localStorage `storage`-event cross-tab transport is unavailable on React Native (single app instance, no tabs).",
+    "L4 blank line — no-op.",
+    "L5-L17 component JSDoc ported and extended to document the web cross-tab behavior, the bare-invalidate (no re-broadcast) intent, the mount-inside-QueryClientProvider contract, and the native reality + unavailable-transport rationale.",
+    "L18 `export function QueryBroadcastBridge()` preserved, typed `(): null` to match the render-nothing contract.",
+    "L19 `const qc = useQueryClient()` preserved verbatim.",
+    "L20 `useEffect(() => {` preserved verbatim.",
+    "L21 `return subscribe((msg) => {` ported to `return subscribeToQueryInvalidations(msg => {` (arrowParens:avoid) keeping the unsubscribe-returning cleanup contract.",
+    "L22 `if (msg.type !== 'queryInvalidate') return` discriminant guard preserved; `QueryInvalidateMessage` type ported verbatim from web broadcast.ts so the guard stays meaningful.",
+    "L23 `for (const key of msg.keys) {` preserved verbatim.",
+    "L24-L25 QueryKey cast comment preserved verbatim.",
+    "L26 `void qc.invalidateQueries({ queryKey: key as unknown[] })` preserved — bare invalidate, never invalidateAndBroadcast, matching the anti-ping-pong intent.",
+    "L27-L28 inner handler/subscribe closing braces preserved.",
+    "L29 `}, [qc])` effect dependency array preserved verbatim.",
+    "L30 `return null` preserved verbatim.",
+    "L31-L32 closing brace + trailing newline preserved.",
+    "Native unavailable state made explicit via `nativeQueryBroadcastBridgeCapabilities` (broadcastChannelAvailable/crossTabTransportAvailable/localStorageStorageEventAvailable=false, inProcessInvalidationBus=true) and an in-process `publishQueryInvalidate` stand-in for the web `broadcast({type:'queryInvalidate'})` emitter, per parity-contract rule 7.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components imported; gates run from apps/native: typecheck, lint --quiet, jest --runInBand --detectOpenHandles."
+  ]
+}
