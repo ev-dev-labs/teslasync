@@ -8,6 +8,7 @@
 // so the deferred set is documented via nativeFormsBarrelCapabilities instead.
 
 export {ComboboxMulti, type ComboboxMultiProps} from './ComboboxMulti';
+export {UnitInput, type UnitInputProps} from './UnitInput';
 
 // --- Pending native ports --------------------------------------------------
 // The web exports below have no native parity module yet. They are intentionally
@@ -29,12 +30,11 @@ export {ComboboxMulti, type ComboboxMultiProps} from './ComboboxMulti';
 // export {SearchInput, type SearchInputProps} from './SearchInput';
 // export {TagInput, type TagInputProps, type TagInputHandle, type TagSeparator} from './TagInput';
 // export {TreeSelect, type TreeSelectProps, type TreeGroup, type TreeLeaf} from './TreeSelect';
-// export {UnitInput, type UnitInputProps} from './UnitInput';
 // export {VehicleSelect, type VehicleSelectProps} from './VehicleSelect';
 // export {VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleMultiSelectProps, type VehicleSelection} from './VehicleMultiSelect';
 
 export const nativeFormsBarrelCapabilities = {
-  ported: ['ComboboxMulti'],
+  ported: ['ComboboxMulti', 'UnitInput'],
   pending: [
     'ActiveFilterChips',
     'Combobox',
@@ -49,7 +49,6 @@ export const nativeFormsBarrelCapabilities = {
     'SearchInput',
     'TagInput',
     'TreeSelect',
-    'UnitInput',
     'VehicleSelect',
     'VehicleMultiSelect',
   ],
