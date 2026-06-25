@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AISignalExplorerNlFilter.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AISignalExplorerNlFilter.tsx",
+  "sourceLineCount": 228,
+  "coveredLineCount": 228,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the file comments, SignalFilterDraft DTO, prop contract, draft parser, prompt/draft state names, trimmed/hasPrompt/hasVehicle/body derivations, tool_result capture, canDraft/canApply guards, apply callback, feature wrapper, and display names.",
+    "Converted web AIFeatureCard/Textarea/Button/div rendering to native AIFeatureCard, TextInput, Pressable, View, AppText, and native tokens while preserving i18n fallback keys/text, free-text prompt intent, rows=2 visual height, Draft filter CTA, Apply to filters CTA, and propose-only onApply behavior.",
+    "Preserved POST /ai/signals/filter/draft and the draft_signal_filter tool_result parsing path with native-safe fetch streaming; if React Native fetch lacks a readable SSE response body, the stream surfaces an explicit unavailable error instead of importing DOM/EventSource/browser-only code."
+  ]
+}
