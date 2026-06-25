@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/MetricSwitcherChart.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/MetricSwitcherChart.tsx",
+  "sourceLineCount": 256,
+  "coveredLineCount": 256,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 256 source lines before editing and preserved the generic MetricSwitcherMetric/MetricSwitcherChartProps API, activeMetric/onMetricChange flow, title/ariaLabel/emptyMessage/action/testId props, and date/value projection behavior.",
+    "Ported the metric pill switcher, active metric fallback, memoized item/projected data derivation, getValue default, tooltip formatter, y-axis tick formatter, optional x-axis formatter, chart type selection, color fallback, and empty-state rendering to React Native primitives.",
+    "Replaced Recharts ResponsiveContainer, BarChart, AreaChart, LineChart, XAxis, YAxis, Tooltip, Bar, Area, Line, SVG gradient, grid, and DOM div/PillFilterBar/EmptyState className usage with native ChartContainer, EmptyState, AppText, Pressable, ScrollView, tokenized styles, tap-to-select tooltip summary, grid lines, and bar/area/line visual approximations."
+  ]
+}
