@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useOptimisticMutation.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useOptimisticMutation.ts",
+  "sourceLineCount": 148,
+  "coveredLineCount": 148,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 148-line source hook line by line before editing and preserved every exported type, option field, context field, resolver helper, optimistic cache snapshot, rollback, invalidation, success, error, and settled callback behavior.",
+    "Source is non-visual TanStack Query utility code; the native output imports only @tanstack/react-query and contains no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI component imports.",
+    "Replaced the web @/lib/queryBroadcast dependency with a native-safe local invalidation shim and an explicit nativeOptimisticMutationCapabilities.queryBroadcastAvailable=false export because React Native has no browser-tab BroadcastChannel equivalent.",
+    "The broadcast option remains accepted so existing callers keep the same API surface; on native it invalidates local TanStack Query caches rather than attempting unavailable cross-tab broadcast."
+  ]
+}
