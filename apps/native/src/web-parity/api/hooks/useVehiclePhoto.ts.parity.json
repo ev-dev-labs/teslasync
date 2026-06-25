@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useVehiclePhoto.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useVehiclePhoto.ts",
+  "sourceLineCount": 187,
+  "coveredLineCount": 187,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 187 source lines before editing and preserved VEHICLE_PHOTO_* constants, vehiclePhotoKeys, vehiclePhotoUrl cache-busting behavior, metadata query, upload mutation, delete mutation, validation error reasons/messages, endpoint paths, methods, and cache updates.",
+    "Source is non-visual TanStack Query API hook code; the native output imports only the native web-parity API client plus TanStack Query and uses no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "Replaced browser File-only upload typing with native-safe Blob or {uri,name,type,size} descriptors; multipart upload still bypasses request() so no JSON Content-Type corrupts the boundary, with size validation applied when native descriptors expose size and server validation authoritative otherwise.",
+    "The web query-broadcast helper and useVehicles dependency are represented by a local invalidateQueries shim and local ['vehicles', id] detail key because those web helpers are not available in this native parity hook directory."
+  ]
+}
