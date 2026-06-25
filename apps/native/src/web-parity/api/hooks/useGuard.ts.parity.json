@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/api/hooks/useGuard.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useGuard.ts",
+  "sourceLineCount": 183,
+  "coveredLineCount": 183,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 183-line source file line by line before editing and ported the GuardConfig, GuardEvent, GuardEventsResponse, mutation response types, guardKeys factories, acknowledgment helper, and all five TanStack Query hooks.",
+    "Preserved the web API paths exactly without an /api/v1 prefix: /vehicles/{vehicleId}/guard, /vehicles/{vehicleId}/guard/events, /vehicles/{vehicleId}/guard/panic, and /vehicles/{vehicleId}/guard/events/{eventId}/acknowledge.",
+    "Replaced web-only Toast and queryBroadcast imports with the native parity mutation feedback helper backed by React Native Alert.alert and local React Query invalidation; native cross-tab query broadcast is explicitly unavailable.",
+    "Inlined the source polling and stale-time constants from web/src/lib/constants.ts because the native parity layer does not expose the web @/lib/constants alias.",
+    "Source is non-visual API/type code; the native output imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components."
+  ]
+}
