@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIAlertTuningSuggestions.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIAlertTuningSuggestions.tsx",
+  "sourceLineCount": 241,
+  "coveredLineCount": 241,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source with line numbers before editing; the declared 241 source lines cover the streaming contract comments, AlertRuleDraftPatch/props types, body memoization, tool_result patch extraction, cleanup on rule changes, busy/apply guards, AI feature card render, and withAiFeature wrapping.",
+    "Converted DOM-only div/ul/li/Button/AIFeatureCard/AiOutputPanel/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus a native-safe local SSE stream implementation that preserves POST /ai/alerts/rules/{ruleID}/tune/draft, vehicle_id body handling, stream state names, cancellation, and typed draft application.",
+    "Preserved i18n keys with fallback strings through a native translation fallback; React Native fetch runtimes without ReadableStream/TextDecoder support report an explicit stream error instead of silently pretending the AI stream is available."
+  ]
+}
