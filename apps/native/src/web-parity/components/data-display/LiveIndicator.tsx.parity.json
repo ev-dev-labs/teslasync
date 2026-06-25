@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/LiveIndicator.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/LiveIndicator.tsx",
+  "sourceLineCount": 112,
+  "coveredLineCount": 112,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 112 numbered source lines before editing. Ported the LiveIndicatorVariant union 'pill'|'dot'|'compact' (L7-13), LiveIndicatorProps variant/className (L15-18) plus native-friendly status/lastMessageAt overrides + style/testID/data-testid/accessibilityLabel, the VariantConfig shape icon/text/bg/dot/label/spin (L20-30), the component doc (L32-44), and the four-state cfg map + render branches (L45-112).",
+    "Resolved the Tailwind class tokens to literal values preserving visual intent: connected text-emerald-300 #6ee7b7 / bg-emerald-500/10 rgba(16,185,129,0.1) / dot emerald-400 #34d399; reconnecting text-amber-300 #fcd34d / bg-amber-500/10 rgba(245,158,11,0.1) / dot amber-400 #fbbf24 / spin:true; disconnected text-rose-300 #fda4af / bg-rose-500/10 rgba(244,63,94,0.1) / dot rose-400 #fb7185; unknown text-[var(--text-muted)] -> colors.textMuted / bg-white/[0.03] rgba(255,255,255,0.03) / dot var(--surface-2) #151621; chip border-white/[0.05]; gap-1.5->6, px-2->8, py-0.5->2, rounded-full->999, text-xs->caption(12), h-3 w-3 icon->12, h-2 w-2 dot->8.",
+    "Replaced lucide-react Wifi/WifiOff/Loader2 with native View-drawn glyphs: WifiGlyph renders the colored top arcs of concentric rings over a base dot (lucide Wifi), the off flag overlays a diagonal slash (lucide WifiOff), and the reconnecting spinner is an Animated partial ring honoring animate-spin via Easing.linear loop and OS reduce-motion (AccessibilityInfo); the icon kind is stored as a 'wifi'|'wifiOff'|'spinner' discriminator instead of a component reference.",
+    "Ported formatRelativeTime faithfully from web/src/lib/dateFormat.ts ('Just now'/'Nm ago'/'Nh ago'/locale date fallback, em-dash for nullish/invalid) since native has no @/lib/dateFormat; replaced the cn() class merge with StyleSheet + style arrays; replaced react-i18next with the established useNativeTranslationFallback returning the same default strings for live.connected/reconnecting/disconnected/unknown.",
+    "NATIVE-SAFE: the web useLiveConnection subscribes to the browser-only singleton sseManager (EventSource), unavailable in React Native, so the inlined useLiveConnection returns the explicit 'unknown' unavailable state (documented via LIVE_CONNECTION_UNAVAILABLE_REASON); optional status/lastMessageAt props let callers/tests drive all four states while preserving the web default of reading the hook with no props. DOM role=status/title/aria-label mapped to accessible + accessibilityRole + accessibilityLiveRegion='polite'. No DOM-only modules, HTML elements, Recharts, Leaflet, or web UI components imported."
+  ]
+}
