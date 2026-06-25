@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIChatbotIndicator.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIChatbotIndicator.tsx",
+  "sourceLineCount": 63,
+  "coveredLineCount": 63,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the AI-off comments, chatbot page ownership note, withAiFeature('chatbot-llm') gate, display names, translated tooltip/aria/badge strings, and Helix visual badge.",
+    "Converted DOM span/title/aria/SVG/Tailwind behavior to React Native View/AppText/StyleSheet primitives using native tokens, accessibilityLabel/accessibilityHint, and a native-safe decorative helix glyph.",
+    "Preserved fail-closed AI feature gating against settings.ai_mode and settings.ai_features, including the ai-feature-chatbot-llm-root testID from the generated native AI registry; no chatbot API route was moved because this indicator does not own POST /api/v1/ai/chatbot."
+  ]
+}
