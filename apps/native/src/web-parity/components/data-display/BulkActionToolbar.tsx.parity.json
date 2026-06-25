@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/data-display/BulkActionToolbar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/BulkActionToolbar.tsx",
+  "sourceLineCount": 20,
+  "coveredLineCount": 20,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing; it is a singular-name alias that exists to keep BulkActionToolbar adopters compiling while sharing the existing BulkActionsToolbar implementation.",
+    "Preserved the re-export behavior by aliasing the native BulkActionsToolbar parity component as BulkActionToolbar instead of duplicating toolbar UI, confirmation routing, pending state, clear action, count labels, or accessibility behavior.",
+    "Preserved the public type surface by re-exporting BulkAction and aliasing BulkActionsToolbarProps as BulkActionToolbarProps from the native BulkActionsToolbar port, with no DOM-only modules, browser elements, Recharts, Leaflet, or web UI imports."
+  ]
+}
