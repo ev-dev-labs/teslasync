@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Currency.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Currency.tsx",
+  "sourceLineCount": 49,
+  "coveredLineCount": 49,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 49 numbered source lines before editing; preserved the CurrencyProps public shape (value?, precision default 2, symbolOverride, className, fallback default em dash) and the JSDoc intent on lines 4-30.",
+    "Ported the line 38-43 logic verbatim: useFormatting().currencySymbol is sourced from the native useSettings() query hook (currency_symbol with the same '$' fallback and the locale used by fmtNumber), the line 39 `value == null || !Number.isFinite(value)` guard returns the fallback, line 42 symbolOverride ?? currencySymbol is kept, and line 43 fmtNumber(value, precision) is reproduced by an inlined locale-aware toLocaleString formatter matching the native chart-parity convention (web's @/lib/numberFormat is DOM-agnostic but inlined here per the parity layer pattern).",
+    "Converted the line 40 and 44-47 DOM <span> render to a React Native <AppText> node: the Tailwind className prop is retained for source compatibility but ignored on native, the canonical `${symbol}${value.toFixed(precision)}` title attribute (lines 28-29, 45) becomes accessibilityLabel, and the `{symbol}{display}` children (line 46) render concatenated; added an optional native style override plus testID hook.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; only React, react-native type primitives, the native AppText component, and the native useSettings hook are used."
+  ]
+}
