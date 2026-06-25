@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/BulkActionsToolbar.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/BulkActionsToolbar.tsx",
+  "sourceLineCount": 180,
+  "coveredLineCount": 180,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 180 source lines line by line before editing and preserved the BulkAction/BulkActionsToolbarProps public shape, selectedIds/count logic, itemNoun plural selection, optional total display, null return when no rows are selected, action ordering, onClear behavior, and local pending state keyed by action id.",
+    "Converted the web GlassPanel/div/span/Button/ConfirmDialog/useConfirm/Tailwind implementation to React Native GlassPanel/View/AppText/Pressable/Modal primitives using existing native design tokens; className remains accepted for source compatibility but is intentionally ignored because native uses StyleSheet styles.",
+    "Preserved destructive confirmation behavior by routing actions with confirm payloads through a native modal that carries title, description, confirmLabel, and danger/warning intent before invoking action.onClick(selectedIds).",
+    "Preserved i18n intent with the original bulk.* keys and fallback strings via a native-safe translation fallback helper, including {{count}} and {{total}} interpolation for selected/of-total labels.",
+    "Mapped web data-bulk-action attributes and aria-live/region intent to native testID values, accessibilityLiveRegion, accessibilityRole toolbar/button/alert, and accessibilityState busy/disabled without importing DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components."
+  ]
+}
