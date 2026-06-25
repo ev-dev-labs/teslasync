@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIWatchFaceNLResponse.tsx",
+  "sourceLineCount": 194,
+  "coveredLineCount": 194,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the watch-face Helix narration comments, feature-gate contract, POST /ai/watch/respond hook URL, optional message body, no-op event handler, cancellation effect, cap guard, translated labels, input slot, wrapper, and display names.",
+    "Converted web-only react-i18next, Textarea, withAiFeature, and useAiStream dependencies to native fallback translations, a native multiline TextInput, View-based AI feature gating against the native feature registry, native AIFeatureCard, and a native fetch SSE stream consumer.",
+    "Preserved MaxMessageChars=1000, empty/whitespace message serialization as {}, stream state names including paused-confirm, disabled Ask behavior while over cap/paused/streaming, POST /api/v1/ai/watch/respond via apiUrl('/ai/watch/respond'), and explicit unavailable-state errors when React Native fetch cannot expose readable streams."
+  ]
+}
