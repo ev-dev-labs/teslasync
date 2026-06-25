@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/queryClient.ts",
+  "outputPath": "apps/native/src/web-parity/api/queryClient.ts",
+  "sourceLineCount": 85,
+  "coveredLineCount": 85,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 85-line source file line by line before editing and mapped the module documentation, DEFAULT_QUERY_CLIENT_CONFIG export, and createQueryClient factory.",
+    "Source is non-visual TanStack Query utility code; native output imports React Native AppState plus TanStack Query only, with no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "Preserved staleTime, retry, retryDelay, refetchOnWindowFocus, networkMode offlineFirst, mutation retry/networkMode, refetchIntervalInBackground false, exported state names, and factory behavior.",
+    "Browser document.hidden/document.visibilityState is native-unavailable; native parity installs a focusManager bridge from React Native AppState so interval polling pauses outside the active app state. OfflineFirst remains configured, but durable offline detection still depends on a future native network status provider."
+  ]
+}
