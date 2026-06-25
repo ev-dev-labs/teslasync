@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AILearnedAnomalyBaselines.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AILearnedAnomalyBaselines.tsx",
+  "sourceLineCount": 64,
+  "coveredLineCount": 64,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the anomaly-baseline narration comments, InnerSection props, display names, withAiFeature('learned-per-vehicle-anomaly-baselines') gate, translated title/description/button/badge labels, and vehicleId start guard.",
+    "Preserved the default 14-day learning request body {vehicle_id, days} and POST /api/v1/ai/ml/anomaly-baselines/train stream path via the native apiUrl helper without adding a duplicate /api/v1 prefix.",
+    "Converted web-only AIFeatureCard/withAiFeature/useAiStream dependencies to React Native-safe View-based feature gating, native AIFeatureCard rendering, and an explicit stream-unavailable error state when React Native fetch lacks readable SSE support."
+  ]
+}
