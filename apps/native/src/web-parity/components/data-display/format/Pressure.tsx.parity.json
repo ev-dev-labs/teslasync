@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Pressure.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Pressure.tsx",
+  "sourceLineCount": 46,
+  "coveredLineCount": 46,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 46 numbered source lines before editing. L1-3 imports: @/hooks/useUnits, @/lib/numberFormat (fmtNumber) and @/lib/unitConversion (convertPressureFromSI) have no native counterpart, so their pure logic is ported verbatim and kept self-contained; native has no useUnits hook, so the pressure pref / precision / locale are derived from the existing native ../../../api/hooks/useSettings query (consumed as {data: settings}), mirroring web useUnits.derivePressure and numberFormat's setGlobalPrecision/setGlobalLocale.",
+    "L5-15 PressureProps (bar?/psi?/precision?/className?) preserved verbatim, plus native style/testID affordances; L17-20 doc comment adapted (hover title → accessibilityLabel). L21 signature preserved; className accepted for parity but unused (_className) since native has no className styling.",
+    "L22-24 useUnits()/unitPrefs.pressure/toPressureDisplay reproduced via derivePressure(settings?.unit_of_pressure) ('psi' else 'bar') + ported convertPressureFromSI(kPa→kPa|psi÷6.894757|bar÷100) using KPA_PER_PSI=6.894757 / KPA_PER_BAR=100 constants.",
+    "L26-34 sourceBar/title logic ported byte-for-byte: bar finite → bar*100 kPa + `${bar.toFixed(2)} bar`; else psi finite → psi*6.894757 kPa + `${psi.toFixed(2)} psi`; both guarded by != null && Number.isFinite.",
+    "L36-38 null branch (<span className>—</span>) → <AppText>—</AppText>. L40 display=fmtNumber(toPressureDisplay(sourceBar), precision) reproduced as fmtNumber(value, precision ?? globalPrecision, globalLocale) so an undefined precision falls back to settings.decimal_precision exactly like the web numberFormat global; safeNumber + try/catch en-US fallback ported.",
+    "L41-46 <span className title>{display} {pressureUnit}</span> → <AppText accessibilityLabel={title}>{`${display} ${pressureUnit}`}</AppText>; the hover title (raw caller value + source unit) is surfaced via accessibilityLabel since React Native has no hover tooltip. No DOM elements, Recharts, Leaflet, or old web UI components imported.",
+    "Gates from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
