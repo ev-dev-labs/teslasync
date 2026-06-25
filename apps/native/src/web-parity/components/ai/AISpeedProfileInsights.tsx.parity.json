@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AISpeedProfileInsights.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AISpeedProfileInsights.tsx",
+  "sourceLineCount": 44,
+  "coveredLineCount": 44,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the speed-profile header comments, optional driveId prop, URL memo with encodeURIComponent and /ai/drives/0/speed-profile/insights fallback, empty body memo, stream setup, translated card labels, canStart guard, withAiFeature wrapping, and display names.",
+    "Converted web-only react-i18next/AIFeatureCard/withAiFeature/useAiStream dependencies to native-safe fallback translations, View-based AI feature gating against the generated native registry, the native AIFeatureCard, and a native fetch SSE stream consumer.",
+    "Preserved POST /api/v1/ai/drives/{driveID}/speed-profile/insights through apiUrl('/ai/drives/{driveID}/speed-profile/insights'), the empty JSON body, stream state names, speed-profile visual intent, and explicit unavailable-state errors when React Native fetch cannot expose readable streams."
+  ]
+}
