@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/devtools.ts",
+  "outputPath": "apps/native/src/web-parity/api/devtools.ts",
+  "sourceLineCount": 228,
+  "coveredLineCount": 228,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and ported every exported devtools, system, repair, backup, export/import, API key, audit, and chatbot API function.",
+    "Source is non-visual API/type code; the native output uses React Native-safe request/apiUrl helpers and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components.",
+    "Preserved endpoint paths, snake_case query parameters, request methods, JSON body shapes, response type shapes, and SI field names; window.open was replaced with Linking.openURL.",
+    "Browser File upload was replaced with a native-safe ImportUploadFile type supporting Blob or React Native {uri,name,type} values, and multipart upload bypasses the JSON default header so FormData remains valid."
+  ]
+}
