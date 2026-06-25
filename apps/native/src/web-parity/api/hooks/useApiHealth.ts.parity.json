@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useApiHealth.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useApiHealth.ts",
+  "sourceLineCount": 103,
+  "coveredLineCount": 103,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and preserved the ApiHealthStatus/ApiHealthState types, ProbeResult shape, timeout/poll/stale constants, query key, query state names, and status bucketing behavior.",
+    "Preserved the direct root /healthz probe by importing the native parity getApiBase() helper instead of using request(), avoiding an /api/v1 prefix exactly like the web hook.",
+    "The source is non-visual API hook code; no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported. React Native fetch has no typed cache mode and no typed performance global, so cache: no-store is represented with Cache-Control/Pragma headers and latency is measured with Date.now()."
+  ]
+}
