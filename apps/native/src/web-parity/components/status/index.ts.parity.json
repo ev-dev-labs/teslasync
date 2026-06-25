@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/status/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/status/index.ts",
+  "sourceLineCount": 8,
+  "coveredLineCount": 8,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 8 source barrel lines; each re-export is reproduced from a native-safe sibling port.",
+    "Line 1 StatusHero (+StatusHeroProps,HeroStatus), line 2 StickyChipBar (+StickyChipBarProps,ChipItem), line 3 StickyCompactHero (+StickyCompactHeroProps), line 4 HealthRow (+HealthRowProps), line 5 ActionItem (+ActionItemProps,ActionSeverity), line 6 ActionItemsPanel (+ActionItemsPanelProps), line 7 ResourcesPanel (+ResourcesPanelProps,ResourceRow), line 8 UptimeHeatmap (+UptimeHeatmapProps,UptimeDay) — all preserved one-for-one.",
+    "Added native-only capability constants (nativeStickyChipBarCapabilities, nativeStickyCompactHeroCapabilities, nativeUptimeHeatmapCapabilities) documenting browser-only behaviour, matching the native a11y barrel pattern.",
+    "No DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components imported."
+  ]
+}
