@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/data-display/SavedViewMenu.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/SavedViewMenu.tsx",
+  "sourceLineCount": 639,
+  "coveredLineCount": 639,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 639 source lines line by line before editing and preserved the SavedViewMenuProps public shape (route, currentQuery, onApply, className) plus the internal SavedView state model: views = viewsRaw ?? [], activeView via find(v.query === currentQuery), defaultView via find(v.is_default), and the same memo dependency arrays.",
+    "Preserved the auto-apply-default behavior exactly (L89-105): autoAppliedRef guard, early returns for already-applied and non-empty currentQuery, and onApply(defaultView.query) only when the query is empty -- with the same useEffect dependency list [defaultView, currentQuery, onApply].",
+    "Ported every handler with identical semantics: handleApply (onApply + close menu + announce 'View {{name}} applied'), handleClear (onApply('') + announce 'Saved view cleared'), handleTogglePin (updateMut.mutate {id, route, patch:{is_pinned:!is_pinned}}), handleToggleDefault (setDefaultMut.mutate {id, route, isDefault:!is_default}); all five hooks (useSavedViews/useCreateSavedView/useUpdateSavedView/useDeleteSavedView/useSetDefaultSavedView) call the same /saved-views API paths via the native hook module.",
+    "Replaced the DOM popover with a React Native Modal: the web outside-click (document mousedown) and Escape listeners (L111-125) map to the modal backdrop Pressable + onRequestClose; the menu still closes after manage/save/rename/delete just like the web setOpen(false) calls.",
+    "Converted lucide icons (Bookmark, BookmarkCheck, Pin, PinOff, Star, Pencil, Trash2, Plus, X) to accessible glyph buttons (B/BK trigger, * default, PIN pin/unpin, ED rename, DL delete, + save, x clear) with the real action meaning carried in accessibilityLabel; default state keeps the inline amber star marker and the set/clear-default toggle, matching L250-299.",
+    "Ported all four sub-dialogs faithfully: SavedViewSaveDialog (reset-on-open effect L424-429, trimmed-name guard, makeDefault checkbox -> native CheckRow, saving label), SavedViewRenameDialog (sync name from view L489-491, no-op-when-unchanged submit L494-501), the delete ConfirmDialog (open when deleteTarget != null, danger variant, loading, deleteConfirm message with {{name}}), and SavedViewManageDialog (active-row highlight, emptyQuery title fallback, per-row default/pin/rename/delete, Close button).",
+    "Preserved i18n intent by keeping every translation key and English fallback verbatim (savedViews.title/manage/empty/saveCurrent/defaultBadge/unsetDefault/setDefault/unpin/pin/renamePrompt/appliedBadge/clearApplied/announceApplied/announceCleared/deleteTitle/deleteConfirm/namePlaceholder/name/makeDefault/emptyQuery and common.delete/cancel/saving/save/close) via a native translation fallback helper that supports {{name}} interpolation.",
+    "Used only React Native primitives (View, Pressable, Modal, ScrollView, TextInput, ActivityIndicator) and existing native building blocks (AppText, theme tokens, web-parity a11y announce, useSavedViews hooks); no DOM elements, lucide-react, Recharts, Leaflet, cn(), or web @/components/ui imports remain. The className prop is accepted but intentionally ignored (renamed _className) since native styling uses StyleSheet."
+  ]
+}
