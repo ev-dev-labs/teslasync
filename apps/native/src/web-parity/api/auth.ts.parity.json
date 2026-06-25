@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/auth.ts",
+  "outputPath": "apps/native/src/web-parity/api/auth.ts",
+  "sourceLineCount": 9,
+  "coveredLineCount": 9,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing and mapped all imports, comments, and exported API functions.",
+    "Source is non-visual API/type code; native output uses the React Native-safe request client and imports no DOM, browser HTML, Recharts, Leaflet, or web UI modules.",
+    "Preserved AuthStatus fields, endpoint paths (/auth/status, /auth/login, /auth/disconnect), response shapes, and POST method behavior."
+  ]
+}
