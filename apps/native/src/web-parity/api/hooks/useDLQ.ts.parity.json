@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useDLQ.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useDLQ.ts",
+  "sourceLineCount": 147,
+  "coveredLineCount": 147,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 147-line web hook in full and preserved every exported key, hook name, query/mutation state name, endpoint path, retry/stale/refetch behavior, sudo cancellation handling, 403 replay-disabled branch, and cache invalidation scope.",
+    "Ported as native-safe non-visual TypeScript using the React Native parity request client and Alert-backed mutation toast helper; no DOM, browser UI, Recharts, Leaflet, or web components are imported.",
+    "Inlined the DLQ response DTOs from web/src/types/admin-diagnostics.ts because the native parity layer does not yet have a shared admin-diagnostics type module."
+  ]
+}
