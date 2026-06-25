@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/feedback/EmptyState.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/EmptyState.tsx",
+  "sourceLineCount": 53,
+  "coveredLineCount": 53,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 53 source lines with line numbers before porting. Imports L1-4: react-router-dom <Link> (L1), cn() (L2), shared <Button as CtaButton> (L3), <Heading>/<Text> typography (L4) were replaced by React Native View/Pressable + AppText + StyleSheet + theme tokens.",
+    "EmptyStateProps interface L6-15 ported faithfully: icon?:ReactNode, title?, message (required), action?, actionTo? {label,to}, with the source comments preserved that actionTo is the navigation CTA and takes priority over action. The web event field action.onClick (L11) is mapped to the native idiom action.onPress, and the DOM-only className (L14) is replaced by native style/testID. Added onNavigate?(to) as the native analog of react-router-dom <Link to> since native ships no DOM router.",
+    "linkButtonClasses L17-25 (the secondary/sm CTA Tailwind mirror: inline-flex/center, rounded-md, font-medium, gray-100/gray-700 bg, gray-900/gray-100 text, h-8 px-3 text-xs) collapses to the single native `secondaryButton` style (height 32 = h-8, paddingHorizontal 12 = px-3, fontSize 12 = text-xs, borderRadius 6 = rounded-md, surfaceRaised bg + textPrimary = dark secondary, weight semibold = font-medium) so both action and actionTo render identically, matching the source.",
+    "Render L27-53: <div role=status> centered column py-16 text-center (L29-32) -> <View accessibilityLiveRegion=polite> with paddingVertical 64 + alignItems/justifyContent center; icon && muted wrapper mb-4 (L33) -> conditional icon slot View with marginBottom md (web text-[var(--text-muted)] currentColor tint is the caller icon's own color in native); title && <Heading level=panel> mb-1 (L34-38) -> AppText weight=semibold fontSize 16/base color textPrimary marginBottom xs textAlign center (panelTitle token = text-base font-semibold text-primary); <Text variant=bodySm as=p> mb-4 max-w-md (L39-41) -> AppText variant=caption tone=secondary maxWidth 448 (=28rem) marginBottom md textAlign center (bodySm token = text-xs text-secondary).",
+    "CTA branch L42-50 preserved exactly: actionTo wins (L42-45) -> Pressable accessibilityRole=link onPress=onNavigate(actionTo.to) carrying the path string verbatim; else action (L46-49) -> Pressable accessibilityRole=button onPress=action.onPress; else null (L50). Function close L51-53 mirrored. No DOM elements, react-router, lucide, Recharts/Leaflet, web UI imports, API paths, or unit conversions were introduced; navigation is the only browser-only behavior and is surfaced via the explicit onNavigate hook (no-op when unwired)."
+  ]
+}
