@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useSignals.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useSignals.ts",
+  "sourceLineCount": 318,
+  "coveredLineCount": 318,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 318-line source file line by line before editing and preserved the module intent for typed-envelope signal inspector hooks across available, live, and history endpoints.",
+    "Ported signalKeys, SignalHistoryRange, ValueKind and UnitKind normalization, envelope/value coercion, descriptor normalization, all three TanStack Query hooks, query keys, enabled guards, stale/refetch timing, retry behavior, snake_case query parameters, and /signals API paths.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client, inlines the web timing constants and typed signal DTOs because the native parity layer has no web @/lib/constants or typed @/api/types alias, and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI modules."
+  ]
+}
