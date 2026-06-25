@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/maps/leafletGlobal.ts",
+  "outputPath": "apps/native/src/web-parity/components/maps/leafletGlobal.ts",
+  "sourceLineCount": 27,
+  "coveredLineCount": 27,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 27 source lines before editing. Lines 1-19 (doc block) explain that the module mirrors Leaflet onto window.L so classical browser-script plugins (leaflet-draw, leaflet.markercluster, leaflet.heat) resolve window.L at evaluation time via a side-effect import; this intent is preserved verbatim in the native doc comment.",
+    "Lines 20-25 (import L from 'leaflet'; the globalThis cast; the `typeof window !== 'undefined' && !w.L` guard; w.L = L assignment) are browser/DOM-only. The native conversion contract forbids importing Leaflet, React Native has no window/DOM, and the classical plugins never run on native (native maps use react-native-maps), so these are replaced by a native-safe no-op with an explicit LEAFLET_GLOBAL_UNAVAILABLE_REASON unavailable-state export instead of importing leaflet or touching a window global.",
+    "Line 27 (export {}) — module-ness is preserved by exporting the named LEAFLET_GLOBAL_UNAVAILABLE_REASON constant, so converted native consumers (GeofenceDrawer, MarkerCluster) can still use the side-effect import `import './leafletGlobal';` harmlessly.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported into the native output."
+  ]
+}
