@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/usePinned.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/usePinned.ts",
+  "sourceLineCount": 136,
+  "coveredLineCount": 136,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 136-line source hook line by line before editing and preserved pinnedKeys, buildQuery, usePinned, TogglePinInput, useTogglePin, ReorderPinInput, and useReorderPin behavior.",
+    "Ported the non-visual TanStack Query logic to the native web-parity API client while preserving /pinned paths, type/context query parameters, POST/DELETE/PATCH methods, request bodies, cache lookup fallback for unpin, stale time, and toast key/fallback intent.",
+    "Inlined PinnedItem/PinnedItemType and STALE_TIMES.SLOW because the native parity layer has no shared web api/types or @/lib/constants alias; browser queryBroadcast is unavailable on native, so invalidation is local TanStack Query cache invalidation."
+  ]
+}
