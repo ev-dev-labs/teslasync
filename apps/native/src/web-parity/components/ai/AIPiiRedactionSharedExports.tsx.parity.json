@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIPiiRedactionSharedExports.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIPiiRedactionSharedExports.tsx",
+  "sourceLineCount": 205,
+  "coveredLineCount": 205,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full line-numbered source before editing; covered the header contracts, source comments, shared export type allow-set, exportType state name, body shape, /ai/exports/redaction/draft useAiStream call, i18n keys, empty hint, feature gate, and display names.",
+    "Converted web AIFeatureCard/Select/withAiFeature/useAiStream/useTranslation usage to React Native-safe View/Pressable/AppText primitives, the native parity AIFeatureCard, native settings-backed AI feature gating, and native apiUrl('/ai/exports/redaction/draft') POST streaming.",
+    "Preserved the Helix visual intent, disabled-until-export-type-picked behavior, export_type canonical slug values, /api/v1 route prefix behavior, SSE state names, delta accumulation, and explicit unavailable-state errors when React Native fetch lacks readable SSE support."
+  ]
+}
