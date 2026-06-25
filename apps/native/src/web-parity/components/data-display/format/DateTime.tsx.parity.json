@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/format/DateTime.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/DateTime.tsx",
+  "sourceLineCount": 119,
+  "coveredLineCount": 119,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 119 numbered source lines before editing. L1-12 imports: the web modules @/lib/dateFormat (formatDateTime/formatRelativeTime/formatDate/formatDateShort/formatTime/tzAbbreviation/FormatOptions), @/lib/locale (resolveLocale) and @/lib/timezone (TzMode/resolveTimezone/useTimezone) have no native counterpart yet, so their pure logic is ported verbatim and self-contained; @/hooks/useSettings is swapped for the existing native ../../../api/hooks/useSettings (TanStack Query, consumed as {data: settings}).",
+    "L14 DateTimeVariant, L16-34 DateTimeProps (value/variant/in/showTz/className), L36-49 DateTime dispatcher (in!==undefined||showTz branch), L51-53 PureDateTime, L55-69 DateTimeWithTz, L71-78 RenderArgs and L80-119 renderSpan are all preserved with identical variant switch, ISO 'title' computation (L101-107), tz-aware title suffix, and tzAbbreviation gating (L109).",
+    "Visual surface converted from DOM <span>+title+className (L112-117) to AppText: the canonical ISO 'title' string is exposed via accessibilityLabel (native has no hover tooltip, matching the Avatar parity precedent); the nested muted xs abbrev span becomes a nested AppText variant=caption tone=muted with a leading space for the web ml-1 gap. className is accepted for parity but not applied (native has no className styling); added native style/testID affordances.",
+    "Native has no useSelectedVehicle context, so useTimezone passes a null vehicle tz to resolveTimezone and 'vehicle' mode degrades to the user/device timezone; browserTimezone is ported as deviceTimezone via Intl.DateTimeFormat().resolvedOptions().timeZone with a UTC fallback. No DOM-only modules, Recharts, Leaflet, or old web UI components are imported.",
+    "Gates from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
