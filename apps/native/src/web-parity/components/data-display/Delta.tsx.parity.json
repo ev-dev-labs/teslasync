@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/Delta.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/Delta.tsx",
+  "sourceLineCount": 213,
+  "coveredLineCount": 213,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 213 source lines with numbered lines before editing and preserved the full DeltaProps public shape (metric, current, previous, display, comparedTo, size, inline, hideArrow, loading, className, precision) plus its JSDoc semantics, the ResolvedUnitLabels prefix/suffix contract, and the same default values (display='percent', size='sm', inline=true, hideArrow=false, loading=false).",
+    "Ported the dependency graph inline because none exist in the native parity tree yet: web/src/lib/metricSemantics.ts (Direction, MetricUnit, MetricSemantic, METRIC_SEMANTICS registry, MetricId, resolveSemantic) is reproduced verbatim, and fmtNumber is ported from web/src/lib/numberFormat.ts with the locale try/catch and safeNumber guard (default precision 2, locale en-US).",
+    "Reproduced the useUnitLabels switch exactly (currency prefix, percent/%, mi|km, kwh→kWh, wh→Wh, wh_per_mi→efficiency, h, min, mph|kph, c|f, bar, count/default) and formatAbsolute's prefix+suffix / prefix-only / percent / suffix-only / bare branches; the web useUnits/useFormatting hooks are replaced by a native-safe DeltaUnitPrefs+currencySymbol bridge defaulting to the web no-settings values (km, km/h, °C, bar, $) and overridable via props.",
+    "Preserved all delta math and rendering branches: loading skeleton (size-based 14/16 height, 60px width), the missing/non-finite current|previous em-dash with muted colour, signedDelta, canPercent (previous!==0), signedPct, colorForDelta (0→muted, neutral→secondary, higher/lower_better→success/danger mapped from emerald-400/rose-400 via theme tokens), absDelta/absPct, absText/pctText (percent precision defaults to 1), and the absolute/both/percent valueNode selection including the faded (pctText) span and the percent→em-dash fallback when previous=0.",
+    "Converted DOM span + lucide-react ArrowUp/ArrowDown/ArrowRight + Tailwind classes + Skeleton + cn to React Native View/AppText/Text/StyleSheet with theme tokens; arrows render as ↑/↓/→ text glyphs marked decorative (accessibilityElementsHidden) like the source aria-hidden, the wrapper title tooltip maps to accessibilityHint ('{{current}} vs {{previous}}' interpolated) with the visible value as accessibilityLabel, and i18n intent is kept via the original delta.noComparison and delta.title keys through a native translation fallback with {{var}} interpolation. No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported."
+  ]
+}
