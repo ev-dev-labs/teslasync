@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useAiUsage.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useAiUsage.ts",
+  "sourceLineCount": 134,
+  "coveredLineCount": 134,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete source hook line by line before editing and preserved every exported AI usage DTO, query-key factory, hook name, and TanStack Query binding.",
+    "Ported the same native-safe request paths without /api/v1 double-prefixing: /ai/usage/today, /ai/usage/by-feature with encoded since, and /ai/usage/recent with limit.",
+    "The source is non-visual API code; no DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported, and the web INTERVALS.STANDARD cadence is preserved as a native-local constant."
+  ]
+}
