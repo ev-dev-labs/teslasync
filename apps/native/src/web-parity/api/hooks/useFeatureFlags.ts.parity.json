@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/api/hooks/useFeatureFlags.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useFeatureFlags.ts",
+  "sourceLineCount": 164,
+  "coveredLineCount": 164,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 164-line source file line by line before editing and ported the module intent, sudo re-export, featureFlagKeys factories, useFlags, useFlag, useFlagChanges, useSetFlag, and useDeleteFlag.",
+    "Preserved every source API path without an /api/v1 prefix: /system/flags, /system/flags/changes, /system/flags/{key}, /system/flags/{key}/changes, PUT /system/flags/{key}, and DELETE /system/flags/{key}?reason=...; internal/api/apiflagsh confirms those routes are mounted under /api/v1/system/flags.",
+    "Inlined the FeatureFlag DTOs from web/src/types/admin-diagnostics.ts plus INTERVALS.STANDARD, STALE_TIMES.MODERATE, and PAGINATION.DEFAULT_LIMIT because the native parity layer does not expose the web @/types/admin-diagnostics or @/lib/constants aliases.",
+    "Source is non-visual API/type hook code; native output uses the React Native-safe parity request client, forwards AbortSignal values, preserves TanStack Query cache settings, preserves mutation toast intent through the native Alert bridge, and imports no DOM, browser HTML, Recharts, Leaflet, or web UI modules.",
+    "No unit conversion or i18n rendering exists in this source hook; hook data remains raw API data and toast translation keys/fallbacks are preserved for the native feedback bridge."
+  ]
+}
