@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIAnomalyExplanations.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIAnomalyExplanations.tsx",
+  "sourceLineCount": 49,
+  "coveredLineCount": 49,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 49-line source before editing; covered the header comments, props type, InnerSection body memoization, /ai/anomalies/explain stream setup, translated card labels, vehicleId start guard, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved the POST /api/v1/ai/anomalies/explain contract with snake_case body {vehicle_id, days: 30}; React Native runtimes without fetch ReadableStream/TextDecoder support surface an explicit stream error instead of fabricating a response."
+  ]
+}
