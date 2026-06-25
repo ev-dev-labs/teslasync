@@ -108,3 +108,5 @@ route-completion-loop-logs/
 .visual-parity-loop-state/
 visual-parity-loop-logs/
 visual-parity-artifacts/
+.file-parity-loop-state/
+file-parity-loop-logs/
