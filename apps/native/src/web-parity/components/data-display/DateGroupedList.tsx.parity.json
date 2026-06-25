@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/data-display/DateGroupedList.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/DateGroupedList.tsx",
+  "sourceLineCount": 113,
+  "coveredLineCount": 113,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 113-line source with numbered lines before editing; covered the generic DateGroupedListGroup and DateGroupedListProps types, dateKey/dateLabel/relativeLabel/summary/items fields, renderItem and itemKey behavior, spacing defaults, className/testId compatibility, and all mapped group/item rendering.",
+    "Converted DOM div/section/header/span, aria-labelledby, data-date-key, Tailwind spacing, and CSS variables to React Native View/AppText/StyleSheet primitives, native colors/spacing tokens, accessibility header labels, testID hooks, and native-safe item wrappers without importing DOM-only or web UI modules.",
+    "Preserved caller-owned unit/i18n intent by keeping dateLabel, relativeLabel, summary, and renderItem as caller-supplied ReactNode values; primitive string/number nodes are wrapped in AppText so native Text nesting rules are respected."
+  ]
+}
