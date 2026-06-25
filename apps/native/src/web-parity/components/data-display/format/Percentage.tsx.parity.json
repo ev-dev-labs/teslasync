@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Percentage.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Percentage.tsx",
+  "sourceLineCount": 30,
+  "coveredLineCount": 30,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 30 numbered source lines before editing; preserved the PercentageProps public shape from lines 3-10 (value? number|null, ratio? number|null, precision?, className?) and the JSDoc intent on lines 4, 6, 12.",
+    "Ported the line 13-19 selection logic verbatim: line 15-16 `value != null && Number.isFinite(value)` keeps value as-is, line 17-18 `ratio != null && Number.isFinite(ratio)` multiplies the 0-1 ratio by 100, and the initial `v: number | null = null` (line 14) plus the null fallback (lines 21-23) render the same em dash, now via <AppText> instead of the DOM <span className>.",
+    "Converted the line 25-29 render: web's fmtNumber(v, precision) reads module-global precision/locale that useSettings seeds, so the native port sources the same from the native useSettings() hook (precision falls back to settings.decimal_precision, locale from settings.locale) and reproduces fmtNumber via an inlined locale-aware toLocaleString matching the sibling Currency parity port; the trailing literal `%` (line 27) is retained.",
+    "The canonical two-decimal value from line 26's title attribute (`${v.toFixed(2)}%`) is preserved verbatim as accessibilityLabel, the web className prop is retained for source compatibility but ignored on native, and an optional native style override plus a testID hook were added.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; only React, react-native type primitives, the native AppText component, and the native useSettings hook are used."
+  ]
+}
