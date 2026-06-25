@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AICrossRuleConflictDetection.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AICrossRuleConflictDetection.tsx",
+  "sourceLineCount": 305,
+  "coveredLineCount": 305,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 305 source lines with line numbers before editing; the conversion covers the wiring comments, RuleConflict and prop types, rule_ids/vehicle_id body construction, detect_rule_conflicts tool_result parsing, ruleIds cleanup reset, busy/canStart guards, review callbacks, conflict empty/list rendering, and withAiFeature wrapping.",
+    "Converted DOM-only AIFeatureCard/Button/div/ul/li/span usage to React Native View/Pressable/AppText/PremiumCard with native tokens while preserving feature id cross-rule-conflict-detection, POST /ai/alerts/rules/conflicts, stream state names, testIDs, i18n keys and fallback intent, and the parent-owned onSelectRule write path.",
+    "React Native fetch runtimes without ReadableStream/TextDecoder support report an explicit AI stream error instead of silently succeeding, matching the native parity unavailable-state pattern used by adjacent AI conversions."
+  ]
+}
