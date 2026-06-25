@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/maps/GeofenceDrawer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/maps/GeofenceDrawer.tsx",
+  "sourceLineCount": 272,
+  "coveredLineCount": 272,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 272 source lines line by line before editing. L1-6 imports (react useEffect/useRef, react-leaflet useMap, leaflet L, ./leafletGlobal, leaflet-draw, leaflet.draw.css) are DOM/Leaflet/CSS browser-only and were dropped; replaced with React/useCallback/useMemo plus React Native View/StyleSheet and existing native components (SectionHeader, EmptyState, AppText, PremiumCard, StatusPill) and theme tokens.",
+    "L8-50 public types preserved verbatim: L13 GeofenceMode union, L16-26 DrawableGeofence, L29-35 NewGeofence, L37-50 GeofenceDrawerProps (fences/onCreate/onEdit/onDelete/modes/color all kept; one additive native-only optional `style?: StyleProp<ViewStyle>` documented in-comment since the web had no style prop).",
+    "L56-60 ID_KEY const + TaggedLayer interface tag Leaflet layers (extends L.Layer) and have no native analog (no Leaflet layers exist), so they were omitted and documented. L62-185 GeofenceDrawer: the web mounts an L.FeatureGroup + L.Control.Draw, wires L.Draw.Event CREATED/EDITED/DELETED, syncs persisted fences into layers, and returns null. Interactive pointer drawing is genuinely browser-only, so the native port renders a read-only summary card with an explicit accessibilityRole='alert' unavailable notice (testID geofence-drawer-native-unavailable-notice).",
+    "Behavior preserved where portable: defaults modes=['circle'] (L74) and color='#22d3ee' (L75) kept; the L96-106 modes.includes() toolbar set is surfaced as per-mode chips tinted with `color`; the L112-116 capability gating (edit enabled only when onEdit, remove only when onDelete, create always-on) is reproduced by buildActionLabels referencing onCreate/onEdit/onDelete; the L168-182 fence sync is reproduced by listing each fence with describeFence and a shape chip, with EmptyState when there are no fences (null-safe `fences ?? []`).",
+    "L191-252 Leaflet geometry helpers (layerToGeometry, inferLayerType, fenceToLayer) inspect L.Circle/L.Rectangle/L.Polygon layers and cannot run natively; their shape-detection + validity rules (circle needs lat/lng + radius>0, polygon needs >=3 vertices) are reproduced against the DrawableGeofence data model as fenceShape() driving the type chip. L254-272 describeFence is preserved VERBATIM (exported pure helper, including the em-dash format, radius.toFixed(0), and lat/lng.toFixed(4)).",
+    "Rule 4/5 native-safety: no leaflet, react-leaflet, leaflet-draw, DOM elements, Recharts, or web UI imported; only React Native primitives, existing apps/native components, and theme tokens. Gates run from apps/native: `npm run typecheck` (tsc --noEmit), `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles` all green."
+  ]
+}
