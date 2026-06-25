@@ -110,3 +110,5 @@ visual-parity-loop-logs/
 visual-parity-artifacts/
 .file-parity-loop-state/
 file-parity-loop-logs/
+.file-parity-fleet-state/
+file-parity-fleet-logs/

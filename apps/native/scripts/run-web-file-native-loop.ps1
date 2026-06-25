@@ -21,12 +21,17 @@ param(
     [int]$TimeoutMinutes = 240,
     [int]$IdleTimeoutMinutes = 90,
     [int]$PollSeconds = 10,
+    [int]$ShardIndex = 0,
+    [int]$ShardCount = 1,
     [switch]$IncludeTests = $false,
     [switch]$DryRun = $false,
     [switch]$NoDiscord = $false
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($ShardCount -lt 1) { throw "ShardCount must be >= 1" }
+if ($ShardIndex -lt 0 -or $ShardIndex -ge $ShardCount) { throw "ShardIndex must be between 0 and ShardCount - 1" }
 
 New-Item -ItemType Directory -Force -Path $StateRoot, $LogRoot, $OutputRoot | Out-Null
 $donePath = Join-Path $StateRoot "done.txt"
@@ -141,7 +146,7 @@ function Test-FileConversionResult {
     if ([int]$meta.coveredLineCount -lt $sourceLines) {
         return [pscustomobject]@{ Done = $false; Reason = "not all source lines covered" }
     }
-    if (Test-Path $TranscriptPath) {
+    if (-not [string]::IsNullOrWhiteSpace($TranscriptPath) -and (Test-Path $TranscriptPath)) {
         $text = Get-Content $TranscriptPath -Raw
         if ($text -match '(?m)^STATUS=BLOCKED\s*$' -or $text -match '(?m)^EXIT=(?!0\s*$)\d+\s*$') {
             return [pscustomobject]@{ Done = $false; Reason = "blocked marker" }
@@ -224,6 +229,8 @@ function Invoke-FileConversion {
     $beforeHead = (git -C $RepoRoot rev-parse HEAD).Trim()
     @"
 Set-Location '$RepoRoot'
+`$nodeDir = Join-Path `$env:LOCALAPPDATA 'nvm\v24.18.0'
+if (Test-Path (Join-Path `$nodeDir 'node.exe')) { `$env:PATH = "`$nodeDir;`$env:PATH" }
 Get-Content -Raw '$input' | copilot --yolo --autopilot -s
 "@ | Set-Content -Path $runner -Encoding UTF8
     $proc = Start-Process -FilePath "pwsh" -ArgumentList @("-NoProfile", "-File", $runner) -WorkingDirectory $RepoRoot -RedirectStandardOutput $transcript -RedirectStandardError "$transcript.err" -PassThru
@@ -248,7 +255,7 @@ Get-Content -Raw '$input' | copilot --yolo --autopilot -s
 }
 
 $sourceFiles = Get-WebSourceFiles
-$manifest = @(
+$fullManifest = @(
     for ($i = 0; $i -lt $sourceFiles.Count; $i++) {
         $file = $sourceFiles[$i]
         $sourceRootPath = (Resolve-Path $SourceRoot).Path
@@ -265,29 +272,40 @@ $manifest = @(
         }
     }
 )
+$manifest = @($fullManifest | Where-Object { (($_.index - 1) % $ShardCount) -eq $ShardIndex })
 $manifest | ConvertTo-Json -Depth 6 | Set-Content -Path $manifestPath -Encoding UTF8
 
 $doneSet = Read-DoneSet
 $attempts = Read-Attempts
 
-Send-Discord "**TeslaSync file-by-file native conversion loop started**`nFiles: $($manifest.Count)`nDone: $($doneSet.Count)/$($manifest.Count)"
+Send-Discord "**TeslaSync file-by-file native conversion loop started**`nShard: $ShardIndex/$ShardCount`nFiles: $($manifest.Count) of $($fullManifest.Count)`nDone: $($doneSet.Count)/$($manifest.Count)"
 
 foreach ($item in $manifest) {
     $id = $item.relPath
     if ($doneSet.Contains($id)) { continue }
+
+    $existing = Test-FileConversionResult -SourcePath $item.sourceFullName -OutputPath $item.outputFullName -TranscriptPath "" -TimedOut:$false -CommittedClean:$false
+    if ($existing.Done) {
+        [void]$doneSet.Add($id)
+        Write-DoneSet $doneSet
+        Write-Host "DONE [$($item.index)/$($fullManifest.Count)] $id (existing output)"
+        Write-LoopEvent @{ event = "done-existing"; file = $id; index = $item.index; total = $fullManifest.Count }
+        continue
+    }
+
     $attempt = 1 + [int]($attempts[$id] ?? 0)
     if ($attempt -gt $MaxAttempts) {
         Write-LoopEvent @{ event = "max-attempts"; file = $id; attempts = $attempt - 1 }
         continue
     }
     if ($DryRun) {
-        Write-Host "START [$($item.index)/$($manifest.Count)] $id attempt $attempt/$MaxAttempts"
+        Write-Host "START [$($item.index)/$($fullManifest.Count)] $id attempt $attempt/$MaxAttempts"
         continue
     }
     $attempts[$id] = $attempt
     Write-Attempts $attempts
-    Write-Host "START [$($item.index)/$($manifest.Count)] $id attempt $attempt/$MaxAttempts"
-    Write-LoopEvent @{ event = "start"; file = $id; attempt = $attempt; index = $item.index; total = $manifest.Count }
+    Write-Host "START [$($item.index)/$($fullManifest.Count)] $id attempt $attempt/$MaxAttempts"
+    Write-LoopEvent @{ event = "start"; file = $id; attempt = $attempt; index = $item.index; total = $fullManifest.Count; shardIndex = $ShardIndex; shardCount = $ShardCount }
 
     $outputDir = Split-Path $item.outputFullName
     New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
@@ -298,11 +316,11 @@ foreach ($item in $manifest) {
     if ($result.Done) {
         [void]$doneSet.Add($id)
         Write-DoneSet $doneSet
-        Write-Host "DONE [$($item.index)/$($manifest.Count)] $id"
+        Write-Host "DONE [$($item.index)/$($fullManifest.Count)] $id"
         Write-LoopEvent @{ event = "done"; file = $id; attempt = $attempt; transcript = $run.Transcript }
         Send-Discord "**File native conversion DONE**`n$id`nDone: $($doneSet.Count)/$($manifest.Count)"
     } else {
-        Write-Host "BLOCKED [$($item.index)/$($manifest.Count)] $id - $($result.Reason)"
+        Write-Host "BLOCKED [$($item.index)/$($fullManifest.Count)] $id - $($result.Reason)"
         Write-LoopEvent @{ event = "blocked"; file = $id; attempt = $attempt; reason = $result.Reason; transcript = $run.Transcript }
         Send-Discord "**File native conversion blocked; loop continues**`n$id`nReason: $($result.Reason)`nAttempt: $attempt/$MaxAttempts`nDone: $($doneSet.Count)/$($manifest.Count)"
     }
