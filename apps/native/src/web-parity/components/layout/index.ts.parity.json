@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/layout/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/layout/index.ts",
+  "sourceLineCount": 16,
+  "coveredLineCount": 16,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 16 source lines line by line before editing. The web file is a pure barrel that re-exports 10 layout modules; the native port preserves that public-API surface while honouring the file-by-file conversion order.",
+    "The native web-parity/components/layout directory currently contains only this barrel (no layout sub-module has a native parity implementation yet), so there are zero active re-exports. Every web export is preserved as a forward-declaration comment that mirrors the exact web export names/types. An active `export ... from './Missing'` would break `tsc --noEmit` under isolatedModules.",
+    "Source coverage: L1 PageContainer, L2 PageHeader, L3 PageHeaderSticky+type PageHeaderStickyProps, L4 Breadcrumbs+type BreadcrumbItem, L5 Stack, L6 Grid, L7 CopyLinkButton, L8 PrefetchLink+type PrefetchLinkProps, L9 VehiclePicker+type VehiclePickerProps, and L10-16 StatusBar/useStatusBarPrefs/setStatusBarPrefs/type StatusBarProps/type StatusBarPrefs are each mirrored verbatim as forward declarations and enumerated in nativeLayoutBarrelCapabilities.pending.",
+    "Mirrors the established native barrel convention (web-parity/components/forms/index.ts and charts/index.ts) by adding an exported `nativeLayoutBarrelCapabilities` const that records ported (none yet) vs pending modules and the deferral reason, making the unavailable state explicit and programmatically inspectable per conversion contract rule 7.",
+    "No DOM, browser HTML, Recharts, Leaflet, react-router, or old web UI components are imported; the file is comment/const only and RN-safe. No native source imports this layout barrel (verified via grep), so the deferred exports break nothing.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), npm test -- --runInBand --detectOpenHandles (jest)."
+  ]
+}
