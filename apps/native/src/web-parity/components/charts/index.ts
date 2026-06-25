@@ -31,6 +31,10 @@ export {ChartExportMenu, type ChartExportMenuProps} from './ChartExportMenu';
 export {ChartTooltip, ChartTooltipBase, type ChartTooltipProps} from './ChartTooltip';
 export {ChartGradient, ChartGradientBase} from './ChartGradient';
 export {
+  SmallMultiplesChart,
+  type SmallMultiplesChartProps,
+} from './SmallMultiplesChart';
+export {
   AREA_DEFAULTS,
   areaGradient,
   createAreaGradientDescriptor,
@@ -279,145 +283,6 @@ export function Sparkline({
     testID: testID ?? dataTestID,
     width,
   });
-}
-
-export interface SmallMultiplesChartProps<
-  T extends Record<string, unknown> = Record<string, unknown>,
-> {
-  data: T[];
-  series: string[];
-  seriesLabel?: (series: string) => string;
-  xKey?: string;
-  cellHeight?: number;
-  cellMinWidth?: number;
-  columns?: number;
-  syncId?: string;
-  colorIndex?: Record<string, number>;
-  onCellClick?: (series: string) => void;
-  emptyCellLabel?: string;
-  maxPointsPerCell?: number;
-  className?: string;
-  style?: StyleProp<ViewStyle>;
-  testID?: string;
-  'data-testid'?: string;
-}
-
-export function SmallMultiplesChart<
-  T extends Record<string, unknown> = Record<string, unknown>,
->({
-  data,
-  series,
-  seriesLabel,
-  xKey = 'timestamp',
-  cellHeight = 120,
-  cellMinWidth = 280,
-  columns,
-  syncId,
-  colorIndex,
-  onCellClick,
-  emptyCellLabel = 'No data',
-  maxPointsPerCell = 400,
-  className: _className,
-  style,
-  testID,
-  'data-testid': dataTestID,
-}: SmallMultiplesChartProps<T>) {
-  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
-  const safeSeries = useMemo(
-    () => (Array.isArray(series) ? series : []),
-    [series],
-  );
-  const projections = useMemo(
-    () =>
-      safeSeries.map(key => {
-        const values = strideSample(
-          safeData
-            .map(row => safeNumberOrNull(row[key]))
-            .filter((value): value is number => value != null),
-          maxPointsPerCell,
-        );
-        const firstRow = safeData.find(row => safeNumberOrNull(row[key]) != null);
-        const lastRow = [...safeData]
-          .reverse()
-          .find(row => safeNumberOrNull(row[key]) != null);
-
-        return {
-          color:
-            NATIVE_CHART_COLORS[
-              colorIndex?.[key] == null
-                ? safeSeries.indexOf(key) % NATIVE_CHART_COLORS.length
-                : colorIndex[key] % NATIVE_CHART_COLORS.length
-            ],
-          key,
-          label: seriesLabel?.(key) ?? key,
-          rangeLabel: formatRange(firstRow?.[xKey], lastRow?.[xKey]),
-          values,
-        };
-      }),
-    [colorIndex, maxPointsPerCell, safeData, safeSeries, seriesLabel, xKey],
-  );
-  const cellBasis = columns
-    ? (`${100 / Math.max(columns, 1)}%` as DimensionValue)
-    : undefined;
-
-  return React.createElement(
-    View,
-    {
-      accessibilityLabel: `Small multiples chart${
-        syncId ? ` synced as ${syncId}` : ''
-      } with ${safeSeries.length} series`,
-      accessibilityRole: 'summary',
-      style: [styles.smallMultiplesRoot, style],
-      testID: testID ?? dataTestID,
-    },
-    projections.map(item =>
-      React.createElement(
-        Pressable,
-        {
-          key: item.key,
-          accessibilityLabel: `${item.label}. ${item.values.length} points. ${item.rangeLabel}`,
-          accessibilityRole: onCellClick ? 'button' : 'summary',
-          disabled: !onCellClick,
-          onPress: onCellClick ? () => onCellClick(item.key) : undefined,
-          style: ({pressed}) => [
-            styles.smallMultipleCell,
-            {
-              flexBasis: cellBasis,
-              minHeight: cellHeight,
-              minWidth: Math.min(cellMinWidth, 360),
-            },
-            pressed && styles.pressed,
-          ],
-        },
-        React.createElement(
-          View,
-          {pointerEvents: 'none', style: styles.smallMultipleHeader},
-          React.createElement(
-            AppText,
-            {numberOfLines: 1, variant: 'caption', weight: 'semibold'},
-            item.label,
-          ),
-          React.createElement(
-            AppText,
-            {numberOfLines: 1, variant: 'caption', tone: 'muted'},
-            item.rangeLabel,
-          ),
-        ),
-        item.values.length > 0
-          ? React.createElement(NativeSparkBars, {
-              color: item.color,
-              data: item.values,
-              height: Math.max(cellHeight - 52, 36),
-              width: Math.max(cellMinWidth - spacing.lg, 120),
-            })
-          : React.createElement(
-              AppText,
-              {style: styles.emptyCell, tone: 'muted', variant: 'caption'},
-              emptyCellLabel,
-            ),
-      ),
-    ),
-  );
 }
 
 export interface TimeMarkerProps {
@@ -979,45 +844,11 @@ function safeNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-function safeNumberOrNull(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
 function formatNumber(value: number, decimals = DEFAULT_NUMBER_PRECISION): string {
   return value.toLocaleString('en-US', {
     maximumFractionDigits: decimals,
     minimumFractionDigits: decimals,
   });
-}
-
-function strideSample<T>(rows: T[], cap: number): T[] {
-  if (cap <= 0 || rows.length <= cap) {
-    return rows;
-  }
-
-  const stride = Math.ceil(rows.length / cap);
-  const sampled: T[] = [];
-  for (let index = 0; index < rows.length; index += stride) {
-    sampled.push(rows[index]);
-  }
-  const last = rows[rows.length - 1];
-  if (sampled[sampled.length - 1] !== last) {
-    sampled.push(last);
-  }
-  return sampled;
-}
-
-function formatRange(first: unknown, last: unknown): string {
-  if (first == null && last == null) {
-    return 'No range';
-  }
-  if (first === last || last == null) {
-    return String(first);
-  }
-  if (first == null) {
-    return String(last);
-  }
-  return `${String(first)} - ${String(last)}`;
 }
 
 function normalizeSeverity(severity: string | null | undefined): Severity {
@@ -1155,9 +986,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 80,
   },
-  emptyCell: {
-    marginTop: spacing.md,
-  },
   metricPill: {
     borderColor: colors.border,
     borderRadius: 999,
@@ -1206,25 +1034,6 @@ const styles = StyleSheet.create({
     minHeight: 120,
     minWidth: 0,
     width: '100%',
-  },
-  smallMultipleCell: {
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexGrow: 1,
-    gap: spacing.sm,
-    margin: spacing.xs,
-    overflow: 'hidden',
-    padding: spacing.md,
-  },
-  smallMultipleHeader: {
-    gap: spacing.xs,
-  },
-  smallMultiplesRoot: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
   },
   sparkBar: {
     borderRadius: 999,

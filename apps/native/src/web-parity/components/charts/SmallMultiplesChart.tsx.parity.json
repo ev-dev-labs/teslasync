@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/charts/SmallMultiplesChart.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/SmallMultiplesChart.tsx",
+  "sourceLineCount": 319,
+  "coveredLineCount": 319,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 319 source lines line by line before editing and preserved the exported generic SmallMultiplesChartProps API, defaults, xKey handling, per-series labels, colorIndex mapping, emptyCellLabel fallback, and onCellClick drill-in behavior.",
+    "Ported the per-cell finite-number projection and stride downsampling logic, including first/last preservation, into React Native-safe TypeScript while avoiding DOM, Recharts, ChartTooltip, cn, and browser hooks.",
+    "Converted the grid of lazy Recharts line-chart cells into React Native flex-wrap Pressable/View/AppText cells using native TeslaSync tokens, per-cell y domains, x/y tick labels, line segments, no-data placeholders, test IDs, and latest-value summaries.",
+    "Browser-only IntersectionObserver lazy mounting, Recharts hover tooltip, keyboard activation, and syncId crosshair synchronization were considered; native exposes explicit SMALL_MULTIPLES_NATIVE_CAPABILITIES unavailable states and keeps syncId in accessibility metadata."
+  ]
+}
