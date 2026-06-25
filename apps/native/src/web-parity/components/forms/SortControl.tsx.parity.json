@@ -1,0 +1,29 @@
+{
+  "sourcePath": "web/src/components/forms/SortControl.tsx",
+  "outputPath": "apps/native/src/web-parity/components/forms/SortControl.tsx",
+  "sourceLineCount": 90,
+  "coveredLineCount": 90,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 90 source lines with numbered output before editing.",
+    "L1 `import { useTranslation } from 'react-i18next'`: react-i18next is not a native dependency, so it is replaced by a local useNativeTranslationFallback() t-shim that returns the fallback copy verbatim (same pattern as the native ChartExportMenu/BulkActionsToolbar ports); all i18n keys + fallbacks are preserved.",
+    "L2 `import { ArrowDown, ArrowUp } from 'lucide-react'`: lucide is browser-only; the asc/desc arrows become semantic glyphs `\\u2191` (ArrowUp) / `\\u2193` (ArrowDown) rendered in AppText, mirroring the native TransitionArrow glyph approach.",
+    "L3 `import { Select } from '@/components/ui/Select'`: the DOM `<select>` web UI component is unavailable in native parity; replaced by a trigger Pressable (active label + `\\u25BE` caret) that opens a Modal option list -- the established native dropdown pattern.",
+    "L4 `import { cn } from '@/lib/cn'`: Tailwind class-merge is web-only and dropped; className is retained on props for source compatibility but ignored, with a native `style` override added instead.",
+    "L6 `export type SortDirection = 'asc' | 'desc'`: preserved verbatim.",
+    "L8-13 SortOption<F> interface (value/label + JSDoc): preserved verbatim.",
+    "L15-27 SortControlProps<F> (field, direction, options, onFieldChange, onDirectionChange, className, testId, directionAriaLabel + JSDoc): all preserved; native `style?` added alongside the retained className.",
+    "L29-39 component JSDoc (`[▾ Field name] [↓]`, field dropdown + direction toggle, generic over F): carried over verbatim onto the native component plus a file header documenting the native-safe substitutions.",
+    "L40-49 `export function SortControl<F extends string = string>({...})`: generic signature + every destructured prop name preserved (className aliased to _className as ignored on native).",
+    "L50 `const { t } = useTranslation()` -> `const t = useNativeTranslationFallback()`.",
+    "L51 `flip = () => onDirectionChange(direction === 'asc' ? 'desc' : 'asc')`: preserved (wrapped in useCallback); also drives the toggle Pressable onPress.",
+    "L52-55 dirLabel asc->'Ascending' / desc->'Descending' via t(): preserved verbatim.",
+    "L57-61 outer `<div data-testid={testId} className='inline-flex items-center gap-1'>` -> RN <View> {flexDirection:'row', alignItems:'center', gap: spacing.xs (gap-1=4px)} with testID={testId}.",
+    "L62-69 `<Select value={field} onChange=(e)=>onFieldChange(e.target.value) aria-label='Sort by' data-testid=`${testId}-field` options size='sm'>`: native trigger Pressable (accessibilityLabel='Sort by', accessibilityState.expanded, testID `${testId}-field`) showing selected option label (find by value, falling back to the field key); options.map preserved into the Modal menu where each menuitem Pressable calls onFieldChange(value) -- same effect as the web onChange.",
+    "L70-81 direction `<button onClick={flip} aria-label={directionAriaLabel ?? `${'Sort direction'}: ${dirLabel}`} title={dirLabel} data-testid=`${testId}-direction` class=(border/surface/hover/focus-ring)>`: native Pressable with accessibilityLabel=directionLabel (same ?? fallback), title mapped to accessibilityHint={dirLabel} (no native tooltip), testID `${testId}-direction`, and a bordered 36x36 surface box styled from theme tokens with a pressed-opacity state replacing hover/focus rings.",
+    "L82-87 `{direction === 'asc' ? <ArrowUp aria-hidden/> : <ArrowDown aria-hidden/>}`: native ternary renders the `\\u2191`/`\\u2193` glyph in a decorative AppText (no a11y label; the parent Pressable carries the label).",
+    "L88-90 closing `</div>` + function close: native View/Modal closing tags; SortControl.displayName added; no DOM, Tailwind, cn, lucide, Recharts, Leaflet, or web UI Select imported.",
+    "Native extras (not in web, additive only): a Modal/backdrop close affordance ('Close sort options') and `${testId}-options` / `${testId}-option-${value}` test hooks for the dropdown list.",
+    "Verification: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
