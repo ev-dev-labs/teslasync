@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/components/feedback/ErrorDisplay.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/ErrorDisplay.tsx",
+  "sourceLineCount": 166,
+  "coveredLineCount": 166,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 166 source lines with a numbered view before editing.",
+    "L1 `useTranslation` (react-i18next): replaced by the shared native fallback hook `useNativeTranslationFallback` -> NativeTFunction (key, fallback, values?) with `{{var}}` interpolation; every t() key + English fallback copied verbatim.",
+    "L2 `useNavigate` (react-router-dom): replaced by an `onNavigate(href)` bridge prop; the 404 CTA calls `onNavigate(listHref)` (L62) and the 401 CTA calls `onNavigate('/login')` (L88 window.location.href).",
+    "L3 lucide-react icons AlertCircle/FileQuestion/Lock/Server/WifiOff: mapped to the `ErrorIconKey` union + `ERROR_ICON_GLYPHS` rose badge ('!','?','LK','SV','WX'); lucide identity preserved per branch.",
+    "L4 `../ui/Button`: replaced by internal `ErrorActionButton` (rose Pressable + AppText), mirroring `variant=ghost size=sm` + `bg-rose-500/10 text-rose-300 hover:bg-rose-500/20`.",
+    "L5 `isApiError` from '@/api/client': imported from native '../../api/client' (same ApiError.status branch).",
+    "L6 `useOnlineStatus` (navigator.onLine): replaced by `online` bridge prop defaulting to true; offline branch still reached via `status === 0` (L128).",
+    "L7 `./_ErrorState`: ported as internal `ErrorState` layout primitive (icon badge + title + message + action, compact variant, role/aria), not exported (web also keeps it private).",
+    "L9-24 `ErrorDisplayProps` interface + JSDoc preserved (error: unknown, onRetry, compact, className, resourceName, listHref); className retained for parity but unused natively (destructured `_className`); native extras added: onNavigate, online, style, testID.",
+    "L26-39 component JSDoc + signature preserved; `useTranslation`/`useNavigate`/`useOnlineStatus` hook calls replaced by native equivalents (t hook, onNavigate prop, online prop).",
+    "L44 `if (!error) return null` preserved.",
+    "L46 `const status = isApiError(error) ? error.status : undefined` preserved verbatim.",
+    "L48-73 404 branch: FileQuestion icon, `thing = resourceName ?? t('error.notFound.thingDefault','Resource')`, interpolated title `{{thing}} not found`, message, and listHref-gated `Back to list` CTA (onNavigate(listHref)) all preserved.",
+    "L75-99 401/403 branch: Lock icon, `Sign in required` title/message, `Sign in` CTA routed through onNavigate('/login') (replaces window.location.href).",
+    "L101-125 5xx branch: `status !== undefined && status >= 500`, Server icon, `Server error` title/message, onRetry-gated `Retry` CTA preserved.",
+    "L127-164 network/offline branch: `isOffline = !online || status === 0`, WifiOff/AlertCircle icon, role status/alert + ariaLive polite/assertive mapped to accessibilityLiveRegion + accessibilityRole, offline vs online title/message copy, and onRetry-gated CTA with `disabled={isOffline}` + `Retry when online`/`Retry` label preserved (aria-disabled -> accessibilityState.disabled).",
+    "L165-166 closing JSX/function preserved; added ErrorDisplay.displayName. No DOM/Recharts/Leaflet/web-UI imports; only RN primitives + native AppText + theme tokens + native api client."
+  ]
+}
