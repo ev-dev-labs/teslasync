@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useChat.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useChat.ts",
+  "sourceLineCount": 108,
+  "coveredLineCount": 108,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete 108-line source hook line by line before editing and preserved every exported chat query key, query hook, mutation hook, cache update, invalidation, removeQueries call, toast fallback, enabled gate, and send-message callback option.",
+    "Source is non-visual API hook code; the native output imports only TanStack Query, the React Native-safe devtools parity API functions/types, and the Alert-backed native mutation toast bridge.",
+    "Preserved chatbot endpoint behavior through the existing native devtools functions, including /chatbot, /chatbot/history, /chatbot/sessions, session_id payload/query naming, and rename/delete session paths."
+  ]
+}
