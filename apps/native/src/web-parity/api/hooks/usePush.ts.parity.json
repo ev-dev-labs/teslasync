@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/usePush.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/usePush.ts",
+  "sourceLineCount": 112,
+  "coveredLineCount": 112,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 112-line source hook line by line before editing and preserved pushKeys, usePushPublicKey, usePushSubscriptions, useSubscribePush, and useUnsubscribePush behavior.",
+    "Ported the non-visual TanStack Query logic to the native web-parity API client while preserving /push/public-key and /push/subscribe paths, GET/POST/DELETE methods, request bodies, stale times, retry=false for the public key query, null-on-404 behavior, and toast key/fallback intent.",
+    "Inlined PushSubscriptionRow, PushSubscribeBody, and STALE_TIMES because the native parity layer has no shared web api/types or @/lib/constants alias; browser queryBroadcast is unavailable on native, so invalidation is local TanStack Query cache invalidation.",
+    "Documented browserPushManagerAvailable=false because native cannot create the browser PushManager payload in this slice; the server-side hook contract remains available for callers that provide compatible endpoint/key data."
+  ]
+}
