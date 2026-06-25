@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/maps/MapTileLayer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/maps/MapTileLayer.tsx",
+  "sourceLineCount": 176,
+  "coveredLineCount": 176,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 176 source lines with numbered output before editing. Replaced the react-leaflet/react-dom/FullscreenButton imports (L1-6) with React, React Native primitives, @tanstack/react-query, the native parity getMapConfig/MapConfig (web-parity/api/settings), AppText, and theme tokens — no DOM/Leaflet/web-UI modules imported.",
+    "Preserved the exported MapStyle union (L8), the non-exported MapTileLayerProps shape (L10-12, with native-only containerStyle/testID conveniences), the TileDef type (L14), and the freeTiles/azureTiles/googleTiles tile tables (L16-52) verbatim including every url and HTML attribution string and the i18n-ignore brand-name comments.",
+    "MapTileLayer (L54-70): kept the ['map-config'] useQuery (queryFn getMapConfig -> /system/map-config, staleTime 5*60*1000) and the azure/google/free provider-selection branch (extracted into resolveTiles), and the `tiles[style] || tiles.dark` fallback. The Leaflet <TileLayer url attribution/> render (no native raster tiles / no react-native-maps installed) becomes an explicit native-safe placeholder surface that still shows the resolved style, provider, and decoded attribution.",
+    "MapInvalidator (L72-80): Leaflet invalidateSize() has no native equivalent, so — matching the web component's null return — the native port is a render-nothing no-op, documented inline and in this sidecar.",
+    "MapFullscreenControl doc + props + positions (L82-121): preserved the exported MapFullscreenControlProps (position/ariaLabelEnter/ariaLabelExit) and ported POSITION_CLASS Tailwind corners (L116-121) to POSITION_STYLE absolute offsets with zIndex 800 to mirror z-[800].",
+    "MapFullscreenControl body (L123-176): createPortal into map.getContainer(), useMap(), and the document 'fullscreenchange' Fullscreen API are browser-only, so the native port keeps the corner positioning and enter/exit label logic (label flips on tracked isFullscreen, which never activates on native) and surfaces an explicit 'fullscreen unavailable on native' notice on press instead of toggling browser fullscreen.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
