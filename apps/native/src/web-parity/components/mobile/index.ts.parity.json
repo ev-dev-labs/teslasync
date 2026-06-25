@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/mobile/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/mobile/index.ts",
+  "sourceLineCount": 11,
+  "coveredLineCount": 11,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source barrel line by line. Lines 1-8 are the JSDoc describing the pull-to-refresh + swipe-to-action gesture primitives and their touch-only/desktop-passthrough intent; that intent is preserved verbatim in the native barrel's JSDoc.",
+    "Line 9 is blank. Line 10 `export { PullToRefresh, type PullToRefreshProps } from './PullToRefresh'` and line 11 `export { SwipeRow, type SwipeRowProps, type SwipeAction } from './SwipeRow'` are re-exported with identical public names from the new native sibling implementations.",
+    "Following the established sibling a11y/index.ts pattern, the native barrel additionally re-exports nativePullToRefreshCapabilities and nativeSwipeRowCapabilities so the documented unavailable-state contract (DOM TouchEvent gesture replaced by RefreshControl / react-native-gesture-handler Swipeable) is reachable.",
+    "The barrel imports no DOM-only modules, browser HTML elements, Recharts, Leaflet, lucide-react, or old web UI components; the sibling .tsx ports use only React Native primitives (View/StyleSheet)."
+  ]
+}

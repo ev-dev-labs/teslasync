@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/mobile/PullToRefresh.tsx",
+  "outputPath": "apps/native/src/web-parity/components/mobile/PullToRefresh.tsx",
+  "sourceLineCount": 258,
+  "coveredLineCount": 258,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. The JSDoc (lines 1-25) describing the iOS-Mail pull-to-refresh interaction, the touch-only/coarse-pointer opt-in, the prefers-reduced-motion handling, and the { passive: false } imperative listeners is summarised in the native header.",
+    "The browser-only machinery — DOM TouchEvent listeners (lines 138-187), preventDefault (162-164), isAtScrollTop's getComputedStyle/document/window scroll walk (62-80), the lucide-react Loader2 spinner, Tailwind <div> indicator, and inline transform/transition styles (200-256) — has no React Native analog, so it is documented as unavailable via nativePullToRefreshCapabilities.",
+    "The public surface is preserved: PullToRefreshProps keeps onRefresh, threshold, children, enabled; the web `className` (cn merge, line 36/203) becomes the native `style` prop matching sibling web-parity ports. DEFAULT_THRESHOLD/MAX_PULL state is documented as inert because the gesture is unavailable.",
+    "The native component mirrors the source's inactive branch (line 192-194 `if (!active) return <>{children}</>`) by rendering children straight through inside a transparent View with testID 'pull-to-refresh' (the native analog of the web data-testid). No DOM-only modules, browser HTML, Recharts, Leaflet, or lucide-react are imported."
+  ]
+}

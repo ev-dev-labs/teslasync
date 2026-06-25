@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/mobile/SwipeRow.tsx",
+  "outputPath": "apps/native/src/web-parity/components/mobile/SwipeRow.tsx",
+  "sourceLineCount": 342,
+  "coveredLineCount": 342,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. The JSDoc (lines 1-27) describing the iOS-Mail swipe-to-archive/delete interaction, reveal/auto-fire thresholds, vertical-drag abort, the navigator.vibrate haptic, and the touch-only/coarse-pointer opt-in is summarised in the native header.",
+    "The browser-only machinery — DOM TouchEvent listeners (lines 150-269), preventDefault (204-206), getBoundingClientRect width math (191/225), safeVibrate/navigator.vibrate (89-101), the lucide-react Archive/Trash2 icons (76-81), and the absolutely-positioned Tailwind <button> action underlays with inline translate3d transform (279-340) — has no React Native analog, so it is documented as unavailable via nativeSwipeRowCapabilities.",
+    "The public surface is preserved: SwipeAction keeps label, onAction, tone, icon, ariaLabel; SwipeRowProps keeps children, rightAction, leftAction, enabled, revealThreshold; the web `className` (cn merge, line 37/282) becomes the native `style` prop matching sibling web-parity ports.",
+    "The native component mirrors the source's inactive branch (line 271-273 `if (!active) return <>{children}</>`) by rendering children straight through inside an overflow:'hidden' View (the native analog of the web `relative overflow-hidden` wrapper) with testID 'swipe-row'. No DOM-only modules, browser HTML, Recharts, Leaflet, or lucide-react are imported."
+  ]
+}
