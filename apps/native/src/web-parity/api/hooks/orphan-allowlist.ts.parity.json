@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/orphan-allowlist.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/orphan-allowlist.ts",
+  "sourceLineCount": 79,
+  "coveredLineCount": 79,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 79 source lines line by line before editing and mapped the OrphanWaiver interface, INTENTIONAL_ORPHANS entries, and isIntentionalOrphan predicate.",
+    "Source is non-visual utility/API metadata, so the native output preserves behavior and exports without importing DOM-only modules, browser HTML, Recharts, Leaflet, or web UI components.",
+    "No unit handling, i18n behavior, visual primitives, or browser-only capabilities exist in the source file; both intentional orphan waiver reasons and tracking text are preserved for audit parity."
+  ]
+}
