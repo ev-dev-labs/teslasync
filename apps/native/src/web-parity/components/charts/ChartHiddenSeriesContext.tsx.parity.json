@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/ChartHiddenSeriesContext.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartHiddenSeriesContext.tsx",
+  "sourceLineCount": 58,
+  "coveredLineCount": 58,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 58 source lines line by line and preserved the ChartHiddenSeriesContext export, useChartHiddenSeries hook, ChartHiddenSeriesProvider render-prop API, null state for charts without chartKey, and private inner provider pattern.",
+    "Ported the HiddenSeriesState shape faithfully with hidden, toggle, isHidden, and reset state names so ChartContainer render props and legend consumers keep the same contract.",
+    "React Native has no browser URL/search-param layer, so the web useHiddenSeries dependency was replaced by a native-safe chartKey-scoped in-memory store with canonical sorted hidden-series values; this unavailable URL persistence difference is explicit in the native source comment."
+  ]
+}

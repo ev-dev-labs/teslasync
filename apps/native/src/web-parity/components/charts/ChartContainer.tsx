@@ -3,10 +3,8 @@
 // container API, annotation flow, fallback data table, and label-anchor helper.
 
 import React, {
-  createContext,
   forwardRef,
   useCallback,
-  useContext,
   useEffect,
   useId,
   useMemo,
@@ -36,18 +34,18 @@ import {
 } from '../../api/hooks/useAnnotations';
 import {AddAnnotationPopover} from './AddAnnotationPopover';
 import {AnnotationList} from './AnnotationList';
+import {
+  ChartHiddenSeriesProvider,
+  type HiddenSeriesState,
+} from './ChartHiddenSeriesContext';
+
+export {useChartHiddenSeries} from './ChartHiddenSeriesContext';
+export type {HiddenSeriesState} from './ChartHiddenSeriesContext';
 
 export interface ChartAnnotationsConfig {
   vehicleId?: number | null;
   scope: AnnotationScope;
   chartId?: string;
-}
-
-export interface HiddenSeriesState {
-  hidden: Set<string>;
-  toggle: (seriesKey: string) => void;
-  isHidden: (seriesKey: string) => boolean;
-  reset: () => void;
 }
 
 export interface ChartContainerRenderProps {
@@ -103,13 +101,10 @@ type NativeTFunction = (
 type Direction = 'ltr' | 'rtl';
 
 const HIDDEN_STORAGE_PREFIX = 'teslasync-annotations-hidden:';
-const HIDDEN_SERIES_PREFIX = 'teslasync-hidden-series:';
 const RTL_LANGS: ReadonlySet<string> = Object.freeze(
   new Set(['ar', 'he', 'fa', 'ur']),
 );
 const annotationHiddenPrefs = new Map<string, boolean>();
-const hiddenSeriesPrefs = new Map<string, readonly string[]>();
-const ChartHiddenSeriesContext = createContext<HiddenSeriesState | null>(null);
 
 function readHiddenPref(key: string): boolean {
   return annotationHiddenPrefs.get(HIDDEN_STORAGE_PREFIX + key) === true;
@@ -121,19 +116,6 @@ function writeHiddenPref(key: string, hidden: boolean): void {
     annotationHiddenPrefs.set(storageKey, true);
   } else {
     annotationHiddenPrefs.delete(storageKey);
-  }
-}
-
-function readHiddenSeriesPref(chartKey: string): readonly string[] {
-  return hiddenSeriesPrefs.get(HIDDEN_SERIES_PREFIX + chartKey) ?? [];
-}
-
-function writeHiddenSeriesPref(chartKey: string, hidden: readonly string[]): void {
-  const storageKey = HIDDEN_SERIES_PREFIX + chartKey;
-  if (hidden.length === 0) {
-    hiddenSeriesPrefs.delete(storageKey);
-  } else {
-    hiddenSeriesPrefs.set(storageKey, hidden);
   }
 }
 
@@ -163,62 +145,6 @@ function useNativeTranslationFallback(): NativeTFunction {
       interpolate(fallback, params),
     [],
   );
-}
-
-function useNativeHiddenSeries(chartKey: string | undefined): HiddenSeriesState | null {
-  const [hiddenValues, setHiddenValues] = useState<readonly string[]>(() =>
-    chartKey ? readHiddenSeriesPref(chartKey) : [],
-  );
-
-  useEffect(() => {
-    setHiddenValues(chartKey ? readHiddenSeriesPref(chartKey) : []);
-  }, [chartKey]);
-
-  const hidden = useMemo(() => new Set(hiddenValues), [hiddenValues]);
-
-  const isHidden = useCallback(
-    (seriesKey: string) => hidden.has(seriesKey),
-    [hidden],
-  );
-
-  const toggle = useCallback(
-    (seriesKey: string) => {
-      if (!chartKey) {
-        return;
-      }
-
-      setHiddenValues(prev => {
-        const next = new Set(prev);
-        if (next.has(seriesKey)) {
-          next.delete(seriesKey);
-        } else {
-          next.add(seriesKey);
-        }
-
-        const sorted = Array.from(next).sort();
-        writeHiddenSeriesPref(chartKey, sorted);
-        return sorted;
-      });
-    },
-    [chartKey],
-  );
-
-  const reset = useCallback(() => {
-    if (!chartKey) {
-      return;
-    }
-    writeHiddenSeriesPref(chartKey, []);
-    setHiddenValues([]);
-  }, [chartKey]);
-
-  return useMemo(
-    () => (chartKey ? {hidden, toggle, isHidden, reset} : null),
-    [chartKey, hidden, isHidden, reset, toggle],
-  );
-}
-
-export function useChartHiddenSeries(): HiddenSeriesState | null {
-  return useContext(ChartHiddenSeriesContext);
 }
 
 function escapeCell(value: CsvCellValue): string {
@@ -346,8 +272,6 @@ export const ChartContainer = forwardRef<View, ChartContainerProps>(
     const [hidden, setHidden] = useState(() => readHiddenPref(annotationKey));
     const [popoverOpen, setPopoverOpen] = useState(false);
     const [nativeNotice, setNativeNotice] = useState<string | null>(null);
-    const hiddenSeries = useNativeHiddenSeries(chartKey);
-
     useEffect(() => {
       if (annotationsEnabled) {
         setHidden(readHiddenPref(annotationKey));
@@ -430,11 +354,11 @@ export const ChartContainer = forwardRef<View, ChartContainerProps>(
       annotationsEnabled && !hidden && visibleAnnotations.length > 0;
 
     const renderChildren = useCallback(
-      () =>
+      (hiddenSeries: HiddenSeriesState | null) =>
         isFunctionChildren(children)
           ? children({annotations: visibleAnnotations, hidden, hiddenSeries})
           : children,
-      [children, hidden, hiddenSeries, visibleAnnotations],
+      [children, hidden, visibleAnnotations],
     );
 
     const handleCsv = useCallback(() => {
@@ -588,16 +512,18 @@ export const ChartContainer = forwardRef<View, ChartContainerProps>(
               message={t('chart.noData', 'No data available')}
             />
           ) : (
-            <ChartHiddenSeriesContext.Provider value={hiddenSeries}>
-              <NativeSectionErrorBoundary
-                fallbackTitle={t(
-                  'errors.section.chartTitle',
-                  'This chart failed to load',
-                )}
-                name={`chart:${title}`}>
-                {renderChildren()}
-              </NativeSectionErrorBoundary>
-            </ChartHiddenSeriesContext.Provider>
+            <ChartHiddenSeriesProvider chartKey={chartKey}>
+              {hiddenSeries => (
+                <NativeSectionErrorBoundary
+                  fallbackTitle={t(
+                    'errors.section.chartTitle',
+                    'This chart failed to load',
+                  )}
+                  name={`chart:${title}`}>
+                  {renderChildren(hiddenSeries)}
+                </NativeSectionErrorBoundary>
+              )}
+            </ChartHiddenSeriesProvider>
           )}
         </View>
 
