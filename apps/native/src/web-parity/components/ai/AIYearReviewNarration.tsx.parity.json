@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIYearReviewNarration.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIYearReviewNarration.tsx",
+  "sourceLineCount": 44,
+  "coveredLineCount": 44,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing; covered the header route comment, optional numeric vehicleId prop, previous-calendar-year default, memoized vehicle_id/year body, stream invocation, translated labels, canStart condition, feature id, and display names.",
+    "Preserved the yir-narration feature id, POST /api/v1/ai/analytics/year-in-review/narrate route via native apiUrl('/ai/analytics/year-in-review/narrate'), body keys vehicle_id/year, stream state names, duplicate-start no-op behavior, and vehicleId != null start gating.",
+    "Converted web-only react-i18next, DOM wrapper, web withAiFeature, and web useAiStream dependencies to React Native View gating, settings-backed AI feature enablement, fallback translation intent, the native AIFeatureCard visual scaffold, and an explicit unavailable error if React Native fetch lacks readable SSE body support."
+  ]
+}
