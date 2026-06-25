@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/maps/MarkerCluster.tsx",
+  "outputPath": "apps/native/src/web-parity/components/maps/MarkerCluster.tsx",
+  "sourceLineCount": 233,
+  "coveredLineCount": 233,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 233 source lines before editing. L1-7 leaflet/react-leaflet/markercluster imports + CSS are dropped (no DOM/Leaflet in native) and replaced with React Native View/AppText primitives; documented in the header block.",
+    "L13-24 ClusterPoint interface ported verbatim (id, lat, lng, popupHtml, color, ariaLabel). L26-52 MarkerClusterProps ported with identical JSDoc/defaults; the only change is iconCreateFunction returns a native-safe ClusterIconDescriptor instead of L.DivIcon (L39), with getClusterColor (L51) precedence preserved.",
+    "L64-100 defaultIconCreate ported with the exact density thresholds and colours (>=100 rgba(244,63,94,.85)/#f43f5e rose, >=25 rgba(251,191,36,.85)/#fbbf24 amber, >=10 rgba(168,85,247,.85)/#a855f7 purple, else rgba(34,211,238,.85)/#22d3ee cyan), override-color branch, 36px size, [18,18] anchor, border rgba(255,255,255,.85), text #0b1020, className 'teslasync-cluster' captured as a ClusterIconDescriptor instead of HTML.",
+    "L102-114 makeDotIcon ported: 16px size, [8,8] anchor, [0,-8] popupAnchor, fill=color, border rgba(255,255,255,.9), glow=color, empty className, as a DotIconDescriptor.",
+    "L126-156 component signature + default props (maxClusterRadius=50, disableClusteringAtZoom=18, defaultColor='#22d3ee') and the three stable handler refs + sync effects (L143-156) ported faithfully.",
+    "L139 safePoints 5000 cap preserved (MAX_RENDERED_MARKERS); L162-164 WeakMap marker->point recovery is unnecessary natively because descriptors carry the point directly, documented.",
+    "L166-201 the leaflet markerClusterGroup creation/addLayer/removeLayer side-effects are not portable (no map); the cluster iconCreateFunction precedence (custom -> getClusterColor -> defaultIconCreate, L179-183) is preserved in the `plan` memo. L203-230 marker build loop preserved: coordinate filtering (typeof number + NaN guard, L210-211), icon via makeDotIcon (L213), popupHtml (L217-219), ariaLabel, and click forwarding through onMarkerClickRef (L220-222).",
+    "L232 `return null` becomes a visually-hidden accessible status node stating the explicit 'interactive map clustering unavailable on native' state, preserving the no-visible-output visual intent; nativeMarkerClusterCapabilities documents leaflet/markercluster/divIcon unavailability."
+  ]
+}
