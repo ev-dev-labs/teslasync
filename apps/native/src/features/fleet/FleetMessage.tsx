@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { SemanticIcon, type SemanticIconName } from '../../components/icons/SemanticIcon';
@@ -29,7 +29,7 @@ export function FleetMessage({
 }: FleetMessageProps) {
   return (
     <View style={[styles.root, toneStyles[tone]]}>
-      <SemanticIcon name={icon ?? toneIcon[tone]} decorative />
+      <SemanticIcon name={icon ?? toneIcon[tone]} size="lg" decorative />
       <EmptyState title={title} message={message} />
     </View>
   );
@@ -37,16 +37,17 @@ export function FleetMessage({
 
 const styles = StyleSheet.create({
   root: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    minHeight: 128,
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.md,
     borderWidth: 1,
-    borderRadius: 18,
-    padding: spacing.md,
+    borderRadius: 22,
+    padding: spacing.lg,
   },
 });
 
-const toneStyles = StyleSheet.create<Record<FleetMessageTone, {borderColor: string; backgroundColor: string}>>({
+const toneStyles = StyleSheet.create<Record<FleetMessageTone, ViewStyle>>({
   empty: {
     borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,

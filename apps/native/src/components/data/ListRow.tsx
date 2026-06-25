@@ -18,6 +18,8 @@ interface ListRowProps {
   meta?: string;
   detail?: ReactNode;
   icon?: SemanticIconName;
+  selected?: boolean;
+  tone?: 'accent' | 'neutral' | 'success' | 'warning';
   onPress?: (event: GestureResponderEvent) => void;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
@@ -29,6 +31,8 @@ export function ListRow({
   meta,
   detail,
   icon,
+  selected = false,
+  tone = 'neutral',
   onPress,
   accessibilityLabel,
   style,
@@ -37,7 +41,8 @@ export function ListRow({
     accessibilityLabel ?? [title, subtitle, meta].filter(Boolean).join(', ');
   const content = (
     <>
-      {icon ? <SemanticIcon name={icon} decorative /> : null}
+      <View style={[styles.sideRail, selected && styles.sideRailSelected, toneRailStyles[tone]]} />
+      {icon ? <SemanticIcon name={icon} decorative style={selected ? styles.selectedIcon : undefined} /> : null}
       <View style={styles.copy}>
         <View style={styles.titleRow}>
           <AppText weight="semibold" style={styles.title}>
@@ -61,7 +66,12 @@ export function ListRow({
         accessibilityRole="button"
         accessibilityLabel={label}
         onPress={onPress}
-        style={({pressed}) => [styles.root, pressed && styles.pressed, style]}>
+        style={({pressed}) => [
+          styles.root,
+          selected && styles.selected,
+          pressed && styles.pressed,
+          style,
+        ]}>
         {content}
       </Pressable>
     );
@@ -72,7 +82,7 @@ export function ListRow({
       accessible
       accessibilityRole="text"
       accessibilityLabel={label}
-      style={[styles.root, style]}>
+      style={[styles.root, selected && styles.selected, style]}>
       {content}
     </View>
   );
@@ -80,17 +90,39 @@ export function ListRow({
 
 const styles = StyleSheet.create({
   root: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 18,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.md,
     backgroundColor: colors.surfaceRaised,
+    overflow: 'hidden',
+  },
+  selected: {
+    borderColor: colors.borderAccent,
+    backgroundColor: colors.surfaceSelected,
   },
   pressed: {
     opacity: 0.82,
+  },
+  sideRail: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 3,
+    opacity: 0.64,
+  },
+  sideRailSelected: {
+    opacity: 1,
+  },
+  selectedIcon: {
+    borderColor: colors.borderAccent,
   },
   copy: {
     flex: 1,
@@ -108,5 +140,20 @@ const styles = StyleSheet.create({
   },
   detail: {
     paddingTop: spacing.xs,
+  },
+});
+
+const toneRailStyles = StyleSheet.create({
+  accent: {
+    backgroundColor: colors.accent,
+  },
+  neutral: {
+    backgroundColor: colors.border,
+  },
+  success: {
+    backgroundColor: colors.success,
+  },
+  warning: {
+    backgroundColor: colors.warning,
   },
 });

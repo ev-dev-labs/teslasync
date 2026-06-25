@@ -10,6 +10,8 @@ import {
 type VisualRouteId =
   | 'account'
   | 'charging'
+  | 'chargingDetail'
+  | 'driveDetail'
   | 'drives'
   | 'energy'
   | 'explore'
@@ -17,6 +19,8 @@ type VisualRouteId =
   | 'root'
   | 'settings'
   | 'system'
+  | 'tripDetail'
+  | 'trips'
   | 'vehicles';
 
 type ShellSectionId =
@@ -62,6 +66,8 @@ interface VisualRouteMeta {
   variant:
     | 'account-loading'
     | 'dashboard'
+    | 'detail-skeleton-charge'
+    | 'detail-skeleton-drive'
     | 'empty-vehicle'
     | 'energy'
     | 'explore'
@@ -102,12 +108,41 @@ const visualRoutes: Record<VisualRouteId, VisualRouteMeta> = {
     title: 'Drive History',
     variant: 'empty-vehicle',
   },
+  driveDetail: {
+    id: 'driveDetail',
+    activeSection: 'driving',
+    activeLabel: 'Drives',
+    title: 'Drive Detail',
+    variant: 'detail-skeleton-drive',
+  },
+  trips: {
+    id: 'trips',
+    activeSection: 'driving',
+    activeLabel: 'Trips',
+    title: 'Trips',
+    subtitle: 'Multi-drive trip reports with distance and cost tracking',
+    variant: 'dashboard',
+  },
+  tripDetail: {
+    id: 'tripDetail',
+    activeSection: 'driving',
+    activeLabel: 'Trips',
+    title: 'Trip Detail',
+    variant: 'dashboard',
+  },
   charging: {
     id: 'charging',
     activeSection: 'charging',
     activeLabel: 'Charging Overview',
     title: 'Charging Sessions',
     variant: 'empty-vehicle',
+  },
+  chargingDetail: {
+    id: 'chargingDetail',
+    activeSection: 'charging',
+    activeLabel: 'Charge History',
+    title: 'Charge Session',
+    variant: 'detail-skeleton-charge',
   },
   energy: {
     id: 'energy',
@@ -189,7 +224,7 @@ const shellSections: ShellSection[] = [
     count: 12,
     items: [
       { label: 'Drives', route: 'drives', icon: '≋' },
-      { label: 'Trips', icon: '⌁' },
+      { label: 'Trips', route: 'trips', icon: '⌁' },
       { label: 'Trip Planner', icon: '♙' },
       { label: 'Navigation', icon: '⌁' },
       { label: 'Geofences', icon: '▥' },
@@ -208,7 +243,7 @@ const shellSections: ShellSection[] = [
     count: 6,
     items: [
       { label: 'Charging Overview', route: 'charging', icon: '↯' },
-      { label: 'Charge History', icon: '▤' },
+      { label: 'Charge History', route: 'chargingDetail', icon: '▤' },
       { label: 'Charging Curve', icon: '⌁' },
       { label: 'Charging Patterns', icon: '▧' },
       { label: 'Smart Charging', icon: '▧' },
@@ -344,8 +379,20 @@ function routeFromPath(pathname: string): VisualRouteMeta {
   if (normalized === '/drives') {
     return visualRoutes.drives;
   }
+  if (normalized.startsWith('/drives/')) {
+    return visualRoutes.driveDetail;
+  }
+  if (normalized === '/trips') {
+    return visualRoutes.trips;
+  }
+  if (normalized.startsWith('/trips/')) {
+    return visualRoutes.tripDetail;
+  }
   if (normalized === '/charging') {
     return visualRoutes.charging;
+  }
+  if (normalized.startsWith('/charging/')) {
+    return visualRoutes.chargingDetail;
   }
   if (normalized === '/energy') {
     return visualRoutes.energy;
@@ -387,9 +434,7 @@ export function ShellVisualParityFrame() {
       <View style={styles.backgroundOrb} />
       <Sidebar route={route} />
       <View style={styles.main}>
-        <View style={styles.topBar}>
-          <Text style={styles.jumpText}>Ctrl+K to jump</Text>
-        </View>
+        <TopBar route={route} />
         <ScrollView
           contentContainerStyle={styles.mainScroll}
           showsVerticalScrollIndicator={false}
@@ -399,6 +444,23 @@ export function ShellVisualParityFrame() {
         </ScrollView>
       </View>
       <FooterStatus />
+    </View>
+  );
+}
+
+function TopBar({ route }: { route: VisualRouteMeta }) {
+  if (route.variant === 'detail-skeleton-drive') {
+    return (
+      <View style={styles.topBarDetail}>
+        <DriveDetailBreadcrumb />
+        <Text style={styles.jumpTextDetail}>Ctrl+K to jump</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.topBar}>
+      <Text style={styles.jumpText}>Ctrl+K to jump</Text>
     </View>
   );
 }
@@ -487,19 +549,46 @@ function RouteHeader({ route }: { route: VisualRouteMeta }) {
   const notificationActions = route.id === 'notifications';
   const accountActions = route.id === 'account';
   const systemActions = route.id === 'system';
+  const tripsActions = route.id === 'trips';
+  const singleLineHeader = !(
+    route.subtitle ||
+    topActions ||
+    energyActions ||
+    notificationActions ||
+    accountActions ||
+    systemActions ||
+    tripsActions
+  );
+
+  if (route.variant === 'detail-skeleton-drive') {
+    return null;
+  }
 
   return (
-    <View style={styles.routeHeader}>
+    <View style={[styles.routeHeader, singleLineHeader && styles.routeHeaderSingleLine]}>
       <View style={styles.routeHeaderCopy}>
         <Text style={styles.pageTitle}>{route.title}</Text>
         {route.subtitle ? <Text style={styles.pageSubtitle}>{route.subtitle}</Text> : null}
       </View>
       {topActions ? <DashboardActions /> : null}
       {energyActions ? <EnergyActions /> : null}
+      {tripsActions ? <TripsActions /> : null}
       {notificationActions || accountActions ? (
         <Text style={styles.headerActionText}>⌁  Copy link</Text>
       ) : null}
       {systemActions ? <SystemActions /> : null}
+    </View>
+  );
+}
+
+function DriveDetailBreadcrumb() {
+  return (
+    <View style={styles.detailBreadcrumb}>
+      <Text style={styles.breadcrumbMuted}>⌂</Text>
+      <Text style={styles.breadcrumbMuted}>›</Text>
+      <Text style={styles.breadcrumbMuted}>Drives</Text>
+      <Text style={styles.breadcrumbMuted}>›</Text>
+      <Text style={styles.breadcrumbText}>Drive Detail</Text>
     </View>
   );
 }
@@ -537,6 +626,20 @@ function EnergyActions() {
   );
 }
 
+function TripsActions() {
+  return (
+    <View style={styles.tripsActions}>
+      <View style={styles.datePill}>
+        <Text style={styles.datePillText}>▣  Pick a date range · Jun 25, 2025 – Jun 25, 2026⌄</Text>
+      </View>
+      <Text style={styles.updatingText}>• ↻ updating...</Text>
+      <View style={styles.savedViewsButton}>
+        <Text style={styles.savedViewsText}>▯  Saved views</Text>
+      </View>
+    </View>
+  );
+}
+
 function SystemActions() {
   return (
     <View style={styles.systemActions}>
@@ -557,6 +660,10 @@ function RouteBody({ route }: { route: VisualRouteMeta }) {
       return <ExploreBody />;
     case 'skeleton':
       return <FleetSkeletonBody />;
+    case 'detail-skeleton-drive':
+      return <DriveDetailSkeletonBody />;
+    case 'detail-skeleton-charge':
+      return <ChargeDetailSkeletonBody />;
     case 'empty-vehicle':
       return <NoVehicleBody />;
     case 'energy':
@@ -646,13 +753,60 @@ function FleetSkeletonBody() {
     <View style={styles.fleetSkeleton}>
       <View style={styles.skeletonTopRow}>
         {[0, 1, 2, 3].map(index => (
-          <SkeletonBar key={index} width="24%" />
+          <SkeletonBar key={index} width={268} />
         ))}
       </View>
+      <SkeletonBar width="100%" style={styles.fleetSkeletonLineOne} />
+      <SkeletonBar width="100%" style={styles.fleetSkeletonLineTwo} />
+      <SkeletonBar width="100%" style={styles.fleetSkeletonLineTight} />
+      <SkeletonBar width="100%" style={styles.fleetSkeletonLineTight} />
+    </View>
+  );
+}
+
+function DriveDetailSkeletonBody() {
+  return (
+    <View style={styles.driveDetailSkeleton}>
       <SkeletonBar width="100%" />
+      <SkeletonBar width="100%" style={styles.detailSkeletonLineSmall} />
+      <SkeletonBar width="100%" style={styles.detailSkeletonLineLarge} />
+      <View style={styles.driveDetailPillRow}>
+        {Array.from({ length: 8 }).map((_, index) => (
+          <SkeletonBar key={index} width={122} />
+        ))}
+      </View>
+      <SkeletonBlock width="100%" style={styles.driveDetailHeroPanel} />
+      <View style={styles.driveDetailPanelRow}>
+        <SkeletonBlock width={532} style={styles.driveDetailBottomPanel} />
+        <SkeletonBlock width={532} style={styles.driveDetailBottomPanel} />
+      </View>
+    </View>
+  );
+}
+
+function ChargeDetailSkeletonBody() {
+  return (
+    <View style={styles.chargeDetailSkeleton}>
       <SkeletonBar width="100%" />
-      <SkeletonBar width="100%" />
-      <SkeletonBar width="100%" />
+      <SkeletonBar width="100%" style={styles.detailSkeletonLineSmall} />
+      <View style={styles.chargeDetailPillRow}>
+        {[211, 211, 212, 211, 211].map((width, index) => (
+          <SkeletonBar key={index} width={width} />
+        ))}
+      </View>
+      <SkeletonBar width="100%" style={styles.chargeDetailWideLine} />
+      <View style={styles.chargeDetailMetricRow}>
+        {[0, 1, 2, 3].map(index => (
+          <SkeletonBar key={index} width={268} />
+        ))}
+      </View>
+      <View style={styles.chargeDetailMetricRowTight}>
+        {[0, 1, 2, 3].map(index => (
+          <SkeletonBar key={index} width={268} />
+        ))}
+      </View>
+      <SkeletonBlock width="100%" style={styles.chargeDetailHeroPanel} />
+      <SkeletonBlock width="100%" style={styles.chargeDetailBottomPanel} />
     </View>
   );
 }
@@ -660,7 +814,7 @@ function FleetSkeletonBody() {
 function NoVehicleBody() {
   return (
     <View style={styles.noVehiclePanel}>
-      <Text style={styles.noVehicleIcon}>⌁</Text>
+      <Text style={styles.noVehicleIcon}>▱</Text>
       <Text style={styles.noVehicleTitle}>No vehicle selected</Text>
       <Text style={styles.noVehicleCopy}>
         Add a vehicle to your fleet to see data on this page.
@@ -853,18 +1007,26 @@ function SystemSkeletonPanel({ lines }: { lines: number }) {
   );
 }
 
-function SkeletonBar({ width }: { width: ViewStyle['width'] }) {
-  return <View style={[styles.skeletonBar, { width }]} />;
+function SkeletonBar({
+  width,
+  style,
+}: {
+  width: ViewStyle['width'];
+  style?: ViewStyle;
+}) {
+  return <View style={[styles.skeletonBar, { width }, style]} />;
 }
 
 function SkeletonBlock({
   width,
   tall = false,
+  style,
 }: {
   width: ViewStyle['width'];
   tall?: boolean;
+  style?: ViewStyle;
 }) {
-  return <View style={[styles.skeletonBlock, tall && styles.skeletonTall, { width }]} />;
+  return <View style={[styles.skeletonBlock, tall && styles.skeletonTall, { width }, style]} />;
 }
 
 function SkeletonPill() {
@@ -1065,8 +1227,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
+  topBarDetail: {
+    height: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.04)',
+    paddingLeft: 33,
+    paddingRight: 32,
+  },
   jumpText: {
     marginLeft: 33,
+    marginTop: -4,
+    color: '#596176',
+    fontSize: 10,
+  },
+  jumpTextDetail: {
     marginTop: -4,
     color: '#596176',
     fontSize: 10,
@@ -1086,8 +1263,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 24,
   },
+  routeHeaderSingleLine: {
+    minHeight: 39,
+  },
   routeHeaderCopy: {
     minWidth: 0,
+  },
+  detailBreadcrumb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: -4,
+  },
+  breadcrumbMuted: {
+    color: '#778199',
+    fontSize: 13,
+  },
+  breadcrumbText: {
+    color: '#c7d2e1',
+    fontSize: 13,
+    fontWeight: '700',
   },
   pageTitle: {
     color: shell.text,
@@ -1257,17 +1452,82 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   fleetSkeleton: {
-    paddingTop: 11,
-    gap: 25,
+    paddingTop: 0,
   },
   skeletonTopRow: {
     flexDirection: 'row',
     gap: 16,
   },
+  fleetSkeletonLineOne: {
+    marginTop: 24,
+  },
+  fleetSkeletonLineTwo: {
+    marginTop: 24,
+  },
+  fleetSkeletonLineTight: {
+    marginTop: 12,
+  },
   skeletonBar: {
     height: 16,
     borderRadius: 9,
     backgroundColor: '#3b4656',
+  },
+  driveDetailSkeleton: {
+    paddingLeft: 16,
+    paddingRight: 16,
+    paddingTop: 15,
+  },
+  detailSkeletonLineSmall: {
+    marginTop: 8,
+  },
+  detailSkeletonLineLarge: {
+    marginTop: 24,
+  },
+  driveDetailPillRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 24,
+  },
+  driveDetailHeroPanel: {
+    height: 320,
+    marginTop: 24,
+  },
+  driveDetailPanelRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 24,
+  },
+  driveDetailBottomPanel: {
+    height: 280,
+  },
+  chargeDetailSkeleton: {
+    paddingTop: 0,
+  },
+  chargeDetailPillRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 32,
+  },
+  chargeDetailWideLine: {
+    marginTop: 32,
+  },
+  chargeDetailMetricRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 32,
+  },
+  chargeDetailMetricRowTight: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 16,
+  },
+  chargeDetailHeroPanel: {
+    height: 256,
+    marginTop: 32,
+  },
+  chargeDetailBottomPanel: {
+    height: 288,
+    marginTop: 32,
   },
   noVehiclePanel: {
     height: 350,
@@ -1309,6 +1569,12 @@ const styles = StyleSheet.create({
   energyActions: {
     flexDirection: 'row',
     gap: 11,
+    paddingTop: 6,
+  },
+  tripsActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingTop: 6,
   },
   datePill: {

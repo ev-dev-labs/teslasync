@@ -20,6 +20,7 @@ export function EmptyState({title, message}: EmptyStateProps) {
 
 const styles = StyleSheet.create({
   root: {
+    alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.md,
   },

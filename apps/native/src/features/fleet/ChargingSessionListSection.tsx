@@ -64,6 +64,8 @@ export function ChargingSessionListSection({
               )}`}
               meta={session.id === selectedSessionId ? 'Selected' : formatDateTime(session.started_at)}
               icon="charging"
+              selected={session.id === selectedSessionId}
+              tone={session.live || !session.ended_at ? 'success' : 'accent'}
               onPress={() => onSelect(session.id)}
               detail={
                 <View>

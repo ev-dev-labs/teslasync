@@ -15,6 +15,8 @@ export const representativeRoutes = [
     label: 'Dashboard shell',
     route: '/',
     nativeTarget: 'dashboard',
+    evidence:
+      'V0003 dashboard widgets use native premium cards, metric grids, loading/error/empty states, and dashboard route readiness.',
   },
   {
     id: 'explore',
@@ -29,6 +31,8 @@ export const representativeRoutes = [
     label: 'Vehicles',
     route: '/vehicles',
     nativeTarget: 'vehicles',
+    evidence:
+      'V0003 vehicle visuals cover garage overview cards, selectable vehicle rows, detail metrics, live-state panels, and empty/error states.',
   },
   {
     id: 'drives',
@@ -36,6 +40,35 @@ export const representativeRoutes = [
     label: 'Drives',
     route: '/drives',
     nativeTarget: 'driving',
+    evidence:
+      'V0003 driving visuals cover drive list rows, overview metrics, drive detail cards, trip summaries, route replay summaries, and empty/error states.',
+  },
+  {
+    id: 'trips',
+    group: 'fleet',
+    label: 'Trips',
+    route: '/trips',
+    nativeTarget: 'driving',
+    evidence:
+      'V0003 trip-list parity is represented by the native driving/trips surface with shared premium list rows and trip summary cards.',
+  },
+  {
+    id: 'drive-detail',
+    group: 'fleet',
+    label: 'Drive detail',
+    route: '/drives/1',
+    nativeTarget: 'driving',
+    evidence:
+      'V0003 drive-detail parity maps to the selected native drive detail, telemetry, and route replay summary cards.',
+  },
+  {
+    id: 'trip-detail',
+    group: 'fleet',
+    label: 'Trip detail',
+    route: '/trips/1',
+    nativeTarget: 'driving',
+    evidence:
+      'V0003 trip-detail parity maps to the selected native drive-backed trip detail and summary cards without WebView embedding.',
   },
   {
     id: 'charging',
@@ -43,6 +76,17 @@ export const representativeRoutes = [
     label: 'Charging',
     route: '/charging',
     nativeTarget: 'charging',
+    evidence:
+      'V0003 charging visuals cover overview metrics, selectable charging rows, charging detail panels, curve summaries, heatmap/cost panels, and empty/error states.',
+  },
+  {
+    id: 'charging-detail',
+    group: 'operations',
+    label: 'Charging detail',
+    route: '/charging/1',
+    nativeTarget: 'charging',
+    evidence:
+      'V0003 charging-detail parity maps to the selected native session detail, telemetry curve, power metrics, and unavailable-action states.',
   },
   {
     id: 'energy',

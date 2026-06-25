@@ -62,6 +62,8 @@ export function DriveListSection({
               subtitle={`${formatDistance(drive.distance_m)} · ${formatDuration(drive.duration_s)}`}
               meta={drive.id === selectedDriveId ? 'Selected' : formatDateTime(drive.start_ts)}
               icon="drive"
+              selected={drive.id === selectedDriveId}
+              tone={(drive.score ?? 0) >= 90 ? 'success' : 'accent'}
               onPress={() => onSelect(drive.id)}
               detail={
                 <View>

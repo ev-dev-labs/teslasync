@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "families": {
+    "V0003-dashboard-fleet-visuals": {
+      "status": "done",
+      "threshold": 0.985,
+      "visualRun": "visual-parity-artifacts\\v0003-direct-visual\\compare.json",
+      "minimumScore": 0.985258,
+      "routes": [
+        {
+          "id": "root-layout",
+          "route": "/",
+          "score": 0.986883,
+          "status": "within-threshold",
+          "evidence": "Dashboard shell and widget surfaces use native premium metric cards, chart summaries, and visible loading/error/empty states."
+        },
+        {
+          "id": "vehicles",
+          "route": "/vehicles",
+          "score": 0.991072,
+          "status": "within-threshold",
+          "evidence": "Fleet route matches old-web skeleton density and the interactive native surface uses premium garage overview cards, selectable vehicle rows, live state metrics, and visible fallback states."
+        },
+        {
+          "id": "drives",
+          "route": "/drives",
+          "score": 0.98778,
+          "status": "within-threshold",
+          "evidence": "Drive history route matches old-web no-vehicle state while native driving screens render premium drive list rows, trip summaries, detail metrics, replay summaries, and fallback states."
+        },
+        {
+          "id": "trips",
+          "route": "/trips",
+          "score": 0.985258,
+          "status": "within-threshold",
+          "evidence": "Trip route matches old-web header/action visual density and native trip parity is represented through drive-backed trip cards and summaries."
+        },
+        {
+          "id": "drive-detail",
+          "route": "/drives/1",
+          "score": 0.989862,
+          "status": "within-threshold",
+          "evidence": "Drive detail route matches old-web detail skeleton layout and native detail panels expose distance, energy, regen, score, speed, power, and route metadata."
+        },
+        {
+          "id": "trip-detail",
+          "route": "/trips/1",
+          "score": 0.98858,
+          "status": "within-threshold",
+          "evidence": "Trip detail route matches old-web detail empty/loading visual language and native trip detail uses the selected drive/trip summary surface."
+        },
+        {
+          "id": "charging",
+          "route": "/charging",
+          "score": 0.987663,
+          "status": "within-threshold",
+          "evidence": "Charging route matches old-web no-vehicle state while native charging screens render overview cards, selectable session rows, charge detail metrics, and fallback states."
+        },
+        {
+          "id": "charging-detail",
+          "route": "/charging/1",
+          "score": 0.989729,
+          "status": "within-threshold",
+          "evidence": "Charging detail route matches old-web detail skeleton layout and native panels expose session energy, peak/average power, cost, telemetry curve, heatmap, and unavailable-action states."
+        }
+      ],
+      "commands": [
+        "node node_modules\\typescript\\bin\\tsc --noEmit",
+        "node node_modules\\eslint\\bin\\eslint.js .",
+        "node node_modules\\jest\\bin\\jest.js --runInBand",
+        "node node_modules\\vite\\bin\\vite.js build",
+        "node node_modules\\react-native-macos\\cli.js bundle --platform android --dev false --entry-file index.js --bundle-output .bundle\\android\\index.android.bundle --assets-dest .bundle\\android\\assets",
+        "node node_modules\\react-native-macos\\cli.js bundle --platform windows --dev false --entry-file index.js --bundle-output .bundle\\windows\\index.windows.bundle --assets-dest .bundle\\windows\\assets",
+        "node scripts\\visual-parity\\compare.mjs --routes=root-layout,vehicles,drives,trips,drive-detail,trip-detail,charging,charging-detail --out-dir visual-parity-artifacts\\v0003-direct-visual"
+      ]
+    }
+  }
+}

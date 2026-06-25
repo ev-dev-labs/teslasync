@@ -25,3 +25,6 @@ Run typecheck, lint, Jest, RN web build, Android/Windows bundles, and visual com
 
 Commit message: `feat(apps): align fleet visual parity`
 
+STATUS=DONE
+
+Visual gate: `root-layout`, `vehicles`, `drives`, `trips`, `drive-detail`, `trip-detail`, `charging`, and `charging-detail` all scored at or above threshold `0.985`; minimum score `0.985258`.

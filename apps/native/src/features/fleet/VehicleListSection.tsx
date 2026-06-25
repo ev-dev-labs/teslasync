@@ -59,6 +59,8 @@ export function VehicleListSection({
               }
               meta={vehicle.id === selectedVehicleId ? 'Selected' : vehicle.state || 'unknown'}
               icon="vehicle"
+              selected={vehicle.id === selectedVehicleId}
+              tone={vehicle.healthy ? 'success' : 'warning'}
               onPress={() => onSelect(vehicle.id)}
               detail={
                 <View>
