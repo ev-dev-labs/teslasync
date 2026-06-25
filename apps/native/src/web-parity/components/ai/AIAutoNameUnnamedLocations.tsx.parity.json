@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIAutoNameUnnamedLocations.tsx",
+  "sourceLineCount": 206,
+  "coveredLineCount": 206,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 206-line source before editing; covered the header stream contract comments, LocationNameDraft/props types, empty body memoization, draft_location_name tool_result extraction, cleanup on location changes, busy/apply guards, translated AI card render, draft preview, and withAiFeature wrapping.",
+    "Converted DOM-only p/div/span/Button/AIFeatureCard/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved POST /api/v1/ai/locations/{locationId}/name/draft via native apiUrl('/ai/locations/{locationId}/name/draft'), the empty JSON body, stream state names, propose-only apply callback behavior, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams."
+  ]
+}
