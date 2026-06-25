@@ -6,7 +6,7 @@
   "conversionStatus": "converted",
   "notes": [
     "Read all 51 source lines line by line and preserved the chart barrel's public export names in the native parity barrel.",
-    "Lines 1-17 are covered by native-safe re-exports for converted siblings plus inline React Native implementations for RadialGauge, MiniChart, Sparkline, TimeMarker, MetricSwitcherChart, useChartLegendState, and the theme chart palette helpers; SmallMultiplesChart and TimeMarker now re-export their dedicated native parity files.",
+    "Lines 1-17 are covered by native-safe re-exports for converted siblings plus inline React Native implementations for RadialGauge, MiniChart, Sparkline, TimeMarker, MetricSwitcherChart, useChartLegendState, and the theme chart palette helpers; SmallMultiplesChart, TimeMarker, and useChartLegendState now re-export their dedicated native parity files.",
     "Lines 18-48 are covered by re-exporting the existing native sync, cursor, brush, legend, tooltip, annotation, gradient, default, hidden-series, and chart utility ports.",
     "Lines 50-51 are covered without importing Recharts: every Recharts symbol exported by the web barrel is replaced by a React Native-safe unavailable primitive, and nativeChartsBarrelCapabilities documents the DOM/SVG limitation explicitly."
   ]

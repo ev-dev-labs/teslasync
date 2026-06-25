@@ -3,10 +3,7 @@
 // DOM/SVG-only helpers with React Native-safe primitives.
 
 import React, {
-  useCallback,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
 import {
@@ -96,6 +93,10 @@ export {
   type SeverityTokens,
   type TimeMarkerProps,
 } from './TimeMarker';
+export {
+  useChartLegendState,
+  type ChartLegendState,
+} from './useChartLegendState';
 export {
   ChartHiddenSeriesContext,
   ChartHiddenSeriesProvider,
@@ -654,76 +655,6 @@ export function MetricSwitcherChart<P extends {date: string}>({
       testID: testId,
     },
   );
-}
-
-export interface ChartLegendState {
-  hidden: Set<string>;
-  isHidden: (dataKey: string) => boolean;
-  toggle: (dataKey: string) => void;
-  setHidden: (dataKey: string, hidden: boolean) => void;
-  reset: () => void;
-}
-
-const nativeLegendStore = new Map<string, Set<string>>();
-
-export function useChartLegendState(chartId: string): ChartLegendState {
-  const [hidden, setHiddenState] = useState<Set<string>>(
-    () => new Set(nativeLegendStore.get(chartId) ?? []),
-  );
-
-  useEffect(() => {
-    setHiddenState(new Set(nativeLegendStore.get(chartId) ?? []));
-  }, [chartId]);
-
-  const persist = useCallback(
-    (next: Set<string>) => {
-      const copy = new Set(next);
-      if (copy.size > 0) {
-        nativeLegendStore.set(chartId, copy);
-      } else {
-        nativeLegendStore.delete(chartId);
-      }
-      setHiddenState(copy);
-    },
-    [chartId],
-  );
-
-  const isHidden = useCallback(
-    (dataKey: string) => hidden.has(dataKey),
-    [hidden],
-  );
-
-  const toggle = useCallback(
-    (dataKey: string) => {
-      const next = new Set(hidden);
-      if (next.has(dataKey)) {
-        next.delete(dataKey);
-      } else {
-        next.add(dataKey);
-      }
-      persist(next);
-    },
-    [hidden, persist],
-  );
-
-  const setHidden = useCallback(
-    (dataKey: string, shouldHide: boolean) => {
-      const next = new Set(hidden);
-      if (shouldHide) {
-        next.add(dataKey);
-      } else {
-        next.delete(dataKey);
-      }
-      persist(next);
-    },
-    [hidden, persist],
-  );
-
-  const reset = useCallback(() => {
-    persist(new Set());
-  }, [persist]);
-
-  return {hidden, isHidden, reset, setHidden, toggle};
 }
 
 export interface ChartPalette {

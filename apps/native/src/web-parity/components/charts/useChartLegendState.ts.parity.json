@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/useChartLegendState.ts",
+  "outputPath": "apps/native/src/web-parity/components/charts/useChartLegendState.ts",
+  "sourceLineCount": 112,
+  "coveredLineCount": 112,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 112 source lines line by line and preserved the ChartLegendState shape, state names, storage key namespace, chartId re-read behavior, isHidden, toggle, setHidden, and reset semantics.",
+    "Converted browser window.localStorage reads/writes to a React Native-safe module-scoped in-memory store keyed by teslasync.chart.<chartId>.hidden because no durable native storage dependency is available in apps/native.",
+    "The source try/catch quota/privacy-mode behavior is covered by side-effect-free in-memory writes; native app restart persistence is explicitly unavailable while current-process legend UX remains functional."
+  ]
+}
