@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/ChartAnnotationLayer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/charts/ChartAnnotationLayer.tsx",
+  "sourceLineCount": 31,
+  "coveredLineCount": 31,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 31-line source file line by line before editing and preserved the renderAnnotationLines export, annotations array input, toXValue(timestamp) callback, annotation id keys, timestamp mapping, label display, category color mapping, dashed line, stroke width, opacity, and top label intent.",
+    "Replaced Recharts ReferenceLine with React Native View/AppText primitives so the helper can still return an array of elements to spread into a native chart plot layer without importing DOM modules, Recharts, Leaflet, or web UI components.",
+    "Native chart wrappers do not expose the Recharts x-scale, so numeric toXValue results are treated as 0-1 or 0-100 percentages and non-numeric timestamp/category values are distributed evenly while preserving the original x value for accessibility evidence."
+  ]
+}
