@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Speed.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Speed.tsx",
+  "sourceLineCount": 43,
+  "coveredLineCount": 43,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 43-line numbered source before editing; covered the three web imports useUnits/fmtNumber/convertSpeedFromSI (L1-3), the SpeedProps interface mph/kmh/precision/className with its JSDoc (L5-12), the component JSDoc intent (L14-17), the useUnits()+unitPrefs.speed resolution and toSpeedDisplay closure (L18-21), the sourceMph/title let-bindings and the mph (L25-27) and km/h (L28-31) finite-input branches, the null-source em-dash early return (L33-35), and the fmtNumber+span render with unit suffix and title tooltip (L37-43).",
+    "useUnits/unitPrefs.speed (L19-20) is reproduced via the native useSettings web-parity hook plus a deriveSpeed helper (unit_of_length==='mi'?'mph':'km/h') copied from the web useUnits, mirroring the web useUnits→useSettings chain; convertSpeedFromSI (L3,21) and fmtNumber (L2,37) have no native parity module so both are inlined verbatim — same METERS_PER_MILE/METERS_PER_KM/SECONDS_PER_HOUR constants, same km/h+mph switch, same safeNumber+toLocaleString locale-fallback, and the precision default of 2 (web _globalPrecision) with derivePrecision(settings.decimal_precision) as the fmtNumber fallback so unit math and number formatting stay byte-for-byte.",
+    "Preserved state/variable names sourceMph and title verbatim (L23-31) including the misleadingly-named-but-actually-SI-m/s sourceMph and the literal 0.44704 mph→m/s and (kmh*1000)/3600 km/h→m/s factors (L26,29); converted the DOM <span className title> to React Native AppText — className retained on SpeedProps for source compatibility but ignored on native (destructured as _className), native style?:StyleProp<TextStyle> and testID added for parity consumers, the source-value title tooltip mapped to accessibilityHint only on the value branch while the null branch renders the bare em-dash with no hint (matching the source which sets title only inside the value if/else), and {display} {speedUnit} kept as the visible content.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; only React, type-only react-native StyleProp/TextStyle, the existing apps/native AppText primitive, and the existing native useSettings web-parity hook are used. toLocaleString('en-US', ...) matches existing native Intl usage in src/lib/format.ts and the inlined fmtNumber in web-parity charts (RadialGauge/ChartTooltip), so it is RN/Hermes-safe."
+  ]
+}
