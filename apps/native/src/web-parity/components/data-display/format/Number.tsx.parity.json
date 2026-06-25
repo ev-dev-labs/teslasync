@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/format/Number.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/format/Number.tsx",
+  "sourceLineCount": 25,
+  "coveredLineCount": 25,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read source lines 1-25 line by line before editing. L1 imported fmtNumber from @/lib/numberFormat; there is no native parity numberFormat lib, so the locale-aware fmtNumber plus a safeNumber guard are inlined exactly as the existing native parity files (RadialGauge.tsx, ChartTooltip.tsx) do — default precision 2 and an en-US toLocaleString fallback for bad locale tags.",
+    "L3-9 FormattedNumberProps (value, precision, unit, className) are preserved 1:1; the L6-7 'unit suffix appended after a single space' contract is kept as `unit ? ` ${unit}` : ''` and the L11-14 doc comment is carried over verbatim. className is retained for source parity but ignored on native (renamed _className), and native style/testID/data-testid/accessibilityLabel affordances are added to match sibling parity components (Avatar.tsx, DriveScore.tsx).",
+    "L15-18 the component signature and the `value == null || !Number.isFinite(value)` guard render the em-dash placeholder; the web <span> becomes AppText. L19 fmtNumber(value, precision) maps to the inlined fmtNumber. L20-24 the <span title={`${value}`}>{display}{unit}</span> becomes AppText: the formatted display + unit suffix remain the visible text and the web title (raw, full-precision value tooltip) is mapped to accessibilityHint so it stays supplementary on native, which has no hover affordance. L25-26 closing braces/trailing newline considered.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; uses only React, react-native types, and the existing native AppText primitive. Verified with: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles."
+  ]
+}
