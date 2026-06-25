@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useWatch.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useWatch.ts",
+  "sourceLineCount": 123,
+  "coveredLineCount": 123,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 123-line source file line by line before editing and ported every type, watchKeys factory, query hook, mutation hook, API path, query parameter, polling interval, stale time, retry setting, request header, skipAuthRefresh option, command body field, and success/error feedback branch.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client and Alert-backed mutation toast bridge, with no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI imports.",
+    "The web-only window.location and sessionStorage watch-key lookup has no React Native equivalent, so the native hook exposes nativeWatchApiKeyCapabilities plus setWatchApiKey, setWatchApiKeyFromUrl, clearWatchApiKey, and getWatchApiKey for explicit native/deep-link key injection with module-memory session persistence."
+  ]
+}
