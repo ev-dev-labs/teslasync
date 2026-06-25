@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useNotificationChannels.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useNotificationChannels.ts",
+  "sourceLineCount": 159,
+  "coveredLineCount": 159,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 159 source lines and ported every export, re-exported channel CRUD hook, webhook-specific hook, API path, query key, mutation variable shape, and toast helper exposure into native-compatible TypeScript.",
+    "Inlined the notification channel discriminated union, webhook result/preview types, safeArray guard, and notificationKeys because the native web-parity layer does not yet expose the web useNotifications or @/api/types aliases for this file.",
+    "Replaced the browser cross-tab queryBroadcast dependency with local TanStack Query invalidation and documented queryBroadcastAvailable=false in nativeNotificationChannelHookCapabilities; the file imports no DOM modules, web UI components, Recharts, or Leaflet."
+  ]
+}
