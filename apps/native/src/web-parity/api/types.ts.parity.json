@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/types.ts",
+  "outputPath": "apps/native/src/web-parity/api/types.ts",
+  "sourceLineCount": 3218,
+  "coveredLineCount": 3218,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 3218-line source file in contiguous line-numbered ranges before editing and converted every exported API contract, helper, and type re-export.",
+    "Source is non-visual API/type code; the native output preserves the API field names, SI unit annotations, API-path comments, and status helper behavior without DOM, Recharts, Leaflet, browser HTML, or web UI imports.",
+    "Web-only @/types imports were replaced with native parity hook type exports or inline native-safe FSM status definitions so the file remains React Native-compatible."
+  ]
+}
