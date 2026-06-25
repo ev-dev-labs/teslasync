@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIChargingDiagnosis.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIChargingDiagnosis.tsx",
+  "sourceLineCount": 47,
+  "coveredLineCount": 47,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 47-line source before editing; covered the header comments, optional sessionId prop, URL memo with encodeURIComponent and /ai/charging/0/diagnose fallback, empty body memo, stream setup, translated card labels, canStart guard, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream usage to React Native View/Pressable/AppText/PremiumCard plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved POST /api/v1/ai/charging/{sessionID}/diagnose via native apiUrl('/ai/charging/{sessionID}/diagnose'), the empty JSON body, stream state names, charging diagnosis visual intent, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams."
+  ]
+}
