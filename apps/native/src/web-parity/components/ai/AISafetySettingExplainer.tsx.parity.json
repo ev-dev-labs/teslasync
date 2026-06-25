@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AISafetySettingExplainer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AISafetySettingExplainer.tsx",
+  "sourceLineCount": 146,
+  "coveredLineCount": 146,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the complete line-numbered source before editing; the header wiring, Helix UX, safety-alignment comments, empty request body memoization, deliberate no-op event handler, cleanup cancellation effect, busy guard, translated labels, feature wrapper, and display names were all considered.",
+    "Converted DOM-only useTranslation/useAiStream/withAiFeature imports to native-safe fallback translation, settings-backed generated-registry feature gating, and a React Native fetch readable-stream SSE consumer.",
+    "Preserved POST /api/v1/ai/settings/safety/explain through apiUrl('/ai/settings/safety/explain'), stream state names, empty body shape, double-submit no-op semantics, Helix badge copy, below-card action placement, and ai-feature-safety-setting-explainer-root/suggest test IDs.",
+    "Native runtimes without fetch readable SSE support surface an explicit stream error instead of silently pretending Helix narration is available."
+  ]
+}
