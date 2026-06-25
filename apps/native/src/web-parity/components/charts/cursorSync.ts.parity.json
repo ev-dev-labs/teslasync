@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/charts/cursorSync.ts",
+  "outputPath": "apps/native/src/web-parity/components/charts/cursorSync.ts",
+  "sourceLineCount": 107,
+  "coveredLineCount": 107,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 107 source lines line by line and preserved the CursorSyncValue type, per-syncId positions map, listener set, emit loop, subscribe cleanup, and reset helper.",
+    "Ported setCursorSyncPosition, getCursorSyncPosition, clearCursorSync, and useCursorSyncPosition with the same no-op same-value behavior, null clearing semantics, undefined syncId handling, and useSyncExternalStore subscription model.",
+    "The source is non-visual utility code, so the native output uses only React state-store APIs and imports no DOM, browser, Recharts, Leaflet, or web UI modules."
+  ]
+}
