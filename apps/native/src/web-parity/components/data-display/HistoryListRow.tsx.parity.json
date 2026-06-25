@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/data-display/HistoryListRow.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/HistoryListRow.tsx",
+  "sourceLineCount": 174,
+  "coveredLineCount": 174,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 174 source lines line by line before editing and preserved the exported HistoryListRowGlow union and the full HistoryListRowProps slot contract: checkbox, leading, primary, route, metrics, insight, actions, href, onClick, selected, glow (default 'cyan'), hideChevron, className, and testId.",
+    "Converted the DOM/web dependencies (react-router-dom Link, lucide-react ChevronRight, web GlassPanel hover/glow/onClick, cn, Tailwind classes, MouseEventHandler) to React Native View/Pressable/AppText plus the native GlassPanel and design tokens; no DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported.",
+    "Reproduced the slot layout top-down (checkbox sibling, leading w-9 centred column at width 36, primary flex-wrap row, route line, metrics flex-wrap row, insight line, trailing chevron) and the selected border/ring tint via panelSelected borderAccent + surfaceSelected styles; glow/hover are accepted but inert because native has no hover (glow aliased to _glow).",
+    "Preserved the click-handling contract: onClick fires on body press; otherwise href routes through an onNavigate(href) native bridge with accessibilityRole='link'; the actions overlay is an accessible=false Pressable that absorbs presses (stopPropagation parity) so quick actions never navigate, and the checkbox renders outside the pressable body so selection toggling never navigates.",
+    "Browser-only react-router navigation is documented as an explicit native-safe unavailable state: an href row without onNavigate is a no-op link-role press target, and hover-revealed actions become always-visible on touch; className is accepted for source parity but ignored in favour of StyleSheet, with an added optional style override mapped onto the panel where web applied className."
+  ]
+}
