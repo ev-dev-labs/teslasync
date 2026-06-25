@@ -7,7 +7,7 @@
   "notes": [
     "Read the source barrel line by line; preserved the exported VisuallyHidden, VisuallyHiddenProps, VisuallyHiddenOwnProps, AnnouncerRegion, RouteAnnouncer, and RouteAnnouncerProps public names.",
     "AnnouncerRegion is re-exported from the existing native-safe sibling implementation, matching the source barrel intent without importing web UI or DOM modules.",
-    "VisuallyHidden and RouteAnnouncer depend on DOM sr-only styling, aria-live, react-router-dom, window, and document.title on web, so this native barrel provides React Native hidden Text/View and optional title/pathname-driven route announcement adapters with explicit capability constants documenting unavailable browser behavior.",
-    "The conversion imports only React and React Native primitives; it does not import DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components."
+    "VisuallyHidden now re-exports from the required native sibling file, while RouteAnnouncer continues to provide the optional title/pathname-driven route announcement adapter with explicit capability constants documenting unavailable browser behavior.",
+    "The barrel imports no React Native primitives directly and does not import DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components."
   ]
 }

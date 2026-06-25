@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/a11y/VisuallyHidden.tsx",
+  "outputPath": "apps/native/src/web-parity/components/a11y/VisuallyHidden.tsx",
+  "sourceLineCount": 129,
+  "coveredLineCount": 129,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 129 source lines line by line before editing; preserved the exported VisuallyHiddenOwnProps, VisuallyHiddenProps, VisuallyHidden function, liveRegion, priority, focusable, children, as, and rest-prop API intent.",
+    "Tailwind sr-only and focus:not-sr-only are DOM/CSS-only, so the native output uses an absolutely positioned 1x1 opacity-0 Text/View primitive and documents domSrOnlyClassAvailable=false and focusRevealAvailable=false.",
+    "The web aria-live/role/aria-atomic live-region shorthand is mapped to React Native accessibilityLiveRegion plus alert/text/link roles where available; aria-atomic/htmlFor/href/className are accepted for parity but not forwarded to native primitives.",
+    "The default span and web as=label/as=a/as=div polymorphism were considered and mapped to Text or View without importing DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components."
+  ]
+}
