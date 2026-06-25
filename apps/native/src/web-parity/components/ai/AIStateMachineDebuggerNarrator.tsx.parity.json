@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/ai/AIStateMachineDebuggerNarrator.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIStateMachineDebuggerNarrator.tsx",
+  "sourceLineCount": 191,
+  "coveredLineCount": 191,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full line-numbered source before editing; covered the safety comments, optional vehicleId/fromUnix/toUnix props, finite positive scope guard, stable snake_case body memo, unconditional stream hook, translated AIFeatureCard labels, feature-gated export, and display names.",
+    "Converted web-only react-i18next/AIFeatureCard/withAiFeature/useAiStream dependencies to native-safe fallback translations, View-based AI feature gating against the generated native registry, the native AIFeatureCard, and a native fetch SSE stream consumer.",
+    "Preserved POST /api/v1/ai/system/fsm/narrate through apiUrl('/ai/system/fsm/narrate'), the vehicle_id/from_unix/to_unix request body, stream state names, double-submit no-op while streaming, disabled Narrate transitions affordance until a valid vehicle/window scope exists, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams.",
+    "No unit conversion was required because the component only sends vehicle id and Unix-second request bounds."
+  ]
+}
