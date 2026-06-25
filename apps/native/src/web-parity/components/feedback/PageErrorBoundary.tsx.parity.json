@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/components/feedback/PageErrorBoundary.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/PageErrorBoundary.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines with a numbered view before editing.",
+    "L1 `import { type ReactNode } from 'react'`: preserved as `import React, {type ReactNode} from 'react'` (React default needed for the class boundary + classic-runtime JSX; ReactNode still types children and the render return).",
+    "L2 `import { ErrorBoundary } from './ErrorBoundary'`: the web ErrorBoundary has NOT been ported into the native parity tree and this conversion is single-file scoped, so rather than import an unported/web-only file the page boundary is reproduced inline as a self-contained React error boundary — the same self-contained pattern ChartContainer.tsx uses for its NativeSectionErrorBoundary. The web ErrorBoundary's full-page (non-inline) fallback path that this wrapper actually exercises is the only behaviour reproduced.",
+    "L3 blank line.",
+    "L4 `interface PageErrorBoundaryProps {`: preserved verbatim.",
+    "L5 `children: ReactNode;`: preserved verbatim.",
+    "L6-7 pageName JSDoc (`Page identifier for log correlation, e.g. \"Battery Health\".`) + `pageName: string;`: preserved verbatim.",
+    "L8 interface close `}`: preserved; native-safe extras appended after the original fields — `onGoHome?: () => void` (bridges the web `window.location.href = '/'` go-home redirect) and `testID?`.",
+    "L9 blank line.",
+    "L10-16 component JSDoc (page-level boundary; wraps a full page so a render failure doesn't take down the shell/sidebar/top bar/route nav; mounted automatically by `<PageContainer>`; uses the full-page fallback icon + retry + go-home): preserved on the exported class, re-attributing the fallback to the web `ErrorBoundary` it was ported from.",
+    "L17 `export function PageErrorBoundary({ children, pageName }: PageErrorBoundaryProps)`: converted to `export class PageErrorBoundary extends React.Component<PageErrorBoundaryProps, PageErrorBoundaryState>` because React error boundaries MUST be class components; the public name, props ({children, pageName}), and named export are unchanged (a named class already provides its React display name).",
+    "L18 `return <ErrorBoundary name={`page:${pageName}`}>{children}</ErrorBoundary>;`: reproduced rather than delegated — healthy render returns `children` unchanged; `getDerivedStateFromError` flips to the error state; `componentDidCatch` emits the structured `[ErrorBoundary:page:${pageName}]` console.error (preserving the web `name` log correlation exactly; web `reportFrontendError` is web-only and not ported); the error state renders the ported full-page fallback — network heuristic (message contains fetch/network/offline/Failed to fetch) -> WifiOff 'WX' glyph + 'Connection Lost' copy, else AlertTriangle '!' glyph + 'Something went wrong' + `error.message || fallback`; 'Try Again'/'Try Again Anyway' Pressable resets the boundary and bumps retryCount (web handleRetry; the browser-only stale-chunk `window.location.reload()` recovery + i18next chunk-load copy are dropped as no-native-analogue code-splitting concerns); optional 'Go Home' Pressable invokes the `onGoHome` bridge; >=3 retries shows the extra warning copy and retryCount>0 shows 'Retry attempt N' — all RN primitives (View/Pressable) + native AppText + theme tokens, no DOM/HTML/lucide/Recharts/Leaflet/web-UI imports.",
+    "L19 function close `}`: preserved as the class close + StyleSheet.create block (danger-tinted icon badge, accent primary / subtle secondary action buttons) mapping the web Tailwind fallback styling onto native tokens."
+  ]
+}
