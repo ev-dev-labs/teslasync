@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AIDataRepairSuggestions.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AIDataRepairSuggestions.tsx",
+  "sourceLineCount": 129,
+  "coveredLineCount": 129,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered 129-line source before editing; covered the endpoint/gating/safety comments, empty body memo, /ai/system/data-repair/draft useAiStream call, translated title/description/button/badge labels, streaming disabled guard, withAiFeature wrapping, and display names.",
+    "Converted DOM-only AIFeatureCard/withAiFeature/useAiStream dependencies into React Native View/Pressable/AppText/PremiumCard primitives plus native-safe AI feature gating against the generated registry and settings hook.",
+    "Preserved POST /api/v1/ai/system/data-repair/draft, the empty JSON body, stream state names, Helix card visual intent, propose-only copy, and explicit unavailable-state errors when React Native fetch cannot expose readable SSE streams."
+  ]
+}
