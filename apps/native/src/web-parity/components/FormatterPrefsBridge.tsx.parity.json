@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/components/FormatterPrefsBridge.tsx",
+  "outputPath": "apps/native/src/web-parity/components/FormatterPrefsBridge.tsx",
+  "sourceLineCount": 94,
+  "coveredLineCount": 94,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 94 source lines before editing; this is a side-effect-only bridge component that renders null (source L52,L93-94 preserved: FormatterPrefsBridge(): null returning null).",
+    "Imports ported (source L1-12): react useEffect/useRef and @tanstack/react-query useQueryClient kept verbatim; useSettings query hook now imports from the existing native ../api/hooks/useSettings; the four browser-only @/lib modules (broadcast, broadcastTopics, locale, numberFormat) are unavailable in native so their needed surfaces are reimplemented self-contained and native-safe.",
+    "numberFormat globals ported faithfully: _globalPrecision=2 and _globalLocale='en-US' module state with setGlobalPrecision (clamped 0..20), getGlobalPrecision, setGlobalLocale (empty/whitespace -> en-US), getGlobalLocale — mirroring the web numberFormat module the bridge synced (source L7-12 imports, L66-79 logic).",
+    "resolveLocale ported verbatim from @/lib/locale (trim/length guard -> en-US fallback) covering source L6 import and L64 usage.",
+    "TOPICS.SETTINGS_CHANGED='settings.changed' constant ported from @/lib/broadcastTopics covering source L5 import and L88 guard.",
+    "Browser-only cross-tab transport (BroadcastChannel + localStorage storage events from @/lib/broadcast subscribe, source L4 import and L86-90) is unavailable in React Native; replaced with an in-process Set-based listener registry: subscribe() returns an unsubscribe (used by source L86-91 second useEffect) plus publishPrefsBroadcast() so an in-app caller can still fire settings.changed. Documented in nativeFormatterPrefsBridgeCapabilities (crossTabBroadcastAvailable:false).",
+    "First useEffect (source L62-80) ported line-for-line: settings guard, resolveLocale + decimal_precision ?? 2, lastLocale/lastDecimals refs (L60-61), and the !== current && !== global write-or-record logic preserved exactly.",
+    "Second useEffect (source L86-91) preserved: subscribe handler ignores non-SETTINGS_CHANGED messages and calls void qc.invalidateQueries({ queryKey: ['settings'] }); deps [qc] kept.",
+    "Doc comment intent (source L14-51 why-this-exists + render-output) preserved and annotated with the native broadcast adaptation; arrow bodies use prettier arrowParens:avoid (msg =>) and object destructuring brace style to satisfy native lint/format.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI components imported; gates run: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
