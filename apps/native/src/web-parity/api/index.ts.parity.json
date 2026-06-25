@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/index.ts",
+  "outputPath": "apps/native/src/web-parity/api/index.ts",
+  "sourceLineCount": 277,
+  "coveredLineCount": 277,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 277 source lines line by line before editing and mapped every barrel export group: client, types, auth, vehicles, drives, charging, settings, analytics, and devtools.",
+    "Source is non-visual API/type code; native output imports only native-safe TypeScript modules and the converted parity/native API clients, with no DOM-only modules, browser HTML, Recharts, Leaflet, or web UI components.",
+    "Preserved every source export name, API path, request method, query parameter spelling, SI field suffix intent, and compatibility type surface; missing web-only barrel dependencies are represented by native-safe interfaces or already-converted parity modules."
+  ]
+}
