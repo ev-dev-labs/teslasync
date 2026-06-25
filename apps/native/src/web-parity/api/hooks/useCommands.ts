@@ -1,0 +1,54 @@
+import { useQuery } from '@tanstack/react-query';
+
+import { request } from '../client';
+
+const STALE_TIMES = {
+  QUICK: 10_000,
+  MODERATE: 15_000,
+} as const;
+
+export interface CommandLogEntry {
+  id: number;
+  vehicle_id: number;
+  command: string;
+  params: string;
+  status: string;
+  error: string;
+  created_at: string;
+}
+
+export const commandKeys = {
+  history: (vehicleId: string | undefined) =>
+    ['command-history', vehicleId] as const,
+  latest: (vehicleId: string | number | undefined) =>
+    ['command-latest', vehicleId] as const,
+};
+
+/** Fetch recent command log for a vehicle. */
+export function useCommandHistory(vehicleId: string | undefined) {
+  return useQuery({
+    queryKey: commandKeys.history(vehicleId),
+    queryFn: ({ signal }) =>
+      request<CommandLogEntry[]>(
+        `/vehicles/${vehicleId}/commands/history?limit=200`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.QUICK,
+    select: data => data ?? [],
+  });
+}
+
+/** Fetch latest command per command-name for a vehicle. */
+export function useCommandLatest(vehicleId: string | undefined) {
+  return useQuery({
+    queryKey: commandKeys.latest(vehicleId),
+    queryFn: ({ signal }) =>
+      request<CommandLogEntry[]>(`/vehicles/${vehicleId}/commands/latest`, {
+        signal,
+      }),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.MODERATE,
+    select: data => data ?? [],
+  });
+}

@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useCommands.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useCommands.ts",
+  "sourceLineCount": 42,
+  "coveredLineCount": 42,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 42-line source file line by line before editing and ported the import intent, CommandLogEntry interface, commandKeys factories, useCommandHistory hook, and useCommandLatest hook.",
+    "Preserved both API paths exactly: /vehicles/{vehicleId}/commands/history?limit=200 and /vehicles/{vehicleId}/commands/latest; confirmed the backend router exposes both under /vehicles/{vehicleID}/commands/*.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client, forwards AbortSignal values, preserves enabled guards and null-to-empty-array selection, and imports no DOM, browser HTML, Recharts, Leaflet, or web UI modules.",
+    "Inlined STALE_TIMES.QUICK and STALE_TIMES.MODERATE because the native parity layer does not expose the web @/lib/constants alias; no unit conversion or i18n behavior exists in this source hook."
+  ]
+}
