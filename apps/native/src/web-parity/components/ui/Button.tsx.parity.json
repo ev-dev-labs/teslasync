@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/components/ui/Button.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ui/Button.tsx",
+  "sourceLineCount": 54,
+  "coveredLineCount": 54,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 54 source lines with numbered output before editing.",
+    "L1 `import { forwardRef, type ButtonHTMLAttributes } from 'react'`: forwardRef preserved; ButtonHTMLAttributes<HTMLButtonElement> is DOM-only and replaced by react-native PressableProps (the native button attribute surface).",
+    "L2 `import { cn } from '@/lib/cn'`: cn is clsx + tailwind-merge (browser/Tailwind-only); dropped. Class merging becomes a RN StyleSheet `style` array whose last element is the caller `style` (same 'last wins' precedence cn gives the trailing className).",
+    "L3 blank line: preserved as import-group spacing.",
+    "L4-10 `const variants = { primary, secondary, outline, danger, ghost } as const`: the 5 Tailwind variant class strings become the StyleSheet record maps containerStyles (bg/border), pressedStyles (hover -> Pressable pressed) and textColorStyles. Exact colors preserved as literal hex: primary bg-blue-600 #2563eb/hover blue-700 #1d4ed8 text-white; secondary dark:bg-gray-700 #374151 / dark:text-gray-100 #f3f4f6 (dark classes honored on the dark token bg); outline border dark:border-gray-600 #4b5563 transparent bg text textPrimary; danger bg-red-600 #dc2626/hover red-700 #b91c1c text-white; ghost transparent / dark:hover:bg-gray-800 #1f2937 text textPrimary. `focus-visible:ring*` and `forced-colors:*` are browser-only affordances with no RN analog and are dropped.",
+    "L11 blank line: preserved.",
+    "L12-19 `const sizes = { sm, md, lg, auto } as const`: the size class strings become sizeContainerStyles (h-* -> height 32/40/48; px-* -> paddingHorizontal 12/16/24) + sizeTextStyles (text-xs 12 / text-sm 14 / text-base 16). The L16-17 comment about density-aware `auto` is honored: `auto` (min-h-d-row px-d-pad-x text-d-base) has no native density utilities, mapped to a touch-friendly minHeight 44 + paddingHorizontal 16 + fontSize 15 fallback (documented in the file header).",
+    "L20 blank line: preserved.",
+    "L21-26 `export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { variant?; size?; loading?; icon?: React.ReactNode }`: preserved as `ButtonProps extends Omit<PressableProps, 'style' | 'children' | 'disabled'>` with variant?: ButtonVariant, size?: ButtonSize, loading?: boolean, icon?: ReactNode all kept verbatim; className?: string retained for source compatibility (ignored on native), style?: StyleProp<ViewStyle> added as the native styling channel, children?/disabled? re-typed for RN. ButtonVariant/ButtonSize exported as named keyof-equivalent unions.",
+    "L27 blank line: preserved.",
+    "L28-29 `export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ variant = 'primary', size = 'md', loading, icon, className, children, disabled, ...props }, ref) => (`: preserved as `forwardRef<View, ButtonProps>(function Button({...}, ref))` (HTMLButtonElement -> View, Pressable's host ref). Every destructured name + default kept (variant='primary', size='md', loading, icon, className aliased to _className as ignored, style, children, disabled, ...props).",
+    "L30-31 `<button ref={ref}`: preserved as `<Pressable ... ref={ref}>` (DOM button -> RN accessible Pressable with accessibilityRole='button').",
+    "L32-39 `className={cn('inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors', focus-visible..., 'disabled:pointer-events-none disabled:opacity-50', variants[variant], sizes[size], className)}`: base classes -> styles.base (flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8, borderRadius:6) + label fontWeight '500' (font-medium); `transition-colors`/`focus-visible:*` dropped (no RN analog); `disabled:opacity-50` -> styles.disabled opacity 0.5 (pointer-events-none implicit in Pressable disabled); variants[variant] -> containerStyles[variant]+pressedStyles[variant]; sizes[size] -> sizeContainerStyles[size]; trailing `className` -> caller `style` merged LAST in the style array (last-wins, same as cn).",
+    "L40 `disabled={disabled || loading}`: preserved as `const isDisabled = Boolean(disabled) || Boolean(loading)` passed to Pressable `disabled={isDisabled}`.",
+    "L41 `aria-busy={loading || undefined}`: preserved as accessibilityState={{busy: Boolean(loading), disabled: isDisabled}} (RN a11y equivalent; disabled also surfaced).",
+    "L42 `{...props}`: preserved verbatim — remaining PressableProps (onPress mapping the web onClick, testID, accessibilityLabel, hitSlop, etc.) spread onto <Pressable> after the defaults so caller props win.",
+    "L43 `>`: maps to the Pressable opening-tag close.",
+    "L44-49 `{loading ? (<svg class='h-4 w-4 animate-spin' ...><circle/><path/></svg>) : icon}`: the inline SVG spinner -> native <ActivityIndicator color={TEXT_COLOR[variant]} size='small'/> in the same leading slot; non-loading branch renders the `icon` node verbatim ({loading ? spinner : icon}).",
+    "L50 `{children}`: preserved — string/number children wrapped in AppText with labelStyle (variant text color + size text scale + font-medium) so the text is styled like the web; element children rendered as-is (RN cannot place raw strings directly, and arbitrary nodes must not be wrapped in Text).",
+    "L51 `</button>`: maps to the </Pressable> close.",
+    "L52-53 `), );` (arrow body + forwardRef close): maps to the close of the Button function/forwardRef.",
+    "L54 `Button.displayName = 'Button'`: preserved verbatim.",
+    "No DOM elements, cn/clsx/tailwind-merge, Tailwind classes, inline SVG, Recharts, Leaflet, or old web UI components imported; only react forwardRef/ReactNode + RN Pressable/ActivityIndicator/View/StyleSheet + the existing native AppText and theme tokens are used.",
+    "Verification: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
