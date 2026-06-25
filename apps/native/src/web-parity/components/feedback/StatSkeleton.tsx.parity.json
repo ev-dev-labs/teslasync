@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/components/feedback/StatSkeleton.tsx",
+  "outputPath": "apps/native/src/web-parity/components/feedback/StatSkeleton.tsx",
+  "sourceLineCount": 16,
+  "coveredLineCount": 16,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 16 source lines with a numbered view before editing.",
+    "L1 `import { GlassPanel } from '../ui/GlassPanel'`: mapped to the existing native GlassPanel at '../../../components/ui/GlassPanel' (View-based glass surface), used as each card container.",
+    "L2 `import { Skeleton } from './Skeleton'`: the web Skeleton (not yet ported) is reproduced inline as `SkeletonBar` — `animate-pulse bg-gray-200 dark:bg-gray-700 rounded` becomes an Animated.View pulsing opacity 1->0.5->1 over 2s (Easing.inOut) with AccessibilityInfo reduced-motion fallback to a static 0.75 opacity; dark-mode `bg-gray-700` preserved as #374151, `rounded` as borderRadius 4.",
+    "L3 blank line: no-op.",
+    "L4 doc comment `Skeleton shaped like a stat card with a number and label.` preserved verbatim on the exported StatSkeleton.",
+    "L5 signature `StatSkeleton({ count = 4 }: { count?: number })` preserved: `count` default 4 kept (clamped to >=0 integer as itemCount); native-safe optional extras added (style, accessibilityLabel, testID, data-testid).",
+    "L6 `return (` preserved as the component's JSX return.",
+    "L7 container `div className=grid grid-cols-2 sm:grid-cols-${count} gap-3`: converted to a flex-wrap row. The `sm:` (>=640px) breakpoint is reproduced with useWindowDimensions -> 2 columns below 640px, `count` columns at/above; `gap-3` (12px) gutter reproduced via the negative-margin(grid)/cell-padding technique so spacing is correct on first paint.",
+    "L8 `Array.from({ length: count }).map((_, i) => ...)` preserved; iterates itemCount, each rendered into a fractional-width cell (width `${100/columns}%`).",
+    "L9 `GlassPanel key={i} className='p-4 space-y-2'`: key={i} preserved; `p-4` -> card padding 16; `space-y-2` (8px vertical gap between the two bars) -> card `gap: 8`.",
+    "L10 `<Skeleton className='h-3 w-16' />` (label bar): SkeletonBar width 64 (w-16) x height 12 (h-3). Honors the intended label shape; the web inline style overriding these classes is a documented quirk, not reproduced.",
+    "L11 `<Skeleton className='h-7 w-24' />` (value bar): SkeletonBar width 96 (w-24) x height 28 (h-7), the taller 'number' bar.",
+    "L12-14 closing `</GlassPanel>`, map `))}`, and `</div>` preserved as the cell/grid JSX structure.",
+    "L15-16 closing `)` and `}` preserved; added StatSkeleton.displayName and grid accessibility (accessible + 'Loading statistics' label + busy state). No DOM/Recharts/Leaflet/web-UI imports; only RN primitives + the native GlassPanel."
+  ]
+}
