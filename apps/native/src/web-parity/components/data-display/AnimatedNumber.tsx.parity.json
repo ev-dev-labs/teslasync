@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/AnimatedNumber.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/AnimatedNumber.tsx",
+  "sourceLineCount": 55,
+  "coveredLineCount": 55,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 55-line source with numbered lines before editing; covered the React hook imports, cn/fmtNumber dependencies, AnimatedNumberProps shape, default duration/decimals, prefix/suffix/className props, display state, rafRef name, effect dependencies, ease-out quadratic animation, cleanup cancellation, and rendered number text.",
+    "Converted the DOM span and Tailwind tabular-nums class to React Native AppText/StyleSheet text with fontVariant tabular-nums; className is retained for source compatibility and intentionally ignored because native styling is supplied through StyleSheet/style.",
+    "Preserved the source count-up behavior from 0 to value over duration seconds using a native-safe requestAnimationFrame scheduler, kept display and rafRef state names, formatted with a local parity fmtNumber equivalent, and rendered prefix/formatted value/suffix in the same order.",
+    "No API paths, units, browser-only modules, HTML elements, Recharts, Leaflet, or old web UI components are imported; if requestAnimationFrame is unavailable on a host runtime, the native implementation explicitly falls back to the final value instead of leaving the component blank."
+  ]
+}
