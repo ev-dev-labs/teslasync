@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useDashboardLayouts.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useDashboardLayouts.ts",
+  "sourceLineCount": 125,
+  "coveredLineCount": 125,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source hook line by line before editing and preserved the NamedDashboardLayout, CreateDashboardLayoutInput, UpdateDashboardLayoutInput, dashboardLayoutLibraryKeys, and all exported hook names.",
+    "Ported the non-visual TanStack Query logic to the native web-parity API client, preserving /dashboard/layouts paths, snake_case vehicle_id query parameter, mutation methods, request bodies, default/apply endpoint behavior, and query invalidation scope.",
+    "Replaced the web-only @/lib/constants dependency with an in-file SLOW stale-time constant matching STALE_TIMES.SLOW and preserved mutation toast intent through the existing native _toastHelpers Alert bridge; no DOM, HTML, Recharts, Leaflet, unit conversion, or visual UI code exists in this source."
+  ]
+}
