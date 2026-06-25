@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ai/AINLDashboardComposer.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ai/AINLDashboardComposer.tsx",
+  "sourceLineCount": 204,
+  "coveredLineCount": 204,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the line-numbered source before editing; covered the header behavior comments, DashboardLayoutDraft/DashboardEnvelope/DashboardSlot/DashboardSlotGrid interfaces, onApply contract, parseDashboardLayoutDraft validation, prompt and draft state names, trimmed prompt body, draft_dashboard_layout tool_result capture, POST /ai/power/dashboard/draft stream URL, canDraft/canApply guards, handleDraft/handleApply semantics, translated card copy, two-row prompt input, Apply to editor action, feature wrapper, and display names.",
+    "Converted web-only Textarea/onChange/div/Button usage to native TextInput, View, Pressable, AppText, AIFeatureCard, and TeslaSync native tokens while preserving i18n fallback intent, accessible prompt/apply labels, disabled apply behavior, and the propose-only manual editor apply flow.",
+    "Recreated native-safe AI feature gating and SSE stream handling locally to match existing native AI parity components; when React Native fetch does not expose a readable stream, the component surfaces an explicit unavailable error instead of importing browser-only streaming code."
+  ]
+}
