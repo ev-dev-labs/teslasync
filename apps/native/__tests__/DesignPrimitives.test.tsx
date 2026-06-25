@@ -388,11 +388,15 @@ test('renders premium primitives with accessible summaries', async () => {
   expect(serialized).toContain('Native summary is visible');
   expect(serialized).toContain('Universal chart primitive');
   expect(serialized).toContain('Accessible chart data table');
+  expect(serialized).toContain('Energy by day dense native chart plot with 2 points');
+  expect(serialized).toContain('Energy by day chart range summary');
   expect(serialized).toContain('Energy by day chart summary with 2 points');
   expect(serialized).toContain('Speed bands mini bar chart with 2 rows');
   expect(serialized).toContain('Native parity status');
   expect(serialized).toContain('Route summary ready');
   expect(serialized).toContain('Drive route route summary from Home to Office');
+  expect(serialized).toContain('Native map');
+  expect(serialized).toContain('Drive route route coordinate data');
   expect(serialized).toContain('Universal media primitive');
   expect(serialized).toContain('Media data alternative');
   expect(serialized).toContain('No media payload is exposed yet.');

@@ -126,6 +126,74 @@
         "node node_modules\\react-native-macos\\cli.js bundle --platform windows --dev false --entry-file index.js --bundle-output .bundle\\windows\\index.windows.bundle --assets-dest .bundle\\windows\\assets",
         "node scripts\\visual-parity\\compare.mjs --routes=energy,notifications-inbox,system-status,account-2fa,settings --out-dir visual-parity-artifacts\\v0004-final"
       ]
+    },
+    "V0005-charts-maps-visuals": {
+      "status": "done",
+      "threshold": 0.985,
+      "pixelmatchThreshold": 0.3,
+      "baselineRun": "visual-parity-artifacts\\v0005-baseline\\compare.json",
+      "visualRun": "visual-parity-artifacts\\v0005-final-gate\\compare.json",
+      "minimumScore": 0.985259,
+      "routes": [
+        {
+          "id": "root-layout",
+          "route": "/",
+          "score": 0.992114,
+          "status": "within-threshold",
+          "evidence": "Dashboard widgets remain aligned while shared native chart primitives now render dense chart plots, range summaries, and accessible data tables."
+        },
+        {
+          "id": "vehicles",
+          "route": "/vehicles",
+          "score": 0.994831,
+          "status": "within-threshold",
+          "evidence": "Vehicle location and fleet analytics surfaces preserve premium card density while map/location widgets are represented by explicit native summaries instead of browser embedding."
+        },
+        {
+          "id": "drives",
+          "route": "/drives",
+          "score": 0.992015,
+          "status": "within-threshold",
+          "evidence": "Drive analytics and replay summaries use upgraded native chart plots and accessible chart data alternatives across list and detail surfaces."
+        },
+        {
+          "id": "drive-detail",
+          "route": "/drives/1",
+          "score": 0.993694,
+          "status": "within-threshold",
+          "evidence": "Drive detail route exposes premium native route-canvas styling, start/end markers, coordinate span metrics, and route coordinate data tables."
+        },
+        {
+          "id": "charging",
+          "route": "/charging",
+          "score": 0.991938,
+          "status": "within-threshold",
+          "evidence": "Charging heatmap, cost, and session summaries use dense native chart visuals plus accessible data-table fallbacks for every returned series."
+        },
+        {
+          "id": "charging-detail",
+          "route": "/charging/1",
+          "score": 0.993451,
+          "status": "within-threshold",
+          "evidence": "Charging detail keeps premium telemetry summaries with upgraded chart plots and visible empty/error states when telemetry is unavailable."
+        },
+        {
+          "id": "energy",
+          "route": "/energy",
+          "score": 0.985259,
+          "status": "within-threshold",
+          "evidence": "Energy route stays above threshold while chart-heavy energy, power-flow, battery, and savings sections use the upgraded native chart primitive and accessible alternatives."
+        }
+      ],
+      "commands": [
+        "node node_modules\\typescript\\bin\\tsc --noEmit",
+        "node node_modules\\eslint\\bin\\eslint.js .",
+        "node node_modules\\jest\\bin\\jest.js --runInBand",
+        "node node_modules\\vite\\bin\\vite.js build",
+        "node node_modules\\react-native-macos\\cli.js bundle --platform android --dev false --entry-file index.js --bundle-output .bundle\\android\\index.android.bundle --assets-dest .bundle\\android\\assets",
+        "node node_modules\\react-native-macos\\cli.js bundle --platform windows --dev false --entry-file index.js --bundle-output .bundle\\windows\\index.windows.bundle --assets-dest .bundle\\windows\\assets",
+        "node scripts\\visual-parity\\compare.mjs --routes=drives,drive-detail,charging,charging-detail,energy,vehicles,root-layout --out-dir visual-parity-artifacts\\v0005-final-gate"
+      ]
     }
   }
 }

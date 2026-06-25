@@ -9,6 +9,10 @@ import {
 } from 'react-native';
 
 import { colors, spacing } from '../../theme/tokens';
+import {
+  ChartDataTable,
+  type ChartDataTableRow,
+} from '../charts/ChartDataTable';
 import { SectionHeader } from '../data/SectionHeader';
 import { EmptyState } from '../feedback/EmptyState';
 import { AppText } from '../ui/AppText';
@@ -44,6 +48,7 @@ export interface RouteSegment {
 const maxRouteDots = 12;
 const maxRouteSegmentPoints = 32;
 const routeSegmentHeight = 3;
+const mapGridLines = [20, 40, 60, 80];
 
 interface MapRouteSummaryProps {
   title: string;
@@ -186,6 +191,17 @@ export function MapRouteSummary({
     [validPoints],
   );
   const routeDots = useMemo(() => sampleRoutePoints(validPoints, maxRouteDots), [validPoints]);
+  const routeTableRows = useMemo<ChartDataTableRow[]>(
+    () =>
+      sampleRoutePoints(validPoints, 6).map((point, index) => ({
+        id: `${index}:${point.latitude}:${point.longitude}`,
+        label: point.label ?? `Point ${index + 1}`,
+        value: `${formatCoordinate(point.latitude)}, ${formatCoordinate(
+          point.longitude,
+        )}`,
+      })),
+    [validPoints],
+  );
   const projectedPath = useMemo(
     () => (bounds ? projectRoutePoints(routePath, bounds) : []),
     [bounds, routePath],
@@ -245,6 +261,36 @@ export function MapRouteSummary({
             accessibilityLabel={`${title} route summary from ${startLabel} to ${endLabel} with ${validPoints.length} coordinate points`}
             style={styles.routeCanvas}>
             <View style={styles.routeBackdrop} />
+            <View pointerEvents="none" style={styles.routeTileNorth} />
+            <View pointerEvents="none" style={styles.routeTileSouth} />
+            <View pointerEvents="none" style={styles.mapGridLayer}>
+              {mapGridLines.map(line => (
+                <React.Fragment key={line}>
+                  <View
+                    style={[
+                      styles.mapGridLineVertical,
+                      {left: `${line}%` as DimensionValue},
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.mapGridLineHorizontal,
+                      {top: `${line}%` as DimensionValue},
+                    ]}
+                  />
+                </React.Fragment>
+              ))}
+            </View>
+            <View pointerEvents="none" style={styles.mapBadge}>
+              <AppText variant="caption" tone="accent" weight="semibold" style={styles.uppercase}>
+                Native map
+              </AppText>
+            </View>
+            <View pointerEvents="none" style={styles.compass}>
+              <AppText variant="caption" tone="accent" weight="bold">
+                N
+              </AppText>
+            </View>
             <View onLayout={handleCanvasLayout} pointerEvents="none" style={styles.routePlot}>
               {routeSegments.map(segment => (
                 <View
@@ -265,15 +311,29 @@ export function MapRouteSummary({
                   <View
                     key={`${point.latitude}:${point.longitude}:${index}`}
                     style={[
-                      styles.routeDot,
+                      styles.routeMarker,
                       {
                         left: `${point.x * 100}%` as DimensionValue,
                         top: `${point.y * 100}%` as DimensionValue,
                       },
-                      index === 0 && styles.startDot,
-                      index === projectedDots.length - 1 && styles.endDot,
-                    ]}
-                  />
+                    ]}>
+                    <View
+                      style={[
+                        styles.routeDot,
+                        index === 0 && styles.startDot,
+                        index === projectedDots.length - 1 && styles.endDot,
+                      ]}
+                    />
+                    {index === 0 || index === projectedDots.length - 1 ? (
+                      <AppText
+                        variant="caption"
+                        tone="primary"
+                        weight="bold"
+                        style={styles.pinLabel}>
+                        {index === 0 ? 'START' : 'END'}
+                      </AppText>
+                    ) : null}
+                  </View>
                 ))}
               </View>
             </View>
@@ -294,6 +354,10 @@ export function MapRouteSummary({
               )} lng`}
             />
           </View>
+          <ChartDataTable
+            label={`${title} route coordinate data`}
+            rows={routeTableRows}
+          />
         </>
       )}
     </PremiumCard>
@@ -350,6 +414,7 @@ function normalizeCoordinate(value: number, min: number, max: number): number {
 const styles = StyleSheet.create({
   routeCanvas: {
     minHeight: 156,
+    position: 'relative',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 22,
@@ -367,6 +432,75 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: colors.surfaceSelected,
   },
+  routeTileNorth: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    left: spacing.md,
+    height: 56,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    backgroundColor: 'rgba(53, 213, 255, 0.08)',
+  },
+  routeTileSouth: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: spacing.md,
+    left: spacing.md,
+    height: 64,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    backgroundColor: 'rgba(52, 211, 153, 0.08)',
+  },
+  mapGridLayer: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    bottom: spacing.md,
+    left: spacing.md,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  mapGridLineVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: colors.border,
+  },
+  mapGridLineHorizontal: {
+    position: 'absolute',
+    right: 0,
+    left: 0,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  mapBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderAccent,
+    borderBottomRightRadius: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  compass: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderAccent,
+    borderBottomLeftRadius: 14,
+    backgroundColor: colors.surface,
+  },
   routeSegment: {
     position: 'absolute',
     height: routeSegmentHeight,
@@ -383,32 +517,42 @@ const styles = StyleSheet.create({
   routeDotsLayer: {
     ...StyleSheet.absoluteFillObject,
   },
-  routeDot: {
+  routeMarker: {
     position: 'absolute',
+    width: 58,
+    alignItems: 'center',
+    gap: 2,
+    marginLeft: -29,
+    marginTop: -16,
+  },
+  routeDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
     borderWidth: 2,
     borderColor: colors.accent,
     backgroundColor: colors.background,
-    marginLeft: -6,
-    marginTop: -6,
   },
   startDot: {
     width: 18,
     height: 18,
     borderRadius: 9,
     backgroundColor: colors.success,
-    marginLeft: -9,
-    marginTop: -9,
   },
   endDot: {
     width: 18,
     height: 18,
     borderRadius: 9,
     backgroundColor: colors.danger,
-    marginLeft: -9,
-    marginTop: -9,
+  },
+  pinLabel: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: colors.surface,
+    fontSize: 9,
+    lineHeight: 13,
   },
   endpointRow: {
     flexDirection: 'row',
@@ -429,6 +573,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.xs,
     backgroundColor: colors.surfaceRaised,
+  },
+  uppercase: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   metricRow: {
     flexDirection: 'row',
