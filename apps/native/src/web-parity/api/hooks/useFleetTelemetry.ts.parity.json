@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/api/hooks/useFleetTelemetry.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useFleetTelemetry.ts",
+  "sourceLineCount": 51,
+  "coveredLineCount": 51,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 51-line source file line by line before editing and preserved the module intent for /tesla/fleet-telemetry/coverage plus the note that legacy MQTT-error/subscription health hooks remain separate.",
+    "Ported the TanStack Query hook, exported fleetTelemetryKeys.coverage query key, API path, AbortSignal forwarding, typed FleetTelemetryCoverageResponse response, and defaulting of categories, destination_totals, and orphan_fields.",
+    "Source is non-visual API/type hook code; the native output uses the React Native-safe parity request client, imports the existing native API type, inlines STALE_TIMES.SLOW from the web constants, and imports no DOM, browser HTML, Recharts, Leaflet, or web UI modules."
+  ]
+}
