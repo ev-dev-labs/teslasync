@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/data-display/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/data-display/index.ts",
+  "sourceLineCount": 126,
+  "coveredLineCount": 126,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 126 source lines line by line; the file is a re-export barrel, so every export name is preserved one-for-one in the native barrel and resolves to a dedicated React Native sibling file (charts-barrel precedent), with no DOM/Recharts/Leaflet/framer-motion/react-router imports.",
+    "Lines 1-37 (StatCard, UsageCard + 9 types, KVList) covered by new native StatCard.tsx, UsageCard.tsx (full slot/intent port, footer links via onFooterLinkPress), KVList.tsx.",
+    "Lines 14-41 (Avatar block, UserCell, StatusBadge, ProgressRing, AnimatedNumber, Timeline, RecentActivityFeed, MetricCard, InlineMetric, MetricBar, TimelineItem, FSMBadge, TransitionArrow): Avatar re-exports the pre-existing native Avatar.tsx; the rest are new RN ports. ProgressRing approximates the SVG arc with a radial fill (no react-native-svg); AnimatedNumber uses requestAnimationFrame; MetricBar animates via Animated; RecentActivityFeed renders through native Timeline with a humanized title + onActivityPress.",
+    "Lines 41-65 (FreshnessIndicator + useIsStale, DataFreshness + DataFreshnessAuto + FRESHNESS_COLORS + 3 types, LiveIndicator, Delta, ComparisonHeader, KpiOverviewCard, DateGroupedList, TimeStamp, BulkActionsToolbar): Delta ports metricSemantics inline and resolves unit labels via the native useSettings-backed _formatPrimitives; LiveIndicator accepts an optional status (no native SSE useLiveConnection); BulkActionsToolbar re-exports the pre-existing native file.",
+    "Lines 66-98 (BulkActionToolbar alias, SeverityBadge + SeverityIcon, StatusDot, SourceLayerBadge, SavedViewMenu, PlaybackControls, PlaybackSpeedMenu + REPLAY_SPEEDS/nextSpeed/shiftSpeed, TimelineScrubber + 4 types): SavedViewMenu is a functional native port wired to the existing native useSavedViews hooks (Modal list + create/rename/delete dialogs); PlaybackControls + TimelineScrubber port drag-to-scrub via PanResponder; keyboard-shortcut props are accepted for parity but inert on native.",
+    "Lines 100-126 (HistoryListRow, ScoreBadge, BatteryDelta, RouteDisplay + RouteEndpoint + endpointLabel, and the format barrel: DateTime, Distance, Speed, Temperature, Pressure, Energy, Power, Voltage, Current, Currency, Percentage, FormattedNumber, Duration, Range, useRangeLabel + DateTimeVariant/DurationVariant types) covered by new native files plus format/index.ts (DateTime+Pressure pre-existing; the other 12 format renderers + _formatPrimitives ported the SI converters/fmtNumber/useUnits logic inline).",
+    "Shared internal helpers _tokens.ts (severity/neon colour maps from web lib/tokens) and format/_formatPrimitives.ts (numberFormat/unitConversion/useUnits logic) keep the ports DRY; lucide icons become text glyphs, Tailwind tints become resolved hex/rgba, and hover tooltips become accessibilityLabel.",
+    "Gates run from apps/native: npx tsc --noEmit EXIT=0; npm run lint -- --quiet EXIT=0; npm test -- --runInBand --detectOpenHandles => 16 suites / 71 tests passed, EXIT=0."
+  ]
+}
