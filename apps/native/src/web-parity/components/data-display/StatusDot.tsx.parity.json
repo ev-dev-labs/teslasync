@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/StatusDot.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/StatusDot.tsx",
+  "sourceLineCount": 22,
+  "coveredLineCount": 22,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 22 numbered source lines before editing. L1-2 imports (cn from @/lib/cn, normalizeSeverity + severityTokens from @/lib/tokens) are replaced by React Native primitives plus an inlined normalizeSeverity and a literal-hex DOT_COLOR map, since native has no @/lib/cn or @/lib/tokens; cn class-merge is unnecessary because styles are composed via StyleSheet + a style-array prop.",
+    "L4-9 StatusDotProps (severity: string|null|undefined, className?, label?) ported verbatim and extended with native-friendly style/testID/data-testid for source compatibility; className is retained but ignored on native (prefixed _className). L11-12 doc comment + component signature preserved (displayName added).",
+    "L13 normalizeSeverity(severity) preserved exactly (info/warn/critical/success union plus legacy warning/error/fatal/ok aliases). L16 severityTokens[sev].dot Tailwind classes (bg-sky-400 / bg-amber-400 / bg-red-400 / bg-emerald-400) resolved to literal hex #38bdf8 / #fbbf24 / #f87171 / #34d399 in DOT_COLOR; inline-block h-2 w-2 rounded-full -> 8dp View with borderRadius 4 + flexShrink 0.",
+    "L14-21 <span> -> React Native <View>. ARIA mapped: role={label?'img'} -> accessibilityRole='image' + accessible; aria-label={label} -> accessibilityLabel; aria-hidden={label?undefined:true} -> accessibilityElementsHidden + importantForAccessibility='no-hide-descendants' for the decorative no-label case (else 'yes'). pointerEvents='none' reflects the non-interactive inline marker. L22 closing brace covered. No DOM-only modules, HTML elements, Recharts, Leaflet, or web UI components imported."
+  ]
+}
