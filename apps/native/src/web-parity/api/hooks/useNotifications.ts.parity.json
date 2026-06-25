@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/api/hooks/useNotifications.ts",
+  "outputPath": "apps/native/src/web-parity/api/hooks/useNotifications.ts",
+  "sourceLineCount": 1033,
+  "coveredLineCount": 1033,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 1,033 source lines before editing and preserved every exported hook, DTO type, query key, filter serializer, mutation variable shape, API path, polling interval, staleTime, and optimistic cache update from the web source.",
+    "Ported this non-visual API hook to native-compatible TypeScript using the native web-parity request client and Alert-backed mutation toast helper; no DOM modules, browser elements, Recharts, Leaflet, or web UI components are imported.",
+    "Inlined the web notification DTOs, safeArray guard, constants, query invalidation helper, and optimistic mutation helper because the native parity layer does not expose the web @/api/types, @/lib/safeArray, @/lib/constants, @/lib/queryBroadcast, or useOptimisticMutation aliases.",
+    "Native cross-tab queryBroadcast is explicitly unavailable, so broadcast invalidations are preserved as local TanStack Query invalidations and documented via nativeNotificationHookCapabilities.queryBroadcastAvailable=false."
+  ]
+}
