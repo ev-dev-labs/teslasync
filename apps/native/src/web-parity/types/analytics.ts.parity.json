@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/types/analytics.ts",
+  "outputPath": "apps/native/src/web-parity/types/analytics.ts",
+  "sourceLineCount": 131,
+  "coveredLineCount": 131,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 131 numbered source lines before editing; this is non-visual TypeScript type-only code with no imports, so no DOM, browser HTML, Recharts, Leaflet, or web UI components were present or introduced.",
+    "Ported every exported interface 1:1: AnalyticsSummary (L1-11), VehicleComparisonEntry (L13-19), MileageStats (L28-38), MonthlyMileageBucket (L46-52), MonthlyMileageResponse (L55-58), DailyMileageBucket (L67-72), DailyMileageResponse (L75-78), CostBreakdown (L80-97), MonthlyCostEntry (L99-105), TimelineEvent (L107-112), StateSummary (L114-118), WeeklyDigestData (L120-131).",
+    "Preserved all field names verbatim (snake_case API-contract fields like vehicle_id/lifetime_km/avg_efficiency_wh_per_km and camelCase fields like totalDistanceKm/durationMin), nullable union types, array shapes, and unit-suffix semantics to keep parity with the backend mileage_handler.go and SI unit handling.",
+    "Preserved all doc comments (the MileageStats/MonthlyMileageBucket/DailyMileageBucket JSDoc blocks and the /mileage/monthly + /mileage/daily envelope comments at L21-27, L40-45, L54, L60-66, L74) so i18n/API-path intent and backend cross-references are retained."
+  ]
+}
