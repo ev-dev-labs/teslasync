@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/lib/metricSemantics.ts",
+  "outputPath": "apps/native/src/web-parity/lib/metricSemantics.ts",
+  "sourceLineCount": 90,
+  "coveredLineCount": 90,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 90 source lines before porting. metricSemantics.ts is non-visual utility/type code (Direction union, MetricUnit union, MetricSemantic interface, the static METRIC_SEMANTICS registry, the derived MetricId keyof type, and the pure resolveSemantic resolver). It has no imports and touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so the logic/types port 1:1 to React Native-compatible TypeScript (contract rule 6).",
+    "L1-6 module JSDoc preserved ('single source of truth for is going up good or bad? across every Delta indicator', incl. the See web/src/components/data-display/Delta.tsx reference); a native-conversion section was appended documenting that it is type/util code with no DOM and that the MetricUnit values are display hints, not backend fields.",
+    "L8-14 `export type Direction = 'higher_better' | 'lower_better' | 'neutral'` ported verbatim with its JSDoc (higher_better=green, lower_better=red, neutral=muted).",
+    "L16-36 `export type MetricUnit` ported verbatim — all 15 members in order (currency, percent, mi, km, kwh, wh, wh_per_mi, h, min, count, mph, kph, c, f, bar) with its JSDoc. These are display unit hints consumed at the render boundary (preserved verbatim for behavioral parity, contract rule 3); they are NOT backend/DB field names, so Phase-48 SI-canonical naming rules do not apply to this faithful port.",
+    "L38-42 `export interface MetricSemantic { id: string; direction: Direction; unit?: MetricUnit }` ported verbatim.",
+    "L44-71 `export const METRIC_SEMANTICS = { ... } as const satisfies Record<string, MetricSemantic>` ported verbatim — all 18 entries with identical ids/directions/units (cost, cost_per_mi, energy_consumed, energy_per_mi, range, efficiency, regen_pct, drive_score, vampire_drain, idle_time, distance, trip_count, charging_sessions, battery_health_pct, speed_avg, temperature, pressure) plus the inline efficiency comment (L56-58). Column alignment was dropped and bracket-spacing removed to satisfy the native eslint/prettier toolchain (verified consistent with sibling enums.ts); data and types are byte-identical in meaning.",
+    "L73 `export type MetricId = keyof typeof METRIC_SEMANTICS` ported verbatim.",
+    "L75-90 resolveSemantic ported 1:1: string branch does METRIC_SEMANTICS[metric] lookup, returns found else `{id: metric, direction: 'neutral'}`; the `'id' in metric && typeof metric.id === 'string'` branch returns `metric as MetricSemantic`; final branch returns `{id: 'inline', direction: metric.direction, unit: metric.unit}`. Identical control flow, return shapes, and union parameter type (prettier wrapped the two single-statement if-bodies in braces — no behavior change).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported (no imports at all). Style matches .prettierrc.js (singleQuote, trailingComma all, arrowParens avoid) and @react-native eslint config. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
