@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/lib/enums.ts",
+  "outputPath": "apps/native/src/web-parity/lib/enums.ts",
+  "sourceLineCount": 64,
+  "coveredLineCount": 64,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 64 source lines before porting. enums.ts is non-visual utility/type code (vehicle-state -> badge-color / text-class / label helpers, gear/charge/window string-literal unions, and two charge-state predicates); it touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so the logic ports 1:1 to React Native-compatible TypeScript (contract rule 6).",
+    "L1-4 module JSDoc preserved ('Centralized TypeScript enum types and display config. Vehicle state types/helpers re-exported from FSM single source.'); a native-conversion section was appended documenting the inlined FSM pieces and the verbatim Tailwind-class return of getStateColor.",
+    "L6-11 the `@/types/fsm` seam (`export type { VehicleState }`, `import { resolveStyle, VEHICLE_STATE_ENTRIES }`, `import type { VehicleState }`) — the FSM module is not yet part of the native parity layer, so following the sibling closestRoute.ts port (which inlined RouteEntry from the not-yet-ported routeRegistry) the three consumed symbols are inlined verbatim from web/src/types/fsm: BadgeVariant/StateStyle/StateEntry/ResolvedStateStyle/VARIANT_THEME/resolveStyle (theme.ts L1-48 + types.ts L1-37) and VEHICLE_STATES/VehicleState/VEHICLE_STATE_ENTRIES (vehicle.ts L8-28). The inlines are module-private; only `export type VehicleState = (typeof VEHICLE_STATES)[number]` is re-exported, keeping enums.ts's public surface identical to the web. DEFAULT_STATE was NOT inlined (enums.ts never uses it).",
+    "VEHICLE_STATE_ENTRIES inlined with every override field verbatim (online success; driving success+blue badgeDot/green tint; charging warning+yellow badgeDot/cyan tint; parked info+cyan badgeDot/purple tint; updating info+indigo; asleep neutral+purple badgeDot; offline danger+gray/muted) so resolveStyle().text yields byte-identical results to the web single source.",
+    "L13-22 getStateBadgeColor ported 1:1: `(state ?? '').toLowerCase()` cast to VehicleState, VEHICLE_STATE_ENTRIES lookup, `if (!entry) return 'neutral'`, the success->green / warning->amber / info->cyan / neutral->neutral / danger->red variantMap, and the `?? 'neutral'` fallback — identical control flow and return union.",
+    "L24-29 getStateColor ported 1:1: returns `resolveStyle(entry).text` for a known state else the `'text-[var(--text-muted)]'` literal. The returned values are web Tailwind text-color class strings preserved verbatim for behavioral parity (contract rule 3); the native display boundary maps them exactly as getStateBadgeColor's semantic name is mapped — no CSS/DOM introduced.",
+    "L31-38 getStateLabel ported verbatim — the module-local labels map (driving/charging/parked/asleep/online/offline/updating) keyed on `(state ?? '').toLowerCase()` with the `?? 'Unknown'` fallback; independent of the FSM source, so no inline needed.",
+    "L40-42 `export type GearState = 'D' | 'R' | 'P' | 'N'` ported verbatim.",
+    "L44-48 `export type DetailedChargeState` (Charging|Complete|Disconnected|NoPower|Starting|Stopped|Error) ported verbatim (prettier reflowed one member per line; identical union).",
+    "L50-53 isChargingState ported verbatim — falsy short-circuit `if (!state) return false`, then `includes('Charging') || includes('Starting') || state === 'Enable'`.",
+    "L55-58 isChargeCompleteState ported verbatim — falsy short-circuit then `state.includes('Complete')`.",
+    "L60-62 `export type WindowState = 'Closed' | 'Partial' | 'Open'` and L64 `export type ChargePortLatchState = 'Engaged' | 'Disengaged'` ported verbatim.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported (no imports at all — the FSM dependency is inlined). Style matches .prettierrc.js (singleQuote, trailingComma all, arrowParens avoid, semicolons) and eslint extends @react-native. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
