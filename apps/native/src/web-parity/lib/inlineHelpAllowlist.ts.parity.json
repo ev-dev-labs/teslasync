@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/lib/inlineHelpAllowlist.ts",
+  "outputPath": "apps/native/src/web-parity/lib/inlineHelpAllowlist.ts",
+  "sourceLineCount": 36,
+  "coveredLineCount": 36,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 36 source lines line by line. Pure, non-visual i18n-key allowlist utility — no DOM, JSX, Recharts, Leaflet, browser HTML elements, or old web UI imports. Only constructs are a frozen string array, a derived string-literal union type, and a pure membership function, so the logic ports verbatim with no native-safe shim; a native-port header docblock was prepended per contract rule 6 documenting the no-DOM/identical-behavior reasoning.",
+    "L1-16 module docblock (explaining the allowlist purpose, that it gates the `MISSING_HELP[…]` audit warning, and that `web/scripts/audit-inline-help.mjs` consumes it) ported verbatim so intent and references are preserved.",
+    "L17-29 `INLINE_HELP_ALLOWLIST: readonly string[]` ported byte-identically including both inline comments (L18 self-evident form fields, L24 trivial toggles) and all 9 i18n keys (automations.builder.name/description/enabled, notifications.alertStudio.editor.nameLabel/namePlaceholder/enabledLabel, notifications.channels.nameLabel/enabled/disabled) plus the trailing `as const`. Keys are preserved exactly so i18n intent and audit coverage math stay in lockstep with web.",
+    "L31 `export type InlineHelpAllowedKey = (typeof INLINE_HELP_ALLOWLIST)[number]` derived union type ported verbatim; L33-36 `isInlineHelpAllowed(i18nKey: string): boolean` pure helper (case-sensitive `.includes` exact match) ported verbatim. No API paths, unit-suffixed/SI fields, or i18n call sites (only key strings) exist in source — nothing to convert there. Verified from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
