@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/lib/cn.ts",
+  "outputPath": "apps/native/src/web-parity/lib/cn.ts",
+  "sourceLineCount": 7,
+  "coveredLineCount": 7,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 7 source lines before editing. L1 `import { clsx, type ClassValue } from 'clsx'` and L2 `import { twMerge } from 'tailwind-merge'`: neither package is installed in apps/native (RN has no className/Tailwind pipeline) and both are treated as web-only by every consumer port, so the imports are dropped and their behaviour is re-implemented inline instead of pulling in browser/Tailwind-only deps.",
+    "L4 JSDoc ('Merge Tailwind classes with conflict resolution. Combines clsx + tailwind-merge.') is preserved and expanded in the file header, which documents both the verbatim web original and the native adaptation.",
+    "L5 `export function cn(...inputs: ClassValue[])` is ported with an identical public signature: same variadic `ClassValue[]` inputs (the clsx `ClassValue` union is redefined locally as string|number|boolean|null|undefined|array|dictionary) and an explicit `: string` return type.",
+    "L6 `return twMerge(clsx(inputs))`: the clsx flatten is re-implemented faithfully (toClassString mirrors clsx's toVal — string/number stringify, arrays recurse skipping falsy, dictionaries emit truthy keys, same join semantics) so cn() returns the identical space-separated string; the twMerge Tailwind-conflict pass is documented as UNAVAILABLE on native (no Tailwind engine to consume output) and the clsx string is returned as-is — the only behaviour delta, immaterial because no native consumer feeds a Tailwind processor.",
+    "L3/L7 blank/closing lines: file is self-contained with zero external imports, no DOM, HTML elements, Recharts, Leaflet, or web UI components, matching the existing web-parity/lib convention (broadcastTopics.ts). Passes typecheck, lint --quiet, and the existing jest suite."
+  ]
+}
