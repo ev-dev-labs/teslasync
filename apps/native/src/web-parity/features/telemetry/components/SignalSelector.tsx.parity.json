@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/features/telemetry/components/SignalSelector.tsx",
+  "outputPath": "apps/native/src/web-parity/features/telemetry/components/SignalSelector.tsx",
+  "sourceLineCount": 74,
+  "coveredLineCount": 74,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 74 source lines line by line before editing and preserved the SignalSelectorProps surface (options, value, onChange, max default 5 with null = no cap, showLayerHelp default true, labelOverride) plus state/behaviour names.",
+    "L40 cap = max ?? Number.POSITIVE_INFINITY, L65 onChange = Number.isFinite(cap) ? next.slice(0, cap) : next, and the maxItems/atMax gate are ported verbatim into a single `commit` wrapper + `atMax = Number.isFinite(cap) && value.length >= cap`.",
+    "L44-49 label: labelOverride ?? (max != null ? `Signals (N / max)` : `Signals (N)`) reproduced exactly, using the original `max` (not cap) for the displayed denominator.",
+    "L10/39 react-i18next useTranslation -> native-safe t(key, fallback?, params?) that interpolates i18next-style {{name}} placeholders, keeping every key: 'Signals', 'Search signals…', 'help.signal.layers', 'help.signal.layers.aria', and the reproduced ComboboxMulti keys (combobox.maxReached/noResults/moreHidden/removeChip/openListAria/closeListAria).",
+    "L11/63 lucide-react Search -> decorative AppText glyph (\\u2315); the ComboboxMulti chevron is rendered as a \\u2304 glyph that rotates 180deg when open.",
+    "L50-57 HelpTooltip (no native port) reproduced inline: RN has no hover, so the `?` trigger toggles an inline help panel on tap (placement=bottom intent) and the L53 defaultValue body is also exposed via accessibilityHint; i18nKey/defaultValue/ariaLabel (L52-54) preserved.",
+    "L13/59-71 ComboboxMulti (no native port) reproduced locally per the SignalQueryControls/VehicleMultiSelect precedent: removable selected chips, case-insensitive filter that always hides already-selected options, the 50-option visible cap with a 'N more — refine search' footer, 'Maximum reached'/'No results' empty rows, Backspace-at-empty removes trailing chip, hideLabel via TextInput accessibilityLabel, and L70 renderOption mono font via fontFamily monospace.",
+    "L14-15 @/components/ui HelpTooltip and @/lib/cn dropped; L43 outer className('w-full', className) -> native root style {width:'100%'} plus a `style` prop analog applied to the root View. No DOM/Recharts/Leaflet/web-UI imports; uses RN View/Pressable/ScrollView/TextInput + existing AppText and theme tokens.",
+    "The web `document` mousedown click-outside listener is DOM-only and dropped; the dropdown closes on option select or via the chevron toggle (the web primary close paths), matching the established native SignalMultiSelect approach.",
+    "Verified with: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
