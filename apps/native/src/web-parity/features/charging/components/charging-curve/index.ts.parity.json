@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-curve/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-curve/index.ts",
+  "sourceLineCount": 9,
+  "coveredLineCount": 9,
+  "conversionStatus": "converted",
+  "notes": [
+    "Source is a pure re-export barrel (9 `export { default as X } from './X'` lines, line 10 trailing blank). Each named export is preserved by a native-safe component of the same name; the barrel's only behavior — exposing these nine identifiers — is reproduced exactly.",
+    "L1 `export { default as SummaryStatsGrid } from './SummaryStatsGrid'` -> `export const SummaryStatsGrid` placeholder (stats prop preserved); the DOM/Recharts sibling has no native port yet, so a GlassPanel + AppText 'native port pending' state replaces the SVG chart.",
+    "L2 `SessionCurveChart` -> `export const SessionCurveChart` placeholder (curveData prop preserved).",
+    "L3 `SessionDetailPanel` -> `export const SessionDetailPanel` placeholder (session prop preserved).",
+    "L4 `SessionComparisonChart` -> `export const SessionComparisonChart` placeholder (sessions prop preserved).",
+    "L5 `ChargerTypeChart` -> `export const ChargerTypeChart` placeholder (sessions prop preserved).",
+    "L6 `SpeedTrendChart` -> `export const SpeedTrendChart` placeholder (sessions prop preserved).",
+    "L7 `TimeToChargeSection` -> `export const TimeToChargeSection` placeholder (sessions prop preserved).",
+    "L8 `YearlyTrendChart` -> `export const YearlyTrendChart` placeholder (yearlyTrend prop preserved).",
+    "L9 `LoadingSkeleton` -> `export function LoadingSkeleton` rendering native skeleton bars (View) inside a GlassPanel.",
+    "L10 trailing blank line: no-op.",
+    "Built with React.createElement (the output path must stay `index.ts`, which cannot contain JSX). No DOM elements, Recharts, Leaflet, or web UI imported; only React, react-native View/StyleSheet, and the shared native AppText/GlassPanel + theme tokens are used.",
+    "Prop interfaces mirror the web sibling prop names (stats, curveData, session, sessions, yearlyTrend) using permissive structural types so future native call sites compile unchanged; no `any` used. The source has no i18n strings, so the short placeholder labels are native scaffolding, not source-derived copy.",
+    "Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
