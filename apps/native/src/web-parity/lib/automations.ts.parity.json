@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/lib/automations.ts",
+  "outputPath": "apps/native/src/web-parity/lib/automations.ts",
+  "sourceLineCount": 20,
+  "coveredLineCount": 20,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-4 `import type { AutomationStep, AutomationStepKind } from '@/types/automations'` -> `import type { AutomationStep, AutomationStepKind } from '../api/hooks/useAutomations'`; the native parity tree colocates these discriminated-union types in api/hooks/useAutomations.ts (web/src/api/types.ts re-exports them from there), and both types have identical shape/discriminant (`kind`) to the web originals.",
+    "L6-11 `isStep<K>` type guard ported 1:1: returns `step.kind === kind` narrowing to `Extract<AutomationStep, {kind: K}>`; pure logic, no DOM/React dependency.",
+    "L13-20 `findStepByKind<K>` ported 1:1: `steps.find((s): s is Extract<AutomationStep, {kind: K}> => s.kind === kind)`; uses only Array.prototype.find, runs unchanged under React Native.",
+    "L5,12 blank separator lines and L21 trailing newline preserved as standard formatting.",
+    "Brace style adjusted to parity convention `{kind: K}` (no inner spacing) to match existing native-parity files and pass eslint/prettier."
+  ]
+}
