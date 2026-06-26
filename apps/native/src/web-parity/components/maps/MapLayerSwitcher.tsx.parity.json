@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/maps/MapLayerSwitcher.tsx",
+  "outputPath": "apps/native/src/web-parity/components/maps/MapLayerSwitcher.tsx",
+  "sourceLineCount": 52,
+  "coveredLineCount": 52,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 52 source lines line by line before editing; preserved the MapLayerSwitcher export, current/onChange prop names and signature, the MapStyle union, and the four-entry layers table (dark/satellite/streets/terrain) with identical ids, emoji icons, and labels.",
+    "L1 clsx and L19/L35 className string composition are replaced by React Native StyleSheet array composition; L2 imports MapStyle from ./MapTileLayer which is not yet ported to native, so the identical union type is defined and re-exported here to keep the native contract in sync.",
+    "L18-29 floating absolute Leaflet overlay div is ported to an absolutely positioned View (bottom/left/zIndex 1000, row, gap, rounded border, glass surface, shadow) using theme tokens; backdrop-blur has no RN primitive so the semi-transparent surfaceGlass token approximates the overlay intent.",
+    "L30-49 button map preserves per-layer key, onPress=>onChange(l.id), title becomes accessibilityLabel, active (current===l.id) vs inactive styling (surfaceRaised+textPrimary vs transparent+textSecondary), and the web hover state maps to a Pressable pressed state plus accessibilityRole=button and accessibilityState.selected.",
+    "L46-47 icon span renders always and the L47 `hidden sm:inline` label is preserved via useWindowDimensions against Tailwind's 640px sm breakpoint so labels stay icon-only on narrow native viewports.",
+    "Web-only `forced-colors`/Windows High Contrast wrappers (L21-27, L37-40) have no React Native equivalent; native renders always-visible solid token-based colors and borders instead, so no forced-colors state is required. No DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported."
+  ]
+}
