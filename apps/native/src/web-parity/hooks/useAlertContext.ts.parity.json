@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/hooks/useAlertContext.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useAlertContext.ts",
+  "sourceLineCount": 68,
+  "coveredLineCount": 68,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 68-line source hook line by line before editing. Ported the AlertContext interface (web L18-30) verbatim, including every JSDoc field comment and the hasContext convenience flag, plus the ALERT_WINDOW_MS constant (web L32).",
+    "Preserved the exact useMemo computation (web L37-66): vehicle_id/t/signal param reads, the Number() + Number.isFinite() vehicleId guard, the ±30 min ISO timeWindow (from/to via toISOString), and the hasContext OR-logic using the validated safeVehicleId. Behavior, state names, and the ISO API/timestamp handling are unchanged.",
+    "Replaced browser-only react-router-dom useSearchParams (web L2 import, L35 usage) with a native-safe in-process query-param store read through React useSyncExternalStore; React Native has no URL/router. Added setAlertContextParams()/clearAlertContext() as the native navigation/notification bridge (analog of navigating to ?vehicle_id=&t=&signal=). The store starts empty, so until the native layer populates it the hook returns all-null with hasContext=false — the documented unavailable/default-view state matching the web 'no alert context in URL' path.",
+    "Native output imports only React (useMemo, useSyncExternalStore); no DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI components. No i18n or unit conversion is present in this source file, so none was introduced."
+  ]
+}
