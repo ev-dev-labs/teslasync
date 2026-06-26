@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/lib/alertDrillthrough.ts",
+  "outputPath": "apps/native/src/web-parity/lib/alertDrillthrough.ts",
+  "sourceLineCount": 129,
+  "coveredLineCount": 129,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 129 numbered source lines before editing. L1-L13 module JSDoc + L17-L22 DrillthroughTarget interface + L24-L31/L95/L98-L106/L124 doc comments preserved verbatim.",
+    "L15 `import type { Alert } from '@/api/types'` -> native `../api/types` (the already-ported web-parity types whose Alert mirrors the web shape including rule_signal/vehicle_id/created_at; same import the sibling AlertCard.tsx native port uses).",
+    "L32-L93 SIGNAL_TO_PAGE record ported key-for-key (all 51 signal->route entries: battery, charging, driving, climate, tire-pressure, security-access, software-updates, navigation) with identical route strings; only whitespace reformatted by the linter's object spacing.",
+    "L96 SIGNAL_EXPLORER_FALLBACK = '/signal-explorer' preserved verbatim.",
+    "L107-L122 getAlertDrillthrough ported with identical logic: rule_signal ?? null, vehicle_id>0 guard (treat 0 as no vehicle), created_at -> t, conditional query assembly in insertion order, SIGNAL_TO_PAGE lookup with SIGNAL_EXPLORER_FALLBACK default. Single-line ifs wrapped in braces only to satisfy @react-native eslint curly rule; behavior unchanged.",
+    "L125-L129 getAlertDrillthroughHref ported; the browser-only `new URLSearchParams(query).toString()` (rule 7: Hermes lacks a complete URLSearchParams) is replaced by an inline application/x-www-form-urlencoded encoder (encodeURIComponent + %20->'+'), value-identical to URLSearchParams for vehicle_id/ISO-timestamp/signal and matching the existing native AlertCard.tsx inline builder; insertion-order key iteration preserves the same query string.",
+    "No DOM, browser HTML, Recharts, Leaflet, react-router, or web UI components imported; output is pure native-compatible TypeScript using only encodeURIComponent (a standard JS global available in Hermes)."
+  ]
+}
