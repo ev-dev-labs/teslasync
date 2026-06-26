@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/notifications/components/LegacyAlertRulesRedirect.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/components/LegacyAlertRulesRedirect.tsx",
+  "sourceLineCount": 11,
+  "coveredLineCount": 11,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 11 source lines before editing; the file is a routing-only redirect that sends the legacy /alert-rules route to /notifications/rules while preserving the query string, with no visible UI.",
+    "Source L1-4 (JSDoc describing the /alert-rules -> /notifications/rules redirect preserving search params): preserved as the component/file header doc and on the default-export JSDoc; intent kept verbatim.",
+    "Source L6 `import { Navigate, useLocation } from 'react-router-dom'`: react-router-dom is browser-only and unavailable in native. `useLocation().search` becomes a native-safe `search` prop (RouteTransition/RouteAnnouncer `pathname`-prop precedent); `<Navigate replace />` becomes an `onRedirect(target, { replace: true })` callback fired in a mount useEffect (the same onNavigate(path) navigation precedent used by the native shell App.tsx + Breadcrumbs/HealthRow/ActionItem). Only `react`'s useEffect is imported.",
+    "Source L8 `export default function LegacyAlertRulesRedirect()`: preserved as the default export, name unchanged; now accepts optional native-safe { search = '', onRedirect } props with a default empty-object param so it can still mount with zero arguments.",
+    "Source L9 `const { search } = useLocation()`: replaced by the `search` prop (default '') — the native-safe replacement for useLocation().search, documented in nativeLegacyAlertRulesRedirectCapabilities.reactRouterLocationAvailable=false.",
+    "Source L10 `return <Navigate to={`/notifications/rules${search}`} replace />`: target string is computed by the exported resolveLegacyAlertRulesRedirect(search) helper (``/notifications/rules${search}`` preserved exactly, with LEGACY_ALERT_RULES_TARGET='/notifications/rules') and dispatched via onRedirect(target, { replace: true }) in useEffect keyed on [search, onRedirect] so it re-fires when search changes, mirroring how the web <Navigate> re-navigates when its `to` prop changes. The component returns null, matching <Navigate> rendering no DOM/visible UI.",
+    "Source L11 (closing brace / trailing newline): function body closed; displayName='LegacyAlertRulesRedirect' added.",
+    "replace semantics preserved via the { replace: true } option (replaceSemanticsPreserved=true); search-param preservation preserved (searchParamsPreserved=true).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, framer-motion, react-router, or old web UI components imported into native output; only react's useEffect is used (non-visual routing logic per conversion contract rule 6). Prettier arrowParens:avoid, singleQuote, trailingComma:all applied. Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
