@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/i18n/en.json",
+  "outputPath": "apps/native/src/web-parity/i18n/en.json",
+  "sourceLineCount": 10096,
+  "coveredLineCount": 10096,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 10096 source lines; the file is a pure i18next translation resource (489 top-level namespaces) with no DOM, browser HTML, Recharts, Leaflet, or web UI dependencies, so it is platform-agnostic data.",
+    "Ported byte-for-byte (verified identical SHA-256 B91B3454...34C8, 397508 bytes, LF line endings, no BOM, trailing newline) preserving every i18n key, interpolation placeholder ({{name}} etc.), curly quotes, and case-sensitive duplicate-cased keys (mqtt vs Mqtt) intact.",
+    "JSON re-validated with a case-sensitive parser (Node JSON.parse) to confirm React Native / i18next can consume it unchanged; no conversion of logic was required for non-visual data."
+  ]
+}
