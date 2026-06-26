@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/types.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/types.ts",
+  "sourceLineCount": 152,
+  "coveredLineCount": 152,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 152 source lines with numbered output before editing; the file is a pure TypeScript type module (widget registry shapes) with no runtime behavior, so interfaces/types are ported field-for-field.",
+    "L1 import type { LucideIcon } from 'lucide-react': dropped (DOM/SVG icon component, not native-safe). Native renders icons via <SemanticIcon name={...} />, so WidgetDef.icon (L62) is retyped LucideIcon -> SemanticIconName via a type-only import from ../../../../components/icons/SemanticIcon (no runtime coupling). This matches the existing native registry ports registry/security.ts and registry/charging.ts that already mirror this field as SemanticIconName.",
+    "L2 import type { LazyExoticComponent, ComponentType } from 'react': kept verbatim — React.lazy + these type helpers are native-safe under Metro, so WidgetDef.component (L67) keeps LazyExoticComponent<ComponentType<WidgetProps>>.",
+    "L4-18 WidgetHelp: ported verbatim including the JSDoc and learnMore {url,label?} sub-shape (text?, i18nKey?, defaultValue?, learnMore?).",
+    "L20-23 WidgetSize (cols 1-4, rows 1-8 with the same inline range comments) and L25-32 WidgetConfig (vehicleId?, refreshRate?, chartType?, showTitle?, timeRange?, [key:string]:unknown index signature): ported verbatim.",
+    "L34-38 WidgetProps (vehicleId?, size, config?) and L40-56 WidgetCategory string union (all 16 members: vehicle/battery/energy/driving/charging/climate/tires/security/commands/media/telemetry/analytics/alerts/automations/system/maps): ported verbatim.",
+    "L58-73 WidgetDef: id/name/description/category/defaultSize/minSize/maxSize/component/help? ported verbatim; only icon retyped to SemanticIconName (see L1 note); JSDoc on help? preserved.",
+    "L75-79 WidgetInstance (id, widgetId, config?) ported verbatim. L81-101 RGLLayout (i,x,y,w,h,minW?,minH?,maxW?,maxH?,static?,isDraggable?,isResizable?,moved?) + RGLLayouts breakpoint index map: these are plain serializable position/size data shapes stored inside SavedDashboard.layouts (not react-grid-layout runtime), so ported verbatim and native-safe; original doc comments kept.",
+    "L103-118 DashboardSettings (refreshInterval, vehicleId?, showWidgetBorders, compactMode) and the DEFAULT_DASHBOARD_SETTINGS const value {refreshInterval:0, showWidgetBorders:false, compactMode:false}: ported verbatim (plain object literal, native-safe).",
+    "L120-137 SavedDashboard (id,name,icon?,vehicleId?:number|null,widgets,layouts,createdAt,updatedAt,isDefault?,settings?) with its per-vehicle-scope JSDoc, and L139-152 LegacyDashboardLayout (@deprecated; id,name,widgets[{id,widgetId,position,size,config?}],createdAt,updatedAt): ported verbatim, preserving the @deprecated tag and trailing newline.",
+    "No DOM, no lucide-react, no Recharts/Leaflet, and no web UI components imported — only the native-safe React type helpers plus a type-only SemanticIconName import.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), npm test -- --runInBand --detectOpenHandles (jest) — all pass."
+  ]
+}
