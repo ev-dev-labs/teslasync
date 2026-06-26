@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/export.ts",
+  "outputPath": "apps/native/src/web-parity/lib/export.ts",
+  "sourceLineCount": 61,
+  "coveredLineCount": 61,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 61 numbered source lines before editing. L1-L6 file JSDoc -> native header comment documenting the web->native adaptation (CSV/JSON serialisation + server-side export URL helpers).",
+    "L8-L19 buildExportUrl ported faithfully: same ('drives'|'charging'|'positions') type, ('csv'|'json') format, optional {start,end,vehicleId} filters, same `/api/v1/export/${type}?${params.toString()}` template and snake_case `vehicle_id` key. URLSearchParams kept (matches api/* parity ports); `params.set(...)` (L15-L17) -> `params.append(...)` because the React Native URLSearchParams TS surface exposes append but not set, and format/start/end/vehicle_id are each written at most once so the query string is byte-identical; the same `if (filters?.x)` truthy guards are preserved.",
+    "L21-L26 exportAsCSV signature preserved (data, filename, columns?); the inline `{ key: keyof T; label: string }` column type (L25) extracted to exported `ExportColumn<T>`. L27 empty-data early return preserved via `serializeCSV` returning null -> exportAsCSV returns { payload:null, outcome:{ downloaded:false, reason:'empty' } } (no download), the native analogue of web's `if (!data.length) return`.",
+    "L29-L41 CSV body ported verbatim into `serializeCSV`: column inference `Object.keys(data[0]).map(...)` (L29), header `cols.map(c=>c.label).join(',')` (L30), per-row mapping with null/undefined -> '' (L34), RFC-4180 quote escaping for values containing , \" or \\n via `\"${val.replace(/\"/g,'\"\"')}\"` (L35-L37), `String(val)` fallback (L38), `.join(',')` rows (L39) and `[header,...rows].join('\\n')` (L41).",
+    "L42 `downloadBlob(csv, filename, 'text/csv;charset=utf-8;')` and L48 `downloadBlob(json, filename, 'application/json')`: exact mime types preserved; the downloadBlob call becomes routing the serialised DownloadPayload through a FileDownloadSink.",
+    "L45-L49 exportAsJSON ported: `JSON.stringify(data, null, 2)` (L47) preserved verbatim (same 2-space indent) then routed through the sink with the application/json mime type.",
+    "L51-L60 downloadBlob (Blob, URL.createObjectURL, document.createElement('a'), link.href/download, document.body.appendChild/removeChild, link.click, URL.revokeObjectURL) is DOM-only with no equivalent in the bare RN dependency set (no expo-file-system/expo-sharing/react-native-share). Rule 7: modelled as a pluggable FileDownloadSink; default `nativeUnavailableDownloadSink` returns { downloaded:false, reason:'unavailable' } (explicit unavailable state). The serialised payload (content+filename+mimeType) is always returned via ExportResult so a native screen / future transport can persist or share it. L61 closing brace covered.",
+    "No DOM/browser/Recharts/Leaflet/web-UI imports; pure native-compatible TypeScript using React Native primitives only. Verified with apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles (added __tests__/Export.test.ts mirroring the web export.test.ts buildExportUrl/CSV/JSON cases plus the native sink contract)."
+  ]
+}
