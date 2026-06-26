@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/types/charging.ts",
+  "outputPath": "apps/native/src/web-parity/types/charging.ts",
+  "sourceLineCount": 184,
+  "coveredLineCount": 184,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 184 source lines before editing; source is a pure non-visual TypeScript type module with no imports, DOM, Recharts, Leaflet, or web UI dependencies.",
+    "Ported every interface 1:1 with identical field names, optionality, snake_case JSON keys, SI-suffixed fields (total_energy_added_wh, peak_power_w), and the OptimizerRecommendation priority union ('high'|'medium'|'low').",
+    "Preserved the three section divider comments (Cost Forecast, Charging Optimizer, Smart Charge Planner) and the trailing newline; no unit conversion or browser-only behavior existed so none was introduced."
+  ]
+}
