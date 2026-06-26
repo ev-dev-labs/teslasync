@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/lib/csvExport.ts",
+  "outputPath": "apps/native/src/web-parity/lib/csvExport.ts",
+  "sourceLineCount": 136,
+  "coveredLineCount": 136,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 136 source lines before editing. The file is a non-visual CSV utility module with zero imports — no DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components — so the serialization logic ports as platform-agnostic TypeScript under the same public surface.",
+    "L1-8 module JSDoc: preserved and expanded into the native header, retaining the RFC-4180 contract description and adding a 'Native adaptation' section documenting the download no-op.",
+    "L10 `CsvCellValue` type and L12-20 `CsvColumn<T>` interface (key/header/accessor with their JSDoc): ported verbatim; prettier reflowed the union onto one member per line.",
+    "L22-48 `escapeCell`: ported verbatim — null/undefined→'', string passthrough, number/boolean via String(), object/array via JSON.stringify with String() fallback, and the /[\",\\r\\n]/ + leading/trailing-whitespace quoting with doubled embedded quotes. Behaviour matches the web vitest suite (commas, quotes, CRLF, BOM-free cells).",
+    "L50-69 `toCSV<T>`: ported verbatim — header from `header ?? key`, accessor-or-key value lookup via `row as unknown as Record<string, unknown>`, ',' field join, '\\r\\n' row join, and header-only output when body is empty.",
+    "L71-90 `objectsToCSV`: ported verbatim — Set-tracked first-seen key union preserving insertion order, mapped to `{ key }` columns, delegated to toCSV; empty input returns '' identically.",
+    "L92-115 `downloadCSV`: browser-only (UTF-8 BOM `Blob`, `URL.createObjectURL`, `document.createElement('a')`/appendChild/click/removeChild, deferred `URL.revokeObjectURL`). React Native's tsconfig omits the DOM lib so these globals are unavailable, and the web source is itself a documented 'No-op on non-browser environments' (its `typeof window/document === 'undefined'` guard). Implemented as a native-safe no-op that keeps the same `(filename, csv) => void` signature; the filename `.csv` normalization (L102) and UTF-8 BOM/mimeType (L103-104) are preserved in the additive `prepareCSVDownload` helper, and the explicit unavailable state is exported as `CSV_DOWNLOAD_AVAILABLE = false` so callers can route bytes to a native share/file API (mirrors the existing ChartContainer 'native CSV unavailable' pattern).",
+    "L117-126 `downloadRowsAsCSV<T>`: ported verbatim — delegates to `downloadCSV(filename, toCSV(rows, columns))`, inheriting the native no-op download.",
+    "L128-136 `defaultExportFilename`: ported verbatim — local-time getFullYear/getMonth+1/getDate, zero-padded to `prefix-YYYY-MM-DD` (matches the web test's local-timezone assertions). L137 trailing newline preserved.",
+    "Gates run from apps/native: `npm run typecheck` (tsc --noEmit) clean, `npm run lint -- --quiet` clean (prettier-formatted, no unused vars/expressions), `npm test -- --runInBand --detectOpenHandles` full existing suite green."
+  ]
+}
