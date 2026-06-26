@@ -1,0 +1,27 @@
+{
+  "sourcePath": "web/src/features/admin/components/devtools/TelemetryErrorsPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/devtools/TelemetryErrorsPanel.tsx",
+  "sourceLineCount": 124,
+  "coveredLineCount": 124,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 124 source lines line by line before editing. Every line is accounted for below; the full 5-state machine (idle | loading | error | data | empty), the prop contract, state names, and copy-routing are preserved.",
+    "L1 `import { Badge, Button, DataTable, type Column } from '@/components/ui'`: no native module. Badge -> inline dot-pill (StateBadge), Button -> ghost Pressable (DownloadButton), DataTable -> static native table (ErrorsTable: header + rows keyed by rowKey). `Column<T>` is re-expressed as a native-pragmatic subset (key/header/render/align) and exported.",
+    "L2 `import { Skeleton } from '@/components/feedback'`: replaced by an inline SkeletonLines component rendering the same `lines={3}` shimmer bars (web L57).",
+    "L3 `import { Icons } from '@/lib/icons'`: Icons.download -> shared SemanticIcon `download` glyph (apps/native components/icons/SemanticIcon), the established native icon vocabulary.",
+    "L5 `import type { TelemetryError } from './types'`: native sibling types.ts not yet ported, so the 4-field interface (rowKey/timestamp/code/message) is mirrored locally and re-exported to keep the file self-contained and typecheck-clean.",
+    "L7-21 TelemetryErrorsPanelProps interface (title, loading, error, requested, ok, errors, columns, vin, idleMessage, emptyMessage, rawData, rawDisclosureLabel, downloadLabel): ported verbatim and exported; field names/types preserved exactly.",
+    "L23-29 4-state-UI explanatory comment: preserved in the native file header doc.",
+    "L30-44 function signature + destructured props: ported verbatim as `export function TelemetryErrorsPanel({...}: TelemetryErrorsPanelProps)`.",
+    "L45-52 idle branch (!requested): `<div className='mt-3 rounded-lg bg-white/[0.02] p-3'>` -> View styles.panel; title span (text-xs text-secondary) -> PanelTitle; idleMessage (text-sm italic text-muted) -> AppText styles.idleText tone='muted'.",
+    "L53-60 loading branch: same panel + `<Skeleton lines={3} />` -> SkeletonLines lines={3} inside styles.skeletonWrap.",
+    "L61-68 error branch: `bg-neon-red/5` -> styles.panelError rgba(239,68,68,0.05); error text (text-rose-300) -> AppText styles.errorText color colors.danger.",
+    "L69-79 data branch DataTable (tableId='admin:fleet-api-errors', columns, data=errors, keyExtractor=r.rowKey, compact, pagination defaultPageSize:50): ErrorsTable renders header + body rows keyed by row.rowKey, TABLE_ID constant preserved as testID, compact vertical padding, and DEFAULT_PAGE_SIZE=50 lightweight paging (Prev/Next + 'page / count' when rows exceed one page). Per-column align honoured.",
+    "L80-95 ghost download Button with Blob/URL.createObjectURL/document.createElement('a').click()/URL.revokeObjectURL + Icons.download + downloadLabel: DownloadButton ghost Pressable with SemanticIcon `download`; browser file download is unavailable on native, so the identical serialization JSON.stringify(errors, null, 2) and filename `telemetry-errors-${vin || 'all'}.json` are handed to React Native Share.share, preserving export intent. Failures are swallowed.",
+    "L99-102 empty-state explanatory comment (ok=false unknown shape vs ok=true healthy): preserved in the native file header doc and inline comment.",
+    "L103-111 empty branch: panel with flex justify-between title + `<Badge variant={ok?'success':'warning'} size='sm' dot>{ok?'0':'?'}</Badge>` -> styles.titleRow with PanelTitle + StateBadge (dot-pill, success/warning tone, label '0'/'?'); emptyMessage (text-secondary) -> AppText styles.emptyText.",
+    "L112-121 raw disclosure `{!ok && rawData != null && <details><summary>{rawDisclosureLabel}</summary><pre>{JSON.stringify(rawData,null,2)}</pre></details>}`: same guard `!ok && rawData != null` -> RawDisclosure native collapsible (Pressable summary + caret toggling SemanticIcon next/expand) revealing the pretty-printed JSON in a maxHeight 256 ScrollView (web max-h-64 overflow-auto) with a monospace block (Platform-selected mono font), text color colors.textPrimary.",
+    "L122-124 closing markup/brace: ported.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, or web UI components are imported; only react, react-native primitives, and existing apps/native SemanticIcon/AppText/theme tokens are used. CSS vars mapped to tokens: --text-secondary->textSecondary, --text-muted->textMuted, --text-primary->textPrimary, --surface-overlay->surfaceGlass. Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
