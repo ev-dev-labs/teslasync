@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/notifications/components/LegacyAlertStudioRedirect.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/components/LegacyAlertStudioRedirect.tsx",
+  "sourceLineCount": 12,
+  "coveredLineCount": 12,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 12 source lines line by line before editing. L1-5 JSDoc (redirect /alert-studio -> /notifications/studio, preserve search params, keep draft-restore links + email CTAs working) is preserved as the native file header and the component doc.",
+    "L7 `import { Navigate, useLocation } from 'react-router-dom'` is dropped: React Native has no DOM router. `useLocation` is replaced by a native-safe `search` prop (the exact value `useLocation().search` supplies, including its leading '?', defaulting to '') and `Navigate ... replace` is replaced by an `onRedirect(to, { replace })` callback — the analog of Navigate's imperative navigate(to, { replace }).",
+    "L9 `export default function LegacyAlertStudioRedirect()` is preserved as the default export (same name, plus displayName); props are added for the native-safe location/navigation inputs.",
+    "L10 `const { search } = useLocation()` becomes the `search` prop with a '' default, matching a location with no query string.",
+    "L11 `<Navigate to={`/notifications/studio${search}`} replace />` is split into the exported constant LEGACY_ALERT_STUDIO_REDIRECT_TARGET='/notifications/studio' and the pure helper buildAlertStudioRedirectTarget(search) (identical `${target}${search ?? ''}` concat); the `replace` intent is preserved via a `replace` prop defaulting to true; the redirect fires as a mount/location-change useEffect side-effect (like the native App.tsx setActivePath redirect effect) and the component returns null, matching Navigate rendering nothing. L12 trailing newline accounted for.",
+    "Unavailable browser behavior (DOM router useLocation + Navigate) is documented via nativeLegacyAlertStudioRedirectCapabilities (reactRouterLocationAvailable=false, domNavigateAvailable=false, nativeRedirectPropsSupported=true) and these notes, per the native-safe contract.",
+    "Rule 4/5 compliance: no DOM elements, react-router-dom, Recharts, Leaflet, or old web UI components are imported — only React's useEffect. Added __tests__/LegacyAlertStudioRedirectParity.test.tsx covering the resolved target (search preserved + empty), replace default/override, and null render.",
+    "Verified via gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
