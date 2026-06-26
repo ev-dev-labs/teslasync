@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/admin/pages/BackupRestorePage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/pages/BackupRestorePage.tsx",
+  "sourceLineCount": 947,
+  "coveredLineCount": 947,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-21 imports: shared web UI kit / data-display / feedback / motion / layout, react-i18next, TanStack Query, @/lib formatters, @/api/client request+getApiBase, lucide Icons, and SettingsExportImport -> native equivalents (Skeleton/EmptyState/AlertBanner/FadeIn/Input from web-parity, AppText/GlassPanel/SemanticIcon/tokens from src) plus inlined Button/Badge/Select/Toggle/Modal/ConfirmDialog/DataTable/MetricCard/TimeStamp/PageContainer/Icons and inlined fmtInt/formatBytes/formatRelative/formatDurationMsCompact/getErrorMessage/cn; useQuery/useMutation/useQueryClient kept verbatim.",
+    "L27-72 types BackupConfig, BackupRun, RestorePreview, ConfigFormData ported verbatim (snake_case fields preserved; native request() camelCaseKeys keeps the originals).",
+    "L78-151 constants PROVIDERS, PROVIDER_BADGE_VARIANT, PROVIDER_ICON, STATUS_CONFIG, EMPTY_FORM, BACKUP_TYPE_OPTIONS, PROVIDER_OPTIONS, PROVIDER_FIELDS ported; PROVIDER_ICON/STATUS_CONFIG `typeof Icons.*` become native glyph IconComponent types; STATUS_CONFIG Tailwind colour classes collapse into the Badge variant + the glyph semantic tone (documented).",
+    "L157-200 component setup: useTranslation()/useToast()/useQueryClient()/usePageTitle kept; usePageTitle is a native no-op (no document.title); the six useState hooks (modalOpen, editingConfig, form, deleteTarget, previewData, previewOpen) preserved verbatim.",
+    "L171-205 queries: useQuery ['backup-configs'] and ['backup-runs'] with the exact queryFn paths and the refetchInterval(query) 5000/30000 logic preserved; anyError/loading derivations and the stats + failedRuns useMemo blocks ported verbatim.",
+    "L207-273 mutations: create/update/delete/trigger/quickBackup/verify useMutation blocks ported with identical paths, methods, JSON.stringify bodies, query keys, and onSuccess/onError toast keys.",
+    "L275-335 callbacks: closeModal/openCreate/openEdit/handleSave/handleDownload/handlePreview/setField/setProviderField preserved; handleDownload window.open(`${getApiBase()}/api/v1/backup/runs/${id}/download`) -> Linking.openURL(apiUrl(`/backup/runs/${id}/download`)) (identical URL) with a toast on failure (rule 7).",
+    "L337-552 configColumns + runColumns Column<T> arrays ported: every key/header/sortable and render() preserved; DOM div/span -> View/AppText, cn() icon classes kept verbatim (accepted+ignored), Badge/Button/TimeStamp swapped for native inlines; the run-status `animate-spin` + conditional icon colours are not applied to the placeholder glyph (documented).",
+    "L554-562 previewColumns ported (Table name mono + Rows fmtInt).",
+    "L564-635 render header + FadeIn stats grid: PageContainer keeps the exact loading->spinner-only / error->box / children branch semantics; the 4-Skeleton loading branch and the four MetricCards (Total Configs/Backups/Last Backup/Total Size, cyan/green/purple/default) ported; grid cols-2/lg:cols-4 -> flexWrap cells.",
+    "L638-722 Backup Configurations + Backup History GlassPanels: EmptyState (action.onClick->onPress) or DataTable for each, the Refresh button invalidating ['backup-runs'], and the failed-runs Recent Errors list ported verbatim.",
+    "L724-734 SettingsExportImport section: ported as a native-safe local component — the export endpoint is wired through useExportSettings (real), while the browser File-API import (file picker/drag-drop) and Blob/anchor save-as download are surfaced as an explicit unavailable state (nativeSettingsBackupCapabilities.unavailableReason) per rule 7.",
+    "L736-847 create/edit Modal: Input (onChange e.target.value -> onChangeText), Toggle, two Selects (provider reset clears provider_config), numeric Inputs (keyboardType numeric + Math.max(1,Number)), dynamic PROVIDER_FIELDS (textarea->multiline, password->secureTextEntry), compress/encrypt toggles, and the Cancel/Save footer (disabled !form.name.trim(), loading create||update) all ported.",
+    "L849-861 delete ConfirmDialog ported with the {{name}} interpolation, danger variant, and onConfirm guarded by deleteTarget.",
+    "L863-943 restore-preview Modal: checksum status row, optional Backup Metadata key/value list, the per-table DataTable or the no-tables EmptyState, the Close footer, and the loading-preview fallback all ported; cn() conditional emerald/rose icon colour kept verbatim (glyph renders its semantic tone).",
+    "L945-947 default export BackupRestorePage closes the component; gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
