@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/admin/pages/DiskForecastPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/pages/DiskForecastPage.tsx",
+  "sourceLineCount": 211,
+  "coveredLineCount": 211,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-11 module doc + GET /api/v1/admin/observability/disk-forecast backing endpoint preserved in the native header comment.",
+    "L12-14 imports (useMemo, react-i18next useTranslation, lucide-react Database): useMemo retained; useTranslation -> local useNativeTranslationFallback shim (interpolates {{count}}/{{pct}}); lucide Database is decorative and maps to the native EmptyState which carries meaning via title/message.",
+    "L16-25 web component imports (PageContainer, GlassPanel/Badge/DataTable/Column, PanelTitle/Caption, StatCard, FadeIn, EmptyState/AlertBanner/SectionErrorBoundary, usePageTitle, formatBytes/fmtNumber, useDiskForecast, isApiError): PageContainer -> local screen scaffold; GlassPanel/PanelTitle/Caption -> themed View+AppText; Badge -> SeverityBadge; DataTable/Column -> native header+rows table; StatCard/EmptyState/ErrorBoundary reuse native parity components; FadeIn -> reduced-motion mount fade; AlertBanner -> WarningBanner; SectionErrorBoundary -> native ErrorBoundary inline; usePageTitle -> native no-op; formatBytes/fmtNumber inlined native-safe; isApiError from native client.",
+    "L26-29 type imports DiskForecastSeverity + HypertableSize sourced from the native useOperatorConfidence hook (which inlines those wire DTOs).",
+    "L31-43 SEVERITY_VARIANT and SEVERITY_LABEL maps ported verbatim (ok/warn/critical/unknown -> success/warning/danger/neutral and OK/Warn/Critical/em-dash).",
+    "L45-51 component body: useTranslation->shim, usePageTitle title call, useDiskForecast() query, subsystemMissing = isApiError(error) && status===503, rows = data?.hypertables ?? [] all preserved with identical names.",
+    "L53-59 fleetTotals useMemo reducer (total/uncompressed/compressed/growth via rows.reduce) ported verbatim with [rows] dependency.",
+    "L61-124 columns useMemo<Column[]> with [t] dependency: all six columns (hypertable name + chunk count Caption, total formatBytes, uncompressed/compressed split, growth/d, est_days_to_quota null-guard fmtNumber, severity Badge) ported with identical i18n keys, align='right', and render logic.",
+    "L126-134 PageContainer title/subtitle/query -> native header (title + subtitle AppText) + query-driven FreshnessChip (StatusPill) + page ErrorBoundary wrapper.",
+    "L135-144 FadeIn wrapper + subsystemMissing AlertBanner(warning) -> FadeIn mount fade + WarningBanner with admin.subsystem.unavailableTitle + admin.diskForecast.notConfigured copy.",
+    "L146-181 rows.length>0 four-StatCard grid (fleetTotal/tableCount, fleetUncompressed/percentSub, fleetCompressed/percentSub, fleetGrowth/growthSub) with toFixed(1) percent math and total>0 em-dash guards ported verbatim into a flex-wrap statGrid.",
+    "L183-206 GlassPanel + PanelTitle 'Hypertables' + SectionErrorBoundary('disk-forecast-table') wrapping the empty-state-vs-DataTable branch: rows.length===0 && !isLoading && !subsystemMissing shows EmptyState (emptyTitle/emptyMessage); otherwise the native table renders columns/data keyed by hypertable_name with emptyTable fallback message.",
+    "L207-211 closing JSX/default export preserved; DiskForecastPage remains the default export.",
+    "Native-safe substitutions documented: no DOM/Tailwind/lucide/Recharts imports; uses React Native primitives (ScrollView/View/Animated/StyleSheet) + native parity components (AppText, StatCard, EmptyState, ErrorBoundary, StatusPill) and theme tokens; usePageTitle and document.title intentionally unavailable on native; lucide Database glyph intentionally unavailable in the native EmptyState contract.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
