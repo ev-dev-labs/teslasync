@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/motion/CarAnimation.tsx",
+  "outputPath": "apps/native/src/web-parity/components/motion/CarAnimation.tsx",
+  "sourceLineCount": 176,
+  "coveredLineCount": 176,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full numbered source before editing; covered all four exports (CarAnimation L12-89, ChargingBolt L95-121, BatteryFillAnimation L127-148, WheelSpin L154-176), their JSDoc reduced-motion contracts (L6-11/91-94/123-126/150-153), size/className props, the t() aria-labels (carAnimation.tesla/charging/loading), COLOR.GOOD/WARN/BAD battery thresholds, the verbatim battery fill-width math, every SVG shape (car body path, windshield, rear window, two wheels with hubs, headlight, taillight, ground shadow, bolt path, battery outline/cap/fill, wheel circles + 5 rotate(angle 12 12) spokes), and each framer transition (pathLength/opacity/scale-spring/scaleX/opacity-keyframe loops/360 rotate loop).",
+    "framer-motion + SVG (motion.path/circle/ellipse/rect/g, div wrapper) and react-i18next/useMotionPreference are DOM/browser-only and react-native-svg is not a dependency, so shapes are approximated with positioned RN View/Animated.View strokes+fills (same technique as HelixMark/RadialGauge/Sparkline ports), framer transitions become Animated timing/spring/loop helpers, useMotionPreference becomes AccessibilityInfo.isReduceMotionEnabled, and useTranslation becomes a fallback shim returning the English default.",
+    "Native-safe approximations documented inline: the car-body pathLength draw-in is rendered as a fade-in (no Animated pathLength on a View); the lightning path is a two-stroke zig-zag glyph whose pulsing fillOpacity becomes a gentle opacity pulse; reduced motion pins every shape to its final visual state (opacity 1, scale 1, steady head/tail-light, full fill, static wheel) per the source JSDoc. Web CSS vars (--surface-1/2/3, --theme-primary, --text-muted) and COLOR.* are resolved to dark-theme hex/rgba to preserve visual intent without browser CSS variables.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) clean, npm run lint -- --quiet clean, npm test -- --runInBand --detectOpenHandles green."
+  ]
+}
