@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/features/settings/components/SettingField.tsx",
+  "outputPath": "apps/native/src/web-parity/features/settings/components/SettingField.tsx",
+  "sourceLineCount": 36,
+  "coveredLineCount": 36,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 36 numbered source lines before editing; every line is mapped below.",
+    "L1 `import type { ReactNode } from 'react'` -> `import React from 'react'`; the `children: ReactNode` prop is preserved as `children: React.ReactNode` (the GasPriceSettings inline-SettingField precedent).",
+    "L2 `import { HelpIcon } from '@/components/ui'` -> `import { HelpIcon } from '../../../components/ui/HelpIcon'` (the already-ported native parity HelpIcon). The web ui barrel resolves to the same component; the native parity path is used. AppText (real native ui, ../../../../components/ui/AppText) + react-native View/StyleSheet are added for the label + layout.",
+    "L3 blank -> import-group separation preserved.",
+    "L4-11 `export interface SettingFieldHelp { i18nKey?: string; content?: string; for?: string }` (with the i18nKey/content/for JSDoc, L5/L7/L9-10) -> ported verbatim as an exported interface with the identical fields, optionality, and JSDoc intent so call-sites keep the same type.",
+    "L12 blank -> preserved.",
+    "L13-22 `export function SettingField({ label, help, children }: { label: string; help?: SettingFieldHelp; children: ReactNode })` -> `export function SettingField({ label, help, children }: { label: string; help?: SettingFieldHelp; children: React.ReactNode }): React.ReactElement` — identical named export, identical prop names/types (the L19 'Optional inline help icon' JSDoc preserved), ReactNode -> React.ReactNode. SettingField.displayName added for parity consistency.",
+    "L23-24 `return ( <div>` -> `return ( <View>` (the root field wrapper; no styling on the web div).",
+    "L25 `<div className=\"mb-1.5 flex items-center gap-1\">` -> `<View style={styles.labelRow}>`: mb-1.5 -> marginBottom 6, flex items-center -> flexDirection row + alignItems center, gap-1 -> gap 4.",
+    "L26-28 `<label className=\"block text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]\">{label}</label>` -> `<AppText tone=\"muted\" style={styles.label}>{label}</AppText>`: text-xs -> fontSize 12 (+lineHeight 16), font-medium -> fontWeight '500', uppercase -> textTransform 'uppercase', tracking-wider -> letterSpacing 0.5, text-[var(--text-muted)] -> tone='muted'. (web `block` is the default block layout; no RN analog needed for a flex-row child.) These map exactly to the GasPriceSettings inline-SettingField parity styles (fieldLabelRow/fieldLabel).",
+    "L29-31 `{help && (<HelpIcon i18nKey={help.i18nKey} content={help.content} for={help.for} />)}` -> `{help ? (<HelpIcon content={help.content} for={help.for} i18nKey={help.i18nKey} />) : null}`: the web `&&` short-circuit (render the icon only when `help` is supplied) is preserved as a ternary->null; the same three props are forwarded to the native parity HelpIcon. (Native limitation, rule 7: the ported HelpIcon additionally renders nothing when an i18nKey-only help resolves to no text — its own documented short-circuit, since no i18n runtime is wired on native.)",
+    "L32 `</div>` -> `</View>` (labelRow close).",
+    "L33 `{children}` -> `{children}` (rendered verbatim after the label row).",
+    "L34-35 `</div> )` -> `</View> )` (root close + return close).",
+    "L36 `}` (function close) + L37 trailing newline -> preserved.",
+    "No DOM/Recharts/Leaflet/react-i18next/lucide/framer-motion/old web-ui import reaches the native output — only react, react-native primitives (View/StyleSheet), the real native AppText, and the native parity HelpIcon.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
