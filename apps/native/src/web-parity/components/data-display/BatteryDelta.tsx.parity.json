@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/BatteryDelta.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/BatteryDelta.tsx",
+  "sourceLineCount": 99,
+  "coveredLineCount": 99,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 99 source lines with numbered line output before editing and preserved the BatteryDeltaProps public shape, startPct/endPct null and Number.isFinite data guard, default showIcon=true, default variant='compact', className compatibility, and test hook behavior.",
+    "Preserved compact and pair rendering behavior exactly, including unknown/zero em dash, positive '+', negative Unicode minus, percentage magnitude, pair arrow label, and the original positive emerald/success, negative amber/warning, and muted tone intent using native theme tokens.",
+    "Preserved i18n intent with the battery.delta.unknown and battery.delta.aria keys plus fallback strings and {{from}}/{{to}} interpolation through a native-safe translation fallback, because the native app does not currently depend on react-i18next.",
+    "Converted lucide-react Battery, DOM span/data-testid/aria-label, Tailwind classes, and cn() composition to React Native View/AppText/StyleSheet primitives, native accessibilityLabel/accessibilityRole, testID aliases, and a small decorative native battery glyph without importing browser-only modules or old web UI components."
+  ]
+}
