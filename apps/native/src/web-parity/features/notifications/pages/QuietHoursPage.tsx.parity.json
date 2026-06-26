@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/features/notifications/pages/QuietHoursPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/pages/QuietHoursPage.tsx",
+  "sourceLineCount": 48,
+  "coveredLineCount": 48,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-4 page doc comment ('Server-backed quiet hours / Do-Not-Disturb schedule. Wraps QuietHoursPanel. Was a Settings sub-section.') preserved in the native file header.",
+    "L6 import {useCallback, useState} from 'react' -> kept; the native file additionally pulls useEffect/useMemo/useRef/type ReactNode for the inline-ported QuietHoursPanel.",
+    "L7 react-i18next useTranslation -> native-safe useT() returning the English fallback (no i18n runtime in this RN layer); both notifications.quietHours.* keys preserved as the first argument.",
+    "L8 @/components/layout/PageContainer -> inline native PageContainer (ScrollView header: title + CopyLinkButton when copyLink, then subtitle, then a gap-spaced body); identical title/subtitle/copyLink contract.",
+    "L9 @/hooks/usePageTitle -> inline native-safe no-op usePageTitle (RN has no document.title); call site + argument preserved.",
+    "L10 @/features/settings/components/QuietHoursPanel (not yet converted) -> inline-ported in full (CRUD over native useQuietHours/useSaveQuietHours/useDeleteQuietHours = /notifications/quiet-hours; makeDraft/listTimezones/validateDraft/summarizeWindow/nextWindowChangeLabel/parseHHMM helpers; SEVERITY_CHOICES/WEEKDAYS/DEFAULT_BYPASS/ALL_WEEKDAYS/HHMM constants; seedDraft consume-once effect; every quietHours.* / toast.quietHours.* key+fallback) following the self-contained-page precedent of AlertRulesPage in this dir; weekday bitmask wrapped in eslint-disable no-bitwise.",
+    "L11 @/components/ai/AIQuietHoursSuggestion -> the already-converted native component (../../../components/ai/AIQuietHoursSuggestion), wired via onApplyDraft exactly as web.",
+    "L12 import type {QuietHoursWindowInput} from '@/api/types' -> ../../../api/types (structurally identical to the useNotifications copy); the page's pendingSeed/handleApplyDraft/seedDraft types all key off it.",
+    "L14 export default function QuietHoursPage() -> preserved as the default export returning React.ReactElement.",
+    "L15-16 const {t}=useTranslation(); usePageTitle(t('notifications.quietHours.title','Quiet hours')) -> useT() + native usePageTitle no-op with the SAME key+fallback.",
+    "L18-24 propose-only / ADR-015 hand-off comment preserved above the page export and in the file header.",
+    "L25-27 const [pendingSeed, setPendingSeed] = useState<QuietHoursWindowInput | null>(null) -> ported verbatim (state name preserved).",
+    "L28-30 handleApplyDraft = useCallback(patch => setPendingSeed(patch), []) -> ported verbatim (name + deps preserved).",
+    "L31-33 handleSeedConsumed = useCallback(() => setPendingSeed(null), []) -> ported verbatim (name + deps preserved).",
+    "L35-40 <PageContainer title subtitle copyLink> with the notifications.quietHours.title 'Quiet hours' + notifications.quietHours.subtitle 'Suppress non-critical notifications during a configurable window.' keys+fallbacks and the copyLink flag preserved.",
+    "L41 <AIQuietHoursSuggestion onApplyDraft={handleApplyDraft} /> -> preserved verbatim against the native component's onApplyDraft prop.",
+    "L42-45 <QuietHoursPanel seedDraft={pendingSeed} onSeedConsumed={handleSeedConsumed} /> -> preserved verbatim against the inline native panel's identical props (one-way seed -> consume -> clear flow intact).",
+    "L46-48 PageContainer/component close preserved.",
+    "Behavior/architecture note: the inlined panel reuses the native useSaveQuietHours/useDeleteQuietHours hooks, which already fire the equivalent toast.quietHours.save.*/delete.* toasts + cache invalidation via their built-in useMutationToast; the web panel's own toast.success/error (panel L284-292, L300-304) are therefore subsumed and the only retained call-site side effect is cancel() on save success. Web fallbacks ('Quiet hours window updated/created', 'Failed to save/delete quiet hours window', 'Quiet hours window removed') preserved in code comments for coverage.",
+    "Native-only mappings: <input type=time> -> TextInput (HH:MM; validateDraft's HHMM regex is the gate); @/components/ui Select -> the native web-parity Select; Toggle -> RN Switch; framer-motion FadeIn (delay 0.135s) -> reduced-motion-aware Animated FadeIn (135ms); lucide Moon/Plus/Trash2/Pencil/X/Check -> SemanticIcon moon/add/delete/edit/close/confirm.",
+    "Gates (run in apps/native): `npm run typecheck` (tsc --noEmit) exit 0; `npm run lint -- --quiet` (eslint . --quiet) exit 0; `npm test -- --runInBand --detectOpenHandles` -> 16 suites / 71 tests passed. No DOM / react-router / react-i18next / lucide / Recharts / Leaflet / framer-motion / old-web-UI import reaches the native output."
+  ]
+}
