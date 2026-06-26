@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-curve/SummaryStatsGrid.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-curve/SummaryStatsGrid.tsx",
+  "sourceLineCount": 80,
+  "coveredLineCount": 80,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 react-i18next useTranslation -> native-safe useNativeTranslationFallback(); the t('key','fallback') contract is preserved and every charging.curve.* key below keeps its English fallback.",
+    "L2 fmtNumber/fmtInt from @/lib/numberFormat -> ported inline (web global defaults precision 2 / locale en-US; fmtInt == precision 0) via safeNumber + toLocaleString with en-US fallback.",
+    "L3 cn from @/lib/cn -> dropped (React Native StyleSheet); the SummaryCard web `className` becomes an optional `style` escape hatch applied to the card.",
+    "L4 GlassPanel from @/components/ui -> native GlassPanel (../../../../../components/ui/GlassPanel).",
+    "L5 Skeleton from @/components/feedback -> native reduced-motion-aware SkeletonBar (Animated opacity 1->0.5->1 pulse, dim steady state under reduced motion); the web 'mt-1 h-7 w-20' shape kept as 28px tall x 80px wide.",
+    "L6 FadeIn from @/components/motion -> local reduced-motion-aware FadeIn (Animated.View) reproducing initial {opacity:0,y:12} -> animate {opacity:1,y:0} easeOut; L47 delay 0.05 -> FADE_IN_DELAY_MS 50, duration 400ms (useMotionPreference(400) default).",
+    "L7 useFormatting from @/hooks/useFormatting -> formatCurrency ported inline as `${'$'}${fmtNumber(amount,2)}` (web no-settings defaults: currency symbol '$', precision 2).",
+    "L8 SummaryStats type from ./types -> ported inline (sibling native types.ts not yet converted) with totalSessions/totalEnergy/avgRate/peakRate/avgDuration/totalCost.",
+    "L10-22 SummaryCard prop signature (label/value/unit?/loading?/className?) preserved; className mapped to `style`, plus a native-only `reduceMotion` prop driving the loading SkeletonBar.",
+    "L23-35 SummaryCard JSX: GlassPanel(p-4 min-w-0 overflow-hidden -> padding 16/minWidth 0/overflow hidden) wrapping the uppercase truncated label (text-xs -> caption + uppercase + tracking-wider letterSpacing 0.8, numberOfLines 1, text-secondary tone), then the loading Skeleton (L26-27 -> SkeletonBar) vs the value paragraph.",
+    "L29-32 value paragraph (mt-1 text-lg xl:text-2xl font-semibold text-white truncate -> fontSize 18 base for text-lg, semibold weight, primary/white tone, numberOfLines 1; xl:text-2xl is web-only responsive intent) with the optional unit span (L31 ml-1 text-xs text-secondary -> nested caption AppText with a leading space).",
+    "L36 SummaryCard close preserved.",
+    "L38-40 SummaryStatsGridProps (stats: SummaryStats | null) preserved verbatim.",
+    "L42-47 SummaryStatsGrid: useTranslation -> native t; useFormatting().formatCurrency -> inline formatCurrency; FadeIn delay={0.05} -> <FadeIn reduceMotion>; reduceMotion read once via useReduceMotion and threaded to FadeIn + each card.",
+    "L48 grid 'grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6' -> native flex-wrap row (styles.grid gap 16) with each card flexBasis 47% + flexGrow 1 guaranteeing the mobile grid-cols-2 base; lg/xl column counts are documented web-only responsive intent.",
+    "L49-52 Total Sessions card: fmtInt(stats?.totalSessions ?? 0), no unit -> preserved.",
+    "L53-57 Total Energy card: fmtNumber(stats?.totalEnergy ?? 0) unit 'kWh' -> preserved.",
+    "L58-62 Avg Charge Rate card: fmtNumber(stats?.avgRate ?? 0) unit 'kW' -> preserved.",
+    "L63-67 Peak Rate card: fmtNumber(stats?.peakRate ?? 0) unit 'kW' -> preserved.",
+    "L68-72 Avg Duration card: fmtInt(stats?.avgDuration ?? 0) unit 'min' -> preserved.",
+    "L73-76 Total Cost card: formatCurrency(stats?.totalCost ?? 0), no unit -> preserved.",
+    "L77-80 grid/FadeIn/component close + default export SummaryStatsGrid preserved.",
+    "No DOM/Recharts/Leaflet/old web UI imported; only React Native primitives, native GlassPanel/AppText, and theme tokens are used.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
