@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/hooks/useAiStream.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useAiStream.ts",
+  "sourceLineCount": 468,
+  "coveredLineCount": 468,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 468 source lines before editing and preserved the full public surface verbatim: AiStreamEvent (delta/tool_call/tool_result/confirm_request/done/error variants with reason/retry_after_s/banner_level/baseline_available), AiStreamState ('idle'|'streaming'|'paused-confirm'|'done'|'error'), UseAiStreamArgs (url/body/onEvent), AiLimitInfo, UseAiStreamResult (start/cancel/state/text/error/limit), the exported parseSSEFrame, and the internal toTypedEvent narrowing — all kept byte-for-byte equivalent including the F9 structured-limit capture and the do-not-promote-paused-confirm terminal logic.",
+    "Preserved behavior, state names, and API path construction: getApiBase is imported from the native ../api/client and the URL is built exactly as the source ${getApiBase()}/api/v1${url.startsWith('/') ? url : '/' + url}; POST with Content-Type application/json + Accept text/event-stream + credentials include; AbortController-driven cancel() and unmount cleanup; runningRef coalescing of duplicate start(); SSE_DELIM_RE and LINE_DELIM_RE regexes unchanged; delta-text accumulation, confirm_request pause, done, and error->finalizeError transitions identical.",
+    "Per conversion contract rule 7, the browser-only fetch ReadableStream body (res.body.getReader()) and global TextDecoder are replaced with native-safe runtime probes mirrored from apps/native/src/web-parity/api/hooks/useLogStream.ts (NativeReadableStreamReader/Body, ResponseWithNativeStream, TextDecoderLike, getReadableStreamBody, getTextDecoder, toUint8Array, decodeAscii, decodeStreamChunk, robust isAbortError). When the RN runtime cannot expose a readable body, the hook surfaces an explicit unavailable state through its existing state='error' surface: genuinely-empty bodies keep the source 'stream_no_body' contract, while a present-but-unstreamable body yields the documented AI_STREAM_UNAVAILABLE_REASON; a missing UTF-8 TextDecoder for non-ASCII bytes raises the same explicit reason.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported; only React hooks and the native api/client are used. Native style applied (single quotes, no bracket spacing, arrowParens avoid, trailing commas) and verified via tsc --noEmit, eslint --quiet, and jest --runInBand --detectOpenHandles."
+  ]
+}
