@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/onboarding/tourSteps.ts",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/tourSteps.ts",
+  "sourceLineCount": 15,
+  "coveredLineCount": 15,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-9 deprecation docblock (@deprecated; tour-step defs moved to per-feature files under web/src/features/onboarding/tours/; main walkthrough now lives in tours/mainTour.ts (Phase-40 / Prompt 65); file kept temporarily so external MAIN_TOUR_STEPS imports keep compiling; removed in a follow-up cleanup) -> preserved verbatim inside the native header docblock, plus the rule-6/7 record of how the cross-file dependency was handled.",
+    "L10 `export { MAIN_TOUR } from './tours/mainTour'` and L11 `import { MAIN_TOUR } from './tours/mainTour'` -> the native `tours/mainTour` parity port does not exist yet (only the sibling tours/alertsTour.ts is ported, and it is itself fully self-contained). Mirroring that sibling, MAIN_TOUR is rebuilt inline verbatim from the web tours/mainTour.ts source (id 'main', routeMatch '/', titleKey 'tour.tours.main.title', titleFallback 'Welcome to TeslaSync', descriptionKey 'tour.tours.main.description', descriptionFallback 'A quick tour of the dashboard, sidebar, and live data.', version 2, the 7 STEPS, autoStart ({pathname, vehicleCount}) => pathname === '/' && vehicleCount > 0) and exported as `export const MAIN_TOUR`, preserving the web public surface exactly. The 7 steps keep their verbatim CSS-selector targets ([data-tour=\"sidebar\"], dashboard-grid, edit-mode-btn, vehicle-section, commands-section, live-signals-section, keyboard-hint), titles, descriptions (em-dashes and the don't apostrophe preserved) and placements (right/bottom/bottom/right/right/right/top).",
+    "L12 `import type { TourStep } from '@/hooks/useTour'` -> DROPPED as an import because no native useTour parity port exists; the TourStep interface (target/title/description/placement/onShow/onHide) is inlined verbatim, identical to web useTour.ts L9-22, plus TourAutoStartContext + TourDefinition (inlined from web lib/tourRegistry, same as the alertsTour native port) so the inlined MAIN_TOUR is correctly typed and a future native registry can consume it unchanged.",
+    "L13 blank line -> normal separation, no code.",
+    "L14 `export const MAIN_TOUR_STEPS: TourStep[] = MAIN_TOUR.steps` -> ported verbatim with identical name, type annotation and value (MAIN_TOUR.steps), preserving the deprecated derived export the shim exists to provide.",
+    "L15 trailing blank line -> normal EOF. Every source line (1-15) considered; no DOM, window, browser HTML elements, Recharts, Leaflet, framer-motion or old web UI components imported.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) PASS; npm run lint -- --quiet (eslint . --quiet) PASS; npm test -- --runInBand --detectOpenHandles PASS."
+  ]
+}
