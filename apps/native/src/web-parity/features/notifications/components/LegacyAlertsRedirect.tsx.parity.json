@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/features/notifications/components/LegacyAlertsRedirect.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/components/LegacyAlertsRedirect.tsx",
+  "sourceLineCount": 33,
+  "coveredLineCount": 33,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 33 source lines line by line. L1-13 doc comment (the /alerts -> Notifications mapping table and param-forwarding rationale) is preserved verbatim in the native header.",
+    "L15 'react-router-dom' Navigate/useLocation is browser-only: useLocation (L24) becomes a native-safe `search` prop, and `<Navigate to replace />` (L32) becomes an onRedirect navigation-shell callback fired once on mount (mirroring Navigate's mount-time replace) plus an explicit, accessible redirect-state surface, documenting the unavailable DOM-history-replace state per conversion rule 7.",
+    "L17-21 TAB_TO_ROUTE (alerts->/notifications/alerts, history->/notifications/inbox, preferences->/notifications/quiet-hours) ported verbatim. L25-31 resolution (tab default 'alerts' L26, tab-strip L28, '/notifications/alerts' fallback L29, toString L30, `qs ? target?qs : target` L31) ported 1:1 into the pure, testable resolveLegacyAlertsRedirect; L23/L33 default export wraps it. The web `new URLSearchParams(location.search)` used .get/.delete/.toString, but the React Native URLSearchParams type only exposes append/toString, so a small self-contained x-www-form-urlencoded parser reproduces first-value get, drop-all delete, and order-preserving serialize identically.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components imported — only React, react-native View/StyleSheet, and the native AppText/GlassPanel + spacing token. Gates run from apps/native: npm run typecheck (pass), npm run lint -- --quiet (pass), npm test -- --runInBand --detectOpenHandles (pass)."
+  ]
+}
