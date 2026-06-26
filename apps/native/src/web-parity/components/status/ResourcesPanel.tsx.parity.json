@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/status/ResourcesPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/components/status/ResourcesPanel.tsx",
+  "sourceLineCount": 105,
+  "coveredLineCount": 105,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 105 source lines line by line before editing; preserved the module doc-comment intent (L1-11: memory/goroutines/DB pool/uptime rows, % thresholds, CPU/disk not-yet-exposed note) as the native header comment.",
+    "Preserved the public contract verbatim: ResourceRow (label, valueText, metaText?, percent?, icon?: ReactNode — L17-26) and ResourcesPanelProps (rows, footnote?, id?, className? — L28-34), adding only native-idiomatic style/testID passthrough.",
+    "Converted GlassPanel + Tailwind p-4 (L14, L38) to native GlassPanel with StyleSheet padding 16; the <h3> 'Resources' title (L39, text-sm/font-semibold/var(--text-primary)/mb-3) maps to AppText fontSize 14, fontWeight 600, marginBottom 12, color textPrimary. Title stays a literal (no t() in source, so no i18n added).",
+    "Reproduced the rows stack (L41-45 space-y-3 -> View gap 12, rows.map keyed by row.label) and the footnote (L47-49 mt-3/text-xs/var(--text-muted) -> marginTop 12, fontSize 12, color textMuted), wrapping bare-string footnote in AppText while element footnotes render as-is.",
+    "Ported ResourceRowItem severity logic exactly (L54-70): percent==null->normal, >=90->critical, >=70->warn; barColor green/amber/red-400 (#4ade80/#fbbf24/#f87171) and textColor primary/amber/red preserved as exact Tailwind hex values plus the var(--text-primary) token.",
+    "Rebuilt the row layout (L72-87): flex/items-center/gap-3 -> flexDirection row, alignItems center, gap 12; icon span aria-hidden -> View with accessibilityElementsHidden + importantForAccessibility no-hide-descendants (bare-string icon wrapped in AppText); truncate label -> numberOfLines={1}; value tabular-nums/font-medium -> fontVariant ['tabular-nums'], fontWeight 500; ml-1 metaText -> nested AppText with a leading space and muted/xs/font-normal styling.",
+    "Ported the progress bar (L88-102): role=progressbar/aria-valuenow=Math.round(percent)/min0/max100/aria-label '<label> usage' -> accessibilityRole progressbar + accessibilityValue {min:0,max:100,now:round} + accessibilityLabel; track h-1.5/rounded-full/bg-white-6% -> height 6, borderRadius 999, overflow hidden, rgba(255,255,255,0.06); fill width Math.max(0,Math.min(100,percent))% preserved. The web 'transition-all duration-slow' CSS animation (L98) has no native equivalent and is omitted (fill width applied directly).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components imported; cn/@/lib/cn and @/components/ui barrel (L14-15) replaced with native GlassPanel/AppText/theme tokens. className retained for source compatibility but ignored on native; id mapped to testID."
+  ]
+}
