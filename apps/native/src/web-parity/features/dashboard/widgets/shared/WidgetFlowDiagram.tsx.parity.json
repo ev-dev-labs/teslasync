@@ -1,0 +1,29 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/shared/WidgetFlowDiagram.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/shared/WidgetFlowDiagram.tsx",
+  "sourceLineCount": 207,
+  "coveredLineCount": 207,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-4 imports: `type ReactNode, useMemo` kept (plus useState/useCallback + LayoutChangeEvent/ViewStyle for the onLayout sizing that replaces SVG h-full/w-full); @/components/data-display AnimatedNumber -> no native count-up runtime, value formatted with an inlined fmtNumber(value,1) in AppText; @/components/feedback EmptyState -> inlined native EmptyState (message + py-8); @/lib/cn dropped (className composition becomes RN style arrays). Only RN primitives + the existing native AppText and theme tokens are imported.",
+    "L6-13 FlowNode interface ported verbatim (id/label/value/formattedValue/icon?:ReactNode/position union). icon stays ReactNode (native-safe; native consumers pass native nodes). formattedValue kept on the type though the web render path uses AnimatedNumber on the raw value (faithful: it is also unused here).",
+    "L15-21 FlowArrow interface ported verbatim (from/to/value/active/color?).",
+    "L23-28 WidgetFlowDiagramProps ported verbatim (nodes/arrows/compact?/emptyMessage? with default 'No flow data available').",
+    "L30-38 POSITION_COORDS (top 50/12, bottom 50/88, left 12/50, right 88/50, center 50/50) ported verbatim as viewBox units, scaled to px at render.",
+    "L40-43 NODE_RADIUS=14, NODE_RADIUS_COMPACT=10, MIN_STROKE=1, MAX_STROKE=4 ported verbatim.",
+    "L45-50 arrowColor(value, override) ported with identical branch order: override -> resolveLineColor (TAILWIND_LINE_COLORS maps cyan/emerald/amber/yellow/purple/blue/red-400 — every text-* class the three consumers EnergyFlowWidget/EnergyFlowAnimatedWidget/LivePowerFlowWidget pass — with a raw-colour passthrough fallback); value>0 -> emerald-400 #34d399; value<0 -> red-400 #f87171; else var(--text-muted) (colors.textMuted). The web `stroke-current` + class indirection becomes a direct backgroundColor/borderColor hex.",
+    "L52-56 strokeForValue(value, maxValue) ported verbatim (maxValue===0 -> MIN_STROKE; else MIN_STROKE + |value|/maxValue * (MAX_STROKE-MIN_STROKE)).",
+    "L58-65 WidgetFlowDiagram({nodes,arrows,compact=false,emptyMessage}) signature + defaults ported verbatim.",
+    "L66-69 nodeMap = useMemo(new Map(nodes.map(n=>[n.id,n])), [nodes]) ported verbatim.",
+    "L71-76 visibleArrows useMemo (!compact -> arrows; compact -> [...arrows].sort by |value| desc .slice(0,3)) ported verbatim.",
+    "L78-81 maxArrowValue = useMemo(Math.max(...arrows.map(a=>|value|),1), [arrows]) ported verbatim.",
+    "L83-85 nodes.length===0 -> EmptyState(message=emptyMessage); web className py-8 -> paddingVertical 32.",
+    "L87 r = compact ? NODE_RADIUS_COMPACT : NODE_RADIUS ported (viewBox units; pixel radius is r*scale).",
+    "L89-106 <svg viewBox 0 0 100 100 h-full w-full role=img> + <defs><style>@keyframes dashFlow></defs> -> replaced by an onLayout-measured relative root View. The CSS keyframe animation has no native runtime so it is dropped; active arrows still render dashed. The 0..100 viewBox is mapped to px with the SVG default preserveAspectRatio xMidYMid meet: side=min(width,height), scale=side/100, offsetX/offsetY centre the square.",
+    "L108-146 arrows render: visibleArrows.map -> look up from/to nodes (return null if either missing), dx/dy/dist=sqrt||1, unit vector ux/uy, radius-offset endpoints x1,y1,x2,y2 — all ported verbatim in viewBox units — then sw=strokeForValue, color=arrowColor. Converted to px (offset + coord*scale) and drawn as a centred, atan2-rotated View (the MapRouteSummary technique): left=(px1+px2)/2-len/2, top=(py1+py2)/2-thick/2, width=len, transform rotate rad. strokeLinecap='round' -> borderRadius thick/2 on solid lines; strokeDasharray '4 8' for active -> dashed border line (borderStyle dashed + borderTopWidth). The dashFlow animation has no native runtime (documented).",
+    "L148-204 nodes render: nodes.map -> px centre from POSITION_COORDS; <circle fill-white/5 stroke-white/20 strokeWidth 0.5> -> circular View (backgroundColor rgba(255,255,255,0.05), borderColor rgba(255,255,255,0.2), borderWidth 0.5*scale); <foreignObject> flex column centre with optional icon (node.icon rendered as-is) + <AnimatedNumber value decimals=1 font-semibold var(--text-primary) text-[5px]/[4px]> -> AppText fmtNumber(value,1), fontWeight 600, colors.textPrimary, fontSize (compact?4:5)*scale; <text> label (compact&&len>3 -> slice(0,3).toUpperCase()) at y = bottom? cy+r+5 : cy-r-2, textAnchor middle, fill-white/60 font-medium text-[4px]/[3px] -> centred AppText (rgba(255,255,255,0.6), fontWeight 500, fontSize (compact?3:4)*scale) positioned above/below the node. All ported.",
+    "L205-207 closing </svg> / component end ported.",
+    "No DOM, no react-i18next, no Recharts/SVG (no react-native-svg in the app — geometry reproduced with positioned + rotated native Views), no Leaflet, no framer-motion, no web UI components. Named exports WidgetFlowDiagram/FlowNode/FlowArrow preserved for the (not-yet-converted) consumer widgets.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), npm test -- --runInBand --detectOpenHandles (jest) — all pass."
+  ]
+}
