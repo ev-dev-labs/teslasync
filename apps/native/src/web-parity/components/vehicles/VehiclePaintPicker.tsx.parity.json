@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/components/vehicles/VehiclePaintPicker.tsx",
+  "outputPath": "apps/native/src/web-parity/components/vehicles/VehiclePaintPicker.tsx",
+  "sourceLineCount": 109,
+  "coveredLineCount": 109,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 109 source lines line by line before editing; preserved the exported VehiclePaintPickerProps (vehicleId, exteriorColor, className) and the VehiclePaintPicker component, plus the paint.* i18n keys, the override>inferred>fallback resolution, the setPaint snap-to-inferred-clears-override normalization, reset, and isOverridden behavior.",
+    "L1 react-i18next useTranslation -> local fallback shim returning the inline English string (paint.pickerLabel/label/detected/reset and each palette labelKey+defaultLabel are still referenced). L2 cn -> dropped; className kept for source compatibility but ignored (_className) with a native style override added.",
+    "L3 useVehiclePaint (web/src/hooks/useVehiclePaint.ts) ported native-safe: localStorage persistence and BroadcastChannel/storage cross-tab sync are browser-only and unavailable on native (no AsyncStorage dep), so the override lives in a module-level Map for the app session and the in-process subscribeInTab/notifyInTab listener bus is preserved verbatim. UseVehiclePaint shape (paint/inferred/isOverridden/setPaint/reset) and the overrideId state name are unchanged.",
+    "L4 PAINT_PALETTE_LIST + inferPaintFromTesla + isPaintPaletteId + FALLBACK_PAINT reproduced locally with the exact swatch hexes (#e9ecf2/#5b6675/#1f3a72/#0d1117/#a3001a), label keys, default labels, and display order; only id/labelKey/defaultLabel/swatch are modeled because the picker consumes only those, while the full gradient palette for the VehicleTwin SVG belongs to the dedicated vehicleColors source module ported separately.",
+    "L37-45 outer div role=radiogroup/aria-label -> View accessibilityRole=radiogroup + accessibilityLabel; the Paint eyebrow span (text-xs uppercase tracking-wider text-secondary) -> AppText with 12/uppercase/letterSpacing 0.6/colors.textSecondary.",
+    "L46-94 swatch button row -> Pressable radios: role=radio -> accessibilityRole=radio, aria-checked -> accessibilityState.checked, aria-label -> accessibilityLabel, title (incl. the inferred swatch's '· Auto-detected') -> accessibilityHint, onClick -> onPress(setPaint), style background -> backgroundColor, h-7 w-7 rounded-full border-2 -> 28x28/radius14/borderWidth2, selected border-white scale-110 shadow-cyan-500/20 -> white border + transform scale 1.1 + soft cyan shadow, idle border-strong -> rgba(255,255,255,0.2), hover:scale-105 -> pressed scale 1.05.",
+    "L69-89 the selected inline checkmark <svg> has no native analog (react-native-svg absent) -> decorative white '✓' glyph (h-3.5 w-3.5 -> fontSize 14, drop-shadow -> textShadow) in an absolute inset-0 View flagged aria-hidden (accessibilityElementsHidden/no-hide-descendants). L90 VisuallyHidden -> imported native VisuallyHidden parity component.",
+    "L95-106 the aria-live=polite value span -> AppText accessibilityLiveRegion=polite (text-xs text-secondary), and the conditional reset button (text-[11px] text-cyan-300 hover:text-cyan-200 hover:underline) -> Pressable role=button onPress=reset with cyan-300 (#67e8f9) idle and cyan-200 (#a5f3fc)+underline on press. No DOM elements, Recharts, Leaflet, or web UI components imported; only react-native primitives, AppText, tokens, and the a11y VisuallyHidden port are used."
+  ]
+}
