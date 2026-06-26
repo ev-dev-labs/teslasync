@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/hooks/useBulkSelection.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useBulkSelection.ts",
+  "sourceLineCount": 154,
+  "coveredLineCount": 154,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 154 source lines before editing. Lines 1-19 (module JSDoc describing the selection primitive, additive selectAll, symmetric toggleAll, 'none'|'some'|'all' masterState, referential stability, and generic id type) and lines 23-51 (the BulkSelection<T> interface with per-member doc comments) are ported verbatim.",
+    "Pure non-visual React state primitive: the only import is `{ useCallback, useMemo, useState } from 'react'` (line 21), which is identical in React Native. No DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components are referenced, so the file is React Native-compatible as-is and was copied byte-for-byte (LF endings, 154 lines).",
+    "Behavior, state names, and the generic <T = number> signature are preserved exactly: useState Set<T> initializer (line 54), isSelected/toggle/setSelected (incl. the idempotent same-value short-circuit at lines 75-76), selectAll (additive, []-noop at line 85), clear (size-0 short-circuit at line 100), masterState ('none' for empty visible, counts hits, returns all/some/none at lines 105-112), toggleAll (every-selected check then add/delete, lines 118-128), and the memoized return object + dependency array (lines 131-153) are unchanged.",
+    "No API paths, unit handling, or i18n strings exist in this file, so there is nothing to remap; state names selectedIds/setIds and the returned API surface (selectedIds, count, isSelected, toggle, setSelected, selectAll, clear, masterState, toggleAll) are retained 1:1 for callers (e.g. AlertRules/Automation/Geofence/Export list pages and BulkActionToolbar)."
+  ]
+}
