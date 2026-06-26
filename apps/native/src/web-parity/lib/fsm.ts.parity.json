@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/lib/fsm.ts",
+  "outputPath": "apps/native/src/web-parity/lib/fsm.ts",
+  "sourceLineCount": 65,
+  "coveredLineCount": 65,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 65 source lines line by line. Pure, non-visual FSM state display config module — no DOM, JSX, Recharts, Leaflet, browser HTML elements, or old web UI imports. Only constructs are a TypeScript interface and plain object-literal Record maps, so the logic ports verbatim with no native-safe shim; a native-port header docblock was prepended per contract rule 6 documenting the no-DOM/identical-behavior reasoning.",
+    "L1 module docstring `/** FSM state display configurations for frontend rendering. */` and L2 blank preserved. L3-8 `export interface StateConfig` (label:string, color:string, variant union 'info'|'success'|'warning'|'danger'|'neutral', optional icon?:string) ported byte-identically; the variant union and optional icon are kept exactly so callers type-check unchanged.",
+    "L10-18 `vehicleStates` (unknown/online/asleep/driving/charging/offline) and L20-28 `chargingStates` (pending/connecting/charging/completing/completed/failed) ported verbatim, including every label, hex color (#6b7280/#22c55e/#a855f7/#3b82f6/#f59e0b/#ef4444), and variant — preserving original visual intent at the render boundary.",
+    "L30-37 `chargingSubStates` with dotted keys ('charging.starting'/'charging.ramping'/'charging.steady'/'charging.tapering'/'charging.complete') ported verbatim; L39-46 `tripStates` (started/in_progress/paused/completed/cancelled) ported verbatim including the snake_case `in_progress` key matching backend state names.",
+    "L48-56 `exportStates` (queued/validating/processing/uploading/completed/failed) and L58-65 `notificationStates` (pending/sending/sent/failed/retrying) ported verbatim. No i18n call sites, API paths, or unit-suffixed/SI fields exist in source — nothing to convert there; English labels are display data consumed by native status/badge components. Verified from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
