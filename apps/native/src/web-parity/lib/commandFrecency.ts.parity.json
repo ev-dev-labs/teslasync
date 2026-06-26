@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/lib/commandFrecency.ts",
+  "outputPath": "apps/native/src/web-parity/lib/commandFrecency.ts",
+  "sourceLineCount": 121,
+  "coveredLineCount": 121,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 121 numbered source lines before editing. L1-L18 module docstring (frecency = Frequency × Recency, score = count × 2^(-ageDays/HALF_LIFE_DAYS), HALF_LIFE_DAYS=14, never-deleted decay, single localStorage key, small payload perf note) preserved in the native header plus the web->native storage-substitution rationale (rule 7).",
+    "L20-L22 constants ported verbatim: STORAGE_KEY='teslasync:cmd-frecency:v1' (key preserved so a future AsyncStorage cache loads prior data), HALF_LIFE_DAYS=14, MS_PER_DAY=86_400_000.",
+    "L24-L31 FrecencyEntry interface (count/lastUsed with doc comments) and `type Store = Record<string, FrecencyEntry>` kept identical.",
+    "L33-L58 load(): only the browser-only `localStorage.getItem(STORAGE_KEY)` (L35) is swapped for `getNativeStorage('local').getItem(STORAGE_KEY)`; the !raw guard, JSON.parse, non-object/Array guard, per-entry count/lastUsed typeof+Number.isFinite validation loop, and try/catch->{} fallback are byte-for-byte equivalent.",
+    "L60-L67 save(): `localStorage.setItem` -> `getNativeStorage('local').setItem`, same JSON.stringify(store) and silent-catch graceful-degrade comment.",
+    "L69-L73 decayScore(): pure math ported verbatim — Math.max(0, age), Math.pow(2, -ageDays/HALF_LIFE_DAYS), count*decay.",
+    "L75-L95 recordCommandUse() (empty-id guard, ?? {count:0,lastUsed:0}, count+1, Date.now()) and getCommandScore() (load()[id], 0 fallback, decayScore) unchanged; only `localStorage` indirection differs via load()/save().",
+    "L97-L121 getAllCommandScores() (single load, one Date.now(), Object.entries map) and _resetFrecency() (exported underscore name preserved; `localStorage.removeItem` -> `getNativeStorage('local').removeItem`, same ignore comment) ported faithfully.",
+    "No DOM/browser/Recharts/Leaflet/web-UI imports — only the existing native-safe ./nativeWebStorage synchronous store. Verified with apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles (added __tests__/CommandFrecency.test.ts exercising record/score/decay/snapshot/reset and malformed-row filtering)."
+  ]
+}
