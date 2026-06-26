@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/admin/components/devtools/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/devtools/helpers.ts",
+  "sourceLineCount": 184,
+  "coveredLineCount": 184,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 184 source lines line by line and ported every exported symbol with identical behavior: apiFetch (L8-21), useVehicleOptions (L25-36), rgbToHsl (L40-55), describeCron (L59-75), getNextCronRuns (L77-113), extractTelemetryErrors (L125-160), pickString (L162-169), getRelativeTime (L173-184).",
+    "Imports rewired to native equivalents: useQuery from '@tanstack/react-query', request from '../../../../api/client' (the native request<T> client which already strips/adds /api/v1), and the Vehicle type from '../../../../api/types' which carries vin + display_name.",
+    "The TelemetryError type (source L4 'import type { TelemetryError } from ./types') is defined inline because the sibling devtools/types.ts pure-type module is not a conversion target in any worktree manifest; the inlined interface preserves the exact rowKey/timestamp/code/message shape from web/.../devtools/types.ts and keeps the helper self-contained, matching the codebase pattern of inlining interfaces in converted files.",
+    "Non-visual utility/API code: no DOM, browser HTML, Recharts, Leaflet, or web UI modules imported. All logic (color math, cron description, next-run scheduling with 525960 safety bound, defensive Tesla error envelope extraction, parseInt radix-10 calls, relative-time buckets) is pure JS/TS that runs unchanged on React Native.",
+    "Preserved API path '/dev-tools/${endpoint}' and '/vehicles', the 'GET'|'POST'|'DELETE' method union, the 'Request failed' fallback string, snake_case field probing (reported_at/error_code/error_message/vin etc.), and non-null assertions; native style applied (single quotes, semicolons, trailing commas) with braces added on single-line ifs — behavior identical.",
+    "Verified against native gates: npm run typecheck (tsc --noEmit), npm run lint -- --quiet, and npm test all pass."
+  ]
+}
