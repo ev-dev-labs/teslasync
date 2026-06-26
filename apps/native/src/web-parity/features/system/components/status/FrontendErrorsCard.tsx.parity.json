@@ -1,0 +1,32 @@
+{
+  "sourcePath": "web/src/features/system/components/status/FrontendErrorsCard.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/status/FrontendErrorsCard.tsx",
+  "sourceLineCount": 85,
+  "coveredLineCount": 85,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-13 file header docblock (purpose: last-hour browser frontend-error summary, total + top offenders, GET /admin/web-errors/summary via useWebErrorsSummary, renders inside the Recent errors accordion) -> preserved and expanded in the native header comment.",
+    "L15 import {Bug} from 'lucide-react' -> dropped (no lucide/SVG in the parity bundle); the parity SemanticIcon 'bug' glyph is resolved via getSemanticIconDefinition('bug').glyph (BUG_GLYPH) and rendered muted, matching the web icon inheriting the header row's text-muted color (CollapsibleCommandGroup leading-icon precedent).",
+    "L16 import {Badge} from '@/components/ui' -> not imported; the web Badge variant='neutral' size='sm' is reproduced inline as a View+AppText pill (styles.badge/badgeText) using the dark-mode neutral variant bg gray-700 #374151 / text gray-200 #e5e7eb at sm padding (px-1.5 py-0.5, rounded-full, font-medium).",
+    "L17 import {Skeleton} from '@/components/feedback/Skeleton' -> native parity Skeleton at ../../../../components/feedback/Skeleton.",
+    "L18 import {fmtInt} from '@/lib/numberFormat' -> inlined safeNumber + fmtInt (fmtNumber(v,0)): nullish/non-finite -> 0, en-US (web module default locale) grouped integer with the bad-locale en-US try/catch fallback.",
+    "L19 import {useWebErrorsSummary} from '@/api/hooks/useAdmin' -> native parity hook at ../../../../api/hooks/useAdmin (GET /admin/web-errors/summary, refetch STANDARD), returning WebErrorsSummary.",
+    "L21-22 function FrontendErrorsCard + const {data, isLoading} = useWebErrorsSummary() -> preserved verbatim (same hook, same destructured state names data/isLoading).",
+    "L24-31 isLoading branch: <div className='space-y-2 mt-4'> with two <Skeleton className='h-6'/> -> <View style={styles.loadingGroup}> (marginTop 16 = mt-4, gap spacing.sm = space-y-2) with two <Skeleton height={24}/> (h-6 = 1.5rem = 24px).",
+    "L33-39 !data branch: <div className='mt-4 text-xs text-[var(--text-muted)]'>Unable to load frontend error summary.</div> -> <AppText style={styles.unavailable}> (marginTop 16, fontSize 12, textMuted) with the identical English copy.",
+    "L41 const total = data.total ?? 0 -> preserved verbatim.",
+    "L42 const top = data.top ?? [] -> preserved verbatim.",
+    "L44-45 outer <div className='mt-4 rounded-md bg-white/[0.02] p-3 ring-1 ring-white/[0.05]'> -> <View style={styles.card}> (marginTop 16, borderRadius 6 = rounded-md, backgroundColor rgba(255,255,255,0.02), padding spacing.md = p-3, borderWidth 1 + borderColor rgba(255,255,255,0.05) = ring-1 ring-white/[0.05]).",
+    "L46-49 header row <div className='flex items-center gap-2 text-xs uppercase tracking-wide text-[var(--text-muted)]'> with <Bug className='h-3.5 w-3.5'/> + <span>Frontend errors (last hour)</span> -> <View style={styles.header}> (row, center, gap-2) holding the muted BUG_GLYPH AppText (styles.headerIcon) and the uppercase tracking-wide muted label AppText (styles.headerLabel, letterSpacing 0.6, textTransform uppercase). Copy preserved.",
+    "L50-57 total row <div className='mt-2 flex items-baseline gap-2'> with the text-2xl font-semibold tabular-nums primary count {fmtInt(total)} + text-xs muted 'reported by browser sessions' -> <View style={styles.totalRow}> (marginTop spacing.sm, row, alignItems baseline, gap-2) with styles.totalValue (fontSize 24, fontWeight 600, fontVariant tabular-nums, textPrimary) and styles.totalCaption (fontSize 12, textMuted). Copy preserved.",
+    "L59-77 top.length > 0 branch: <ul className='mt-3 divide-y divide-white/[0.04]'> mapping each entry to an <li> keyed `${entry.name}|${entry.route}|${idx}` -> <View style={styles.list}> (marginTop spacing.md = mt-3) mapping to row Views with the identical key; the divide-y separator becomes a per-row top border (styles.rowDivided, rgba(255,255,255,0.04)) applied only when idx > 0.",
+    "L62-65 <li className='flex items-center justify-between gap-2 py-1.5'> -> styles.row (row, center, justify space-between, gap-2, paddingVertical 6 = py-1.5).",
+    "L66-71 left cluster <div className='flex min-w-0 items-center gap-2'> with Badge(entry.name || '—') + truncate font-mono text-xs cyan-300 route(entry.route || '—') -> styles.rowLeft (row, center, gap-2, flexShrink 1 = min-w-0) containing the inline neutral badge (entry.name || '—') and styles.route AppText (numberOfLines 1 = truncate, fontFamily monospace = font-mono, fontSize 12, color #67e8f9 = cyan-300, flexShrink 1). Em-dash fallbacks preserved.",
+    "L72-74 right count <span className='shrink-0 tabular-nums text-xs text-[var(--text-primary)]'>{fmtInt(entry.count ?? 0)}</span> -> styles.count AppText (flexShrink 0 = shrink-0, fontVariant tabular-nums, fontSize 12, textPrimary) with fmtInt(entry.count ?? 0) preserved verbatim.",
+    "L78-82 empty branch: <p className='mt-2 text-xs text-[var(--text-muted)]'>No frontend errors reported in the last hour.</p> -> <AppText style={styles.empty}> (marginTop spacing.sm, fontSize 12, textMuted) with the identical English copy.",
+    "L83-85 closing JSX/function -> preserved; FrontendErrorsCard.displayName='FrontendErrorsCard' added per the parity-tree convention.",
+    "i18n intent: the web source uses hardcoded English strings (no t()/useTranslation), so all four user-facing strings are carried through unchanged.",
+    "API path parity: useWebErrorsSummary -> GET /admin/web-errors/summary unchanged; data shape WebErrorsSummary { total, top: {name, route, count}[] } consumed identically.",
+    "No DOM elements, lucide-react, Recharts, Leaflet, or web UI-kit components are imported into the native output; only RN primitives, native AppText, native SemanticIcon glyph, native theme tokens, and the parity Skeleton/useAdmin hook are used."
+  ]
+}
