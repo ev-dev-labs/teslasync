@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/types/fsm/vehicle.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/vehicle.ts",
+  "sourceLineCount": 282,
+  "coveredLineCount": 282,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 282 source lines before editing; pure non-visual FSM type/constant/data module with two relative imports from './types' and zero DOM/browser/Recharts/Leaflet/web-UI/React-component dependencies, so it is React Native-compatible verbatim (byte-identical to source, SHA256 71EA7F19...036D2707, 19506 bytes, LF, no BOM) and required no native-safe stubbing.",
+    "L1-2 imports preserved verbatim: L1 type-only import of 7 symbols (StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix, TruthTable, Scenario) and L2 value import deriveEdges + type-only TransitionRow from './types'; the sibling dependency apps/native/src/web-parity/types/fsm/types.ts already exists (verbatim 95-line port with its own sidecar), so tsc resolves './types' identically to web.",
+    "L4-13 VEHICLE_STATES as-const tuple (online/driving/charging/parked/updating/asleep/offline) and L13 VehicleState = (typeof ...)[number] union ported verbatim, preserving the exact state names that must match Go internal/enums/constants.go plus frontend-only 'updating'.",
+    "L15-28 VEHICLE_STATE_ENTRIES Record<VehicleState,StateEntry> ported verbatim including each BadgeVariant (success/success/warning/info/info/neutral/danger) and the Tailwind override class-name strings (badgeDot/bg/text/dot incl. L27 text-[var(--text-muted)] arbitrary-value CSS var); these are data string literals (not JSX/DOM) carrying visual intent, RN-safe unchanged.",
+    "L30-42 VEHICLE_STATE_LABELS Record<VehicleState,string> i18n default labels ported verbatim, preserving the t(`vehicle.state.${state}`, ...) i18n intent documented in the JSDoc.",
+    "L44-52 VEHICLE_TRIGGERS as-const tuple (13 triggers mirroring Go iota) + VehicleTrigger union, and L54-60 VEHICLE_GUARDS as-const tuple (9 guards) + VehicleGuard union ported verbatim.",
+    "L62-120 VEHICLE_TRANSITIONS TransitionRow<VehicleState,VehicleTrigger>[] (50-row single-source-of-truth table across ONLINE/DRIVING/CHARGING/PARKED/ASLEEP/OFFLINE sections, incl. the box-drawing comment separators) ported verbatim preserving every from/to/trigger/guard(null where absent)/timing(immediate|debounced) and the column alignment.",
+    "L122-131 VEHICLE_DISALLOWED DisallowedTransition[] (2 rows with em-dash reason strings) and VEHICLE_DISALLOWED_PATTERNS as-const (3 narrative pattern strings) ported verbatim.",
+    "L133-141 VEHICLE_COVERAGE CoverageMatrix<VehicleState> (7x7 self/valid/disallowed/null cells) ported verbatim.",
+    "L143-146 local helper factories T()/NOOP/NA/DIS() returning TruthTableCell action literals (transition/no_op/not_applicable/disallowed) ported verbatim, and L148-202 VEHICLE_TRUTH_TABLE TruthTable (7 states x 13 triggers) wired through those helpers ported verbatim.",
+    "L204-240 VEHICLE_SCENARIOS Scenario<VehicleState>[] (V1..V38 id/description/transitions arrays, with the non-contiguous V-id gaps preserved exactly) ported verbatim.",
+    "L242-255 VEHICLE_EDGES = deriveEdges(VEHICLE_TRANSITIONS) and VEHICLE_FSM FSMDefinition wiring states/edges/transitions/disallowed/coverage/truthTable/scenarios/labels ported verbatim.",
+    "L257-269 VehicleSignalContext interface (currentState + 9 boolean/number signal fields) and L271-282 deriveVehicleStatus(state?) function ported verbatim, preserving the charging>driving>API-state-string>offline derivation priority and the is_charging/speed snake_case input field names. Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles all green; only apps/native changes committed."
+  ]
+}
