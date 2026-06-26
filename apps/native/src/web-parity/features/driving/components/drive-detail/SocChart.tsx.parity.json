@@ -1,0 +1,28 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/SocChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/SocChart.tsx",
+  "sourceLineCount": 67,
+  "coveredLineCount": 67,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 react-i18next useTranslation -> local key-preserving fallback shim (t(key,'English')); every call site keeps its i18n key.",
+    "L2 lucide-react Activity -> decorative '📈' telemetry-trend Glyph in AppText, hidden from a11y; h-8 w-8 opacity-20 -> fontSize 32 / opacity 0.2.",
+    "L3-9 @/components/charts barrel (ChartContainer, ChartTooltip, AREA_DEFAULTS, areaGradient, AreaChart, Area, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, useSyncedCursor, useSyncedReferenceLineX) -> web-parity components/charts barrel; real ports for container/tooltip/defaults/gradient/sync hooks, native chart-primitive stubs for the recharts leaves.",
+    "L10 @/lib/tokens chartTokens -> only chartTokens.cursor consumed; inlined verbatim as CURSOR_TOKENS (stroke 'rgba(255, 255, 255, 0.3)', strokeWidth 1, strokeDasharray '4 2').",
+    "L11 @/components/motion FadeIn -> web-parity motion FadeIn; className='h-full' retained for source parity (inert on native).",
+    "L12 ./types ChartDataPoint -> inlined verbatim (all 21 fields incl. time/battery read by the chart); drive-detail types.ts not a standalone native port yet.",
+    "L14-16 SocChartProps interface (chartData: ChartDataPoint[]) preserved verbatim.",
+    "L18-21 SocChart component + useTranslation/useSyncedCursor/useSyncedReferenceLineX hook wiring preserved 1:1; syncedX is CursorSyncValue (string|number|null).",
+    "L24 FadeIn className='h-full' wrapper preserved.",
+    "L25 chart-a11y:no-table JSX comment preserved verbatim; ChartContainer intentionally receives NO data/dataColumns so no accessible table renders (start/end SOC lives in the drive summary tiles).",
+    "L26-31 ChartContainer title/ariaLabel i18n keys + fallbacks, height={220}, className='h-full' preserved.",
+    "L32 chartData.length > 1 chart-vs-empty guard preserved.",
+    "L33-39 ResponsiveContainer width/height + AreaChart data/syncId/syncMethod/onMouseMove synced-cursor wiring preserved on native stubs (inert visually).",
+    "L40-43 CartesianGrid (strokeDasharray/stroke var(--glass-border)/strokeOpacity), XAxis (dataKey time, tick fill var(--text-muted)/fontSize 10, interval preserveStartEnd), YAxis (domain [0,100], tick), Tooltip content={<ChartTooltip/>} preserved verbatim as inert stub props.",
+    "L44 areaGradient('socGrad', '#10b981') -> native gradient placeholder View (Recharts SVG <defs> gradients unavailable on native).",
+    "L45 Area {...AREA_DEFAULTS} dataKey='battery' stroke='#10b981' fill='url(#socGrad)' name SOC % preserved verbatim.",
+    "L46-55 syncedX != null ReferenceLine (x, stroke/strokeWidth/strokeDasharray from CURSOR_TOKENS, ifOverflow='hidden', isFront) preserved verbatim.",
+    "L56-63 empty-state <div> -> centred View (h-full -> flex:1, gap-2 -> spacing.sm); Activity glyph + <p className='text-xs'> -> AppText tone='muted' variant='caption' with the driveDetail.noChartData key.",
+    "L64-67 ChartContainer/FadeIn/component closers preserved. Native gates run: typecheck (0), lint --quiet (0), test --runInBand --detectOpenHandles (83/83 passed)."
+  ]
+}
