@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/admin/components/dlq-inspector/EntriesTable.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/dlq-inspector/EntriesTable.tsx",
+  "sourceLineCount": 157,
+  "coveredLineCount": 157,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 157 source lines before editing. Created as part of the DLQInspectorPage conversion (sibling not in the loop manifest; required for the page to typecheck).",
+    "Module JSDoc L1-11 ported as the native header. Imports L12-23: react-i18next useTranslation (L12) -> native useNativeTranslationFallback; ui Badge/Button/DataTable/useSortToggle/Column (L14-20) -> inline RN Badge + Pressable Inspect button + a vertical list of row cards + an inline ported useSortToggle (Column type dropped — not needed for the card layout); data-display TimeStamp (L21) -> inline formatAbsolute (same as EntryDrawer); fmtInt (L22) ported inline; DLQEntrySummary type (L23) imported from the native useDLQ hook.",
+    "EntriesTableProps {rows, loading, onInspect} (L25-29) preserved + exported. formatBytes (L31-36) ported verbatim (B/KB/MB, '—' for non-finite/negative).",
+    "Sort L38-58: useSortToggle('arrived_at','desc') (L40) ported inline with identical toggle semantics (same key flips dir, new key resets to 'desc'); the `sorted` comparator switch (L42-58) is preserved verbatim for arrived_at (Date.parse diff), parsed_reason (localeCompare), parsed_vin ((a ?? '').localeCompare), raw_payload_size (numeric), default 0. The web sortable column HEADERS become a tappable SortChip row (Arrived/Reason/VIN/Payload) with an active ↑/↓ arrow.",
+    "Columns L60-136 reproduced as a per-row card: arrived_at (L62-67) -> card header formatAbsolute + the Inspect Pressable (web Button size=sm variant=secondary, L126-135) onInspect(row); the remaining columns become a KVList — parsed_reason mono '—' fallback (L68-78), parsed_vin mono-muted ?? '—' (L79-88), parsed_source_topic mono-muted ?? '—' (L89-97), parsed_redeliveries fmtInt-or-'—' (L98-104), raw_payload_size formatBytes (L105-115), replayable -> Badge success 'Yes' / neutral 'No' (L116-125, common.yes/common.no).",
+    "DataTable wiring L138-156: tableId/name/keyExtractor(row.id)/sortKey/sortDir/onSort preserved as the card list keyed by row.id + the SortChip row; the emptyMessage (loading 'Loading…' else 'No DLQ entries — the pipeline is clean.', L148-152) renders as a centered muted message when sorted.length===0; pagination (defaultPageSize 25, options 25/50/100, L153) is dropped (the parent page is a ScrollView so the full sorted list scrolls); mobileColumns ['arrived_at','parsed_reason','actions'] (L154) is dropped — the native card always shows the full column set.",
+    "Native-only adaptations documented: no raw <table>/<button> — every interactive surface is a Pressable (>=44px Inspect target, tappable sort chips); DataTable pagination + mobileColumns are web responsive-table affordances with no card-layout analogue. No DOM/Tailwind imports — only react, react-native, canonical AppText, parity KVList, theme tokens, and the useDLQ type.",
+    "Gates: cd apps/native; npm run typecheck PASS; npm run lint -- --quiet PASS; npm test -- --runInBand --detectOpenHandles PASS 71/71."
+  ]
+}

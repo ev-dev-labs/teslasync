@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/admin/components/dlq-inspector/StatusHeader.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/dlq-inspector/StatusHeader.tsx",
+  "sourceLineCount": 71,
+  "coveredLineCount": 71,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 71 source lines before editing. Created as part of the DLQInspectorPage conversion: the page imports StatusHeader from '../components/dlq-inspector' but only EntryDrawer existed in the native tree and these three siblings + the barrel are not in the loop manifest, so they are ported here so the page typechecks/lints/tests.",
+    "Module JSDoc L1-8 ported as the native header. Imports L9-16: react-i18next useTranslation (L9) -> native useNativeTranslationFallback t(key, fallback); lucide Inbox/ShieldCheck/AlertOctagon (L10) -> decorative ▤ / ✓ / ⚠ glyphs; StatCard (L12) -> inline RN StatCard; AlertBanner (L13) -> inline RN WarningBanner; Grid (L14) -> a flex-wrap row (flexBasis:220 -> grid-cols-1 on narrow, sm:grid-cols-3 on wide); fmtInt (L15) ported inline with safeNumber; DLQListResponse type (L16) imported from the native useDLQ hook instead of @/types/admin-diagnostics.",
+    "Props + body L18-27: StatusHeaderProps {data: DLQListResponse | undefined, loading: boolean} (L18-21) preserved + exported; count = data?.count ?? 0 (L25), replayable = (data?.entries ?? []).filter(e => e.replayable).length (L26), enabled = data?.replay_enabled ?? false (L27) preserved verbatim.",
+    "Render L29-56: the Grid of three StatCards preserved 1:1 — Total entries (Inbox▤, value loading?'—':fmtInt(count), sublabel 'in dead-letter queue', L32-37); Replayable (ShieldCheck✓, fmtInt(replayable), 'parsed with source topic', L38-43); Replay mode (AlertOctagon⚠, loading?'—':enabled?'Enabled':'Disabled', 'DLQ_REPLAY_ENABLED env', L44-55) — all t() keys + English fallbacks kept.",
+    "Warning banner L58-68: rendered only when !loading && !enabled (L58), variant='warning', title 'DLQ replay is disabled' (admin.dlq.banners.disabledTitle), body the verbatim disabledMessage about the HTTP 403 + result=\"disabled\" log (L63-66). Closing L69-71 preserved.",
+    "Native-only adaptations: web StatCard Skeleton loading branch is unnecessary (the parent passes the '—' placeholder); lucide SVG icons -> text glyphs; the responsive Grid collapses to a flex-wrap row. No DOM/lucide/Tailwind imports — only react, react-native, canonical AppText, theme tokens, and the useDLQ type.",
+    "Gates: cd apps/native; npm run typecheck PASS; npm run lint -- --quiet PASS; npm test -- --runInBand --detectOpenHandles PASS 71/71."
+  ]
+}
