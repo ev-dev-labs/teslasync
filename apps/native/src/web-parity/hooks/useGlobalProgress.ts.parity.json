@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/hooks/useGlobalProgress.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useGlobalProgress.ts",
+  "sourceLineCount": 29,
+  "coveredLineCount": 29,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 29 source lines line by line before editing. L1 `import { useMemo } from 'react'` preserved verbatim. L2 `import { globalProgress } from '@/lib/globalProgress'` rewired to the native parity controller at ../lib/globalProgress (the web `@/lib/*` alias has no native tsconfig path, so relative import is used, matching every other web-parity hook).",
+    "L4-26 JSDoc preserved with intent intact: opt-in hook for heavy mutations (>~800 ms file uploads / exports / bulk ops), the {@link globalProgress} reference, the useEffect start()/stop() usage example, the keep-the-per-button-spinner-for-quick-mutations guidance, and the stable-identity-across-renders guarantee for safe useEffect dependency inclusion. Web wording 'top-progress bar' is rendered 'top-progress strip' to match the native TopProgress layout role; behavior is unchanged.",
+    "L27-28 hook body ported verbatim: `export function useGlobalProgress() { return useMemo(() => ({ start: globalProgress.start }), []) }`. The empty-deps useMemo preserves the web hook's stable object identity exactly; only a trailing semicolon was added by the native prettier config (singleQuote/trailingComma/bracketSpacing). L29 is the trailing newline.",
+    "globalProgress is a shared singleton (also consumed by the route-chunk Suspense boundary / TopProgress on web), so it was ported as a real shared module at apps/native/src/web-parity/lib/globalProgress.ts (see its sidecar) rather than inlined — inlining would fork the channel and break the single-active-bar contract once those consumers are ported. The controller is pure JS (setInterval/clearInterval/Set/closures) and runs identically under React Native, so no browser-only fallback was needed for this hook.",
+    "Native output imports only React (useMemo) and the native globalProgress controller — no DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI components. No i18n strings or unit conversions exist in this source, so none were introduced. Verified from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
