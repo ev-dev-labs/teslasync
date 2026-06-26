@@ -1,0 +1,29 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx",
+  "sourceLineCount": 49,
+  "coveredLineCount": 49,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-7 imports preserved: react-i18next useTranslation -> useNativeTranslation() shim (returns the fallback copy, keys retained); lucide-react Settings -> decorative Unicode gear Glyph (U+2699); @/components/ui GlassPanel -> shared native components/ui/GlassPanel; @/components/data-display KVList -> inline KVList View parity; @/components/feedback Skeleton -> inline Skeleton (Animated pulse honouring reduce-motion); VehicleConfigSnapshot type imported from ../../../../api/types (native parity types, same path as the sibling LiveStateIndicators port).",
+    "L9-12 VehicleConfigSectionProps { vehicleConfig: VehicleConfigSnapshot | null | undefined; softwareVersion: string | undefined } preserved verbatim.",
+    "L14-15 component signature + useTranslation() destructure preserved as the shim (const t = useNativeTranslation()).",
+    "L17-18,32 configItems = vehicleConfig ? [...] : [] ternary preserved; built as a typed KVItem[] so the same `configItems.length > 0` branch drives rendering.",
+    "L19 Car Type row: t('vehicles.detail.carType','Car Type') + vehicleConfig.car_type ?? '—' preserved (EM_DASH = U+2014).",
+    "L20 Trim row: t('vehicles.detail.trim','Trim') + vehicleConfig.trim ?? '—' preserved.",
+    "L21 Exterior Color row: t('vehicles.detail.color','Exterior Color') + vehicleConfig.exterior_color ?? '—' preserved.",
+    "L22 Wheels row: t('vehicles.detail.wheels','Wheels') + vehicleConfig.wheel_type ?? '—' preserved.",
+    "L23 Roof Color row: t('vehicles.detail.roofColor','Roof Color') + vehicleConfig.roof_color ?? '—' preserved.",
+    "L24 Charge Port row: t('vehicles.detail.chargePort','Charge Port') + vehicleConfig.charge_port ?? '—' preserved.",
+    "L25 Right-Hand Drive row: t('vehicles.detail.rhd','Right-Hand Drive'); right_hand_drive != null ? (yes -> t('common.yes','Yes') / no -> t('common.no','No')) : '—' preserved.",
+    "L26 Europe Vehicle row: t('vehicles.detail.europeVehicle','Europe Vehicle'); europe_vehicle != null ? Yes/No : '—' preserved (same common.yes/common.no keys).",
+    "L27 Offroad Lightbar row: t('vehicles.detail.offroadLightbar','Offroad Lightbar'); offroad_lightbar_present != null ? Yes/No : '—' preserved.",
+    "L28 Rear Seat Heaters row: t('vehicles.detail.rearSeatHeaters','Rear Seat Heaters') + vehicleConfig.rear_seat_heaters ?? '—' preserved.",
+    "L29 Sunroof row: t('vehicles.detail.sunroofInstalled','Sunroof') + vehicleConfig.sunroof_installed ?? '—' preserved.",
+    "L30 Software row: t('vehicles.detail.softwareVersion','Software') + vehicleConfig.software_update_version ?? softwareVersion ?? '—' chained fallback preserved.",
+    "L34-35 GlassPanel className='p-6' -> shared native GlassPanel with style padding 24 (p-6).",
+    "L36-41 header div.flex items-center gap-2 mb-4 -> View (flexDirection row, alignItems center, gap 8, marginBottom 12); Settings icon h-4 w-4 text-[var(--neon-cyan)] -> gear Glyph fontSize 16 in the cyan accent token; span.text-lg font-bold text-[var(--text-primary)] -> AppText fontSize 18 / fontWeight 700 / textPrimary (accessibilityRole='header').",
+    "L42-46 configItems.length > 0 ? <KVList items columns={2}/> : <Skeleton lines={4} height={16}/> branch preserved: KVList reproduces the two-column dl (50% cells, 24px gap-x-6 gutter), flex justify-between py-2 rows, divide-y top borders on every cell after the first, muted text-sm label + medium primary text-sm value; Skeleton lines>1 renders four space-y-2 (gap 8) height-16 pulse bars with the last at 60% width, matching the web Skeleton's lines branch.",
+    "L47-49 closing GlassPanel/JSX/function preserved. No DOM/HTML, lucide SVG, Recharts, Leaflet, or web UI imports in the native output; only React Native primitives, AppText, the shared GlassPanel and theme tokens are used."
+  ]
+}
