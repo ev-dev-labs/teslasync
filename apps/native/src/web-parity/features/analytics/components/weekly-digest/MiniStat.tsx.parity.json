@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/MiniStat.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/MiniStat.tsx",
+  "sourceLineCount": 21,
+  "coveredLineCount": 21,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { GlassPanel } from '@/components/ui'` -> shared native GlassPanel imported from ../../../../../components/ui/GlassPanel (AppText + theme tokens added for the text/color mappings).",
+    "L2 `import { cn } from '@/lib/cn'` -> no Tailwind/cn in RN; the class string is replaced by an equivalent RN style and `className` is accepted only for source-call parity (renamed _className, ignored), with a native `style` override added.",
+    "L3 blank line.",
+    "L4-9 `MiniStatProps` interface preserved verbatim: label:string, value:string|number, icon?:ReactNode (React.ReactNode -> ReactNode from 'react'), className?:string; an optional native `style?: StyleProp<ViewStyle>` is appended.",
+    "L11 `export function MiniStat({ label, value, icon, className })` -> same signature with className aliased to _className plus added style.",
+    "L12-13 `<GlassPanel className={cn('flex items-center gap-3 px-4 py-3', className)}>` -> <GlassPanel style={[styles.root, style]}> where styles.root = flexDirection row + alignItems center + gap 12 (gap-3) + paddingHorizontal 16 (px-4) + paddingVertical 12 (py-3).",
+    "L14 `{icon && <span className=\"text-[var(--text-muted)]\">{icon}</span>}` -> RN-safe `icon ? (<View style={styles.icon}>...</View>) : null`; a string/number icon renders via AppText tone=\"muted\" (the --text-muted mapping), an element icon renders as-is since RN has no currentColor cascade into arbitrary children.",
+    "L15 `<span className=\"flex flex-col\">` -> <View style={styles.column}> (flexDirection column).",
+    "L16 `<span className=\"text-xs text-[var(--text-secondary)]\">{label}</span>` -> <AppText variant=\"caption\" tone=\"secondary\">{label}</AppText> (text-xs == caption 12px, --text-secondary == tone secondary).",
+    "L17 `<span className=\"text-sm font-semibold text-white\">{String(value)}</span>` -> <AppText weight=\"semibold\" style={styles.value}>{String(value)}</AppText>; styles.value = fontSize 14 (text-sm) + color textPrimary (text-white) and font-semibold == weight semibold (fontWeight 600); String(value) coercion preserved.",
+    "L18-21 closing column View / GlassPanel and component end preserved; no DOM, Tailwind/cn, Recharts, Leaflet, or web UI imports introduced."
+  ]
+}
