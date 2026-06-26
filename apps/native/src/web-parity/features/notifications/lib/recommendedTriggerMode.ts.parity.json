@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/notifications/lib/recommendedTriggerMode.ts",
+  "outputPath": "apps/native/src/web-parity/features/notifications/lib/recommendedTriggerMode.ts",
+  "sourceLineCount": 41,
+  "coveredLineCount": 41,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 41 source lines line by line. This is a non-visual pure-TypeScript utility (conversion contract rule 6): no DOM, browser HTML, Recharts, Leaflet, react-leaflet, framer-motion, or web UI-kit usage, so the logic ports unchanged to React Native.",
+    "Preserved the full L1-L16 JSDoc block verbatim (smart-defaults engine doc, the explicit '=' / '!=' / 'changed' -> 'once' and '>' / '<' / '>=' / '<=' / 'between' / 'outside' -> 'repeat' mapping table, and the switch-over-Map exhaustiveness rationale referencing ALERT_RULE_OPS).",
+    "Import rewiring: source L18 `import type { AlertRuleInput, AlertRuleTriggerMode } from '@/api/types'` -> `import type {AlertRuleInput, AlertRuleTriggerMode} from '../../../api/types'`. The web `@/` alias is not configured in apps/native (no tsconfig paths / no babel module-resolver), so a relative path to the native parity api/types.ts is used, matching the established precedent (features/analytics/.../slides.ts -> '../../../../api/types'). AlertRuleInput (L586), AlertRuleTriggerMode (L507) and op?: AlertRuleOp (L604) all exist in apps/native/src/web-parity/api/types.ts, so NonNullable<AlertRuleInput['op']> resolves to the identical AlertRuleOp union.",
+    "Ported L20 `type RuleOp = NonNullable<AlertRuleInput['op']>` and L22-41 `recommendedTriggerMode(op: RuleOp): AlertRuleTriggerMode` switch with byte-identical case ordering and return literals: '=','!=','changed' -> 'once' (L24-27); '>','<','>=','<=','between','outside' -> 'repeat' (L28-34); default exhaustiveness guard `const _exhaustive: never = op; void _exhaustive; return 'repeat'` (L35-39). Behavior, exported symbol surface, and the never-typed compile-time exhaustiveness check are unchanged.",
+    "Native code style applied per apps/native/.eslintrc.js (@react-native) + .prettierrc.js: singleQuote, trailingComma all, arrowParens avoid, bracketSpacing false (no spaces inside import braces), semicolons added to satisfy the eslint prettier rule, matching sibling parity files.",
+    "Verified against native gates from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles."
+  ]
+}
