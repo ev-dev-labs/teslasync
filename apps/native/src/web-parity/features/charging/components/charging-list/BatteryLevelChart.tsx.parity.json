@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-list/BatteryLevelChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-list/BatteryLevelChart.tsx",
+  "sourceLineCount": 39,
+  "coveredLineCount": 39,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line before editing; the named export BatteryLevelChart, its BatteryLevelChartProps { data: StartLevelBucket[] } shape, and both i18n keys (charging.charts.batteryLevelAtStart / charging.charts.batteryLevelHint) are preserved verbatim (L10-15, L21, L23).",
+    "L1 react-i18next useTranslation -> a local native useTranslation() whose t(key, fallback) returns the English fallback (or key), keeping every key at the call site since the parity bundle ships no i18n runtime.",
+    "L2 lucide-react <BatteryCharging className='h-4 w-4 text-neon-amber'> (L20) -> the SemanticIcon registry 'batteryCharging' glyph rendered as a small inline amber AppText (colors.warning), preserving the icon identity and its neon-amber tint.",
+    "L3 GlassPanel from @/components/ui (L18 className='p-6') -> the already-ported native GlassPanel with 24px (p-6) padding.",
+    "L4-7 the Recharts/web charts barrel (ChartTooltip, chartGrid, axisTickSm, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer) used at L27-35 -> a native-safe horizontal bar list (the ported StatisticsPage vehicle-comparison / MiniBarChart convention): one amber bar per start-SOC bucket scaled to the shared max count (matching Recharts' auto YAxis at L31), each row showing its XAxis 'range' label (L30) and its always-visible 'count' (L33). The Bar fill='#f59e0b' fillOpacity={0.6} (L33) is preserved as rgba(245,158,11,0.6); the radius [4,4,0,0] maps to a 4px track radius; the hover-only Tooltip+ChartTooltip (L32) has no native equivalent so counts are shown inline; the name='Sessions' series label is preserved in the chart's accessibilityLabel.",
+    "L8 `import type { StartLevelBucket } from './helpers'` -> inlined locally as the equivalent { range: string; count: number } type because the charging-list ./helpers module is not yet ported into the native bundle.",
+    "L19-25 section-title h3 (text-lg font-semibold, --text-primary) + the text-xs --text-muted ml-2 hint span -> a wrapping title row: amber glyph + an 18px semibold primary title + a caption muted hint with an 8px left margin.",
+    "L26 the h-36/sm:h-44 fixed-height chart div -> a content-height native bar list (the horizontal orientation is content-driven; null-safety guard `data ?? []` plus zero-count buckets render an empty track, matching a zero-height Recharts bar).",
+    "L36-39 closing JSX/return/component boundary preserved. No DOM, react-i18next, lucide-react, Recharts, Leaflet, or web UI-kit modules imported. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
