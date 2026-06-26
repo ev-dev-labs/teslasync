@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/lib/touchTargetAllowlist.ts",
+  "outputPath": "apps/native/src/web-parity/lib/touchTargetAllowlist.ts",
+  "sourceLineCount": 28,
+  "coveredLineCount": 28,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-19 top-of-file JSDoc block ('Touch-target audit explicit waivers (WCAG 2.5.5)', the audit:touch-target rationale, the quarterly-review note, and the file/element/reason match-semantics bullets incl. the Unicode • and — glyphs) preserved verbatim. A leading // native-port header was prepended above it documenting that this is a DOM-free 1:1 type/data port and why nothing was transformed.",
+    "L20-24 `export interface TouchTargetWaiver` ported byte-for-byte: `file: string`, `element: '*' | 'Button' | 'IconButton' | 'button' | 'a'`, `reason: string`. The element union keeps the web literal names verbatim because they are the cross-platform audit waiver type contract (string literals), not rendered DOM elements — so no native substitution is needed or correct.",
+    "L26-28 `export const TOUCH_TARGET_ALLOWLIST: TouchTargetWaiver[] = [ /* intentionally empty at adoption time; entries justify themselves */ ]` ported 1:1, including the intentional-empty comment; the array stays empty.",
+    "L29 trailing newline preserved.",
+    "Pure non-visual type/data module: no DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported or referenced — runs unchanged under React Native. Source already conforms to the native prettier config (singleQuote, trailingComma:'all'); no value or formatting change was required.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
