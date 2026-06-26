@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/types/sharing.ts",
+  "outputPath": "apps/native/src/web-parity/types/sharing.ts",
+  "sourceLineCount": 109,
+  "coveredLineCount": 109,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 109 numbered source lines before editing; this is non-visual, type-only TypeScript for the shareable drive reports feature with zero imports, so no DOM, browser HTML elements, Recharts, Leaflet, or web UI components were present or introduced (contract rules 4 & 6). Ported 1:1 to React Native-compatible TypeScript.",
+    "L1 leading doc comment '/** Types for the shareable drive reports feature. */' preserved verbatim to retain API/feature intent.",
+    "L3-16 ShareToken ported verbatim: id, token, drive_id, created_by|null, title|null, description|null, include_map, include_telemetry, include_speed, views, expires_at|null, created_at — snake_case API-contract field names and nullable unions preserved exactly.",
+    "L18-31 SharedDriveInfo ported verbatim with SI unit-suffix fields (distance_m, duration_s, max_speed_mps, avg_speed_mps, efficiency_wh_per_m) and nullable battery/elevation fields preserved to honor SI canonical unit handling (contract rule 3).",
+    "L33-36 SharedVehicle (model, color), L38-41 SharedMapPoint (lat, lng), L43-46 SharedElevationPoint (distance_m, elevation_m), L48-51 SharedSpeedPoint (distance_m, speed_mps), L53-58 SharedTelemetryPoint (distance_m, battery_level|null, power|null, elevation|null) all ported verbatim.",
+    "L60-70 SharedDriveData ported verbatim including the payload_version 'v2' | 'v1' literal union (single quotes kept per prettier singleQuote), drive: SharedDriveInfo, vehicle|null, and the four nullable array fields map_points/elevation_profile/speed_profile/telemetry.",
+    "L72-78 CreateShareRequest ported verbatim with optional (?) fields title/description/include_speed/include_telemetry/expires_in_days; L80-84 CreateShareResponse (token, url, id) ported verbatim.",
+    "L86-109 SharedDriveDataV1 ported verbatim: legacy v1 payload shape with inlined drive object using non-SI km/min/kmh/wh_km field names (distance_km, duration_min, max_speed_kmh, avg_speed_kmh, efficiency_wh_km) and inline array literal types for elevation_profile/speed_profile/telemetry — all field names, units, and nullability preserved exactly to keep backend share-link contract parity (note: legacy v1 names retained intentionally because this is a frozen wire shape, not new code).",
+    "Formatting normalized with the repo prettier config (apps/native/.prettierrc.js: singleQuote, trailingComma all, arrowParens avoid; @react-native eslint-config enforces prettier). Prettier only re-wrapped the long inline telemetry object union on source L108 across multiple lines (printWidth 80); no field name, key, type, union member, or behavior changed. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
