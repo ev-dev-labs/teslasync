@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/lib/broadcastTopics.ts",
+  "outputPath": "apps/native/src/web-parity/lib/broadcastTopics.ts",
+  "sourceLineCount": 119,
+  "coveredLineCount": 119,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 119 source lines before editing; the file is a pure non-visual constants/type registry with zero imports and no DOM, browser HTML, Recharts, Leaflet, or web UI dependencies, so it ports verbatim and is platform-agnostic for React Native.",
+    "Preserved every line: the module JSDoc (L1-36), the TOPICS const object with all 28 topic string values and their inline JSDoc (L38-99), the Topic union type (L101-106), and the FORMATTER_AFFECTING_TOPICS array (L108-119) — all behavior, exact string discriminators, and i18n-neutral intent retained unchanged.",
+    "JSDoc references to web-only surfaces (FormatterPrefsBridge, useSettings, broadcast.ts) are documentation comments only — no actual imports exist, so typecheck/lint are unaffected and the comments are kept faithfully to preserve documentation intent."
+  ]
+}
