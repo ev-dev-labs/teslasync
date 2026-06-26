@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-curve/SpeedTrendChart.tsx",
+  "sourceLineCount": 119,
+  "coveredLineCount": 119,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 react useMemo -> preserved (import React, {useMemo}).",
+    "L2 react-i18next useTranslation -> useNativeTranslation() shim returning t(key, fallback) fallback copy; every web t() key + default string is preserved verbatim.",
+    "L3 `import type { ChargingSession } from '@/api/types'` -> `import type {ChargingSession} from '../../../../api/types'` (native parity types).",
+    "L4-17 `@/components/charts` ChartContainer/ChartTooltip/chartGrid/axisTickSm/AREA_DEFAULTS/LineChart/Line/XAxis/YAxis/CartesianGrid/Tooltip/ResponsiveContainer -> the native recharts barrel renders only an 'unavailable' placeholder and RN has no SVG line backend, so they are replaced by a self-contained native panel (GlassPanel header + DC/AC series key + grouped MonthlyTrendBars + accessible MonthlyDataTable + static legend). Only CHART_COLORS is imported from the native charts barrel.",
+    "L18 `useChartPalette` from `@/hooks/useChartPalette` -> native CHART_COLORS constant (the same colour-blind-safe Okabe-Ito default the web hook resolves to); palette[0]/palette[1] semantics kept (dcColor=palette[0], acColor=palette[1]) with FALLBACK_DC/AC guards.",
+    "L19 `isDcSession, avg` from `./helpers` -> inlined verbatim native functions (no native sibling helpers yet); DC_POWER_THRESHOLD_W=20_000 carried over.",
+    "L20 `convertPowerFromSI` from `@/lib/unitConversion` -> inlined verbatim native convertPowerFromSI (W -> watts, kW -> watts/1000); WATTS_PER_KILOWATT=1000.",
+    "L21 `import type { MonthlySpeed } from './types'` -> inlined local MonthlySpeed interface {month, dcAvgKw, acAvgKw}.",
+    "L23-25 SpeedTrendChartProps {sessions: ChargingSession[]} -> preserved identically.",
+    "L27-29 default export component, useTranslation()->useNativeTranslation(), useChartPalette()->CHART_COLORS constant assigned to `palette`.",
+    "L31-49 monthlyTrend useMemo -> ported verbatim: same empty guard, same Map<string,{dc,ac}>, same (started_at??'').slice(0,7) month key, same convertPowerFromSI(peak_power_w??0,'kW'), same isDcSession branch, same sort([a],[b])=>a.localeCompare(b), same Math.round(avg(...)*10)/10 rounding, same dcAvgKw/acAvgKw keys; only braces added for native eslint curly.",
+    "L51-71 ChartContainer props (title/subtitle/ariaLabel/data/dataColumns/height/exportable/exportFilename) -> title+subtitle rendered in the GlassPanel header; ariaLabel passed to MonthlyTrendBars accessibilityLabel; data/dataColumns (month/dcAvgKw/acAvgKw + col.month/col.dcAvgKw/col.acAvgKw labels) preserved as the accessible MonthlyDataTable; height 280 -> CHART_HEIGHT 200 chart area; exportable/exportFilename ('charging-speed-trend') CSV download is browser-only and noted as native-unavailable (the data table preserves the values).",
+    "L72-76 ResponsiveContainer/LineChart data+margin -> native View chartFrame + horizontal ScrollView of per-month bar columns.",
+    "L77 CartesianGrid {...chartGrid} -> dropped (native chartGrid is an inert SVG-unavailable marker; bar track provides the visual baseline).",
+    "L78 XAxis dataKey='month' tick=axisTickSm -> per-column month label (row.month) beneath each bar group.",
+    "L79-87 YAxis tick + rotated 'Avg kW' label -> yAxis tick column (max/mid/0 via formatKw) + a plain 'Avg kW' caption above the chart (charging.curve.avgKw preserved; RN has no rotated SVG axis label).",
+    "L88 Tooltip content=<ChartTooltip/> -> hover tooltips unavailable on touch; exact values are shown in the MonthlyDataTable instead.",
+    "L89-96 Line dcAvgKw, name=t('charging.curve.dcAvg','DC Avg'), stroke=palette[0], unit=' kW' -> DC bars coloured palette[0] + 'DC Avg' series-key chip (charging.curve.dcAvg preserved).",
+    "L97-104 Line acAvgKw, name=t('charging.curve.acAvg','AC Avg'), stroke=palette[1], unit=' kW' -> AC bars coloured palette[1] + 'AC Avg' series-key chip (charging.curve.acAvg preserved).",
+    "L105-106 </LineChart></ResponsiveContainer> -> close native chart frame.",
+    "L107-116 bottom legend: <div> with bg-[#00f0ff] DC Fast (charging.curve.dcFast) + bg-emerald-500 AC / Home (charging.curve.acHome), text-[var(--text-secondary)] -> native legend row with LEGEND_DC_COLOR '#00f0ff' and LEGEND_AC_COLOR '#10b981' swatches and tone='secondary' captions; web's intentional palette-vs-legend colour split preserved.",
+    "L117-119 </ChartContainer> + component close -> GlassPanel close + default export; SpeedTrendChart.displayName set.",
+    "Empty state: native EmptyState (charging.curve.speedTrend.empty) added so the panel is never blank when there are no sessions (web relied on ChartContainer's empty chart) — documented native addition.",
+    "No DOM, Recharts, Leaflet, framer-motion, or web UI components imported; only RN primitives (View/ScrollView/StyleSheet), native AppText/EmptyState/GlassPanel parity components, native theme tokens, and the native CHART_COLORS constant."
+  ]
+}
