@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/dashboard/components/AddWidgetButton.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/components/AddWidgetButton.tsx",
+  "sourceLineCount": 57,
+  "coveredLineCount": 57,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read every source line. L1 `useTranslation` -> local useNativeTranslationFallback() t() shim (react-i18next is not a native dependency; precedent SortControl/WeekSelector). L2 `Button, Tooltip` from @/components/ui and L3 `Icons` from @/lib/icons are remapped to the native parity Button, a dropped Tooltip, and a glyph (see below).",
+    "L5-20 JSDoc (visibility + positioning rationale) is preserved as the native header comment. L21-27 `AddWidgetButtonProps { onClick, isEditing }` are ported verbatim including the doc comments.",
+    "L29-32: `AddWidgetButton`, `const { t } = useTranslation()` -> the shim, `if (isEditing) return null` early-return preserved, and `t('dashboard.addWidget', 'Add Widget')` key + fallback preserved.",
+    "L34-38: the outer `<div data-print-hide data-testid=dashboard-add-widget-fab className='fixed bottom-20 right-6 z-[56]'>` -> an absolutely-positioned <View> with testID `dashboard-add-widget-fab`; fixed->absolute, bottom-20->80, right-6->24, z-[56]->zIndex 56. `data-print-hide` has no native print surface and is dropped (documented).",
+    "L39,54: `<Tooltip content={label} side='left'>` is a hover/focus-only affordance with no native touch equivalent; dropped and its label preserved as the Button accessibilityLabel (same data the web aria-label carries).",
+    "L40-46,53: `<Button variant='primary' size='lg' onClick={onClick} className='h-14 w-14 rounded-full p-0 shadow-xl' aria-label={label}>` -> native Button variant=primary size=lg onPress=onClick accessibilityLabel=label, with style {width/height 56, borderRadius 28, paddingHorizontal 0, ...shadows.panel} merged last to win over lg defaults (the rounded 56px FAB + shadow-xl).",
+    "L47-52: the icon comment + `<Icons.add className='h-8 w-8' strokeWidth={2.5} aria-hidden='true' />` (lucide Plus) -> decorative '+' glyph in AppText at fontSize 32 (h-8/w-8) + fontWeight 700 (strokeWidth 2.5), importantForAccessibility='no' (aria-hidden). L55-57 closing markup mapped to the View/Button close."
+  ]
+}
