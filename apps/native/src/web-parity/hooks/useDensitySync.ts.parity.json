@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/hooks/useDensitySync.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useDensitySync.ts",
+  "sourceLineCount": 59,
+  "coveredLineCount": 59,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 59 source lines line by line before editing: the react import (L1) and the `@/api/hooks/useSettings` import (L2) -> rewired to the native parity hook at ../api/hooks/useSettings; the Density docblock (L4-8) + `export type Density = 'compact' | 'comfortable' | 'spacious'` (L9) ported verbatim; DENSITY_LS_KEY = 'teslasync-density' (L11) and ALLOWED (L12) retained; the isDensity(v): v is Density guard (L14-16) ported verbatim.",
+    "getCurrentDensity() docblock + body (L18-27): the web getter reads `document.body.dataset.density` and defaults to 'comfortable' when document is undefined or the value is not a valid Density. Native has no document.body, so getCurrentDensity() reads an in-memory module store seeded to DEFAULT_DENSITY='comfortable' — same public signature, same default, same Density return.",
+    "useDensitySync() docblock + body (L29-58): preserved exactly — useSettings() data+isSuccess, the lastApplied useRef<Density|null>, and the useEffect with deps [isSuccess, settings?.ui_density] that early-returns on !isSuccess / !isDensity(next) / unchanged value, then sets lastApplied.current=next before applying. The web `document.body.dataset.density = next` write (L50-52) maps to applyDensity(next) on the in-memory store; the localStorage.setItem try/catch flash-prevention write (L53-57) maps to persistDensity(next).",
+    "Explicit unavailable browser state (contract rule 7): document.body.dataset.density -> in-memory subscribable density store (currentDensity + listeners) read via getCurrentDensity() and observed via a native-only subscribeDensity() that stands in for the web body[data-density] CSS reactivity; localStorage persistence -> no-op persistDensity (AsyncStorage is not a dependency) so density holds only for the JS runtime lifetime, with the teslasync-density key namespace retained. Captured in nativeDensitySyncCapabilities. The web QueryClientProvider-placement note (L36-38 intent) is carried over for the mounting carrier.",
+    "No DOM modules, browser HTML elements, Recharts, Leaflet, localStorage, or old web UI components imported — only React (useEffect/useRef) and the native parity useSettings hook. No i18n or unit conversion exists in this source, so none was introduced. The sibling DensityApplier.tsx was refactored to import useDensitySync from this canonical hook (mirroring the web DensityApplier -> @/hooks/useDensitySync boundary) and re-exports Density/getCurrentDensity/subscribeDensity/useDensitySync + nativeDensityApplierCapabilities for back-compat, removing the previously-inlined duplicate store. Verified via npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles."
+  ]
+}
