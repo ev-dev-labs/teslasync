@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/types.ts",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/types.ts",
+  "sourceLineCount": 71,
+  "coveredLineCount": 71,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. The file is pure non-visual TypeScript type code with zero imports and no DOM/React/Recharts/Leaflet/browser deps, so all 8 exported interfaces are ported 1:1 with identical names, members, types, and optionality.",
+    "Drive (L1-8), ChargingSession (L10-18), Alert (L20-24) ports keep the snake_case API field names verbatim — start_date, distance, duration_min, efficiency_wh_km, energy_used, start_ts, total_energy_added_wh, cost, start_battery_pct, end_battery_pct, severity, created_at — to preserve Go-JSON-tag/data-shape parity (these are existing web source fields, not new SI fields).",
+    "DigestMetrics (L26-49) ported with all 23 camelCase members including topDrive: Drive | undefined (L40) and alertsByType: Record<string, number> (L47) preserved exactly.",
+    "FunFact (L51-55), DailyDistanceEntry (L57-60), DailyEnergyEntry (L62-65), AlertPieEntry (L67-71) ported 1:1 with identical string/number members.",
+    "Blank separator lines (L9, L19, L25, L50, L56, L61, L66) and trailing newline (L72) are accounted for as structural whitespace; no logic, behavior, unit handling, or i18n is present to adapt for React Native.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
