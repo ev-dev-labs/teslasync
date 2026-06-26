@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/admin/components/devtools/types.ts",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/devtools/types.ts",
+  "sourceLineCount": 17,
+  "coveredLineCount": 17,
+  "conversionStatus": "converted",
+  "notes": [
+    "Pure non-visual TypeScript type module — no DOM elements, no browser-only APIs, no Recharts/Leaflet/web-UI imports — so it ports verbatim and is already React Native compatible (rule 6).",
+    "L1-7 leading godoc block (TelemetryError is the UI-normalised shape after extractTelemetryErrors unwraps Tesla's GET /api/1/vehicles/{vin}/fleet_telemetry_errors envelope; defensive extractor rationale) preserved word-for-word to keep behavioural/API-path intent.",
+    "L8 `export interface TelemetryError {` preserved as a named export (mirrors web index.ts `export type { TelemetryError }`); native FleetApiSection.tsx currently inlines an identical shape, so the canonical exported type now matches that inline copy field-for-field.",
+    "L9-12 the rowKey comment (Tesla errors carry no `id`; composite key = observable identifiers + wire row index) preserved verbatim.",
+    "L13-16 fields rowKey/timestamp/code/message: string ported 1:1; trailing semicolons added per apps/native @react-native eslint + prettier (singleQuote/trailingComma) house style, matching the inlined interface in FleetApiSection.tsx. L17 closing brace preserved.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) -> exit 0; npm run lint -- --quiet -> exit 0; npm test -- --runInBand --detectOpenHandles -> all suites passed."
+  ]
+}
