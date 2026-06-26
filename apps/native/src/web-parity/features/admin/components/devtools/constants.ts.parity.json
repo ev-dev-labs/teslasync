@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/admin/components/devtools/constants.ts",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/devtools/constants.ts",
+  "sourceLineCount": 155,
+  "coveredLineCount": 155,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 155 source lines line by line before editing. This is a non-visual data/constants module; every export is accounted for below.",
+    "L1-3 `import { KeyRound, FileCode, Key, Globe, Shield, Link, Radio } from 'lucide-react'`: removed — lucide-react is a DOM/SVG module absent from apps/native (package.json). The seven glyphs were only used as ONBOARDING_STEPS `icon:` values, so they are re-expressed as their lucide NAME strings (native vocabulary precedent: web-parity/components/charts/TimeMarker.tsx uses `icon: 'AlertOctagon'`), preserving icon identity/visual intent without a DOM import.",
+    "L5-13 ICON_COLOR_MAP: preserved verbatim as Record<string,string> (the five neon Tailwind className strings cyan/green/purple/amber/red kept exactly for data fidelity, mirroring TimeMarker keeping `bg-red-500/10`). Because className strings are inert in RN StyleSheet, an additional ICON_COLOR_TOKENS map + IconColorToken interface expose the same five keys as native RGBA {bg,fg,ring} (neon hex from web/tailwind.config.js: cyan #00f0ff, green #10b981, purple #a855f7, amber #f59e0b, red #ef4444; bg=/10, fg=solid, ring=/20) so native chips can use backgroundColor/color/borderColor.",
+    "L15-60 VIN decoder maps ported verbatim: VIN_MANUFACTURERS (L17-22), VIN_MODELS (L23-28), VIN_DRIVE (L29-40), VIN_YEAR (L41-52), VIN_PLANT (L53-60) — identical keys and values, Record<string,string> types preserved.",
+    "L62-64 BYTE_UNITS = ['B','KB','MB','GB','TB'] as const ported verbatim including the const assertion.",
+    "L66-77 PERMS unix permission map (octal digit -> rwx triplet) ported verbatim as Record<string,string>.",
+    "L79-101 HTTP_CODES: all 19 {code,text,desc} entries (200..504) ported verbatim with the {code:number;text:string;desc:string}[] type preserved.",
+    "L103-117 TESLA_ENDPOINTS: all 11 {method,path,desc} entries ported verbatim; API paths (/api/1/vehicles ...) preserved exactly per contract rule 3.",
+    "L119-134 TELEMETRY_FIELDS: all 11 category objects (Location, Driving, Charging, Powershare, Climate, Vehicle State, Safety, Powertrain, Tires & Service, Media, User Preference, Vehicle Config) ported verbatim with every signal-name string intact (incl. ChargeRateMilePerHour and unit-suffixed Tesla proto identifiers kept as the upstream wire names).",
+    "L136-146 ONBOARDING_STEPS: 7 steps ported with id/label/desc verbatim and `as const` preserved; each `icon:` lucide component reference becomes the equivalent name string ('KeyRound','FileCode','Key','Globe','Shield','Link','Radio'). Added OnboardingStepIcon = typeof ONBOARDING_STEPS[number]['icon'] for typed native consumers.",
+    "L148-155 REFERENCE_LINKS: 4 links ported verbatim — title i18n keys (devtools.ref.*), urls, and the already-string `icon: '...' as const` values ('BookOpen','Globe','ExternalLink','Radio') are unchanged. Added ReferenceLinkIcon union for native consumers.",
+    "No DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported; the file has zero imports. Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
