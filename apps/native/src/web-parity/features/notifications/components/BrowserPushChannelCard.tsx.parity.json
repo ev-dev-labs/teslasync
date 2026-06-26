@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/components/BrowserPushChannelCard.tsx",
+  "sourceLineCount": 189,
+  "coveredLineCount": 189,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-19 doc comment (three card states + per-device revoke intent): preserved as the native header comment and reflected in the rendered states.",
+    "L21 useMemo + L22 react-i18next useTranslation: useMemo kept; useTranslation replaced by inlined useNativeTranslation() (key,fallback)=>fallback shim preserving every webpush.* key + English default.",
+    "L23 lucide-react BellRing/BellOff/Smartphone/Trash2/AlertCircle: mapped to shared native SemanticIcon (notificationsActive/notificationsMuted/monitor/delete/alertCircle), decorative.",
+    "L25 Badge/Button/GlassPanel from @/components/ui: GlassPanel -> native GlassPanel; Badge -> inline ParityBadge (success/neutral/warning -> theme tokens); Button -> inline Pressables with icon+label.",
+    "L26 useWebPush: replaced by native-safe useNativeWebPush() with identical return shape (isSupported/isPushSupported/isSubscribed=false, currentEndpoint=null, permission='denied', no-op subscribe/unsubscribe) because RN has no DOM Notification API/PushManager/service worker.",
+    "L27 usePushSubscriptions/useUnsubscribePush/usePushPublicKey: imported from the already-ported native api/hooks/usePush (same REST contract: GET/DELETE /push/subscribe, GET /push/public-key).",
+    "L28 formatRelative from @/lib/dateFormat: ported inline verbatim (— fallback, just now, Xm/Xh/Xd ago, then formatDate absolute fallback).",
+    "L29 PushSubscriptionRow type: imported as a type from the native usePush port which re-declares the same row shape.",
+    "L31-33 props (className): mapped to native `style` prop forwarded to GlassPanel (RN has no className).",
+    "L35-50 component setup + rows useMemo(subs ?? []): ported 1:1 with the native hooks.",
+    "L52-65 disabledReason chain + isUnsupported: ported verbatim with all four keys/fallbacks; native always resolves to the unsupported notice because useNativeWebPush reports browser push unavailable.",
+    "L67-77 handleEnable/handleDisable/handleRemoveDevice: ported verbatim (await subscribe/unsubscribe/unsubMut.mutateAsync(endpoint)).",
+    "L79-109 GlassPanel + header (icon box, title, subtitle) + status Badge (subscribed/notSubscribed/unsupported): ported to native View/AppText/SemanticIcon + ParityBadge.",
+    "L111-136 unsupported notice (AlertCircle + reason) vs action row (Enable/Disable button + iOS note): ported; native renders the unsupported notice branch.",
+    "L138-185 registered-devices list (border header, per-row Smartphone + UA + this-device marker + last-used + Trash2 remove): ported; UA truncation via numberOfLines, lastUsed interpolation via {{when}} replace, remove via useUnsubscribePush mutateAsync.",
+    "L186-189 closing JSX/exports: preserved; Tailwind classes throughout translated to a native StyleSheet (no DOM-only modules, HTML elements, lucide-react, or web UI components imported)."
+  ]
+}
