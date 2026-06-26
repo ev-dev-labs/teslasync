@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/lib/dateRange.ts",
+  "outputPath": "apps/native/src/web-parity/lib/dateRange.ts",
+  "sourceLineCount": 116,
+  "coveredLineCount": 116,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 116 source lines line by line. Pure, non-visual utility — no DOM, JSX, Recharts, Leaflet, browser HTML elements, or old web UI imports. Only platform primitives used are Date, Date.UTC, Number, Math, String.padStart, and Intl.DateTimeFormat/formatToParts with an IANA timeZone + hourCycle 'h23', all available on Hermes and in the Jest/Node gate (formatToParts has native-parity precedent in lib/chargingAggregation.ts and components/forms/CurrencyInput.tsx), so the logic ports verbatim with no native-safe shim needed.",
+    "L1-22 module docblock (calendar-day -> API-instant rationale, half-open [start, endExclusive) contract, local-midnight boundary, required-timezone/no-silent-default rule) preserved; a native-port header docblock was prepended above it documenting the no-DOM/Hermes-availability reasoning per contract rule 6. L23 blank line preserved.",
+    "L24-31 `export interface CalendarRange` (startDate, endDate, timezone string fields + per-field JSDoc) and L33-38 `export interface InstantRange` (startInstant, endInstantExclusive + JSDoc) ported byte-identically.",
+    "L40-65 `localMidnightToInstant(date, timezone): Date` ported verbatim: date.split('-') destructure, Number() parse, Number.isFinite guard throwing `localMidnightToInstant: invalid date \"...\"`, and the two-pass DST-correct offset round-trip (Date.UTC guess -> tzOffsetMs -> corrected -> second tzOffsetMs -> new Date). L67-93 private `tzOffsetMs(instantMs, timezone)` ported verbatim including the Intl.DateTimeFormat options object, formatToParts, the `get` helper with `?? 0` null-safety, and the asUtc Date.UTC re-encode returning asUtc - instantMs.",
+    "L95-106 `calendarRangeToInstants(range): InstantRange` ported verbatim (start = localMidnightToInstant, endNext = nextDay, endExclusive = localMidnightToInstant, returns ISO strings via toISOString). L108-116 private `nextDay(date)` ported verbatim (UTC date arithmetic with setUTCDate(+1) and padStart-zero-padded YYYY-MM-DD reassembly). No i18n strings and no unit-suffixed/SI fields in source — nothing to convert there. Verified from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
