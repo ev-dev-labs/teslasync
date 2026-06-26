@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/features/admin/components/ingest-xray/XRayControls.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/ingest-xray/XRayControls.tsx",
+  "sourceLineCount": 113,
+  "coveredLineCount": 113,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-8 file JSDoc (server-constrained vehicle/window/bucket controls; bucket auto-disables when >= window) preserved in the native header comment and re-implemented faithfully.",
+    "L9 react-i18next useTranslation -> local useNativeTranslationFallback returning English fallbacks; every t(key, fallback) preserved including dynamic admin.xray.windowOption.${w} / bucketOption.${b} keys.",
+    "L11 web `<Select>` / SelectOption import -> no DOM <select> in RN and no shared native Select, so the constrained option set renders as a radiogroup of pressable pills (XRaySelect) with a local XRaySelectOption mirror of {value,label,disabled?}.",
+    "L12 `Vehicle` type imported from the native web-parity api/types port (id/vin/display_name confirmed).",
+    "L13-16 IngestXRayBucket / IngestXRayWindow imported from the native useIngestXRay hook port (same literal unions the web source got from @/types/admin-diagnostics).",
+    "L18-26 XRayControlsProps interface ported verbatim and exported.",
+    "L28-34 WINDOW_SECS and L36-42 BUCKET_SECS tables ported byte-for-byte.",
+    "L44-45 ALL_WINDOWS / ALL_BUCKETS literal arrays ported verbatim.",
+    "L47-56 component signature + destructured props + useTranslation ported; t obtained from the native fallback hook.",
+    "L58-64 vehicleOptions (placeholder value '' first, then String(v.id) with display_name || vin || `Vehicle ${id}` fallback) ported exactly.",
+    "L66-69 windowOptions map ported.",
+    "L71-78 bucketOptions map including the tooBig = BUCKET_SECS[b] >= WINDOW_SECS[windowSel] disable rule ported verbatim; disabled pills render dimmed + non-pressable.",
+    "L80-92 vehicle Select (div w-64) -> vehicleControl View (wider minWidth) + XRaySelect; onChange v ? Number(v) : null and value vehicleId!==null?String:'' preserved; aria-label -> accessibilityLabel.",
+    "L94-101 window Select (div w-40) -> control View (narrower minWidth) + XRaySelect; onChange casts to IngestXRayWindow; windowAria preserved.",
+    "L103-110 bucket Select (div w-40) -> control View + XRaySelect; onChange casts to IngestXRayBucket; bucketAria preserved.",
+    "L80 outer `flex flex-wrap items-center gap-4` bar -> flex-wrap row, gap-4 (16px) BAR_GAP, top-aligned (flex-start) because pill groups can wrap to multiple rows; L111-113 closing JSX preserved + XRayControls.displayName set.",
+    "No DOM elements, recharts, leaflet, framer-motion, or web UI components imported; only React Native primitives (View, Pressable), the native AppText, and theme tokens are used."
+  ]
+}
