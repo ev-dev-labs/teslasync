@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/onboarding/hooks/useOnboardingSkip.ts",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/hooks/useOnboardingSkip.ts",
+  "sourceLineCount": 147,
+  "coveredLineCount": 147,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 147 source lines line by line before editing and preserved the full public contract: the STORAGE_KEY constant ('teslasync:onboarding:skipped:v1', line 8), the useSyncExternalStore(subscribeListener, getSnapshot, getServerSnapshot) model (lines 85-99, 125), the UseOnboardingSkip interface (lines 118-122), the useOnboardingSkip hook with its skip/unskip useCallbacks (lines 124-147), isOnboardingSkippedSync (lines 105-107), and the __resetOnboardingSkipForTests helper which still only clears listeners + re-reads cachedSnapshot (lines 113-116).",
+    "Source lines 10-30 (readSkipped/writeSkipped over window.localStorage) were ported to native-safe readSkipped/writeSkipped that prefer globalThis.localStorage when present (react-native-web target, keeping the exact STORAGE_KEY and the '1' flag value plus the setItem/removeItem on true/false branches) and fall back to an in-process inMemorySkipped boolean; the original try/catch best-effort drop on quota/private-mode is retained, and durable cross-restart persistence on a pure native runtime is intentionally unavailable.",
+    "Source line 11/20 `typeof window === 'undefined'` guards have no native window; the getWebStorage() capability probe replaces them so reads/writes degrade to the in-memory fallback instead of throwing.",
+    "Module-level shared state (lines 32-57): listeners Set, cachedSnapshot seeded from readSkipped(), notify() with per-listener try/catch swallow, and setSkipped() were ported verbatim — setSkipped still writes, conditionally updates cachedSnapshot + notify()s only on change, then broadcasts.",
+    "The @/lib/broadcast cross-tab bus (lines 2, 56, 68-73) became a module-level listener set: broadcast({type:'onboarding.skip.changed', skipped}) -> broadcastOnboardingSkipChanged(value), and subscribeBroadcast(...) -> subscribeOnboardingSkipChange(...). The bootstrap subscriber keeps the original discriminator guard (msg.type !== 'onboarding.skip.changed') and the cachedSnapshot === msg.skipped no-op guard so a same-process re-entry never double-notifies — faithfully matching the web TAB_ID self-filter contract; cross-tab / cross-device fan-out is web-only and marked unavailable in nativeOnboardingSkipCapabilities.",
+    "The native `storage` DOM event listener (lines 74-82) has no React Native equivalent, so that defensive transport folds into the same module bus and is documented as unavailable (storageEventAvailable:false); bootstrap() still runs once (bootstrapped guard) and both paths funnel into notify() exactly as the source intended.",
+    "The hook's defensive on-mount resync effect (lines 130-136) and getServerSnapshot()->false (lines 97-99) are preserved unchanged. No DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported; the file uses only React (useCallback/useEffect/useSyncExternalStore) and native-safe TypeScript.",
+    "No unit handling, i18n strings, or visual output exist in this non-visual utility hook, so unit/i18n/visual intent is preserved trivially. Verified with cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
