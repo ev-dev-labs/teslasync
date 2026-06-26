@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/lib/signals.ts",
+  "outputPath": "apps/native/src/web-parity/lib/signals.ts",
+  "sourceLineCount": 30,
+  "coveredLineCount": 30,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 30 source lines before porting. signals.ts is non-visual utility/type code (a SignalFieldType string-literal union, a SignalField interface, the static SIGNAL_FIELDS registry, and four pure derived helpers). It has no imports and touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so the logic/types port 1:1 to React Native-compatible TypeScript (contract rule 6). A native-conversion header comment was prepended documenting this.",
+    "L1 `export type SignalFieldType = 'numeric' | 'boolean' | 'string'` ported verbatim (semicolon added per native .prettierrc).",
+    "L3-8 `export interface SignalField` ported verbatim — key/label/type plus optional unit?, with the three inline comments preserved ('DB column / API field name', 'Human-readable label', \"e.g. 'mph', '°C', '%'\").",
+    "L10-22 `export const SIGNAL_FIELDS: SignalField[]` ported verbatim — all 9 entries with identical keys/labels/types/units (battery_level %, inside_temp °C, outside_temp °C, speed mph, is_locked, is_charging, is_climate_on, sentry_mode, state) and the 'extensible — add new signals here' trailing comment. The `key`/`label`/`unit` strings are API field names + UI display hints preserved for behavioral parity (contract rule 3); 'mph' is a display label, not a new Go/DB field, so Phase-48 SI-canonical rules do not apply. Prettier reflowed the outside_temp entry and the trailing-comma'd objects across lines (no behavior change).",
+    "L24-27 derived helpers ported 1:1: NUMERIC_SIGNAL_FIELDS = SIGNAL_FIELDS.filter(f => f.type === 'numeric'); BOOLEAN_SIGNAL_FIELDS = filter type === 'boolean'; BOOL_FIELD_KEYS = new Set(BOOLEAN_SIGNAL_FIELDS.map(f => f.key)). Identical logic; prettier wrapped the two filter calls across lines (no behavior change). arrowParens:avoid keeps the single-arg arrows paren-free.",
+    "L29-30 `export const SIGNAL_FIELD_OPTIONS = SIGNAL_FIELDS.map(f => ({ value: f.key, label: f.label }))` ported 1:1 for Select dropdowns (prettier expanded the returned object across lines, no behavior change).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported (no imports at all). Style matches .prettierrc.js (singleQuote, trailingComma all, arrowParens avoid) and the @react-native eslint config. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
