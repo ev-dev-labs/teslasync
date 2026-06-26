@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/driving/components/drivetrain-health/constants.ts",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drivetrain-health/constants.ts",
+  "sourceLineCount": 55,
+  "coveredLineCount": 55,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 55 source lines individually. Line 1 type-only import of ReactNode from 'react' is valid in React Native (same react package), so it was preserved unchanged.",
+    "Line 3 HealthStatus union type and lines 5-9 HEALTH_SCORE numeric record ported verbatim, preserving the good/warning/critical 95/60/25 values.",
+    "Lines 11-15 HEALTH_COLOR hex strings (#10b981/#f59e0b/#ef4444) are valid React Native color values and were kept identical to preserve visual intent; lines 17-21 HEALTH_GLOW glow-name union mapping preserved verbatim.",
+    "Lines 23-31 TempSensor interface (including icon: ReactNode), lines 33-39 ChartDataPoint, lines 41-49 MotorChartDataPoint, and lines 51-55 Recommendation interfaces were ported faithfully with identical fields, nullable unions, and priority literal types.",
+    "Source is non-visual constant/type code: no DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported, so the native output adds none. No browser-only behavior required a native-safe fallback or unavailable state."
+  ]
+}
