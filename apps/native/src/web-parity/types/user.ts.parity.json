@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/types/user.ts",
+  "outputPath": "apps/native/src/web-parity/types/user.ts",
+  "sourceLineCount": 8,
+  "coveredLineCount": 8,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 8 source lines before editing; the file is pure non-visual type code (a single exported TypeScript interface) with no imports and no runtime logic.",
+    "L1 (export interface User) and L7 (closing brace) ported verbatim; the interface name is preserved so it matches the web @/types/user contract.",
+    "L2-L3 (id: string, email: string) and L6 (updatedAt: string) ported 1:1 as required string fields.",
+    "L4 (displayName: string) preserved with camelCase naming matching the API camelCaseKeys transform contract.",
+    "L5 (avatarUrl?: string) preserved as an optional string field, retaining the optional modifier for null safety.",
+    "L8 is the source trailing newline; no semantic content, covered by the file terminator.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components were present or introduced; the type is platform-agnostic and React Native-safe as-is.",
+    "Native gates run from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
