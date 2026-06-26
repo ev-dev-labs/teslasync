@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/helpers.ts",
+  "sourceLineCount": 7,
+  "coveredLineCount": 7,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-5 export function formatDuration(min: number): string — ported verbatim: L2 const h = Math.floor(min / 60), L3 const m = Math.round(min % 60), L4 return h > 0 ? `${h}h ${m}m` : `${m}m`. Pure numeric/string logic, no DOM/browser deps; consumed by DriveStatCards + DriveTimeline.",
+    "L6 blank line preserved as the separator between the function and the constant.",
+    "L7 export const LEGEND_STYLE = { fontSize: 10, color: '#9ca3af' } as const — ported verbatim (as const literal typing kept). Web uses it as Recharts <Legend wrapperStyle={LEGEND_STYLE}>; the fontSize/color shape is also a valid React Native TextStyle, so it is native-safe and reusable when ElevationChart/TemperatureSection/TirePressureSection are ported. No Recharts/Leaflet/DOM import introduced.",
+    "L8 trailing newline preserved.",
+    "Non-visual utility/constant module (contract rule 6): logic + data port 1:1 to native-compatible TypeScript with behaviour, export names and values identical. Formatting adjusted to native prettier (singleQuote, trailingComma:all, no-space object braces) only.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
