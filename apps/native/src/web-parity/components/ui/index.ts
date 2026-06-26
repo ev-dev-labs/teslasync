@@ -11,6 +11,7 @@
 // sibling lands. No native consumer imports this barrel yet, so the public API
 // is preserved incrementally without referencing modules that do not exist.
 
+export {PinButton, type PinButtonProps} from './PinButton';
 export {Drawer} from './Drawer';
 export {
   ContextMenuRoot,
