@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/system/components/status/helpers.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/status/helpers.tsx",
+  "sourceLineCount": 74,
+  "coveredLineCount": 74,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react'`: lucide-react is DOM/SVG-only, so the three icons become unicode glyph stand-ins (CheckCircle -> U+2713, AlertTriangle -> U+26A0, XCircle -> U+2717) rendered via AppText, matching the AiUsageCard/APIUsageWidget native icon convention.",
+    "L2 `import { fmtNumber } from '@/lib/numberFormat'`: reproduced as a native-safe shim (safeNumber guard + toLocaleString with en-US locale fallback) mirroring the web fmtNumber defaults; only `formatBytes` consumes it (always at precision 1).",
+    "L4-15 getStatusColor(status): ported verbatim — identical lowercase switch and identical hex palette (#22c55e healthy group, #f59e0b degraded group, #ef4444 unhealthy group, #6b7280 default).",
+    "L17-28 statusTextClass(status): web returned Tailwind text-color classes; native keeps the export name + status groupings but returns concrete colors carrying the same intent (text-green-400 -> #4ade80, text-amber-400 -> #fbbf24, text-red-400 -> #f87171, text-[var(--text-muted)] -> theme colors.textMuted) for `<AppText style={{color}}>` consumption.",
+    "L30-42 getStatusIcon(status): JSX.Element of a lucide icon with `h-4 w-4` + statusTextClass className becomes React.ReactElement of an AppText glyph (fontSize/lineHeight 16 == h-4) tinted with statusTextClass(status); the four switch branches (CheckCircle/AlertTriangle/XCircle/default AlertTriangle) and groupings are preserved 1:1, plus accessibilityRole='image'/accessibilityLabel for native a11y parity with the SVG.",
+    "L44-51 formatUptime(seconds): ported verbatim — same days/hours/mins floor math and the same 'Nd Nh Nm' / 'Nh Nm' / 'Nm' formatting tiers (only braces added per prettier).",
+    "L53-59 formatBytes(bytes): ported verbatim — 0 -> '0 B', k=1024, sizes B/KB/MB/GB/TB, log-based index, `fmtNumber(bytes/k^i, 1)` via the native fmtNumber shim.",
+    "L61-74 statusToBadgeVariant(status): ported verbatim — identical lowercase switch returning the same 'success' | 'warning' | 'danger' | 'neutral' union (note default + the healthy group here excludes 'connected', matching the web original).",
+    "L75 trailing newline preserved. No DOM elements, lucide-react, Recharts, Leaflet, or web UI components imported; only react, react-native StyleSheet, native AppText and theme tokens are used."
+  ]
+}
