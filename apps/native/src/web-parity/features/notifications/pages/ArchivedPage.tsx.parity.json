@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/features/notifications/pages/ArchivedPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/pages/ArchivedPage.tsx",
+  "sourceLineCount": 40,
+  "coveredLineCount": 40,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 40 source lines before editing. L1-5 docstring (ArchivedPage reuses InboxBody with archived=true so the bulk-action set swaps Archive for Restore) is preserved + expanded in the native header comment; L6/L15/L21 blanks carry no behavior.",
+    "L7 `useTranslation` from react-i18next -> native-safe `t(key, fallback?)` (useNativeTranslationFallback) returning the English default; every translation key is preserved.",
+    "L8 `Link` from react-router-dom + L28-34 `<Link to=\"/notifications/inbox\" className=…>…</Link>` -> native `BackToInboxLink` using `Pressable` with `accessibilityRole=\"link\"`; the destination path is preserved verbatim as `INBOX_ROUTE = '/notifications/inbox'` (also surfaced via the back-link accessibilityHint). The web focus/hover Tailwind classes map to a pressed-state background; navigation is owned by the native navigator shell.",
+    "L9 `ArrowLeft` from lucide-react + L32 `<ArrowLeft className=\"h-3.5 w-3.5\" />` -> decorative `AppText` glyph `ICON_ARROW_LEFT` ('\\u2190'), the established native lucide stand-in.",
+    "L10 `PageContainer` from @/components/layout + L23-26/L36/L38 usage -> a local native-safe `PageContainer` (ScrollView scaffold) reproducing title (L24), subtitle (L25), copyLink (L26) and actions (L27-35); mirrors the inline PageContainer convention of the already-ported EnergyProductsPage. The web `copyLink` CopyLinkButton copies window.location to the clipboard (browser only); native has no shareable browser URL, so `copyLink` renders a non-interactive labelled `CopyLinkButton` stand-in (explicit unavailable state).",
+    "L11 `usePageTitle` from @/hooks/usePageTitle + L18 `usePageTitle(t(...))` -> native-safe no-op `usePageTitle(_title)` because `document.title` is browser-only; the resolved title string is still computed at the call site exactly like the web.",
+    "L12 `useVehicles` + L19 `const { data: vehicles = [] } = useVehicles()` and L13 `useAlertRules` + L20 `const { data: rules = [] } = useAlertRules()` -> imported from the already-ported native hooks `../../../api/hooks/useVehicles` and `../../../api/hooks/useNotifications`; `data` defaults to `[]` exactly as the web. The Vehicle / AlertRule types are imported from those same native hook modules.",
+    "L14 `InboxBody` from ../components/InboxBody + L37 `<InboxBody archived={true} vehicles={vehicles} rules={rules} />` -> InboxBody is a large sibling component with its own conversion lifecycle (not yet ported to native and NOT this page's responsibility). Following the App.tsx / ClientUtilitiesSection precedent, a native-safe `InboxBody` stand-in keeps the identical prop shape (archived / vehicles / rules), preserves the `archived` Restore-scope title branch, surfaces the wired filter context (vehicles.length + rules.length), and renders an explicit 'not yet available in native' state.",
+    "L16 `export default function ArchivedPage()` / L17 `const { t }` / L22 `return (` / L39 `)` / L40 `}` -> preserved 1:1 as the default-exported native ArchivedPage wiring t + usePageTitle + useVehicles + useAlertRules into the native PageContainer + InboxBody.",
+    "No DOM-only module, browser HTML element, Recharts, Leaflet, or old web UI component is imported. Only React Native primitives (ScrollView/View/Pressable/ActivityIndicator/StyleSheet) + the existing native AppText / GlassPanel / theme tokens are used. No SI unit-suffixed field is introduced (this page carries no unit values).",
+    "Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
