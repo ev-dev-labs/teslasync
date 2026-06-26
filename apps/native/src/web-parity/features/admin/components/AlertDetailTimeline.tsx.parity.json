@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/admin/components/AlertDetailTimeline.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/AlertDetailTimeline.tsx",
+  "sourceLineCount": 114,
+  "coveredLineCount": 114,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 114 numbered source lines before editing. Covered the doc-comment intent (L1-10), the useMemo/useTranslation/Timeline/EmptyState/Icons/formatDateTime/AlertEvent imports (L11-17), the AlertDetailTimelineProps interface with events + className (L19-22), the KIND_COLOR map with exact hex values created/acknowledged/reopened/commented (L24-29), the component body's actor-trim guard and titleKey kind vs kindAnonymous branching with the t(key, fallback, {actor}) call (L31-53), the empty-state early return with the notifications icon + Audit timeline title + No events yet message and the no-action loading comment (L55-63), the Timeline render (L65), the kindIcon switch (L68-82), defaultTitleWithActor (L84-97), defaultTitleAnonymous (L99-112), and the default export (L114).",
+    "React Native has no Timeline parity primitive, so the shared @/components/data-display Timeline (DOM div/span connector + dot + content) is reproduced inline with View + AppText: a marker column holds a 22px colored-border dot with a kind glyph and a hairline connector to the next dot, and the content column renders title + formatDateTime(time) on a baseline row with the optional note beneath, preserving the original visual intent.",
+    "Preserved all logic and identifiers verbatim: KIND_COLOR exact hex values, the events?.length / actor.trim() guards, titleKey alerts.timeline.kind.* vs alerts.timeline.kindAnonymous.* keys, the alerts.timeline.title/empty keys, and the defaultTitleWithActor/defaultTitleAnonymous English fallbacks. kindIcon's lucide icons (Bell/CheckCircle/RefreshCw/Edit3/Info) were mapped to KIND_GLYPH (NO/OK/RE/ED + 'i') from the established SemanticIcon glyph vocabulary.",
+    "Swapped DOM-only dependencies for native equivalents: react-i18next useTranslation -> useNativeTranslationFallback preserving the i18next (key, defaultValue, options) signature plus {{actor}} interpolation; @/lib/icons Icons.notifications -> SemanticIcon name=notifications for the empty state; @/lib/dateFormat -> lib/format formatDateTime; @/api/types AlertEvent -> web-parity/api/types AlertEvent. No DOM elements, Recharts, Leaflet, lucide-react, or old web UI components are imported.",
+    "className is accepted-but-ignored for source compatibility (web Tailwind slot) and a native style prop applies to the timeline container instead; per-item dot/glyph colors use inline style arrays sourced from data (KIND_COLOR), the native-idiomatic equivalent of the web Timeline's dynamic style={{ borderColor }}."
+  ]
+}
