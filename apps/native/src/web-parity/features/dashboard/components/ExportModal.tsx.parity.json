@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/dashboard/components/ExportModal.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/components/ExportModal.tsx",
+  "sourceLineCount": 127,
+  "coveredLineCount": 127,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-9 imports: react-i18next -> useNativeTranslationFallback (key+fallback+{{var}} interpolation); lucide Download/AlertTriangle/Package -> repo SemanticIcon glyphs (download 'DW', warning 'W!', package 'PK', plus copy 'CP'/confirm 'OK' for the CopyButton toggle); web ui Modal -> native Modal parity (web-parity/components/ui/Modal); ui Button/Badge/CopyButton + feedback AlertBanner -> inlined native sub-components (no native parity ports exist yet); useDateFormat -> inlined formatDate; ./MiniGridPreview -> inlined native MiniGridPreview; ../hooks/validateImport toUrlSafeBase64/buildMinimalExport -> inlined native-safe ports; ../widgets/types SavedDashboard -> local mirror.",
+    "L11-16 ExportModalProps {open,onClose,dashboard,onDownload} preserved verbatim as exported interface; SavedDashboard shape mirrored field-for-field.",
+    "L18-20 component signature + useTranslation('dashboard') + useDateFormat().formatDate preserved (t via fallback, formatDate inlined).",
+    "L22-25 dashboardJson = JSON.stringify(dashboard, null, 2) useMemo preserved verbatim including dependency array.",
+    "L27-31 jsonSize useMemo: new Blob([json]).size -> utf8ByteLength; same <1024 '{bytes} B' else '{(bytes/1024).toFixed(1)} KB' formatting and deps.",
+    "L33-40 shareUrl useMemo with the explanatory comment: buildMinimalExport + toUrlSafeBase64 ported verbatim; window.location.origin -> resolveShareOrigin() native injection point (globalThis.TESLASYNC_WEB_ORIGIN, '' fallback) preserving the /dashboard#import= deep-link shape.",
+    "L42-47 shareUrlTooLong = shareUrl.length > 2000 and shareError i18n key 'export.urlTooLong' with {{size}} interpolation preserved.",
+    "L49-52 handleDownload = onDownload() then onClose() preserved verbatim.",
+    "L54-61 <Modal open/onClose/title='export.title'/size='md'> preserved; the className dark-surface override (#0f1218 / white-8 border) reproduced via the Modal port's native style prop (styles.dialogCard).",
+    "L62-85 summary row: w-32 shrink-0 MiniGridPreview column + min-w-0 info column with truncated name (numberOfLines=1), badge row, and 'export.updated' caption with {{date}} -> all reproduced with View/AppText + styles.",
+    "L72-78 two neutral Badges (Package glyph + 'export.widgetCount' {{count}} widgets; and jsonSize) preserved.",
+    "L87-117 options column: primary 'export.downloadFile' button (Download glyph, handleDownload) + two ghost CopyButtons ('export.copyClipboard' of dashboardJson; 'export.copyShareUrl' of shareUrl, disabled when shareUrlTooLong) with withToast preserved via clipboard+toast registries.",
+    "L119-123 conditional warning AlertBanner (AlertTriangle glyph) shown only when shareError -> inlined WarningBanner with warning tokens at web alpha stops.",
+    "L124-128 close JSX/exports; ExportModal.displayName set.",
+    "Native-safe replacements documented in the file header: Blob/btoa/TextEncoder -> inlined utf8+base64; window.location.origin -> resolveShareOrigin; navigator.clipboard -> registerExportClipboardWriter registry; useOptionalToast -> registerExportToast registry (graceful no-op when absent); the decorative per-tile widget lucide icon (browser-only registry) is dropped while the tile block is preserved.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) clean; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles green. No DOM, lucide, recharts/leaflet, Blob, btoa, window, or web UI components imported."
+  ]
+}
