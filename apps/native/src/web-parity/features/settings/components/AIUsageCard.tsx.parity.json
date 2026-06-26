@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/features/settings/components/AIUsageCard.tsx",
+  "outputPath": "apps/native/src/web-parity/features/settings/components/AIUsageCard.tsx",
+  "sourceLineCount": 107,
+  "coveredLineCount": 107,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-20 module doc comment (lightweight Helix 'Usage today' card; reads /ai/usage/today via useAiUsageToday polled at INTERVALS.STANDARD; degrades to em-dash; __usage__ meta-feature guard server-side; deeper card lives in features/system) -> preserved as the native header comment.",
+    "L21 blank line -> preserved structure.",
+    "L22 import useTranslation from react-i18next -> native local useTranslation() hook returning English fallbacks (no i18next runtime in the parity tree).",
+    "L23 import { Caption, Subhead } from @/components/ui -> AppText with the resolved roles inlined (Subhead = text-sm font-medium text-secondary; Caption = text-xs text-muted).",
+    "L24 import useAiUsageToday from @/api/hooks/useAiUsage -> ../../../api/hooks/useAiUsage (already-ported native hook).",
+    "L25 import useFormatting from @/hooks/useFormatting -> inlined settings-derived formatCurrency (useSettings query) matching the web hook.",
+    "L26 import fmtInt from @/lib/numberFormat -> inlined fmtInt + safeNumber + fmtNumber (non-finite -> 0, locale-aware).",
+    "L28 const PLACEHOLDER = '—' -> PLACEHOLDER = '\\u2014' (identical em dash).",
+    "L30-33 microCentsToDollars(mc): null/non-finite -> 0, else mc / 1_000_000 -> ported verbatim.",
+    "L35-38 formatCount(n): null/non-finite -> PLACEHOLDER, else fmtInt(n) -> ported verbatim.",
+    "L40-43 AIUsageCard(): useTranslation('settings'), useFormatting().formatCurrency, useAiUsageToday() {data,isLoading,isError} -> native t, derived formatCurrency (locale/precision/currencySymbol from useSettings), useAiUsageToday().",
+    "L45-46 tokensIn/tokensOut = !data || isError ? PLACEHOLDER : formatCount(data.input_tokens/output_tokens) -> ported verbatim.",
+    "L47-48 cost = !data || isError ? PLACEHOLDER : formatCurrency(microCentsToDollars(data.cost_micro_cents)) -> ported verbatim.",
+    "L50-55 <section> rounded-md border border-subtle p-4 space-y-1, aria-label, data-testid='ai-usage-card' -> View style.section (borderRadius 6, borderWidth 1, borderColor token, padding 16, gap 4), accessibilityLabel, testID='ai-usage-card'.",
+    "L56 <Subhead>{title}</Subhead> -> AppText style.subhead with the same translated title key.",
+    "L57 grid grid-cols-3 gap-3 text-xs text-secondary -> View style.grid (flexDirection row, gap 12) with three flex:1 cells; per-cell label color overrides to muted, value to text-sm primary.",
+    "L58-72 three <UsageCell> (tokensIn / tokensOut / cost) with label, value, isLoading -> three native <UsageCell> with identical keys and props.",
+    "L74-81 <Caption> data.call_count>0 ? `${formatCount(call_count)} liveSuffix` : placeholder -> AppText style.caption with the identical conditional and both translation keys/fallbacks.",
+    "L82-84 </section> close + return/function close -> native View close + return/function close.",
+    "L86-94 UsageCell({label,value,isLoading}: {string,string,boolean}) prop contract -> preserved verbatim.",
+    "L95-105 <div flex-col><span text-muted>{label}</span><span text-sm font-medium text-primary data-testid='ai-usage-value' aria-busy={isLoading||undefined}>{value}</span></div> -> View style.cell with AppText label (style.cellLabel muted) and AppText value (style.cellValue, testID='ai-usage-value', accessibilityState.busy = isLoading || undefined).",
+    "L106-107 component close + trailing newline -> preserved.",
+    "Behavior/state names (data, isLoading, isError, tokensIn, tokensOut, cost, call_count, input_tokens, output_tokens, cost_micro_cents), API path (/ai/usage/today via useAiUsageToday), unit handling (microCentsToDollars /1e6, locale-aware fmtInt + formatCurrency), and i18n keys all preserved.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
