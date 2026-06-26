@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/lib/datePresets.ts",
+  "outputPath": "apps/native/src/web-parity/lib/datePresets.ts",
+  "sourceLineCount": 167,
+  "coveredLineCount": 167,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 167 numbered source lines before editing. Pure calendar arithmetic over the JS Date API — no DOM, window, Recharts, Leaflet, or web-UI dependency (only Date getters/setters + String.prototype.padStart, all present in Hermes/React Native), so the module ports byte-for-byte aside from the two eslint curly fixes noted below.",
+    "L1-L8 module JSDoc (quick-select presets; resolve(now?) returns local-calendar YYYY-MM-DD so 'Today' matches wall-clock day even at 23:30; future inTz(now,tz) swap note) preserved verbatim beneath a native header that records the web->native byte-for-byte rationale and the full preserved surface.",
+    "L10-L13 DatePresetRange interface (start/end: string, YYYY-MM-DD comments) and L15-L20 DatePreset interface (id, i18nKey, fallback, resolve: (now?: Date) => DatePresetRange) ported identically.",
+    "L22-L28 iso() helper ported verbatim: getFullYear(), String(getMonth()+1).padStart(2,'0'), String(getDate()).padStart(2,'0'), `${y}-${m}-${day}` template — local-calendar (non-UTC) day semantics unchanged.",
+    "L30-L134 DATE_PRESETS array: all 11 presets ported key-for-key with identical id / i18nKey / fallback / resolve logic — today, yesterday, 7d(-6), 30d(-29), 90d(-89), mtd(month,1), qtd(floor(month/3)*3,1), ytd(0,1), lastMonth(prev-month-1 .. day0-of-this-month), 1y(setFullYear-1), all('2015-01-01' baseline). The 'Day 0 = last day of previous month' comment (L113) is retained. Only prettier object spacing differs ({ start: ... } -> {start: ...}); default-param arrows `(now = new Date())` keep parens (arrowParens:'avoid' only drops them for a single bare param).",
+    "L136-L137 DEFAULT_PRESET_IDS = ['today','7d','30d','mtd','ytd','all'] as const preserved (prettier reflowed the literal onto multiple lines; values/order/`as const` unchanged).",
+    "L139-L142 getDatePreset(id) ported verbatim — DATE_PRESETS.find(p => p.id === id) with the bare-param arrow kept per arrowParens:'avoid'.",
+    "L144-L154 resolveAllTimeStart(minDate?) ported with identical baseline '2015-01-01' and minDate>baseline clamp; the only change is the single-line `if (!minDate) return baseline;` (L152) wrapped in braces to satisfy the @react-native eslint curly rule — behavior unchanged.",
+    "L156-L167 matchPresetId(start,end,now?) ported with identical for..of over DATE_PRESETS, preset.resolve(now), and first-match return; signature reflowed multi-line by prettier and the single-line `if (r.start === start && r.end === end) return preset.id;` (L164) wrapped in braces for the curly rule — behavior unchanged.",
+    "No browser-only behavior to stub: the file is deterministic logic, so a real native-safe port was made (no 'unavailable' state needed). Verified under apps/native with `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles`; added __tests__/DatePresets.test.ts exercising every preset's exact range (calendar-anchored + rolling windows), iso zero-padding, the default-now branch, getDatePreset lookups, DEFAULT_PRESET_IDS stability, resolveAllTimeStart clamping, and matchPresetId round-trip + no-match."
+  ]
+}
