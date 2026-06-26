@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/analytics/components/analytics/helpers.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/analytics/helpers.tsx",
+  "sourceLineCount": 20,
+  "coveredLineCount": 20,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import type { ReactNode }` kept verbatim — SectionTitle still accepts ReactNode children.",
+    "L2 `GlassPanel` from @/components/ui -> native components/ui/GlassPanel; className=\"p-3\" -> styles.panel padding 12.",
+    "L3 `Skeleton` from @/components/feedback has no native port -> decorative SkeletonBlock View (surfaceRaised fill, rounded 4px, a11y-hidden); animate-pulse shimmer dropped (no RN keyframes).",
+    "L5-12 MetricSkeleton: GlassPanel wrapping two SkeletonBlocks — width 60%/40% forwarded as DimensionValue, heights 12/24, second keeps mt-2 -> marginTop 8.",
+    "L14-19 SectionTitle: <span class=\"text-sm font-semibold text-[var(--text-primary)]\"> -> AppText tone=primary weight=semibold with text-sm (14px/20px) override; children passthrough preserved.",
+    "L20 trailing newline; file has no DOM-only / Recharts / Leaflet / old-web-UI imports."
+  ]
+}
