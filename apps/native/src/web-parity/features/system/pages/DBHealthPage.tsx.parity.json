@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/system/pages/DBHealthPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/pages/DBHealthPage.tsx",
+  "sourceLineCount": 442,
+  "coveredLineCount": 442,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-20 imports: react/react-i18next/lucide/@/components(layout,ui,data-display,motion,feedback,charts)/@/api/hooks/useAdmin/usePageTitle/numberFormat/cn/types-admin all remapped to RN primitives + native parity components (EmptyState, SemanticIcon, AppText, tokens, useAdmin, StatCard, ErrorBoundary, GlassPanel); lucide icons -> SemanticIcon glyphs; cn dropped for StyleSheet arrays.",
+    "L22 LARGE_TABLE_THRESHOLD (100MB) preserved verbatim as the module constant.",
+    "L24-29 page-local formatBytes ported verbatim incl. GB toFixed(2) (kept distinct from the lib formatBytes).",
+    "L31 SortKey type ('size'|'rows'|'name') preserved; L36 sortKey useState('size') preserved.",
+    "L33-44 DBHealthPage default export + the three admin queries (useDBStats/useMigrations/useConnectionPool) with isLoading/isFetching/error destructures preserved by name.",
+    "L46-47 queryError = statsError ?? migrationError and tables = dbStats?.tables ?? [] preserved (?? replaces || on Error|null with identical semantics).",
+    "L49-57 sortedTables useMemo preserved verbatim incl. (b.sizeBytes ?? b.rowCount) size sort, rowCount sort, name localeCompare.",
+    "L59-70 chartData useMemo preserved verbatim: sort by rowCount desc, slice top 15, 20-char name truncation to 18 + ellipsis, map to {name, rows}.",
+    "L72-79 migrationVersion field-name fallback cast ((migrationData as Record<string,unknown>)?.version ?? currentVersion ?? em-dash), migrationDirty/migrationPending/migrations preserved verbatim.",
+    "L81-89 pool alias, poolUsage clamp (inUse/maxOpen*100 capped 100), largeTables filter(>threshold).length preserved.",
+    "L91-94 dbSizeDisplay = dbStats ? formatBytes(Number(databaseSize)||0) : em-dash preserved.",
+    "L96-156 tableColumns useMemo (name/rows/size/indexes/vacuum) ported: large-table AlertTriangle -> amber warning glyph + amber mono name, fmtInt rows, formatBytes size with em-dash fallback, indexCount ?? em-dash, web <TimeStamp> -> inlined formatRelative; right-align classNames -> column.align.",
+    "L158-168 PageContainer title/subtitle/loading/actions -> local screen scaffold header (title L160, subtitle L161) + RefreshIndicator reproducing the L164-167 RefreshCw spin (statsFetching) + 'Auto-refresh 30s' copy; loading gate expressed via per-section loading states.",
+    "L170-177 AlertBanner variant=danger -> DangerBanner rendering (queryError as Error).message, preserved.",
+    "L179-205 Summary Cards Grid cols{2,4} -> 2-col flex-wrap summaryGrid; four StatCards (totalSize/tables/largeTables/migration) with loading flags + SemanticIcon database/warning/success icons; value expressions preserved incl. statsLoading ? em-dash : tables.length and String(migrationVersion).",
+    "L207-244 ChartContainer + Recharts vertical BarChart -> TableSizeChart: chartTitle (L210), chartTitle.aria (L211) accessibilityLabel, dataColumns col.table/col.rows (L214-215) as captions, Bar name 'dbHealth.rows' (L236) as legend, loading skeleton (L217), proportional fills + fmtInt values; CHART_COLORS[0] -> accent fill.",
+    "L246-293 table list panel: GlassPanel p-5 -> padding=lg; h2 tablesTitle; ArrowUpDown glyph + three sort Buttons (size/rows/name, primary/secondary) -> SortButton active/idle; statsLoading 6 Skeletons (L274-279) preserved; DataTable -> native header/rows in horizontal ScrollView with emptyMessage noTables; keyExtractor row key = tbl.name; pagination/max-h-50vh collapse into page scroll.",
+    "L295-379 migration sidebar: migrationLoading Skeleton(128); migrationData branch with currentVersion, status dirty/clean colored (red/green), pending>0 amber row, recent migrations slice(-5).reverse() with v{version} {name} + appliedAt formatRelative, else EmptyState noMigrations; outer else EmptyState noMigrationData; native EmptyState requires a title so a concise title key accompanies each preserved message.",
+    "L381-436 connection pool sidebar: poolLoading Skeleton(160); pool?.maxOpen != null branch maps the six rows (maxOpen/open/inUse/idle/waitCount/waitDuration ms) + UsageBar (poolUsage% label, fill cyan/red>=80, width %) preserved; else EmptyState noPoolData.",
+    "L438-442 closing PageContainer/JSX -> ScrollView scaffold close; default export preserved.",
+    "Native-safe substitutions documented in the file header: react-i18next -> useNativeTranslationFallback (all dbHealth.* keys + English copy verbatim); usePageTitle -> no-op shim; FadeIn delay 0.1/0.2/0.3/0.4 honoured via Animated delay; Skeleton/FadeIn/RefreshIndicator reduced-motion-aware; fmtNumber/fmtInt inlined; no DOM/Recharts/lucide imports remain.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) PASS; npm run lint -- --quiet PASS (0 errors); npm test -- --runInBand --detectOpenHandles PASS."
+  ]
+}
