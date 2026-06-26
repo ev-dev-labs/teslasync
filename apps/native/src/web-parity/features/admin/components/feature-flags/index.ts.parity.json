@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/admin/components/feature-flags/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/feature-flags/index.ts",
+  "sourceLineCount": 3,
+  "coveredLineCount": 3,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `export { FlagsTable } from './FlagsTable'` preserved verbatim as the native named re-export of the ported native FlagsTable.tsx (web DataTable/Button/useSortToggle reproduced with RN primitives).",
+    "L2 `export { FlagEditDrawer } from './FlagEditDrawer'` preserved verbatim as the native named re-export of the ported native FlagEditDrawer.tsx (web Drawer/Input/Textarea/GlassPanel reproduced with an RN Modal bottom sheet + TextInput FormField).",
+    "L3 `export { ChangesPanel } from './ChangesPanel'` preserved verbatim as the native named re-export of the ported native ChangesPanel.tsx (web DataTable/Badge/TimeStamp/EmptyState reproduced with RN primitives).",
+    "Barrel is non-visual: it only re-exports the three siblings. The three sibling components were converted to native (same directory) so the barrel resolves under `tsc --noEmit` (tsconfig include is **/*.ts(x)); the public export names match the web barrel 1:1 so downstream native imports stay source-compatible.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; FeatureFlag types come from the native api/hooks/useFeatureFlags port.",
+    "Gates run from apps/native: npm run typecheck (pass); npm run lint -- --quiet (pass); npm test -- --runInBand --detectOpenHandles (19 suites / 88 tests pass)."
+  ]
+}
