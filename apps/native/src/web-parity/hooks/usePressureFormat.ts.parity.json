@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/hooks/usePressureFormat.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/usePressureFormat.ts",
+  "sourceLineCount": 56,
+  "coveredLineCount": 56,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 56 source lines before editing. Preserved the public surface verbatim: hook name usePressureFormat (web L37), UsePressureFormatResult with pressureUnit/toPressureValue/formatPressureValue and their JSDoc (web L5-23), the toPressureValue useCallback with the same `pa == null || !Number.isFinite(pa) -> null` guard and convertPressureFromSI(pa, pressureUnit) body + [pressureUnit] dep (web L40-46), and the final useMemo returning {pressureUnit, toPressureValue, formatPressureValue} over the same deps (web L48-55). react useCallback/useMemo import kept (web L1).",
+    "web L2 `import { useUnits, type UnitFormatter } from './useUnits'`: the native parity tree has no shared useUnits, so per the ChargeStatusWidget/GeofenceWidget precedent the hook reads the SAME native settings query (apps/native web-parity api/hooks/useSettings) and reproduces web useUnits' derivePressure (psi->psi else bar, L102-104), deriveLocale (string non-empty else 'en-US', L106-109) and derivePrecision (number/finite/>=0 else undefined, L111-116), plus the formatPressure UnitFormatter useUnits binds (L155-158). FormatOptions/UnitFormatter types re-declared verbatim from web useUnits L47-56.",
+    "web L3 `import { convertPressureFromSI, type PressureUnitPref } from '@/lib/unitConversion'`: PressureUnitPref ('kPa'|'psi'|'bar', unitConversion L67) and convertPressureFromSI (L178-190) ported verbatim with KPA_PER_PSI/KPA_PER_BAR constants; formatPressure (L362-371) ported with its helpers formatNumber (L271-283, Intl.NumberFormat), resolvePrecision (L289-306), isFiniteNumber (L267-269), DEFAULT_PRESSURE_PRECISION=1 (L256) and DEFAULT_EMPTY_DISPLAY='—' (L249). No deprecated useSettings/unitConversion helpers used.",
+    "No DOM, Recharts, Leaflet, or web UI imports introduced — only react + the native useSettings hook and Intl.NumberFormat (already used across apps/native, e.g. src/lib/format.ts). The hook has no browser-only behavior, so no unavailable state is needed; behavior, state/derivation names, unit handling (SI kPa -> bar/psi) and i18n-neutral formatting intent are fully preserved on native."
+  ]
+}
