@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/registry/security.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/registry/security.ts",
+  "sourceLineCount": 83,
+  "coveredLineCount": 83,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 import { lazy } from 'react': kept (React.lazy + dynamic import are native-safe in Metro); also import createElement + the ComponentType/LazyExoticComponent types for the inlined native placeholder and the mirrored WidgetDef.component type.",
+    "L2 lucide-react icon imports (Shield, DoorOpen, Eye, ShieldAlert, AlertOctagon, Users): dropped (DOM/SVG, not native-safe). The per-widget icon intent is preserved by retyping WidgetDef.icon to the repo SemanticIconName and mapping each glyph: Shield->security, DoorOpen->doorOpen, Eye->show, ShieldAlert->securityAlert, AlertOctagon->alertCircle, Users->users.",
+    "L3 import type { WidgetDef } from '../types': ../types has no native port yet, so WidgetSize/WidgetConfig/WidgetProps/WidgetCategory/WidgetHelp/WidgetDef are mirrored field-for-field inline (icon retyped LucideIcon->SemanticIconName, component kept LazyExoticComponent<ComponentType<WidgetProps>>), matching the sibling native registry port charging.ts.",
+    "L4 blank line: no-op.",
+    "L5 export const SECURITY_WIDGETS: WidgetDef[] = [ : preserved verbatim as the module's single export.",
+    "L6-16 security-status: id 'security-status' / name 'Security' / description 'Lock, sentry, doors, windows status' / category 'security' ported verbatim; defaultSize {1,2} / minSize {1,2} / maxSize {2,40} ported verbatim; icon Shield->security; component -> shared native-safe UNAVAILABLE_WIDGET placeholder (web ../SecurityStatusWidget has no native port yet, recorded in a trailing comment).",
+    "L17-27 door-window-status: ported verbatim ({2,2}/{1,2}/{4,40}); full '4 doors + 4 windows with open/closed/partial badges' description preserved; icon DoorOpen->doorOpen; component -> placeholder (web ../DoorWindowStatusWidget pending).",
+    "L28-38 sentry-event-log: ported verbatim ({2,4}/{2,4}/{4,40}); description 'Recent sentry events with timestamps' preserved; icon Eye->show (eye glyph); component -> placeholder (web ../SentryEventLogWidget pending).",
+    "L39-49 safety-features: ported verbatim ({2,4}/{1,2}/{4,40}); full ADAS description (autopilot/collision warning/lane departure/blind spot) preserved; icon ShieldAlert->securityAlert; component -> placeholder (web ../SafetyFeaturesWidget pending).",
+    "L50-60 safety-history: ported verbatim ({2,4}/{2,4}/{4,40}); full ADAS timeline description (collision warnings/AEB/lane departures/disengagements) preserved; icon AlertOctagon->alertCircle; component -> placeholder (web ../SafetyHistoryWidget pending).",
+    "L61-71 guard-mode: ported verbatim ({2,4}/{1,2}/{4,40}); description 'Anti-theft guard status, recent security events, panic button' preserved; icon Shield->security (same shield glyph as security-status, mapped consistently); component -> placeholder (web ../GuardModeWidget pending).",
+    "L72-82 vehicle-access: ported verbatim ({2,4}/{1,2}/{4,40}); description 'Authorized drivers, pending invitations, mobile access status' preserved; icon Users->users; component -> placeholder (web ../VehicleAccessWidget pending).",
+    "L83 closing ']; ' preserved — all 7 entries (category 'security') ported with identical id/name/description and grid sizes; only the DOM icon type and the missing-module lazy imports were adapted.",
+    "Native-safe unavailable state: NativeUnavailableWidget renders a View + AppText('Widget unavailable in native', tone='muted') via React.createElement (output must be a .ts module, so no JSX), wrapped as a LazyExoticComponent so its type matches the source's component field; reused by all 7 security widgets because none have a native port today.",
+    "No DOM, no lucide-react, no Recharts/Leaflet, no web UI components imported — only react (lazy/createElement) + react-native View/StyleSheet + existing apps/native AppText, SemanticIconName type and theme tokens.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), npm test -- --runInBand --detectOpenHandles (jest) — all pass."
+  ]
+}
