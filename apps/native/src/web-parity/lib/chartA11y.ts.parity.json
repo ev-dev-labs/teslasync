@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/chartA11y.ts",
+  "outputPath": "apps/native/src/web-parity/lib/chartA11y.ts",
+  "sourceLineCount": 95,
+  "coveredLineCount": 95,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-23 top-of-file JSDoc preserved verbatim; only the illustrative code-fence placeholder `…recharts…` (L16) was retitled `…native chart series…` because native <ChartContainer> renders native chart primitives, not Recharts (forbidden in native). A leading `//` native-port header was added above the JSDoc documenting that this is a 1:1 DOM-free logic port and why the import path changed.",
+    "L25 `import type { ChartDataColumn, ChartDataRow } from '@/components/charts/ChartContainer'` -> `import type {ChartDataColumn, ChartDataRow} from '../components/charts/ChartContainer'`; the native parity ChartContainer (apps/native/src/web-parity/components/charts/ChartContainer.tsx) exports both types with identical shapes (`ChartDataRow = Record<string, string|number|null|undefined>`, `ChartDataColumn = {key,label,format?}`). The `@/` path alias is not configured in the native tsconfig, so a relative path is used.",
+    "L27-39 `ChartA11yField<T>` interface ported 1:1: `key: keyof T & string`, `label: string`, `format?: (value: unknown) => string` with all member JSDoc comments preserved.",
+    "L41-48 `ChartA11yPayload` interface ported 1:1: `data: ChartDataRow[]`, `dataColumns: ChartDataColumn[]`.",
+    "L50-95 `chartRowsFromTimeseries<T extends Record<string, unknown>>` ported 1:1: dataColumns projection (key/label/format), per-row normalization where `undefined`->`null`, string/number/null pass-through, and `String(v)` fallback for unsupported value types. Logic, comments (incl. Unicode → and — markers), and branch order unchanged.",
+    "Formatting-only adjustments to satisfy the native prettier config (arrowParens:'avoid', singleQuote, trailingComma:'all'): `(f) =>`->`f =>`, `(row) =>`->`row =>`, import/return brace inner-spacing removed (`{data, dataColumns}`), and the 3-line `else if` condition collapsed to one line (78 cols, < 80 printWidth). No behavioral change.",
+    "Pure utility/type module: no DOM, browser HTML, Recharts, Leaflet, or web UI runtime imports — only a type-only import; runs unchanged under React Native.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
