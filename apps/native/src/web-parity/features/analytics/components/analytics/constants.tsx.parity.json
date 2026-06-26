@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/analytics/components/analytics/constants.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/analytics/constants.tsx",
+  "sourceLineCount": 20,
+  "coveredLineCount": 20,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-3 `import { BarChart3, Activity, Calendar, MapPin, Clock } from 'lucide-react'` -> dropped; lucide-react is DOM SVG with no native analogue, so each icon is rendered via the repo SemanticIcon (imported from src/components/icons/SemanticIcon), the established native-parity way to render a lucide glyph.",
+    "L4 `import { CHART_COLORS } from '@/components/charts'` -> native charts barrel `../../../../components/charts`. The native CHART_COLORS is the same CB-safe Okabe-Ito palette (#0072B2,#E69F00,#009E73,#F0E442,#56B4E9,#D55E00,...), so PIE_COLORS stays value-identical.",
+    "L6 `export const TAB_KEYS = ['overview','driving','charging','battery'] as const` -> preserved byte-for-byte (plain string union, no DOM).",
+    "L7 `export type TabKey = (typeof TAB_KEYS)[number]` -> preserved byte-for-byte.",
+    "L9-12 `export const PIE_COLORS = [CHART_COLORS[0..5]]` -> preserved verbatim against the native CHART_COLORS; same six indices, same resulting hex values.",
+    "L14-20 `export const QUICK_LINKS = [...]` -> all five entries preserved with identical labelKey i18n keys (analytics.links.statistics/compare/weeklyDigest/mileage/timeline) and identical route hrefs (/statistics,/period-compare,/weekly-digest,/mileage,/timeline). Each lucide JSX icon node is replaced by an intent-preserving <SemanticIcon size=\"sm\" decorative /> node so `icon` remains a renderable React node ({link.icon} still works): BarChart3->analytics, Activity->activity, Calendar->calendar, MapPin->mapPinned, Clock->clock.",
+    "L21 trailing blank line preserved. `import React from 'react'` added because the native base tsconfig uses jsx: react-native (classic runtime), which requires React in scope for the SemanticIcon JSX nodes.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
