@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/EnergySummaryPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/EnergySummaryPanel.tsx",
+  "sourceLineCount": 65,
+  "coveredLineCount": 65,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 65 source lines line by line before editing.",
+    "L1 react-i18next useTranslation -> inlined native useTranslation()/TFunc returning the English fallback (or key); all 7 t(key, fallback) call sites preserved verbatim (energySummary/energyConsumed/energyRecovered/netConsumption/efficiency/batteryUsed/rangeUsed).",
+    "L2 lucide-react BatteryCharging -> the canonical native SemanticIcon 'batteryCharging' glyph (getSemanticIconDefinition('batteryCharging').glyph) rendered as an inline green (text-green-400 -> colors.success) AppText, decorative/accessibility-hidden, matching the inline header-icon visual.",
+    "L3 GlassPanel from '@/components/ui' -> native '../../../../../components/ui/GlassPanel'; L4 FadeIn from '@/components/motion' -> native parity '../../../../components/motion/FadeIn'.",
+    "L5 useUnits + L18/L20/L21 unitPrefs.distance -> inlined deriveDistance(settings?.unit_of_length) off the native useSettings query (data result); 'mi' selects miles else km, preserving distanceUnit, efficiencyUnit (Wh/mi vs Wh/km) and toEfficiencyDisplay (× 1.609344) verbatim.",
+    "L6 fmtNumber/fmtWithUnit from '@/lib/numberFormat' -> inlined safeNumber/fmtNumber/fmtWithUnit using settings.decimal_precision (default 2) + settings.locale (default en-US), reproducing the web global precision/locale that useSettings sets.",
+    "L7 DriveDetail from '@/types/driving' -> imported from the canonical native home '../../../../api/hooks/useDriving' (its Drive base supplies startBatteryPct/endBatteryPct); no type duplication.",
+    "L8 DriveStats from './types' -> inlined locally verbatim (sibling ./types module not yet ported), matching the inlined-sibling-type precedent; only energyWh/regenWh/consumptionWhKm/startRange/endRange are read but the full shape is mirrored for structural assignability.",
+    "L10-L13 EnergySummaryPanelProps preserved (drive + stats).",
+    "L23-L28 FadeIn>GlassPanel>header(h3) -> FadeIn>GlassPanel>View header row (battery glyph + title); padding p-5 -> spacing.lg, mb-4 -> spacing.md, gap-2 -> spacing.sm.",
+    "L29 CSS grid grid-cols-2/sm:3/lg:6 gap-4 text-center -> native View with flexDirection row + flexWrap + gap (spacing.md), cells flexBasis 30% / flexGrow / minWidth 96, centered text (mobile-first responsive equivalent).",
+    "L30-L41 Energy Consumed/Recovered/Net Consumption -> >1000 Wh promotes to kWh via fmtWithUnit(v/1000,'kWh') else `${fmtNumber(v)} Wh`, colors amber/green/cyan -> colors.warning/success/accent.",
+    "L42-L45 Efficiency -> consumptionWhKm>0 ? `${fmtNumber(toEfficiencyDisplay(...))} ${efficiencyUnit}` : em-dash; purple -> colors.violet.",
+    "L46-L52 Battery Used -> start/end non-null delta `${start-end}%` else em-dash, plus nested smaller muted span `${start ?? '?'}% -> ${end ?? '?'}%` using U+2192/U+2014; ml-1 approximated by a leading space.",
+    "L53-L60 Range Used -> start/end non-null ? fmtWithUnit(startRange-endRange, distanceUnit) : em-dash; green -> colors.success.",
+    "L62-L65 closing GlassPanel/FadeIn and component close preserved; text-[var(--text-primary)]/[var(--text-muted)] -> colors.textPrimary/textMuted; text-[10px]/text-lg/text-xs -> 10/18/12 px.",
+    "No DOM elements, react-i18next, lucide-react, Recharts, Leaflet, or web UI-kit modules imported into the native output."
+  ]
+}
