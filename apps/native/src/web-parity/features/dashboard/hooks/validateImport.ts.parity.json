@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/dashboard/hooks/validateImport.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/hooks/validateImport.ts",
+  "sourceLineCount": 233,
+  "coveredLineCount": 233,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read every source line. The module is non-visual utility/type code (despite the hooks/ path): no React hook, JSX, DOM element, Recharts, Leaflet, or web-UI import, so the logic ports faithfully to native-compatible TypeScript.",
+    "L1-7 web imports replaced with native-safe inlines. L2-7 `../widgets/types` (SavedDashboard/WidgetInstance/RGLLayouts/RGLLayout) -> module-local interfaces (plus the referenced WidgetConfig/DashboardSettings), pure type decls with no runtime dep, keeping ImportValidation/validateImportData/buildMinimalExport signatures structurally identical.",
+    "L1 `../widgets/registry` WIDGET_REGISTRY -> module-local `{ id }[]` allow-list mirroring all 118 web widget ids grouped by the 16 source registry files (vehicle/battery/energy/driving/charging/climate/tires/security/commands/media/telemetry/analytics/alerts/automations/system/maps). The web registry pulls in lucide-react + React.lazy; validateImportData consumes it only at L121 `WIDGET_REGISTRY.map((def) => def.id)`, which is preserved verbatim so the availability set is byte-identical.",
+    "L9-16 `ImportValidation` interface ported verbatim (exported). L18-37 `clamp`, `isFinitePositive` (type guard), `sanitizeLayoutItem` ported 1:1 incl. the x/y/w/h clamp bounds (0..cols-1, y, 1..cols, 1..8).",
+    "L39-197 `validateImportData` ported verbatim: step comments 1-6, all local names (errors/warnings/parsed/data/rawWidgets/validWidgets/seenIds/registryIds/available/missing/rawLayouts/availableIds/sanitizedLayouts/breakpointCols/now/validatedDashboard), the JSON.parse try/catch + object/array guards, required-field checks, unique-id + `-dup-` suffix via Date.now()/Math.random().toString(36).slice, registry availability filter, breakpointCols {lg:4,md:3,sm:2,xs:1}, per-item layout sanitisation, 100-char name slice, and all six early-return shapes are unchanged (engine-agnostic on Hermes).",
+    "L199-219 `toUrlSafeBase64`/`fromUrlSafeBase64` used browser-only btoa/atob/TextEncoder/TextDecoder, which are absent from the RN Hermes runtime AND the RN TS lib (no `dom` lib). Reimplemented with pure-JS utf8Encode/utf8Decode/base64Encode/base64Decode (scoped eslint-disable no-bitwise for the standard bit packing). Output is byte-identical to the web pipeline: same UTF-8 bytes -> standard base64 -> url-safe `+`->`-`, `/`->`_`, stripped `=`; decode reverses it (padding-tolerant, matching atob). Behaviour fully reproduced, so no degraded/unavailable state is surfaced.",
+    "L221-233 `buildMinimalExport` ported verbatim incl. the conditional `...(w.config ? { config: w.config } : {})` spread and JSON.stringify of { name, widgets, layouts }. Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
