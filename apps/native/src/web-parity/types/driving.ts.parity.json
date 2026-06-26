@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/types/driving.ts",
+  "outputPath": "apps/native/src/web-parity/types/driving.ts",
+  "sourceLineCount": 303,
+  "coveredLineCount": 303,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 303 source lines before editing; it is a pure non-visual TypeScript type-definition module with zero imports, no runtime code, and no DOM/browser/React/Recharts/Leaflet/web-UI dependencies, so it is React Native-compatible verbatim and required no native-safe stubbing.",
+    "L1-35 Drive interface ported verbatim including SI-canonical unit JSDoc (durationS seconds, distanceM meters, energyUsedWh/regenEnergyWh watt-hours, avgSpeedMps/maxSpeedMps m/s, avgPowerW watts) and all nullable (| null) fields plus optional live? flag, preserving Phase-48 SI field names exactly.",
+    "L37-87 ported verbatim: DriveDetail extends Drive (positions, telemetry arrays), DrivePosition (incl. dual createdAt?/created_at? snake+camel keys and all nullable sensor fields), DriveTelemetryPoint (full 27-field telemetry shape with tirePressureFl/Fr/Rl/Rr, soc/usableSoc, lat/lon nullables).",
+    "L89-174 ported verbatim: DriveScore (trend 'up'|'down'|'flat'), DrivingStats, DrivingDynamicsData, AccelerationDistributionData, DrivetrainHealthData (overallHealth 'good'|'warning'|'critical'), SpeedProfileData, SpeedBucket (incl. snake/camel dual keys speed_bucket/speedBucket, avg_power_kw/avgPowerKw and legacy range?/percentage?/driveCount? with the inline legacy-fields comment preserved), RegenEfficiencyData, RouteEfficiencyData, RouteSummary.",
+    "L176-218 Driving Coach section ported verbatim including the box-drawing section banner comment: DrivingCoachData (snake_case API fields, style_breakdown Record<string,number>), CoachPatterns, CoachWeeklyTrend, CoachRecommendation (impact 'high'|'medium'|'low'), CoachDriveScore (style 'efficient'|'moderate'|'aggressive').",
+    "L220-303 Trip Planner section ported verbatim including its box-drawing banner comment: TripLocation, TripPlanPreferences, TripPlanRequest, TripPlanRoute, TripLeg, TripChargeStop, TripWeatherImpact, TripSOCPoint, TripPlan, GeocodeResult — all snake_case JSON field names, optional (?) markers, and number|null nullability retained exactly to keep API-response parity with the Go structs and native driving/trip hooks. Typecheck, lint --quiet, and jest gates run green; only apps/native changes committed."
+  ]
+}
