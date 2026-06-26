@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/hooks/usePreferredRange.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/usePreferredRange.ts",
+  "sourceLineCount": 25,
+  "coveredLineCount": 25,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 25 source lines (numbered) before editing. The hook is pure, UI-agnostic React: a single useMemo over the preferred_range preference with no JSX, no DOM element, no Recharts/Leaflet, no browser-only API, so it ports 1:1 to React Native (Hermes runs the same useMemo primitive).",
+    "L1 `import { useMemo } from 'react'` preserved as `import {useMemo} from 'react'` (react is RN-compatible; native prettier style, no inner-brace spacing).",
+    "L2 `import { useSettings } from './useSettings'` targets the app-level web/src/hooks/useSettings (returns `rangeType`), which is NOT yet ported. Following the native convention (useFaviconBadge reads from `../api/hooks/useSettings`), rewritten to `import {useSettings} from '../api/hooks/useSettings'`; that query hook's AppSettings exposes the same snake_case `preferred_range` field, and `selectPreferredRange` collapses the loading-time `undefined` to the same `'rated'` default the web app-level hook applies, so the result is observably identical.",
+    "L3-8 `import { selectPreferredRange, type PreferredRangeFields, type PreferredRangeResult, type RangeType } from '@/lib/preferredRange'` — that lib is pure/React-free/browser-free and NOT yet ported, so following the useConfirm/useActiveFilterChips precedent the helper + its three types are inlined module-locally byte-for-byte (RangeType='rated'|'ideal'; PreferredRangeFields{rated_range?,ideal_range?: number|null}; PreferredRangeResult{meters:number|null, source:RangeType, labelKey:'idealRange'|'ratedRange', defaultLabel:'Ideal Range'|'Rated Range'}; FALLBACK_TYPE='rated'; selectPreferredRange(state, rangeType) => type = rangeType==='ideal'?'ideal':FALLBACK_TYPE, meters = type==='ideal'? state?.ideal_range ?? null : state?.rated_range ?? null, ternary returning the matching {meters,source,labelKey,defaultLabel}). selectPreferredRange/FALLBACK_TYPE stay module-local (web usePreferredRange.ts does not export them).",
+    "L10 `export type { RangeType, PreferredRangeFields, PreferredRangeResult }` re-export preserved: the three inlined types are declared with `export`, so this module's public type surface matches the web file exactly.",
+    "L12-19 the usePreferredRange JSDoc (rangeType-aware value+label; pass null/undefined state while loading -> meters null + stable preferred-type label) carried over verbatim, with the only edit being `Reads useSettings().rangeType` -> `Reads the preferred_range preference from useSettings()` to reflect the native query-hook source.",
+    "L20-22 `export function usePreferredRange(state: PreferredRangeFields | null | undefined): PreferredRangeResult` signature ported 1:1 (state name + nullable union + return type preserved).",
+    "L23 `const { rangeType } = useSettings()` adapted to `const {data: settings} = useSettings(); const rangeType = settings?.preferred_range;` — the native query hook returns {data}, and preferred_range is the field the web app-level hook derives rangeType from. Loading-time undefined -> 'rated' via selectPreferredRange (parity with the web defaults block).",
+    "L24 `return useMemo(() => selectPreferredRange(state, rangeType), [state, rangeType])` ported 1:1; web `(state, rangeType) => ...` arrow body unchanged, the [state, rangeType] dependency array preserved, reflowed across lines per native prettier printWidth. L25 trailing blank line preserved.",
+    "No DOM/Recharts/Leaflet/web-UI imports introduced; runtime deps are react + the native useSettings query hook. Gates run from apps/native: npm run typecheck (tsc --noEmit); npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
