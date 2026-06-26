@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/components/motion/index.ts",
+  "outputPath": "apps/native/src/web-parity/components/motion/index.ts",
+  "sourceLineCount": 9,
+  "coveredLineCount": 9,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the web barrel line by line. Preserved its public export surface: CarAnimation (L1), FadeIn (L2), RouteTransition (L3), the RouteTransitionProps type (L4), StaggerContainer (L5), StaggerItem (L6), and the framer-motion AnimatePresence + motion re-export (L8 comment + L9). The blank L7 is a no-op.",
+    "Because the motion siblings have not been converted to native yet, this barrel follows the established a11y-barrel precedent: a self-contained native-safe .ts module using React.createElement (JSX is not allowed in a .ts file).",
+    "framer-motion (DOM-only, not a native dependency) and the @/hooks/useMotionPreference web hook are replaced by a local useMotionPreference built on AccessibilityInfo.isReduceMotionEnabled / reduceMotionChanged, mirroring the web hook's reduce + durationMs (0 when reduced) contract. FadeIn (opacity 0->1, translateY 12->0, 400ms easeOut, delay seconds), StaggerContainer (injects index*0.06s stagger delay into child elements), and StaggerItem (opacity 0->1, translateY 15->0, 350ms) reproduce the framer entrance tweens with Animated.timing and honour reduced motion.",
+    "L9 AnimatePresence + motion: native-safe shims. AnimatePresence renders its children (native has no exit-animation phase); motion is a namespace of the RN Animated primitives (View/Text/ScrollView/Image). nativeMotionCapabilities documents the unavailable framer/SVG/router capabilities.",
+    "RouteTransition's react-router-dom useLocation/matchPath cross-fade is unavailable on native (no DOM router), so the port is a passthrough that fills its parent (preserving the web initial={false} no-first-render-flash behaviour); skipPattern is retained for source compatibility but unused.",
+    "CarAnimation's inline SVG silhouette is approximated with positioned Views (body, cabin, two wheels, head/tail light, ground shadow) because there is no react-native-svg dependency; the draw-in and pulsing lights honour reduced motion. The aria-label uses a local react-i18next fallback resolver that keeps the carAnimation.tesla i18n key while returning the inline English string.",
+    "No DOM modules, browser HTML elements, Recharts, Leaflet, framer-motion, react-router-dom, or old web UI components are imported. Only React, react-native (Animated/View/etc.), and the native theme tokens are used. The web-only className prop is retained on each prop type for source compatibility but ignored on native."
+  ]
+}
