@@ -1,0 +1,32 @@
+{
+  "sourcePath": "web/src/hooks/useEditLease.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useEditLease.ts",
+  "sourceLineCount": 398,
+  "coveredLineCount": 398,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 398 source lines before porting. The entire edit-lease election protocol, the module-level lease registry, EditConflictError, ELECTION_TIMEOUT_MS, getCurrentLease, useEditLease and __resetEditLeasesForTests are pure platform-agnostic TypeScript and are ported 1:1; only the browser-tab transport from @/lib/broadcast (BroadcastChannel + localStorage fallback) and the window 'beforeunload' hook are replaced by native-safe seams.",
+    "L1-7 imports: react useEffect/useState kept (L1); the @/lib/broadcast import of TAB_ID/broadcast/subscribe/BroadcastMessage (L2-7) is replaced by an inline native-safe bus section (no DOM-only module imported).",
+    "L9-56 module/protocol doc block preserved: the two-tab edit-conflict rationale, the 5-step election protocol (request → grant → tiebreaker → release), the 'multiple subscribers within a single tab' shared-registry note, and the 'what this hook is NOT' caveats are all carried over (re-worded tab→surface) with an added native section documenting that RN has no peer surfaces/BroadcastChannel so the lone instance self-grants, while the react-native-web build's auto-detected BroadcastChannel makes the full handshake live.",
+    "L58-63 OtherTabInfo interface (tabId, claimedAt) ported verbatim.",
+    "L65-73 LeaseState interface (isOwner, otherTab|null with the same null-meaning doc) ported verbatim.",
+    "L75-84 UseEditLeaseResult extends LeaseState + claim(): the +1ms / Take-over / EditConflictBanner doc preserved.",
+    "L86-104 EditConflictError class ported: readonly resourceKey + otherTab fields, super(message), name='EditConflictError'; message wording adjusted from 'another browser tab holds' to 'another surface holds' to match the native single-instance/cross-surface framing while preserving intent.",
+    "L106-112 ELECTION_TIMEOUT_MS = 250 + the 'instant banner' rationale preserved verbatim.",
+    "L114-122 LeaseInternal interface ported verbatim (resourceKey, claimedAt, isOwner, otherTab, subscribers Set, electionTimer ReturnType<typeof setTimeout>|null, unsubscribeBus).",
+    "L124-130 leases Map registry + its doc ported verbatim.",
+    "L132-140 notifySubscribers with per-subscriber try/catch ported verbatim.",
+    "L142-165 broadcastGrant/broadcastRequest/broadcastReleased ported verbatim — they call the local native broadcast() which routes to the active transport; payload shapes (type, resourceKey, tabId, claimedAt) and TAB_ID usage unchanged.",
+    "L167-185 startElection ported verbatim: clearTimeout guard, broadcastRequest, setTimeout(ELECTION_TIMEOUT_MS) self-grant when !isOwner && otherTab===null (claimedAt=Date.now(), isOwner=true, broadcastGrant, notify).",
+    "L187-249 handleMessage ported verbatim incl. the three-type guard (still meaningful against the lease-only BroadcastMessage subset), resourceKey filter, self-TAB_ID defense-in-depth, request→grant-if-owner, granted tiebreaker (newer claimedAt wins, equal falls back to lower tabId; owner-yields vs re-assert; non-owner replace logic), and released→clear otherTab + startElection.",
+    "L251-269 acquire ported verbatim: lazy registry create, subscribe(msg => handleMessage(created, msg)) via the native bus stored in unsubscribeBus, startElection.",
+    "L271-283 release ported verbatim: subscribers.size guard, clear electionTimer, call+null unsubscribeBus, broadcastReleased, leases.delete.",
+    "L285-294 performClaim ported verbatim incl. the +1ms 'beat previous owner' comment, isOwner=true, otherTab=null, broadcastGrant, notify.",
+    "L296-312 getCurrentLease ported verbatim: returns null when unmounted, else {isOwner, otherTab} snapshot.",
+    "L314-372 useEditLease ported: useState(0) force counter, useEffect([resourceKey]) acquire+subscribe+initial sub() render, opt-out empty-string path returning {isOwner:false, otherTab:null, claim:noop}, and the leases.get(resourceKey) read returning isOwner/otherTab with ?? defaults + a claim() that re-reads and performClaim. The browser window 'beforeunload' add/removeEventListener (L336-349) is replaced by a guarded globalThis lifecycle probe (getGlobalLifecycle) so it still fires the broadcastReleased hint on the react-native-web build and is a safe no-op on pure native; the typeof window guard intent is preserved.",
+    "L374 noop() ported verbatim.",
+    "L376-398 __resetEditLeasesForTests ported verbatim: clears each entry's electionTimer, calls+nulls unsubscribeBus in try/catch, clears subscribers, then leases.clear().",
+    "Browser-only dependency handling (contract rule 7): @/lib/broadcast is DOM-only (BroadcastChannel/localStorage/window). Replaced with an inline native-safe bus — stable TAB_ID via a bitwise-free Math.random v4-shaped id (mirrors the web safeUUID Math.random fallback, no Web Crypto needed on RN), a lease-only BroadcastMessage union (the only variants this hook uses), and an EditLeaseTransport seam. The default transport AUTO-DETECTS a global BroadcastChannel (structurally typed like the automationSSE EventSource port) with the same _from:TAB_ID envelope + self-filter as the web bus so the react-native-web browser build keeps real cross-tab parity; otherwise it is a documented no-op. EDIT_LEASE_BUS_UNAVAILABLE_REASON is exported as the explicit unavailable state and setEditLeaseTransport lets a host (or test) inject real fanout — mirroring the useAchievementCelebrationPrefs injectable-seam + automationSSE unavailable-reason precedents.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported — only react. DOM globals (BroadcastChannel, window/addEventListener) are reached only through guarded globalThis casts (RN tsconfig omits the DOM lib). Formatting matches repo prettier (single quotes, trailing commas, no bracket spacing, arrowParens avoid) and @react-native eslint (curly braces on all ifs, eqeqeq-smart != null). Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
