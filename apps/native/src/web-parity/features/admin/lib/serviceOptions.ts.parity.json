@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/features/admin/lib/serviceOptions.ts",
+  "outputPath": "apps/native/src/web-parity/features/admin/lib/serviceOptions.ts",
+  "sourceLineCount": 61,
+  "coveredLineCount": 61,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 61 source lines line by line before editing and ported the ServiceSelectOption interface (value/label), the DeriveOpts interface (byService, activeService, labelFor, allLabel, optional readonly knownServices), and the deriveServiceOptions function exactly.",
+    "Preserved behavior: pinned head 'All Services' option with empty value, Set-based union of knownServices then by_service keys then activeService, label mapping via labelFor, and case-insensitive locale label sort with sensitivity 'base' returning [head, ...tail].",
+    "Kept all JSDoc/i18n intent comments verbatim (All Services label, SERVICE_CONFIG catalog rationale, alphabetical sort rationale); source is non-visual utility/type code with no imports, so native output adds no DOM, browser, Recharts, Leaflet, or web UI dependencies.",
+    "Only formatting adapted to native prettier (arrowParens avoid: value => ; bracketSpacing false on inline objects/destructuring); no API paths or unit handling exist in this file."
+  ]
+}
