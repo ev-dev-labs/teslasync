@@ -1,0 +1,28 @@
+{
+  "sourcePath": "web/src/features/driving/components/driving-dynamics/MotorHistoryCharts.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/driving-dynamics/MotorHistoryCharts.tsx",
+  "sourceLineCount": 175,
+  "coveredLineCount": 175,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-3 imports: useMemo kept (react); react-i18next useTranslation -> local fallback useTranslation; lucide Activity icon -> native SemanticIcon name='activity'. useCallback/useState added for the inlined hooks.",
+    "L5-21 @/components/charts barrel: the Recharts composition (ResponsiveContainer/AreaChart/Area/LineChart/Line/XAxis/YAxis/CartesianGrid/Tooltip/Legend/ChartGradient/AREA_DEFAULTS) is replaced by the native AreaChartWrapper; ChartContainer + interactive ChartLegend are imported from the native charts barrel.",
+    "L22-23 EmptyState/FadeIn -> native parity EmptyState + FadeIn (delays 0.2/0.25/0.3 preserved).",
+    "L24 useHiddenSeries (URL-search-param state, browser-only) -> local in-memory useHiddenSeries keeping the HiddenSeriesState API (hidden/toggle/isHidden/reset) and sorted toggle order; 'motor-power-history' key + 'powerHidden' state name preserved (rule 7).",
+    "L25 useDateFormat -> local useDateFormat returning formatTime (toLocaleTimeString {hour:'2-digit',minute:'2-digit'}, '—' guard); device locale/zone used since useTimezone is not ported.",
+    "L26 MotorSnapshot type imported from the ported native web-parity api/types.",
+    "L28-32 MotorHistoryChartsProps interface preserved verbatim (motorHistory/toSpeedDisplay/speedUnit); body destructures only { motorHistory } exactly as the source.",
+    "L34-36 component decl + useTranslation() + useDateFormat() call sites preserved.",
+    "L38-41 powerHidden = useHiddenSeries('motor-power-history') with the original explanatory comment retained.",
+    "L43-51 powerChartData useMemo: time=formatTime(s.ts), power=s.power_kw ?? null, regen=s.regen_kw ?? null — ported verbatim.",
+    "L53-61 torqueChartData useMemo: front=s.torque_nm_front ?? null, rear=s.torque_nm_rear ?? null — ported verbatim.",
+    "L63-71 rpmChartData useMemo: front=s.motor_rpm_front ?? null, rear=s.motor_rpm_rear ?? null — ported verbatim.",
+    "L73-78 noData EmptyState: lucide Activity -> SemanticIcon 'activity'; message key dynamics.awaitingData preserved; the no-action comment retained.",
+    "L80-114 Motor Power chart: FadeIn delay=0.2 + ChartContainer (title/subtitle/ariaLabel/height=280/chartKey='motor-power-history'/exportable/exportFilename='motor-power' + chart-a11y:no-table comment all preserved). Recharts AreaChart#06b6d4/#22c55e + ChartLegend(state=powerHidden) + per-Area hide -> native ChartLegend(state=powerHidden, interactive tap-to-hide) feeding visiblePowerSeries (filtered by powerHidden.isHidden) into AreaChartWrapper; YAxis ' kW' unit -> yFormatter suffix; empty data -> noData.",
+    "L116-143 Motor Torque chart: FadeIn delay=0.25 + ChartContainer (torque-history, exportable, no-table comment) ; Recharts LineChart front#3b82f6/rear#a855f7 -> AreaChartWrapper (native-safe line substitute, no LineChartWrapper exists); YAxis ' Nm' -> yFormatter suffix; empty data -> noData.",
+    "L145-172 Motor RPM chart: FadeIn delay=0.3 + ChartContainer (motor-rpm, exportable, no-table comment); Recharts LineChart front#06b6d4/rear#a855f7 -> AreaChartWrapper; YAxis ' RPM' -> yFormatter suffix; empty data -> noData.",
+    "L173-175 fragment return + component close preserved (<> ... </>).",
+    "Source ChartContainers pass exportable WITHOUT a data/exportData prop (relying on the chart-a11y:no-table comment), so the native ports intentionally omit data/dataColumns too — matching the source's image-export-only intent.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) PASS; npm run lint -- --quiet PASS; npm test -- --runInBand --detectOpenHandles PASS. No DOM/Recharts/Leaflet/react-i18next/web-UI-kit imports in the native output."
+  ]
+}
