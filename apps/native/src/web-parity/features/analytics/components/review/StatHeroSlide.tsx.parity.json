@@ -1,0 +1,32 @@
+{
+  "sourcePath": "web/src/features/analytics/components/review/StatHeroSlide.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/review/StatHeroSlide.tsx",
+  "sourceLineCount": 105,
+  "coveredLineCount": 105,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 105 source lines with numbered output before editing; no DOM, react-i18next, framer-motion, Recharts, Leaflet, or web UI-kit modules are imported into the native output.",
+    "L1 AnimatedNumber from @/components/data-display -> local AnimatedNumber reproducing the web rAF count-up (ease-out quad 1-(1-p)^2 from 0 to value over duration s, rendering fmtNumber(display, decimals) with fontVariant tabular-nums); used at L38-43, honours reduce-motion by jumping to the final value.",
+    "L2 motion from @/components/motion (framer-motion) -> local Animated.View wrappers PopIn (emoji spring) + SlideUp (number/unit/comparison entries); used at L24-31/33-44/46-53/55-62.",
+    "L3 react-i18next useTranslation + L4 i18next TFunction -> inlined native useTranslation()/TFunc supporting both web shapes t(key, fallback) and t(key, {defaultValue, ...interpolation}) with {{var}} interpolation; every key preserved verbatim (L84 yearReview.distanceComparison, L85 yearReview.distanceSmall, L93 yearReview.energyUnit, L94 yearReview.energyComparison).",
+    "L5 useUnits from @/hooks/useUnits -> derived from native useSettings(); L17-18 unitPrefs.distance reproduced via deriveDistance(settings.unit_of_length === 'mi' ? 'mi' : 'km'); the web numberFormat global locale reproduced via deriveLocale(settings.locale).",
+    "L6 convertDistanceFromSI + DistanceUnitPref from @/lib/unitConversion -> inlined km/mi branches (meters/1000 or meters/1609.344) matching the web lib constants; DistanceUnitPref -> local DistanceUnit ('km' | 'mi', the branches this caller hits); used at L76.",
+    "L7 fmtNumber from @/lib/numberFormat -> inlined locale-aware toLocaleString helper with min=max fraction digits and en-US fallback, identical to the web lib; used at L84 (earthLaps percent) and inside AnimatedNumber.",
+    "L8 type YearReview from @/api/types -> imported from native web-parity api/types; the {data, field} Props (L10-13) preserved verbatim.",
+    "L10-13 Props interface (data: YearReview, field: string) -> preserved verbatim.",
+    "L15-20 component signature + useTranslation + useUnits.distance + getStatConfig call -> preserved; locale additionally threaded so getStatConfig's fmtNumber matches the web global-locale read.",
+    "L22-23 outer div (flex flex-col items-center justify-center h-full px-8 text-center) -> container View style (flex 1, center/center, paddingHorizontal 32).",
+    "L24-31 motion.span emoji (initial scale 0 rotate -20, animate scale 1 rotate 0, spring stiffness 200 damping 15; text-6xl md:text-8xl mb-6) -> PopIn fromRotate -20deg / stiffness 200 / damping 15 wrapping the emoji AppText; fontSize 60, marginBottom 24.",
+    "L33-44 motion.div (initial y 40 opacity 0, animate y 0 opacity 1, delay 0.3 duration 0.5) wrapping AnimatedNumber(value=config.value, duration=1.5, decimals=config.decimals, text-6xl md:text-8xl font-bold text-white) -> SlideUp distance 40 / delay 0.3 / duration 0.5 wrapping AnimatedNumber (fontSize 60, bold, primary tone, tabular-nums); locale prop added for fmtNumber.",
+    "L46-53 motion.p unit (initial y 20 opacity 0, animate y 0 opacity 1, delay 0.6 duration 0.4; text-xl md:text-2xl text-[var(--text-secondary)] mt-3) -> SlideUp distance 20 / delay 0.6 / duration 0.4 with marginTop 12 wrapping a secondary-tone AppText (fontSize 20).",
+    "L55-62 motion.p comparison (initial y 20 opacity 0, animate y 0 opacity 1, delay 0.9 duration 0.4; text-lg text-[var(--text-muted)] mt-6 max-w-md) -> SlideUp distance 20 / delay 0.9 / duration 0.4 with marginTop 24 / maxWidth 448 wrapping a muted-tone AppText (fontSize 18).",
+    "L63-65 closing div/return/component -> preserved.",
+    "L67-72 getStatConfig signature (data, field, t, distanceUnit) -> preserved with one explicit extra param `locale: string` threading the web numberFormat global locale (documented deviation); StatConfig return interface added for typing.",
+    "L73-87 'distance' case -> SI comment + convertDistanceFromSI(total_distance_km*1000) + earthLaps (total_distance_km/40075, constant named EARTH_CIRCUMFERENCE_KM) + emoji road + value=dist + decimals 0 + unit=distanceUnit + comparison (earthLaps>=0.01 ? distanceComparison with percent=fmtNumber(earthLaps*100,1) else distanceSmall) -> preserved verbatim.",
+    "L88-95 'energy' case -> emoji bolt + value=total_energy_kwh + decimals 0 + unit=energyUnit('kWh charged') + comparison energyComparison with days=Math.round(total_energy_kwh/30) -> preserved verbatim.",
+    "L96-104 default case -> emoji chart + value 0 + decimals 0 + empty unit/comparison -> preserved verbatim.",
+    "L105 closing brace -> preserved.",
+    "All entry animations (PopIn / SlideUp / AnimatedNumber) honour the OS reduce-motion setting via AccessibilityInfo and render the resting/final state when enabled, mirroring the FadeIn and DriveHighlightSlide parity ports.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
