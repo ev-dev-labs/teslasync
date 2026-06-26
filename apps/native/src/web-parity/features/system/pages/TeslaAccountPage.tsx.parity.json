@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/system/pages/TeslaAccountPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/pages/TeslaAccountPage.tsx",
+  "sourceLineCount": 103,
+  "coveredLineCount": 103,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 react-i18next useTranslation -> inline native-safe useNativeTranslation() returning t(key, fallback?, params?) = interpolate(fallback ?? key, params); every t(...) key + English default is preserved verbatim and the i18next-style {{time}} placeholder in teslaAccount.lastSynced is interpolated.",
+    "L2 lucide-react RefreshCw/User/ImageOff -> decorative glyph constants ICON_REFRESH '\\u21BB' (refresh button), ICON_USER '\\uD83D\\uDC64' (no-profile empty state), ICON_IMAGE_OFF '\\uD83D\\uDDBC' (avatar placeholder) (the established icon->glyph precedent); the spinning RefreshCw (animate-spin while pending) becomes an ActivityIndicator while refreshMutation.isPending and the glyph otherwise.",
+    "L4 @/components/layout PageContainer -> local native-safe PageContainer (ScrollView scaffold: title/subtitle/loading/error/children; body gated behind the loading ActivityIndicator then an error box, mirroring the web loading -> error -> children ladder and the web error red-box rendering error.message).",
+    "L5 @/components/ui GlassPanel/Button -> existing native GlassPanel (../../../../components/ui/GlassPanel) + a local native RefreshButton reproducing the web primary Button (accent Pressable, ActivityIndicator-or-glyph + label, accessibilityLabel = refresh text, disabled + accessibilityState busy while pending).",
+    "L6 @/components/feedback EmptyState -> local native-safe EmptyState (icon glyph + centered message), mirroring the web { icon, message } usage.",
+    "L7 @/components/motion FadeIn -> static passthrough View (framer-motion has no native equivalent); the delay prop (0.05) is accepted but inert.",
+    "L8 @/components/data-display KVList -> local native KVList over the same { label, value }[] contract: a label/value row per item with the web divide-y separators reproduced as a borderTop on rows after the first; string/number values render in a styled AppText, ReactNode values render as-is.",
+    "L10 @/hooks/usePageTitle -> native no-op usePageTitle (document.title is browser-only; the native navigator owns the header title); still called with t('teslaAccount.title','Tesla Account').",
+    "L11 @/api/hooks/useUser useTeslaUserProfile + useRefreshTeslaProfile -> imported from the already-ported native ../../../api/hooks/useUser (same GET /tesla/user/profile and POST /tesla/user/profile/refresh paths, same TeslaProfileEnvelope { profile, fetched_at } shape).",
+    "L12 @/lib/dateFormat formatDateTime/formatRelative -> ported native-safe with the FormatOptions {tz,locale} + intlOpts/intlLocale helpers: formatDateTime (year/month/day/hour/minute, tz/locale-aware via toLocaleString), formatRelative (just now / Nm ago / Nh ago / Nd ago / else formatDate), plus formatDate needed by the >7d formatRelative fallback; all return '\\u2014' for nullish/invalid and wrap Intl in try/catch for device safety.",
+    "L14-16 export default function TeslaAccountPage + useTranslation()/usePageTitle(t('teslaAccount.title','Tesla Account')) preserved via the native shims.",
+    "L18-19 const { data, isLoading, error } = useTeslaUserProfile(); const refreshMutation = useRefreshTeslaProfile() preserved verbatim (state names data/isLoading/error/refreshMutation).",
+    "L21-22 const profile = data?.profile ?? null; const fetchedAt = data?.fetched_at ?? null preserved verbatim.",
+    "L24-30 PageContainer props preserved: title=t('teslaAccount.title','Tesla Account'), subtitle=t('teslaAccount.subtitle','Your Tesla account profile synced from the Fleet API'), loading={isLoading}, error={error instanceof Error ? error : null}.",
+    "L31-48 Section 1 sync bar: FadeIn -> native syncBar row (web flex items-center justify-between mb-6) with the relative caption (fetchedAt ? t('teslaAccount.lastSynced','Last synced: {{time}}',{time: formatRelative(fetchedAt)}) : t('teslaAccount.neverSynced','Never synced \\u2014 click Refresh to fetch from Tesla')) and the RefreshButton (onPress=()=>refreshMutation.mutate(), pending=refreshMutation.isPending, label=t('teslaAccount.refresh','Refresh from Tesla') used as both the visible label and the aria-/accessibilityLabel); the RefreshCw animate-spin becomes the ActivityIndicator while pending.",
+    "L50-55 Section 2 profile card: FadeIn delay=0.05 -> GlassPanel p-6 (styles.panel) with the h2 title t('teslaAccount.profile','Profile') rendered as an AppText weight=semibold (typography.title).",
+    "L56-57 profile ? branch -> native profileRow (web flex items-start gap-6).",
+    "L58-71 Avatar branch preserved verbatim: profile.profile_image_url ? <Image source={{uri}}> (rounded-full h-20 w-20 border-2 object-cover -> 80x80, borderRadius 40, borderWidth 2, resizeMode cover, accessibilityLabel=t('teslaAccount.avatar','Profile picture')) : an ImageOff placeholder circle (bg-white/[0.04] -> colors.surfaceRaised, border-2 -> colors.border) with the ICON_IMAGE_OFF glyph (web ImageOff h-8 w-8 text-muted).",
+    "L73-91 Details branch: web flex-1 min-w-0 -> styles.profileDetails (flex:1, minWidth:0) wrapping the KVList with the three items preserved verbatim — { t('teslaAccount.name','Name'), profile.full_name || '\\u2014' }, { t('teslaAccount.email','Email'), profile.email || '\\u2014' }, { t('teslaAccount.fetchedAt','Fetched At'), formatDateTime(profile.fetched_at) }.",
+    "L93-98 else branch -> native EmptyState (icon=ICON_USER for the web <User/>, message=t('teslaAccount.noProfile','No profile data yet. Click \"Refresh from Tesla\" to sync your account.')); the web no-action transient-empty-state comment is preserved verbatim above the native EmptyState.",
+    "L99-103 closing GlassPanel/FadeIn/PageContainer/return/function preserved.",
+    "Coverage: every one of the 103 source lines was read and considered. No DOM/Recharts/Leaflet/lucide/react-i18next/old web-UI imports remain in the native output. Behaviour, state names (data/isLoading/error/refreshMutation/profile/fetchedAt), API paths (/tesla/user/profile, /tesla/user/profile/refresh), and all i18n keys are preserved; no unit-suffixed fields are involved."
+  ]
+}
