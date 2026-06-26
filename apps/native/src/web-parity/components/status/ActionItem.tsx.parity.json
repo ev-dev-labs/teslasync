@@ -1,0 +1,32 @@
+{
+  "sourcePath": "web/src/components/status/ActionItem.tsx",
+  "outputPath": "apps/native/src/web-parity/components/status/ActionItem.tsx",
+  "sourceLineCount": 94,
+  "coveredLineCount": 94,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 94-line source with numbered lines before editing.",
+    "L1-7 doc comment (operator-task row, severity drives colour, optional CTA): preserved/expanded in the native file header.",
+    "L9 `import { type ReactNode }`: preserved as `import {type ReactNode} from 'react'` for the description prop.",
+    "L10 `import { Link } from 'react-router-dom'`: replaced — no in-app router on native; route navigation goes through `useNativeHrefNavigation` -> `Linking.openURL` (best-effort, errors swallowed).",
+    "L11 lucide-react Info/AlertTriangle/AlertCircle/ChevronRight: replaced with severity-tinted inline AppText glyphs (info 'ℹ', warn '⚠', error '⛔', chevron '›') matching the established SeverityBadge port.",
+    "L12 `import { cn } from '@/lib/cn'`: dropped — native uses StyleSheet + style arrays instead of className merging.",
+    "L14 `export type ActionSeverity = 'info' | 'warn' | 'error'`: preserved verbatim.",
+    "L16-20 SEVERITY_CFG (icon/text/bg/ring per severity): ported to a token-driven SeverityVisual map — text-blue-400/amber-400/red-400 -> colors.accent/warning/danger (fg); bg-*-500/10 -> surfaceSelected/warningSurface/dangerSurface; ring-*-400/20 -> borderAccent/warningBorder/dangerBorder; lucide icon -> glyph.",
+    "L22-29 ActionItemProps (severity, title, description?: ReactNode, cta {label,to?,external?,onClick?}): preserved verbatim; added optional `testID` for native test targeting; doc comments retained.",
+    "L31-33 ActionItem signature + cfg/Icon lookup: preserved (cfg lookup kept; Icon constant folded into the cfg.glyph render).",
+    "L36-42 outer div `flex items-start gap-3 rounded-lg p-3 ring-1` + bg/ring: -> View styles.row (flexDirection row, alignItems flex-start, gap spacing.md, borderRadius 8, padding spacing.md, borderWidth 1) with per-severity bg/border.",
+    "L43 `<Icon className='h-5 w-5 shrink-0 mt-0.5' aria-hidden />`: -> severity-tinted AppText glyph (fontSize 16, marginTop 2) with accessibilityElementsHidden/importantForAccessibility='no-hide-descendants' for aria-hidden parity.",
+    "L45-50 body `flex-1 min-w-0 space-y-0.5` + title `text-sm font-medium text-[var(--text-primary)]` + description `text-xs text-[var(--text-secondary)]`: -> View styles.body (flex 1, gap 2); title AppText (fontSize 14, fontWeight 500, textPrimary); description rendered via string/number -> AppText (fontSize 12, textSecondary) else ReactNode -> View wrapper.",
+    "L47-49 `{description && (...)}`: reproduced as an explicit truthiness guard so a falsy node never renders a bare value outside a Text node on native.",
+    "L52-54 `{cta && <ActionCTA cta=... severityText=cfg.text />}`: preserved — renders ActionCTA with severityColor=cfg.fg when cta present.",
+    "L59-65 ActionCTA + baseClasses (inline-flex items-center gap-1 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium min-h-[36px] hover/focus + severityText): -> Pressable styles.cta (row, alignItems center, gap spacing.xs, borderRadius 6, paddingH spacing.md, paddingV 6, minHeight 36, flexShrink 0, alignSelf flex-start) + pressed-surface state; label AppText fontSize 12/fontWeight 500 tinted by severityColor.",
+    "L67-75 `cta.to && cta.external` -> `<a href target=_blank rel=noopener>label + ChevronRight</a>`: -> Pressable accessibilityRole='link' onPress navigate(cta.to); external carries no separate native transport (documented) and is preserved on the prop type.",
+    "L76-81 `cta.to` -> `<Link to>label + ChevronRight</Link>`: -> same Pressable navigate(cta.to) path (role='link').",
+    "L84-91 `cta.onClick` -> `<button type=button onClick>label + ChevronRight</button>`: -> Pressable accessibilityRole='button' onPress cta.onClick().",
+    "L72/L79/L88 ChevronRight `h-3.5 w-3.5`: -> inline '›' AppText glyph tinted by severityColor, aria-hidden.",
+    "L93 `return null` (no to + no onClick): preserved as early `if (!cta.to && !cta.onClick) return null`.",
+    "L94 end of file / `export function ActionItem`: named export preserved; a convenience default export added per native-parity repo convention.",
+    "Gates from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
