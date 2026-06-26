@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/driving/components/drivetrain-health/DetailCards.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drivetrain-health/DetailCards.tsx",
+  "sourceLineCount": 77,
+  "coveredLineCount": 77,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 react-i18next useTranslation -> local key-preserving fallback shim (no react-i18next in native deps); every i18n key + English fallback retained verbatim.",
+    "L3 @/components/ui Card/CardHeader -> local View-based Card (var(--surface-1) bg, var(--glass-border) border, rounded-lg, p-4, shadow-sm) and CardHeader (mb-4 row, text-base semibold title; optional subtitle/action surface kept for source-API fidelity though DetailCards passes only title).",
+    "L4 @/components/layout Grid -> local GridRow: cols={{default:1, md:2}} gap={4} resolves mobile-first to a flex-wrap row (gap 16) with min-width grow items (1-up on a phone, 2-up when wide).",
+    "L5 @/components/data-display KVList -> local KVList (divide-y stack: each row a space-between flex row, py-2, muted text-sm label + semibold text-sm value, top border between rows).",
+    "L6 @/components/motion FadeIn -> ported web-parity components/motion FadeIn; delay={0.4} seconds preserved (L33).",
+    "L7 @/hooks/useUnits useUnits -> local SI-floor shim exposing formatTemperature + formatEnergy. No native settings/locale port yet, so the floor is the web default derivation (temperature->°C, DEFAULT_ENERGY_PREF->kWh). The @/lib/unitConversion formatters are reproduced faithfully: °C with no leading space + default precision 1; kWh = wh/1000 + default precision 2; per-call {precision} override + non-finite->'—' preserved. User-preference unit switching is UNAVAILABLE (contract rule 7).",
+    "L8 @/lib/numberFormat fmtNumber/fmtInt -> inlined native-safe equivalents (+ safeNumber dep): nullish/non-finite->0, en-US locale, per-call precision honoured, fmtInt = 0 dp.",
+    "L10 @/types/driving DrivetrainHealthData/DrivingStats -> imported from the native api/hooks/useDriving port; interfaces match the web shapes field-for-field (frontMotorTempC/rearMotorTempC/inverterTempC/batteryTempC: number|null; regenEnergyWh/co2SavedKg: number).",
+    "L11 ./helpers displayTemp -> inlined verbatim (null -> '—', else format through the supplied formatter); sibling helpers module not a standalone native port yet, so the component stays self-contained.",
+    "L13-19 DetailCardsProps {health, peakPower, avgPowerMax, minRegenPower, stats} ported verbatim.",
+    "L21-31 DetailCards signature + useTranslation + useUnits destructure ({formatTemperature: formatTemperatureUnit, formatEnergy}) + the local formatTemperature(value, precision?) => formatTemperatureUnit(value, {precision}) wrapper preserved exactly.",
+    "L32-45 FadeIn(delay 0.4) > GridRow > Card 'Temperature Details' (CardHeader) + KVList of frontMotorTemp/rearMotorTemp/inverterTemp/batteryTemp, each value=displayTemp(health.<field>, formatTemperature); i18n keys drivetrain.temperatures/frontMotorTemp/rearMotorTemp/inverterTemp/batteryTemp kept.",
+    "L47-73 Card 'Power Summary' (CardHeader) + KVList: peakPower>0 ? `${fmtInt(peakPower)} kW` : '—'; avgPowerMax>0 ? `${fmtNumber(avgPowerMax,1)} kW` : '—'; minRegenPower<0 ? `${fmtNumber(Math.abs(minRegenPower),1)} kW` : '—'; stats ? formatEnergy(stats.regenEnergyWh,{precision:1}) : '—'; stats ? `${fmtNumber(stats.co2SavedKg,1)} kg` : '—'. All guards + unit strings (kW/kg) + i18n keys (peakPowerLabel/avgPowerLabel/maxRegenLabel/regenLabel/co2Label, incl. 'CO₂ Saved') preserved verbatim.",
+    "L74-77 closing GridRow/FadeIn + component close ported; every <div> -> View, title/labels/values -> AppText; Tailwind mapped to StyleSheet tokens (p-4->16, mb-4->16, py-2->8, gap-4->16), var(--surface-1)/var(--glass-border) -> surface/border tokens, --text-muted -> AppText muted tone, text-gray-900/dark:text-gray-100 -> primary tone. No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI imported.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
