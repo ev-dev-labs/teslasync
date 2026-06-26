@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/admin/pages/GasPriceAutoPollPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/pages/GasPriceAutoPollPage.tsx",
+  "sourceLineCount": 31,
+  "coveredLineCount": 31,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-11 page-wrapper docstring (EIA gas-price auto-poll surface promoted from /settings#gas-price to a first-class page whose UI lives in the shared GasPriceSettings) -> preserved as the native header comment plus the native-substitution log.",
+    "L13 import useTranslation from 'react-i18next' -> inlined native useTranslation(namespace?) returning the English fallback (no i18n runtime in the parity bundle) with {{token}} interpolation; the 'settings' namespace arg is accepted+ignored.",
+    "L14 import PageContainer from '@/components/layout/PageContainer' -> inlined native PageContainer (ScrollView + header title/subtitle/actions, then loading->spinner / error->box / empty->copy / else children), matching the BackupRestorePage port.",
+    "L15 import usePageTitle from '@/hooks/usePageTitle' -> inlined native no-op hook (RN has no document.title); the call site + translated title key are preserved.",
+    "L16 import GasPriceSettings from '@/features/settings/components/GasPriceSettings' -> the sibling web component is not yet ported, so a faithful native GasPriceSettings is inlined and wired to the already-ported gas-price + settings hooks (rule 7).",
+    "GasPriceSettings dependencies ported: useGasPriceStatus/usePollGasPrice/useToggleGasPrice/useUpdateGasPriceConfig/useSettings from ../../../api/hooks/useSettings (real, verbatim query keys + API paths /gas-price/status,/poll,/toggle,/config and /settings); FadeIn from ../../../components/motion/FadeIn (delay 0.12 preserved); useFormatting().formatCurrency -> inlined formatCurrency (currency_symbol + decimal_precision from settings, fmtNumber en-US); useSettings().settings.gas_unit -> settings?.gas_unit 'liter'->'L' else 'gal'; formatDateTime from @/lib/dateFormat -> inlined (en-US, '—' fallback); useToast().info -> Alert.alert bridge; GlassPanel/Button/Select/HelpIcon/SettingField + lucide Fuel/Zap/Play/Pause -> native GlassPanel/inlined Button/Select/HelpIcon/SettingField + SemanticIcon fuel/bolt/play/pause; every state name (gasPriceStatus,gasPollMut,gasToggleMut,gasConfigMut,gasUnitLabel,toast), mutation body, and onSuccess toast.info key preserved; HelpIcon resolves empty help text (no call-site defaultValue) and renders nothing, mirroring the web 'render nothing when no help content' contract.",
+    "L18 export default function GasPriceAutoPollPage() -> preserved as the native default export (typed React.ReactElement).",
+    "L19 const { t } = useTranslation('settings') -> preserved verbatim against the native useTranslation.",
+    "L20 const title = t('gas.title', 'Gas Price Auto-Poll') -> preserved verbatim.",
+    "L21 usePageTitle(title) -> preserved verbatim (native no-op).",
+    "L23-29 return <PageContainer title={title} subtitle={t('gas.subtitle','Automatically fetch US average gas prices from EIA')}><GasPriceSettings /></PageContainer> -> preserved: native PageContainer with the same title + subtitle key and the inlined GasPriceSettings as its only child.",
+    "L30-31 close component -> preserved. All Tailwind className styling mapped to StyleSheet + theme tokens (neon-green/orange + --text-*/--surface-2/--glass-border -> native palette). No DOM elements, react-i18next, lucide-react, framer-motion, Recharts, Leaflet, or web UI-kit modules imported. Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
