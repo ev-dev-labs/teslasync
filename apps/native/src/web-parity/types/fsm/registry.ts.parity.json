@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/types/fsm/registry.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/registry.ts",
+  "sourceLineCount": 76,
+  "coveredLineCount": 76,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 76 numbered source lines before editing. registry.ts is non-visual type/data assembly code: it imports each per-FSM definition + its state-name array, assembles the FSM_REGISTRY object (with `satisfies Record<string, FSMDefinition>`), and derives FSM_STATES / FSM_EDGES / STATE_COLORS plus the getStateColor/getStateDefinition lookups. It touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so it ports 1:1 to React Native-compatible TypeScript (contract rule 6). Tailwind class strings are inert string data carried through unchanged (visual intent preserved).",
+    "L1-10 imports preserved verbatim as relative sibling imports: type-only `{ FSMDefinition, ResolvedStateStyle, StateStyle, StateEntry } from './types'`; value imports `{ resolveStyle, DEFAULT_STATE } from './theme'` and the eight per-FSM `{ *_FSM, *_STATES }` modules (vehicle, drive-session, charge-session, command, notification, alert-cooldown, automation, telemetry-connection). Same module graph as the web — no `@/` alias used inside the parity types/fsm/ directory.",
+    "L11-18 comment block ported verbatim (FSM_REGISTRY purpose + `satisfies` rationale).",
+    "L19-28 FSM_REGISTRY object ported verbatim: 8 keys (vehicle, drive_session, charge_session, command, notification, alert_cooldown, automation, telemetry_connection) wired to their *_FSM defs, with the `satisfies Record<string, FSMDefinition>` assertion preserved so literal key types survive.",
+    "L30-40 FSM_STATES `Record<string, readonly string[]>` ported verbatim: same 8 keys mapped to their *_STATES arrays.",
+    "L42-45 FSM_EDGES ported verbatim: `Object.fromEntries(Object.entries(FSM_REGISTRY).map(([k, v]) => [k, v.edges]))` typed `Record<string, [string, string][]>`.",
+    "L47-58 STATE_COLORS ported verbatim: nested `Object.fromEntries` over FSM_REGISTRY entries, resolving each StateEntry via resolveStyle and projecting { badgeDot, bg, text, dot } into `Record<string, Record<string, StateStyle>>`.",
+    "L60-68 getStateColor ported verbatim: keyof-typed registry lookup with `?? FSM_REGISTRY.vehicle` fallback, `def.states as Record<string, StateEntry>` cast, lowercased state key, DEFAULT_STATE fallback for unknown states, and the { badgeDot, bg, text, dot } projection.",
+    "L70-76 getStateDefinition ported verbatim: same lookup/fallback, returning the full ResolvedStateStyle (resolveStyle(entry)) or DEFAULT_STATE. L77 trailing newline preserved.",
+    "Dependencies that did not yet exist in the native parity layer were ported faithfully 1:1 (no DOM/browser/Recharts/Leaflet/web-UI deps) so every relative import resolves identically to the web, following the established sibling-module precedent set by the alert-cooldown.ts conversion (which created types.ts without its own sidecar): theme.ts (VARIANT_THEME/resolveStyle/DEFAULT_STATE), vehicle.ts (states/entries/labels/triggers/guards/50-row transitions/disallowed/coverage/truth-table/scenarios/edges/FSM/VehicleSignalContext/deriveVehicleStatus), drive-session.ts, charge-session.ts, command.ts, notification.ts, automation.ts, and telemetry-connection.ts. types.ts and alert-cooldown.ts already existed from the prior conversion and were reused. These sibling files carry their own future conversion steps; only registry.ts gets a sidecar here.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported or introduced. Formatting normalized with the repo prettier config (apps/native/.prettierrc.js: singleQuote, trailingComma all, arrowParens avoid; prettier 2.8.8 default semi + bracketSpacing) — prettier only re-wrapped long object/array literals across multiple lines, no value/key/type/behavior change. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
