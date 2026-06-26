@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/titleStore.ts",
+  "outputPath": "apps/native/src/web-parity/lib/titleStore.ts",
+  "sourceLineCount": 67,
+  "coveredLineCount": 67,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 67 numbered source lines before editing. L1-L19 module docstring (three composing contributors baseTitle/basePrefix/flashPrefix set by usePageTitle/useTitleBadge/useCriticalAlertFlash, flash-over-badge precedence, flash clear-to-'' re-reveals badge, runtime-singleton rationale, __resetTitleStoreForTests test hook) preserved verbatim, plus an appended web->native adaptation note (rule 7).",
+    "L21-L23 module state `let basePrefix=''`, `let flashPrefix=''`, `let baseTitle='TeslaSync'` ported byte-for-byte (same names, same defaults).",
+    "L25-L29 apply(): the ONLY browser-only behavior. L26 `if (typeof document === 'undefined') return` and L28 `document.title = `${prefix}${baseTitle}`` are unavailable in RN (no DOM document; no cross-platform OS title-bar JS API). Replaced with a native sink: same `const prefix = flashPrefix || basePrefix` precedence (L27 kept exactly), result stored in `composedTitle`, then fanned out to subscribeTitle() listeners. No DOM probe — title-bar is uniformly unavailable.",
+    "L31-L44 setBaseTitle/setBasePrefix/setFlashPrefix ported byte-for-byte: assign field then call apply() — identical signatures `(title|prefix: string): void` and identical apply() trigger so composition stays live on every write.",
+    "L46-L56 getBaseTitle/getBasePrefix/getFlashPrefix ported byte-for-byte (return the corresponding module field).",
+    "L58-L67 __resetTitleStoreForTests(): underscore-prefixed test-only helper (not barrel-exported) preserved — resets basePrefix/flashPrefix/baseTitle to defaults and calls apply(). Added listeners.clear() to fully restore the native singleton between runs (mirrors broadcast.ts __resetBroadcastForTests precedent); web had no listeners so behavior parity is unchanged.",
+    "Native-only additions, none replacing source API: getComposedTitle() exposes the exact string the web wrote to document.title (parity surface for assertions without a DOM); isNativeTitleBarAvailable() returns false as the explicit unavailable-state flag (rule 7); subscribeTitle(listener) registers a lifecycle-safe observer + immediate replay + unsubscribe so a future RN header/Windows/macOS title transport wires delivery in without touching callers; exported type TitleListener.",
+    "No DOM/browser/Recharts/Leaflet/web-UI imports; pure native-compatible TypeScript using only module-level state + a Set. Verified with apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles (added __tests__/TitleStore.test.ts covering default state, base-title write, badge prefix, flash-over-badge precedence, flash clear restore, badge clear, title-change-preserves-prefix, empty-flash fallback, reset, the unavailable flag, and subscribe replay/notify/unsubscribe/reset-clears-listeners)."
+  ]
+}
