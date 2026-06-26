@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-curve/types.ts",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-curve/types.ts",
+  "sourceLineCount": 35,
+  "coveredLineCount": 35,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 35 source lines with numbered output before editing; the file is pure TypeScript type definitions with zero imports, zero DOM, and zero runtime behavior, so it is already fully React Native compatible and was ported verbatim.",
+    "Preserved every exported interface and field exactly: CurvePoint (soc, power) L1-4; ChargerTypeStats (label, count, avgKw, avgKwh, avgDuration) L6-12; MonthlySpeed (month, dcAvgKw, acAvgKw) L14-18.",
+    "Preserved TimeToChargeMetrics L20-26 with its null-union fields (avg10to80, avg20to80), the inline fastest/slowest {rate,id}|null objects, and the yearlyTrend array shape {year, avg10to80, avg20to80, count}[].",
+    "Preserved SummaryStats L28-35 (totalSessions, totalEnergy, avgRate, peakRate, avgDuration, totalCost) and the trailing newline; added only a non-functional parity header doc comment, importing no browser-only modules, Recharts, Leaflet, or web UI."
+  ]
+}
