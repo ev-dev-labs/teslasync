@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/charging/components/cost-analysis/constants.ts",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/cost-analysis/constants.ts",
+  "sourceLineCount": 6,
+  "coveredLineCount": 6,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 6 numbered source lines before editing. This is pure, non-visual constant code with ZERO imports: there is NO DOM, JSX, Recharts, Leaflet, browser API, or old web UI component to adapt, so every one of the six `export const` declarations is ported verbatim with byte-for-byte identical names, numeric literals, and module-level export semantics. Native output is identical valid TypeScript usable unchanged under React Native.",
+    "L1 `export const DEFAULT_GAS_PRICE = 3.5;` ported verbatim (default gasoline price, USD/gal).",
+    "L2 `export const DEFAULT_MPG = 30;` ported verbatim (default combustion fuel economy, miles/gal).",
+    "L3 `export const DEFAULT_ELECTRICITY_RATE = 0.13;` ported verbatim (default electricity rate, USD/kWh).",
+    "L4 `export const CO2_PER_GAL_KG = 8.887;` ported verbatim (CO2 per gallon of gasoline, kg).",
+    "L5 `export const KG_CO2_PER_TREE_YEAR = 22;` ported verbatim (CO2 absorbed per tree per year, kg).",
+    "L6 `export const KWH_PER_GALLON = 33.7;` ported verbatim (energy content of a gallon of gasoline, kWh).",
+    "These are domain/economic constants (USD pricing, mpg, kWh-per-gallon energy equivalence, CO2 factors), NOT SI telemetry storage fields, so the SI-canonical unit-suffix rules do not apply; names and values are preserved exactly to keep cost-analysis math identical to web. No new `Mi`/`Min`/`Mph`/`Kwh`/`Kw`/`Psi` DB/struct field is introduced.",
+    "No DOM-only modules, browser HTML elements, recharts, leaflet, or old web @/components/ui imports appear in the native output (the file has no imports at all). Gates run from apps/native: `npm run typecheck` (tsc --noEmit) exit 0; `npm run lint -- --quiet` exit 0 (no errors); `npm test -- --runInBand --detectOpenHandles` all suites passed (no new test required; the new constants-only module is not imported by any existing suite and does not affect them)."
+  ]
+}
