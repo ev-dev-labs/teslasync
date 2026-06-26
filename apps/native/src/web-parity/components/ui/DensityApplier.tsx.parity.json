@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/components/ui/DensityApplier.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ui/DensityApplier.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines line by line: the `@/hooks/useDensitySync` import (L1), the docblock describing the side-effect-carrier intent and document.body.dataset.density / CSS-token contract (L3-15), and the DensityApplier(): null component that mounts useDensitySync() and returns null (L16-19).",
+    "Preserved behaviour/intent: DensityApplier(): null mounts useDensitySync() and renders nothing, remaining a pure side-effect carrier that must sit under the React Query provider so useSettings() resolves (the source docblock's QueryClientProvider note is carried over verbatim in intent).",
+    "The web `@/hooks/useDensitySync` (web/src/hooks/useDensitySync.ts) is browser-only (document.body.dataset.density + localStorage) and not yet ported, so its logic is reproduced inline native-safe — matching the sibling ConfirmDialog port that inlines native-safe analogs of its browser-only deps. Source state/names preserved: Density type, DENSITY_LS_KEY ('teslasync-density'), ALLOWED list, isDensity guard, getCurrentDensity(), useDensitySync(), the lastApplied useRef, and the [isSuccess, settings?.ui_density] effect that writes only on a resolved, valid, changed value.",
+    "Explicit unavailable browser state (per contract rule 7): document.body.dataset.density -> in-memory subscribable density store (currentDensity + listeners) exposed via getCurrentDensity()/subscribeDensity(); localStorage flash-prevention persistence -> no-op (AsyncStorage is not a dependency) so density holds only for the JS runtime lifetime, with the teslasync-density key namespace retained for traceability. Captured in the nativeDensityApplierCapabilities flags.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components imported — only React (useEffect/useRef) and the native parity useSettings hook (../../api/hooks/useSettings). No JSX is emitted, so React is not default-imported. Verified via npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles."
+  ]
+}
