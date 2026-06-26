@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/main.tsx",
+  "outputPath": "apps/native/src/web-parity/main.tsx",
+  "sourceLineCount": 157,
+  "coveredLineCount": 157,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 157 lines of web/src/main.tsx before editing; the native output ports the SPA bootstrap entry point's deterministic logic and provider tree into native-safe TypeScript without executing any side effects at import.",
+    "Imports (lines 1-19): React/ReactDOM/react-router/web providers are replaced by React Native primitives plus existing apps/native theme tokens and UI components; createQueryClient is reused from the sibling native ../api/queryClient parity, and the DOM root id is sourced from ../platform/webBootstrap (WEB_ROOT_ELEMENT_ID).",
+    "initRum() (21-26) and installGlobalErrorReporting() (28-35) are browser-only (OpenTelemetry browser SDK + window.error/unhandledrejection); both are represented as explicit unavailable adaptations and as 'browser-only' entries in BOOTSTRAP_SEQUENCE.",
+    "Density bootstrap (37-54): DENSITY_LS_KEY, ALLOWED_DENSITIES, DEFAULT_DENSITY, resolveInitialDensity, and the try/catch fallback-to-comfortable are ported via applyInitialDensity into an in-process density store (no localStorage / document.body.dataset in native).",
+    "Dev service-worker cleanup (56-67) is ported as the pure shouldClearDevServiceWorker(env, hasServiceWorkerApi) guard mirroring DEV && VITE_PWA_DEV !== 'true' && 'serviceWorker' in navigator; native passes false because there is no navigator.serviceWorker.",
+    "createQueryClient (69-72) and the queryCache.subscribe error forwarding (74-87) are reproduced faithfully via subscribeQueryErrorReporting + selectQueryErrorForReport, preserving the updated/action.type==='error'/non-null-error decision and the 'query' source; the network POST reporter is replaced by an in-process recordParityFrontendError ring.",
+    "ReactDOM.createRoot(...).render(provider tree) (89-127) is preserved as the typed BOOTSTRAP_PROVIDER_TREE (component, nesting depth, source line, role) for StrictMode, ErrorBoundary, QueryClientProvider, QueryBroadcastBridge, FormatterPrefsBridge, BrowserRouter, NavigationGuardProvider, ThemeProvider, SelectedVehicleProvider, ToastProvider, App, ReloadPrompt, and AchievementUnlockListener, and rendered by the parity panel; DOM mounting is recorded as an unavailable adaptation.",
+    "Web Vitals reporting (129-157): the PROD vs DEV branch is ported as selectWebVitalsMode, and the dev console.debug('[web-vitals]', name, Math.round(value), rating ?? '', id) shape is ported as formatWebVitalDevLog; the dynamic web-vitals / webVitalsReporter imports are web-only and documented as unavailable.",
+    "import.meta.env is replaced by nativeBuildEnv() reading the Metro __DEV__ global for the DEV/PROD fields the bootstrap branches on; runWebBootstrapParity is the native-safe orchestrator that ties the steps together and returns structured data plus an unsubscribe handle.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles, with WebBootstrapParity.test.ts exercising the ported pure logic."
+  ]
+}
