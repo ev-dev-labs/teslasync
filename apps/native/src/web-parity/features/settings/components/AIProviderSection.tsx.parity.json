@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/settings/components/AIProviderSection.tsx",
+  "outputPath": "apps/native/src/web-parity/features/settings/components/AIProviderSection.tsx",
+  "sourceLineCount": 437,
+  "coveredLineCount": 437,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-7 file header doc + L22-62 exported AIProviderDraft interface (all 10 fields + Azure/embedding JSDoc) ported verbatim; L64-68 Props {value,isCloud,onChange} preserved.",
+    "L9 useState/L70 component signature preserved; L10 react-i18next useTranslation('settings') -> useNativeTranslationFallback() (i18n not wired in native build) preserving every key + English fallback + {{var}} interpolation (ip/model).",
+    "L11-19 @/components/ui {Input,Select,HelperText,Subhead,Caption,Button} + @/components/layout {Stack} have no native parity shim, so each is rebuilt inline with RN View/Pressable/TextInput + AppText + tokens (Subhead/Caption/HelperText AppText roles; InputField labelled TextInput + hint; SelectField radio-group of option rows preserving value/onChange/options; GhostButton ghost Pressable; Stack row -> wrapping row View).",
+    "L20 useValidateAiProvider imported from existing native parity hook web-parity/api/hooks/useAiSettings and used as-is.",
+    "L71-78 t + validate + validateBanner state ({kind:'ok'|'fail';message}|null) preserved; L80-83 patch() merge+clear-banner preserved.",
+    "L85-136 runValidate(): cloud full-config vs local mode+base_url payload, the L102-104 empty-api_key trim fall-back spread, and the L118-135 ok/pinned_ip/probed_model/fail banner branches ported verbatim with all i18n keys (successPinned/successProbed/success).",
+    "L138-146 <section aria-label> -> root View accessibilityLabel + testID ai-provider-section + Subhead; L148-192 provider Select + model Input grid with the azure/flavor label+hint conditional preserved.",
+    "L194-264 Azure block (isCloud && provider==='azure'): flavor Select + api_version Input, and L232-262 flavor!=='foundry' deployment + embedding_deployment Inputs preserved with testIDs.",
+    "L266-309 local block: base_url Input + Validate ghost button (disabled when isPending || empty base_url) + status banner; L311-326 azure base_url Input; all testIDs (ai-provider-base-url/validate/azure-base-url) preserved.",
+    "L328-418 cloud block: api_key password field (secureTextEntry, empty=keep-current) + L350-373 cost cap field with cents<->dollars math (Number.parseFloat/Math.max/Math.round/toFixed(2)) + L387-416 cloud Validate ghost button (enabled even with empty api_key) + banner preserved.",
+    "L420-427 local explainer Caption (!isCloud) + L429-434 HelperText validateOptional preserved; L435-437 close.",
+    "Native-safe adaptations: grid-cols-1 sm:grid-cols-2 collapses to mobile single-column stack with same gap; <span role=status> -> AppText accessibilityLiveRegion=polite; DOM data-validate-kind has no RN analogue so ok/fail survives via success/danger tone colour (emerald-300/rose-300 analogues) + stable testID ai-provider-validate-banner; type=number -> keyboardType decimal-pad, type=password -> secureTextEntry. No DOM, react-i18next, web UI, Recharts or Leaflet imported."
+  ]
+}
