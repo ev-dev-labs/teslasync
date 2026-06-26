@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/onboarding/tours/mainTour.ts",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/tours/mainTour.ts",
+  "sourceLineCount": 74,
+  "coveredLineCount": 74,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 74 source lines line by line before editing. This is a non-visual data/config module, so per contract rule 6 the logic/types were ported faithfully into native-compatible TypeScript.",
+    "Source lines 1-2 (`import type { TourDefinition } from '@/lib/tourRegistry'` and `import type { TourStep } from '@/hooks/useTour'`) are erased compile-time-only type imports. Those two web modules have no native parity port yet and the native app defines no `@/` path alias (verified: tsconfig extends @react-native/typescript-config with no paths; jest preset 'react-native' has no moduleNameMapper). Following the established self-contained precedent (useOnboardingSkip.ts inlined its `@/lib/broadcast` dependency), both type contracts were inlined verbatim: TourStep mirrors web/src/hooks/useTour.ts L9-22 (target/title/description/placement union/optional onShow/onHide) and TourDefinition + TourAutoStartContext mirror web/src/lib/tourRegistry.ts L25-63 (id, routeMatch string|RegExp, titleKey, titleFallback, descriptionKey, descriptionFallback, version, steps, optional autoStart predicate).",
+    "Source lines 4-10 (the JSDoc block describing the dashboard auto-start tour and the version-bump invalidation behavior) are preserved verbatim above the STEPS const.",
+    "Source lines 12-62 (the STEPS: TourStep[] array of 7 steps) are preserved exactly — every target selector ([data-tour=\"sidebar\"|\"dashboard-grid\"|\"edit-mode-btn\"|\"vehicle-section\"|\"commands-section\"|\"live-signals-section\"|\"keyboard-hint\"]), every title, every description string (including em-dashes, the '70+'/'230+' figures, and the apostrophe in \"don't\" kept in double quotes per prettier avoidEscape on L31), and every placement ('right'/'bottom'/'top') are byte-identical.",
+    "Source lines 64-74 (export const MAIN_TOUR: TourDefinition) are preserved exactly: id 'main', routeMatch '/', titleKey 'tour.tours.main.title', titleFallback 'Welcome to TeslaSync', descriptionKey 'tour.tours.main.description', descriptionFallback 'A quick tour of the dashboard, sidebar, and live data.', version 2, steps: STEPS, and the autoStart predicate `({pathname, vehicleCount}) => pathname === '/' && vehicleCount > 0` — i18n keys/fallbacks and the route-match behavior are unchanged.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported; the file is pure TypeScript with zero runtime imports and is therefore native-safe. No units or numeric conversions exist in this module, so unit handling is preserved trivially.",
+    "Native-runtime note (contract rule 7): `TourStep.target` values are DOM-selector strings and `placement` is tooltip-relative-to-DOM positioning; React Native has no querySelector/DOMRect. These are preserved here as opaque tour-definition data (no DOM access happens in this data file) so the eventual native tour runtime (the future port of useTour/tourRegistry) can map selectors to view refs/anchors. The data contract is intact; only the consuming runtime will differ.",
+    "Verified with: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
