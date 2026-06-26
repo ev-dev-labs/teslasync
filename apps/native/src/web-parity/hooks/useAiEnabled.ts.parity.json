@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/hooks/useAiEnabled.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useAiEnabled.ts",
+  "sourceLineCount": 39,
+  "coveredLineCount": 39,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 39 source lines before editing; ported the full useAiEnabled JSDoc (AI-Off Contract ADR-015 sections I1/I6/I7, withAiFeature HOC reference, ESLint/aivet enforcement note) and every guard line verbatim: AI_FEATURES[feature] existence check, !settings, ai_mode undefined/'off', ai_features map presence, and flags[feature] === true.",
+    "Non-visual utility hook: no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported; only the existing native parity useSettings API hook and the native ai/features registry.",
+    "Import remap: web `@/ai/features` -> `../ai/features` (native AI_FEATURES/AiFeatureId registry already present); web `@/hooks/useSettings` app-level wrapper has no native equivalent, so the hook reads the same ['settings'] query (/settings path) via the native `../api/hooks/useSettings` hook.",
+    "Behavior preserved: web wrapper returned `{ settings }` (always defaulted to ai_mode:'off' before resolve); native api hook returns `{ data }` which is AppSettings|undefined while the query is unresolved. The unchanged `if (!settings) return false` guard maps undefined to the same fail-closed `false`, so the verdict is identical for every input. State name `settings` retained via `data: settings` destructure."
+  ]
+}
