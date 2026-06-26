@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/registry/tires.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/registry/tires.ts",
+  "sourceLineCount": 28,
+  "coveredLineCount": 28,
+  "notes": [
+    "Read all 28 source lines line by line before editing. The module is pure registry metadata: L1 `import { lazy } from 'react'`, L2 `import { CircleDot } from 'lucide-react'`, L3 `import type { WidgetDef } from '../types'`, L5 `export const TIRE_WIDGETS: WidgetDef[] = [`, L6-L16 the tire-pressure-visual entry, L17-L27 the tire-pressure-history entry, and L28 the closing `];`. Every line is reproduced or accounted for in the native port.",
+    "L1 (lazy) + the per-entry `component: lazy(() => import('../XxxWidget'))` (L15 '../TirePressureVisualWidget', L26 '../TirePressureHistoryWidget'): React.lazy is a React-DOM-oriented loader and both target web widget components are not yet ported into the parity tree, so per contract rule 7 `component` is left unset on the native-safe `WidgetDef.component?: unknown` field and each deferred module path is documented in nativeTireWidgetsCapabilities.pending.components — no source data dropped.",
+    "L2 (lucide-react CircleDot): lucide-react is a browser SVG library forbidden in native (rule 4), so each `icon: CircleDot` (L10, L21) is preserved as its lucide token string `icon: 'CircleDot'` on the native-safe `WidgetDef.icon?: string` field. Visual/icon intent is kept and re-wired to a native icon when each widget is ported.",
+    "L3 (`import type { WidgetDef } from '../types'`): the native ../types module is not yet ported, so `WidgetDef` is imported from the already-ported native registry barrel (../registry → apps/native/src/web-parity/features/dashboard/widgets/registry.ts), the canonical native home of the native-safe WidgetDef/WidgetSize/WidgetCategory/WidgetHelp types. Single source of truth, no type duplication — matches the sibling driving.ts port.",
+    "L5-L28 (TIRE_WIDGETS): both entries ported one-for-one in the same order. tire-pressure-visual (L6-16): id 'tire-pressure-visual', name 'Tire Pressure Visual', description 'Four-tire diagram with pressure per tire, color-coded (green/amber/red)', category 'tires', defaultSize {cols 2, rows 4}, minSize {cols 2, rows 4}, maxSize {cols 4, rows 40}. tire-pressure-history (L17-27): id 'tire-pressure-history', name 'Tire Pressure History', description 'Pressure trends for all 4 tires over time with recommended range', category 'tires', defaultSize {cols 2, rows 4}, minSize {cols 2, rows 4}, maxSize {cols 4, rows 40}. All strings and size triples reproduced verbatim.",
+    "No behavior, state names, API paths, or unit handling exist in this metadata module beyond the registry data; there is no i18n help block on either tire widget (unlike driving.ts regen-efficiency), so nothing additional to preserve. No DOM modules, browser HTML elements, lucide-react, React.lazy DOM loaders, Recharts, Leaflet, react-dom, or old web UI components are imported.",
+    "Added __tests__/TireWidgetsRegistry.test.ts asserting the ported contract: TIRE_WIDGETS has 2 entries in the exact web id order, every entry is category 'tires' with the 'CircleDot' icon token, both size triples are exact, both components are unset, and the capability record documents both deferred component modules keyed by widget id.",
+    "Verified gates from apps/native: npm run typecheck (tsc --noEmit) exit 0; npm run lint -- --quiet (eslint) exit 0; npm test -- --runInBand --detectOpenHandles (jest) all suites pass including the new tire-registry test.",
+    "conversionStatus: converted."
+  ],
+  "conversionStatus": "converted"
+}
