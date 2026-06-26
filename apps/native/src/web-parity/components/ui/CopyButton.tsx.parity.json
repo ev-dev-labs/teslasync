@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/components/ui/CopyButton.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ui/CopyButton.tsx",
+  "sourceLineCount": 114,
+  "coveredLineCount": 114,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 114 source lines before editing and preserved the full public contract: CopyButtonProps (text, label, iconOnly=false, variant='ghost', size='sm', withToast=false, ariaLabel, disabled, title, onCopy) plus the exported CopyButton, the `copied` Copy -> Copied toggle, the 2000ms auto-reset, the onCopy success callback, and the resolved aria-label/aria-live announce logic (L25-114).",
+    "Replaced the shared web <Button variant/size> (L4, L99-113) with a self-contained native Pressable styled to mirror the web Button variant map (primary/secondary/outline/danger/ghost) and size map (sm/md/lg, with 'auto' folded to md), since no parity <Button> exists yet.",
+    "Replaced lucide <Copy>/<CheckCircle> (L3, L89-91) with SemanticIcon 'copy'/'successFilled' glyphs; replaced useTranslation()/t(key, default) (L2, L62, L68-69, L77, L82) with the parity useNativeTranslationFallback (key, fallback) => fallback shim; replaced useOptionalToast() (L5, L65, L77, L82) with the parity Alert.alert toast primitive, kept opt-in via withToast.",
+    "navigator.clipboard.writeText (L73) is browser-only and React Native 0.81 ships no core Clipboard and no clipboard package is bundled here, so per rule 7 the writer is injectable via setCopyButtonClipboardWriter(); with no writer registered (the default) a press enters an explicit `unavailable` state (announced via accessibilityHint, optional Alert, console.warn) and `copied` only flips on a genuinely successful write, keeping the affordance truthful.",
+    "Mapped DOM-only props to native analogs: className -> style (StyleProp<ViewStyle>), title HTML tooltip (L106) -> accessibilityHint, implicit type='button' (L100) dropped, aria-label (L107) -> accessibilityLabel, aria-live='polite' (L108) -> accessibilityLiveRegion='polite'; the try/catch error path (L80-85) preserves console.error and the optional failure toast.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported; only React, React Native primitives, and existing apps/native SemanticIcon, AppText, and theme tokens are used."
+  ]
+}
