@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/types/admin-operator-confidence.ts",
+  "outputPath": "apps/native/src/web-parity/types/admin-operator-confidence.ts",
+  "sourceLineCount": 216,
+  "coveredLineCount": 216,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. The file is pure non-visual TypeScript wire-type code with zero imports and no DOM/React/Recharts/Leaflet/browser deps, so all interfaces and union types are ported 1:1 with identical names, members, types, and optionality (contract rules 3 & 6).",
+    "Source documentation block (L1-25) — Operator Confidence overview, the /api/v1/admin/* endpoint map (schema-drift, slow-queries, vehicle-cost, disk-forecast, secret-rotation, audit-log[/categories|/actions|/verify], gdpr/exports/{id}[/download]) and the 503 SUBSYSTEM_NOT_CONFIGURED degradation contract — preserved verbatim to keep API-path and i18n/error-branching intent intact; a short native-parity-port header precedes it.",
+    "Schema drift section (L27-49): SchemaFingerprint (sha256/table_count/column_count/index_count), SchemaDrift (has_drift/current/expected/*_delta + optional expected_generated_at), SchemaDriftResponse (drift/is_different) ported exactly with snake_case fields matching Go JSON tags.",
+    "Slow queries section (L51-74): SlowQueryOrderBy union ('mean_time'|'total_time'|'calls'|'max_time'), SlowQueryRow (query_id/fingerprint/calls/total_time_ms/mean_time_ms/max_time_ms/rows_returned + nullable shared_blks_hit/shared_blks_read), SlowQueriesResponse (order_by/slow_queries) ported 1:1.",
+    "Vehicle cost section (L76-98): VehicleCostRow (vehicle_id/display_name?/signal_row_count/signal_bytes_est/ingest_rate_per_minute_24h/dlq_failures_24h/last_seen_at), VehicleCostTotals (total_rows/total_bytes_est/total_rate_per_minute_24h/total_failures_24h), VehicleCostResponse (vehicles/totals) ported exactly.",
+    "Disk forecast section (L100-117): DiskForecastSeverity union ('ok'|'warn'|'critical'|'unknown'), HypertableSize (hypertable_name/total_bytes/uncompressed_bytes/compressed_bytes/chunk_count/growth_bytes_per_day/est_days_to_quota?/severity), DiskForecastResponse (hypertables) ported 1:1.",
+    "Secret rotation section (L119-138): SecretRotationSeverity union, SecretRotationStatus (kind/target_id?/last_rotated/age_days/expires_at?/days_to_expiry?/warn_days/critical_days/severity/message?), SecretRotationResponse (items) ported exactly.",
+    "Audit log section (L140-192): AuditLogQueryParams (since/until/categories/actors/actions/entity_type/entity_id/limit/offset all optional), AuditLogRow (16 members incl. nullable category/entity_id/detail/ip/user_agent/before/after/trace_id/prev_row_hash/row_hash/success), AuditLogListResponse (rows/limit), AuditCategoriesResponse (categories), AuditActionsResponse (actions), AuditChainVerifyResponse (intact/first_bad_id/rows_checked/since/limit) ported 1:1.",
+    "GDPR export section (L194-216): GDPRArtifactStatus union ('queued'|'running'|'complete'|'failed'|'expired'), GDPRExportArtifact (id/user_id?/status/format/bytes?/sha256?/storage?/download_url?/created_at/completed_at?/expires_at?/error?) ported exactly.",
+    "All section-divider comments (L27,51,76,100,119,140,194), blank separator lines, and the trailing newline (L217) are accounted for as structural whitespace; no logic, unit handling, or runtime behavior exists to adapt for React Native — types are erased at compile time and add no DOM coupling.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
