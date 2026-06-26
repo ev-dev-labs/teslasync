@@ -131,7 +131,7 @@ describe('BackupActionsCard (native parity)', () => {
       // react-query schedules its pending-state notification via setTimeout(0)
       // (notifyManager defaultScheduler), so drain the macrotask queue to let
       // the isPending re-render commit before asserting.
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
     });
 
     const btn = findByTestID(tree, 'backup-actions-run-button');
