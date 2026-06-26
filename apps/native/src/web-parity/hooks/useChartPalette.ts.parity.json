@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/hooks/useChartPalette.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useChartPalette.ts",
+  "sourceLineCount": 42,
+  "coveredLineCount": 42,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 42 source lines line by line before editing. The web hook is pure TypeScript (TanStack Query read + a string compare) with zero DOM/Recharts/Leaflet dependencies, so every line ports 1:1 to React Native; only the two import sources are remapped to their existing native parity equivalents.",
+    "L1 `import { useSettings } from '@/api/hooks/useSettings'` -> `import { useSettings } from '../api/hooks/useSettings'` (native parity TanStack Query hook at apps/native/src/web-parity/api/hooks/useSettings.ts, which exports useSettings and AppSettings with `chart_palette?: 'cb_safe' | 'neon'`).",
+    "L2 `import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'` -> `import { CHART_COLORS, NEON_COLORS } from '../components/charts/chartUtils'`. The native chartUtils CHART_COLORS is the identical Okabe-Ito CB-safe palette (same 8 hex values #0072B2..#4B4B4B) and NEON_COLORS is the identical neon palette (#00f0ff..#14b8a6), so behavior and visual intent are preserved while reusing the constants native charts already render. No native `@/lib/colors` module exists; chartUtils is the canonical native home for these palettes.",
+    "L3, L6, L12, L23 blank separators preserved between declarations.",
+    "L4-L5 ChartPaletteId docstring + `export type ChartPaletteId = 'cb_safe' | 'neon'` preserved verbatim.",
+    "L7-L11 CHART_PALETTES docstring + `export const CHART_PALETTES: Record<ChartPaletteId, readonly string[]>` preserved; the `cb_safe`/`neon` keys now map to native CHART_COLORS/NEON_COLORS (identical palette values), keeping the readonly string[] typing exact.",
+    "L13-L22 resolveChartPalette docstring + implementation preserved verbatim, including the `pref: string | null | undefined` signature and the `pref === 'neon' ? CHART_PALETTES.neon : CHART_PALETTES.cb_safe` CB-safe fallback so unknown/missing values never need a null-check.",
+    "L24-L38 useChartPalette docstring preserved with adapted references: the `@/lib/colors`/`useThemeChartPalette()` pointers now point at the native `../components/charts` module, and the web cross-tab broadcast sentence is restated for native (TanStack Query cache invalidation re-renders consumers; nativeSettingsHookCapabilities.queryBroadcastAvailable === false, no BroadcastChannel on native) — documented in the file header too.",
+    "L39-L42 `export function useChartPalette(): readonly string[] { const { data } = useSettings(); return resolveChartPalette(data?.chart_palette) }` preserved verbatim (data?.chart_palette is 'cb_safe' | 'neon' | undefined, assignable to the resolver's string | null | undefined param).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported. Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
