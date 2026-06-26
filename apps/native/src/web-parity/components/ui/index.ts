@@ -12,6 +12,7 @@
 // is preserved incrementally without referencing modules that do not exist.
 
 export {PinButton, type PinButtonProps} from './PinButton';
+export {TabNav} from './TabNav';
 export {Drawer} from './Drawer';
 export {
   ContextMenuRoot,
