@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/BatteryPill.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/BatteryPill.tsx",
+  "sourceLineCount": 38,
+  "coveredLineCount": 38,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 lucide-react `Battery` import -> native View-based BatteryGlyph (outline + terminal nub) colored with the dynamic level color; native app ships no react-native-svg/lucide renderer.",
+    "L2 `GlassPanel` from @/components/ui barrel -> shared native GlassPanel imported from ../../../../../components/ui/GlassPanel.",
+    "L3 `fmtInt` from @/lib/numberFormat -> inline native fmtInt mirroring fmtNumber(v,0): safe-number coercion (nullish/NaN/non-number -> 0) + en-US grouped 0-decimal formatting.",
+    "L4 `STATUS_COLORS` from @/lib/colors -> inline value-identical constant {good:#10b981, warning:#f59e0b, critical:#ef4444}.",
+    "L5 `cn` from @/lib/cn -> no Tailwind in RN; class string replaced by equivalent RN style; className accepted for source-call parity (ignored), native `style` override added.",
+    "L7-11 BatteryPillProps interface preserved (level, label, className) with an added optional native `style`.",
+    "L13-19 BatteryPill signature + threshold color logic (>=60 good, >=30 warning, else critical) ported verbatim.",
+    "L22 GlassPanel container with `flex items-center gap-3 px-4 py-3` -> styles.root (flexDirection row, alignItems center, gap 12, paddingHorizontal 16, paddingVertical 12).",
+    "L23 `<Battery className=\"h-5 w-5\" style={{color}}/>` -> <BatteryGlyph color={color}/> in a 20px box.",
+    "L24-29 `<span className=\"flex flex-col\">` column with text-xs/--text-secondary label (AppText caption tone=secondary) and text-sm font-bold colored value (AppText weight=bold, 14px, dynamic color) wrapping fmtInt(level)%.",
+    "L30-35 right track `ml-auto h-2 w-16 overflow-hidden rounded-full bg-[var(--surface-2)]` -> styles.track (marginLeft auto, w64, h8, radius999, overflow hidden, #151621) with fill width `${Math.min(level,100)}%` + backgroundColor color.",
+    "L36-38 component close preserved; no DOM/Recharts/Leaflet/web UI imports introduced."
+  ]
+}
