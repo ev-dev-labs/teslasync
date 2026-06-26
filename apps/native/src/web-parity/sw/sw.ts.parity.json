@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/sw/sw.ts",
+  "outputPath": "apps/native/src/web-parity/sw/sw.ts",
+  "sourceLineCount": 197,
+  "coveredLineCount": 197,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 197 source lines before editing. The source is a browser-only service worker; React Native (Hermes) has no ServiceWorkerGlobalScope, workbox, Cache API, push/notificationclick/install/activate events, or registration.showNotification, so per conversion-contract rule 7 the SW runtime is exposed as an explicit unavailable state (SW_UNAVAILABLE_REASON, getServiceWorkerRuntimeStatus, isServiceWorkerSupported, registerTeslaSyncServiceWorker, handleServiceWorkerMessage) instead of pretending OS push/precaching work.",
+    "L11-15 workbox-precaching/routing/strategies/expiration/cacheable-response imports were intentionally NOT imported (DOM-only, contract rule 4); their configuration is reproduced as inert typed data — NAVIGATION_CACHE (NetworkFirst, cacheName 'navigations', networkTimeoutSeconds 3, statuses [200], maxEntries 10, 7-day TTL) and RUNTIME_CACHE_ROUTES (google-fonts-stylesheets/webfonts/map-tiles CacheFirst buckets with matching cacheable statuses, entry caps, and TTLs) plus the matcher predicates isGoogleFontsStylesheet/isGoogleFontsWebfont/isMapTile (L62-110).",
+    "L17-51 SW global + lifecycle (skipWaiting/clientsClaim) + precacheAndRoute(__WB_MANIFEST)/cleanupOutdatedCaches and L191-197 SKIP_WAITING message handler are mapped to native-safe unavailable helpers + handleServiceWorkerMessage; L114-189 push + notificationclick logic is ported faithfully as pure functions parsePushPayload (json() with text() catch fallback), buildNotification/buildPushNotification (title 'TeslaSync', body '', badge '/icons/badge-72.png', data.url '/notifications/inbox', requireInteraction iff severity==='critical', icon intentionally omitted per the duplicate-icon regression contract), and resolveNotificationClickUrl (data?.url ?? '/').",
+    "No DOM elements, Recharts, Leaflet, or old web UI components were imported. Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles (SwParity.test.ts pins the builder defaults, icon-omission contract, parse fallbacks, click URL, and cache matchers)."
+  ]
+}
