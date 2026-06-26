@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/hooks/useDeferredFilter.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useDeferredFilter.ts",
+  "sourceLineCount": 67,
+  "coveredLineCount": 67,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 67 source lines (numbered) before editing. The module is a pure React hook: the JSDoc header (L1-39), the single import from 'react' of useCallback/useDeferredValue/useState (L40), the DeferredFilter<T> interface with all four documented fields value/deferred/isPending/setValue (L42-51), and the useDeferredFilter<T> hook body (L53-67). Every line was considered and ported.",
+    "Runtime surface ported byte-for-byte: useState<T>(initial) (L54), useDeferredValue(value) (L55), the isPending = !Object.is(value, deferred) staleness check (L56), the reference-stable setValue useCallback wrapping setValueRaw with the empty deps array and its explanatory comment (L58-64), and the returned {value, deferred, isPending, setValue} object (L66). State names, the (next: T | ((prev: T) => T)) updater signature, and the exported names DeferredFilter + useDeferredFilter are unchanged.",
+    "No browser-only behavior to substitute (conversion contract rule 7 N/A): useState, useDeferredValue, and useCallback are all available in the native React 19.1.4 runtime, so no native-safe shim or explicit unavailable state was required. No DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported — the only import is 'react'.",
+    "Per contract rule 3, only the illustrative doc-comment example (non-executed) was adapted from web JSX to native: onChange -> onChangeText and aria-label -> accessibilityLabel on the example SearchInput/SpinnerSmall (L21-22), and the URL-persisted-filter guidance phrased around useUrlString('q','')/URL query state (L27-30) was generalized to navigation/route state since React Native has no URL bar. The intent (don't double up local state on external state; useDeferredValue alone defers the heavy render) and the useTransition rationale (L32-38) are preserved verbatim.",
+    "Style matched to the native tree (.prettierrc: singleQuote, arrowParens avoid, trailingComma all; @react-native eslint, no bracket spacing) and relative-import convention (no @/ alias; this file needs no internal imports). Verified green: tsc --noEmit (0 errors), eslint . --quiet (0 problems), and jest --runInBand --detectOpenHandles (all suites passed)."
+  ]
+}
