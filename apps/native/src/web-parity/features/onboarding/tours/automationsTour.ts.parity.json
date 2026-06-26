@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/onboarding/tours/automationsTour.ts",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/tours/automationsTour.ts",
+  "sourceLineCount": 52,
+  "coveredLineCount": 52,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 52 numbered source lines before editing. The file is a non-visual tour-definition config: a browser-only navigate() helper (L4-9), a STEPS: TourStep[] array (L11-41), and the AUTOMATIONS_TOUR: TourDefinition export (L43-52).",
+    "Imports L1-2: `TourDefinition` from @/lib/tourRegistry and `TourStep` from @/hooks/useTour. Those modules are not part of this file's conversion, so both type shapes are reproduced locally field-for-field (TourStep, TourPlacement, TourDefinition, TourAutoStartContext) to keep the port self-contained and type-checked; shapes match the web source so AUTOMATIONS_TOUR stays structurally drop-in compatible with a future native tourRegistry.",
+    "navigate() L4-9 (browser-only): web pushed window.history.pushState + dispatched a synthetic PopStateEvent, guarded by `typeof window === 'undefined'` (SSR) and `window.location.pathname === href` (same-path). React Native has no window.history; reimplemented as a native-safe shim that forwards href to a host-registered TourNavigator via setAutomationsTourNavigator (default no-op = explicit unavailable state). SSR guard and same-path early-return are browser-specific and dropped; the call-site href is preserved verbatim, matching the established PresetGallery/Layout native-navigate parity pattern.",
+    "STEPS L11-41 ported verbatim: all four steps preserve target selectors ([data-tour=\"automation-builder\"|\"automation-conditions\"|\"automation-actions\"|\"automation-conflicts\"]), titles, full description strings (incl. the → arrow and parenthetical), placement values (bottom/right/right/top), and step 1's onShow: () => navigate('/automations/new').",
+    "AUTOMATIONS_TOUR L43-52 ported verbatim: id 'automations', routeMatch /^\\/automations/ RegExp, titleKey tour.tours.automations.title + fallback 'Automations', descriptionKey tour.tours.automations.description + fallback 'Build triggers, conditions, and actions visually.', version 1, steps: STEPS. i18n keys/fallbacks unchanged.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components imported into native output. No window/document references remain. Formatted with the native .prettierrc.js (singleQuote, trailingComma all, arrowParens avoid)."
+  ]
+}
