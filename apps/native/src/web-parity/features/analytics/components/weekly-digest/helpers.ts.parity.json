@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/helpers.ts",
+  "sourceLineCount": 60,
+  "coveredLineCount": 60,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { fmtNumber } from '@/lib/numberFormat'` -> inlined native-safe fmtNumber shim (safeNumber + toLocaleString min=max fraction digits, default precision 2, en-US catch fallback) matching sibling review-slide shims.",
+    "L2 `import { CITY_PAIRS } from './constants'` -> inlined CITY_PAIRS `as const` verbatim (the only constants symbol used here); preserves findCityPair's `(typeof CITY_PAIRS)[number]` literal return type since constants.ts is a separate file-by-file port.",
+    "L3 blank line preserved.",
+    "L4-13 getWeekRange(offset): Date math (Monday-anchored week, setHours 0/23:59:59.999, +6 day end) ported verbatim — pure Date, Hermes-safe, no DOM.",
+    "L14 blank line preserved.",
+    "L15-18 isInRange(dateStr,start,end): new Date(dateStr) + range comparison ported verbatim.",
+    "L19 blank line preserved.",
+    "L20-24 dayOfWeekIndex(dateStr): getDay() with Sun(0)->6 remap, Mon=0..Sun=6 comment preserved verbatim.",
+    "L25 blank line preserved.",
+    "L26-29 pctChange(current,previous): zero-guard returns 100/0; otherwise ((c-p)/abs(p))*100. Logic identical; single-line guard wrapped in braces for RN eslint/prettier stability (no behaviour change).",
+    "L30 blank line preserved.",
+    "L31-47 trendFor(current,previous,invertPositive=false): diff + pctChange, flat when |diff|<0.01, up/down direction, value via inlined fmtNumber(pct,1) with +/- prefix, positive honours invertPositive — ported verbatim incl. return-shape `{direction:'up'|'down'|'flat';value:string;positive:boolean}`.",
+    "L48 blank line preserved.",
+    "L49-60 findCityPair(distanceKm): nearest-km search over inlined CITY_PAIRS with Infinity seed and Math.abs diff; returns closest pair or undefined — ported verbatim.",
+    "All 60 source lines considered. No DOM/browser-only/Recharts/Leaflet/web-UI usage; module is pure TS utility. Verified via tsc --noEmit, eslint --quiet, and jest (suite) gates."
+  ]
+}
