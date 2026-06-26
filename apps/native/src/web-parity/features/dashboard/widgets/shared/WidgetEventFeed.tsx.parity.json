@@ -1,0 +1,27 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
+  "sourceLineCount": 86,
+  "coveredLineCount": 86,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 import { useMemo, type ReactNode } from 'react' -> kept verbatim (useMemo drives the sort/slice memo; ReactNode types the icon/emptyIcon fields).",
+    "L2 useTranslation('dashboard') -> native local t(key, default): react-i18next is not a native dependency (0 native usages), so the lone widget.noEvents key resolves to its English default exactly as i18next would.",
+    "L3 TimelineItem from @/components/data-display -> reproduced inline as native TimelineRow (no native TimelineItem port exists); same icon chip + connector rail + title/subtitle/time stack.",
+    "L4 EmptyState from @/components/feedback -> shared native EmptyState (components/feedback/EmptyState), web single `message` mapped to native `title` with empty `message`.",
+    "L5 useDateFormat from @/hooks/useDateFormat -> native web-parity useDateFormat hook; its formatDateTime powers the post-24h absolute fallback, preserving locale + tz awareness.",
+    "L7-18 exported interface EventFeedItem (id, icon ReactNode, title, subtitle?, timestamp, color, severity? info|warning|critical, href? incl. its drill-through doc) -> ported field-for-field as the exported EventFeedItem; icon stays ReactNode, href retained.",
+    "L20-26 interface WidgetEventFeedProps (items, maxItems?, compact?, emptyMessage?, emptyIcon?) -> preserved verbatim; a native-only optional onNavigate?(href) is added as the wireable replacement for the browser <Link>.",
+    "L28-36 WidgetEventFeed({items,maxItems,compact=false,emptyMessage,emptyIcon}) + const {t}=useTranslation + const {formatDateTime}=useDateFormat -> same exported function name, same destructured props, compact default false; t is the local fallback, formatDateTime from the native hook.",
+    "L38-48 formatRelativeTime(isoStr): Date diff -> diffMin<1 'Just now', <60 `${diffMin}m ago`, diffHrs<24 `${diffHrs}h ago`, else formatDateTime(isoStr) -> ported byte-for-byte as a closure over the hook's formatDateTime.",
+    "L50 const limit = maxItems ?? (compact ? 3 : 10) -> preserved exactly.",
+    "L52-58 sorted = useMemo([...items].sort(b.timestamp - a.timestamp desc).slice(0, limit), [items, limit]) -> preserved exactly (same descending timestamp comparator, same slice, same deps).",
+    "L60-68 empty branch: return <EmptyState icon={emptyIcon} message={emptyMessage ?? t('widget.noEvents','No events yet')} className='py-4' /> -> native EmptyState with title=emptyMessage ?? t(...); the icon slot has no native equivalent so emptyIcon is rendered in a centred wrapper above it; py-4 maps to paddingVertical spacing.md.",
+    "L70-84 list render: <div className='space-y-0 overflow-y-auto h-full'> mapping <TimelineItem key=id icon title subtitle time={formatRelativeTime(timestamp)} color isLast={i===len-1} href /> -> ScrollView (overflow-y-auto + h-full) mapping TimelineRow with the same key, icon, title, subtitle, computed time, color, isLast, and href->onNavigate wiring.",
+    "L85-86 closing braces of the component/module -> structurally preserved.",
+    "TimelineItem visual intent (web TimelineItem.tsx): flex gap-3 row, 32x32 rounded-lg `${color}15` icon chip, w-px var(--surface-2) connector when !isLast, text-sm font-medium truncate title, text-xs muted subtitle, 10px time -> mirrored with columnGap spacing.md, 32x32 borderRadius 10 chip, hairline surfaceRaised connector, fontWeight 500 numberOfLines={1} title, caption muted subtitle, 10px time.",
+    "react-router-dom <Link to={href}> (TimelineItem) is browser-only -> href row becomes a Pressable accessibilityRole='link' with the web hover:bg-white/[0.04] reproduced as a pressed surfaceHover style; navigation is delegated to the optional onNavigate callback (no-op when unset = explicit unavailable state).",
+    "No DOM, react-router-dom, framer-motion, lucide-react, Recharts, Leaflet, or old web UI components are imported; only React, react-native primitives, and existing native components/hooks/tokens are used.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
