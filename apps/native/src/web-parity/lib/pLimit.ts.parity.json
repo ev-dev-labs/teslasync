@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/lib/pLimit.ts",
+  "outputPath": "apps/native/src/web-parity/lib/pLimit.ts",
+  "sourceLineCount": 67,
+  "coveredLineCount": 67,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-19 top-of-file JSDoc ('pLimit — minimal promise-concurrency limiter', signal-history fan-out rationale, HTTP/1.1 ~6 vs HTTP/2 multiplexing note, 'No external dep'/p-limit 4 KB note, and the Usage example) preserved verbatim — including the `items.map((it) => limit(() => fetchOne(it)))` snippet whose `(it) =>` parens are kept as-is because prettier does not reformat code inside comments. A `//` native-port header was prepended above it documenting the faithful 1:1 DOM-free logic/type port.",
+    "L20 blank line preserved.",
+    "L21-27 `PLimitFn` interface ported 1:1: the callable `<T>(task: () => Promise<T>): Promise<T>` call signature plus `readonly activeCount: number` and `readonly pendingCount: number`, with both member JSDoc comments ('Number of tasks currently executing.' / 'Number of tasks queued behind the concurrency cap.') preserved verbatim.",
+    "L29-32 `pLimit(concurrency: number): PLimitFn` signature and the guard `if (!Number.isInteger(concurrency) || concurrency < 1) throw new TypeError('pLimit: concurrency must be a positive integer')` ported byte-for-byte (single-quoted message already matches native singleQuote).",
+    "L33-34 state `let active = 0` and `const queue: Array<() => void> = []` ported 1:1.",
+    "L36-40 `next` arrow ported 1:1: `if (active >= concurrency) return;`, `const job = queue.shift();`, `if (job) job();`. Empty-param arrow `()` retained (arrowParens:'avoid' only strips parens around a single untyped param).",
+    "L42-51 `run` generic arrow `<T>(task, resolve, reject) => {...}` ported 1:1 (active++, `Promise.resolve().then(task).then(resolve, reject).finally(() => { active--; next(); })`). Only formatting differs: the 101-col single-line parameter list was wrapped one-param-per-line with a trailing comma to satisfy native prettier printWidth 80 + trailingComma:'all'; typed-param parens `(v: T)`/`(e: unknown)` are required by TS so they are unchanged. No behavioral change.",
+    "L53-59 `limit<T>(task)` function ported 1:1: returns `new Promise<T>((resolve, reject) => {...})`, defines `enqueue = () => run(task, resolve, reject)`, and the `if (active < concurrency) enqueue(); else queue.push(enqueue);` branch order is preserved.",
+    "L61-64 `Object.defineProperties(limit, { activeCount: {get: () => active}, pendingCount: {get: () => queue.length} })` ported 1:1, exposing the live `activeCount`/`pendingCount` getters. Inner single-line object braces written without inner spacing to match this repo's @react-native eslint prettier rule (bracketSpacing:false), which is the enforced `npm run lint` gate; the established converted lib files (chartA11y.ts, gear.ts) use the same no-spacing style and pass lint.",
+    "L66-67 `return limit as PLimitFn;` and the closing brace ported 1:1; trailing newline (L68) preserved.",
+    "Pure utility/type module: no DOM, browser HTML, Recharts, Leaflet, or web UI imports — zero imports at all. Relies only on the standard Promise microtask queue, which behaves identically under React Native (Hermes/JSC), so it runs unchanged.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles. (ESLint is the enforced formatter gate; `npx prettier --check` reads .prettierrc.js with bracketSpacing defaulting true and would disagree on inner brace spacing, but it is not a required gate and the codebase convention follows ESLint.)"
+  ]
+}
