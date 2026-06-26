@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/WeekOverWeekSummary.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/WeekOverWeekSummary.tsx",
+  "sourceLineCount": 70,
+  "coveredLineCount": 70,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-9 imports: react-i18next useTranslation (L1) -> local key-preserving fallback shim; @/hooks/useFormatting formatCurrency (L2) -> inlined native-safe equivalent ($ default symbol since no ported native settings provider, explicit precision honoured); lucide-react Car/Activity/Zap/Fuel/BarChart3/Leaf (L3) -> decorative a11y-hidden emoji glyphs (🚗/📈/⚡/⛽/📊/🍃) in AppText; @/components/ui GlassPanel (L4) -> native components/ui/GlassPanel; @/components/data-display StatCard (L5) -> local native StatCard port (GlassPanel column); @/components/motion FadeIn (L6) -> web-parity components/motion FadeIn; @/lib/numberFormat fmtNumber/fmtInt (L7) -> inlined; ./helpers trendFor (L8, + its pctChange dep) -> inlined verbatim; ./types DigestMetrics (L9, + referenced Drive) -> inlined verbatim.",
+    "L11-13 WeekOverWeekSummaryProps {metrics: DigestMetrics} ported verbatim; the referenced DigestMetrics/Drive interfaces inlined exactly from web ./types.",
+    "L15-18 component signature + useTranslation() + useFormatting() formatCurrency destructure preserved (formatCurrency now the inlined native-safe helper; t from the fallback shim).",
+    "L19-24 FadeIn delay={0.3} > GlassPanel(space-y-4 p-6 -> gap16/pad24) > title span 'analytics.weeklyDigest.weekOverWeek'/'Week-over-Week Comparison' (text-lg font-bold text-white -> AppText weight=bold fontSize18 primary).",
+    "L25 grid span (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3) -> View flex-wrap row, gap-3->12, flexBasis 47% two-up (native has no CSS grid breakpoints).",
+    "L26-32 StatCard Distance: label key analytics.weeklyDigest.distance/'Distance', value fmtNumber(totalDistance,1), unit 'km', Car icon glyph, trend trendFor(totalDistance, prevDistance) (no invert) — all preserved.",
+    "L33-38 StatCard Drives: label analytics.weeklyDigest.drives/'Drives', value fmtInt(totalDrives), no unit, Activity icon glyph, trend trendFor(totalDrives, prevDriveCount) — preserved.",
+    "L39-45 StatCard Energy: label analytics.weeklyDigest.energy/'Energy', value fmtNumber(energyUsed,1), unit 'kWh', Zap icon glyph, trend trendFor(energyUsed, prevEnergy, true) (invertPositive: lower=better) — preserved.",
+    "L46-51 StatCard Cost: label analytics.weeklyDigest.cost/'Cost', value formatCurrency(chargingCost,2), no unit, Fuel icon glyph, trend trendFor(chargingCost, prevChargingCost, true) — preserved.",
+    "L52-58 StatCard Efficiency: label analytics.weeklyDigest.efficiency/'Efficiency', value fmtNumber(avgEfficiency,1), unit 'Wh/km', BarChart3 icon glyph, trend trendFor(avgEfficiency, prevAvgEfficiency, true) — preserved.",
+    "L59-65 StatCard CO2: label analytics.weeklyDigest.co2/'CO₂ Saved' (₂ kept verbatim), value fmtNumber(co2Saved,1), unit 'kg', Leaf icon glyph, trend trendFor(co2Saved, prevCo2) — preserved.",
+    "L66-70 closing grid span / GlassPanel / FadeIn / component close ported; every <span>/<div> mapped to View or AppText, Tailwind classes mapped to StyleSheet tokens (p-6->24, space-y-4->16, gap-3->12, gap-1->4, text-2xl->24, text-sm->14, text-xs->12), text-white->primary tone, --text-muted->muted tone, green-600/red-600 trend colours->success/danger tokens; StatCard trend chip preserves direction arrow ↑/↓/— and positive/flat/negative colour semantic.",
+    "Native-unavailable items (contract rule 7, documented): lucide-react SVG icons replaced by a11y-hidden emoji glyphs; react-i18next replaced by a key-preserving fallback shim; useFormatting's settings-driven currency symbol/precision replaced by the web default '$' + explicit call-site precision (no ported native settings provider). The web StatCard's unused loading/sublabel/className props are omitted from the local port (this consumer never passes them). Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
