@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/lib/queryBroadcast.ts",
+  "outputPath": "apps/native/src/web-parity/lib/queryBroadcast.ts",
+  "sourceLineCount": 84,
+  "coveredLineCount": 84,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 84 source lines before porting. queryBroadcast.ts is a non-visual coalescing layer over the cross-surface `broadcast` bus — contract rule 6 (port logic/types faithfully); it has no DOM-only behavior so no unavailable-state seam is needed.",
+    "L1 `import type { QueryClient, QueryKey } from '@tanstack/react-query'` kept verbatim — react-query ^5.101.1 is a dependency of apps/native and is RN-compatible; type-only import.",
+    "L2 `import { broadcast } from './broadcast'` kept verbatim — resolves to the already-ported sibling apps/native/src/web-parity/lib/broadcast.ts whose broadcast() carries the identical `{type:'queryInvalidate'; keys}` envelope variant.",
+    "L4-20 module doc preserved (purpose: cross-surface query invalidation via the broadcast bus + QueryBroadcastBridge subscriber; the Coalescing section explaining the 50 ms batch window and the notifications.read alerts+unread-count example). 'tab'/'tabs' phrasing adapted to surface-neutral 'surface(s)' to match the sibling broadcast.ts native port; intent unchanged. A native-conversion header (contract rule 6) was added documenting the 1:1 port and that QueryBroadcastBridge is subscriber-side prose, not an import.",
+    "L22-25 PendingEntry interface (key: ReadonlyArray<unknown>; serialized: string) ported verbatim.",
+    "L27-29 module-level state ported verbatim: `let pending: Map<string, PendingEntry> = new Map()` (kept `let` — reassigned in flush), `let timer: ReturnType<typeof setTimeout> | null = null` (ReturnType<typeof setTimeout> is portable to RN's timer type), `const COALESCE_MS = 50`.",
+    "L31-37 flush() ported verbatim: clear timer, early-return on empty pending, snapshot keys via Array.from(pending.values()).map(e => e.key), reset pending to a new Map, then broadcast({type:'queryInvalidate', keys}). setTimeout/clearTimeout/Map/Array.from are all RN globals.",
+    "L39-42 scheduleFlush() ported verbatim: skip if a timer is already armed, else setTimeout(flush, COALESCE_MS).",
+    "L44-56 enqueue() ported verbatim: JSON.stringify(key) inside try/catch (skip-silently-on-non-serializable comment preserved word-for-word, local invalidation already happened), de-dupe into the pending Map keyed by the serialized string, then scheduleFlush().",
+    "L58-66 invalidateAndBroadcast doc comment preserved (when to use vs plain qc.invalidateQueries); 'tab'/'tabs' -> 'surface(s)' for cross-file coherence with broadcast.ts, intent unchanged.",
+    "L67-74 invalidateAndBroadcast(qc, filters) ported verbatim: `void qc.invalidateQueries(filters)` then `enqueue(filters.queryKey as ReadonlyArray<unknown>)`; the unknown[] cast comment kept.",
+    "L76-78 + L79-84 __flushQueryBroadcastForTests() test-only helper ported verbatim (if a timer is armed: clearTimeout(timer) then flush()).",
+    "Formatting only: applied the native apps prettier config (singleQuote, trailingComma:all, arrowParens:avoid, semicolons) — e.g. `(e) =>` became `e =>`, object literals/braces single-quoted; no logic, state names, or control flow changed.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
