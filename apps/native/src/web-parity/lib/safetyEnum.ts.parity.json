@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/safetyEnum.ts",
+  "outputPath": "apps/native/src/web-parity/lib/safetyEnum.ts",
+  "sourceLineCount": 70,
+  "coveredLineCount": 70,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 70 source lines before porting. safetyEnum.ts is non-visual utility/type code (a raw-enum prefix registry, a derived keyof field type, and two pure normalizers); it touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so the logic ports 1:1 to React Native-compatible TypeScript (contract rule 6).",
+    "L1-25 module JSDoc preserved verbatim (the SignalValue serialization context, the four arrival shapes boolean/number/typed-enum-string/codec-stripped-suffix, the cleanEnum single-choke-point rule, and the NEVER String(value).toLowerCase() warning); a native-conversion section was appended documenting the inlined type guards (contract rules 6 + 7).",
+    "L26 `import { asNonEmptyString, asFiniteNumber } from './typeGuards'` — the typeGuards module is not yet part of the native parity layer, so following the sibling SecurityAccessPage.tsx / WindowStatusDetail.tsx native ports (which inline asNonEmptyString for the same reason) both consumed guards are inlined verbatim from web/src/lib/typeGuards: asNonEmptyString (`typeof v === 'string' && v.length > 0 ? v : null`, L28-30) and asFiniteNumber (`typeof v === 'number' && Number.isFinite(v) ? v : null`, L38-40). They are module-private; the public surface stays identical to the web. asString/asBoolean were NOT inlined (safetyEnum never uses them).",
+    "L28-34 `export const SAFETY_ENUM_PREFIXES` ported verbatim with `as const` — all four entries identical (forward_collision_warning->'ForwardCollisionSensitivity', lane_departure_avoidance->'LaneAssistLevel', speed_limit_warning->'SpeedAssistLevel', cruise_follow_distance->'FollowDistance').",
+    "L36 `export type SafetyEnumField = keyof typeof SAFETY_ENUM_PREFIXES` ported verbatim.",
+    "L38-57 cleanSafetyEnum ported 1:1 with its JSDoc and `fallback = '—'` default: boolean -> 'On'/'Off'; asFiniteNumber branch returns String(num) (covers number 0); asNonEmptyString else fallback; prefix-startsWith strip via raw.slice(prefix.length) with the speed_limit_warning 'None' -> 'Off' special case and the `stripped || raw` fallthrough, else returns raw. Identical control flow; prettier reflowed the signature to one param per line (no behavior change).",
+    "L59-70 isSafetyEnumActive ported 1:1: `value == null` -> false; boolean -> value; cleanSafetyEnum(value, field, '') then empty -> false; lowercases and returns false for 'off'/'none'/'disabled'/'0' else true. Identical control flow; prettier wrapped the multi-condition if across lines and reflowed the signature (no behavior change).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported (the only web import — typeGuards — is inlined). Style matches .prettierrc.js (singleQuote, trailingComma all, arrowParens avoid) and the @react-native eslint config. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
