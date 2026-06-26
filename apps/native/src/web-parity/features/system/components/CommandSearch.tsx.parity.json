@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/features/system/components/CommandSearch.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/CommandSearch.tsx",
+  "sourceLineCount": 22,
+  "coveredLineCount": 22,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 22 source lines line by line before editing. CommandSearch is a tiny controlled search box for the command palette: a single web Input with a leading Search icon that lifts every keystroke to the parent via onChange(value). The prop contract, the placeholder i18n key + English fallback, and the Input's visual intent are preserved verbatim.",
+    "Imports L1-3: L1 react-i18next useTranslation -> inline native-safe useNativeTranslationFallback t(key, fallback) (no i18n runtime in the parity tree; same pattern as the sibling chatbot/ChatMessageItem port). L2 `@/components/ui` Input -> react-native TextInput wrapped in a bordered row View (no DOM <input>, rule 4). L3 lucide-react Search -> the canonical SemanticIcon 'search' glyph via getSemanticIconDefinition('search').glyph (SEARCH_GLYPH), rendered as muted inline AppText.",
+    "CommandSearchProps interface L5-8 ported verbatim: value:string and onChange:(value:string)=>void. No prop renamed or dropped.",
+    "Function signature L10 preserved: named `export function CommandSearch({ value, onChange }: CommandSearchProps)`. CommandSearch.displayName added (native convention; no behavioural effect).",
+    "useTranslation L11 -> const t = useNativeTranslationFallback(); the placeholder is resolved once into a local `placeholder` const so it can serve BOTH the TextInput placeholder and its accessibilityLabel (the web <input> had no label, so screen readers announced the placeholder — parity preserved).",
+    "Return/Input L13-21 -> <View style={styles.container}> row holding the leading icon + <TextInput>. L15 value={value} -> value={value} (controlled, unchanged). L16 onChange={(e)=>onChange(e.target.value)} -> onChangeText={onChange} (RN onChangeText already delivers the raw string, so the e.target.value unwrap is intrinsic). L17 placeholder={t('commands.search.placeholder','Search commands...')} -> placeholder={placeholder} with the SAME key + fallback; placeholderTextColor={colors.textMuted} reproduces the web `placeholder:text-[var(--text-muted)]`.",
+    "Icon L18 `icon={<Search className=\"h-4 w-4\" />}` -> a muted, bold caption-sized AppText rendering SEARCH_GLYPH in the row's leading slot, marked decorative (accessibilityElementsHidden + importantForAccessibility='no-hide-descendants') since the field carries the accessible label. The web icon was absolutely positioned left-3/-translate-y; the native flex row places it left of the field for the same visual result.",
+    "className L19 `bg-white/[0.03] border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]` plus the web Input defaults (rounded-md border, md size px-3/py-2/text-sm) -> styles.container { backgroundColor 'rgba(255,255,255,0.03)' = bg-white/[0.03]; borderColor 'rgba(255,255,255,0.06)' = border-white/[0.06]; borderWidth 1 + borderRadius 6 = border + rounded-md; paddingHorizontal spacing.md(12) = px-3; width '100%' = w-full } and styles.input { color colors.textPrimary = text-[var(--text-primary)]; fontSize 14 = text-sm; paddingVertical spacing.sm(8) = py-2; flex 1 to fill beside the icon (the web pl-10 icon inset). Native search-field niceties added + documented: autoCapitalize='none', autoCorrect={false}, returnKeyType='search'; plus testID='command-search-input' for native test hooks.",
+    "Closing braces L20-22 preserved (Input close, return close, function close).",
+    "No DOM/Recharts/Leaflet/react-dom/framer-motion/lucide/old web-UI imports in the native output — only react, react-native primitives (View, TextInput, StyleSheet), the canonical SemanticIcon + AppText, and theme tokens (colors, spacing). No browser-only behaviour, so no unavailable state is required.",
+    "Gates (cd apps/native): npm run typecheck (tsc --noEmit) PASS exit 0; npm run lint -- --quiet (eslint . --quiet) PASS exit 0; npm test -- --runInBand --detectOpenHandles PASS exit 0."
+  ]
+}
