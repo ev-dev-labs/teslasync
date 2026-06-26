@@ -1,0 +1,29 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/shared/WidgetComparisonCard.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/shared/WidgetComparisonCard.tsx",
+  "sourceLineCount": 65,
+  "coveredLineCount": 65,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 65 source lines with numbered output before editing.",
+    "L1 import { Delta } from '@/components/data-display': Delta is browser-only (lucide-react ArrowUp/ArrowDown/ArrowRight + useUnits/useFormatting/metricSemantics + i18n + Skeleton) and has no native parity component, so its display='percent'/size='sm' behaviour is inlined as the native-safe MetricDelta (directional glyph + locale-formatted percent).",
+    "L2 import { cn } from '@/lib/cn': dropped; no className concatenation on native, styling is StyleSheet + conditional style arrays.",
+    "L4-11 ComparisonMetric interface (label, current, previous, formattedCurrent, unit?, higherIsBetter?): ported verbatim and still exported from the native module.",
+    "L13-16 WidgetComparisonCardProps interface (metrics: ComparisonMetric[], compact?): ported verbatim.",
+    "L18-20 MetricRow signature + higherIsBetter ?? true + direction = higherIsBetter ? 'higher_better' : 'lower_better': preserved exactly (direction typed as MetricDirection union); MetricRow also takes isLast to reproduce the last:border-b-0 rule.",
+    "L22-23 outer <div className='flex items-center justify-between gap-3 py-2.5 border-b border-white/[0.06] last:border-b-0'> -> styles.row View: flexDirection row, alignItems center, justifyContent space-between, gap spacing.md (12), paddingVertical 10 (py-2.5), borderBottomWidth 1 + borderBottomColor rgba(255,255,255,0.06) (border-white/[0.06]); last:border-b-0 -> isLast && styles.rowLast (borderBottomWidth 0).",
+    "L24 <div className='flex min-w-0 flex-col gap-0.5'> -> styles.metricInfo View: column (default), flex 1 + minWidth 0 (min-w-0, enables truncation), gap 2 (gap-0.5).",
+    "L25 <span className='truncate text-xs text-[var(--text-muted)]'>{metric.label} -> AppText tone='muted' variant='caption' (12px = text-xs) numberOfLines={1} (truncate); --text-muted maps to the native muted tone.",
+    "L26-27 <span className='truncate text-base font-semibold text-[var(--text-primary)]'>{metric.formattedCurrent} -> AppText weight='semibold' numberOfLines={1} style.value (fontSize 16 = text-base, color textPrimary = --text-primary).",
+    "L28-32 optional unit nested <span className='ml-0.5 text-xs font-normal text-[var(--text-muted)]'>{metric.unit} -> nested AppText tone='muted' style.unit (fontSize 12 = text-xs, fontWeight 400 = font-normal); ml-0.5 (2px) reproduced as a leading thin space \\u2009 since inline RN Text ignores margins; nesting keeps value+unit on one truncating line.",
+    "L33-34 closing value span / left column div -> AppText/View close.",
+    "L35-41 <Delta metric={{ direction }} current={metric.current} previous={metric.previous} display='percent' size='sm' /> -> <MetricDelta current previous direction /> inlining the web Delta percent path: missing/non-finite inputs -> em-dash muted no arrow (web 'delta-empty' branch); signedDelta = current - previous; signedPct = previous!==0 ? (signedDelta/Math.abs(previous))*100 : null; pctText = signedPct==null ? null : fmtNumber(|pct|,1)+'%'; valueText = pctText ?? em-dash; arrow ^/v/-> by sign (ArrowUp/ArrowDown/ArrowRight glyphs); deltaColor mirrors web colorForDelta (delta 0 -> muted; higher_better&>0 || lower_better&<0 -> emerald/success #34d399; else rose/danger #fb7185); size='sm' -> 12px font-medium (text-xs); fmtNumber replaced by locale-aware formatDecimal (device locale, 1 fraction digit) preserving i18n intent; web title tooltip preserved as accessibilityLabel ('{current} vs {previous}' / 'No comparison data').",
+    "L42-43 Delta + row close -> View close.",
+    "L46-50 WidgetComparisonCard({metrics, compact}) + visible = compact ? metrics.slice(0, 2) : metrics: preserved exactly.",
+    "L52-56 empty branch: <p className='text-sm text-[var(--text-muted)] py-2'>No comparison data</p> -> AppText tone='muted' style.empty (fontSize 14 = text-sm, paddingVertical spacing.sm = 8 = py-2); literal English string preserved (not i18n in source).",
+    "L58-63 wrapper <div className={cn('flex flex-col', compact && 'text-sm')}> + visible.map(m => <MetricRow key={m.label} metric={m} />): -> styles.container column View; key={m.label} preserved; index/visible.length-1 added solely to drive the last:border-b-0 rule. compact && 'text-sm' is a no-op for the rows (every inner AppText is explicitly sized and RN Text does not inherit font-size from a View), so only the meaningful compact slice() behaviour is reproduced.",
+    "L64-65 closing braces -> component close; WidgetComparisonCard exported with displayName.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, lucide-react, or old web UI components imported; uses React Native View/AppText + existing theme tokens only.",
+    "Verification: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
