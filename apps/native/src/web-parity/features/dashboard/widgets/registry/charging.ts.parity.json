@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/registry/charging.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/registry/charging.ts",
+  "sourceLineCount": 151,
+  "coveredLineCount": 151,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 import { lazy } from 'react': kept (React.lazy + dynamic import are native-safe in Metro); also import createElement + the ComponentType/LazyExoticComponent types for the inlined native placeholder and the mirrored WidgetDef.component type.",
+    "L2-4 lucide-react icon imports (Zap, BarChart3, DollarSign, Calendar, TrendingUp, Sparkles, Plug, Gauge, Clock): dropped (DOM/SVG, not native-safe). The per-widget icon intent is preserved by retyping WidgetDef.icon to the repo SemanticIconName and mapping each glyph: Zap->bolt, BarChart3->analytics, DollarSign->dollarSign, Calendar->calendar, TrendingUp->trendUp, Sparkles->sparkles, Plug->charger, Gauge->speedCircle, Clock->clock.",
+    "L5 import type { WidgetDef } from '../types': ../types has no native port yet, so WidgetSize/WidgetConfig/WidgetProps/WidgetCategory/WidgetHelp/WidgetDef are mirrored field-for-field inline (icon retyped LucideIcon->SemanticIconName, component kept LazyExoticComponent<ComponentType<WidgetProps>>), mirroring the sibling native widget ports.",
+    "L7 export const CHARGING_WIDGETS: WidgetDef[] = [ : preserved verbatim as the module's single export.",
+    "L8-18 charge-status: id/name/description/category and defaultSize {2,2}/minSize {1,2}/maxSize {3,40} ported verbatim; icon Zap->bolt; component -> shared native-safe UNAVAILABLE_WIDGET placeholder (web ../ChargeStatusWidget has no native port yet, recorded in a trailing comment).",
+    "L19-29 charge-status-live: ported verbatim ({2,2}/{1,2}/{3,40}); icon Zap->bolt; component -> placeholder (web ../ChargeStatusLiveWidget pending).",
+    "L30-40 charge-history: ported verbatim ({2,4}/{2,2}/{4,40}); icon BarChart3->analytics; component -> placeholder (web ../ChargeHistoryWidget pending).",
+    "L41-51 charge-session-chart: ported verbatim ({2,4}/{1,2}/{4,40}); full home/SC/destination description preserved; icon Zap->bolt; component -> placeholder (web ../ChargeSessionChartWidget pending).",
+    "L52-62 charge-cost-tracker: ported verbatim ({2,2}/{1,2}/{4,40}); description (total kWh/cost/cost per mile/gas savings) preserved as the source's display string; icon DollarSign->dollarSign; component -> placeholder (web ../ChargeCostTrackerWidget pending).",
+    "L63-73 charging-schedule: ported verbatim ({2,2}/{1,2}/{4,40}); icon Calendar->calendar; component WIRED to the real native lazy(() => import('../ChargingScheduleWidget')) — the one charging widget with a native port today (its WidgetProps shape matches the inlined mirror).",
+    "L74-84 cost-forecast: ported verbatim ({2,4}/{1,2}/{4,40}); icon TrendingUp->trendUp; component -> placeholder (web ../CostForecastWidget pending).",
+    "L85-95 charging-optimizer: ported verbatim ({2,2}/{1,2}/{4,40}); icon Sparkles->sparkles; component -> placeholder (web ../ChargingOptimizerWidget pending).",
+    "L96-106 wall-connector: ported verbatim ({2,4}/{1,2}/{4,40}); icon Plug->charger; component -> placeholder (web ../WallConnectorWidget pending).",
+    "L107-117 charging-telemetry: ported verbatim ({2,2}/{1,2}/{4,40}); icon Gauge->speedCircle; component -> placeholder (web ../ChargingTelemetryWidget pending).",
+    "L118-128 supercharger-history: ported verbatim ({2,4}/{1,2}/{4,40}); icon Zap->bolt; component -> placeholder (web ../SuperchargerHistoryWidget pending).",
+    "L129-139 charge-plans: ported verbatim ({2,4}/{1,2}/{4,40}); icon Clock->clock; component -> placeholder (web ../ChargePlansWidget pending).",
+    "L140-150 charging-session-detail: ported verbatim ({2,4}/{1,2}/{4,40}); description (power curve/SoC overlay/kWh added/peak power) preserved; icon Zap->bolt; component -> placeholder (web ../ChargingSessionDetailWidget pending).",
+    "L151 closing ']; ' preserved — all 13 entries (category 'charging') ported with identical id/name/description and grid sizes; only the DOM icon type and the missing-module lazy imports were adapted.",
+    "Native-safe unavailable state: NativeUnavailableWidget renders a View + AppText('Widget unavailable in native', tone='muted') via React.createElement (output must be a .ts module, so no JSX), wrapped as a LazyExoticComponent so its type matches the source's component field; reused by the 12 widgets whose native ports do not exist yet.",
+    "No DOM, no lucide-react, no Recharts/Leaflet, no web UI components imported — only react (lazy/createElement) + react-native View/StyleSheet + existing apps/native AppText, SemanticIconName type and theme tokens.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), npm test -- --runInBand --detectOpenHandles (jest) — all pass."
+  ]
+}
