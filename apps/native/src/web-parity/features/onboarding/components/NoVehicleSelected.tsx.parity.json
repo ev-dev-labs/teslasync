@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/components/NoVehicleSelected.tsx",
+  "sourceLineCount": 60,
+  "coveredLineCount": 60,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 lucide-react Car -> shared native SemanticIcon glyph 'vehicle' (size=lg mirrors the web h-12 w-12); lucide SVG has no native renderer.",
+    "L2 react-i18next useTranslation -> inline useNativeTranslation() (key, fallback, options?) shim preserving every i18n key + English fallback and i18next {{name}} interpolation.",
+    "L3 react-router-dom useNavigate -> inline useNativeNavigation(): no in-app router on native, so the preserved '/onboarding' route string is handed to Linking.openURL best-effort with errors swallowed.",
+    "L5 @/components/layout PageContainer -> inline native PageContainer (title header + children), mirroring the web title + children render.",
+    "L6 @/components/ui GlassPanel -> shared native GlassPanel; the web 'p-8' padding maps to the panel padding style.",
+    "L7 @/components/feedback EmptyState -> inline native EmptyState reproducing the web icon + title + message + imperative action { label; onClick } shape.",
+    "L9-L20 JSDoc rationale for the defensive empty state carried over as the file header comment block.",
+    "L22-L29 NoVehicleSelectedProps interface ported verbatim (pageTitle; title?; description?) with the same doc comments.",
+    "L31-L37 component signature + destructured props preserved; const { t } -> t = useNativeTranslation(), navigate = useNativeNavigation().",
+    "L39-L41 PageContainer title={pageTitle} + GlassPanel padded (p-8) preserved.",
+    "L42-L56 EmptyState icon=vehicle, title ?? t('common.noVehicleSelected.title','No vehicle selected'), message ?? t('common.noVehicleSelected.desc','Add a vehicle to your fleet to see data on this page.'), action { label: t('common.noVehicleSelected.action','Set up TeslaSync'), onClick: () => navigate('/onboarding') } all preserved one-for-one.",
+    "L57-L60 closing JSX/exports preserved; named export NoVehicleSelected retained.",
+    "DOM elements (div), Recharts, Leaflet, and old web UI components are not imported; only React Native primitives, shared native components/icons, and theme tokens are used.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
