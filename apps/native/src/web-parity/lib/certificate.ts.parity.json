@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/lib/certificate.ts",
+  "outputPath": "apps/native/src/web-parity/lib/certificate.ts",
+  "sourceLineCount": 66,
+  "coveredLineCount": 66,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 66 numbered source lines before editing. L1-L6 inline data param type -> exported `CarbonCertificateData` interface (vehicleName/totalKm/totalKwh/ownerName?), same field names/optionality.",
+    "L7-L10 carbon math ported verbatim into `computeCarbonStats`: gasEquivalentL = (totalKm/100)*8, co2SavedKg = *2.31, treesEquivalent = Math.round(co2SavedKg/22), gallonsSaved = Math.round(gasEquivalentL*0.264172). Same constants, same comments, same rounding/order.",
+    "L12-L13 `window.open('','_blank')` + `if (!printWindow) return` (browser-only popup, rule 7) modelled as a pluggable `CarbonCertificatePresenter`; default `nativeUnavailablePresenter` returns { presented:false, reason:'unavailable' } — explicit parity of the popup-blocked early return.",
+    "L15-L63 `printWindow.document.write(`...`)` HTML reproduced byte-for-byte in `renderCarbonCertificateHtml` (string only, no DOM import): DOCTYPE/title em-dash, full <style> block incl. @import/@media print, \\u{1f30d} globe + \\u{2082} CO2 subscript, all interpolations (Math.round(co2SavedKg).toLocaleString(), Math.round(totalKm).toLocaleString(), treesEquivalent, gallonsSaved, Math.round(totalKwh), Math.round(gasEquivalentL), vehicleName, ownerName||'TeslaSync User', toLocaleDateString) and every label/branding/footer string preserved. `||` kept (not `??`) so empty ownerName still falls back.",
+    "L64-L65 `document.close()` + `print()` are the DOM commit/print step with no bare-RN equivalent; folded into the presenter contract (default = unavailable). `generateCarbonCertificate(data, present?)` keeps the source name + data-first signature, computes stats, renders html, and returns { stats, html, presentation } so a native screen / future WebView-print transport can render or share.",
+    "No DOM/browser/Recharts/Leaflet/web-UI imports; pure native-compatible TypeScript. toLocaleString/toLocaleDateString follow the host engine's Intl exactly as the web relied on the browser's (full-ICU Node under the jest gate). Verified with apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles (added __tests__/CarbonCertificate.test.ts)."
+  ]
+}
