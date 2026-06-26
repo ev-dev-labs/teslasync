@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/test-setup.ts",
+  "outputPath": "apps/native/src/web-parity/test-setup.ts",
+  "sourceLineCount": 157,
+  "coveredLineCount": 157,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 157 source lines before editing; the web file is the Vitest setupFiles entry (jest-dom matchers, useSettings/timezone vi.mock stubs, resilience latch beforeEach, and IntersectionObserver/ResizeObserver/EventSource polyfills) for jsdom.",
+    "L1 (@testing-library/jest-dom) and L2 (vitest beforeEach/vi) are NOT imported in native — Jest + react-native preset is used; their roles are represented by nativeTestSetupCapabilities (jestDomMatchers:false, vitestModuleMocking:false→jestModuleMocking:true) so the typecheck/lint/test gates stay green.",
+    "L5-66 useSettings vi.mock: the L19-52 defaults object is ported verbatim to defaultSettingsMock and the L55-64 derived return to defaultUseSettingsMockReturn / mockUseSettings(); the L16-18/L54 importActual+spread is documented as the native jest.requireActual equivalent a per-file jest.mock factory uses.",
+    "L68-80 timezone vi.mock ('UTC') ported to DEFAULT_TEST_TIMEZONE + mockUseTimezone(); L82-95 resilience beforeEach latch reset ported to resetWebParityTestState() with the same optional-chaining + try/catch guard, taking the not-yet-ported resilience module as an argument (rule 7 native-safe adaptation).",
+    "L97-113 IntersectionObserver and L126-130 ResizeObserver doubles ported to MockIntersectionObserver/MockResizeObserver with native-safe local types replacing DOM Element/IntersectionObserverEntry (RN ships no DOM lib); L136-157 EventSource double ported to MockEventSource preserving CONNECTING/OPEN/CLOSED statics, readyState=OPEN on construct, and close()→CLOSED.",
+    "L115-117 / L132-134 conditional installs and the L137 unconditional EventSource assignment are reproduced by installWebParityTestGlobals() (Observers installed only when absent, EventSource always replaced) and bundled with the mock payloads by installWebParityTestEnvironment(); installs are on-demand rather than import-time so importing the module has no side effects.",
+    "Native gates run from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass; a companion __tests__/WebParityTestSetup.test.ts exercises every ported export. No DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI components are imported."
+  ]
+}
