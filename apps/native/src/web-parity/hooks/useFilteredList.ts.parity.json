@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/hooks/useFilteredList.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useFilteredList.ts",
+  "sourceLineCount": 38,
+  "coveredLineCount": 38,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 38 source lines before editing. This is a pure, framework-agnostic client-side substring filter whose only dependency is React useMemo (L1) — no DOM, browser, Recharts, Leaflet, or web-UI APIs are touched — so the logic ports verbatim to React Native; the L1 `import { useMemo } from 'react'` is kept (re-styled to the native-parity convention `import {useMemo}`).",
+    "Preserved exactly: the FilterField<T> type and its JSDoc (L3-4), the full behavioral JSDoc contract incl. the empty/whitespace passthrough and stable-`fields` reference note (L6-21), and the generic useFilteredList<T>(items, query, fields) signature with items: T[] | undefined | null, query: string, fields: ReadonlyArray<FilterField<T>>): T[] (L22-26).",
+    "Preserved the useMemo body line-for-line (L27-37): `items ?? []` null-coalescing (L28), `query.trim().toLowerCase()` (L29), the `if (!q) return list` empty-query short-circuit (L30), `list.filter(...fields.some(...))` (L31-32), the property-name-vs-accessor-function branch `typeof f === 'function' ? f(item) : item[f]` (L33), the `String(v ?? '').toLowerCase().includes(q)` lowercased substring match (L34), and the [items, query, fields] dependency array (L37). Arrow params de-parenthesized (item =>, f =>) per the native .prettierrc arrowParens: 'avoid'; behavior unchanged. L38 trailing blank line covered.",
+    "Contract rule 6/7 N/A beyond the kept import: no browser-only behavior exists, so no native-safe unavailable state was required."
+  ]
+}
