@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/features/analytics/components/analytics/DrivingPerformanceCards.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/analytics/DrivingPerformanceCards.tsx",
+  "sourceLineCount": 75,
+  "coveredLineCount": 75,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-8 imports: react-i18next useTranslation → inline native-safe useNativeTranslation t(key, fallback) shim (no native i18next runtime); lucide-react icons (Gauge/TrendingUp/Zap/BatteryCharging/MapPin/Car) → semantic emoji glyph constants passed as MetricCard string icon; MetricCard imported from native ../../../../components/data-display/MetricCard; safe imported from native charts barrel ../../../../components/charts (identical impl: finite number else 0); useUnits → inline native-safe hook; convertDistanceFromSI/convertSpeedFromSI ported from web/src/lib/unitConversion.ts; fmtNumber ported from web/src/lib/numberFormat.ts; FleetAnalytics type imported from native ../../../../api/types.",
+    "L10-11 constants SECONDS_PER_HOUR=3600 and METERS_PER_KM=1000 preserved verbatim; METERS_PER_MILE=1609.344 added to match the lib imperial branch.",
+    "L13-17 component signature `DrivingPerformanceCards({ data }: { data: FleetAnalytics | undefined })` preserved; useTranslation()/useUnits() calls preserved via the native shims; distanceUnit=unitPrefs.distance and speedUnit=unitPrefs.speed preserved; native useUnits derives {distance, speed} from web-parity useSettings().unit_of_length exactly as the web hook does ('mi' → mi/mph else km/km/h).",
+    "L18-21 fromKmh closure (km/h → m/s via *1000/3600 then convertSpeedFromSI) and fromKm closure (km → m via *1000 then convertDistanceFromSI) ported verbatim, including the explanatory comments.",
+    "L22-27 destructuring da=data?.drive_analytics, ss=speed_stats, ps=power_stats, rs=regen_stats, ds=distance_stats preserved verbatim with optional chaining.",
+    "L29-30 web grid <div class='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3'> → native <View> 2-column wrapped grid (flexWrap + justify space-between + rowGap, cell width 48%); md/lg breakpoints flattened to the mobile 2-col primary intent.",
+    "L31-37 Top Speed MetricCard: label key analytics.driving.topSpeed, value ss ? fmtNumber(fromKmh(safe(ss.max)),0) : '—', subtitle speedUnit, color cyan, Gauge icon → 🏁 — preserved.",
+    "L38-44 Avg Speed MetricCard: analytics.driving.avgSpeed, fmtNumber(fromKmh(safe(ss.avg)),0), subtitle speedUnit, color purple, TrendingUp → 📈 — preserved.",
+    "L45-51 Peak Power MetricCard: analytics.driving.peakPower, fmtNumber(safe(ps.max),0), subtitle 'kW' (no conversion), color amber, Zap → ⚡ — preserved.",
+    "L52-58 Peak Regen MetricCard: analytics.driving.peakRegen, fmtNumber(safe(rs.max),0), subtitle 'kW', color green, BatteryCharging → 🔋 — preserved.",
+    "L59-65 Avg Drive Distance MetricCard: analytics.driving.avgDriveDist, fmtNumber(fromKm(safe(ds.avg)),1), subtitle distanceUnit, color cyan, MapPin → 📍 — preserved.",
+    "L66-72 Longest Drive MetricCard: analytics.driving.longestDrive, fmtNumber(fromKm(safe(ds.max)),1), subtitle distanceUnit, color purple, Car → 🚗 — preserved.",
+    "L73-75 closing grid/return/function preserved; '—' empty fallback hoisted to EMPTY_VALUE constant; behaviour, state names, API field names (drive_analytics/speed_stats/power_stats/regen_stats/distance_stats, max/avg), unit handling, and i18n keys all preserved. No DOM/Recharts/Leaflet/lucide/web-UI imports remain in the native output."
+  ]
+}
