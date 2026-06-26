@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/analytics/components/review/slides.ts",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/review/slides.ts",
+  "sourceLineCount": 27,
+  "coveredLineCount": 27,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 27 line-numbered source lines before editing; every line was considered. This is non-visual utility/data/type code (no JSX, no DOM, no browser globals, no Recharts/Leaflet/framer-motion/web @/components), so per the contract it is ported faithfully into native-compatible TypeScript with only the type import path remapped.",
+    "L1 `import type { YearReview } from '@/api/types'` -> `import type { YearReview } from '../../../../api/types'` (the native web-parity api/types mirror; identical relative depth to the sibling ChargingBreakdownSlide.tsx port, since the native app has no `@/` alias). L2 blank line preserved.",
+    "L3-7 `interface SlideDefinition { type: string; bg: string; field?: string; }` preserved verbatim — same field names, types, and optional `field?` marker. L8 blank line preserved.",
+    "L9-22 `export const SLIDE_DEFS: SlideDefinition[]` preserved verbatim: all 12 slide entries with identical `type` values ('title','stat-hero','stat-chart','drive-highlight','charging-breakdown','savings','environment','patterns','comparisons','summary'), identical `field` values ('distance','drives','longest','energy','efficient'), and identical `bg` Tailwind gradient strings. The `bg` strings are pure string DATA encoding each slide's background-gradient visual intent (consumed downstream by slide renderers), not DOM/styling executed in this file, so they are kept byte-for-byte to preserve visual intent. L23 closing `];` preserved.",
+    "L24-27 `export function buildSlides(data: YearReview | undefined)` preserved verbatim including the `if (!data) return SLIDE_DEFS;` guard and the final `return SLIDE_DEFS;` — behaviour, the `data` param name, and the `YearReview` type reference are all intact. L28 trailing newline preserved.",
+    "No DOM elements, browser-only modules, Recharts, Leaflet, react-i18next, framer-motion, or old web UI components are imported; the only dependency is the native YearReview type. Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
