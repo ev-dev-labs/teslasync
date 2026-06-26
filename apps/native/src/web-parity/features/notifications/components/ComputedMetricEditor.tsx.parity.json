@@ -1,0 +1,32 @@
+{
+  "sourcePath": "web/src/features/notifications/components/ComputedMetricEditor.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/components/ComputedMetricEditor.tsx",
+  "sourceLineCount": 283,
+  "coveredLineCount": 283,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-12 module docstring (operand panel for kind='computed_metric' rules; parent owns editor state via onChange, component owns only the live-preview cache) -> preserved in the native header comment.",
+    "L14 react/useEffect/useMemo/useState -> imported from react (plus useCallback for the i18n shim). L15 react-i18next useTranslation -> local native useTranslation() shim returning the English fallback and interpolating {{token}}; empty-string fallback for the `would` key preserved via `fallback ?? key`.",
+    "L16 @/components/ui Select/Input/GlassPanel -> native Input ('../../../components/ui/Input'), native GlassPanel ('../../../../components/ui/GlassPanel'), and an inlined Select (DOM <select> -> wrap-flow option chips, the AutomationBuilderPage AlertStudio precedent).",
+    "L17 @/api/types ComputedMetricOp/ComputedMetricSummary -> imported from '../../../api/types' (identical native port). L18 usePreviewComputedMetric -> '../../../api/hooks/useNotifications'. L19 @/lib/numberFormat fmtNumber -> inlined faithfully (safeNumber non-finite -> 0, locale-aware fixed decimals, bad-locale en-US fallback, default precision 2).",
+    "L21-27 ComputedMetricEditorValue interface (metric_id, metric_window, metric_op, metric_threshold raw string, vehicle_id?) -> ported verbatim. L29-34 Props (value/onChange/metrics/loading?) -> ported verbatim.",
+    "L36 ALL_OPS const ['>','>=','<','<=','=','!=','%_change_>','%_change_<'] -> ported verbatim.",
+    "L38-41 component signature + useTranslation + usePreviewComputedMetric + previewError state -> preserved (return type annotated React.ReactElement for the native lint preset).",
+    "L43-46 selected useMemo (metrics.find by metric_id, deps [metrics, value.metric_id]) -> ported verbatim.",
+    "L48-55 metricOptions useMemo (map id/label via t('...metricNames.{id}', m.label), deps [metrics, t]) -> ported verbatim; stable useCallback t keeps the dep array honest.",
+    "L57-63 windowOptions useMemo (selected?.windows ?? [], t('...metricWindows.{w}', w)) -> ported verbatim.",
+    "L65-71 opOptions useMemo (selected?.ops ?? ALL_OPS, t('...metricOps.{opKey(op)}', opLabel(op))) -> ported verbatim.",
+    "L73-82 handleMetric (find def, default metric_window to first window or '', default metric_op to first op or current, clear previewError) -> ported verbatim.",
+    "L84-88 `ready` guard (metric_id && metric_window && metric_op && finite parseFloat(threshold)) -> ported verbatim.",
+    "L90-120 preview useEffect (early-return when !ready / non-finite threshold, clear error, previewMut.mutate with vehicle_id ?? undefined and onError(err:unknown) setting previewError, deps exclude previewMut to avoid a loop) -> ported verbatim; the intentional dep exclusion comment is kept and paired with an eslint-disable-next-line react-hooks/exhaustive-deps.",
+    "L122-123 previewData = previewMut.data; previewSuffix = selected ? unitSuffix(selected.unit) : '' -> ported verbatim.",
+    "L125-170 outer <div className='space-y-4'> + grid grid-cols-1 sm:grid-cols-3 with the three labelled UiSelects (metric/window/op) -> styles.root (gap) wrapping styles.selectGrid (vertical stack = the grid-cols-1 mobile base) with three FieldLabel + Select fields; e.target.value handlers become onChange(value); metric placeholder switches loading->'Loading metrics…' else 'Choose a metric' with disabled={loading}; window placeholder + disabled={!selected}; op disabled={!selected}, metric_op cast preserved.",
+    "L172-184 threshold <label> + UiInput type='number' step='any' value/onChange/placeholder -> FieldLabel + native Input keyboardType='numbers-and-punctuation' (decimals + leading minus for negative %_change thresholds), onChangeText, same placeholder 'e.g. 200'.",
+    "L186-221 preview GlassPanel className='p-3' with the 'Live preview' caption and the four mutually-exclusive states -> native GlassPanel (padding 12) + FieldLabel + four conditionals: !ready idle copy (muted), ready&&isPending 'Computing…' (muted), ready&&previewError (rose/danger), ready&&!isPending&&!previewError&&previewData previewValue (primary). text-xs -> AppText variant='caption'; text-rose-300 -> tone='danger'.",
+    "L206-220 previewValue interpolation (value: fmtNumber(previewData.value,2), suffix: previewSuffix ? ' '+suffix : '', verdict: would_trigger ? t('...would','') : t('...wouldNot','NOT')) -> ported verbatim; the empty 'would' fallback yields '' so the template reads 'would  fire'/'would NOT fire' exactly as web.",
+    "L226-235 opLabel (% change > / % change <, default op) -> ported verbatim. L237-258 opKey (gt/gte/lt/lte/eq/neq/pctGt/pctLt, default op) -> ported verbatim.",
+    "L260-283 unitSuffix (currency->'', currency_per_mi->'/mi', kwh->'kWh', wh_per_mi->'Wh/mi', mi, km, h, count->'', %->'%', default unit) -> ported verbatim.",
+    "DOM/web-only substitutions: <select> -> inlined chip Select with a selectable value='' placeholder chip (matches web <option value=''>); <label>/<p> 10px-uppercase-muted captions -> FieldLabel (AppText); responsive grid -> mobile vertical stack; Tailwind/CSS-var classes -> StyleSheet + theme tokens. No DOM nodes, react-i18next, Recharts, Leaflet, or web UI kit modules imported.",
+    "Gates: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles` all run from apps/native after the conversion."
+  ]
+}
