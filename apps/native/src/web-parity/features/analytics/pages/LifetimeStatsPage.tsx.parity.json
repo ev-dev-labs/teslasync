@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/features/analytics/pages/LifetimeStatsPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/pages/LifetimeStatsPage.tsx",
+  "sourceLineCount": 514,
+  "coveredLineCount": 514,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-29 imports: react-router (useSearchParams/useLocation/useNavigate), lucide icons, and web shared components (PageContainer, Grid, GlassPanel, HelpTooltip, StatCard, AnimatedNumber, ProgressRing, Currency, DataFreshnessAuto, EmptyState, FadeIn/StaggerContainer/StaggerItem, VehicleSelect, AchievementBadge) are all DOM/web-only and replaced by React Native primitives + native re-implementations; AILifetimeStatsQA uses the already-ported native component; useLifetimeStats is the ported web-parity hook.",
+    "L30-31 constants SECONDS_PER_HOUR=3600 and METERS_PER_KM=1000 preserved verbatim (plus METERS_PER_MILE for the SI converters).",
+    "L35-50 page setup: useTranslation->useNativeT, useDateFormat->useNativeDateFormat, usePageTitle->header title (document.title is browser-only), useUnits/useFormatting->useNativeFormat (distanceUnit/speedUnit/formatCurrency from useSettings), and the fromKm/fromKmh SI converters reproduced exactly; useSelectedVehicle->useNativeSelectedVehicle; useLifetimeStats(vehicleId) + {data,isLoading,error} preserved with the same /analytics/lifetime path.",
+    "L52-54 stats/achievements/unlockedCount derivations preserved verbatim (achievements = stats?.achievements ?? [], unlockedCount filter on a.unlocked).",
+    "L56-99 deep-link `?achievement={id}` effect: useSearchParams/useNavigate/useLocation/scrollIntoView/badgeRefs/requestAnimationFrame and useMotionPreference are browser-only; useDeepLinkAchievementId() returns null in native, but pulsedId/setPulsedId state machine + the 3s timeout clear are preserved (documented unavailable URL source).",
+    "L101-114 PageContainer title/subtitle/loading/error/actions rebuilt natively; the `error instanceof Error ? error : error ? new Error(String(error)) : null` coercion preserved verbatim; actions render VehicleSelect + DataFreshnessAuto (forceStaleAfterMs 6h).",
+    "L115-150 Hero: Car glyph + AnimatedNumber(fromKm(total_distance_km), duration 1.5, decimals 0) + distanceUnit; heroSubtitle with total_drives; earth_circumferences>0 earthCompare; ownership_days>0 since (fmtDate(first_drive_date), ownership_days) — every conditional and i18n key/fallback/interpolation preserved.",
+    "L152-155 AI Q&A block renders <AILifetimeStatsQA vehicleId={vehicleId ?? undefined} /> (ported native component).",
+    "L157-186 Key Stats Grid (cols default 2 / md 4): Total Drives (total_drives, total_driving_hours hrs), Total Distance (fromKm, unit distanceUnit), Total Energy (total_energy_kwh kWh, total_charge_sessions sessions), Total Savings (formatCurrency total_savings, vsGas) — all StatCards ported, icons->emoji.",
+    "L188-226 Fun Facts: Flame header; stats ? Grid of 4 FunFactCards (earth_circumferences*100 %, moon_trips*100 %, trees_equivalent, homes_equivalent_days days) : EmptyState noData — preserved.",
+    "L228-246 Savings Comparison: gas_equivalent_cost>0 ? SavingsBar(total_charging_cost, gas_equivalent_cost, total_savings, co2_offset_kg) : EmptyState noSavingsData — preserved.",
+    "L248-292 Environmental Impact: stats ? Grid(default 1/md 3) with ProgressRing(min(co2/1000*100,100)) + AnimatedNumber(co2_offset_kg, suffix ' kg') + co2Offset; 🌳 trees_equivalent; ☕ round(total_savings/5) coffeesEquiv : EmptyState — preserved (emoji kept).",
+    "L294-326 Personal Records: stats ? Grid(1/md 3) RecordCards longestDrive(fromKm longest_drive_record.value), highestSpeed(fromKmh highest_speed_record.value), biggestCharge(max_charge_record.value kWh) with dates : EmptyState — preserved.",
+    "L328-367 Activity Summary: stats ? Grid(2/md 4) MiniStats mostActiveDay(most_active_day_of_week||'—'), mostActiveHour(most_active_hour:00 or '—'), daysOnRoad(days_on_road), avgEfficiency(avg_efficiency_wh_km Wh/km or '—' + HelpTooltip help) : EmptyState — preserved.",
+    "L369-411 Achievement Gallery: header + unlockedCount/length unlocked; achievements.length>0 ? StaggerContainer/StaggerItem grid of AchievementBadge with pulse ring (pulsedId===a.id) : EmptyState noAchievements — StaggerContainer becomes native Grid(2/md 4), StaggerItem kept as pass-through, badgeRefs/scrollIntoView dropped (DOM-only), animate-pulse ring -> static highlighted border.",
+    "L412-414 component close preserved.",
+    "L416-432 FunFactCard sub-component ported (icon/value/unit/label).",
+    "L434-478 SavingsBar sub-component ported: maxCost/evPct/gasPct math verbatim, two proportional bars (green/red), youSaved Currency + co2 kg avoided line, useTranslation->useNativeT.",
+    "L480-496 RecordCard sub-component ported (title/value/date/icon, useDateFormat->useNativeDateFormat).",
+    "L498-514 MiniStat sub-component ported (label/value/optional HelpTooltip with ariaLabel fallback `More info about ${label}`).",
+    "Cross-cutting swaps: fmtNumber/fmtInt/convertDistanceFromSI/convertSpeedFromSI reproduced value-identically; lucide icons->emoji glyphs (per-icon tint not reproducible); framer-motion fade/stagger->static final-state native layout (equivalent to the reduced-motion branch); ProgressRing SVG arc->proportional disc in a ring track (only the sub-pixel arc geometry not reproduced); DataFreshnessAuto 30s relative-time tick omitted (computed per render). Gates: tsc --noEmit, eslint --quiet (0 errors/0 warnings), and jest --runInBand --detectOpenHandles (71 tests) all pass."
+  ]
+}
