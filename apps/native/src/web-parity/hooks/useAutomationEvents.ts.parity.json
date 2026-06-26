@@ -1,0 +1,29 @@
+{
+  "sourcePath": "web/src/hooks/useAutomationEvents.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useAutomationEvents.ts",
+  "sourceLineCount": 150,
+  "coveredLineCount": 150,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 150 source lines before editing; ported the hook faithfully — state names (events, connectionState, firingNow), the eventCounter id scheme, maxEvents cap, modeFilter, the 5s firing-now auto-clear, and terminal-event clearing are preserved.",
+    "L1 react import (useEffect/useRef/useState/useCallback) ported verbatim.",
+    "L2 import {automationSSE, type AutomationSSEListener} kept; resolves to the native-safe sibling created at ../lib/automationSSE (web's ../lib/automationSSE has no native EventSource, so it was ported native-safe alongside this hook — see automationSSE.ts.parity.json).",
+    "L3-10 the `@/api/types` type imports (AutomationSSEEventType + the 5 event payload types) are rewritten to the native relative path '../api/types'; native parity uses relative imports (no `@/` alias).",
+    "L12-23 AutomationActivityEvent interface ported 1:1 (id/type/data union of the 5 events/receivedAt: Date).",
+    "L25-32 UseAutomationEventsOptions ported 1:1 (maxEvents?/enabled?/modeFilter? 'live'|'test'|null) with doc comments preserved.",
+    "L34-43 UseAutomationEventsReturn ported 1:1 (events/connectionState 'connected'|'reconnecting'/firingNow Set<number>/clearEvents) with doc comments preserved.",
+    "L45 module-level eventCounter preserved (drives the `ae-${++eventCounter}` id).",
+    "L47-54 doc block + function signature/default-options destructure (enabled=true, modeFilter=null) ported verbatim.",
+    "L55-62 useState/useRef setup ported; firingTimers map value type changed from browser `number` to `ReturnType<typeof setTimeout>` (native-safe, matches api/client.ts convention) — identical runtime behavior.",
+    "L64 clearEvents useCallback(() => setEvents([]), []) ported verbatim.",
+    "L66-71 useEffect + `if (!enabled) return` guard + listener declaration ported.",
+    "L70-71 modeFilter narrowing (`'mode' in data ? data.mode : undefined` then skip on mismatch) ported verbatim.",
+    "L73-85 event construction (id/type/data/receivedAt new Date()) and setEvents with maxEvents (?? 50) slice cap ported verbatim, reading optsRef.current for the latest maxEvents.",
+    "L87-109 automation.triggered firing-now tracking: Set add, existing-timer clear, and 5s auto-clear timer ported; browser-only `window.setTimeout` replaced with native global `setTimeout` (RN has no `window`) — same 5000ms semantics, timer stored/deleted in firingTimers.",
+    "L111-129 terminal-event (succeeded/failed/skipped) firing-now clearing ported verbatim incl. the `!prev.has` early-return identity guard and timer cleanup.",
+    "L132-136 onConnect handler + automationSSE.subscribe/onConnect + initial setConnectionState(getState()) ported verbatim.",
+    "L138-146 effect cleanup (unsubscribe/offConnect + clear all firing timers + map.clear) ported; firingTimers.current is captured into a local `timers` const before the cleanup closure to keep behavior identical (the ref Map is never reassigned, only mutated) while satisfying react-hooks ref-in-cleanup lint.",
+    "L147 dependency array [enabled, modeFilter] preserved. L149-150 return {events, connectionState, firingNow, clearEvents} preserved.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, or web UI components imported — only react + the native-safe automationSSE + api/types. Formatted with the repo prettier config (singleQuote, trailingComma all, arrowParens avoid). Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}

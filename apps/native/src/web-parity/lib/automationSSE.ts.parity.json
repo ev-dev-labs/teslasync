@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/lib/automationSSE.ts",
+  "outputPath": "apps/native/src/web-parity/lib/automationSSE.ts",
+  "sourceLineCount": 139,
+  "coveredLineCount": 139,
+  "conversionStatus": "converted",
+  "notes": [
+    "Created as the native-safe dependency required by hooks/useAutomationEvents.ts (web's ../lib/automationSSE was not yet ported). Read all 139 source lines before porting.",
+    "L1-8 module doc preserved (dedicated client for /api/v1/automations/events, separate from sseManager, exponential-backoff reconnect, typed dispatch, ForwardAuth cookie auth); native header additionally documents the EventSource-unavailable behavior.",
+    "L10-17 the type imports of the 5 automation event payloads + AutomationSSEEventType are kept, rewritten to the native relative path '../api/types'.",
+    "L19-35 AutomationEventData union, the exported AutomationSSEListener type, ConnectionListener, and the AutomationSSEClient interface (subscribe/unsubscribe/onConnect/offConnect/getState) ported 1:1.",
+    "L37-43 module state (eventListeners/connectListeners Sets, source, state 'reconnecting' default, failCount, reconnectTimer, connecting) ported; reconnectTimer typed as `ReturnType<typeof setTimeout>` instead of browser `number`, and `source` typed against a structural NativeEventSource (RN has no DOM EventSource type).",
+    "L45-55 BASE_BACKOFF_MS/MAX_BACKOFF_MS + the capped-backoff comment + EVENT_TYPES array ported verbatim.",
+    "L57-61 emit() with per-listener try/catch and console.error ported verbatim.",
+    "L63-109 doConnect() ported: connecting guard, prior-source close, typed-event listeners, JSON.parse dispatch with parse-error console.error, heartbeat no-op, and the onerror handler that closes, increments failCount, sets 'reconnecting', and schedules a backoff reconnect. Browser-only `new EventSource(...)` is replaced by a host-provided global EventSource polyfill probe (mirrors api/sseClient.ts): when absent it stays in the truthful 'reconnecting' state and logs AUTOMATION_SSE_UNAVAILABLE_REASON instead of falsely reporting connected; `window.setTimeout` -> native global `setTimeout`. The bare path is resolved through apiUrl('/api/v1/automations/events') so it targets the native API base.",
+    "L72 endpoint '/api/v1/automations/events' preserved exactly (via the AUTOMATION_EVENTS_PATH const resolved by apiUrl).",
+    "L111-139 the automationSSE client object ported 1:1: subscribe lazily connects when no source/!connecting; unsubscribe auto-disconnects + clears reconnectTimer when the last listener leaves; onConnect/offConnect manage connectListeners; getState returns the current 'connected'|'reconnecting' state.",
+    "Added export const AUTOMATION_SSE_UNAVAILABLE_REASON to make the platform-unavailable case explicit/documentable (native analog of api/sseClient.ts's unavailable reason); getState()'s 'connected'|'reconnecting' contract is unchanged so the consuming hook is unaffected.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, or web UI components imported — only the native api/client apiUrl helper + api/types. Formatted with the repo prettier config. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
