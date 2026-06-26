@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/notifications/components/LegacyNotificationsRedirect.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/components/LegacyNotificationsRedirect.tsx",
+  "sourceLineCount": 28,
+  "coveredLineCount": 28,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 28 source lines line by line before editing. The web file is pure routing glue: a query-aware redirect from the legacy /notifications?tab=… route to the new top-level /notifications/{inbox,archived,channels} routes that forwards the remaining (non-tab) params so filter/search state survives.",
+    "L1-9 docblock (component purpose + the four /notifications -> /notifications/inbox|archived|channels redirect examples) -> ported verbatim into the native header comment and extended to document the native-safe replacements.",
+    "L11 `import { Navigate, useLocation } from 'react-router-dom'` -> removed (no react-router-dom on native). useLocation().search -> a native-safe `search` prop the native navigation shell supplies; <Navigate> -> the module-level navigation sink (legacyNotificationsRedirectNavigate / setLegacyNotificationsRedirectNavigator) fired from an effect, mirroring AlertCard's <Link> -> setAlertCardNavigator port. Only `useEffect` is imported from react.",
+    "L13-17 `const TAB_TO_ROUTE: Record<string, string> = { inbox: '/notifications/inbox', archived: '/notifications/archived', channels: '/notifications/channels' }` -> ported verbatim, byte-for-byte.",
+    "L19 `export default function LegacyNotificationsRedirect()` -> preserved name + default export; signature gains an optional { search } prop (the native-safe useLocation replacement) defaulting to '' so the bare /notifications case still redirects to the inbox. Returns null (the web <Navigate> renders null).",
+    "L20 `const location = useLocation()` -> replaced by the `search` prop (react-router useLocation has no native analogue; flagged in nativeLegacyNotificationsRedirectCapabilities.reactRouterLocationAvailable=false).",
+    "L21 `const params = new URLSearchParams(location.search)` -> parseSearch(search): a native-safe ordered key/value parser (strips a leading '?', skips empty segments, decodes '+'->space then percent-decodes, value-less key -> '') so no URL polyfill is required (same approach AlertCard used). urlSearchParamsAvailable=false is recorded.",
+    "L22 `const tab = params.get('tab') ?? 'inbox'` -> `getFirst(params, 'tab') ?? 'inbox'`; getFirst returns the first value or null (not '') for an absent key, so an absent tab falls back to 'inbox' while a present-but-empty `tab=` keeps '' — value-identical to URLSearchParams.get + ?? semantics.",
+    "L23 `params.delete('tab')` -> `deleteKey(params, 'tab')` filters out every 'tab' entry while preserving the order of the rest (URLSearchParams.delete parity).",
+    "L24 `const target = TAB_TO_ROUTE[tab] ?? '/notifications/inbox'` -> `TAB_TO_ROUTE[tab] ?? LEGACY_NOTIFICATIONS_DEFAULT_ROUTE` (the exported default constant equals '/notifications/inbox'); identical unknown-tab fallback.",
+    "L25 `const qs = params.toString()` -> `serialize(remaining)`: ordered `encode(k)=encode(v)` joined by '&', where encodeComponent = encodeURIComponent(v).replace(/%20/g,'+') — byte-identical to URLSearchParams.toString() for the conventional filter/search values forwarded here.",
+    "L26 `const to = qs ? `${target}?${qs}` : target` -> ported verbatim inside the pure resolveLegacyNotificationsTarget(search) helper (extracted so the exact web computation is testable and side-effect free).",
+    "L27 `return <Navigate to={to} replace />` -> `useEffect(() => legacyNotificationsRedirectNavigate(to, { replace: true }), [to])` then `return null`; the replace-history semantics of the web `replace` prop are preserved via the { replace: true } option. With no host navigator wired the redirect is a safe no-op a host overrides.",
+    "L28 closing brace + EOF -> ported.",
+    "No DOM-only modules, browser HTML elements, react-router-dom, Recharts, Leaflet, framer-motion, or old web UI components are imported — only React's useEffect. The TAB_TO_ROUTE map, all API/route paths, the tab->route mapping, the param-forwarding behavior, and the i18n-free routing intent are preserved exactly.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) PASS; npm run lint -- --quiet (eslint . --quiet) PASS; npm test -- --runInBand --detectOpenHandles PASS (16 suites / 71 tests)."
+  ]
+}
