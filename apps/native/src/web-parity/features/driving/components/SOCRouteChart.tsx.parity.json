@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/driving/components/SOCRouteChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/SOCRouteChart.tsx",
+  "sourceLineCount": 133,
+  "coveredLineCount": 133,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { useMemo } from 'react'` -> `import React, {useMemo} from 'react'` (React in scope for the classic JSX runtime; useMemo drives both derivations and the i18n-fallback memo).",
+    "L2-15 Recharts barrel import `{ ChartContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, chartGrid, axisTick, AREA_DEFAULTS } from @/components/charts` -> only the native-safe web-parity `ChartContainer` is imported (from ../../../components/charts); every Recharts plotting primitive + the chartGrid/axisTick/AREA_DEFAULTS style descriptors are replaced by the hand-built native View plot (no Recharts is imported into native output).",
+    "L16 `import { EmptyState } from '@/components/feedback'` -> native `components/feedback/EmptyState` (../../../../components/feedback/EmptyState); it requires a title, so the chart-title key is reused as the title and the original empty-message key is preserved.",
+    "L17 `import { useTranslation } from 'react-i18next'` -> local `useNativeTranslationFallback()` returning `(key, fallback) => fallback`; all six i18n keys + English defaults preserved (title, aria, empty, Distance col, SOC % col).",
+    "L18 `import type { TripSOCPoint, TripChargeStop } from '@/types/driving'` -> identical type-only import from the already-ported native `web-parity/api/hooks/useDriving` (the native home of these types).",
+    "L20-24 `interface SOCRouteChartProps { socCurve: TripSOCPoint[]; chargeStops: TripChargeStop[]; minArrivalSOC: number }` -> preserved verbatim.",
+    "L26-27 `export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC })` + `const { t } = useTranslation()` -> preserved named export/destructure + `const t = useNativeTranslationFallback()`.",
+    "L29-35 `chartData` useMemo mapping `socCurve ?? []` to `{ distance: Math.round(pt.distance_m*10)/10, soc: Math.round(pt.soc*10)/10 }` over `[socCurve]` -> preserved verbatim (typed ChartPoint[]); no unit conversion (web plots rounded distance_m and labels the axis 'km' unchanged).",
+    "L37-52 `stopDistances` useMemo (cumDist scan over `chargeStops ?? []`, leg-boundary match `pt.distance_m > cumDist && Math.abs(pt.soc - stop.charge_from_soc) < 5`, push `Math.round(matchPt.distance_m)`, advance cumDist) -> preserved verbatim including the `// Charge stops align with leg boundaries` comment and `[socCurve, chargeStops]` deps.",
+    "L54-65 empty branch `if (chartData.length === 0)` returning `<ChartContainer title aria height={300}>` wrapping `<EmptyState message=... />` -> preserved: native ChartContainer with the same title/ariaLabel/height(PLOT_HEIGHT=300) wrapping the native EmptyState; the `chart-a11y:no-table` and `no-action` comments are carried across.",
+    "L67-80 non-empty `<ChartContainer title aria data={chartData.map(...)} dataColumns={[distance,soc]} height={300}>` -> preserved verbatim; the native ChartContainer renders the same accessible fallback data table from `data` + `dataColumns`.",
+    "L81-82 `<ResponsiveContainer width='100%' height={300}><AreaChart data margin=...>` -> native fixed-height (PLOT_HEIGHT) plot frame; the responsive/auto-size wrapper has no native analogue and is folded into the View layout.",
+    "L83-89 SVG `<defs><linearGradient id='socGradient'> #22c55e@0.4 / #eab308@0.2 / #ef4444@0.1` -> RN has no SVG linearGradient; the same green->yellow->red encoding is reproduced by per-point SOC band colours (SOC_GREEN #22c55e >=50, SOC_YELLOW #eab308 >=20, SOC_RED #ef4444 else) via `socBandColor`, with a translucent area fill (withAlpha 0.28) + coloured top border.",
+    "L90 `<CartesianGrid {...chartGrid} />` -> native horizontal gridlines at 0/25/50/75/100% (SOC_GRID_LINES) drawn as absolutely positioned border-coloured Views.",
+    "L91-95 `<XAxis dataKey='distance' {...axisTick} label='km' />` -> native bottom axis: up-to-four evenly spaced distance ticks (pickXTicks) + a muted 'km' axis title (literal, matching the web hardcoded label).",
+    "L96-100 `<YAxis domain={[0,100]} {...axisTick} label='SOC %' />` -> native left axis with the fixed 100/75/50/25/0 SOC ticks (SOC_AXIS_TICKS) + a muted 'SOC %' axis title (literal, matching the web hardcoded label).",
+    "L101-105 `<Tooltip contentStyle labelFormatter='{v} km' formatter='{v}% SOC' />` -> the Recharts hover tooltip is a browser pointer interaction with no native plot to attach to; omitted and documented (the same values remain reachable via the ChartContainer accessible data table).",
+    "L106-111 `<Area {...AREA_DEFAULTS} dataKey='soc' stroke='#22c55e' fill='url(#socGradient)' />` -> the SOC series is the column area itself: each point is a bottom-anchored fill whose height is `clampPercent(point.soc)` on the 0-100 domain, coloured by the SOC band (green stroke intent preserved via the band top border).",
+    "L112-118 `<ReferenceLine y={minArrivalSOC} stroke='#ef4444' strokeDasharray='6 4' label='Min {minArrivalSOC}%' />` -> a red dashed (borderStyle dashed; RN has no strokeDasharray) horizontal line positioned at `bottom: clampPercent(minArrivalSOC)%`, plus a marker-legend entry rendering the exact `Min ${minArrivalSOC}%` label.",
+    "L119-128 `stopDistances.map((dist,i) => <ReferenceLine x={dist} stroke='#3b82f6' strokeDasharray='4 4' label='\\u26a1 Stop {i+1}' />)` -> per stop a blue dashed vertical line positioned at `left: xFractionPercent(dist, minDist, span)%` (Recharts numeric-x placement reproduced across the distance domain), plus a marker-legend entry rendering the exact `\\u26a1 Stop ${i+1}` label; the `key={stop-${i}}` is preserved.",
+    "L129-133 closing `</AreaChart></ResponsiveContainer></ChartContainer>` + braces -> matching native closing JSX; added `SOCRouteChart.displayName` and an alphabetically sorted StyleSheet. No DOM, Recharts, Leaflet, framer-motion, or web UI components are imported.",
+    "Gates: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles` all run from apps/native."
+  ]
+}
