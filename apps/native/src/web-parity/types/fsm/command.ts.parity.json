@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/types/fsm/command.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/command.ts",
+  "sourceLineCount": 102,
+  "coveredLineCount": 102,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 102 source lines before editing; pure non-visual TypeScript type + data module (command-dispatch FSM) with no DOM, Recharts, Leaflet, react-leaflet, or web UI imports — nothing browser-only to neutralize.",
+    "L1 `import { deriveEdges, type TransitionRow, StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix, Scenario, ToastMap } from './types'`: the sibling web/src/types/fsm/types.ts is not yet a converted native target, so the exact transitive closure it provides (BadgeVariant, StateStyle, StateEntry, Edge, TransitionTiming, TransitionRow, CoverageCell, CoverageMatrix, DisallowedTransition, Scenario, ToastMap, TruthTableCell, TruthTable, FSMDefinition) plus the `deriveEdges` helper is inlined verbatim as module-local (non-exported) declarations — the established inline idiom (TimeOfUseAnalysis/charging-curve helpers/LiveTelemetry/battery.ts). Unused-by-command members (ResolvedStateStyle, isValidTransition) were intentionally omitted to keep lint clean; this preserves the web file's public export surface exactly.",
+    "L3-8 COMMAND_STATES (10 states, `as const`) and L8 CommandState union ported 1:1; L23-29 COMMAND_TRIGGERS (11 triggers) + CommandTrigger and L31-36 COMMAND_GUARDS (6 guards) + CommandGuard ported 1:1 (COMMAND_GUARDS/CommandGuard remain exported for external consumers even though guards are typed string|null internally, matching web).",
+    "L10-21 COMMAND_STATE_ENTRIES ported verbatim including all `overrides` (wake_timeout/timed_out orange, retrying purple, gave_up red); these badgeDot/bg/text/dot values are class-name tokens consumed at the not-yet-ported FSM-visualisation boundary and are preserved exactly (no Tailwind→RN remap done here, mirroring the data-only nature of the source).",
+    "L38-55 COMMAND_TRANSITIONS (16 rows), L57 COMMAND_EDGES = deriveEdges(...), L59-66 COMMAND_DISALLOWED (6 rows), L68-79 COMMAND_COVERAGE (10x10 matrix), L81-85 COMMAND_TOASTS (with emoji/ellipsis strings ✅/⚠️/❌/… kept byte-for-byte), L87-96 COMMAND_SCENARIOS (K1-K8) and L98-102 COMMAND_FSM aggregate all ported 1:1 with identical state/trigger/guard names, ordering, and snake_case identifiers; `deriveEdges` dedupe logic (Set keyed on `${from}→${to}`) reproduced verbatim.",
+    "Reformatted to native conventions (single quotes, semicolons, trailing-comma all, no manual column alignment) via eslint --fix; gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles` all pass."
+  ]
+}
