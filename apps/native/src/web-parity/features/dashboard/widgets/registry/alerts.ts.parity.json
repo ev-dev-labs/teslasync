@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/registry/alerts.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/registry/alerts.ts",
+  "sourceLineCount": 28,
+  "coveredLineCount": 28,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 28 source lines before editing. This is a pure widget-registry data module: it exports `ALERT_WIDGETS: WidgetDef[]` (L5) with the two 'alerts' category dashboard widgets and is closed by `];` (L28). All metadata is preserved 1:1 (rule 3).",
+    "L1 `import { lazy } from 'react'` -> kept (`import React, { lazy } from 'react'`); `lazy` is a React API available in React Native. `React` is additionally imported for `React.createElement` (the placeholder factory below, since a .ts file cannot use JSX).",
+    "L2 `import { Bell } from 'lucide-react'` -> lucide-react is a DOM/SVG dependency forbidden in native output (rule 4) and the native app has no react-native-svg. The source field name `icon` is kept but now holds a decorative glyph string `BELL_GLYPH = '🔔'` — the exact `Bell -> '🔔'` mapping the sibling dashboard/components/TemplateGallery ICON_GLYPHS table already uses, keeping the icon intent consistent + auditable (rules 5/7).",
+    "L3 `import type { WidgetDef } from '../types'` -> the native `../types` is not yet ported, so the `WidgetDef` contract plus its `WidgetSize` / `WidgetConfig` / `WidgetProps` / `WidgetCategory` (full 16-member union) / `WidgetHelp` deps are reproduced + exported locally (verbatim from web ../types except `icon`: LucideIcon -> glyph string). Same self-contained approach the sibling FleetStats/QuickNav/AnomalyDetector widget ports use for `./types` WidgetProps.",
+    "L4 blank line -> no-op.",
+    "L5 `export const ALERT_WIDGETS: WidgetDef[] = [` and L28 `];` -> preserved verbatim as the exported array literal typed against the local WidgetDef.",
+    "L6-L16 alert-feed entry -> id 'alert-feed', name 'Alert Feed', description 'Recent alerts reverse-chronological with severity badges', category 'alerts', defaultSize {cols:2,rows:4}, minSize {cols:2,rows:4}, maxSize {cols:4,rows:40} all kept verbatim. L10 `icon: Bell` -> `icon: BELL_GLYPH` ('🔔'). L15 `component: lazy(() => import('../AlertFeedWidget'))` -> the native AlertFeedWidget is not yet ported; a lazy import of a non-existent native module would not type-check, so the ref resolves via the same React.lazy code-split shape + the same LazyExoticComponent<ComponentType<WidgetProps>> type to a native-safe `makeUnavailableWidget('AlertFeedWidget')` placeholder that renders an explicit 'AlertFeedWidget unavailable on native' state (rule 7).",
+    "L17-L27 notification-stats entry -> id 'notification-stats', name 'Notification Stats', description 'Notification delivery rate, active channels, recent delivery log', category 'alerts', defaultSize {cols:2,rows:2}, minSize {cols:1,rows:2}, maxSize {cols:4,rows:40} all kept verbatim. L21 `icon: Bell` -> `icon: BELL_GLYPH` ('🔔'). L26 `component: lazy(() => import('../NotificationStatsWidget'))` -> same native-safe placeholder treatment as L15, naming 'NotificationStatsWidget'. When these widgets are ported in their own passes, a future pass swaps the placeholder factory for the real native import().",
+    "The placeholder renders RN primitives only (View + the native app AppText tone='muted' variant='caption'), centered with padding, surfacing the unavailable state rather than rendering blank. No DOM elements, Recharts, Leaflet, framer-motion, lucide-react, or old web UI components are imported.",
+    "Verified in apps/native: `npm run typecheck` (tsc --noEmit) exit 0; `npm run lint -- --quiet` exit 0; `npm test -- --runInBand --detectOpenHandles` passed with no regression."
+  ]
+}
