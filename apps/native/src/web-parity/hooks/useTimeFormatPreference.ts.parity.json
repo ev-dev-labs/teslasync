@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/hooks/useTimeFormatPreference.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useTimeFormatPreference.ts",
+  "sourceLineCount": 17,
+  "coveredLineCount": 17,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 17 source lines line by line before editing. L1 `import { useSettings } from '@/api/hooks/useSettings'` -> rewired to the native parity hook at '../api/hooks/useSettings' (same hook the sibling useDensitySync port imports); that native useSettings already declares `time_format_default?: 'relative' | 'absolute'` on AppSettings, so the field read is type-safe.",
+    "L3-12 docblock intent preserved and adapted: the web doc describes returning the user's preferred default format for `<TimeStamp>` and reading `time_format_default` from server-persisted AppSettings via the canonical TanStack Query hook. Ported into the native docblock, with the `<TimeStamp>` reference annotated as the native timestamp-rendering analog.",
+    "L13-17 logic ported verbatim: `export function useTimeFormatPreference(): 'relative' | 'absolute'` (L13), `const { data } = useSettings()` (L14), `const pref = data?.time_format_default` (L15), and the fallback `return pref === 'absolute' ? 'absolute' : 'relative'` (L16) — identical state names, return type, optional-chaining null safety, and the same fallback to 'relative' when unloaded/missing/unknown. L18 trailing newline preserved.",
+    "Explicit unavailable browser behavior (contract rule 7): the web doc's cross-tab broadcast claim (L7-8 'cross-tab broadcasts mutate every consumer instantly') has no React Native analog — there are no browser tabs and the native useSettings reports nativeSettingsHookCapabilities.queryBroadcastAvailable === false. Documented in the native docblock; the in-process single-source-of-truth behavior is preserved because all consumers share one React Query cache entry, so the user-visible intent is unchanged.",
+    "No i18n strings and no unit conversion exist in this source, so none were introduced or altered. No DOM modules, browser HTML elements, Recharts, Leaflet, localStorage, or old web UI components imported — only the native parity useSettings hook. Verified via cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
