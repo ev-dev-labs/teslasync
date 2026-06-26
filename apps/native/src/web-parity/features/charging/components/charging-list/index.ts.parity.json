@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-list/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-list/index.ts",
+  "sourceLineCount": 31,
+  "coveredLineCount": 31,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 31 source lines (plus the trailing newline) with line numbers before porting. The source is a pure re-export barrel for the charging-list section family; the native port keeps it a pure re-export barrel and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI components.",
+    "BatteryLevelChart (web L5) is the only charging-list sibling currently present in apps/native/src/web-parity/features/charging/components/charging-list (BatteryLevelChart.tsx, exported as `export function BatteryLevelChart`), so it is the single live native re-export, mirroring the web barrel's component-only surface for that line.",
+    "The other nine section components on web L1-4 and L6-10 (HeroGauges L1, QuickMetrics L2, ChartsRow L3, AcDcStatsPanel L4, DetailedStatistics L6, EfficiencyPanel L7, ChargerSpecsPanel L8, OptimizerSection L9, SessionListSection L10) map to modules not yet ported into the native parity tree; re-exporting any would point at a missing file and break the native typecheck, so each is enumerated verbatim in nativeChargingListBarrelCapabilities.pending.exports with a shared NATIVE_CHARGING_LIST_PENDING_REASON.",
+    "The ./helpers value exports on web L11-22 (computeStats, computeChargerBreakdown, computeEnergyTrend, computeCostByType, computeStartLevelDist, computeAcDcBreakdown, computeEfficiencyStats, computeChargerSpecs, computeEnhancedStats, filterAndSortSessions) and the type-only exports on web L23-31 (SortKey, ChargerFilter, ChargingStats, AcDcBreakdown, EfficiencyStats, ChargerSpecsData, EnhancedStats) all come from the not-yet-ported ./helpers module; every one is listed in the pending capability record so the source public API stays documented and discoverable instead of being silently dropped. This follows the capability-record convention already used by the native charts and feedback barrels.",
+    "No behavior, state names, API paths, unit handling, or i18n strings exist in this barrel to preserve; it carries no browser-only runtime behavior of its own beyond module re-export wiring, which is reproduced faithfully for the ported BatteryLevelChart and explicitly deferred for the rest. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
