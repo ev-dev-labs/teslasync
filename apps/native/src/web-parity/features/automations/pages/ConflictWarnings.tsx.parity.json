@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/automations/pages/ConflictWarnings.tsx",
+  "outputPath": "apps/native/src/web-parity/features/automations/pages/ConflictWarnings.tsx",
+  "sourceLineCount": 28,
+  "coveredLineCount": 28,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 28 source lines with numbered output before editing. This is a small presentational component that maps automation conflicts onto AlertBanner notices; it ports cleanly to React Native with no DOM, lucide-react, recharts, leaflet, or web UI imports.",
+    "L1-L4 imports: react-i18next useTranslation (L1) becomes a self-contained useNativeTranslationFallback hook returning the English fallback (no i18n runtime on native, matching the sibling LiveStaleDataBanner/DraftRecoveryBanner ports); the lucide-react AlertTriangle/Info glyphs (L2) become native SemanticIcon name='warning'/'info' badges; the shared web AlertBanner (L3) has no native parity port so its warning (neon-amber) and info (neon-cyan) variant chrome is recreated inline as a ConflictBanner; the AutomationConflict type (L4, web '@/api/types') is redirected to the native parity home '../../../api/types' which exports the identical shape.",
+    "L6-L8 ConflictWarningsProps interface preserved exactly (conflicts: AutomationConflict[]); exported here for native parity-port convention (DraftRecoveryBanner likewise exports its props), which is additive and keeps the { conflicts } API identical.",
+    "L10-L12 component signature + guard preserved: const t from the (now native fallback) translation hook, and the `if (conflicts.length === 0) return null` early-return is reproduced verbatim as `if (conflicts.length === 0) { return null; }`.",
+    "L14-L26 render preserved as visual intent: the space-y-2 wrapper <div> becomes a <View style={styles.stack}> with gap spacing.sm (8px = space-y-2); conflicts.map((c,i)=>...) and the key `${c.automation_id}-${i}` are identical; the per-conflict <AlertBanner> with variant={c.severity==='warning'?'warning':'info'}, icon={severity==='warning'?<AlertTriangle/>:<Info/>}, title={t('automations.builder.conflict','Potential Conflict')} and children {`\"${c.automation_name}\": ${c.reason}`} are reproduced by <ConflictBanner severity title message> -- same severity branch drives both the neon-amber/neon-cyan chrome and the warning/info SemanticIcon, same i18n key+fallback for the title, and the same `\"name\": reason` body string.",
+    "L28-L29 closing braces handled. Native-safe adaptations documented: AlertBanner is recreated inline because no native port exists (mirroring the sibling banner ports); the neon-amber (#f59e0b) / neon-cyan (#00f0ff) variant ramps (bg /5, border /20, body text /80, icon+title full) are rebuilt from the neon channels since the shared tokens lack those exact alpha stops; the i18n title uses the English fallback with the original key preserved; accessibilityLiveRegion='polite' and a decorative icon role are added for native a11y. Verified via cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
