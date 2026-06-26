@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/hooks/useActiveFilterChips.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useActiveFilterChips.ts",
+  "sourceLineCount": 80,
+  "coveredLineCount": 80,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 80 source lines (numbered) before editing. The module is a pure, UI-agnostic React hook (useMemo over plain JS objects): no JSX, no DOM element, no Recharts/Leaflet, no browser-only API, so the logic ports 1:1 to React Native (Hermes runs the same useMemo/Object.keys/Array.isArray/String primitives).",
+    "L1-13 file-header JSDoc (UI-agnostic intent: drop empty/default values, return descriptors in the same iteration order as config) carried over into the native conversion header.",
+    "L15 `import { useMemo } from 'react'` preserved (react is RN-compatible) as `import {useMemo} from 'react'` per the native prettier style (no inner brace spacing).",
+    "L16 `import type { FilterChipDescriptor } from '@/components/forms/ActiveFilterChips'` is a pure type with no runtime/DOM dependency; the native ActiveFilterChips component is not yet ported, so the interface {key,label,value,onRemove} is inlined module-locally and re-exported (validateImport.ts precedent), keeping the hook's return contract structurally identical.",
+    "L18-29 ChipConfig JSDoc (label/format/setter/isEmpty semantics incl. the default isEmpty predicate) ported verbatim.",
+    "L30-35 `ChipConfig<V = unknown>` interface ported 1:1 (label, format?, setter, isEmpty?). L37 `ChipConfigRecord = Record<string, ChipConfig<never>>` preserved.",
+    "L39-44 `defaultIsEmpty` ported verbatim: null/undefined -> true, '' string length 0, empty array, else false (single-line if-without-braces matches existing native lint-passing files).",
+    "L46-49 `defaultFormat` ported verbatim: arrays join via map(String) -> ', '; else String(value). Web `value.map((v) => String(v))` rewritten as `value.map(v => String(v))` per native arrowParens:'avoid'; behaviour identical.",
+    "L51-58 useActiveFilterChips JSDoc (Object.keys(config) ordering) carried over. L59-80 hook body ported 1:1: useMemo([config,state]) loop over Object.keys(config), cfg cast to ChipConfig<unknown>, value=state[key], empty=(cfg.isEmpty ?? defaultIsEmpty)(value) with `if (empty) continue;`, value_=(cfg.format ?? defaultFormat)(value), chips.push({key,label,value:value_,onRemove:()=>cfg.setter(undefined)}). All names (chips, cfg, value, value_, empty) preserved; no DOM/Recharts/Leaflet/web-UI imports.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
