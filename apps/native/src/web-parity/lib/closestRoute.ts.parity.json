@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/lib/closestRoute.ts",
+  "outputPath": "apps/native/src/web-parity/lib/closestRoute.ts",
+  "sourceLineCount": 81,
+  "coveredLineCount": 81,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 81 source lines before porting. closestRoute.ts is pure non-visual utility code (string normalization + iterative Levenshtein); it touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so the logic ports 1:1 to React Native-compatible TypeScript (contract rule 6).",
+    "L1 `import type { RouteEntry } from './routeRegistry'` — the sibling routeRegistry module is not yet part of the native parity layer; closestRoute depends only on the structural RouteEntry TYPE (not the data), so the interface is inlined verbatim from web routeRegistry.ts (same path/name/label/i18nKey/hidden fields + JSDoc) and re-exported, keeping the engine self-contained and type-checking without the sibling module. Documented in the native header comment.",
+    "L3-17 module JSDoc preserved (purpose, the three worked distance examples /dashboards->/, /vehiclees->/vehicles, /baterry->/battery, and the hidden-entry exclusion rationale); a native-conversion section was appended explaining the inlined RouteEntry seam.",
+    "L18-20 `RouteSuggestion extends RouteEntry { distance: number }` ported verbatim (still exported).",
+    "L22-40 closestRoutes(query, registry, limit=5) ported 1:1: normalize(query) guard returning [] on empty, the registry loop skipping r.hidden, min(pathDist,labelDist) over normalize(path)/normalize(label), the distance<=6 threshold push of {...r, distance}, and the sort by distance then path.localeCompare, then slice(0, limit). Default parameter limit=5 preserved.",
+    "L42-46 normalize() ported verbatim — toLowerCase().replace(/[\\s\\-_/]+/g, '') (whitespace/dash/underscore/slash stripping); prettier collapsed it onto one chained line, behavior identical.",
+    "L48-81 levenshtein() ported verbatim: equal/empty short-circuits, swap-to-shorter-inner-loop optimization (param reassignment kept), two-row prev/curr arrays of size m+1, prev seed loop, the j/i double loop with charCodeAt cost and Math.min(curr[i-1]+1, prev[i]+1, prev[i-1]+cost), row swap, returning prev[m]. No bitwise ops, so no no-bitwise lint concern.",
+    "Style adapted to native conventions (.prettierrc.js: singleQuote, trailingComma all, semicolons) — single quotes/semicolons added, object spread brace spacing `{...r, distance}` per prettier; no semantic change.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported (no imports at all). Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
