@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/charging/components/cost-analysis/CostPerKwhChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/cost-analysis/CostPerKwhChart.tsx",
+  "sourceLineCount": 53,
+  "coveredLineCount": 53,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line before editing; the named export CostPerKwhChart, its CostPerKwhChartProps { data: { date: string; costPerKwh: number }[] } shape, and every i18n key (costAnalysis.charts.costPerKwh / .rateLabel / .noData) are preserved verbatim (L12-19, L25, L40, L48).",
+    "L1 react-i18next useTranslation -> a local native useTranslation() whose t(key, fallback) returns the English fallback (or key), keeping every key at the call site since the parity bundle ships no i18n runtime (L17, L21-26).",
+    "L2 lucide-react <BarChart3 className='h-4 w-4 text-purple-400' /> (L24) -> the SemanticIcon registry 'analytics' glyph rendered as a small inline AppText tinted colors.violet (#a78bfa ~= text-purple-400), preserving the bar-chart icon identity and its purple tint.",
+    "L3 GlassPanel from @/components/ui (L22 className='p-4') -> the already-ported native GlassPanel with 16px (p-4) padding.",
+    "L4-8 the Recharts/web charts barrel (ChartTooltip, chartGrid, axisTickSm, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AREA_DEFAULTS) used at L28-45 -> the already-ported native AreaChartWrapper (the SessionCurveChart convention) imported from ../../../../components/charts; it draws the same single 'costPerKwh' series (xKey 'date' from XAxis L31, stroke palette[2] from L41) with native grid (CartesianGrid L30) and axes (XAxis/YAxis L31-35) plus an always-visible latest-value summary because RN has no hover Tooltip (L36); the YAxis tickFormatter formatCurrency(v,2) (L34) maps to the wrapper yFormatter, the Line name '$/kWh' (L40) maps to the series label, AREA_DEFAULTS (L38) line styling folds into the wrapper, and the activeDot (L42) has no native equivalent (the wrapper draws its own point dots). ResponsiveContainer height={260} (L28) -> AreaChartWrapper height={260} with a 100%-width root.",
+    "L9 useChartPalette() (L18) -> the chart_palette settings value resolved against the native CHART_COLORS (cb_safe) / NEON_COLORS barrels exactly like web resolveChartPalette (neon -> NEON_COLORS, else cb_safe); palette[2] (L41) stays the same series stroke colour.",
+    "L10 useFormatting() (L19) formatCurrency (L34) -> an inlined formatCurrency derived from the native useSettings() query: currencySymbol = trimmed currency_symbol || '$', userPrecision = floored decimal_precision (default 2), `${symbol}${fmtNumber(amount, decimals ?? precision)}`, with fmtNumber inlined as en-US locale-aware fixed-decimal (non-finite -> 0), matching web useFormatting.",
+    "L21-50 the return JSX -> GlassPanel(padding 16) > title row (flex row, items-center, gap 8 = gap-2, mb 16 = mb-4) with the violet glyph + a 14px (text-sm) semibold primary (text-white) title; data.length > 0 (L27, null-guarded via `const rows = data ?? []`) renders the AreaChartWrapper, else (L46-49) a centred 260px (h-[260px]) muted 14px 'Not enough data' placeholder reproducing the text-[var(--text-muted)] empty div.",
+    "L51-53 closing JSX/return/component boundary preserved. No DOM, react-i18next, lucide-react, Recharts, Leaflet, or web UI-kit modules imported. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
