@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/types/fsm/ui-types.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/ui-types.ts",
+  "sourceLineCount": 55,
+  "coveredLineCount": 55,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 55 source lines before editing; pure non-visual API-layer FSM type/constant code with no DOM, React, Recharts, Leaflet, or web UI dependencies, so it ports 1:1 and is fully React Native compatible. No imports exist in the source, so nothing browser-only needed substitution.",
+    "L1 doc comment ('API-layer interfaces for FSM debugger/system pages — NOT FSM definitions') preserved as the leading header doc block, em-dash text kept verbatim.",
+    "L3-12 FSMTransition interface ported with all 8 members identical (id:number, vehicle_id:number, ts:string, fsm_name:string, from_state:string, to_state:string, trigger:string, details?:Record<string,unknown>|null); snake_case keys kept to stay wire-compatible with the Go API JSON.",
+    "L14-20 ActiveSubFSM ported verbatim: type:'drive'|'charge' literal union, state:string, start_time:string, optional drive_id?:number and session_id?:number.",
+    "L22-26 FSMStats ported verbatim (enabled:boolean, stats:Record<string,number>, active_subs?:ActiveSubFSM[]).",
+    "L28-33 FSMTransitionResponse ported verbatim (data:FSMTransition[], total:number, page:number, per_page:number).",
+    "L35-39 FSMType union ('all'|'vehicle'|'telemetry_connection') ported; prettier (printWidth 80) collapses the short union to a single line — same type, same members.",
+    "L40-44 FSM_TYPE_OPTIONS and L46-54 HOURS_OPTIONS constants ported with identical values/order (all/vehicle/telemetry_connection options; 1/6/24/168/720/2160/0-hour options with their exact English labels). Labels left as literal strings to match the un-i18n'd web source for behavioral parity; a native screen can translate at the render boundary.",
+    "L55 trailing blank line preserved. No API paths, unit-suffixed fields, or unit conversions exist in this file, so no SI/unit remapping was required.",
+    "Brace spacing follows the native @react-native prettier preset (bracketSpacing:false), single quotes, semicolons, and trailing commas, matching the sibling fsm/cross-fsm.ts; normalized with eslint --fix so it is prettier/prettier clean.",
+    "Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles` all pass."
+  ]
+}
