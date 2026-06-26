@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/system/hooks/useStatusLiveSSE.ts",
+  "outputPath": "apps/native/src/web-parity/features/system/hooks/useStatusLiveSSE.ts",
+  "sourceLineCount": 170,
+  "coveredLineCount": 170,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 170 source lines before editing and preserved the useStatusLiveSSE hook name, the snapshot/state/lastUpdateAt state, the reconnect() callback, the exact GET /api/v1/status/live endpoint default, and the StatusSeverity/StatusV1Snapshot/StatusLiveState/UseStatusLiveSSEOptions/UseStatusLiveSSEResult types (L24-68) verbatim with snake_case JSON keys.",
+    "Ported the connection lifecycle faithfully (L73-167): closeSource, connect's prev==='live'->'reconnecting' guard, open/status/heartbeat/error listeners, JSON.parse of the status payload, Date.now() lastUpdateAt, RECONNECT_BASE_MS=1000/RECONNECT_MAX_MS=30000 exponential backoff (Math.min(base*2^retry,max)), retry counter reset on open and reconnect, and the not-enabled -> 'offline' effect branch.",
+    "React Native has no browser EventSource (L78,L100-107,L130) so the source is probed from a host-provided global EventSource polyfill via getEventSourceConstructor(); when absent the unavailable case maps onto the existing explicit 'offline' state, keeping the { snapshot, state, lastUpdateAt, reconnect } surface unchanged. withCredentials:true intent is preserved through the constructor init.",
+    "EventSource.CLOSED (L130) is replaced by the EVENT_SOURCE_CLOSED=2 constant checked against es.readyState; window.setTimeout/window.clearTimeout (L89,L134) become RN-safe setTimeout/clearTimeout with a ReturnType<typeof setTimeout> timer ref; the relative endpoint resolves through the native apiUrl helper so the request still hits /api/v1/status/live.",
+    "The browser document.visibilitychange foreground restart (L155-164) is converted to AppState.addEventListener('change') reconnecting only when state==='active' and sourceRef.current===null, with cleanup via subscription.remove() plus closeSource(); no DOM, recharts, leaflet, or web UI modules are imported."
+  ]
+}
