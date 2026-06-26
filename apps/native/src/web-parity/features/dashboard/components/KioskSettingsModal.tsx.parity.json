@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/dashboard/components/KioskSettingsModal.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/components/KioskSettingsModal.tsx",
+  "sourceLineCount": 283,
+  "coveredLineCount": 283,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 283 source lines before editing. Preserved the KioskSettingsModalProps contract (open/onClose/config/onUpdateConfig/onEnterKiosk/dashboards), the selectedIds Set<string> state seeded from config.dashboardIds || dashboards.map(d=>d.id) (L67-69), toggleDashboard with the size>1 deselect floor + immediate onUpdateConfig({dashboardIds}) (L71-83), and handleEnter -> onUpdateConfig -> onClose -> onEnterKiosk (L85-89).",
+    "Reproduced the four option constants verbatim — ROTATION_OPTIONS (L25-33), CURSOR_TIMEOUT_OPTIONS (L35-40), DIM_AFTER_OPTIONS (L42-49), CLOCK_POSITION_OPTIONS (L51-56) — and the KioskConfig type (from sibling hooks/useKioskMode) plus a SavedDashboard subset (id/name/isDefault) since those source modules are ported separately.",
+    "Converted web Modal/FormSection/Select/Toggle/Input[checkbox]/Slider/div/label/span/p + Tailwind classes to RN Modal/ScrollView/View/Pressable/Switch/AppText with native tokens. Modal (L92) -> RN Modal (transparent fade, backdrop-tap + onRequestClose close, ScrollView body, size=lg -> maxWidth 600).",
+    "Select (L97-102,149-154,160-165,186-195) -> native-safe labelled radiogroup of chips; the DOM ChangeEvent onChange has no native analog so the native Select emits the option value directly and each call site keeps its identical Number(value) / `value as KioskConfig['clockPosition']` update logic. Toggle (L143-147,180-184) -> RN Switch (onValueChange->onChange(checked)).",
+    "Checkbox dashboard rows (L110-131) -> Pressable role=checkbox rows preserving aria-label=d.name, the d.isDefault 'Default' badge (L125-129), and the max-h-40 overflow-y-auto list via a nested ScrollView (L109). Slider (L167-174,209-217,226-234) -> native-safe adjustable: value-fill track + -/+ steppers clamped to min/max stepping by step (default 1), WAI-ARIA increment/decrement actions, preserving formatValue/min/max/step/value/onChange(n).",
+    "Gated sub-controls preserved exactly: rotation dashboard picker shows only when rotateInterval>0 && dashboards.length>1 (L104), cursor-timeout under hideCursor (L148), dim-brightness under dimAfter>0 (L166), clock-position under showClock (L185). Live preview swatch (L242-256) keeps the dynamic rgba(10,10,20,backgroundOpacity) and rgba(255,255,255,0.03+widgetOpacity*0.17) opacity math; the Transparent/Solid scale captions (L218-221,235-238) and the hint block (L260-268) are ported.",
+    "Web/DOM-only behaviour with no native parity is documented as unavailable: react-i18next useTranslation -> inline-English fallback shim (every kiosk.* / common.* key + default kept verbatim); lucide-react Maximize2/Monitor (L3,261,276) -> decorative aria-hidden glyph stand-ins (⤢ / 🖥); CSS backdrop-filter blur on the preview widget (L251) and the slider pointer-drag are dropped (stepper + screen-reader adjustable actions replace the drag). Action buttons (L271-279) -> Pressables (ghost Cancel + primary Enter Kiosk Mode).",
+    "Verified: cd apps/native; npm run typecheck (tsc --noEmit) passes; npm run lint -- --quiet passes; npm test -- --runInBand --detectOpenHandles passes (existing suite, no regression)."
+  ]
+}
