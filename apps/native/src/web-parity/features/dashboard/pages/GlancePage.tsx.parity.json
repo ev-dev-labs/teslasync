@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/features/dashboard/pages/GlancePage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/pages/GlancePage.tsx",
+  "sourceLineCount": 264,
+  "coveredLineCount": 264,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-3 imports (useMemo kept; react-i18next useTranslation -> inlined English-default `t` with {{var}} interpolation; react-router-dom Link/useSearchParams dropped, documented below).",
+    "L4-13 lucide-react icons (Battery, Thermometer, Lock, Unlock, MapPin, Wind, Volume2, LucideIcon) -> no native icon font: QuickActions use shared SemanticIcon glyphs (locked/unlocked/wind/volume); metric chips use SemanticIcon-style 2-glyph stand-ins (BT / T° / LK·UL / LO).",
+    "L14-20 web ui/charts/data-display/feedback/motion/layout imports -> native equivalents: GlassPanel+AppText (ui), RadialGauge (charts), FreshnessIndicator (data-display), EmptyState (feedback), FadeIn -> plain View (motion), PageContainer -> inlined header+loading/error/empty scaffold (layout). Button/Badge/MetricCard rebuilt as local QuickAction/StatusBadge/GlanceMetric.",
+    "L21-22 useVehicles/useVehicleState/useLocationSnapshotLatest/useVehicleCommand imported unchanged from native web-parity hooks (same API paths).",
+    "L23-27 useUnits/convertDistanceFromSI/convertTempFromSI/usePageTitle/fmtNumber/batteryColor/COLOR inlined (no shared native module): unitPrefs derived from useSettings exactly as web useUnits (unit_of_length==='mi', unit_of_temp==='F'); converters + fmtNumber/safeNumber + batteryColor/COLOR_MUTED copied verbatim; usePageTitle dropped (no document.title).",
+    "L29-40 getLocationLabel ported verbatim (home/work/favorite/destination_name/em-dash fallback), typed structurally like web, fed by LocationSnapshot.",
+    "L42-67 QuickAction sub-component: web ghost Button (icon-or-spinner over label, disabled, loading, aria-label) -> native Pressable + SemanticIcon/ActivityIndicator + AppText, accessibilityLabel/State preserved.",
+    "L71-74 title = t('glance.title'); usePageTitle dropped -> title rendered in on-screen header.",
+    "L76-77 useSearchParams vehicle_id -> `vehicleIdParam` kept as `string | null` constant null (no native URL); selection useMemo unchanged.",
+    "L79 useVehicles destructured as vehicles/vehiclesLoading/vehiclesError (names preserved).",
+    "L82-91 vehicle useMemo selection logic byte-identical (String(v.id)===vehicleIdParam, fall back to vehicles[0]); vehicleId = vehicle?.id ?? 0.",
+    "L93-98 useVehicleState(vehicleId, {refetchInterval: 10_000}) + dataUpdatedAt; state = asVehicleState(stateData?.state) (narrows the FSM-string case as web's `any` did); useLocationSnapshotLatest(vehicleId, 30_000).",
+    "L100-101 useUnits -> inlined unitPrefs (distance/temperature) + locale + userPrecision from useSettings; sendCommand = useVehicleCommand().",
+    "L103-106 isOnline (online||parked), canSendCommands (isOnline && !isPending), locationLabel = getLocationLabel(location, t) preserved.",
+    "L109-112 freshnessTimestamp useMemo(dataUpdatedAt -> ISO string | null) preserved.",
+    "L114-128 PageContainer(title, loading=vehiclesLoading, error=vehiclesError) -> ScrollView + header + loading(ActivityIndicator)/error(error box)/empty branches; !vehicle -> GlassPanel + SemanticIcon battery + EmptyState (web single `message` -> EmptyState prominent `title`, message empty since web supplied none).",
+    "L129-142 centered FadeIn stage (rest state) + vehicle name (display_name||model||'Tesla') + StatusBadge (success/neutral dot, label state?.state ?? 'Unknown').",
+    "L144-154 big battery RadialGauge: value=battery_level??0, max=100, label, unit '%', size 180, color batteryColor(level) else COLOR_MUTED — all preserved.",
+    "L156-198 key metrics grid (Range green/BT, Interior amber/T°, Security green|red/LK|UL, Location cyan/LO): Range fmtNumber(convertDistanceFromSI(rated_range, unitPrefs.distance),0)+unit; Interior fmtNumber(convertTempFromSI(inside_temp, unitPrefs.temperature),1)+unit; Security Locked/Unlocked; Location locationLabel — exact value logic + em-dash null fallbacks preserved.",
+    "L200-243 three QuickActions: lock/unlock (command state?.is_locked?'unlock':'lock', loading on command==='lock'), climate (climate_off/climate_on, loading on climate_on||climate_off), horn (honk_horn) — disabled=!canSendCommands, mutate({vehicleId, command}) preserved verbatim.",
+    "L245-248 FreshnessIndicator timestamp={freshnessTimestamp} size='md' imported native component.",
+    "L250-258 <Link to='/'> open-full-app -> static muted AppText with same translated label (no native navigator wired).",
+    "L260-264 closing structure preserved; default export GlancePage.",
+    "Gates: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles. Companion __tests__/GlancePageParity.test.tsx renders loading/error/empty/full-content states."
+  ]
+}
