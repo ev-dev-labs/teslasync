@@ -1,0 +1,29 @@
+{
+  "sourcePath": "web/src/lib/broadcast.ts",
+  "outputPath": "apps/native/src/web-parity/lib/broadcast.ts",
+  "sourceLineCount": 253,
+  "coveredLineCount": 253,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 253 source lines before porting. broadcast.ts is the canonical cross-tab message bus; only the two browser-only transports (BroadcastChannel + localStorage storage-event) are platform-bound — everything else is platform-agnostic TypeScript ported 1:1.",
+    "L1 `import { useEffect } from 'react'` kept verbatim (react is RN-compatible).",
+    "L3-38 module doc preserved (purpose, why two+ tabs, the 5 design constraints: single 'teslasync' channel, lazy construction, self-tab filter via _from, no PII, no back-pressure); the native header additionally documents the contract rule-7 native-safe seam.",
+    "L40-43 BroadcastMessage doc comment kept.",
+    "L44-96 the ENTIRE BroadcastMessage discriminated union ported verbatim — all 27 variants and every section comment (theme.changed/customColors, auth.logout, notifications.read/cleared, snooze.changed, changelog.seen, tour.completed/reset/replay-requested, checklist.dismissed, onboarded, onboarding.skip.changed, install.dismissed, vehicle.paint.changed, dashboard.layout, savedView.changed, formDraft.acquired/released/committed, lease.request/granted/released, queryInvalidate, settings.changed). Only stylistic single-quote/semicolon formatting changed; 'window CustomEvent'/'peer tabs' wording adapted to surface-neutral language without changing intent.",
+    "L98-103 Envelope interface (_from, _ts, msg) ported verbatim — _ts is still used to build the storage fallback key.",
+    "L105 `import { safeRandomUUID } from './safeUUID'` replaced by an inlined `safeRandomUUID` (native parity layer has no ported ./safeUUID yet), mirroring the sibling useEditLease/useSettings ports; uses the Math.random v4-template (no Web Crypto, no bitwise) so it is native-safe and avoids the no-bitwise lint warning while preserving TAB_ID's uniqueness-only contract.",
+    "L107 CHANNEL_NAME = 'teslasync' kept verbatim so a shared host bus stays wire-compatible.",
+    "L109-110 exported TAB_ID = safeRandomUUID() kept (stable per-surface id; self-broadcast filter still works).",
+    "L112 `let chan: BroadcastChannel | null` -> `let chan: NativeBroadcastChannel | null`; BroadcastChannel is typed structurally (postMessage/add+removeEventListener('message')/close) because RN's tsconfig omits the DOM lib (mirrors the automationSSE structural EventSource).",
+    "L114-116 hasBroadcastChannel(): the `typeof BroadcastChannel !== 'undefined'` DOM probe becomes a globalThis BroadcastChannel-constructor probe (getBroadcastChannelConstructor) — works on the react-native-web build / a host polyfill, false on pure native.",
+    "L118-131 getChannel() ported faithfully: the `typeof window === 'undefined'` SSR guard is replaced by the constructor detection (no constructor -> null), keeping lazy singleton construction and the try/catch fallback-to-storage comment.",
+    "L133-134 FALLBACK_KEY_PREFIX = '__teslasync_bus_' kept verbatim.",
+    "L136-148 postViaStorage() ported: the `typeof window` guard + `window.localStorage` become a structural getWebStorage() globalThis probe (setItem/removeItem); the exact key scheme `${PREFIX}${_ts}_${Math.random().toString(36).slice(2)}`, the setItem-then-removeItem trick, the 'fires in OTHER tabs' comment, and the best-effort catch are preserved.",
+    "L150-169 broadcast(): the original channel-then-storage send path is preserved verbatim inside the default transport's postMessage (envelope {_from,_ts,msg}, try channel.postMessage/return, catch fall-through to postViaStorage). The `typeof window` early-return is subsumed by the detect-or-no-op transports. The public broadcast() now routes through activeTransport() so a host can inject real fanout.",
+    "L171-225 subscribe(): ported verbatim into the default transport's subscribe — both transports wired (channel 'message' listener + storage 'storage' listener), the cleanups array, the identical envelope guards (object check, _from===TAB_ID self-filter, msg object check), per-handler try/catch, JSON.parse of storage newValue with FALLBACK_KEY_PREFIX key filter, and the combined unsubscribe. MessageEvent/StorageEvent are typed structurally ({data?:unknown} / {key,newValue}). The `typeof window` early-return becomes the detect-or-no-op path (returns a no-op cleanup when neither transport exists).",
+    "L227-237 useBroadcast() React hook ported verbatim (useEffect returning subscribe(handler), [handler] dep).",
+    "L239-253 __resetBroadcastForTests() ported verbatim (close the channel singleton in a try/catch, null `chan`).",
+    "Browser-only dependency handling (contract rule 7): BroadcastChannel + localStorage are DOM-only. Added an exported BroadcastTransport seam + setBroadcastTransport() injection point + BROADCAST_BUS_UNAVAILABLE_REASON explicit unavailable state — the native analog established by the sibling useEditLease (setEditLeaseTransport/EDIT_LEASE_BUS_UNAVAILABLE_REASON) and useSettings (setSettingsBusTransport/SETTINGS_BUS_UNAVAILABLE_REASON) ports. Default transport auto-detects both globals so the react-native-web build keeps real cross-tab parity; pure native is a documented no-op.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported — only `react`. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
