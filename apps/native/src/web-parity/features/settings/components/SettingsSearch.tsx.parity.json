@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/features/settings/components/SettingsSearch.tsx",
+  "outputPath": "apps/native/src/web-parity/features/settings/components/SettingsSearch.tsx",
+  "sourceLineCount": 182,
+  "coveredLineCount": 182,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-7 file header doc (find-as-you-type search; substring + keyword + fuzzy-subsequence, e.g. lng -> Language; deep-links to section anchors) ported into the native header.",
+    "L9 react hooks: useEffect/useMemo/useState preserved; useId (L36 listboxId) and useRef (L35 wrapperRef) are DOM/ARIA-only and dropped — selection maps to accessibilityRole/accessibilityState + stable testIDs; useCallback added for the i18n hook + handlers.",
+    "L10 react-router-dom useNavigate -> onNavigate?(path) native navigation sink (default no-op), the CommandPalette/Explore convention.",
+    "L11 react-i18next useTranslation('settings') -> useNativeTranslationFallback() (i18n not wired in native build) preserving every key + English fallback + {{var}} interpolation.",
+    "L12 lucide-react <Search aria-hidden> -> decorative AppText magnifier glyph (accessible={false}).",
+    "L13 @/components/ui <Input type=search icon=...> -> bordered inputRow View + TextInput (value/onChangeText, placeholder, accessibilityLabel) — no web UI imported.",
+    "L14 @/lib/cn + Tailwind classes -> StyleSheet styles (glass dropdown, active row, surfaceSelected highlight).",
+    "L15 ../searchIndex {getSettingsIndex, searchSettings, SettingsEntry} is not in the native manifest and is consumed only here, so L23-41 SettingsEntry interface, L49-590 getSettingsIndex (full translated index, all entries verbatim), L599-610 fuzzyMatch and L620-646 searchSettings ranking are ported inline verbatim — the sole change is the i18next TFunction param type -> local NativeTFunction.",
+    "L17 MAX_RESULTS=8 preserved; L18-22 SCROLL_FALLBACK_DELAY_MS comment + const are a DOM same-hash scrollIntoView affordance with no native analogue — dropped; the full href (incl. its #anchor) is handed to onNavigate so the host navigator resolves the section (documented).",
+    "L24-27 SettingsSearchProps.className preserved in the type (web call-site compatibility, ignored on native) + native style?:ViewStyle and onNavigate?(path) added.",
+    "L29-34 component signature + query/open/activeIndex useState preserved with identical names; L30 t, L31 navigate -> onNavigate, L32-34 state mirrored.",
+    "L35 wrapperRef + L36 listboxId(useId) dropped (DOM/ARIA-only).",
+    "L38 index=useMemo(getSettingsIndex(t),[t]) and L39-42 matches=useMemo(searchSettings(index,query).slice(0,MAX_RESULTS),[index,query]) preserved verbatim.",
+    "L44-48 useEffect resetting activeIndex to 0 whenever matches changes preserved verbatim.",
+    "L50-62 document 'mousedown' click-outside listener (browser-only) -> dismiss-on-blur (TextInput onBlur -> setOpen(false)); the dropdown rows live in a ScrollView keyboardShouldPersistTaps='handled' so a row tap commits without first blurring the input, while taps elsewhere blur and close the popover.",
+    "L64-79 commit(entry): setQuery('')/setOpen(false) preserved; L67 navigate(entry.href) -> onNavigate?(entry.href); L68-78 same-hash window.setTimeout + document.getElementById + scrollIntoView fallback is DOM-only and dropped (the #anchor travels in the href).",
+    "L81-100 handleKeyDown -> handleKeyPress (NativeSyntheticEvent<TextInputKeyPressEventData>) + onSubmitEditing: L82-85 empty-matches Escape-closes guard, L86-88 ArrowDown (i+1)%len, L89-91 ArrowUp (i-1+len)%len, L92-95 Enter -> onSubmitEditing commits matches[activeIndex], L96-99 Escape closes; event.preventDefault() has no RN analogue and is omitted.",
+    "L102 showDropdown=open && query.length>0, L103 placeholder, L104 ariaLabel preserved.",
+    "L106-129 outer wrapper div + <Input> -> <View styles.wrapper> + inputRow (glyph + TextInput): L109 type=search -> returnKeyType=search/autoCapitalize=none/autoCorrect=false, L110-114 value/onChange(+open) preserved, L115 onFocus, L116 onKeyDown -> onKeyPress, L117 placeholder, L118 aria-label -> accessibilityLabel; L119-127 aria-autocomplete/aria-expanded/aria-controls/aria-activedescendant/role=combobox are DOM ARIA and dropped (native a11y via accessibilityLabel + testID settings-search-input); L128 Search icon -> glyph.",
+    "L131-179 dropdown <ul role=listbox> -> {showDropdown && <View styles.dropdown><ScrollView listbox testID>}: L141-150 matches.length===0 empty <li> -> AppText 'No matching settings.' (testID settings-search-empty); L151-177 matches.map <li><button role=option> -> Pressable rows (L152 active=idx===activeIndex; L159 aria-selected -> accessibilityState.selected; L160 onMouseEnter hover has no touch analogue and is omitted; L161 onClick -> onPress commit; L170 title span -> AppText weight=semibold; L171-173 description span -> AppText tone=muted/caption; testID settings-search-option-${entry.id}).",
+    "L180-182 close braces preserved. Native-safe adaptations documented; no DOM, react-i18next, react-router, lucide, web UI, Recharts or Leaflet imported. Gates: tsc --noEmit clean, eslint --quiet clean, jest 16 suites / 71 tests pass."
+  ]
+}
