@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/telemetry/components/SignalSparklinePreview.tsx",
+  "outputPath": "apps/native/src/web-parity/features/telemetry/components/SignalSparklinePreview.tsx",
+  "sourceLineCount": 130,
+  "coveredLineCount": 130,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 130 source lines. Docstring L1-14 preserved as the native header comment (own useSignalHistory query, renderLeafRight rules-of-hooks rationale, enabled fetch gate, numeric vs non-numeric chip distinction).",
+    "Imports L16-20: useMemo kept (+ useEffect/useRef added for the animate-pulse loop); Sparkline (L17) -> native charts barrel Sparkline (same data/color/width/height props, no Recharts/SVG); useSignalHistory (L18) -> native api/hooks/useSignals (same /signals/{id}/{signal}/history?hours=&limit= query); SignalKind/SignalEnvelope (L19) -> native api/types (structurally identical); cn (L20) dropped (no Tailwind in native) and documented.",
+    "Constants L22-23 (SPARKLINE_LIMIT=30, SPARKLINE_HOURS=1) preserved verbatim and passed as the {hours, limit} range to useSignalHistory.",
+    "Props interface L25-38 preserved: vehicleId/signal/valueKind/enabled/color?/width?/height?/className?. Defaults color='#22d3ee', width=80, height=18 (L61-63) kept; className kept on the interface but inert (renamed _className).",
+    "envelopesToNumbers L40-48 ported verbatim (number Number.isFinite push, boolean -> 1/0); NON_NUMERIC set L50-54 ('string','unknown','time') preserved.",
+    "Component body L56-79: isNumeric derive, useSignalHistory call, and the numericSeries useMemo (query.data?.data ? envelopesToNumbers : []) preserved exactly with the original rules-of-hooks comment.",
+    "Guard L81 `if (!enabled) return null` preserved as the first return.",
+    "Non-numeric chip L83-96: <span> chip (inline-flex/items-center/rounded/px-1.5/py-0.5/text-[10px]/uppercase/tracking-wide/text-muted/glass-border) -> native View+AppText with borderColor colors.border, borderRadius 4, paddingHorizontal 6/paddingVertical 2, fontSize 10, letterSpacing 0.5, textTransform uppercase, colors.textMuted; the L91 title becomes accessibilityLabel `Non-numeric signal (${valueKind})`; renders {valueKind}.",
+    "Loading skeleton L98-109: <span> animate-pulse/rounded/bg-surface-2 with style {width,height} -> Animated.View with surfaceRaised bg, borderRadius 4, {height,width} and an Animated opacity loop 1<->0.5 (PULSE_HALF_DURATION_MS=1000, Easing.inOut) gated to run only while the skeleton shows; aria-hidden (L101) -> accessibilityElementsHidden + importantForAccessibility='no-hide-descendants'.",
+    "No-samples branch L111-120: numericSeries.length<2 -> <span>—</span> with title 'No samples in last hour' -> AppText '—' (fontSize 10, colors.textMuted) with accessibilityLabel 'No samples in last hour'.",
+    "Sparkline render L122-129 preserved: <Sparkline data={numericSeries} color width height /> via the native barrel Sparkline. Trailing L130-131 (closing brace / EOF) accounted for.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles. No DOM-only modules, HTML elements, Recharts, Leaflet, or web @/ UI imports remain."
+  ]
+}
