@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/admin/components/QueueJobDrawer.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/QueueJobDrawer.tsx",
+  "sourceLineCount": 191,
+  "coveredLineCount": 191,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-13 header docblock intent carried into the native conversion docblock (slide-in per-worker job-history panel, fetch gated on `open`, deterministic loading/error/empty testIDs).",
+    "L15-23 web imports: react-i18next useTranslation -> useNativeTranslationFallback t shim (fallback + {{token}} interpolation preserved); lucide-react AlertTriangle -> ⚠ glyph in AppText; @/components/ui Drawer -> native Modal bottom-sheet; @/components/ui/Typography Text/Caption -> AppText; @/components/feedback Spinner -> ported native parity Spinner; @/lib/dateFormat formatDateTime/formatDurationMsLong -> inlined native-safe ports; useQueueJobs + QueueJobView reused from the ported ../../../api/hooks/useSystemQueues + ../../../api/types.",
+    "L25-43 STATUS_TONE map preserved verbatim (sent/ready/success -> emerald-300, pending/queued/partial/deferred_dnd -> amber-300, processing/running -> cyan-300, failed -> rose-300, cancelled/skipped -> --text-muted) using toned-down tailwind-300 literals + colors.textMuted.",
+    "L45-47 statusToneClass -> statusToneColor (?? --text-primary -> colors.textPrimary fallback).",
+    "L49-104 QueueJobRow: props (job) preserved; durationLabel logic carried verbatim (duration_ms number branch, finished_at - started_at fallback, else null); li -> View with testID queue-job-row-${id}; title row -> rowHeader View; bodySm title (font-medium truncate) -> AppText caption/secondary, fontWeight 500, numberOfLines 1; status caption -> AppText with statusToneColor inline + testID queue-job-status-${id} + queueStatus.jobStatus.${status} key; Caption started/duration -> AppText muted with queueStatus.jobStarted + queueStatus.jobDuration interpolation; job.error block -> rose-tinted View (testID queue-job-error-${id}) with ⚠ icon + rose-200 break-words text.",
+    "L106-113 QueueJobDrawerProps preserved verbatim (worker/displayName/open/onClose/testHookOverride: ReturnType<typeof useQueueJobs>).",
+    "L115-140 component body: stable useQueueJobs(worker ?? '__none__', { enabled: Boolean(open && worker && !testHookOverride) }) call + testHookOverride ?? liveQuery, data/isLoading(&&open)/error(&&open)/jobs(?? []) derivations, and titleWithWorker/title i18n all preserved verbatim.",
+    "L142-188 Drawer render: @/components/ui Drawer (framer-motion + react-dom createPortal side-sheet, focus-trap, Esc-to-close) -> Modal transparent animationType=slide bottom sheet; onRequestClose=onClose (Android back) + backdrop Pressable onPress=onClose mirror web Esc/overlay close; Drawer title bar + ✕ reproduced natively (aria-label Close -> native-local accessibilityLabel since it lives in the Drawer primitive, not this source); body div testID queue-job-drawer-body preserved; isLoading -> Spinner size=sm + loading copy; error -> queue-job-drawer-error ⚠ box; jobs.length===0 -> queue-job-drawer-empty italic; else -> queue-job-drawer-list mapping QueueJobRow keyed by job.id.",
+    "L189-191 default export QueueJobDrawer preserved.",
+    "Inlined native-safe formatters verbatim from web @/lib/dateFormat: formatDateTime (—/Invalid Date guard, en-locale Apr 4, 2026, 2:30 AM) and formatDurationMsLong (—/ms/sec.toFixed(1)/min+formatRoundedInt) with isFiniteNumber + en-US formatRoundedInt helpers, matching the ChartTooltip parity precedent (shared lib not yet ported).",
+    "Browser-only behaviour documented: Drawer focus-trap/Tab-cycling and previously-focused-element restoration have no RN analog and are dropped; createPortal -> Modal; lucide AlertTriangle + framer-motion slide -> glyph + Modal slide animation. No DOM elements, lucide, Recharts, Leaflet, or web UI components are imported.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
