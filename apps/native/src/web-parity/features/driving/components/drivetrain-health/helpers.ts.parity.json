@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/driving/components/drivetrain-health/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drivetrain-health/helpers.ts",
+  "sourceLineCount": 42,
+  "coveredLineCount": 42,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 42 source lines with numbered output before editing; the file is pure platform-agnostic TypeScript utility logic (no DOM, browser, React, Recharts, Leaflet, or web UI), so the five functions are ported verbatim and are fully React Native compatible.",
+    "L1 `import { HEALTH_COLOR, type HealthStatus } from './constants'` -> inlined field-for-field because the sibling native ./constants has no parity port yet in this loop (the established repo pattern for not-yet-ported siblings): local `type HealthStatus = 'good' | 'warning' | 'critical'` and `const HEALTH_COLOR = { good:'#10b981', warning:'#f59e0b', critical:'#ef4444' }` mirror web constants.ts exactly. HealthStatus kept non-exported to preserve the web file's exact public surface (it imported, never re-exported, the type).",
+    "L3-9 healthBadgeVariant ported verbatim: 'good'->'success', 'warning'->'warning', else 'danger' (return union 'success'|'warning'|'danger' preserved).",
+    "L11-15 getAlertVariant ported verbatim (health==='warning' ? 'warning' : 'danger'); collapsed to a single-line signature only to satisfy native prettier printWidth 80 — identical behavior and return union 'warning'|'danger'.",
+    "L17-23 tempSeverityColor ported verbatim: null->'#6b7280', ratio=celsius/max, >=0.85->HEALTH_COLOR.critical, >=0.65->HEALTH_COLOR.warning, else HEALTH_COLOR.good.",
+    "L25-34 tempNeonColor ported verbatim: null->'green', >=0.85->'red', >=0.65->'amber', else 'green' (return union 'green'|'amber'|'red' preserved).",
+    "L36-42 displayTemp ported verbatim: null->'—' (em dash), else formatTemperature(celsius); the formatter callback is injected by the caller exactly as in web, so no unit-conversion logic is duplicated. L2/L10/L16/L24/L35/L43 are blanks/trailing newline. Gates run: typecheck (tsc --noEmit), lint --quiet (eslint), jest --runInBand --detectOpenHandles."
+  ]
+}
