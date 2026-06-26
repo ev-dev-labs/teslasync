@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/automations/components/stepInputTypes.ts",
+  "outputPath": "apps/native/src/web-parity/features/automations/components/stepInputTypes.ts",
+  "sourceLineCount": 28,
+  "coveredLineCount": 28,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 28 source lines before editing; this is non-visual TypeScript type-only code with no DOM, browser HTML, Recharts, Leaflet, or web UI dependencies, so it ports verbatim into native-safe TypeScript.",
+    "Lines 1-6: the web import of AutomationActionStep, AutomationConditionStep, AutomationStep, and AutomationTriggerStep from '@/types/automations' is redirected to the native parity home for those step unions, '../../../api/hooks/useAutomations', which exports the identical type shapes; same four type-only imports, same alphabetical order.",
+    "Lines 8-10: the distributive StepInput<T extends AutomationStep> helper using 'T extends unknown ? Omit<T, ...> : never' is preserved exactly, including the four omitted keys 'id' | 'automation_id' | 'step_id' | 'step_order' (note this file omits step_order, unlike the hook's AutomationStepInputBase which keeps it, so the local helper is ported rather than reused).",
+    "Lines 12-18: AutomationTriggerStepInput, AutomationConditionStepInput, AutomationActionStepInput, and the AutomationStepInput union are ported unchanged.",
+    "Lines 20-28: AutomationActionCommandStepInput and AutomationActionSetSettingStepInput Extract<...,{kind: ...}> discriminated narrows are preserved; object literal brace spacing matches the native @react-native prettier (bracketSpacing:false) style verified against existing web-parity files."
+  ]
+}
