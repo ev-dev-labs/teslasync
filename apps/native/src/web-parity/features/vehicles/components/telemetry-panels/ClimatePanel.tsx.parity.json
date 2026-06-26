@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/telemetry-panels/ClimatePanel.tsx",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/telemetry-panels/ClimatePanel.tsx",
+  "sourceLineCount": 145,
+  "coveredLineCount": 145,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-12 imports + ClimatePanelProps preserved: useTranslation -> shim; lucide Thermometer/Fan/Snowflake/Zap -> Glyphs; GlassPanel/MetricCard/EmptyState -> native parity; useUnits formatTemperature -> inlined; ClimateSnapshot from native api/types.",
+    "L18-35 heading (Thermometer) + Cabin/Outside temp MetricCards (formatTemperature inside_temp_c/outside_temp_c; web has no subtitle -> empty helper) preserved.",
+    "L37-55 Driver/Passenger setpoint rows (formatTemperature *_setpoint_c) preserved (web 2-col grid -> stacked rows on phone).",
+    "L57-65 HVAC State row (hvac_state ?? '—') preserved.",
+    "L67-99 six-segment Fan Speed meter: increasing widths + `(fan_status ?? 0) >= level` fill + the numeric fan value preserved.",
+    "L101-138 Defrost (blue when defrost_mode && !== 'Off'), Climate (green when is_climate_on, Zap), Precondition (amber when is_preconditioning) chips with on/off copy preserved.",
+    "L140-142 the climateData-absent EmptyState (telemetry.noClimateData) preserved. No DOM/lucide/recharts/leaflet imports."
+  ]
+}

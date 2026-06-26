@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/telemetry-panels/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/telemetry-panels/index.ts",
+  "sourceLineCount": 2,
+  "coveredLineCount": 2,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `export { TelemetryGrid } from './TelemetryGrid'` preserved verbatim as the native named re-export of the ported native TelemetryGrid.tsx (web StaggerContainer grid of InfoTiles reproduced with an RN responsive Grid + RN primitives).",
+    "L2 `export { LiveTelemetryPanels } from './LiveTelemetryPanels'` preserved verbatim as the native named re-export of the ported native LiveTelemetryPanels.tsx (web FadeIn header + 7-panel grid reproduced with RN Animated FadeIn + RN Grid).",
+    "Barrel is non-visual: it only re-exports the two siblings. Both referenced siblings plus their transitive dependency siblings (InfoTile, PowertrainPanel, ClimatePanel, SecurityPanel, VehicleStatePanel, TirePressurePanel, EnergyChargingPanel, MediaNavigationPanel) were converted to native in the same directory so the barrel resolves under `tsc --noEmit` (tsconfig include **/*.ts(x)); the public export names match the web barrel 1:1.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, lucide-react, react-i18next, or old web UI components are imported anywhere in the converted directory.",
+    "Gates from apps/native: npm run typecheck (pass); npm run lint -- --quiet (pass); npm test -- --runInBand --detectOpenHandles (24 suites / 112 tests pass)."
+  ]
+}

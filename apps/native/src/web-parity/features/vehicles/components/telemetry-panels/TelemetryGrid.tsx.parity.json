@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/telemetry-panels/TelemetryGrid.tsx",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/telemetry-panels/TelemetryGrid.tsx",
+  "sourceLineCount": 82,
+  "coveredLineCount": 82,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-9 imports: react-i18next useTranslation -> useNativeTranslation() shim; lucide-react Battery/Gauge/Thermometer/Navigation/BatteryCharging/Eye -> decorative Unicode Glyphs; @/components/motion StaggerContainer/StaggerItem -> inline responsive native Grid; @/hooks/useUnits + @/lib/numberFormat -> inlined native formatDistance/formatSpeed/formatTemperature + fmtInt/fmtNumber; VehicleState type from native api/types.",
+    "L11-20 TelemetryGridProps (state) preserved; StaggerContainer grid classes (grid-cols-2 sm:3 lg:4 xl:6 gap-3) mapped to Grid cols {default:2,sm:3,lg:4,xl:6} gap 3 (->12px).",
+    "L21-35 Battery tile: `${fmtInt(battery_level)}%`, the >50/>20 emerald/amber/rose colour band, and the rated_range range sub preserved.",
+    "L36-58 Speed (formatSpeed + Driving/Parked sub), Inside (formatTemperature inside + Outside sub), Odometer (formatDistance precision 0) tiles preserved.",
+    "L59-79 Charger tile (is_charging kW / 'Not charging', emerald/muted colour, 'Full in Nh' sub via time_to_full_charge != null) and Sentry tile (Active/Off, rose/muted) preserved.",
+    "Framer-motion entrance stagger has no native-core analog; tiles render statically inside the responsive Grid (visual intent preserved). No DOM/lucide/recharts/leaflet imports."
+  ]
+}

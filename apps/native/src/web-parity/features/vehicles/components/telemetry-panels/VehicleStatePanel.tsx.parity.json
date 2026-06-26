@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/telemetry-panels/VehicleStatePanel.tsx",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/telemetry-panels/VehicleStatePanel.tsx",
+  "sourceLineCount": 161,
+  "coveredLineCount": 161,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-12 imports + VehicleStatePanelProps (live/sseConnected) preserved: useTranslation -> shim; lucide Activity/Lightbulb/Car/ShieldAlert/User/Key/Settings/Gauge/Monitor/MapPin -> Glyphs; GlassPanel -> native parity; useUnits formatSpeed -> inlined.",
+    "L18-28 heading 'Vehicle State' + optional sseConnected 'Live' badge (animate-pulse neon dot -> static layered success dot) preserved.",
+    "L30-71 Lights group: High Beams (cyan/muted), Turn Signal (`(lightsTurnSignal as string) || 'Off'`, amber when set && !== 'Off'), Hazards (rose/muted) preserved with the same `as string` reads.",
+    "L73-96 hairline divider + Driver Seat (green Occupied / muted Empty) and Paired Keys (`(pairedKeyCount as string) || '—'`) preserved.",
+    "L98-157 Access Modes: Valet (purple), Service (amber), Speed Limit (`speedLimitMode ? formatSpeed(currentSpeedLimit as number) : t(common.off)`), Center Display, HomeLink Devices preserved.",
+    "Panel always renders (no empty state), matching the web. animate-pulse has no native-core analog (static dot). No DOM/lucide/recharts/leaflet imports."
+  ]
+}
