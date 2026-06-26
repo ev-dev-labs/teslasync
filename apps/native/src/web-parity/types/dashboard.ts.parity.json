@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/types/dashboard.ts",
+  "outputPath": "apps/native/src/web-parity/types/dashboard.ts",
+  "sourceLineCount": 9,
+  "coveredLineCount": 9,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 9 source lines before editing; the file is pure non-visual type code (a single exported TypeScript interface) with no imports.",
+    "L1 (export interface DashboardStats) and L9 (closing brace) ported verbatim; the interface name is preserved so it matches the web @/types/dashboard contract consumed by useDashboard.ts.",
+    "L2-L8 numeric fields (totalVehicles, totalM, totalEnergyWh, totalChargingSessions, totalTrips, avgEfficiency, totalCostCents) ported 1:1 as number, preserving SI-canonical naming (totalM meters, totalEnergyWh watt-hours, totalCostCents) per the unit-conversion contract.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components were present or introduced; the type is platform-agnostic and React Native-safe as-is.",
+    "Native gates run from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
