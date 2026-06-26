@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/features/charging/components/cost-analysis/types.ts",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/cost-analysis/types.ts",
+  "sourceLineCount": 69,
+  "coveredLineCount": 69,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 69 source lines with numbered output before editing; the file is pure TypeScript type definitions with zero imports, zero DOM, and zero runtime behavior, so it is already fully React Native compatible and was ported verbatim (no browser-only modules, Recharts, Leaflet, or web UI introduced).",
+    "Preserved MonthlyBucket L1-9 (month, cost, energy, sessions, avgCostPerKwh, gasEquiv, savings) and ChargerTypeData L11-17 (name, cost, energy, sessions, color) with identical field names and types.",
+    "Preserved HourBucket L19-25 (hour, label, sessions, avgCost, totalEnergy) and CoreStats L27-41 (totalCost, totalEnergy, avgCostPerKwh, totalDuration, totalDistanceM, costPerDist, gasCost, savings, savingsPercent, co2SavedKg, treeEquiv, gallonsEquiv, count) — SI distance field totalDistanceM kept verbatim.",
+    "Preserved GasComparison L43-52 (gasCost, evCost, actualCost, savings, monthlySavings, yearlySavings, costPerMileGas, costPerMileEV), LifetimeMetrics L54-62 (avgSessionCost, avgSessionEnergy, avgDuration, freeCount, freeEnergy, maxSessionCost, minSessionCost), and TouInsights L64-69 (cheapest/priciest/busiest typed as HourBucket, offPeakPct) plus the trailing newline L70; added only a non-functional parity header doc comment."
+  ]
+}
