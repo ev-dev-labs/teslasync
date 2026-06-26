@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/lib/bucketing.ts",
+  "outputPath": "apps/native/src/web-parity/lib/bucketing.ts",
+  "sourceLineCount": 73,
+  "coveredLineCount": 73,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 73 numbered source lines before editing. This is a pure, dependency-free utility module: no JSX, no DOM, no React, no imports, no API path, no unit-suffixed field, and no i18n. It ports byte-for-byte; the only browser-relevant primitives used (Date.UTC, Number.isFinite, Math.floor, RegExp) are all available identically under Hermes/Node, so no native-safety shim is required.",
+    "L1-9 file-level JSDoc (adaptive day/week/month/year time-bucketing so chart tick density matches the viewed range; pure function, no React/Date-lib deps) preserved verbatim, followed by a native-port header documenting why the module is ported unchanged.",
+    "L11 `export type BucketingMode = 'day' | 'week' | 'month' | 'year'` ported verbatim.",
+    "L13-20 `export interface BucketingThresholds` ported field-for-field (dayUpTo / weekUpTo / monthUpTo) with all three /** inclusive upper-bound (in days) */ doc comments preserved.",
+    "L22-33 the /charging default-spec JSDoc (≤14 daily, 15-90 weekly, 91-730 monthly, >730 yearly) and `export const DEFAULT_BUCKETING_THRESHOLDS = { dayUpTo: 14, weekUpTo: 90, monthUpTo: 730 }` reproduced exactly — threshold values unchanged.",
+    "L35-47 `export function getBucketingMode(rangeDays, thresholds = DEFAULT_BUCKETING_THRESHOLDS)`: JSDoc and the default-parameter signature kept; the four branches (non-finite/NaN or <= dayUpTo -> 'day'; <= weekUpTo -> 'week'; <= monthUpTo -> 'month'; else 'year') are logically identical. The three single-line `if (...) return ...;` statements were wrapped in braces to satisfy the native eslint `curly` rule — behavior is byte-for-byte equivalent.",
+    "L49-63 `export function rangeDays(startYmd, endYmd)`: JSDoc (inclusive UTC-stable day count, 0 on malformed input) preserved; body parses both ends via parseUtcDay, returns 0 when either is null or end < start (single-line if braced for curly rule), and returns Math.floor(diffMs / 86_400_000) + 1 — the numeric separator and the +1 inclusive-range comment (L60-61) are retained verbatim.",
+    "L65-73 private `function parseUtcDay(ymd): number | null`: the `/^(\\d{4})-(\\d{2})-(\\d{2})$/` regex, the malformed-input null guard (single-line if braced for curly rule), the y / mo-1 / d extraction, `Date.UTC(y, mo, d)`, and the `Number.isFinite(ts) ? ts : null` guard are all ported exactly.",
+    "No DOM, lucide-react, Recharts, Leaflet, react-leaflet, or old web UI components are imported (the module has zero imports). Native toolchain formatting applied via eslint (prettier 2.8.8 through @react-native eslint-config: singleQuote, trailingComma all, bracketSpacing false, arrowParens avoid).",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles (jest) — all pass. Only the two files for this conversion (bucketing.ts + bucketing.ts.parity.json) were staged and committed; pre-existing EOL-only dirty web files and unrelated native files were left untouched."
+  ]
+}
