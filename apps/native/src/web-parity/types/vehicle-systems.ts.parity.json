@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/types/vehicle-systems.ts",
+  "outputPath": "apps/native/src/web-parity/types/vehicle-systems.ts",
+  "sourceLineCount": 124,
+  "coveredLineCount": 124,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 124 source lines before editing; it is a pure non-visual TypeScript type-definition module with zero imports, no runtime code, and no DOM/browser/React/Recharts/Leaflet/web-UI dependencies, so it is React Native-compatible verbatim and required no native-safe stubbing.",
+    "L1-42 ClimateState ported verbatim incl. all optional/nullable fields and every grouping comment (Temperatures °C from Fleet Telemetry, HVAC system, Climate modes, Battery & protection, Steering wheel, Seat heaters, Seat climate); preserves snake_case keys created_at/timestamp/id alongside camelCase telemetry fields so it stays parity-compatible with the native useVehicleSystems hook and ClimateControlPage that consume ClimateState.",
+    "L44-58 ported verbatim: TirePressureReading interface (id/vehicleId/frontLeft/frontRight/rearLeft/rearRight numbers, tpmsHardWarning/tpmsSoftWarning booleans, timestamp) plus TirePosition union ('frontLeft'|'frontRight'|'rearLeft'|'rearRight') and TireStatus union ('normal'|'warning'|'critical').",
+    "L60-87 ported verbatim: MaintenanceItem (intervalKm/intervalMonths/estimatedCostUsd numbers), ServiceRecord (itemId/date/odometerKm/notes), MaintenanceStatus union ('good'|'soon'|'overdue'), and SoftwareUpdate (status union 'installed'|'installing'|'downloading'|'available'|'scheduled', nullable installedAt/scheduledAt, createdAt).",
+    "L89-124 ported verbatim: SafetySnapshot incl. the 4-line maintenance comment (L95-98) warning that enum fields may arrive as string|boolean|number and must run through cleanSafetyEnum()/isSafetyEnumActive() — comment retained as intent even though lib/safetyEnum.ts is a sibling concern; all snake_case fields, mixed string|boolean|number|null unions, and miles_since_reset/self_driving_miles_since_reset kept exactly; plus MediaSnapshot (title/artist/album/station/source/playbackStatus strings, volume/volumeMax/elapsed/duration numbers, timestamp). Trailing newline preserved. Typecheck, lint --quiet, and jest gates run green; only apps/native changes committed."
+  ]
+}
