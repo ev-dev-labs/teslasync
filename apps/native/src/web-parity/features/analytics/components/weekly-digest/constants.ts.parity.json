@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/constants.ts",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/constants.ts",
+  "sourceLineCount": 21,
+  "coveredLineCount": 21,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. This is pure non-visual constant code with no DOM/React/browser deps, so DAY_LABELS (L4), CITY_PAIRS (L6-13), ALERT_SEVERITY_COLORS (L15-19) and CO2_PER_KWH_GASOLINE_KG (L21) are ported 1:1 with identical export names, object shapes, `as const` annotations, and literal values.",
+    "L1 `import { CHART_COLORS } from '@/components/charts'` -> native web-parity charts barrel `../../../../components/charts` (same convention as the sibling DrivingTab.tsx port); the barrel re-exports the identical CB-safe palette so ALERT_SEVERITY_COLORS.info = CHART_COLORS[0] = '#0072B2' is unchanged.",
+    "L2 `import { STATUS_COLORS } from '@/lib/colors'` -> inlined a local STATUS_COLORS const with the exact web literals ({good:'#10b981',warning:'#f59e0b',critical:'#ef4444'}) because lib/colors has no native parity port; ALERT_SEVERITY_COLORS.warning/.critical keep their precise hex values (L17-18).",
+    "Blank lines L3/L5/L14/L20 and trailing newline L22 are accounted for as structural whitespace; the long DAY_LABELS array was wrapped one-item-per-line to satisfy the native prettier printWidth, preserving order and values.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
