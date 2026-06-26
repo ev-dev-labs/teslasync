@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/features/exports/pages/ExportsPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/exports/pages/ExportsPage.tsx",
+  "sourceLineCount": 200,
+  "coveredLineCount": 200,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-2 React useMemo/useCallback + react-i18next useTranslation -> React useMemo/useCallback/useState + native-safe useNativeTranslation t(key, fallback?, vars?) shim with {{id}} interpolation.",
+    "L4 @/components/ui GlassPanel/Badge -> native GlassPanel (existing port) + locally reproduced Badge with success/danger/info/neutral variant intent.",
+    "L5 @/components/data-display BulkActionToolbar -> ported native BulkActionsToolbar (same selectedIds/total/onClear/itemNoun/actions contract).",
+    "L6 @/components/layout PageContainer -> local native ScrollView scaffold (title/subtitle/children).",
+    "L7 @/components/motion FadeIn -> local static passthrough View (motion precedent).",
+    "L8 @/components/feedback EmptyState/Skeleton/ErrorDisplay -> native EmptyState (existing port) + static skeleton bars + inline error box rendering error.message.",
+    "L9 @/components/a11y VisuallyHidden -> reduced: native checkboxes carry their label via accessibilityLabel, so the off-screen <label> node is unnecessary.",
+    "L10 @/components/ai/AIPiiRedactionSharedExports -> ported native component, rendered verbatim at L66.",
+    "L12 @/hooks/usePageTitle -> no-op native shim (navigator owns header title).",
+    "L13 @/hooks/useBulkSelection -> ported verbatim (generic Set-backed selection: isSelected/toggle/setSelected/selectAll/clear/masterState/toggleAll).",
+    "L15-20 @/api/hooks/useExports useExportJobs/useBulkExportsDelete/exportDownloadUrl + ExportJobSummary -> imported from the already-ported native hook (same /export/jobs + /export/jobs/bulk paths + shapes).",
+    "L21 @/lib/icons Icons.delete (lucide Trash2) -> ICON_DELETE trash glyph constant passed as the toolbar action icon.",
+    "L22 @/lib/dateFormat formatDateTime -> ported verbatim (full date+time, '—' fallback).",
+    "L23 @/lib/numberFormat formatBytes -> ported verbatim (binary units, one-decimal, '—' fallback).",
+    "L33-55 ExportsPage state: jobsRaw/jobs/visibleIds memos, sel=useBulkSelection<string>(), bulkDelete, masterState, onMasterToggle, statusVariant -> reproduced 1:1 with identical names and logic.",
+    "L57-95 PageContainer title/subtitle + FadeIn + AIPiiRedactionSharedExports + BulkActionToolbar with the single 'delete' action (label, danger variant, Trash icon, confirm title/body/confirmLabel, onClick mutateAsync(ids.map(String)) + sel.clear()) -> preserved verbatim incl. every i18n key/fallback.",
+    "L97-114 GlassPanel overflow-hidden + isLoading skeletons / error ErrorDisplay / empty EmptyState branches -> native GlassPanel + skeleton bars + inline error + EmptyState, same key/fallback strings.",
+    "L115-141 <table>/<thead> header row incl. master checkbox (checked=all, indeterminate=some, onMasterToggle, selectAll aria-label) + Type/Format/Size/Created/Status column headers + trailing action column -> native header View row with native Checkbox (accessibilityState mixed) + AppText column labels.",
+    "L142-194 <tbody> rows: per-row checkbox (selectExport {{id}} label), Type (primary), Format (uppercase), Size (formatBytes or —), Created (formatDateTime), Status Badge with t(`exportsList.status.${status}`), and the ready-only Download <a href=exportDownloadUrl download> -> native View rows + Pressable checkbox + uppercase format + Badge + Pressable Download opening exportDownloadUrl via Linking.openURL.",
+    "L195-200 closing branches/component -> preserved. data-selected -> rowSelected style; hover -> not applicable on native.",
+    "Visual intent preserved: glass panel table, status chips by variant, selected-row highlight, underlined accent Download link; recharts/leaflet/DOM elements not used; no browser-only imports."
+  ]
+}
