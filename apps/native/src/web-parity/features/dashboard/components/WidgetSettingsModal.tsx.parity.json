@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/dashboard/components/WidgetSettingsModal.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/components/WidgetSettingsModal.tsx",
+  "sourceLineCount": 141,
+  "coveredLineCount": 141,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-11 imports: react useState preserved; react-i18next useTranslation('dashboard') -> useNativeTranslationFallback (key+fallback+{{var}} interpolation, mirroring sibling DraftRecoveryBanner/ExportModal); web ui Button/Modal/Select/Toggle + forms FormSection -> native Modal parity (web-parity/components/ui/Modal) plus inlined FormSection/SelectField/ToggleField/action Pressables; @/api/hooks/useVehicles -> native parity hook ../../../api/hooks/useVehicles (same {data} shape); ../widgets/types WidgetConfig/WidgetDef/WidgetInstance -> local mirrors (icon LucideIcon + component LazyExoticComponent dropped as browser/web-React specifics this modal never reads).",
+    "L13-19 WidgetSettingsModalProps {widget,def,open,onClose,onSave} preserved verbatim as an exported interface.",
+    "L21-32 component signature + useTranslation('dashboard') (->t fallback) + useVehicles() + vehicleList = vehicles ?? [] + useState<WidgetConfig>(widget.config ?? {}) all preserved verbatim.",
+    "L34-37 handleSave = onSave(config) then onClose() preserved verbatim.",
+    "L39-41 isVehicleWidget (category !== 'system' && !== 'analytics') and isChartWidget (driving||charging||analytics||battery) derivations preserved verbatim.",
+    "L43-44 <Modal open onClose title=`${def.name} Settings` size='sm'> preserved verbatim (title is a template literal, not i18n, on the web too).",
+    "L45 outer `space-y-4 p-4` div -> styles.body (16px vertical gap; horizontal padding already supplied by the native Modal body, not doubled).",
+    "L46-67 vehicle selector FormSection: isVehicleWidget guard + SelectField value=config.vehicleId?.toString() ?? 'all', options = 'all' label + vehicleList.map(v => {value:v.id.toString(), label:v.display_name || `Vehicle ${v.id}`}); onChange(val) setConfig vehicleId = val==='all' ? undefined : Number(val) preserved verbatim (web e.target.value -> radio onChange(value)).",
+    "L69-88 refresh-rate FormSection: SelectField value=config.refreshRate?.toString() ?? 'default', options Default/5/15/30/60 with same i18n keys+fallbacks; onChange(val) setConfig refreshRate = val==='default' ? undefined : Number(val) preserved verbatim.",
+    "L90-106 time-range FormSection: isChartWidget guard + SelectField value=config.timeRange ?? '7d', options 24h/7d/30d/90d with same keys+fallbacks; onChange(val) setConfig timeRange=val preserved verbatim.",
+    "L108-117 appearance FormSection: ToggleField label 'Show widget title', checked=config.showTitle !== false, onChange(checked) setConfig showTitle=checked preserved verbatim; web ui Toggle -> core RN <Switch> (role=switch), label to the right as on web.",
+    "L119-137 actions row (flex gap-2 justify-end pt-2): ghost Cancel Pressable (onClose, secondary text) + accent-tinted Save Pressable (handleSave, bg-primary/10+text-primary intent); both i18n keys common.cancel/common.save + fallbacks preserved.",
+    "L139-141 closing Modal/JSX + component close preserved.",
+    "Native-safe replacements documented in the file header: react-i18next -> fallback t; <Select> -> accessible radio group (accessibilityRole radiogroup/radio, no RN <select>); <Toggle> -> RN <Switch>; <FormSection> -> inlined bordered panel; web ui <Button> -> inlined Pressables; WidgetDef icon/component dropped.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) clean; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles green. No DOM, react-i18next, lucide-react, recharts/leaflet, or web UI components imported."
+  ]
+}
