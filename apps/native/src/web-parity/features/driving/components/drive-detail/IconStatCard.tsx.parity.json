@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/IconStatCard.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/IconStatCard.tsx",
+  "sourceLineCount": 19,
+  "coveredLineCount": 19,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 19 source lines (numbered) before editing.",
+    "L1 `import { GlassPanel } from '@/components/ui'` -> native GlassPanel from ../../../../../components/ui/GlassPanel (5-level depth, matching the sibling cost-analysis/StatBox + weekly-digest/HighlightCard ports). AppText + theme colors added for the value/label text primitives.",
+    "L2 `import type { LucideIcon } from 'lucide-react'` -> DROPPED: lucide-react is browser-only SVG and forbidden in native output (contract rule 4). The icon contract is preserved as `ComponentType<{ color?: string; size?: number }>` (the renderable shape a lucide icon satisfies); `import React, {type ComponentType, type ReactNode} from 'react'` supplies it plus the RN JSX runtime + ReactNode.",
+    "L3 blank line -> preserved as import-group separation.",
+    "L4-9 IconStatCardProps reproduced field-for-field: icon (L5) retyped LucideIcon -> ComponentType<{color?;size?}> so IconStatCard still owns the colour injection (web L14 style={{ color }}); color: string (L6), value: React.ReactNode -> ReactNode (L7), label: string (L8) verbatim; closing brace (L9) preserved.",
+    "L10 blank line -> preserved between the interface and the component.",
+    "L11 `export function IconStatCard({ icon: Icon, color, value, label }: IconStatCardProps)` -> identical named export + `icon: Icon` rename + destructure (typed `: React.ReactElement`); IconStatCard.displayName added per the named-export parity convention.",
+    "L12 `return (` -> preserved.",
+    "L13 `<GlassPanel className=\"p-4 text-center\">` -> `<GlassPanel style={styles.panel}>`: p-4 -> padding 16, text-center -> alignItems 'center' (centers the column's children, the RN analog of centering inline content).",
+    "L14 `<Icon className=\"h-4 w-4 mx-auto mb-1\" style={{ color }} />` -> `<View style={styles.iconWrap}><Icon color={color} size={16} /></View>`: h-4 w-4 -> size 16; mx-auto satisfied by the panel's alignItems center; mb-1 -> iconWrap marginBottom 4; the dynamic `style={{ color }}` -> the `color` prop forwarded to the icon component (lucide + the future native icon both accept `color`).",
+    "L15 `<p className=\"text-lg font-bold text-[var(--text-primary)]\">{value}</p>` -> `<AppText style={styles.value}>{value}</AppText>`: text-lg -> fontSize 18/lineHeight 28, font-bold -> fontWeight '700' (literal, matching Tailwind 700 vs AppText bold=800), text-[var(--text-primary)] -> colors.textPrimary, plus textAlign 'center' (from the panel's text-center). {value} rendered inside the Text exactly like the web <p> wrapper (RN Text accepts strings + nested Text).",
+    "L16 `<p className=\"text-[10px] text-[var(--text-muted)]\">{label}</p>` -> `<AppText style={styles.label} tone=\"muted\">{label}</AppText>`: text-[10px] -> fontSize 10/lineHeight 14, text-[var(--text-muted)] -> tone 'muted' (colors.textMuted), textAlign 'center' (text-center).",
+    "L17 `</GlassPanel>` -> preserved.",
+    "L18 `)` -> preserved.",
+    "L19 `}` (function close) -> preserved.",
+    "No DOM/lucide-react/Recharts/Leaflet/old web-UI imported; only React Native primitives (View/StyleSheet/Text-via-AppText), the native GlassPanel/AppText, and theme tokens are used.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
