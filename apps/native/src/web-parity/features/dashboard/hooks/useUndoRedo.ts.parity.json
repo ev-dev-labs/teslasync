@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/features/dashboard/hooks/useUndoRedo.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/hooks/useUndoRedo.ts",
+  "sourceLineCount": 72,
+  "coveredLineCount": 72,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 72 source lines line by line and preserved the UndoRedoState<T> interface (current, canUndo, canRedo, undoCount, set, undo, redo, reset), the MAX_HISTORY=50 cap, the JSDoc, and the ref-backed undoStack/redoStack/currentRef plus forceRender version-counter re-render strategy verbatim.",
+    "Source is a non-visual generic React hook that only imports from 'react' (useState, useCallback, useRef); these are React Native-compatible, so no DOM modules, browser HTML elements, Recharts, Leaflet, or web UI components were introduced.",
+    "set/undo/redo/reset state names, push/pop/shift stack semantics, undefined-empty-stack early returns, and the returned canUndo/canRedo/undoCount derivations are identical; only formatting changed (arrowParens 'avoid' so (v) => v + 1 became v => v + 1, and single-line early returns wrapped in braces for the @react-native curly lint rule) with no behavioral change."
+  ]
+}
