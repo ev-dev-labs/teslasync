@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ui/ThemeProvider.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ui/ThemeProvider.tsx",
+  "sourceLineCount": 364,
+  "coveredLineCount": 364,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 364 source lines line by line before editing. Ported verbatim: the ThemeId/ModeId unions (L6-7), ColorTheme (L9-16) and ModeTheme (L18-31) interfaces, hexToRGB (L33-38), defaultCustomPrimary/Accent (L40-41), buildCustomTheme (L49-58), the full themes record with all six palettes incl. custom (L60-102), the full modes record with all seven palettes (L104-203), ThemeContextValue (L205-215), ThemeContext (L217), the useTheme guard (L219-223), and the ThemeProvider state names + setTheme/setMode/setCustomColors + cross-tab subscribe logic (L247-362).",
+    "Preserved state names (themeId, modeId, customColors, initialized, systemDark), the first-mount backend settings load via deliberate raw fetch(`${getApiBase()}/api/v1/settings`) reading settings.theme/mode/custom_primary/custom_accent (L264-285), the currentThemes/theme derivation (L287-288), resolvedMode auto-resolution (L299-300), the apply+persist effect (L302-306), saveThemeToBackend's request GET-then-PUT fire-and-forget (L309-318), and the themesRef/modesRef self-mirror guard (L343-356). getApiBase+request now resolve from web-parity/api/client (L2-3).",
+    "Native-unavailable web behavior mapped + documented: localStorage persistence (L44-45,L249,L254,L271,L275,L279-280,L304-305,L332-333) -> native-safe in-memory themeStore mirroring getItem/setItem; cross-restart persistence is UNAVAILABLE on native (no web storage / AsyncStorage dependency installed). applyThemeCSS DOM custom-property/document.body/classList writes (L225-245) -> no-DOM no-op that records the active palette in a process-global exposed via getActiveNativeTheme; native consumers read the live palette from useTheme(). window.matchMedia('(prefers-color-scheme: dark)') (L291-297) -> Appearance.getColorScheme()+addChangeListener. @/lib/broadcast BroadcastChannel/localStorage cross-tab bus (L4,L323,L328,L337-338,L348) -> native-safe in-process bus preserving theme.changed/theme.customColors shapes and the TAB_ID self-filter; with a single ThemeProvider on one JS runtime the cross-tab mirror is inert by design. No DOM/Recharts/Leaflet/old-web-ui imports; no i18n strings exist in the source so none were needed."
+  ]
+}
