@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/system/components/CommandConfirmDialog.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/CommandConfirmDialog.tsx",
+  "sourceLineCount": 136,
+  "coveredLineCount": 136,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 136 source lines before editing. Ported the CommandConfirmDialogProps contract (open/onClose/onConfirm/def/loading), the countdown/confirmInput derivations (def.countdown ?? 0, def.confirmInput), all state names (remaining, inputValue, inputRef), both useEffects (the 1s setInterval countdown with the prev<=1 clearInterval/return 0 branch + cleanup, and the open && confirmInput setTimeout(50) focus), and the canConfirm predicate (remaining === 0 && (!confirmInput || inputValue.trim().toUpperCase() === confirmInput.toUpperCase())) verbatim.",
+    "Lines 1-6 imports: react-i18next useTranslation -> local useNativeTranslationFallback (returns inline fallback + interpolates {{token}}); @/lib/cn cn() -> styles.dimmed opacity style; @/components/ui Modal/Input/Button -> RN Modal + TextInput + local DialogAction Pressable; lucide-react AlertTriangle -> aria-hidden '\\u26A0' glyph stand-in; `import type CommandDef from ../commands` -> local structural CommandDef subset (labelKey/labelFallback/confirmKey/confirmFallback/countdown/confirmInput).",
+    "Lines 61-70 handleKeyDown: Escape -> Modal onRequestClose (hardware back) + backdrop Pressable onPress=onClose; Enter -> confirm TextInput onSubmitEditing replays canConfirm && !loading -> onConfirm().",
+    "Lines 72-135 JSX: web Modal size=sm + red glass classes -> overlay/backdrop/dialog scaffold with colors.dangerBorder; AlertTriangle red chip header -> iconBadge + glyph; t(def.labelKey, def.labelFallback) title (line 84-86) and t(def.confirmKey ?? '', def.confirmFallback ?? 'Are you sure?') body (line 89-91) preserved; confirmInput block (93-107) renders the typeToConfirm hint with {{word}} interpolation + TextInput (ref/value/onChangeText/placeholder/autoComplete=off, autoCorrect/autoCapitalize off so typed text is compared as-is); cancel ghost Button + danger confirm Button with loading spinner, disabled={!canConfirm}, opacity-50 when remaining>0, and the `Confirm (Ns)` vs `Confirm` label (128-130) preserved.",
+    "data-testid-style hooks added as testID (command-confirm-dialog/input/cancel/submit). No DOM, lucide, recharts, leaflet, or web UI imports remain; only RN primitives, AppText, and theme tokens are used."
+  ]
+}
