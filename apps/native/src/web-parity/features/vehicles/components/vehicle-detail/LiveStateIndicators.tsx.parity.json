@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx",
+  "sourceLineCount": 34,
+  "coveredLineCount": 34,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-5 imports preserved: react-i18next useTranslation -> useNativeTranslation() shim (returns the fallback copy, keys retained); @/components/ui Badge -> inline StateBadge pill; @/hooks/useUnits formatSpeed -> inlined native-safe metric km/h precision-0 formatter; VehicleState type imported from ../../../../api/types (native parity types).",
+    "L7-9 LiveStateIndicatorsProps { state: VehicleState } preserved verbatim.",
+    "L11-13 component signature + useTranslation()/useUnits() destructure of t and formatSpeed preserved as the shim + inline formatter.",
+    "L16 div.flex flex-wrap gap-2 -> View styles.row (flexDirection row, flexWrap wrap, gap 8).",
+    "L17-19 Speed Badge: variant success when state.speed > 0 else neutral, dot, size lg, label `t(common.speed,'Speed'): formatSpeed(state.speed, {precision:0})` preserved.",
+    "L20-22 Lock Badge: variant success when state.is_locked else danger, Locked/Unlocked i18n keys preserved.",
+    "L23-25 Sentry Badge: variant warning when state.sentry_mode else neutral, `Sentry: Active/Off` i18n keys preserved.",
+    "L26-28 Climate Badge: variant info when state.is_climate_on else neutral, `Climate: On/Off` i18n keys preserved (info -> accent/cyan token; no blue token exists).",
+    "L29-31 Charging Badge: variant warning when state.is_charging else neutral, Charging/Not Charging i18n keys preserved.",
+    "L32-35 closing JSX/function preserved. size lg -> px-2.5/py-1/text-sm (paddingHorizontal 10, paddingVertical 4, fontSize 14); dot bg-current -> dot colored with variant fg. No DOM/HTML, Recharts, Leaflet, or web UI imports in the native output."
+  ]
+}
