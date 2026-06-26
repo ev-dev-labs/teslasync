@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/types/trip.ts",
+  "outputPath": "apps/native/src/web-parity/types/trip.ts",
+  "sourceLineCount": 2,
+  "coveredLineCount": 2,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read both source lines before editing; the file is a non-visual pure TypeScript type re-export with no DOM, Recharts, Leaflet, or web-UI dependencies.",
+    "L1 (comment 'Re-export the canonical Trip type from the API types (matches Go JSON tags)') preserved verbatim.",
+    "L2 `export type { Trip } from '@/api/types'` -> `export type { Trip } from '../api/types'`: the native web-parity layer has no '@/' alias (tsconfig extends @react-native/typescript-config with no path mapping), so the established relative-rewrite idiom is used; from web-parity/types/ the '../api/types' module resolves to the converted native web-parity/api/types.ts, which exports an interface Trip byte-identical to the web shape (id, vehicle_id, name, start_date, end_date, started_at, ended_at, SI fields total_distance_m/total_energy_wh/total_duration_s, total_cost, drive_count, charge_count, created_at, created_by_user?, auto_generated?, notes?)."
+  ]
+}
