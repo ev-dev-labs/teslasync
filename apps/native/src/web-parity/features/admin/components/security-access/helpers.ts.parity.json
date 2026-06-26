@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/admin/components/security-access/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/security-access/helpers.ts",
+  "sourceLineCount": 258,
+  "coveredLineCount": 258,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 258 source lines line by line and ported every exported symbol with identical behavior: types WindowState (L8), SentryDayBucket (L10-14), TimelineEvent (L16-22), SecurityStats (L24-31); and functions parseWindowState (L37-45), windowColor (L47-58), windowTextClass (L60-71), doorClosed (L77-96), allWindowsClosed (L98-103), windowSummary (L105-112), timeSince (L118-130), isSentryActive (L138-143), buildSentryBuckets (L145-166), computeSentryUptime (L168-172), findLastLockChange (L178-185), computeSecurityStats (L191-202), deriveTimeline (L208-258).",
+    "Import rewiring: source L1 `import type { SecurityEvent } from '@/types/admin'` -> `import type {SecurityEvent} from '../../../../api/hooks/useAdmin'`, the native parity module whose SecurityEvent interface is byte-for-byte the same camelCase shape (id/locked/sentryMode/doorState/fd|fp|rd|rpWindow/homelinkNearby/guestMode/createdAt). The native api/types.ts SecurityEvent is the snake_case wire row and is intentionally NOT used because this helper reads camelCase fields.",
+    "Source L2 `import { asNonEmptyString } from '@/lib/typeGuards'` is inlined as a module-local function (typeof v === 'string' && v.length > 0 ? v : null) reproduced verbatim from web/src/lib/typeGuards.ts; lib/typeGuards is not a target in this slice so inlining keeps the file self-contained without behavior change. Kept non-exported to preserve the module's exact public surface.",
+    "Non-visual utility/logic file: no DOM, browser HTML, Recharts, Leaflet, react-leaflet, framer-motion, or web UI-kit imports. All logic is pure JS/TS (string narrowing, Map bucketing, Date math, Array sort/map/filter/every, JSON.parse with fall-through catch) that runs unchanged on React Native.",
+    "Preserved exact behavior and literals: WindowState union order, the `lower !== '0'` Open fallthrough (L43), DoorState bool/number/object/JSON-string handling and the closed-token set ''/closed/closedall/0/false (L88), the '—'/'just now'/'Nm ago'/'Nh ago'/'Nd ago' relative-time buckets (L118-130), sentry uptime percentage, lock-change scan, stats counters, and the 50-event timeline cap with descending createdAt/timestamp sorts and lock-/sentry-/door- id prefixes.",
+    "windowColor (L47-58) and windowTextClass (L60-71) intentionally return the original Tailwind class-name string tokens (e.g. 'bg-green-500/20 border-green-500/40', 'text-[var(--text-muted)]') rather than RN styles, matching the established native-parity convention for token-returning helpers (api/index.ts statusDotColor, api/types.ts) so consuming native components map tokens at the render boundary; behavior (return value per state) is identical to web.",
+    "Native code style applied per apps/native/.prettierrc.js (singleQuote, trailingComma all, arrowParens avoid) and formatted with prettier --write; single-arg arrows rewritten v=>/s=>/e=> while multi-arg/destructured arrows keep parens. No noUncheckedIndexedAccess in the resolved tsconfig, so events[i]/history[i]/sorted[i] index reads are typed non-undefined exactly as the source assumed.",
+    "Verified against native gates from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
