@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/hooks/useBackgroundJobs.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useBackgroundJobs.ts",
+  "sourceLineCount": 150,
+  "coveredLineCount": 150,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 150 source lines (numbered) before editing. The module is a pure, UI-agnostic React hook plus a module-scoped pub/sub store: no JSX, no DOM element, no Recharts/Leaflet, no browser-only API, so the logic ports 1:1 to React Native (Hermes runs the same useEffect/useMemo/useSyncExternalStore/Set/new Date().toISOString() primitives).",
+    "L1 `import {useEffect, useMemo, useSyncExternalStore} from 'react'` preserved (react is RN-compatible; useSyncExternalStore is a React 18+/19 API and the native app pins react 19.1.4).",
+    "L2 `import {useIsMutating} from '@tanstack/react-query'` preserved verbatim — @tanstack/react-query ^5.101.1 is a native dependency and exports useIsMutating.",
+    "L3 `import { useExportJobs, type ExportJobSummary } from '@/api/hooks/useExports'` rewritten to the native parity relative path `../api/hooks/useExports`. The native useExports.ts exposes the same `useExportJobs(opts?: {pollWhileActive?: boolean})` signature and the same snake_case `ExportJobSummary` shape ({id, type, status, file_name, created_at}) the aggregator consumes, so the contract is structurally identical.",
+    "L5-22 file-header JSDoc (three-signal aggregation intent: export jobs from /export/jobs, TanStack mutations, ad-hoc registrations; module-scoped observable store rationale) carried over into the native conversion header + preserved verbatim above the type declarations.",
+    "L24 `BackgroundJobKind = 'export' | 'mutation' | 'custom'` and L26-37 `BackgroundJob` interface (id, label, kind, description?, startedAt) ported 1:1 including field JSDoc.",
+    "L39-57 module-scoped store ported verbatim: `let customJobs: BackgroundJob[] = []`, `const listeners = new Set<() => void>()`, `emit()` (for..of over listeners), `subscribe(fn)` returning `() => listeners.delete(fn)`, `getSnapshot()` returning customJobs. All names preserved.",
+    "L59-83 `registerJob` ported 1:1: same `Omit<BackgroundJob,'startedAt'|'kind'> & {kind?}` param, kind defaults to 'custom', startedAt = new Date().toISOString(), spread-merge, idempotent replace via `customJobs.filter(j => j.id !== job.id)`, emit(), returns disposer that filters + emits. Web `(j) =>` rewritten as `j =>` per native arrowParens:'avoid'; the multi-line param signature is reflowed by prettier with no behaviour change. JSDoc + idempotency comment preserved.",
+    "L85-89 `__clearBackgroundJobsForTests` test-only reset (customJobs = []; emit()) ported verbatim with its JSDoc.",
+    "L95-102 `UseBackgroundJobsResult` interface (jobs, hasJobs, count) ported 1:1 with JSDoc. L104-115 `activeExportJobs` ported verbatim: undefined -> [], filter status queued|processing, map<BackgroundJob> to {id:`export:${j.id}`, kind:'export', label: j.file_name || `${j.type} export`, description: queued?'Queued':'Processing', startedAt: j.created_at}. Internal English strings kept byte-for-byte (web source does not i18n them).",
+    "L117-150 `useBackgroundJobs` hook ported 1:1: `const {data: exportJobs} = useExportJobs({pollWhileActive: true})`, `useIsMutating()`, `useSyncExternalStore(subscribe, getSnapshot, getSnapshot)` (3-arg form preserves SSR/initial snapshot parity), composite mutationJob useMemo([mutationCount]) with 'Saving…' / `Saving ${mutationCount} changes…` label and 'tanstack-mutations' id, exports useMemo([exportJobs]), jobs useMemo([exports, mutationJob, custom]) sorting by startedAt.localeCompare oldest-first, the empty unmount-cleanup useEffect(() => () => {}, []), and the return {jobs, hasJobs: jobs.length > 0, count: jobs.length}. All state names and the (a, b) sort comparator preserved.",
+    "No DOM/Recharts/Leaflet/web-UI imports introduced; only native-safe react, @tanstack/react-query, and the native parity useExports hook are referenced.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
