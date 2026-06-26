@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/types/fsm/drive-session.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/drive-session.ts",
+  "sourceLineCount": 95,
+  "coveredLineCount": 95,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 95 source lines before editing; pure non-visual FSM type/constant module with one relative import and zero DOM/browser/Recharts/Leaflet/web-UI dependencies, so it is React Native-compatible verbatim (byte-identical to source, 5962 bytes, LF, no BOM) and required no native-safe stubbing.",
+    "L1 import of value helper deriveEdges plus 7 type-only symbols (TransitionRow, StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix, Scenario) from './types' preserved verbatim; the native fsm/ dir was empty so this first-converted fsm file bootstraps the shared sibling dependency apps/native/src/web-parity/types/fsm/types.ts (verbatim 95-line port, own sidecar) needed by every fsm file's './types' import for tsc to resolve.",
+    "L3-7 DRIVE_SESSION_STATES as-const tuple (pending/active/ending/completed/recovered) and L7 DriveSessionState = (typeof ...)[number] union ported verbatim, preserving state names exactly.",
+    "L9-15 DRIVE_SESSION_STATE_ENTRIES Record<DriveSessionState,StateEntry> ported verbatim including BadgeVariant per state (warning/success/warning/info/neutral) and the Tailwind override class-name strings for ending(orange)/completed(indigo)/recovered(purple); these are data string literals (not JSX/DOM) carrying visual intent, RN-safe unchanged.",
+    "L17-21 DRIVE_SESSION_TRIGGERS tuple (6 triggers) + DriveSessionTrigger union, and L23-26 DRIVE_SESSION_GUARDS tuple (2 guards) + DriveSessionGuard union ported verbatim.",
+    "L28-37 DriveSignalContext interface (8 numeric start*/end* odometer/battery/latitude/longitude fields) ported verbatim.",
+    "L39-48 DRIVE_SESSION_TRANSITIONS TransitionRow[] (8 rows) ported verbatim preserving from/to/trigger/guard(null where absent)/timing('immediate') and the column alignment; L50 DRIVE_SESSION_EDGES derived via deriveEdges(DRIVE_SESSION_TRANSITIONS) preserved.",
+    "L52-59 DRIVE_SESSION_DISALLOWED (6 rows with reason strings incl. em-dash) and L61-65 DRIVE_VALIDATION_RULES as-const (distanceMin/distanceMaxMi/durationMinSec/netEnergyMin/efficiencyRangeWhPerMi tuple/endBatteryMaxDelta) ported verbatim; the *Mi/WhPerMi keys are pre-existing web TS object keys carried for parity, not new Go struct fields or JSON/DB columns, so Phase-48 SI-suffix rules do not apply.",
+    "L67-73 DRIVE_SESSION_COVERAGE CoverageMatrix (5x5 self/valid/null cells) and L75-86 DRIVE_SESSION_SCENARIOS Scenario[] (D1-D10 id/description/transitions) ported verbatim.",
+    "L88-95 DRIVE_SESSION_FSM FSMDefinition wiring states/edges/transitions/disallowed/coverage/scenarios ported verbatim. Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles all green; only apps/native changes committed."
+  ]
+}
