@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ui/Card.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ui/Card.tsx",
+  "sourceLineCount": 70,
+  "coveredLineCount": 70,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 70-line numbered source before editing; covered the imports (L1-2), CardProps with padding union + hover (L4-12), the Card forwardRef container with the padding map, base glass class string, forced-colors block, hover styling, className/children/props spread (L14-44), CardHeaderProps + CardHeader title/subtitle/action (L46-62), and CardFooterProps + CardFooter children/className divider row (L64-70).",
+    "Mapped DOM div->View, forwardRef<HTMLDivElement>->forwardRef<View>, HTMLAttributes spread->ViewProps passthrough, h3/p->AppText, and the Tailwind classes to StyleSheet + theme tokens (rounded-lg->8 radius, border->colors.border, --surface-1->colors.surface, shadow-sm/hover:shadow-md->RN shadow props, mb-4/mt-4/pt-4/gap-2->16/16/16/8). Dropped the cn helper and i18n is not applicable (no strings).",
+    "Documented native-unavailable web behavior: padding 'auto' density-aware utilities (useDensitySync) fall back to the md 16px scale; forced-colors High Contrast overrides have no RN equivalent and are omitted; hover has no native pointer analog so it renders a static elevated shadow signalling interactivity. className props are accepted-but-ignored for source compatibility; no DOM/Recharts/Leaflet/web-ui imports used."
+  ]
+}
