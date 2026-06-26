@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/onboarding/tours/chargingTour.ts",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/tours/chargingTour.ts",
+  "sourceLineCount": 54,
+  "coveredLineCount": 54,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 web `import type { TourDefinition } from '@/lib/tourRegistry'` -> inlined TourDefinition + TourAutoStartContext interfaces (the web @/lib/tourRegistry module is not in the native parity manifest); shapes ported verbatim (id, routeMatch string|RegExp, titleKey/titleFallback, descriptionKey/descriptionFallback, version, steps, optional autoStart predicate).",
+    "L2 web `import type { TourStep } from '@/hooks/useTour'` -> inlined TourStep interface (web @/hooks/useTour absent from native parity manifest): target, title, description, placement 'top'|'bottom'|'left'|'right', optional onShow/onHide — all DOM-free.",
+    "L4-L9 navigate(href) used the browser History API (window.history.pushState + new PopStateEvent('popstate')) with a typeof window guard and a window.location.pathname de-dupe guard; React Native has no DOM History API and this data module cannot reach App.tsx's in-app navigate, so it is remapped to a native-safe best-effort Linking.openURL(href) with swallowed errors (same route-string remap NoVehicleSelected uses). nativeChargingTourCapabilities.historyNavigationAvailable=false records the unavailable state.",
+    "L11-L43 STEPS: TourStep[] ported one-for-one — 4 steps with identical target selectors ([data-tour=\"charging-list\"|\"charging-filters\"|\"cost-analysis\"|\"charging-curve\"]), titles, full description strings, and placements ('bottom','bottom','top','top'); onShow callbacks preserved as () => navigate('/charging' | '/cost-analysis' | '/charging-curve'); step 2 has no onShow, matching the source.",
+    "L45-L54 export const CHARGING_TOUR: TourDefinition preserved verbatim — id 'charging', routeMatch /^\\/(charging|cost-analysis|charging-curve|smart-charge)/, titleKey 'tour.tours.charging.title', titleFallback 'Charging & cost analysis', descriptionKey 'tour.tours.charging.description', descriptionFallback 'Sessions, cost breakdowns, and curve diagnostics.', version 1, steps: STEPS.",
+    "L55 trailing newline preserved.",
+    "No DOM elements, browser HTML, Recharts, Leaflet, or old web UI components are imported; the only runtime dependency is react-native Linking. i18n keys/fallbacks and the routeMatch RegExp are preserved exactly.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
