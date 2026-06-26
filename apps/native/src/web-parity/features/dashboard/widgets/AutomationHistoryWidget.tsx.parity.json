@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/AutomationHistoryWidget.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/AutomationHistoryWidget.tsx",
+  "sourceLineCount": 153,
+  "coveredLineCount": 153,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 153 numbered source lines before editing. The native widgets directory was empty, so every shared web dependency this widget pulls in (WidgetShell, WidgetEventFeed/EventFeedItem, types.WidgetProps, ui.Badge, data-display.TimeStamp/TimelineItem, feedback.EmptyState, data-display.DataFreshness) is reproduced inline native-safe, matching the GlancePage/RateLimitStatusPanel idiom.",
+    "L1 useMemo kept; used for feedItems (L79) and the inlined WidgetEventFeed sort/slice. L1-2 react-i18next useTranslation('dashboard') -> native English-default `t` with {{var}} interpolation preserving every widget.*/freshness.* key.",
+    "L3 lucide-react PlayCircle/CheckCircle/XCircle/Clock -> no native icon font: header icon = accent '\\u25B6' PlayGlyph; per-run icons collapse to the four distinct-icon glyphs (CheckCircle->OK, XCircle->X, Clock->CK, PlayCircle->PL) while the exact per-status hex colour is preserved.",
+    "L4-5 ui.Badge -> local StatusBadge (success/warning/danger tint map); data-display.TimeStamp -> formatRelativeTime label (no native time_format_default pref, so 'auto' resolves to the relative ladder).",
+    "L6 feedback.EmptyState -> shared native EmptyState (web single `message` -> native EmptyState `title`, empty `message`).",
+    "L7 useAutomationHistory imported unchanged from ../../../api/hooks/useAutomations (same /automations/history?limit=20 path, same default limit 20, same 30s refetch interval).",
+    "L8 dateFormat.formatDurationMs inlined verbatim ('Nms'/'N.Ns', '\\u2014' fallback via isFiniteNumber). L9 numberFormat.fmtInt/fmtNumber inlined verbatim (default precision 2, en-US grouping, safeNumber guard).",
+    "L10-11 './WidgetShell' + './shared' WidgetEventFeed -> inline WidgetShell + WidgetEventFeed reproductions (no native ports exist yet). L12 EventFeedItem type -> local interface (glyph replaces the web ReactNode icon). L13 WidgetProps -> local WidgetSize/WidgetProps subset (only size.cols read). L14 AutomationHistoryStatus imported from the native hook module for the STATUS_MAP index cast.",
+    "L16-30 STATUS_MAP: all 8 statuses (success/failed/partial/running/skipped/cancelled/test/undo) ported with their exact hex colours (#22c55e/#ef4444/#f59e0b/#3b82f6/#6b7280/#6b7280/#8b5cf6/#6b7280) and severities (info/critical/warning/info/info/info/info/info); the lucide icon per status maps to its glyph (CheckCircle->OK, XCircle->X, Clock->CK, PlayCircle->PL).",
+    "L32-36 DEFAULT_STATUS (PlayCircle->'PL', #6b7280, info) preserved as the `?? DEFAULT_STATUS` fallback at L82.",
+    "L38-58 CompactView -> native CompactView: text-2xl bold success-rate `fmtNumber(successRate,1)%`, text-[10px] muted t('widget.successRate','Success Rate'), and the lastRunTime guard rendering the TimeStamp as a relative-time label (testID automation-history-compact-time).",
+    "L62-72 default export AutomationHistoryWidget({size}); useAutomationHistory() destructured as data/isLoading/isFetching/isStale/isError/dataUpdatedAt/refetch — names preserved verbatim.",
+    "L74-77 isCompact = size.cols <= 1; items = data?.items ?? []; summary = data?.summary; successRate = summary?.success_rate ?? 0 — preserved.",
+    "L79-96 feedItems useMemo over items: STATUS_MAP[entry.status] ?? DEFAULT_STATUS, durationStr = formatDurationMs(entry.duration_ms ?? null), statusLabel = entry.status ?? '\\u2014', id/title(automation_name ?? '\\u2014')/subtitle(`${statusLabel} \\u00b7 ${durationStr}`)/timestamp(triggered_at ?? new Date(0).toISOString())/color/severity — byte-identical logic; `icon` ReactNode becomes `glyph` string.",
+    "L98 lastEntry = items.length > 0 ? items[0] : null — preserved.",
+    "L100-110 WidgetShell wiring: title t('widget.automationHistory','Automation History'), icon PlayGlyph, loading=isLoading, updatedAt=dataUpdatedAt, isFetching/isStale/isError, onRefresh=() => refetch(). Inline WidgetShell renders a skeleton (testID automation-history-loading) when loading, else header (icon + uppercase muted title + WidgetFreshness) over the body. WidgetFreshness reproduces DataFreshness: isError>fetching>stale>fresh precedence, dot tiers (#34d399/#38bdf8/#fbbf24/#f87171), 'just now / Nm/Nh/Nd/Nw ago' + 'updating\\u2026'/'error' labels, 30s tick, onRefresh on a role=button Pressable.",
+    "L111-124 compact branch: items.length>0 -> CompactView(successRate, lastEntry?.triggered_at ?? null); else EmptyState icon+message -> native EmptyState title=t('widget.noAutomationRuns','No automation runs yet') (testID automation-history-empty).",
+    "L125-137 wide branch success-rate header: StatusBadge variant successRate>=90?'success':>=50?'warning':'danger' with `${fmtNumber(successRate,1)}% ${t('widget.successRate','Success Rate')}`; summary && total-runs `${fmtInt(summary.total_executions)} ${t('widget.totalRuns','runs')}` (border-b hairline preserved).",
+    "L139-149 wide event feed: a ScrollView (overflow-y-auto) wrapping inline WidgetEventFeed items=feedItems maxItems=10 emptyMessage=t('widget.noAutomationRuns',...); WidgetEventFeed sorts by timestamp desc, slices to limit, renders TimelineRow rows (status-coloured `${color}15` icon chip + connector + title/subtitle/relative-time) or EmptyState (testID automation-history-feed-empty). WidgetEventFeed's own t('widget.noEvents','No events yet') default key preserved though overridden here.",
+    "L151-153 closing WidgetShell/branch structure preserved; default export + displayName added.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles (jest). Companion __tests__/AutomationHistoryWidgetParity.test.tsx renders loading, wide-with-data, wide-empty, compact-with-data, compact-empty, and error-freshness states; every test unmounts so the 30s freshness interval leaves no open handle."
+  ]
+}
