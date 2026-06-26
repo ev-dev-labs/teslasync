@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/WeekSelector.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/WeekSelector.tsx",
+  "sourceLineCount": 50,
+  "coveredLineCount": 50,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { useTranslation } from 'react-i18next'` -> local `useNativeTranslationFallback` t() shim ((key,fallback)=>fallback) since react-i18next is unavailable in native parity; i18n keys preserved verbatim at call sites (matches SortControl precedent).",
+    "L2 `import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'` -> decorative Unicode/emoji glyphs in AppText (lucide is browser/SVG-only): ChevronLeft -> '\\u2039' (‹), ChevronRight -> '\\u203A' (›), Calendar -> '📅' (matches Lightbox/Breadcrumbs/PatternsSlide glyph approach).",
+    "L3 `import { GlassPanel, Badge, Button } from '@/components/ui'` -> GlassPanel from native components/ui/GlassPanel (same as sibling HeroGauges/BatteryTab), Button from native parity web-parity/components/ui/Button, Badge inlined as View+AppText pill (no shared native Badge port exists).",
+    "L4 blank line preserved.",
+    "L5-10 interface WeekSelectorProps {weekLabel,isCurrentWeek,onPrevWeek,onNextWeek} ported verbatim — same prop names and types.",
+    "L11 blank line preserved.",
+    "L12-17 `export function WeekSelector({weekLabel,isCurrentWeek,onPrevWeek,onNextWeek}: WeekSelectorProps)` signature ported verbatim.",
+    "L18 `const { t } = useTranslation()` -> `const t = useNativeTranslationFallback()`.",
+    "L19 blank line preserved.",
+    "L20 `return (` preserved.",
+    "L21 `<GlassPanel className='flex items-center justify-between px-5 py-3'>` -> `<GlassPanel style={styles.panel}>`: flexDirection row, alignItems center, justifyContent 'space-between', paddingHorizontal 20 (px-5), paddingVertical 12 (py-3); className dropped (native uses style).",
+    "L22-29 prev `<Button variant='ghost' size='sm' icon={<ChevronLeft className='h-4 w-4'/>} onClick={onPrevWeek}>{t('analytics.weeklyDigest.prevWeek','Previous')}</Button>` -> native parity Button with onClick->onPress, icon = AppText '\\u2039' glyph (h-4 w-4 = fontSize 16, textPrimary ghost colour, importantForAccessibility='no'); variant/size carried over; label string preserved.",
+    "L30 `<span className='flex items-center gap-2 text-sm font-semibold text-white'>` -> `<View style={styles.center}>` (flexDirection row, alignItems center, gap 8 = gap-2, flexShrink 1); the text-sm/font-semibold/text-white typography is applied to the week-label AppText (L32).",
+    "L31 `<Calendar className='h-4 w-4 text-[var(--text-secondary)]'/>` -> AppText '📅' glyph at 16px (h-4); the text-secondary tint cannot apply to a colour emoji so that one tint is intentionally dropped (documented native limitation).",
+    "L32 `{weekLabel}` -> `<AppText style={styles.weekLabel}>{weekLabel}</AppText>` with fontSize 14 (text-sm), fontWeight '600' (font-semibold), color textPrimary (text-white), flexShrink 1.",
+    "L33-37 `{isCurrentWeek && (<Badge variant='info' size='sm'>{t('analytics.weeklyDigest.current','Current')}</Badge>)}` -> `{isCurrentWeek ? (...) : null}` rendering an inlined info pill: View bg #1e3a8a (dark:bg-blue-900), borderRadius 999 (rounded-full), paddingHorizontal 6/paddingVertical 2 (px-1.5 py-0.5) + AppText color #bfdbfe (dark:text-blue-200), fontSize 12 (text-xs), fontWeight '500' (font-medium); i18n key preserved.",
+    "L38 `</span>` -> `</View>` (centre cluster close).",
+    "L39-47 next `<Button variant='ghost' size='sm' icon={<ChevronRight className='h-4 w-4'/>} onClick={onNextWeek} disabled={isCurrentWeek}>{t('analytics.weeklyDigest.nextWeek','Next')}</Button>` -> native parity Button with onClick->onPress, icon = AppText '\\u203A' glyph, disabled={isCurrentWeek} carried over verbatim; label string preserved.",
+    "L48 `</GlassPanel>` preserved.",
+    "L49-50 `);` + closing brace of WeekSelector preserved.",
+    "All 50 source lines considered. No DOM/browser HTML, Recharts, Leaflet, lucide, or web @/components imports in native output; only react, react-native, and existing native components (AppText, GlassPanel, parity Button) + theme tokens. Native affordances documented: lucide glyph stand-ins, dropped Calendar emoji tint, inlined info Badge, i18n fallback shim.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) exit 0; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles passing."
+  ]
+}
