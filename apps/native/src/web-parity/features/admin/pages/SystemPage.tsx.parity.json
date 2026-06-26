@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/admin/pages/SystemPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/pages/SystemPage.tsx",
+  "sourceLineCount": 45,
+  "coveredLineCount": 45,
+  "notes": [
+    "Read all 45 source lines before editing. Module JSDoc (L1-11) — the 'infrastructure-budget' admin page that aggregates RateLimitStatusPanel + sibling panels, the note that SystemStatusPage/ApiLogsPage/DiagnosticPage already cover health/logs/self-test, and the App.tsx + routeRegistry.ts nav-entry wiring guidance — ported verbatim as the native header comment.",
+    "Imports L13-20 mapped 1:1: react-i18next useTranslation (L13) -> native useNativeTranslationFallback t(key, fallback); layout PageContainer + Stack (L15) -> inline RN PageScaffold (ScrollView + title/subtitle header) + a gapped View carrying the testID; motion FadeIn (L16) -> inline RN Animated FadeIn (fade + slide-up, reduced-motion aware via AccessibilityInfo); @/hooks/usePageTitle (L17) -> native-safe no-op hook (RN has no document.title); RateLimitStatusPanel (L19) and QueueStatusPanel (L20) imported from the native parity tree at the same sibling path ('../components/RateLimitStatusPanel', '../components/QueueStatusPanel').",
+    "SYSTEM_PAGE_PATH = '/admin/system' (L22) preserved verbatim as a named export. Default export SystemPage (L24), const { t } = useTranslation() -> const t = useNativeTranslationFallback() (L25), const title = t('system.page.title', 'System budgets') (L26), and usePageTitle(title) (L27) preserved with identical key + English fallback + call order.",
+    "Render L29-44: PageContainer title={title} (L30-31) + subtitle t('system.page.subtitle', 'Operator dashboard for the throttles and budgets that bound this TeslaSync deployment.') (L32-35) -> PageScaffold with the same title + subtitle text rendered in the header. FadeIn (L37) -> inline RN FadeIn. Stack className=\"gap-6\" data-testid=\"system-page-stack\" (L38) -> a View with gap spacing + testID=\"system-page-stack\"; gap-6 (24px) rendered as the native spacing.lg vertical gap to match the sibling-panel rhythm. RateLimitStatusPanel (L39) then QueueStatusPanel (L40) rendered in the same order; closing Stack/FadeIn/PageContainer/return/function (L41-45) preserved.",
+    "RateLimitStatusPanel was not yet present in the native parity tree, so it was converted alongside this page as a faithful sibling component file (apps/native/src/web-parity/features/admin/components/RateLimitStatusPanel.tsx + sidecar), mirroring the already-converted native QueueStatusPanel; this keeps the page's two named imports resolving and the typecheck/lint/test gates green.",
+    "No DOM/Recharts/Leaflet/react-dom/framer-motion/lucide/old web-UI imports in the native output — only react, react-native primitives, the canonical AppText + theme tokens, and the two native parity admin panels.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) PASS exit 0; npm run lint -- --quiet (eslint . --quiet) PASS exit 0; npm test -- --runInBand --detectOpenHandles PASS 71/71 across 16 suites."
+  ],
+  "conversionStatus": "converted"
+}
