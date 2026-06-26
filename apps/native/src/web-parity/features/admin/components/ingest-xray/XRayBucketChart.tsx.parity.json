@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/admin/components/ingest-xray/XRayBucketChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/ingest-xray/XRayBucketChart.tsx",
+  "sourceLineCount": 102,
+  "coveredLineCount": 102,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the web source line by line. Preserved the XRayBucketChartProps API ({ buckets, loading }), the `series` useMemo pre-deriving { ts: Date.parse(bucket_start), bucket_start, count }, and the `isEmpty = !loading && series.length === 0` guard verbatim (source L32-53).",
+    "Preserved every ChartContainer prop from source L55-80: title/subtitle/ariaLabel i18n keys + English defaults, loading, empty={isEmpty}, height={260}, data=series.map -> { bucket, count }, the bucket/count dataColumns with format v => typeof number ? fmtInt(v) : '—', exportable, and exportFilename=\"ingest-xray-buckets\".",
+    "Recharts ResponsiveContainer/BarChart/CartesianGrid/XAxis/YAxis/Tooltip/Bar tree (source L81-99) is DOM/SVG-only, so it is reproduced with native View/AppText/Pressable layers via the shared native ChartContainer: y-axis integer count ticks (allowDecimals={false}), grid lines, one tappable bar per bucket sized to count/maxCount, first/middle/last x-axis time ticks, and a tap-to-select summary row reproducing the Tooltip's formatTime(label) + fmtInt(count) 'admin.xray.chart.tooltip' Samples content.",
+    "@/components/charts -> native web-parity charts barrel (ChartContainer only); useDateFormat().formatTime -> native Intl.DateTimeFormat hour:minute formatter (time-of-day intent); lib/numberFormat.fmtInt -> inlined locale integer formatter (round to 0 decimals, nullish -> 0); @/types/admin-diagnostics.IngestXRayBucketPoint -> inlined local interface; react-i18next useTranslation -> native key/English-default fallback t preserving all admin.xray.chart.* keys.",
+    "Bar fill var(--accent-primary) (source L97) -> native colors.accent token; selected bar uses colors.accentGlow. No DOM, Recharts, Leaflet, or web UI components imported; typecheck, lint --quiet, and jest gates run from apps/native."
+  ]
+}
