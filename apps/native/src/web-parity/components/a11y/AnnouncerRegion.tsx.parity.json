@@ -7,7 +7,7 @@
   "notes": [
     "Read all 49 source lines line by line before editing; preserved the AnnouncerRegion export, polite/assertive state names, mount-once subscription lifecycle, priority branching, test IDs, and sibling live-region intent.",
     "React Native has no DOM aria-live regions or VisuallyHidden span, so the native output uses hidden Text primitives with accessibilityLiveRegion plus AccessibilityInfo.announceForAccessibility while documenting domLiveRegionAvailable=false in the component capabilities.",
-    "Inlined the announcer listener contract in this required output file because the native web-parity tree does not yet expose the web @/hooks/useAnnouncer alias; the same duplicate-message zero-width-space padding, empty-message skip, unsubscribe, and test helper behavior are preserved.",
+    "The announcer listener contract now lives in ../../hooks/useAnnouncer (parity port of web/src/hooks/useAnnouncer.ts); this component imports subscribeAnnouncer from there and re-exports announce/subscribeAnnouncer/the test helpers/types for backward compatibility, so a single shared listener set drives the live regions (the earlier temporary inlining is removed). The same duplicate-message zero-width-space padding, empty-message skip, unsubscribe, and test helper behavior are preserved.",
     "The conversion imports only React, React Native accessibility primitives, and StyleSheet; it does not import DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components."
   ]
 }

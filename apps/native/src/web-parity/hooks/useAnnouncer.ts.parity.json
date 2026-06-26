@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/hooks/useAnnouncer.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useAnnouncer.ts",
+  "sourceLineCount": 130,
+  "coveredLineCount": 130,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 130 source lines line by line before editing. The web hook is pure pub/sub + React useMemo with zero DOM dependencies, so the logic ports 1:1 to React Native; the only browser-specific concern (DOM <span aria-live> live-region rendering) lives in AnnouncerRegion.tsx, not here.",
+    "L1-34 module docstring preserved and lightly adapted: the Mechanism section now points at ../components/a11y/AnnouncerRegion.tsx and describes the native rendering (hidden <Text accessibilityLiveRegion> + AccessibilityInfo.announceForAccessibility) instead of DOM <span aria-live>; the de-dup/zero-width-space, safe-before-mount, and stable-object notes are kept verbatim in intent.",
+    "L36 `import { useMemo } from 'react'` ported as `import {useMemo} from 'react'` (native bracketSpacing:false style). L38-39 AnnouncerPriority and L41-45 AnnouncerListener types preserved exactly.",
+    "L47 `listeners` Set and L49-55 module-level `announceCounter` preserved exactly — this module is the single source of truth for the shared listener set (AnnouncerRegion.tsx was refactored to import/re-export from here instead of inlining a second copy, so useAnnouncer().announce() reaches the mounted region exactly like web).",
+    "L57-84 announce(): empty-message skip, announceCounter increment, `'\\u200B'.repeat(announceCounter % 4)` rotating padding, padded template, and for-of listener fan-out preserved verbatim (priority defaults to 'polite').",
+    "L86-98 subscribeAnnouncer(): listeners.add + returned unsubscribe closure (listeners.delete) preserved verbatim. L100-112 useAnnouncer(): `useMemo(() => ({announce}), [])` stable-object return preserved (RN-compatible, no DOM).",
+    "L114-122 __resetAnnouncerForTests() and L124-130 __getAnnouncerListenerCountForTests() test-only helpers preserved verbatim (listeners.clear/announceCounter=0; listeners.size).",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported — only react's useMemo. Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}

@@ -5,57 +5,33 @@ import {
   Text,
   type AccessibilityRole,
 } from 'react-native';
+import {
+  announce,
+  subscribeAnnouncer,
+  __getAnnouncerListenerCountForTests,
+  __resetAnnouncerForTests,
+  type AnnouncerListener,
+  type AnnouncerPriority,
+} from '../../hooks/useAnnouncer';
 
-export type AnnouncerPriority = 'polite' | 'assertive';
-
-export type AnnouncerListener = (
-  message: string,
-  priority: AnnouncerPriority,
-) => void;
-
-const listeners = new Set<AnnouncerListener>();
-
-let announceCounter = 0;
+// The announcer pub/sub module is now owned by ../../hooks/useAnnouncer (the
+// parity port of web/src/hooks/useAnnouncer.ts), mirroring the web split where
+// AnnouncerRegion consumes `subscribeAnnouncer` from the hook. Re-export the
+// same symbols here so existing AnnouncerRegion consumers keep working while a
+// single shared listener set drives the live regions below.
+export {
+  announce,
+  subscribeAnnouncer,
+  __getAnnouncerListenerCountForTests,
+  __resetAnnouncerForTests,
+};
+export type {AnnouncerListener, AnnouncerPriority};
 
 export const nativeAnnouncerRegionCapabilities = {
   domLiveRegionAvailable: false,
   nativeAccessibilityAnnouncementAvailable: true,
   hiddenTestRegionsRendered: true,
 } as const;
-
-export function announce(
-  message: string,
-  priority: AnnouncerPriority = 'polite',
-): void {
-  if (!message) {
-    return;
-  }
-
-  announceCounter += 1;
-  const padding = '\u200B'.repeat(announceCounter % 4);
-  const padded = `${message}${padding}`;
-
-  for (const listener of listeners) {
-    listener(padded, priority);
-  }
-}
-
-export function subscribeAnnouncer(listener: AnnouncerListener): () => void {
-  listeners.add(listener);
-
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-export function __resetAnnouncerForTests(): void {
-  listeners.clear();
-  announceCounter = 0;
-}
-
-export function __getAnnouncerListenerCountForTests(): number {
-  return listeners.size;
-}
 
 interface NativeLiveRegionProps {
   message: string;
