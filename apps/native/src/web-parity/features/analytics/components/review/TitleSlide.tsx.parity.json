@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/features/analytics/components/review/TitleSlide.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/review/TitleSlide.tsx",
+  "sourceLineCount": 49,
+  "coveredLineCount": 49,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `@/components/data-display` AnimatedNumber -> inlined settled native AnimatedNumber (renders the final value via fmtNumber; the year settles to the same locale-separated string, e.g. '2,024', as the web count-up).",
+    "L2 `@/components/motion` motion -> not imported; the scale/translate/opacity entrances render in their settled end-state.",
+    "L3 import type { YearReview } -> native parity type.",
+    "L4 react-i18next useTranslation -> useNativeTranslation() fallback shim.",
+    "L6-11 interface Props + export function TitleSlide + const { t } -> preserved (displayName added).",
+    "L13-22 centred container (flex col items/justify center, h-full, px-8) + 🚗 (text-7xl) -> RN View styles.container (flex:1, center, paddingHorizontal 32) + AppText emoji.",
+    "L23-30 motion.h1 AnimatedNumber value={data.year} duration={0.8} -> AnimatedNumber decimals=0 value={data.year} (settled; duration accepted+ignored).",
+    "L31-38 motion.p t('yearReview.title','Year in Review') subtitle (text-[var(--text-secondary)]) -> AppText tone='secondary'.",
+    "L39-46 motion.p data.vehicle.display_name -> AppText tone='secondary'.",
+    "L48-49 closing JSX/brace preserved. lucide/DOM: none. Verification: typecheck/lint/test pass."
+  ]
+}

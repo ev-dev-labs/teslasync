@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/analytics/components/review/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/review/index.ts",
+  "sourceLineCount": 12,
+  "coveredLineCount": 12,
+  "conversionStatus": "converted",
+  "notes": [
+    "Barrel module — every source line is a re-export and is preserved 1:1 (prettier no-bracket-spacing is the only cosmetic change).",
+    "L1 export { SlideRenderer } from './SlideRenderer' -> export {SlideRenderer} from './SlideRenderer' (native SlideRenderer.tsx).",
+    "L2 export { SLIDE_DEFS, buildSlides, type SlideDefinition } from './slides' -> preserved verbatim incl. the inline `type SlideDefinition` export (native slides.ts).",
+    "L3 export { TitleSlide } from './TitleSlide' -> preserved (native TitleSlide.tsx).",
+    "L4 export { StatHeroSlide } from './StatHeroSlide' -> preserved (native StatHeroSlide.tsx).",
+    "L5 export { StatChartSlide } from './StatChartSlide' -> preserved (native StatChartSlide.tsx).",
+    "L6 export { DriveHighlightSlide } from './DriveHighlightSlide' -> preserved (native DriveHighlightSlide.tsx).",
+    "L7 export { ChargingBreakdownSlide } from './ChargingBreakdownSlide' -> preserved (native ChargingBreakdownSlide.tsx).",
+    "L8 export { SavingsSlide } from './SavingsSlide' -> preserved (native SavingsSlide.tsx).",
+    "L9 export { EnvironmentSlide } from './EnvironmentSlide' -> preserved (native EnvironmentSlide.tsx).",
+    "L10 export { PatternsSlide } from './PatternsSlide' -> preserved (native PatternsSlide.tsx).",
+    "L11 export { ComparisonsSlide } from './ComparisonsSlide' -> preserved (native ComparisonsSlide.tsx).",
+    "L12 export { SummarySlide } from './SummarySlide' -> preserved (native SummarySlide.tsx).",
+    "All 12 named/type exports are re-exported from native parity siblings created alongside this barrel, so the public surface matches the web barrel 1:1. No DOM/web-only modules, Recharts, Leaflet, or old web UI components imported.",
+    "Verification: cd apps/native; npm run typecheck (EXIT=0, 0 errors); npm run lint -- --quiet (EXIT=0, 0 errors); npm test -- --runInBand --detectOpenHandles (19 suites / 88 tests passed)."
+  ]
+}
