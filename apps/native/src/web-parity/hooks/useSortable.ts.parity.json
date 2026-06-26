@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/hooks/useSortable.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useSortable.ts",
+  "sourceLineCount": 23,
+  "coveredLineCount": 23,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 23 source lines before editing. L1 `import { useState, useMemo } from 'react'` is preserved (reordered to `{ useMemo, useState }` for the native eslint import-sort rule); both hooks behave identically under React Native, so no DOM/browser shim is needed.",
+    "Pure non-visual React state primitive: no DOM APIs, browser globals, HTML elements, Recharts, Leaflet, framer-motion, or web UI components are referenced anywhere in the source, so the file is React Native-compatible as-is and the logic is ported verbatim.",
+    "Signature L3 `useSortable<T>(data: T[], defaultKey: keyof T, defaultDir: 'asc' | 'desc' = 'asc')` ported with identical generic <T>, parameter names, types, and the `'asc'` default direction (only reflowed across lines for the native print-width lint rule).",
+    "State L4-5 ported byte-for-byte: `const [sortKey, setSortKey] = useState<keyof T>(defaultKey)` and `const [sortDir, setSortDir] = useState<'asc' | 'desc'>(defaultDir)` — state names sortKey/sortDir/setSortKey/setSortDir retained 1:1.",
+    "Memoized sort L7-15 preserved exactly: spreads `[...data]` (never mutates input), nullish-last comparator (`aVal == null` -> 1, `bVal == null` -> -1 at L10-11), `<`/`>` three-way `cmp` at L12, direction sign `sortDir === 'asc' ? cmp : -cmp` at L13, and the `[data, sortKey, sortDir]` dependency array at L15. The single-line `const aVal = a[sortKey], bVal = b[sortKey]` (L9) is split into two `const` statements to satisfy the one-declaration-per-statement lint rule with no behavior change.",
+    "toggle L17-20 ported with identical semantics: same key -> flip direction (`d === 'asc' ? 'desc' : 'asc'`), different key -> `setSortKey(key)` then `setSortDir('asc')`; braces added around the blocks for the native curly lint rule, logic unchanged.",
+    "Return L22 `{ sorted, sortKey, sortDir, toggle }` preserved field-for-field so any caller keeps the identical API. No API paths, unit-suffixed fields (Mi/Min/Mph/Kwh/Kw/Psi), or i18n strings exist in this hook, so there is nothing to remap and the SI cutover contract is unaffected. LF line endings match the source (0 CRLF pairs).",
+    "Verified with `cd apps/native; npm run typecheck` (clean), `npm run lint -- --quiet` (clean), and `npm test -- --runInBand --detectOpenHandles` (suite passes)."
+  ]
+}
