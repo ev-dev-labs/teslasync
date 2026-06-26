@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/system/components/CommandTile.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/CommandTile.tsx",
+  "sourceLineCount": 84,
+  "coveredLineCount": 84,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 84 source lines with numbered output before editing.",
+    "L1 `import { useTranslation } from 'react-i18next'` -> native `useNativeTranslationFallback()` (useCallback) returning the English fallback; apps/native ships no react-i18next runtime. Preserves every (key, fallback) pair: commands.toggleFavorite/Toggle favorite (L55), def.labelKey/labelFallback (L70), def.sublabelKey/sublabelFallback (L73).",
+    "L2 `import { cn } from '@/lib/cn'` -> dropped; Tailwind class merging is replaced by React Native StyleSheet + conditional style arrays.",
+    "L3 `Button as ControlButton, GlassPanel from '@/components/ui'` -> native GlassPanel primitive (../../../../components/ui/GlassPanel) for the tile body and a nested RN Pressable in place of the ghost ControlButton favorite toggle.",
+    "L4 lucide-react Loader2/Star/AlertTriangle -> Loader2 (animate-spin) maps to <ActivityIndicator size='small'>; Star -> getSemanticIconDefinition('star').glyph; AlertTriangle -> getSemanticIconDefinition('warning').glyph (the repo-canonical AlertTriangle equivalent used by sibling ports), tinted danger to keep the web red 'dangerous command' marker.",
+    "L5 `import type { CommandDef } from '../commands'` -> native-safe local `CommandDef` interface (the shared commands module is its own un-ported conversion). icon retyped LucideIcon -> SemanticIconName; command/labelKey/labelFallback/sublabelKey/sublabelFallback/variant/dangerous/params mirrored verbatim for the fields CommandTile consumes.",
+    "L7-15 CommandTileProps -> preserved field-for-field (def, onExecute(command, params?), onRequestDialog(def), loading, lastStatus?, isFavorite, onToggleFavorite) with the native CommandDef.",
+    "L17-21 hoverStyles map (default->cyan/30, danger->red/30, success->green/30) -> pressedBorderStyles map (default->borderAccent(cyan), danger->dangerBorder, success->successBorder). Web hover has no native equivalent, so the interactive border tint is mapped to the Pressable pressed state (touch analogue of hover); documented.",
+    "L23 `export function CommandTile({...}: CommandTileProps)` -> preserved as a named export; props destructured identically; CommandTile.displayName added.",
+    "L24 `const { t } = useTranslation()` -> `const t = useNativeTranslationFallback()`.",
+    "L25 `const Icon = def.icon` -> `const commandGlyph = getSemanticIconDefinition(def.icon).glyph` (native icons are glyphs, not components).",
+    "L26 `const variant = def.variant ?? 'default'` -> ported verbatim (typed CommandVariant).",
+    "L28-35 handleClick -> handlePress: `if (loading) return;` then `if (def.dangerous) { onRequestDialog(def); return; }` then `onExecute(def.command, def.params)` -> ported verbatim onto Pressable onPress.",
+    "L37-45 GlassPanel root (p-4 flex-col items-center gap-2 min-h-[100px] justify-center cursor-pointer relative group, hoverStyles[variant], loading&&opacity-50, onClick) -> Pressable(onPress=handlePress, accessibilityRole='button', accessibilityState busy=loading) wrapping GlassPanel styled with styles.tile (padding 16, alignItems center, gap spacing.sm=8, justifyContent center, minHeight 100), loading->styles.tileLoading(opacity .5), pressed->pressedBorderStyles[variant]. cursor-pointer/group/transition are web-only and dropped.",
+    "L46-58 favorite ControlButton (ghost sm, absolute left-1.5 top-1.5 p-0.5, onClick stopPropagation+onToggleFavorite, isFavorite?opacity-100 amber-300:opacity-0 group-hover:opacity-50 text-muted, aria-label) -> nested Pressable(styles.favorite: absolute left/top 6, padding 2, zIndex 1; onPress=onToggleFavorite; accessibilityLabel=t('commands.toggleFavorite','Toggle favorite'); accessibilityState selected=isFavorite; hitSlop 8). RN's responder system makes the inner Pressable swallow the touch, reproducing e.stopPropagation() without an explicit call. group-hover opacity-0 has no touch equivalent, so the inactive star is permanently half-visible (favoriteInactive opacity .5) so it stays tappable; documented.",
+    "L57 `<Star className='h-3 w-3' isFavorite&&fill-current>` -> AppText FAVORITE_GLYPH with favoriteActive(color warning, opacity 1; fill-current intent = full opacity/colour) vs favoriteInactive(textMuted, opacity .5).",
+    "L60-64 `{def.dangerous && <div absolute top-1.5 right-1.5><AlertTriangle h-3 w-3 text-neon-red/50/></div>}` -> `{def.dangerous ? <View styles.danger(absolute right/top 6)><AppText styles.dangerGlyph(DANGER_GLYPH, color danger, opacity .6 = /50 red)/></View> : null}`.",
+    "L66-68 neutral icon box (rounded-xl p-2.5 bg-[--surface-2] text-[--text-muted]) with Loader2 spin else Icon (h-5 w-5) -> View styles.iconBox (40x40, surfaceRaised bg, borderRadius 12, centered) holding ActivityIndicator(color textMuted) when loading else AppText styles.iconGlyph(commandGlyph, textMuted) — the box stays neutral/muted regardless of category, matching web.",
+    "L69-81 text block: label span (text-xs font-medium text-primary block, t(labelKey,labelFallback)); sublabel span gated on def.sublabelFallback (text-[10px] mt-0.5 text-muted, t(sublabelKey ?? '', sublabelFallback)); lastStatus span gated on lastStatus (text-[9px] mt-0.5, startsWith('✓')?neon-green/60:neon-red/60) -> View styles.labels with AppText label/sublabel/status; status colour via statusOk(success)/statusError(danger) keyed on lastStatus.startsWith('✓'); the ✓ sentinel preserved verbatim.",
+    "L82-84 component/JSX close -> preserved.",
+    "No DOM, no react-i18next, no lucide-react, no Recharts/Leaflet, no Tailwind, and no web UI components are imported; only RN primitives + existing native GlassPanel/AppText/SemanticIcon + theme tokens.",
+    "Gates from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles` all pass after the conversion."
+  ]
+}
