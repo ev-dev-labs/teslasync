@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/features/onboarding/checklist.ts",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/checklist.ts",
+  "sourceLineCount": 410,
+  "coveredLineCount": 410,
+  "conversionStatus": "converted",
+  "notes": [
+    "Header docblock (L1-19) ported verbatim and extended with a native-parity section documenting every browser-only reduction.",
+    "Imports (L21-28): react hooks (useCallback/useEffect/useMemo/useState) kept; react-i18next useTranslation replaced by a local native-safe useNativeTranslation; lucide-react Car/Palette/BellRing/Send/Command/BellPlus/LayoutGrid + LucideIcon replaced by CHECKLIST_ICON_GLYPHS; @/api/hooks/useVehicles -> ../../api/hooks/useVehicles; @/api/hooks/useNotifications useAlertRules+useNotificationChannels -> ../../api/hooks/useNotifications; @/components/ui/ThemeProvider useTheme -> local native useNativeTheme.",
+    "Storage keys CP_DISCOVERED_KEY/CHECKLIST_DISMISSED_KEY/CHECKLIST_COMPLETED_AT_KEY/CUSTOMIZE_DASHBOARD_KEY (L32-42) and CHECKLIST_CHANGED_EVENT (L46) preserved with identical string values; DEFAULT_THEME_ID (L49) preserved; THEME_STORAGE_KEY added to mirror the web ThemeProvider's 'teslasync-theme' key.",
+    "safeRead/safeWrite (L53-73) reimplemented over a module-level in-memory Map (localStorage unavailable on native, no AsyncStorage dep); safeWrite null-removes and notifies via emitChecklistChange (native-safe replacement for window.dispatchEvent(CustomEvent)). Try/catch no-op semantics preserved.",
+    "markCommandPaletteDiscovered/isCommandPaletteDiscovered (L82-89) and markCustomizeDashboardCompleted/isCustomizeDashboardCompleted (L97-104) ported verbatim over native storage; idempotent first-write behaviour preserved.",
+    "Dismiss/restart helpers isChecklistDismissed/setChecklistDismissed/getChecklistCompletedAt/setChecklistCompletedAt/restartChecklist (L108-132) ported verbatim including the Number.isFinite>0 guard.",
+    "Web push: isWebPushAvailable (L136-142) and isWebPushGranted (L144-151) return false on native (Notification + navigator.serviceWorker are browser-only; native FCM/APNs not wired) — explicit unavailable state, documented in nativeChecklistCapabilities.webPushAvailable.",
+    "ChecklistTask interface (L155-176) preserved field-for-field; the icon field's LucideIcon type became ChecklistIconGlyph (native-safe glyph keyed by original lucide name via CHECKLIST_ICON_GLYPHS). COMMAND_PALETTE_CTA sentinel (L179) preserved.",
+    "useChecklistFlagVersion (L191-223) ported: window 'storage'/CustomEvent/'focus' listeners + window.setInterval become subscribeChecklistChange + AppState 'active' + setInterval(5000); cross-tab storage event intentionally dropped (single native surface); monotonic version counter + cleanup preserved.",
+    "ChecklistState interface (L225-237) preserved verbatim.",
+    "useChecklistTasks (L245-394) ported: identical fixed hook order (t, flagVersion, vehicles, alertRules, channels, themeId), identical useMemo derived booleans + deps ([flagVersion]), all seven task objects with identical ids/i18n keys/fallbacks/ctaTo/complete predicates, identical tasks deps array, visibleTasks/totalCount/completeCount/allComplete, the completedAt stamping effect ([allComplete, completedAt]), dismiss/restart callbacks, the `void t` intent comment, and the returned state object.",
+    "CELEBRATION_WINDOW_MS (L397) and shouldHideChecklist (L404-410) ported verbatim. Added nativeChecklistCapabilities map (parity convention) summarising native availability. All 410 source lines were read and accounted for."
+  ]
+}
