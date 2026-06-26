@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/DigestSkeleton.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/DigestSkeleton.tsx",
+  "sourceLineCount": 21,
+  "coveredLineCount": 21,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 21 source lines before editing. Imports (L1-3): GlassPanel from @/components/ui -> the already-ported native GlassPanel (../../../../../components/ui/GlassPanel); Skeleton from @/components/feedback -> the already-ported native web-parity Skeleton (../../../../components/feedback/Skeleton); FadeIn from @/components/motion -> the already-ported native web-parity FadeIn (../../../../components/motion/FadeIn). No DOM/Tailwind/web UI-kit module is imported.",
+    "Component (L5) `export function DigestSkeleton()` preserved as a named export (plus a displayName); it is pure presentation with no props, state, data, i18n, or unit handling, so nothing else needs porting. L6/L20-21 return + closing braces reproduced.",
+    "L7 `<FadeIn className=\"space-y-6\">` -> `<FadeIn style={styles.container}>`; the Tailwind space-y-6 (24px) child rhythm becomes the FadeIn container `gap: 24`, applied to the native FadeIn's Animated.View.",
+    "L8-10 first panel `<GlassPanel className=\"p-6\"><Skeleton lines={2} /></GlassPanel>` -> `<GlassPanel style={styles.panel}>` (p-6 == padding 24) wrapping `<Skeleton lines={2} />` with the lines prop passed verbatim (native Skeleton stacks 2 bars, last at 60% width).",
+    "L11-15 grid panel `<GlassPanel className=\"grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3\">{Array.from({length:6}).map((_, i) => <Skeleton key={i} height={80} />)}</GlassPanel>` -> `<GlassPanel style={styles.gridPanel}>` (padding 24 == p-6, flexDirection row + flexWrap + gap 16 == gap-4) over the same Array.from({length:6}).map((_, i) => ...) producing six height-80 Skeletons, each wrapped in a key={i} flexGrow/flexBasis gridCell that wraps to ~2-up on a phone — reproducing the responsive grid-cols-1/sm:2/lg:3 intent (the SummaryStatsRow precedent). height={80} and key={i} preserved verbatim.",
+    "L16-18 last panel `<GlassPanel className=\"p-6\"><Skeleton height={260} /></GlassPanel>` -> `<GlassPanel style={styles.panel}>` (p-6 == padding 24) wrapping `<Skeleton height={260} />` with the height prop passed verbatim (the chart placeholder bar). L19 `</FadeIn>` -> the native FadeIn close.",
+    "No DOM elements, Tailwind classes, Recharts, Leaflet, framer-motion, react-dom, or web UI-kit modules are imported into the native output — only React, RN primitives (StyleSheet/View), and the already-ported native GlassPanel/Skeleton/FadeIn. Verified from apps/native with `npm run typecheck` (tsc --noEmit, exit 0), `npm run lint -- --quiet` (eslint, exit 0), and `npm test -- --runInBand --detectOpenHandles` (all suites pass, incl. the added __tests__/DigestSkeleton.test.tsx asserting the three panels render eight host Skeleton placeholders: the 2-line group + six grid tiles + the chart bar)."
+  ]
+}
