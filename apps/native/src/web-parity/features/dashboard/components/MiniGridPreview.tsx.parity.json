@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/features/dashboard/components/MiniGridPreview.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/components/MiniGridPreview.tsx",
+  "sourceLineCount": 53,
+  "coveredLineCount": 53,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-4 imports: `@/lib/cn` cn (clsx+tailwind-merge, web-only) -> RN `style` array composition; `GRID_COLS` from ../hooks/useDashboardLayout (browser-only RGL hook) -> inlined `GRID_COLS_LG = 4` (its only consumed value, matching the sibling ExportModal port); `getWidgetDef` from ../widgets/registry (lucide-react + lazy web widget modules) -> dropped, documented as the file's one unavailable browser dependency; `SavedDashboard` type from ../widgets/types -> local field-for-field mirror (no native types port exists yet).",
+    "L6-9 MiniGridPreviewProps: `dashboard: SavedDashboard` preserved; web `className?: string` -> native idiom `style?: StyleProp<ViewStyle>` (same caller-extension intent).",
+    "L11 component signature `export function MiniGridPreview({dashboard, className})` preserved as named export with `dashboard, style`.",
+    "L12-13 `lgLayout = dashboard.layouts.lg ?? []` and `cols = GRID_COLS.lg (4)` preserved verbatim (cols sourced from inlined GRID_COLS_LG).",
+    "L15-17 `maxY = lgLayout.length > 0 ? Math.max(...lgLayout.map(l => l.y + l.h)) : 2` ported verbatim.",
+    "L19-20 zero/NaN guard `safeMaxY = maxY > 0 && Number.isFinite(maxY) ? maxY : 2` ported verbatim including the comment.",
+    "L22-29 container `<div className=cn('relative w-full bg-white/[0.02] rounded-lg border border-white/[0.06] overflow-hidden', className)` + inline `style={{aspectRatio: `${cols} / ${safeMaxY}`}}` -> `<View style={[styles.preview, style, {aspectRatio: cols / safeMaxY}]}>`: width 100% / position relative / bg white-2% / radius 8 / 1px white-6% border / overflow hidden reproduced in styles.preview; CSS aspect-ratio string -> RN numeric width/height ratio; caller `style` after base then computed aspectRatio last (web inline style wins over className).",
+    "L30 `lgLayout.map((item) => ...)` preserved (keyed by item.i at L36).",
+    "L31-33 `widget = dashboard.widgets.find(w => w.id === item.i)`; `def = widget ? getWidgetDef(widget.widgetId) : null`; `Icon = def?.icon`: this resolves a browser-only lucide-react component from the web widget registry; no native widget registry exists, so the icon resolution is omitted and rendered as an explicit no-icon empty tile (documented in the file header).",
+    "L34-46 per-tile `<div className='absolute rounded-sm bg-white/[0.06] border border-white/[0.08] flex items-center justify-center transition-colors' style={{left/top/width/height percentages, padding 2px}}>` -> `<View style={[styles.previewTile, {left/top/width/height as DimensionValue % strings}]}>`: absolute / radius 2 / bg white-6% / 1px white-8% border / center / padding 2 reproduced; the four percentage expressions ((item.x/cols)*100, (item.y/safeMaxY)*100, (item.w/cols)*100, (item.h/safeMaxY)*100) kept verbatim; web `transition-colors` hover has no native analog and is dropped.",
+    "L47 `{Icon && <Icon className='h-3 w-3 text-[var(--text-muted)]' />}` -> omitted with the rest of the icon resolution; the tile keeps items-center/justify-center/padding so the decorative slot is visually preserved.",
+    "L48-53 closing JSX + named export preserved; styles.preview / styles.previewTile carry the web class -> StyleSheet mapping comments.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) clean; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles green. No DOM, no cn/clsx/tailwind-merge, no lucide-react, no Recharts/Leaflet, and no web UI components imported."
+  ]
+}
