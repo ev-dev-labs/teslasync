@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-curve/ChargerTypeChart.tsx",
+  "sourceLineCount": 142,
+  "coveredLineCount": 142,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 useMemo + L29 component: chargerTypeStats useMemo ported verbatim (L31-48 -> grouping by getChargerLabel, count/avgKw/avgKwh/avgDuration via avg()).",
+    "L2 react-i18next useTranslation -> native-safe useNativeTranslationFallback(); every t('key','fallback') call preserved (chargerType, chargerTypeDesc, chargerType.aria, col.charger/sessions/avgKw/avgKwh/avgMin, avgPower, avgEnergy, sessions, minAvg).",
+    "L3 ChargingSession type imported from native web-parity/api/types instead of @/api/types.",
+    "L4 fmtNumber/fmtInt ported inline (web global defaults precision 2 / en-US; fmtNumber(_,1) and fmtInt==precision 0 preserved).",
+    "L5 + L99/L114/L129 CHARGER_COLORS ported inline verbatim from web/src/lib/colors.ts including the CHART_COLORS[3]/[4] fallbacks.",
+    "L6-20 @/components/charts: ChartContainer + CHART_COLORS imported from the native charts barrel (real native impls); ResponsiveContainer/ComposedChart/CartesianGrid/XAxis/YAxis/Tooltip/Bar/Cell/chartGrid/axisTickSm/ChartTooltip re-expressed as native View grouped bars (no recharts/DOM imported).",
+    "L21 ./helpers avg/durationMinutes/getChargerLabel ported inline (sibling native helpers.ts not yet converted).",
+    "L22 ./types ChargerTypeStats ported inline.",
+    "L24-26 ChargerTypeChartProps preserved (sessions: ChargingSession[]).",
+    "L50-78 ChartContainer props preserved 1:1: title/subtitle/ariaLabel/data(map -> fmtNumber(avgKw,1)/fmtNumber(avgKwh,1)/fmtInt(avgDuration))/dataColumns(label,count,avgKw,avgKwh,avgDuration)/height=280/exportable/exportFilename='charge-rate-by-type'.",
+    "L79-119 recharts ComposedChart with two Cell-coloured Bars (avgKw left axis, avgKwh right axis @ opacity 0.6) -> native barsRow of per-charger groupCols, each with a kW bar (CHARGER_COLORS[label] ?? CHART_COLORS[3]) and a kWh bar (?? CHART_COLORS[4], opacity 0.6); dual Y axes preserved as intent by independent maxKw/maxKwh scaling; Bar name+unit ('Avg Power'/' kW','Avg Energy'/' kWh') surfaced as a series-key row.",
+    "L120-139 legend `mt-3 space-y-1` rows -> native legendRow list: per-charger coloured dot (?? CHART_COLORS[3]) + label, and '{fmtInt(count)} sessions · {fmtNumber(avgDuration)} min avg'.",
+    "L140-142 component close preserved; default export ChargerTypeChart.",
+    "Native-only: chart body kept within ChartContainer's fixed 280px body; numeric avgKw/avgKwh values remain accessible via the ChartContainer data/dataColumns fallback table. Recharts hover Tooltip is unavailable in React Native and is documented in the file header.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
