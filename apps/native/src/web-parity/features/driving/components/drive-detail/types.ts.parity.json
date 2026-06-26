@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/types.ts",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/types.ts",
+  "sourceLineCount": 71,
+  "coveredLineCount": 71,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 71 source lines with numbered output before editing; the file is pure TypeScript type definitions whose only dependency is the type-only import of LatLngExpression from '@/components/maps' (L1).",
+    "L1 import remapped to the native-safe relative path '../../../../components/maps' which resolves to the existing web-parity maps barrel that re-declares LatLngExpression as a native union; kept as `import type` so no Leaflet/runtime code is pulled into native.",
+    "Ported ChartDataPoint (L3-25) verbatim: time/speed/battery/elevation/power plus the 16 null-union fields (outsideTemp..fanStatus) and climateOn boolean|null exactly as written.",
+    "Ported DriveStats (L27-55) verbatim: all numeric aggregates, the number[] arrays (insideTemps/outsideTemps/driverTemps/passengerTemps), boolean flags (hasAnyTemp, hasTirePressure), and every number|null/string|null field including efficiencyPctPer100.",
+    "Ported RoutePoint (L57-61), SpeedSegment (L63-66, positions: LatLngExpression[]) and SpeedHistogramBucket (L68-71) verbatim, preserving the trailing newline (L72); no DOM elements, Recharts, Leaflet runtime, or web UI components imported. Gates run: typecheck, lint --quiet, jest --runInBand."
+  ]
+}
