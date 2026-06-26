@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/features/onboarding/tours/settingsTour.ts",
+  "outputPath": "apps/native/src/web-parity/features/onboarding/tours/settingsTour.ts",
+  "sourceLineCount": 52,
+  "coveredLineCount": 52,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 import type { TourDefinition } from '@/lib/tourRegistry' -> inline-ported as a private, faithfully-shaped local `TourDefinition` interface (id, routeMatch: string | RegExp, titleKey, titleFallback, descriptionKey, descriptionFallback, version, steps, optional autoStart) because @/lib/tourRegistry is not yet part of this RN parity layer; follows the OnboardingPage.tsx inline-port precedent. Kept private (web imports, not re-exports it) so structural typing keeps SETTINGS_TOUR assignable once that module is converted.",
+    "L2 import type { TourStep } from '@/hooks/useTour' -> inline-ported as a private local `TourStep` interface (target, title, description, placement: 'top'|'bottom'|'left'|'right', optional onShow, optional onHide) verbatim from the web useTour shape; @/hooks/useTour not yet converted.",
+    "L3 blank line -> represented by formatting between the ported type blocks.",
+    "L4-9 function navigate(href) { typeof window === 'undefined' guard; window.location.pathname === href same-path guard; window.history.pushState({}, '', href); window.dispatchEvent(new PopStateEvent('popstate')) } -> native-safe `navigate(href)` that delegates to a registerable module-level `tourNavigationHandler` (set via the new `setTourNavigationHandler`, default no-op), mirroring the onNavigate?.(path) navigation-shell pattern used across this parity layer. RN has no DOM history/location/PopStateEvent: the typeof-window early return becomes the no-handler no-op (explicit unavailable state) and the L6 same-path dedup becomes the registered handler/runner's responsibility (the live route is unreadable from a data module). Documented in the file header + sidecar.",
+    "L10 blank line -> preserved as spacing.",
+    "L11 const STEPS: TourStep[] = [ -> preserved verbatim (typed against the inline-ported TourStep).",
+    "L12-19 step 1 (settings-appearance): target '[data-tour=\"settings-appearance\"]', title 'Appearance & theme', description 'Pick a colour theme, density, and motion preference (Prompt 60). Changes preview live before you save.' (British 'colour' + Prompt 60 kept), placement 'bottom', onShow: () => navigate('/settings') -> all preserved verbatim; onShow now calls the native-safe navigate.",
+    "L20-26 step 2 (settings-units): target '[data-tour=\"settings-units\"]', title 'Units (Prompt 21)', description 'Distance, temperature, energy, and date format follow your preference everywhere — no per-page toggles. Pick imperial or metric once and forget about it.' (em-dash preserved), placement 'top' -> preserved verbatim.",
+    "L27-33 step 3 (settings-notifications): target '[data-tour=\"settings-notifications\"]', title 'Notification channels', description 'Configure email, web push (Prompt 52), ntfy, or webhook channels. Test each channel before relying on it for alerts.', placement 'top' -> preserved verbatim.",
+    "L34-40 step 4 (settings-tour): target '[data-tour=\"settings-tour\"]', title 'Replay any tour later', description 'This block opens the Tour Launcher so you can re-run any walkthrough. The launcher also lives in the help shortcut at the top of the sidebar.', placement 'top' -> preserved verbatim.",
+    "L41 ] closing the STEPS array -> preserved.",
+    "L42 blank line -> preserved as spacing.",
+    "L43 export const SETTINGS_TOUR: TourDefinition = { -> preserved as the sole data export, typed against the inline-ported TourDefinition.",
+    "L44 id: 'settings' -> preserved verbatim.",
+    "L45 routeMatch: /^\\/settings/ -> preserved verbatim (RegExp literal).",
+    "L46 titleKey: 'tour.tours.settings.title' -> preserved verbatim (i18n key intent kept).",
+    "L47 titleFallback: 'Settings' -> preserved verbatim.",
+    "L48 descriptionKey: 'tour.tours.settings.description' -> preserved verbatim.",
+    "L49 descriptionFallback: 'Theme, units, notifications, and tours.' -> preserved verbatim.",
+    "L50 version: 1 -> preserved verbatim.",
+    "L51 steps: STEPS -> preserved verbatim.",
+    "L52 } closing SETTINGS_TOUR -> preserved.",
+    "Native-only addition: setTourNavigationHandler(handler | null) exported so the (not-yet-converted) native tour runner can wire real navigation for tour-step onShow callbacks; this is the native-safe equivalent of the web's window.history navigation and is documented as the explicit unavailable-state mechanism.",
+    "Gates (run in apps/native): `npm run typecheck` (tsc --noEmit), `npm run lint -- --quiet` (eslint . --quiet), and `npm test -- --runInBand --detectOpenHandles` (jest) — see the conversion turn log for raw output."
+  ]
+}
