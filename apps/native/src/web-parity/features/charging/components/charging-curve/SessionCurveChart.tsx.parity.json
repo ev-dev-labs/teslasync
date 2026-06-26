@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-curve/SessionCurveChart.tsx",
+  "sourceLineCount": 83,
+  "coveredLineCount": 83,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing; the SessionCurveChart default-exported component, its SessionCurveChartProps { curveData } shape, and every i18n key (charging.curve.powerVsSoc / .powerVsSocDesc / .powerVsSoc.aria / .col.soc / .col.power / .power) are preserved verbatim (L1, L18-26, L29-78).",
+    "L1 react-i18next useTranslation -> a local native useTranslation() whose t(key, fallback) returns the English fallback (or key), keeping all keys at the call site since the parity bundle ships no i18n runtime.",
+    "L2-17 Recharts/web charts barrel imports -> the already-ported native '../../../../components/charts' barrel: ChartContainer, AreaChartWrapper, and CHART_COLORS. The Recharts ResponsiveContainer/AreaChart/Area/XAxis/YAxis/CartesianGrid/Tooltip primitives plus areaGradient/chartGrid/axisTickSm/ChartTooltip/AREA_DEFAULTS are all folded into AreaChartWrapper, which renders a real native grid/axes area series (no DOM/Recharts).",
+    "L18 `import type { CurvePoint } from './types'` -> inlined locally as an equivalent object-literal type { soc:number; power:number } because the charging-curve ./types module is not yet ported; the object-literal form keeps an implicit index signature so curveData stays assignable to the AreaChartWrapper data prop.",
+    "L28-46 ChartContainer is mapped 1:1 onto the native ChartContainer: title/subtitle/ariaLabel, the rounded data table (L38 Math.round(power*10)/10), the SOC %/Power (kW) dataColumns (L39-42), height=320, exportable, and exportFilename='power-vs-soc' are all preserved.",
+    "L47-80 the Recharts AreaChart (data=curveData, single 'power' Area in CHART_COLORS[0], XAxis dataKey 'soc' / SOC (%) label, YAxis Power (kW) label, Tooltip ChartTooltip, Area unit=' kW') -> AreaChartWrapper with xKey='soc', one series { key:'power', label t('charging.curve.power','Power'), color CHART_COLORS[0] }, height=320, and a yFormatter that reproduces both the 0.1 kW rounding and the ' kW' unit; the hover Tooltip has no native equivalent so AreaChartWrapper's always-visible latest-value summary stands in.",
+    "L81-83 closing JSX/return/component boundary preserved. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
