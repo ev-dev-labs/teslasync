@@ -1,0 +1,30 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/CostSavingsPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/CostSavingsPanel.tsx",
+  "sourceLineCount": 72,
+  "coveredLineCount": 72,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 react-i18next useTranslation -> local key-preserving shim (translate/interpolate/useTranslation) supporting both source call shapes t(key,'English') and t(key,{defaultValue,...params}) with {{token}} interpolation; i18next 'return key when no default' preserved. Needed because L33/37/39/43/52/54/57/61 mix plain + interpolated calls.",
+    "L2 lucide-react DollarSign -> decorative '💲' Glyph in AppText, hidden from a11y (accessibilityElementsHidden/importantForAccessibility=no); the web text-green-400 icon tint -> hex #10b981 (matching the DriveDetailPage CostSavingsPanel port).",
+    "L3 @/components/ui GlassPanel -> shared native components/ui/GlassPanel; web className='p-5' -> forwarded style={styles.panel} (padding spacing.lg).",
+    "L4 @/components/motion FadeIn -> ported web-parity components/motion FadeIn; <FadeIn> with no delay preserved (L30/70).",
+    "L5 @/hooks/useSettings -> reused web-parity api/hooks/useSettings query ({ data: settings }); only settings.gas_efficiency_mpg read directly (L54 atMpg caption).",
+    "L6+L20+L23 @/hooks/useFormatting -> local shim reproducing costPerKwh (base_cost_per_kwh ?? 0.12), currencySymbol (currency_symbol|trim else '$'), formatEnergyCost, formatCurrency, costPerDistanceUnit (SI meters, convertDistanceFromSI), estimateGasCost (gas_efficiency_mpg + gas_price_per_unit, gallon->liter via GALLONS_TO_LITERS) over the same settings query; userPrecision = floor(decimal_precision) else 2 — faithful to the web hook. Web's two useFormatting() calls (L20,L23) consolidated to one destructure (identical memoised result).",
+    "L7+L21+L22 @/hooks/useUnits -> local shim deriving unitPrefs.distance ('mi' when unit_of_length==='mi' else 'km'); only distance is read; distanceUnit = unitPrefs.distance preserved.",
+    "L8 @/lib/numberFormat fmtNumber -> inlined native-safe equivalent (+ safeNumber): nullish/non-finite -> 0, en-US locale, default precision 2, per-call precision honoured (used at L45 prec 3 via formatCurrency, L63 prec 0).",
+    "L9 @/types/driving DriveDetail -> imported from native api/hooks/useDriving (matches web shape field-for-field; only drive.distanceM read at L25/41/45).",
+    "L10 ./types DriveStats -> inlined verbatim (drive-detail types.ts not a standalone native port yet; only stats.energyWh read at L26/38/45). Mirrors DriveDetailPage local DriveStats.",
+    "L12-15 CostSavingsPanelProps {drive: DriveDetail; stats: DriveStats} ported verbatim.",
+    "L17-23 component signature + hook destructures (useTranslation, useSettings->settings, useUnits->unitPrefs->distanceUnit, useFormatting->6 fns) preserved.",
+    "L25-27 derived values preserved exactly: gasCost = estimateGasCost(drive.distanceM); evCost = (stats.energyWh / 1000) * costPerKwh; savings = gasCost != null ? gasCost - evCost : null.",
+    "L29-34 FadeIn > GlassPanel(p-5) > <h3> DollarSign + 'Cost & Savings' -> PanelHeading(icon '💲', color #10b981, t('driveDetail.costSavings')).",
+    "L35 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 -> flex-wrap metricGrid (gap spacing.md; cells flexBasis 30% / flexGrow 1 / minWidth 120) since native has no CSS grid breakpoints.",
+    "L36-40 Trip Cost cell: t('driveDetail.tripCost'), value formatEnergyCost(stats.energyWh/1000) tint #10b981, sub t('driveDetail.atRate',{currencySymbol,costPerKwh,defaultValue:'at {{currencySymbol}}{{costPerKwh}}/kWh'}). text-[10px]->metricLabel 10, text-lg->metricValue 17, text-[9px]->metricSub 11.",
+    "L41-48 Cost/unit cell guarded by drive.distanceM > 0: Metric label t('driveDetail.costPerUnit',{unit:distanceUnit,defaultValue:'Cost / {{unit}}'}) tint #22d3ee, value formatCurrency(costPerDistanceUnit(stats.energyWh/1000, drive.distanceM) ?? 0, 3).",
+    "L49-67 savings block guarded by savings != null && savings > 0 (<>fragment): Gas Cost (equiv) cell (formatCurrency(gasCost!) tint #ef4444 + t('driveDetail.atMpg',{mpg:settings?.gas_efficiency_mpg,defaultValue:'at {{mpg}} MPG'})), Metric 'vs Gas Savings' formatCurrency(savings) tint #10b981, Metric 'Savings %' `${fmtNumber((savings/gasCost!)*100,0)}%` tint #10b981. gasCost! non-null assertions preserved (TS can't narrow gasCost from savings).",
+    "L68-72 closing div/GlassPanel/FadeIn + component close ported; every <div>->View, <h3>/<p>->AppText, var(--text-primary)/var(--text-muted)->AppText primary/muted tones. No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI imported.",
+    "Standalone extraction of the already-vetted inlined CostSavingsPanel in DriveDetailPage.tsx, kept pixel-identical (helpers, hexes, styles) so a future page slim-down to import this sibling changes nothing.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
