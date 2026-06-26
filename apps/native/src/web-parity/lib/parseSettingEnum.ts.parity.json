@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/lib/parseSettingEnum.ts",
+  "outputPath": "apps/native/src/web-parity/lib/parseSettingEnum.ts",
+  "sourceLineCount": 77,
+  "coveredLineCount": 77,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 77 source lines line by line. Pure, non-visual string-parsing utility — no DOM, JSX, Recharts, Leaflet, browser HTML elements, or old web UI imports. Only constructs are a static lookup table and pure predicate/normalization helpers using String.toLowerCase/replace/includes, object index access, and nullish coalescing, all available on Hermes and in the Jest/Node gate, so the logic ports verbatim with no native-safe shim; a native-port header docblock was prepended per contract rule 6 documenting the no-DOM/identical-behavior reasoning and Tesla-enum/em-dash-sentinel preservation.",
+    "L1-6 module docblock (Tesla Fleet Telemetry enum rationale: strips prefixes like DistanceUnitMiles/TemperatureUnitCelsius/ChargeUnitPercent/PressureUnitPsi) ported verbatim. L7 blank line preserved.",
+    "L8-42 `enumMappings: Record<string, Record<string, string>>` lookup table ported byte-identically: distance (distanceunitmiles/distanceunitkilometers/distanceunitkm/miles/mi/km/kilometers), temperature (temperatureunitcelsius/temperatureunitfahrenheit/celsius/fahrenheit/c/f), charge (chargeunitpercent/chargeunitmiles/chargeunitkilometers/percent/mi/km), pressure (pressureunitpsi/pressureunitbar/pressureunitkpa/psi/bar/kpa). All 26 mapping entries and their display values (Miles/Kilometers/Celsius/Fahrenheit/Percent/PSI/Bar/kPa) preserved exactly so Tesla enum display intent stays in lockstep with web.",
+    "L44-49 `parseSettingEnum(value, category)` ported verbatim: falsy-guard returns em-dash sentinel '—', lowercase + strip-non-[a-z] regex normalization, and `enumMappings[category]?.[lower] ?? value` null-safe lookup-with-passthrough. L51-56 `isSettingMiles` (includes 'mile'), L58-63 `isSettingFahrenheit` (includes 'fahr'), L65-70 `isSettingPSI` (includes 'psi'), L72-77 `isSettingBar` (includes 'bar') all ported verbatim with identical falsy-guard-returns-false + toLowerCase().includes() logic. No API paths, unit-suffixed/SI struct fields, or i18n call sites exist in source (display strings are static Tesla enum labels, not i18n keys) — nothing to convert there. Verified from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
