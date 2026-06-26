@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/lib/parseEnums.ts",
+  "outputPath": "apps/native/src/web-parity/lib/parseEnums.ts",
+  "sourceLineCount": 114,
+  "coveredLineCount": 114,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 114 numbered source lines before editing. Pure value-narrowing enum logic over `typeof` checks + String.prototype includes/replace — no DOM, window, Recharts, Leaflet, or web-UI dependency — so the module ports byte-for-byte; the only mechanical edits are native house style (semicolons, no-inner-space braces, and @react-native eslint `curly` braces around the single-line `if` bodies). Behavior, branch ordering, and substring semantics are unchanged.",
+    "L1-L12 module JSDoc (centralized Tesla enum parsers; backend serializes raw signal.SignalValue interface{} so a string-enum may arrive as bool/number; every parser accepts `unknown` and narrows defensively; NEVER coerce non-strings to strings because String(false) would match 'Off') preserved verbatim beneath a native header recording the byte-for-byte rationale and the supporting-dep decision.",
+    "L14 `import { asNonEmptyString } from './typeGuards'` ported as `import {asNonEmptyString} from './typeGuards';`. Because web/src/lib/typeGuards.ts is NOT a separate file-parity manifest entry, a faithful supporting port was created at apps/native/src/web-parity/lib/typeGuards.ts so the import resolves and typechecks (same pattern as nativeWebStorage.ts/safeUUID.ts).",
+    "L16-L22 parseEnumBool: boolean passthrough; string => raw !== '' && !includes('Off') && raw !== 'false' && raw !== '0'; number => raw !== 0; else false — ported identically with curly braces.",
+    "L24-L31 parseBuckleStatus: boolean passthrough; string === 'BuckleStatusLatched'; number !== 0; else false — ported identically.",
+    "L33-L38 isCharging and L40-L45 isChargeComplete: asNonEmptyString(raw) guard then includes('Charging')||includes('Starting')||=== 'Enable' (charging) and includes('Complete') (complete) — ported identically.",
+    "L47-L53 parseHvacPower: boolean passthrough first, then asNonEmptyString guard, then includes('On')||includes('Precondition') — ported identically.",
+    "L55-L64 parseWindowState: replace(/WindowState/i,'') then ordered includes Closed/Partial/Open with `g || s` fallback — ported identically.",
+    "L66-L78 parseCabinOverheatMode: replace(/CabinOverheatProtectionModeState/i,'') then the FanOnly/NoCooling-before-On ordering (the comment about 'FanOnly' containing 'On' is retained) then Off, with `g || s` fallback — ported identically.",
+    "L80-L90 parseClimateKeeperMode: replace(/ClimateKeeperModeState/i,'') then Off/On/Dog/Camp ('Dog Mode'/'Camp Mode') with `g || s` fallback — ported identically.",
+    "L92-L100 parseChargePort and L102-L110 parseChargePortLatch: anchored replace(/^ChargePort/i,'') / replace(/^ChargePortLatch/i,'') then Open/Closed and Engaged/Disengaged with `g || s` fallback — ported identically.",
+    "L112-L114 re-exports `export { parseGear, GEAR_COLORS, GEAR_BG_COLORS } from './gear'` and `export { parseSettingEnum } from './parseSettingEnum'` preserved verbatim. Both web modules are absent from the manifest, so faithful supporting ports were created at web-parity/lib/gear.ts (Tailwind class strings kept as plain data) and web-parity/lib/parseSettingEnum.ts so the re-export surface is byte-identical.",
+    "No browser-only behavior to stub: deterministic logic, real native-safe port (no 'unavailable' state needed). Verified under apps/native with `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles`; added __tests__/ParseEnums.test.ts exercising every parser branch (bool/string/number/null inputs, the FanOnly-before-On and multi-word ordering, charge-state substrings, window/charge-port stripping) plus the parseGear / parseSettingEnum / GEAR_COLORS / GEAR_BG_COLORS re-exports."
+  ]
+}
