@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/SpeedHistogramChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/SpeedHistogramChart.tsx",
+  "sourceLineCount": 50,
+  "coveredLineCount": 50,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { useTranslation } from 'react-i18next'` -> useNativeTranslation() shim returning t(key, fallback) fallback copy; react-i18next is unavailable in native parity. Every web t() key + default string is preserved verbatim.",
+    "L2 `import { Activity } from 'lucide-react'` -> native SemanticIcon name=\"activity\" (lucide-react is a DOM/SVG icon lib); rendered decoratively in the empty state.",
+    "L3-7 `import { ChartContainer, ChartTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from '@/components/charts'` -> ChartContainer is reused from the native parity charts barrel (identical title/ariaLabel/data/dataColumns/height API + the same accessible fallback table). BarChart/Bar/XAxis/YAxis/CartesianGrid/ResponsiveContainer are replaced by the self-contained native SpeedHistogramBars (Y-axis tick column + horizontal ScrollView of proportional View bars); Tooltip/ChartTooltip hover is unavailable on touch, so the ChartContainer data table carries the exact values.",
+    "L8 `import { FadeIn } from '@/components/motion'` -> inline native Animated FadeIn (opacity 0->1 + slide-up 12->0, reduce-motion-aware via AccessibilityInfo, FADE_DURATION_MS=400); framer-motion is browser-only.",
+    "L9 `import type { SpeedHistogramBucket } from './types'` -> inlined local SpeedHistogramBucket interface {range: string; pct: number} (same shape as web ./types).",
+    "L11-13 SpeedHistogramChartProps { speedHistData: SpeedHistogramBucket[] } -> preserved identically.",
+    "L15-16 `export function SpeedHistogramChart({ speedHistData })` + `const { t } = useTranslation()` -> named export preserved; t resolved via useNativeTranslation(); displayName set.",
+    "L18-19 `<FadeIn className=\"h-full\">` -> native <FadeIn style={styles.fill}> (className=\"h-full\" -> flex:1).",
+    "L20-30 `<ChartContainer title ariaLabel data dataColumns height={220} className=\"h-full\">` -> native ChartContainer with identical props: title=t('driveDetail.speedHistogram','Speed Histogram'), ariaLabel=t('driveDetail.speedHistogram.aria','Speed-bucket distribution histogram'), data=speedHistData.map(b=>({range,pct})), height={220} (CHART_HEIGHT), className=\"h-full\"->style={styles.fill}.",
+    "L23 `data={speedHistData.map((b) => ({ range: b.range, pct: b.pct }))}` -> ported verbatim (object key order normalised to satisfy native eslint; same {range,pct} fields).",
+    "L24-27 dataColumns range/pct with t('driveDetail.col.range','Speed range') and t('driveDetail.col.pct','% of drive') -> preserved verbatim; rendered as the ChartContainer accessible fallback table.",
+    "L31 `{speedHistData.length > 0 ? (` -> same length guard chooses bars vs empty state.",
+    "L32-33 `<ResponsiveContainer width=\"100%\" height=\"100%\"><BarChart data={speedHistData}>` -> native SpeedHistogramBars rendering data inside a chart frame (Y-axis + horizontal ScrollView of bar columns).",
+    "L34 `<CartesianGrid strokeDasharray=\"3 3\" stroke=\"var(--glass-border)\" .../>` -> dropped; RN has no SVG grid backend. The Y-axis tick column + bar baseline provide the visual reference (documented native substitution).",
+    "L35 `<XAxis dataKey=\"range\" tick={{ fill: var(--text-muted), fontSize: 10 }} />` -> per-bucket bucket.range label (tone=\"muted\" caption) beneath each bar.",
+    "L36 `<YAxis tick={{ fill: var(--text-muted), fontSize: 10 }} />` -> native yAxis tick column showing max / mid / 0 of the pct domain via formatPct (tone=\"muted\" caption).",
+    "L37 `<Tooltip content={<ChartTooltip />} />` -> hover tooltips are unavailable on touch; exact per-bucket values are shown in the ChartContainer data table instead.",
+    "L38 `<Bar dataKey=\"pct\" fill=\"#a855f7\" name={`% ${t('driveDetail.ofDrive','of drive')}`} radius={[4,4,0,0]} />` -> proportional native bars coloured BAR_COLOR='#a855f7' with top radius 4 (radius [4,4,0,0]); the Bar name (`% of drive`, only shown by Recharts in the hover tooltip) becomes a native series-key chip (swatch + 'of drive' copy), preserving the driveDetail.ofDrive key.",
+    "L39-40 `</BarChart></ResponsiveContainer>` -> close native chart frame.",
+    "L41-45 empty branch: `<div className=\"h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]\"> <Activity className=\"h-8 w-8 opacity-20\" /> <p className=\"text-xs\">{t('driveDetail.noChartData','No telemetry data available')}</p> </div>` -> native centered styles.empty View (flex:1, items/justify center, gap) with SemanticIcon name=\"activity\" (web opacity-20 faded look -> 0.4 for glyph legibility) + tone=\"muted\" caption AppText carrying t('driveDetail.noChartData','No telemetry data available').",
+    "L46-50 `)} </ChartContainer> </FadeIn> );` + component close -> close native ChartContainer + FadeIn; SpeedHistogramChart.displayName set.",
+    "No DOM, Recharts, Leaflet, lucide-react, framer-motion, or web UI components imported; only RN primitives (View/ScrollView/Animated/StyleSheet), the native parity ChartContainer, native SemanticIcon/AppText, and native theme tokens."
+  ]
+}
