@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/hooks/useSSE.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useSSE.ts",
+  "sourceLineCount": 133,
+  "coveredLineCount": 133,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 133 source lines (numbered) before editing and preserved the module docblock intent (L1-17): typed-envelope signal_change consumer, forward-only with no raw-string fallback, isolated from the legacy sseManager vehicle_update channel, own EventSource against /api/v1/events listening for the signal_change event, HTTP/2 multiplex note.",
+    "Imports ported faithfully: react useEffect/useRef (L19) kept; '@/api/types' SignalChangeEvent (L20) -> '../api/types'; '@/api/hooks/useSignals' normalizeSignalKind (L21) -> '../api/hooks/useSignals' (both already exist in native with identical SignalKind/SignalValue/SignalChangeEvent shapes). Added '../api/client' apiUrl for native absolute-URL endpoint resolution.",
+    "Pure logic ported verbatim (line-for-line equivalent): UseSignalChangeStreamOptions enabled/vehicleId/endpoint with comments (L23-37), RawSignalChangePayload (L39-45), parseSignalChangeEvent object guard + field/vehicle_id validation + normalizeSignalKind + coerceValue + ts ?? '' (L47-68), and coerceValue null/undefined->null, string/time, bool, int/float numeric/string parse, and default string|boolean|number passthrough branches (L70-92).",
+    "useSignalChangeStream hook (L94-133) preserved: enabled=true / endpoint='/api/v1/events' defaults (L104), handlerRef = useRef + per-render sync (L105-106), enabled gate (L109), JSON.parse with try/catch early return (L114-119), parseSignalChangeEvent null guard (L120-121), vehicleId client-side filter (L122), handlerRef.current(event) dispatch (L123), signal_change addEventListener (L126), cleanup removeEventListener + close (L128-131), and the [enabled, endpoint, vehicleId] dependency array (L132).",
+    "Conversion contract rule 7 — the browser-only EventSource construction (L111) and DOM MessageEvent<string> type (L113) have no React Native equivalent. Replaced with the sanctioned native polyfill probe (globalThis.EventSource via getEventSourceConstructor, matching sseClient.ts/sseManager.ts), a NativeEventSource interface, and isAbsoluteUrl/resolveEndpoint that routes the relative /api/v1/events through apiUrl (idempotent: normalizePath strips the redundant /api/v1 so the exact path is preserved) while passing absolute test endpoints through. When no polyfill is present (the RN default) the effect is a no-op leaving the subscription in the explicit unavailable state; the handler is never invoked, exactly like the forward-only web hook before any signal_change event.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported — only react and relative ../api parity modules. Native prettier style applied (single quotes, no bracket spacing, arrowParens avoid, trailing commas, semicolons). Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
