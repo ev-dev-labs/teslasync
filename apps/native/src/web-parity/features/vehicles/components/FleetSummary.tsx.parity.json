@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/FleetSummary.tsx",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/FleetSummary.tsx",
+  "sourceLineCount": 95,
+  "coveredLineCount": 95,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 useQuery from @tanstack/react-query kept verbatim — react-query runs natively; same queryKey ['fleet-vehicle-states', vehicles.map(v=>v.id).sort()], queryFn fan-out, enabled vehicles.length>0, refetchInterval 30_000 (L20-37).",
+    "L2 lucide-react Car/Battery/Gauge/Zap → semantic emoji glyph stand-ins (🚗/🔋/🧭/⚡), tinted with the web tile colours cyan-400/green-500/purple-400/amber-400.",
+    "L3 react-i18next useTranslation('vehicles') → inline useNativeTranslation() returning t(key, fallback)=fallback??key; namespace is display-inert. Every key+default preserved: fleet.vehicles/avgBattery/totalRange/chargingOnline (L59,69,79,90).",
+    "L4 @/components/ui/GlassPanel → native GlassPanel; L5 @/components/data-display/AnimatedNumber → inline native-safe AnimatedNumber (RAF + Date.now ease-out quad, tabular-nums fontVariant, value/duration/decimals/prefix/suffix), used at L56/66/76/86.",
+    "L6 useUnits → scoped native useUnits() deriving unitPrefs.distance from web-parity useSettings().unit_of_length ('mi'→'mi' else 'km'); L7 convertDistanceFromSI inlined verbatim (metres→km/mi) for the consumed 'km'|'mi' union (used L76, label unit L79).",
+    "L8 fetchVehicleState imported from web-parity api/hooks/useVehicles (same /vehicles/{id}/state path); its native return widens .state to VehicleState|string|null so the queryFn keeps only object states (web contract is always a VehicleState object) — preserving 'return data?.state ?? null' semantics (L26-27).",
+    "L9 Vehicle type imported from web-parity api/types (prop FleetSummaryProps L12-14, L16). L10 VehicleState type imported from native useVehicles module (where the normalized live-state type lives alongside fetchVehicleState) so the L39-41 filter type matches the fetch return; semantically identical to web api/types VehicleState.",
+    "L39-49 derivations ported verbatim: states null-filter, avgBattery mean of battery_level??0, totalRangeMeters sum of rated_range??0 in SI metres, chargingCount via is_charging, onlineCount=states.length.",
+    "L51-93 markup: div grid grid-cols-2 sm:grid-cols-4 gap-4 → mobile-first 2-column flex wrap (View, flexBasis 47%, rowGap/columnGap 16). Four GlassPanel tiles centered (alignItems center = text-center), p-4=padding 16, icon mb-2, value text-2xl=24/textPrimary, label text-[10px]/muted/uppercase/tracking-wider. Tile 4 charging row: chargingCount green-500 + muted text-sm '/ onlineCount' (L84-88).",
+    "L53/63/73/83 hover:scale-[1.02] transition-transform has no native hover equivalent → omitted. L95 closing brace; FleetSummary.displayName added (native convention). No DOM/HTML/Recharts/Leaflet/lucide-SVG/framer-motion/old-@components imports in the native output."
+  ]
+}
