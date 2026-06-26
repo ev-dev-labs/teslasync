@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/notifications/components/NotificationRow.tsx",
+  "outputPath": "apps/native/src/web-parity/features/notifications/components/NotificationRow.tsx",
+  "sourceLineCount": 197,
+  "coveredLineCount": 197,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-14 doc comment intent (selection checkbox, severity dot/badge, vehicle-tz time, title, vehicle name, drill-through, unread accent) preserved in the native header comment and the rendered row.",
+    "L16 react-router-dom `Link` -> native `useNavigate` shim calling Linking.openURL (drill-through still navigates internal SPA routes via a registered deep-link handler).",
+    "L17 react-i18next `useTranslation` -> local key-preserving shim; every t('key','English') string (notifications.inbox.row.select/markRead/markUnread/archive/unarchive, alerts.viewContext) kept verbatim (L107,153,162,171,180,188,190).",
+    "L18 lucide-react icons (Archive/ArchiveRestore/ChevronRight/MailOpen/Mail) -> accessibility-hidden AppText glyphs in GLYPH; meaning carried by accessibilityLabel.",
+    "L19 `@/lib/cn` -> dropped; conditional styling expressed via StyleSheet arrays (read/unread/pressed/selected states).",
+    "L20 `DateTime` -> shared native TimeStamp port (same value + `in` props); `SeverityBadge` -> local pill mirroring @/lib/tokens severityTokens (bg/border/fg per severity), matching the web size='sm' showIcon={false} call (L113-115).",
+    "L21 `@/components/ui` Button (ghost icon) -> local Pressable IconButton; web <input type=checkbox> (L103-109) -> native Checkbox with accessibilityRole=checkbox.",
+    "L22 `getAlertDrillthroughHref` + SIGNAL_TO_PAGE/SIGNAL_EXPLORER_FALLBACK inlined verbatim (RN lacks guaranteed URLSearchParams).",
+    "L23 types NotificationLog/AlertRule/Alert/Vehicle imported from the native web-parity api/types.",
+    "L25-39 NotificationRowProps exported with the identical public API (log/rule/vehicle/selected/onSelectionChange/onActivate/onArchive/onUnarchive/onMarkRead/onMarkUnread).",
+    "L41-73 component body ported 1:1: isRead/isArchived derivations, severity default rule?.severity ?? 'info', the synthetic Alert (all 11 fields), drillHref guard, and tzMode = vehicle ? 'vehicle' : 'user'.",
+    "L75-101 row container: web role=row/tabIndex/aria-selected + DOM click/keydown control-bubbling guard -> Pressable role=button with accessibilityState.selected and onPress=onActivate; inner controls are separate Pressables so a control tap never reaches the row (structural equivalent of target.closest('button,a,input,label')); Enter/Space activation covered by accessibilityRole=button.",
+    "L103-109 checkbox; L111-145 rowMain (severity badge, timestamp via TimeStamp in=tzMode, vehicle display_name||#id, rule.name, title read/unread weight, optional message) all rendered with null-safe guards.",
+    "L147-194 hover action cluster -> rowActions: markRead/markUnread/archive/unarchive IconButtons under the same conditionals, plus the drill-through link (accessibilityRole=link, navigate(drillHref), View context label + chevron glyph).",
+    "Web hover-reveal (opacity-0 group-hover) and the `hidden sm:inline` label are not applicable on native touch; actions stay visible and the label renders alongside the chevron (accessibilityLabel preserved) — consistent with the sibling InboxBody native port.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
