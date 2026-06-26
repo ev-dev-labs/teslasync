@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/types/admin-diagnostics.ts",
+  "outputPath": "apps/native/src/web-parity/types/admin-diagnostics.ts",
+  "sourceLineCount": 237,
+  "coveredLineCount": 237,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 237 source lines before editing; it is a pure non-visual TypeScript type-definition module with zero imports, no runtime code, and no DOM/browser/Recharts/Leaflet/web-UI dependencies, so it is React Native-compatible verbatim and required no native-safe stubbing.",
+    "L1-18 module-level JSDoc header (Go DTO source-of-truth references for dlq_handler.go, flags_handler.go, ingest_xray_handler.go, drive_diagnostic_handler.go and their repos) ported unchanged to preserve maintenance intent.",
+    "DLQ Inspector section L20-109 ported verbatim: DLQReplayResult union (ok|publish_failed|rate_limited|disabled|not_found|unparseable), DLQEntrySummary (13 fields incl. nullable parsed_* and parse_error), DLQEntryFull extends DLQEntrySummary with raw/inner_payload_b64, DLQListResponse, DLQReplayResponse (optional error/audit_id), DLQReplayAuditRecord, DLQAuditResponse.",
+    "Feature Flags section L111-162 ported verbatim: FeatureFlagOperation ('set'|'delete'), FeatureFlagValue (unknown), FeatureFlagEntry, FeatureFlagsListResponse, FeatureFlagSetRequest, FeatureFlagWriteResponse (optional new_value/deleted, nullable old_value), FeatureFlagChange, FeatureFlagChangesResponse.",
+    "Ingest X-Ray section L164-201 ported verbatim: IngestXRayWindow ('5m'|'15m'|'1h'|'6h'|'24h'), IngestXRayBucket ('30s'|'1m'|'5m'|'15m'|'1h'), IngestXRayValueKind (number), IngestXRayFieldStat, IngestXRayBucketPoint, IngestXRayResponse.",
+    "Drive Diagnostic section L203-237 ported verbatim: DriveDiagnosticWindow ('30s'|'60s'|'5m'|'15m'), DriveDiagnosticTransition (details_json Record<string,unknown>|null), DriveDiagnosticSignal, DriveDiagnosticResponse, preserving all snake_case JSON field names, nullability, and optional markers exactly to keep API-response parity with the Go structs and the native hooks (useDLQ, useFeatureFlags, useIngestXRay, useDriving) that previously inlined these shapes."
+  ]
+}
