@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/features/system/components/FSMSubFSMPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/FSMSubFSMPanel.tsx",
+  "sourceLineCount": 75,
+  "coveredLineCount": 75,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-8 imports: react-i18next useTranslation -> local useNativeTranslationFallback (returns inline English fallback, interpolates {{token}} options); lucide-react Car/Zap -> aria-hidden Unicode glyph stand-ins (react-native-svg is not a dependency); @/components/ui GlassPanel -> native GlassPanel primitive; @/components/data-display TimeStamp -> native-parity TimeStamp port; @/components/feedback EmptyState -> inline centered muted AppText (panel passes only `message`); @/components/layout Grid -> flex-wrap row with useWindowDimensions column count; ./StateBadge (separate queued file) -> local StateBadge modelled here; `import type ActiveSubFSM from @/types/fsm` -> imported from the native useFSM hook.",
+    "L10-13 FSMSubFSMPanelProps { activeSubs?: ActiveSubFSM[]; fsmType: string } ported verbatim.",
+    "L15-16 function signature + `const { t } = useTranslation()` -> exported FSMSubFSMPanel with `const t = useNativeTranslationFallback()`; useWindowDimensions added (called unconditionally before the early returns to honor Rules of Hooks).",
+    "L18-20 isVehicleView gate (fsmType 'vehicle' | 'all') and `if (!isVehicleView) return null` preserved 1:1.",
+    "L22 `const subs = activeSubs ?? []` preserved.",
+    "L24-33 empty-state branch (subs.length === 0): GlassPanel + uppercase tracked-wider secondary heading t('fsm.subFSMs','Active Sub-FSMs') + EmptyState message t('fsm.noSubFSMs','No active drive or charge sessions') -> native GlassPanel, heading AppText (textTransform uppercase, letterSpacing), and inline centered muted empty AppText.",
+    "L35-39 populated branch GlassPanel + heading (mb-3) preserved; heading marginBottom via headingSpaced.",
+    "L40 Grid cols={{ default: 1, md: 2 }} gap={3} -> flex-wrap grid; twoColumns = width >= 768 (Tailwind md breakpoint) selects cardHalf (flexBasis 48%) vs cardFull (100%); gap-3 -> spacing.md.",
+    "L41-49 per-sub derivations: Icon Car/Zap -> SUB_ICON_GLYPH; label t('fsm.activeDrive'/'fsm.activeCharge') preserved; terminalStates drive=['completed','recovered'] charge=['done','recovered'] and `isActive = !terminalStates.includes(sub.state)` preserved verbatim.",
+    "L51-58 card container (key={sub.type}, rounded border bg-white tints, p-3) + icon box (p-2 rounded-lg, bg green-500/10 active vs white/[0.04] idle, icon green-400 vs text-muted) -> styles.card + iconBox/iconBoxActive/iconBoxIdle + iconGlyph color states; testID added for native parity.",
+    "L59-63 inner flex-1 min-w-0 column, title row with label and the green animate-pulse live dot when active -> cardBody/cardTitleRow + static livePulse dot (no CSS animation on native; documented; active also signalled by tinted icon box + badge).",
+    "L64-67 meta row: StateBadge state={sub.state} fsmType={drive->drive_session / charge->charge_session} + TimeStamp value={sub.start_time} className 10px muted -> local StateBadge (getStateColor lower-case lookup + neutral default reproduced for drive_session/charge_session with the registry's variant + per-state override hues) and native TimeStamp with equivalent style.",
+    "L68-75 closing JSX/map/return preserved; FSMSubFSMPanel.displayName set (sibling CommandConfirmDialog precedent).",
+    "Gates: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles` all pass; commit scoped to apps/native."
+  ]
+}
