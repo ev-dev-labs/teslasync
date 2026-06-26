@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/driving/pages/DrivingDynamicsPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/pages/DrivingDynamicsPage.tsx",
+  "sourceLineCount": 122,
+  "coveredLineCount": 122,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-2 React/react-i18next imports -> `React, {useMemo, useState, type ReactNode}` from 'react' (useState + useMemo preserved); `useTranslation` swapped for the native `useNativeT` shim.",
+    "L4-5 web layout/forms imports (`PageContainer`, `VehicleSelect`) -> native re-implementations defined in this file (ScrollView layout + pressable vehicle chip); no DOM/web UI imported.",
+    "L7 `useDrives, useDrivingCoach` from `@/api/hooks/useDriving` -> same names from the ported `../../../api/hooks/useDriving` (API paths `/drives`, `/analytics/driving-coach` preserved).",
+    "L8 `useMotorLatest, useMotorHistory` from `@/api/hooks/useVehicles` -> same names from `../../../api/hooks/useVehicles` (API paths `/motor/latest`, `/motor` preserved).",
+    "L9 `useSelectedVehicle` -> native `useNativeSelectedVehicle` (first-vehicle default + local override; the global store/URL scope is browser-only).",
+    "L10 `useUnits` -> native `useNativeUnits`, deriving the same distance/speed/temperature prefs from the ported `useSettings()` query.",
+    "L11 `usePageTitle` -> native `useNativePageTitle` no-op (no document.title on native; the header still renders the title).",
+    "L12 `convertDistanceFromSI/convertSpeedFromSI/convertTempFromSI` from `@/lib/unitConversion` -> inlined verbatim with the exact constants (METERS_PER_MILE 1609.344, METERS_PER_KM 1000, METERS_PER_FOOT 0.3048, SECONDS_PER_HOUR 3600) and switch bodies; backend stays SI (meters, m/s, °C).",
+    "L13 `computeMotorStats, getThrottleStyle` from `../components/driving-dynamics/helpers` -> inlined verbatim (the helpers module is not yet ported), together with the `MotorStats` interface and `ThrottleStyle` union.",
+    "L14-26 the eleven section imports from `../components/driving-dynamics` -> imported from the native-safe driving-dynamics barrel (each is a 'native port pending' placeholder); all eleven names preserved.",
+    "L28-30 default export + `usePageTitle(t('dynamics.title','Driving Dynamics'))` -> default export retained; title also feeds the native PageContainer header. i18n key/fallback preserved.",
+    "L32-34 vehicle selection: `vehicleId` from the selected-vehicle hook + `vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined` preserved exactly.",
+    "L36-41 data hooks: `vehicleIdNum = vehicleId ?? 0`; `useMotorLatest(vehicleIdNum, 5000)` (motorLatest/motorLoading), `useMotorHistory(vehicleIdNum, 200)`, `useDrives(vehicleIdStr)`, `useDrivingCoach(vehicleIdStr)` — all signatures/args preserved.",
+    "L43-50 settings/unit handling: `unitPrefs` from `useNativeUnits`; `toDistanceDisplay`, `distanceUnit`, `speedUnit`, `tempUnit`, `toSpeedDisplay`, `toTemperatureDisplay` defined in the same order with the same bodies.",
+    "L52-60 date filter: `startDate` seeded to today-30d via `new Date()`/`setDate`/`toISOString().slice(0,10)`; `endDate` to today; `setStartDate`/`setEndDate` preserved. (Date APIs are platform-agnostic.)",
+    "L62-69 `filteredDrives` useMemo: filters `drives` on `d.startTs?.slice(0,10) ?? ''` within [startDate, endDate]; logic + deps preserved verbatim.",
+    "L71-73 `motorStats` useMemo (`computeMotorStats(motorHistory)`) and `throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPower) : null` preserved verbatim.",
+    "L75-122 RENDER: `<PageContainer title subtitle loading={motorLoading} error={null} actions={<VehicleSelect/>}>` -> native PageContainer with the same props (loading shows an ActivityIndicator instead of the web Spinner). `<div className=\"space-y-6\">` -> `<View style={styles.stack}>` with a 24px (Tailwind space-y-6) gap. All eleven sections render in the same order with identical props (LiveMotorStatus, GForcePanel, PedalUsage, SpeedGearPanel, AutopilotSection, MotorHistoryCharts, MotorEfficiencyInsights, SummaryStats, DrivingCoachSection, DriveAnalyticsSection, DrivingTips).",
+    "Native-safe unavailable states: react-i18next translation catalog (English fallbacks returned), global selected-vehicle store + react-router URL scope (local override picker), and document.title (no-op) are browser-only and documented in-file.",
+    "Coupled barrel type fix required for this consumer to typecheck: in `../components/driving-dynamics/index.ts`, `ObjectLike` was loosened from `Readonly<Record<string, unknown>>` to `object` (interface payloads like MotorSnapshot/Drive lack an implicit index signature) and the two `throttleStyle` placeholder props were corrected from `ObjectLike | null` to `string | null` (web `ThrottleStyle` is a string union). Documented in that file's parity sidecar.",
+    "No DOM elements, Recharts, Leaflet, framer-motion, react-router, or web UI components are imported; only React, react-native primitives (ScrollView/View/Pressable/ActivityIndicator/StyleSheet), the shared native AppText, and theme tokens. No `any` used.",
+    "Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}

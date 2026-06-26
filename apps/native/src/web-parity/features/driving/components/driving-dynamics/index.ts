@@ -30,9 +30,13 @@ import {GlassPanel} from '../../../../../components/ui/GlassPanel';
  * TemperatureUnitPref) live in the not-yet-ported driving feature modules;
  * these interfaces keep the same prop names so future native call sites compile
  * unchanged, and the placeholder bodies ignore the values until each section is
- * fully ported. No `any` is used.
+ * fully ported. No `any` is used. `ObjectLike` is the structural stand-in for
+ * the object-shaped domain props; it is `object` (not
+ * `Record<string, unknown>`) so the real interface-typed payloads
+ * (MotorSnapshot, Drive, DrivingCoachData, MotorStats), which lack an implicit
+ * string index signature, remain assignable.
  */
-type ObjectLike = Readonly<Record<string, unknown>>;
+type ObjectLike = object;
 type NumberToNumber = (value: number) => number;
 
 interface LiveMotorStatusProps {
@@ -63,7 +67,9 @@ interface MotorHistoryChartsProps {
 }
 interface MotorEfficiencyInsightsProps {
   motorStats?: ObjectLike | null;
-  throttleStyle?: ObjectLike | null;
+  // throttleStyle is the web `ThrottleStyle` string union
+  // ('conservative' | 'moderate' | 'aggressive'), not an object.
+  throttleStyle?: string | null;
   toTemperatureDisplay: NumberToNumber;
   // tempUnit already includes the degree symbol (e.g. '°C') — never re-prefix.
   tempUnit: string;
@@ -90,7 +96,9 @@ interface DriveAnalyticsSectionProps {
 }
 interface DrivingTipsProps {
   motorStats?: ObjectLike | null;
-  throttleStyle?: ObjectLike | null;
+  // throttleStyle is the web `ThrottleStyle` string union
+  // ('conservative' | 'moderate' | 'aggressive'), not an object.
+  throttleStyle?: string | null;
 }
 
 type PlaceholderComponent<P> = (props: P) => ReactElement;

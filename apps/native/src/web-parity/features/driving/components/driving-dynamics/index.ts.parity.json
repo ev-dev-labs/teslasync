@@ -20,6 +20,7 @@
     "L12 trailing blank line: no-op.",
     "Built with React.createElement (the output path must stay `index.ts`, which cannot contain JSX). No DOM elements, Recharts, Leaflet, or web UI imported; only React, react-native StyleSheet, and the shared native AppText/GlassPanel + theme spacing tokens are used.",
     "Prop interfaces mirror the web sibling prop names using permissive structural types (ObjectLike, NumberToNumber) so future native call sites compile unchanged; no `any` used. The source barrel has no i18n strings, so the short placeholder labels are native scaffolding, not source-derived copy.",
+    "Type refinement (made when the first real consumer, DrivingDynamicsPage, was ported): `ObjectLike` was loosened from `Readonly<Record<string, unknown>>` to `object` so the real interface-typed payloads (MotorSnapshot, Drive[], DrivingCoachData, MotorStats), which lack an implicit string index signature, are assignable; and the two `throttleStyle` props were corrected from `ObjectLike | null` to `string | null` to match the web `ThrottleStyle` string union ('conservative' | 'moderate' | 'aggressive'). Public export surface and placeholder behaviour are unchanged.",
     "Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
   ]
 }
