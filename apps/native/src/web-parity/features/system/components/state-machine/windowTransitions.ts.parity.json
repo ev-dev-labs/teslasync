@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/features/system/components/state-machine/windowTransitions.ts",
+  "outputPath": "apps/native/src/web-parity/features/system/components/state-machine/windowTransitions.ts",
+  "sourceLineCount": 86,
+  "coveredLineCount": 86,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 86 source lines before editing. This is pure, framework-agnostic TypeScript (Date arithmetic, Number.isFinite, Array push/sort) with no DOM, browser, Recharts, Leaflet, or web-UI dependency, so the windowing logic ports verbatim and runs identically under Hermes/JSC.",
+    "L1 import: web pulls `FSMTransition` from the `@/types/fsm` alias which does not exist in the native workspace; remapped to `import type { FSMTransition } from '../../../../api/hooks/useFSM'` — the structurally identical DTO (id, vehicle_id, ts, fsm_name, from_state, to_state, trigger, details?) already inlined by the native useFSM hook, same precedent as sibling FSMHealthPanel.tsx. `import type` is erased at compile time, so no runtime coupling is added.",
+    "L3-13 module JSDoc preserved verbatim (intent: single source of truth for windowing FSM transitions; reconciles the page 'buffered' counter and StateTimeline tick filter to one scope).",
+    "L15-26 WindowedTransitions interface ported verbatim: inWindow, outsideWindow, lastTransition (FSMTransition | null), anchor (Date), minutes — all field names, optionality, and per-field doc comments preserved.",
+    "L28-35 PRESETS_MIN `[5, 10, 30, 120, 360, 1440] as const` preserved exactly, including the JSDoc explaining the toolbar exposes the [5,10,30,120] subset while the helper additionally considers [360,1440].",
+    "L37-67 windowTransitions() ported byte-for-byte: anchor default `?? new Date()`, endTs/startTs window math with `minutes * 60_000`, the -Infinity/last-transition scan, `Number.isFinite(ts)` skip guard, inclusive [startTs,endTs] bucket test, and ascending sort of both buckets by `new Date(ts).getTime()`. Behavior, state names, and return shape identical.",
+    "L69-86 nextWiderPreset() ported verbatim: non-finite guard returns null, negative-gap guard returns null, and the ascending PRESETS_MIN scan returning the smallest preset wider than currentMinutes whose `p * 60_000 >= gapMs`, else null.",
+    "No unit-suffixed fields touched; all values are minutes/milliseconds time math, not SI distance/speed/energy quantities, so the Phase-48 SI canonical rules do not apply. No i18n strings, no API paths, no visual surface in this file.",
+    "The web vitest suite (web/.../__tests__/windowTransitions.test.ts) was NOT ported: it uses `vitest` which is unavailable in the native jest (preset 'react-native') runner, and the native web-parity tree carries no __tests__ by convention. Logic is unchanged, so existing native gates remain green.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) clean; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles green."
+  ]
+}
