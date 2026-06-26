@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/hooks/useCompareWindow.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useCompareWindow.ts",
+  "sourceLineCount": 143,
+  "coveredLineCount": 143,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 143 source lines before editing. The hook is pure Date arithmetic + i18n with no DOM/browser/Recharts/Leaflet/web-UI dependency, so logic, state names, i18n keys, and comments are ported 1:1; the only substantive change is the translation source.",
+    "L1 `import { useMemo } from 'react'` ported verbatim.",
+    "L2 `import { useTranslation } from 'react-i18next'` -> react-i18next is absent from apps/native deps, so it is replaced by a local key-preserving fallback shim (TFunc type + module-stable fallbackT + local `function useTranslation(): { t: TFunc }`), matching the established native parity pattern (components/motion/index.ts, components/ui/Label.tsx). Same `const { t } = useTranslation()` call shape and same `t(key, fallback)` signature so every call site is unchanged. `fallbackT` is module-stable (not a per-render closure) to mirror react-i18next's memoised `t`, preserving the L142 `useMemo` dependency semantics (recompute only when window/anchor change); named `fallbackT` rather than `t` to avoid @typescript-eslint/no-shadow against the hook's local `const { t }`.",
+    "L4 `export type CompareWindow = 'day' | 'week' | 'month' | 'year'` ported verbatim.",
+    "L6-9 `DateRange` interface (start: Date; end: Date) ported verbatim.",
+    "L11-25 `CompareWindowResult` interface ported verbatim incl. all five fields (currentLabel/previousLabel/vsPreviousLabel/currentRange/previousRange) and their JSDoc comments (the inclusive-start/exclusive-end and `<Delta comparedTo>` notes preserved exactly).",
+    "L27-31 `startOfDay` ported verbatim (new Date(d) clone + setHours(0,0,0,0)).",
+    "L33-37 `addDays` ported verbatim (clone + setDate(getDate()+n)).",
+    "L39-43 `addMonths` ported verbatim (clone + setMonth(getMonth()+n)).",
+    "L45-49 `addYears` ported verbatim (clone + setFullYear(getFullYear()+n)).",
+    "L51-60 `startOfIsoWeek` ported verbatim incl. the date-fns-avoidance doc comment, the `0=Sunday..6=Saturday` inline comment, and the Monday-anchored `day === 0 ? -6 : 1 - day` diff.",
+    "L62-66 `startOfMonth` ported verbatim (startOfDay then setDate(1)).",
+    "L68-72 `startOfYear` ported verbatim (startOfDay then setMonth(0, 1)).",
+    "L74-78 the `useCompareWindow` doc block (Delta / '↑ 12% vs last week' intent) ported verbatim.",
+    "L79 signature `useCompareWindow(window: CompareWindow, anchor: Date = new Date())` ported faithfully; only reflowed across lines to satisfy the 80-col prettier printWidth. Parameter name `window` is kept to preserve the public API (RN has no `window` global, so no shadowing).",
+    "L80 `const { t } = useTranslation()` ported verbatim (now resolving to the local shim).",
+    "L82-90 useMemo body + the seven `let` declarations (currentStart/currentEnd/previousStart/previousEnd/currentLabel/previousLabel/vsPreviousLabel) ported verbatim.",
+    "L91-101 `case 'day'` ported verbatim: startOfDay anchor, +1 day current end, -1 day previous start, current start as previous end, and the delta.today/delta.yesterday/delta.vsYesterday keys with identical fallbacks.",
+    "L102-111 `case 'week'` ported verbatim: startOfIsoWeek anchor, +7/-7 day boundaries, delta.thisWeek/delta.lastWeek/delta.vsLastWeek keys + fallbacks.",
+    "L112-121 `case 'month'` ported verbatim: startOfMonth anchor, +1/-1 month boundaries, delta.thisMonth/delta.lastMonth/delta.vsLastMonth keys + fallbacks.",
+    "L122-132 `case 'year'` (plus `default`) ported verbatim: startOfYear anchor, +1/-1 year boundaries, delta.thisYear/delta.lastYear/delta.vsLastYear keys + fallbacks.",
+    "L135-141 the returned object (currentLabel/previousLabel/vsPreviousLabel + currentRange{start,end} + previousRange{start,end}) ported verbatim.",
+    "L142 dependency array `[window, anchor, t]` preserved; with the module-stable shim `t`, memoization fidelity matches the web (react-i18next `t` is likewise stable except on language change).",
+    "L143 closing brace preserved. No DOM-only modules, HTML elements, Recharts, Leaflet, or web UI components are imported — only react. Formatting follows the repo prettier config (singleQuote, trailingComma all, arrowParens avoid). Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
