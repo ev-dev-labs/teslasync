@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/driving/components/drivetrain-health/StatorTempChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drivetrain-health/StatorTempChart.tsx",
+  "sourceLineCount": 100,
+  "coveredLineCount": 100,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 react-i18next useTranslation -> local key-preserving fallback shim (no react-i18next in native deps); every i18n key + English fallback retained verbatim.",
+    "L3-16 @/components/charts (ChartContainer, ChartTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, AREA_DEFAULTS) -> the web-parity components/charts barrel. ChartContainer/ChartTooltip/AREA_DEFAULTS are real native ports; the recharts leaf+chart names are the barrel's native chart-primitive stubs (Recharts is browser DOM/SVG only). The recharts JSX shape is preserved 1:1 but the stubs render an accessibility-labelled 'unavailable' placeholder and IGNORE all styling props.",
+    "L17 @/components/motion FadeIn -> ported web-parity components/motion FadeIn; delay={0.23} seconds preserved (the native FadeIn delay is also in seconds), L37.",
+    "L18 @/hooks/useUnits useUnits -> local shim wired to the native api/hooks/useSettings port; derives unitPrefs.temperature from unit_of_temp ('F'->'°F' else '°C') exactly as the web deriveTemperature, memoised for reference stability. Only unitPrefs is consumed (the web destructures `{ unitPrefs }`), so the shim exposes only that. Real user-preference unit parity (not an SI-only floor).",
+    "L20 ./constants MotorChartDataPoint -> inlined verbatim (time/stator/statorRel/statorRer/torque/speed/axle); the sibling drivetrain-health constants module is not a standalone native port yet, so the type travels with the component (same precedent as the DetailCards port inlining its ./helpers dep).",
+    "L21 @/lib/unitConversion convertTempFromSI -> inlined verbatim (switch: '°C' identity, '°F' = (c*9)/5+32); no native @/lib/unitConversion port yet.",
+    "L23-25 StatorTempChartProps { data: MotorChartDataPoint[] } ported verbatim.",
+    "L27-32 component signature + useTranslation() + useUnits() destructure of { unitPrefs } + toTemperatureDisplay(value) => convertTempFromSI(value, unitPrefs.temperature) + tempUnit = unitPrefs.temperature preserved exactly.",
+    "L34 early return guard `if (data.length <= 1) return null;` preserved verbatim.",
+    "L36-55 FadeIn(delay 0.23) > ChartContainer with title (drivetrain.statorTempHistory), subtitle (drivetrain.statorTempSub), ariaLabel (drivetrain.statorTempHistory.aria), the data={data.map(d => ({time, stator, statorRel, statorRer}))} projection, the four dataColumns (time / stator / statorRel / statorRer, each temp column suffixed `(${tempUnit})`), and height={280} — all i18n keys + fallbacks + the unit suffix preserved verbatim.",
+    "L56-62 ResponsiveContainer width=100% height=100% > LineChart data={data} > CartesianGrid (strokeDasharray '3 3', stroke 'var(--glass-border)', strokeOpacity 0.4) + XAxis dataKey='time' tick={{fill:'var(--text-muted)',fontSize:10}} + YAxis tick={{...}} + Tooltip content={<ChartTooltip />} + Legend. All props carried over verbatim to the native chart stubs which ignore them; the inert var(--...) CSS-var strings document visual intent only (no native runtime effect).",
+    "L63-80 three <Line {...AREA_DEFAULTS} dataKey=stator|statorRel|statorRer name=`${t(...)} (${tempUnit})` stroke=#ef4444|#a855f7|#06b6d4 /> series — dataKeys, i18n names (drivetrain.statorTemp / statorTempRearLeft / statorTempRearRight), unit suffixes and hex strokes preserved verbatim.",
+    "L81-94 two <ReferenceLine y={toTemperatureDisplay(60|80)} stroke=#4ade80|#fbbf24 strokeDasharray='4 4' strokeOpacity=0.5 label={{value:t('drivetrain.normal'|'drivetrain.warm'), position:'right', fill, fontSize:10}} /> — the SI thresholds (60/80 °C) run through toTemperatureDisplay so the line position honours the user's temp unit; i18n keys + label config preserved verbatim.",
+    "L95-100 closing LineChart/ResponsiveContainer/ChartContainer/FadeIn + component close ported. No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI imported.",
+    "NATIVE-UNAVAILABLE: visual line rendering (Recharts SVG) is unavailable on native; the chart-primitive stubs render an a11y 'unavailable' placeholder. ChartContainer still renders the title/subtitle/a11y summary and the accessible data table built from data/dataColumns, so the numeric content (the three stator series over time) survives. Documented per contract rule 7.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
