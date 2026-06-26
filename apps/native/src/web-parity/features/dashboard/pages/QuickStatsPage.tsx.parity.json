@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/pages/QuickStatsPage.tsx",
+  "sourceLineCount": 100,
+  "coveredLineCount": 100,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-15 imports: react-i18next/react-router/lucide-react/web-UI(PageContainer,GlassPanel,MetricCard,EmptyState,FadeIn)/useUnits/useFormatting/unitConversion/usePageTitle/numberFormat replaced by RN primitives, shared native components (GlassPanel, SemanticIcon, AppText), the existing native useVehicles/useVehicleState + useAnalyticsSummary hooks, and inlined native-safe ports of the small lib helpers.",
+    "L17-19 default export retained; usePageTitle -> documented no-op useNativePageTitle (no document on native); title still rendered in the page header.",
+    "L21-22 useVehicles()/useAnalyticsSummary(30): same native hooks, identical data/isLoading/error destructure names and the 30-day window.",
+    "L23 useUnits().unitPrefs.distance -> DEFAULT_DISTANCE_PREF 'km' (web default when settings.unit_of_length !== 'mi'); no native settings store, documented in nativeQuickStatsCapabilities.",
+    "L24 useFormatting().formatCurrency -> inlined formatCurrency with identical `${symbol}${fmtNumber(amount,decimals)}` shape and '$' default symbol.",
+    "L26-29 isLoading/error/vehicle/useVehicleState(vehicle?.id ?? 0): identical derivations and identical (unconditional) hook-call order preserved.",
+    "L31-37 PageContainer(title, loading, error, centered className) -> PageContainerView with same title/loading(Spinner->ActivityIndicator)/error(red panel) semantics and a centered scroll layout for the centering classes.",
+    "L38 max-w-md column -> styles.column (maxWidth 448 = 28rem, width 100%).",
+    "L39-60 vehicle card: GlassPanel; cyan Car-in-circle -> SemanticIcon name='vehicle' (accent); display_name || 'Tesla'; `{model} · {state}` via stateData?.state?.state ?? 'offline' narrowed for the native VehicleStateResult union; EmptyState(message) -> inline message-only EmptyStateView.",
+    "L62-86 four MetricCards -> MetricCardView in a wrapped 2-col grid; web cards render no icon so `color` is visually inert there, color intent preserved via a small accent dot; same labels, value expressions, and cyan/green/amber/purple colors.",
+    "L67 fmtInt(convertDistanceFromSI(totalDistanceKm*1000, distance)): inlined convertDistanceFromSI (METERS_PER_KM/MILE/FOOT) + fmtInt with identical math.",
+    "L72/77/82 totalDrives/totalEnergyKwh/totalCost: same `?? 0` null-safety and fmtInt/formatCurrency(...,0) formatting.",
+    "L88-96 footer + react-router <Link to='/'> -> centered caption with a nested pressable AppText (accessibilityRole='link') that calls the optional onNavigate with QUICK_STATS_DASHBOARD_ROUTE_ID; inert when onNavigate is absent.",
+    "L98-100 closing tags / default export end.",
+    "FadeIn delay props (0.05/0.1) accepted but inert (no framer-motion on native), matching sibling native page ports.",
+    "No DOM, lucide-react, Recharts, Leaflet, react-router, framer-motion, or web UI components imported.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
