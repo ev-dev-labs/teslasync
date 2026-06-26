@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/admin/components/AcknowledgeAlertDialog.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/AcknowledgeAlertDialog.tsx",
+  "sourceLineCount": 112,
+  "coveredLineCount": 112,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 112 source lines before editing. Preserved the module JSDoc intent (L1-13), the NOTE_MAX=1000 constant (L20), and the AcknowledgeAlertDialogProps contract verbatim — open/onClose/onSubmit/submitting?=false/alertTitle? (L22-43).",
+    "State + refs preserved: note/setNote useState (L45), textareaRef (L46, HTMLTextAreaElement -> TextInput), hintId useId (L47). The open-reset useEffect with [open] deps, setNote('') and the deferred setTimeout focus + clearTimeout cleanup (L52-61) are ported; window.setTimeout -> setTimeout.",
+    "Logic preserved: trimmed = note.trim() (L63), tooLong = trimmed.length > NOTE_MAX (L64), handleSubmit guards on submitting||tooLong then onSubmit(trimmed) (L66-69).",
+    "Render parity (L71-109): web Modal(open/onClose/title/size=md) -> RN Modal(visible/transparent/onRequestClose) with the same !submitting close guard; alertTitle subtitle conditional (L81-83); web Textarea -> multiline TextInput keeping label, value/onChange->onChangeText, placeholder, maxLength=NOTE_MAX+50, rows=4->numberOfLines, disabled->editable, tooLong error; aria-describedby hintId kept via nativeID + accessibilityLabelledBy; always-shown hint paragraph (L96-98); ghost Cancel + primary Acknowledge Buttons -> Pressable DialogAction with onClose / handleSubmit and disabled gating (L99-106).",
+    "i18n: react-i18next useTranslation (L15,44) -> native t(key, fallback, options?) fallback preserving all six alerts.ack.* keys, English defaults, and {{max}} interpolation. Default export preserved (L112). No DOM/Recharts/Leaflet/web-UI imports; uses RN primitives + AppText + theme tokens."
+  ]
+}
