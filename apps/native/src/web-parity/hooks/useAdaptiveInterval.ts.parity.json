@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/hooks/useAdaptiveInterval.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useAdaptiveInterval.ts",
+  "sourceLineCount": 33,
+  "coveredLineCount": 33,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 33 source lines before editing and preserved the useAdaptiveInterval hook name/signature ((fastMs = 3000, slowMs = 30_000): number, L11), the `interval`/`setInterval_` state names (L12), the connected->slowMs / reconnecting->fastMs adaptive semantics, the JSDoc 30s/3s contract (L4-10), the lazy useState initializer (L12-14), and the useEffect with onConnected/onDisconnected handlers, mount sync, cleanup, and [fastMs, slowMs] deps (L16-30, L32 return interval).",
+    "L1 imports the browser-only shared sseManager (web/src/lib/sseManager.ts), which has no native port and depends on the DOM EventSource; replaced its consumed slice (getState() + subscribe/unsubscribe for 'connected'/'disconnected') with an inlined native-safe connection tracker that uses a host-provided EventSource polyfill on /api/v1/events via apiUrl('/events'), listening to the same 'connected' SSE event and mapping es.onerror -> 'disconnected', with auto-connect on first subscriber and auto-disconnect when the last unsubscribes (parity with sseManager.subscribe/unsubscribe).",
+    "Native-safe unavailable state per contract rule 7: when no EventSource constructor is registered on globalThis the source never opens, connectionState stays 'reconnecting', and the hook returns fastMs (the primary-data-source cadence) exactly as the web fallback path; the explicit reason is exported as ADAPTIVE_INTERVAL_SSE_UNAVAILABLE_REASON. No DOM/Recharts/Leaflet/web-UI imports were introduced; only react useEffect/useState (L2) and the native api/client apiUrl helper are used."
+  ]
+}
