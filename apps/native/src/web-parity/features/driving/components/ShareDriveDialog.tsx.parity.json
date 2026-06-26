@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/features/driving/components/ShareDriveDialog.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/ShareDriveDialog.tsx",
+  "sourceLineCount": 185,
+  "coveredLineCount": 185,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-8 imports: useState kept; react-i18next useTranslation -> native useNativeTranslationFallback `t` (English default + {{var}} interpolation); lucide Link/Trash2/Eye/ExternalLink -> text glyphs (LINK ⛓ / REVOKE ✕ / EYE ◉ / EXTERNAL ↗); shared Modal/Button/CopyButton/Toggle/Select/Input/GlassPanel/Spinner -> native RN Modal idiom + DialogButton/CopyControl/Toggle(ported)/ExpirySelect/TextField/base GlassPanel/ActivityIndicator; @/lib/dateFormat formatDate -> inlined native-safe formatDate (year/month/day, — fallback).",
+    "L10-14 ShareDriveDialogProps (driveId/open/onClose) preserved verbatim.",
+    "L16-20 hooks: useCreateShareLink/useShareLinks/useRevokeShareLink imported from native ../../../api/hooks/useSharing with identical driveId arg and {data: existingShares, isLoading: sharesLoading} destructure.",
+    "L22-26 state preserved verbatim: shareUrl(null), includeSpeed(true), includeTelemetry(false), expiryDays('30'), title('').",
+    "L28-36 handleCreate: same mutateAsync payload (title|undefined, include_speed, include_telemetry, expires_in_days: Number(expiryDays)||undefined); window.location.origin -> native shareOrigin()=getApiBase() via buildShareUrl(result.token) preserving `${origin}/s/${token}`.",
+    "L38-46 handleRevoke(token) and handleClose (reset shareUrl+title then onClose) preserved verbatim.",
+    "L48 shares = existingShares ?? [] preserved.",
+    "L50-51 shared <Modal open onClose title> -> transparent fade RN Modal + overlay + tap-to-dismiss backdrop + centered dialog card with titled header and ✕ close control (ConfirmDialog/SignalConfigModal idiom); space-y-6 body -> scrolling ScrollView.",
+    "L52-93 create-form face: description <p> -> AppText; title <Input> -> TextField(onChangeText=setTitle); two <Toggle> -> native Toggle (label/checked/onChange) verbatim keys; expiry <Select> 4 options -> ExpirySelect popover with identical value/label pairs (7/30/90/0); Generate <Button loading> -> DialogButton primary fullWidth loading=createShare.isPending leadingGlyph=LINK calling handleCreate.",
+    "L94-121 result face: green 'Share link created!' text; readOnly URL <Input> -> TextField readOnly; CopyButton 'Copy Link' -> CopyControl primary flex-1; ExternalLink <Button variant=outline> window.open -> DialogButton outline icon-only Linking.openURL(shareUrl); 'Create another link' ghost full-width -> DialogButton ghost setShareUrl(null).",
+    "L123-175 existing-shares section: rendered only when shares.length>0 (web parity); per share isExpired = expires_at ? new Date(expires_at)<new Date() : false; GlassPanel row with title ?? 'Untitled share', Eye glyph + `${views} views`, expiry label (Expired / Expires {{date}} via formatDate / No expiry), iconOnly CopyControl copying `${origin}/s/${token}`, and revoke DialogButton (Trash glyph, red tone) calling handleRevoke(share.token); key={share.id}.",
+    "L177-185 sharesLoading Spinner -> ActivityIndicator centered; component close + named export ShareDriveDialog (plus displayName + default export).",
+    "Native-safe substitutions documented: window.location.origin/window.open are browser-only (origin from getApiBase, open via Linking.openURL with swallowed errors); CopyButton withToast has no native toast wired so success is surfaced inline (Copied label) and clipboard degrades to an explicit 'unavailable' state on iOS/Android; Tailwind/CSS vars + text-green-400/text-red-400 resolved to StyleSheet/theme tokens (GREEN_400 #4ade80, RED_400 #f87171). No DOM, lucide-react, Recharts, Leaflet, or old web UI imports.",
+    "Gates: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
