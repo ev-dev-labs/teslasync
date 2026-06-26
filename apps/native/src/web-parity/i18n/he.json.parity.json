@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/i18n/he.json",
+  "outputPath": "apps/native/src/web-parity/i18n/he.json",
+  "sourceLineCount": 9,
+  "coveredLineCount": 9,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 9 numbered source lines before editing. The file is a pure i18next resource JSON data file — no code, no JSX, no DOM/browser API, no Recharts/Leaflet/web-UI imports — so it ports 1:1 to native via a byte-for-byte copy (286 bytes, LF line endings, no BOM, trailing newline; verified Compare-Object identical). i18next is the same runtime contract on React Native (react-i18next), so the resource bundle is reused unchanged and its i18n intent (Hebrew locale, RTL, placeholder fallback) is preserved exactly.",
+    "L1 `{` and L9 `}` — outer JSON object braces preserved verbatim.",
+    "L2 `\"_meta\": {` — the single `_meta` metadata object key preserved verbatim; L8 `}` closes it.",
+    "L3 `\"language\": \"he\"` — BCP-47 language code preserved verbatim (matches the source filename he.json and the native i18n language registry).",
+    "L4 `\"name\": \"עברית\"` — native-script display name preserved verbatim; the Hebrew UTF-8 glyphs are copied byte-identically (no transliteration/escaping introduced).",
+    "L5 `\"direction\": \"rtl\"` — RTL layout-direction hint preserved verbatim; this is the intended i18n direction signal for the native app to honor.",
+    "L6 `\"status\": \"placeholder\"` — placeholder status flag preserved verbatim, signalling that this locale intentionally carries no message keys yet.",
+    "L7 `\"note\": \"Phase-46 / Prompt 48 — placeholder file. All keys fall back to en.json via i18next's fallbackLng. Translation work is tracked as a follow-up sweep.\"` — provenance note preserved verbatim, including the em-dash (—) and the curly apostrophe in \"i18next's\", copied byte-for-byte. The documented fallback-to-en.json behavior via i18next fallbackLng is unchanged on native.",
+    "No DOM/Recharts/Leaflet/web-UI dependency exists or was introduced — it is inert data. Because it is a non-.ts/.tsx data file it is outside the native tsconfig include globs (typecheck), is not a JS/TS source so ESLint (@react-native, no json plugin) does not lint it, and is not a test file so Jest does not run it; the three gates are unaffected and remain green. Committed apps/native changes only."
+  ]
+}
