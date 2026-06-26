@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/features/settings/components/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/settings/components/index.ts",
+  "sourceLineCount": 16,
+  "coveredLineCount": 16,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 16 source lines (numbered) before editing. The web module is a pure re-export barrel of twelve named settings building blocks; the barrel's only behaviour — exposing those twelve identifiers — is reproduced exactly, in source order, with no DOM/Recharts/Leaflet/web-UI import. Built with React.createElement because the output path must stay `index.ts`, which cannot contain JSX (mirrors the sibling cost-analysis/index.ts and driving-dynamics/index.ts native barrels).",
+    "L1 `export { TeslaAccountSection } from './TeslaAccountSection'` -> `export const TeslaAccountSection` native placeholder. The web sibling is a prop-less Tesla OAuth connect/disconnect panel; its DOM/web-UI body has no native port yet, so a GlassPanel + AppText 'native port pending' state replaces it while preserving the identifier.",
+    "L2 `export { FeatureToggles } from './FeatureToggles'` -> `export const FeatureToggles` placeholder (prop-less in web).",
+    "L3 `export { RegionSettings } from './RegionSettings'` -> `export const RegionSettings` placeholder (prop-less in web).",
+    "L4 `export { ActiveOrdersSection } from './ActiveOrdersSection'` -> `export const ActiveOrdersSection` placeholder (prop-less in web).",
+    "L5 `export { GeneralSettings } from './GeneralSettings'` -> `export const GeneralSettings` placeholder (prop-less in web).",
+    "L6 `export { GasPriceSettings } from './GasPriceSettings'` -> `export const GasPriceSettings` placeholder (prop-less in web).",
+    "L7 `export { NotificationSettings } from './NotificationSettings'` -> `export const NotificationSettings` placeholder (prop-less in web).",
+    "L8 `export { QuietHoursPanel } from './QuietHoursPanel'` -> `export const QuietHoursPanel` placeholder. The web QuietHoursPanelProps ({ seedDraft?: QuietHoursWindowInput | null; onSeedConsumed?: () => void }) is preserved by name as an all-optional interface; QuietHoursWindowInput (not yet ported) -> ObjectLike so future native call sites compile unchanged. The web default `= {}` is honoured because all props are optional.",
+    "L9 `export { AppearanceSettings } from './AppearanceSettings'` -> `export const AppearanceSettings` placeholder (prop-less in web).",
+    "L10 `export { SettingsSearch } from './SettingsSearch'` -> `export const SettingsSearch` placeholder. The web SettingsSearchProps ({ className?: string }) prop name is preserved; className is a DOM layout escape hatch with no native analogue, so the placeholder ignores it (documented inline).",
+    "L11 `export { AdvancedSettings } from './AdvancedSettings'` -> `export const AdvancedSettings` placeholder (prop-less in web).",
+    "L12-15 the four-line source comment (AISettings is the only place AI can be enabled per ADR-015 §I7 / §I9; the AIProviderSection/AIFeatureToggleList/AIRestorePanel/AIUsageCard sub-components stay un-exported because AISettings owns them) is preserved verbatim as a comment above the AISettings export, keeping the architectural boundary intent. The native AIProviderSection.tsx already in this directory is intentionally NOT re-exported here, matching the web barrel.",
+    "L16 `export { AISettings } from './AISettings'` -> `export const AISettings` placeholder (prop-less in web).",
+    "Prop interfaces mirror the only two web siblings that take props (QuietHoursPanel, SettingsSearch) using permissive optional structural types (ObjectLike = object) so future native call sites compile unchanged; no `any` used. The other ten siblings are prop-less, mirrored as no-arg components. The source barrel has no i18n strings, so the short placeholder labels are native scaffolding, not source-derived copy. Imports limited to React, react-native (StyleSheet), the shared native AppText/GlassPanel, and the spacing theme token. No DOM, react-i18next, web UI, Recharts, or Leaflet imported.",
+    "Gates run from apps/native: `npm run typecheck` (tsc --noEmit) exit 0; `npm run lint -- --quiet` (eslint --quiet) exit 0; `npm test -- --runInBand --detectOpenHandles` all suites passed, exit 0. Committed apps/native changes only with the required conventional-commit message."
+  ]
+}
