@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/DriveDetailSkeleton.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/DriveDetailSkeleton.tsx",
+  "sourceLineCount": 27,
+  "coveredLineCount": 27,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 27 source lines with a numbered view before editing.",
+    "L1-6 `import { Skeleton, PageHeaderSkeleton, StatGridSkeleton, ChartBlockSkeleton } from '@/components/feedback'`: these web building blocks (./Skeleton + ./PageSkeleton) are not yet ported as standalone native files (only ChartSkeleton/StatSkeleton exist), so native-safe equivalents are reproduced inline per the established self-contained convention (StatSkeleton.tsx / ChargingListPage.tsx); canonical standalone native files stay owned by their own conversion turns. No DOM/Recharts/Leaflet/web-UI imports — RN primitives only.",
+    "L8-13 doc comment ('Mirrors the DriveDetailPage layout while telemetry loads: page header -> hero gauges -> 8 stat cards -> overview chart -> 2 side-by-side charts (SoC + elevation)') preserved verbatim in the native header and honored by the rendered structure.",
+    "L14 `export function DriveDetailSkeleton()`: preserved as the exported native component (added DriveDetailSkeleton.displayName and optional native-safe extras style/testID/data-testid, all defaulted).",
+    "L15-16 `return ( <div className='space-y-6 p-4' data-testid='drive-detail-skeleton'>`: root View — `p-4` -> padding 16, `space-y-6` -> column gap 24; data-testid preserved as testID 'drive-detail-skeleton'; web role=status/aria-busy/aria-label -> RN accessible + accessibilityState busy + accessibilityLabel.",
+    "L17 `<PageHeaderSkeleton />`: inline PageHeaderSkeleton — `space-y-2` title/subtitle stack (gap 8); `<Skeleton h-8 w-64>` -> SkeletonBox 256x32, `<Skeleton h-4 w-96 max-w-full>` -> SkeletonBox height 16 width 100% maxWidth 384; keeps testID page-header-skeleton.",
+    "L18 `<Skeleton className='h-36 rounded-xl' />` (hero gauges): SkeletonBox height 144 (h-36) borderRadius 12 (rounded-xl), full width.",
+    "L19 `<StatGridSkeleton cards={8} className='sm:grid-cols-4 lg:grid-cols-8' />`: inline StatGridSkeleton renders 8 cards; merged Tailwind breakpoints (base grid-cols-2, sm:grid-cols-4, lg:grid-cols-8) reproduced with useWindowDimensions -> 2 cols <640, 4 cols 640-1023, 8 cols >=1024; gap-4 (16) gutter via negative-margin/cell-padding so cells align with full-width boxes; each card SkeletonBox h-24 (96) rounded-xl; keeps testID stat-grid-skeleton.",
+    "L20 `<ChartBlockSkeleton height={320} />` (overview chart): inline ChartBlockSkeleton w-full box, inner SkeletonBox height 320 rounded-xl; keeps testID chart-block-skeleton.",
+    "L21 `<div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>`: dual-chart grid — `grid-cols-1 lg:grid-cols-2` reproduced via useWindowDimensions (1 col <1024, 2 cols >=1024) flex-wrap row; `gap-6` (24) via negative-margin/cell-padding technique.",
+    "L22-23 two `<ChartBlockSkeleton height={280} />`: rendered from a [280,280] array into fractional-width cells, each an inline ChartBlockSkeleton with inner SkeletonBox height 280 rounded-xl.",
+    "L24-26 closing `</div>` x2 + `)` preserved as the dual-grid/root View close.",
+    "L27 closing `}` preserved as the function close.",
+    "Skeleton visuals: web `<Skeleton>` (animate-pulse bg-gray-200 dark:bg-gray-700 rounded) -> Animated.View pulsing opacity 1->0.5->1 over 2s with Tailwind's cubic-bezier(0.4,0,0.6,1) curve; a single shared pulse driver keeps all boxes in phase like the one global animate-pulse keyframe; dark bg-gray-700 -> #374151, rounded -> radius 4 / rounded-xl -> radius 12; AccessibilityInfo reduced-motion freezes the pulse at static 0.75 opacity. Minor note: the negative-margin grids overhang ~8/12px into the 16px container padding (same standalone behaviour as the ported StatSkeleton), keeping grid cells flush with the full-width hero/chart boxes.",
+    "Verification: cd apps/native; npm run typecheck (tsc --noEmit) clean; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles green."
+  ]
+}
