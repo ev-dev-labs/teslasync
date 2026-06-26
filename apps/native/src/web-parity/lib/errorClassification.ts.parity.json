@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/lib/errorClassification.ts",
+  "outputPath": "apps/native/src/web-parity/lib/errorClassification.ts",
+  "sourceLineCount": 25,
+  "coveredLineCount": 25,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 25 source lines before editing. L1-L9 module JSDoc (purpose: classify 'transient waiting' errors so pages render the calm waiting placeholder instead of an angry 'request failed' panel, deferring to the global RateLimitBanner) is preserved verbatim and expanded with a '## Native adaptation' section.",
+    "L11-L14 `import { isRateLimitError, isUpstreamUnavailableError } from './resilience'`: the native web-parity tree has no `lib/resilience.ts` yet (the alphabetical conversion loop — broadcastTopics, cn, csvExport, errorClassification — reaches resilience.ts only later), so the two guards are inlined locally as pure, DOM-free duck-type predicates to keep this port self-contained and typecheck-clean. No DOM, HTML, Recharts, Leaflet, or web-UI modules are imported.",
+    "Behaviour parity for the inlined guards: checks are copied verbatim from web resilience.ts isRateLimitError (object with name/status/retryAfterSec; name==='RateLimitError' && status===429 && typeof retryAfterSec==='number') and isUpstreamUnavailableError (additionally requires 'upstream'; name==='UpstreamUnavailableError' && status===503 && typeof retryAfterSec==='number'). The web `instanceof RateLimitError`/`instanceof UpstreamUnavailableError` fast paths are omitted because those classes set name/status/retryAfterSec to the exact values the duck-type fallback checks, so genuine instances match identically — no behavioural divergence.",
+    "L16-L22 JSDoc for the exported guard (recoverable wait, no user action needed, consumed by QueryError to swap loud error UI for a quiet placeholder) is preserved verbatim.",
+    "L23-L25 `export function isTransientWaiting(err: unknown): boolean { return isRateLimitError(err) || isUpstreamUnavailableError(err) }` is ported with an identical public signature and identical OR-of-two-guards body; reformatted to native Prettier style (semicolons, matching csvExport.ts/cn.ts). Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
