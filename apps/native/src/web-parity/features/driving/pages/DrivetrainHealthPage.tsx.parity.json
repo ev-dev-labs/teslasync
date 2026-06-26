@@ -1,0 +1,33 @@
+{
+  "sourcePath": "web/src/features/driving/pages/DrivetrainHealthPage.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/pages/DrivetrainHealthPage.tsx",
+  "sourceLineCount": 175,
+  "coveredLineCount": 175,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-3 imports (useMemo/useTranslation/lucide Zap,Cpu,BatteryCharging): React useMemo kept; react-i18next -> native key/English-default `t` fallback (supports {{var}} for drivetrain.health.<status>); lucide glyphs -> SemanticIcon names (Zap->bolt, Cpu->cpu, BatteryCharging->batteryCharging) stored on TempSensor.icon.",
+    "L5-7 PageContainer/EmptyState/VehicleSelect/RangePicker imports: PageContainer -> ScrollView+header+ActivityIndicator scaffold; EmptyState -> native components/feedback/EmptyState (title+message); VehicleSelect -> native segmented pill group; RangePicker -> native preset (30D/90D/1Y) control. All reproduced in-file.",
+    "L9-17 hook + lib imports: useDrivetrainHealth/useDrives/useDrivingStats (useDriving), useMotorLatest/useMotorHistory (useVehicles) imported unchanged so every API path is preserved; useSelectedVehicle -> local first-vehicle state via useVehicles; useVehicleLive -> in-file useIsolationResistance over useVehicleLiveSignals (/signals/{id}/live), parsing only IsolationResistance; useUnits/usePageTitle/useDateFormat + convertDistance/Temp/SpeedFromSI inlined verbatim from @/hooks + @/lib.",
+    "L19-24 ./constants import (HEALTH_SCORE,TempSensor,ChartDataPoint,MotorChartDataPoint): inlined verbatim (HEALTH_SCORE good95/warning60/critical25; the three interfaces) since the native constants module is not yet a converted target.",
+    "L25-38 ./drivetrain-health barrel import of 12 siblings: the 2 CONVERTED siblings (HealthRecommendations, TemperatureTrendChart) are imported from their native paths; the other 10 (HealthOverview, HealthGaugeGrid, TemperatureGauges, TemperatureMetricCards, ThermalLoadPanel, LiveMotorStatus, StatorTempChart, TorqueHistoryChart, PowerOutputChart, DetailCards) are reproduced inline natively (CostAnalysisPage precedent).",
+    "L40-43 component decl + useTranslation + useDateFormat + usePageTitle: DrivetrainHealthPage default export; formatDateShort/formatTime from in-file useDateHelpers; usePageTitle (document.title) dropped, title shown in on-screen header.",
+    "L45-46 useSelectedVehicle -> vehicleId local state + vehicleIdStr (String(vehicleId)|undefined) preserved verbatim.",
+    "L48-56 defaultStartDate(-30d)/defaultEndDate + useUrlString('from'/'to') + useUrlBatch -> defaultStart/End memos + startDate/endDate local state + setRangeBatch({from,to}) preserved with identical names/semantics.",
+    "L58-63 data hooks: useDrivetrainHealth(vehicleIdStr), useDrives(vehicleIdStr), useDrivingStats(vehicleIdStr), useMotorLatest(vehicleId??0,5000), useMotorHistory(vehicleId??0,200), useVehicleLive(vehicleId??undefined).isolationResistance all reproduced; same args, same paths.",
+    "L65-68 useUnits + toDistanceDisplay/toSpeedDisplay/toTemperatureDisplay: in-file useUnits derives distance/speed/temperature prefs from useSettings (mi/F) exactly as web; the three SI converters kept verbatim.",
+    "L70-71 overallHealth (health?.overallHealth ?? 'good') + healthScore = HEALTH_SCORE[overallHealth]: preserved verbatim.",
+    "L73-81 sensors memo: 4 TempSensor entries (frontMotor/rearMotor/inverter/battery) with value/maxTemp(150/150/120/60)/color/icon preserved; lucide JSX icon -> SemanticIconName.",
+    "L83-104 chartData memo: date-range filter on startTs, sort asc, slice(-30), map to {date:formatDateShort, powerMax:(avgPowerW??0)/1000, powerMin:0, outsideTemp:outsideTempAvgC??null, distance:toDistanceDisplay(distanceM)} preserved verbatim incl. the readability comment.",
+    "L106 tempTrendData = chartData.filter(outsideTemp!==null): preserved.",
+    "L108-121 avgPowerMax / peakPower / minRegenPower memos (reduce avg, Math.max powerMax, Math.min powerMin) preserved verbatim.",
+    "L123-135 motorChartData memo: maps motorHistory snapshots to {time:formatTime, stator/statorRel/statorRer:toTemperatureDisplay of motor_temp_c_front/rear & inverter_temp_c, torque:torque_nm_front??rear, speed:null (with unused-by-charts comment), axle:motor_rpm_front??rear} preserved verbatim incl. toSpeedDisplay dep.",
+    "L137-154 PageContainer(title/subtitle/loading/error/actions=VehicleSelect+RangePicker): reproduced as ScrollView header (title/subtitle) + actions row; healthLoading -> ActivityIndicator gate; error={null} has no surface.",
+    "L155-169 health ? <>...12 sections...</> : the conditional renders HealthOverview, HealthGaugeGrid, TemperatureGauges, TemperatureMetricCards, ThermalLoadPanel, {motorLatest && LiveMotorStatus}, StatorTempChart, TorqueHistoryChart, TemperatureTrendChart, PowerOutputChart, HealthRecommendations, DetailCards in the same order with identical props.",
+    "L170-172 EmptyState message={drivetrain.noData}: native EmptyState requires title+message, so the web key is the message and a drivetrain.empty.title heading is added (CostAnalysisPage precedent).",
+    "L173-175 PageContainer close + export: ScrollView close + default export.",
+    "Sub-component fidelity: HealthOverview alert+panel+badge+score; HealthGaugeGrid RadialGauge+2 KVLists+Skeleton(stats); TemperatureGauges 4 RadialGauges+max caption; TemperatureMetricCards 6 MetricChips (tempNeonColor tint); ThermalLoadPanel 4 MetricBars+4 InlineMetrics (regenRatio*100); LiveMotorStatus 4 StatBoxes+9 InlineMetrics+isolation color thresholds (500/100) or EmptyState; StatorTempChart 3 temp series + Normal/Warm ref lines; TorqueHistoryChart torque series + 0 ref + torque-present guard; PowerOutputChart powerMax/powerMin + 0 ref (useHiddenSeries declutter dropped, both series shown); DetailCards Temperature Details + Power Summary KVLists incl formatEnergy(regenEnergyWh,{precision:1}). All data.length<=1 chart null-guards preserved.",
+    "Charts: Recharts Line/Area trees replaced by ChartContainer + hand-drawn native dot/grid/reference-line trace (converted TemperatureTrendChart idiom); ChartContainer owns the accessible data table via data+dataColumns.",
+    "Inlined formatters: convertDistance/Speed/Temp/EnergyFromSI, formatTemperatureWith (DEFAULT precision 1), formatEnergyWith (precision 2), fmtNumber/fmtInt (safeNumber + en-US grouping), resolvePrecision, displayTemp, tempSeverityColor, tempNeonColor, healthBadgeTone — verbatim from @/lib/unitConversion, @/lib/numberFormat and ./helpers.",
+    "No DOM, Recharts, Leaflet, framer-motion, lucide-react, or old web UI components are imported; only React Native primitives + native web-parity components/hooks/tokens."
+  ]
+}
