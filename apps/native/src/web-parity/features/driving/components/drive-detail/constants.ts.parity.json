@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/constants.ts",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/constants.ts",
+  "sourceLineCount": 8,
+  "coveredLineCount": 8,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 8 source lines: the 5-line SI-unit comment block (lines 1-5) and the three exported constants (lines 6-8) were each considered and ported verbatim.",
+    "Preserved the SI (m/s) speed-segment thresholds SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, and SPEED_SEGMENT_HIGH_MPS with identical 30/60/100 * 0.44704 m/s values, keeping unit handling and the route-legend display-conversion intent documented in the comment.",
+    "Source is non-visual constant code with no imports; the native output adds none, so it imports no DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components.",
+    "No browser-only behavior, no unavailable state, and no React Native primitives were required for this pure numeric-constant module."
+  ]
+}
