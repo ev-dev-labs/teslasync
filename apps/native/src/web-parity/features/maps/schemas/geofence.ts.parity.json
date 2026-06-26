@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/features/maps/schemas/geofence.ts",
+  "outputPath": "apps/native/src/web-parity/features/maps/schemas/geofence.ts",
+  "sourceLineCount": 70,
+  "coveredLineCount": 70,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing; this is non-visual Zod schema/type/util code with no DOM, browser HTML, Recharts, Leaflet, or web UI dependencies.",
+    "L1-7 header JSDoc ported and adapted: the only web reference ('<input type=\"number\">' strings) is restated as the React Native numeric TextInput equivalent while preserving the original intent that lat/lng/radius arrive as strings; POST /api/v1/geofences path preserved.",
+    "L9 'import { z } from zod' kept verbatim — zod is a pure-TypeScript, DOM-free, RN-compatible library; installed zod@^3.25.76 in apps/native to match web's version exactly, preserving the geofenceFormSchema API surface for downstream parity.",
+    "L11-13 GEOFENCE_ALERT_TYPES const tuple ('entry','exit','both','none') and GeofenceAlertType derived type ported verbatim.",
+    "L15-24 numericString helper ported verbatim: trim, min(1) required message, NaN refine message, and min/max range refine message all preserved character-for-character.",
+    "L26-42 geofenceFormSchema ported verbatim: name (trim/min1/max120 messages), latitude (-90..90), longitude (-180..180), radius (10..50000), alertType enum, enabled boolean.",
+    "L44 GeofenceFormData = z.infer<typeof geofenceFormSchema> preserved.",
+    "L46-55 GeofencePayload interface (name, latitude, longitude, radius, alertOnEntry, alertOnExit, enabled) preserved exactly.",
+    "L57-70 toGeofencePayload ported verbatim: alertOnEntry/alertOnExit derivation from alertType ('entry'|'both' and 'exit'|'both'), Number() coercion of coords/radius, and field mapping unchanged.",
+    "Verified gates from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
