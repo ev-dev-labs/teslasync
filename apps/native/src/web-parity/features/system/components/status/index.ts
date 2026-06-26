@@ -11,11 +11,11 @@
  * This barrel preserves that identical public export surface — all twenty-two
  * identifiers, in source order.
  *
- * BackgroundWorkersCard already has a dedicated native port in this directory,
- * so it is re-exported verbatim from './BackgroundWorkersCard'. The remaining
- * twenty-one web siblings are Tailwind/web-UI panels, DOM forms, Recharts charts
- * or lucide-react/router cards that have not yet been ported to their own native
- * files, so this barrel exposes native-safe placeholder components that render an
+ * BackgroundWorkersCard and SubscribeCard already have dedicated native ports in
+ * this directory, so they are re-exported verbatim from their own files. The
+ * remaining twenty web siblings are Tailwind/web-UI panels, DOM forms, Recharts
+ * charts or lucide-react/router cards that have not yet been ported to their own
+ * native files, so this barrel exposes native-safe placeholder components that render an
  * explicit "native port pending" state through the shared GlassPanel + AppText
  * primitives instead of importing any browser-only module (no DOM, Recharts,
  * Leaflet, react-router-dom, or web UI). StatusPageSkeleton — whose whole job is
@@ -207,7 +207,7 @@ export const ScheduledMaintenanceCard: PlaceholderComponent<
   ScheduledMaintenanceCardProps
 > = () => renderPlaceholder('Scheduled maintenance');
 
-export const SubscribeCard = (): ReactElement => renderPlaceholder('Subscribe');
+export { SubscribeCard } from './SubscribeCard';
 
 export const SLOTrackingCard = (): ReactElement =>
   renderPlaceholder('SLO tracking');
