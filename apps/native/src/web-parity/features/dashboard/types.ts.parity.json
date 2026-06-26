@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/features/dashboard/types.ts",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/types.ts",
+  "sourceLineCount": 145,
+  "coveredLineCount": 145,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the 145-line source file line by line before editing; it is a pure non-visual TypeScript type-definition module with no imports.",
+    "Ported every exported interface verbatim (Vehicle, VehicleState, FleetAnalytics, Alert, Drive, ChargingSession, MotorData, ClimateData, SecurityData, TirePressureData, MediaData, LocationData) preserving all field names, nullability, optional markers, and the SI/legacy unit suffixes (distance_m, duration_s, *_mps, *_w, *_wh, miles_to_arrival, minutes_to_arrival, duration_min).",
+    "No DOM, browser HTML, Recharts, Leaflet, or web UI modules are referenced, so the file is React Native-compatible as-is; no native-safe stubbing was required.",
+    "Preserved the leading dashboard-feature header comment and the dual startedAt/started_at and cost/cost_decimal compatibility fields so API-response parity with the web feature is maintained."
+  ]
+}
