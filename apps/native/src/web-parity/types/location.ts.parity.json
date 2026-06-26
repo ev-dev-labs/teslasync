@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/types/location.ts",
+  "outputPath": "apps/native/src/web-parity/types/location.ts",
+  "sourceLineCount": 22,
+  "coveredLineCount": 22,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. The file is pure non-visual TypeScript wire-type code for the saved-location & geofence domain with zero imports and no DOM/React/Recharts/Leaflet/browser deps, so both exported interfaces are ported 1:1 with identical names, members, types, optionality, and verbatim camelCase field names (contract rules 3 & 6). A short native-parity-port header precedes the ported declarations.",
+    "Location interface (source L1-9): id: string, addressName: string, latitude: number, longitude: number, visitCount: number, totalDurationS: number (SI-canonical seconds, kept as-is per the SI-cutover contract), lastVisited: string | null — all 7 members ported exactly including the nullable lastVisited.",
+    "Geofence interface (source L11-22): id: string, name: string, latitude: number, longitude: number, radius: number, alertOnEntry: boolean, alertOnExit: boolean, enabled: boolean, costPerKwh: number | null, createdAt: string — all 10 members ported exactly including the nullable costPerKwh.",
+    "Source L10 (blank separator between the two interfaces) and L22 (trailing newline) are accounted for as structural whitespace; no logic, unit conversion, i18n, or runtime behavior exists to adapt for React Native — interfaces are erased at compile time and add zero DOM coupling. camelCase member names are preserved verbatim to keep parity with the web type so consuming native hooks/screens reference identical fields.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) PASS, npm run lint -- --quiet PASS, npm test -- --runInBand --detectOpenHandles PASS."
+  ]
+}
