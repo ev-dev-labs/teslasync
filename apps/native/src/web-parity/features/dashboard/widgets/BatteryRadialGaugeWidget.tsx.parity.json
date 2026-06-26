@@ -1,0 +1,26 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/BatteryRadialGaugeWidget.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/BatteryRadialGaugeWidget.tsx",
+  "sourceLineCount": 125,
+  "coveredLineCount": 125,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-8 imports: useMemo retained (plus useCallback/useEffect/useRef/useState for the inlined WidgetShell + i18n fallback); react-i18next useTranslation('dashboard') -> useNativeTranslationFallback (namespace kept as I18N_NAMESPACE, every i18n key preserved, English fallbacks returned); lucide Battery -> repo SemanticIcon 'battery' glyph (BATTERY_GLYPH); @/components/feedback EmptyState, ./WidgetShell and ./shared WidgetGaugeHero+GaugeHeroStat and ./types WidgetProps inlined as native-safe parity; useVehicles/useVehicleState imported from the native api hooks with the same names. The gauge itself reuses the existing native parity <RadialGauge> from the charts barrel ('../../../components/charts').",
+    "L10 STROKE_WIDTH = 8 ported verbatim and shared by the ChargeLimitRing geometry.",
+    "L12-16 getBatteryColor(level) ported verbatim: >50 -> #10b981 green, >20 -> #f59e0b amber, else #ef4444 red.",
+    "L18-47 ChargeLimitRing({value,max,gaugeSize}) keeps the same radius=(gaugeSize-STROKE_WIDTH)/2, center, clamp(0..max) and fraction math. React Native has no SVG stroke-dash, so the thin SVG arc (stroke rgba(255,255,255,0.25)) is reproduced with positioned native Views: a faint full-ring border overlay (same colour intent) plus a brighter marker placed at the charge-limit angle (-90 + fraction*360deg) — the end of the web arc — to convey the limit position on the gauge. Overlay is absolutely centred over the gauge (left:'50%' + negative marginLeft) at top:0.",
+    "L49-53 default export ({vehicleId,size}: WidgetProps) ported: useVehicles(), id = vehicleId ?? vehicles?.[0]?.id ?? 0, useVehicleState(id) destructured identically (data:stateData/isLoading/isFetching/isStale/isError/dataUpdatedAt/refetch).",
+    "L54 state = stateData?.state: the native hook types state as VehicleState|string|null, so it is narrowed to the VehicleState object via `typeof === 'object'`; truthiness for the render branch and the property reads match the web `any` behaviour for the realistic object payload (battery 0 / no charging / no ring when absent).",
+    "L56-57 isCompact (cols===1 && rows===1) and isLarge (cols>=2 && rows>=2) ported verbatim.",
+    "L59 batteryLevel = state?.battery_level ?? 0 ported.",
+    "L60-61 chargeLimitSoc via (state as Record<string,unknown>|undefined)?.charge_limit_soc as number|undefined ported verbatim (extended-payload field not on the VehicleState interface).",
+    "L63 color useMemo (state ? getBatteryColor(batteryLevel) : '#374151', deps [state, batteryLevel]) ported.",
+    "L65 gaugeSize = isCompact ? 70 : 100 ported (matches the WidgetGaugeHero internal RadialGauge size so the ChargeLimitRing aligns).",
+    "L67-75 stats useMemo ported verbatim: [{level,'%'}], pushing {chargeLimit,'%'} only when chargeLimitSoc != null; same i18n keys (widget.level/widget.chargeLimit) and deps [t, batteryLevel, chargeLimitSoc].",
+    "L77-87 WidgetShell props ported: conditional title (widget.batteryRadial) and battery icon hidden when isCompact, loading=isLoading, updatedAt=dataUpdatedAt, isFetching/isStale/isError forwarded, onRefresh=()=>refetch(). The inlined WidgetShell reproduces the consumed web behaviour: loading -> ActivityIndicator, error -> danger caption, conditional title header with icon (11px uppercase muted), title-less freshness overlay, the justUpdated pulse effect (prevUpdatedAt ref + 1500ms timeout) ported verbatim, and a compact DataFreshness pill (status dot error/fetching/stale/fresh + relative 'updated' caption) consuming every freshness prop with refresh-on-press.",
+    "L88-122 body: centred column (h-full flex flex-col items-center justify-center gap-1 -> styles.body); state ? (relative wrapper -> inlined WidgetGaugeHero(compact=isCompact, gauge={value,max:100,label:isCompact?'':Battery,unit:'%',color}, stats=isLarge?stats:undefined) with the ChargeLimitRing child rendered only when chargeLimitSoc != null, plus the is_charging '⚡ Charging' line) : EmptyState(battery glyph, widget.noBattery 'No battery data'). WidgetGaugeHero reuses the barrel RadialGauge and gates stats/children behind !compact exactly like the web; animate-pulse has no native runtime so the charging line renders statically (text-emerald-300 -> colors.success).",
+    "L123-125 closing tags ported.",
+    "No DOM, no react-i18next, no lucide-react, no Recharts/SVG, no Leaflet, no framer-motion and no web UI components imported — only RN primitives plus existing apps/native components (RadialGauge, AppText, SemanticIcon), tokens and native hooks.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint), npm test -- --runInBand --detectOpenHandles (jest) — all pass."
+  ]
+}
