@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/telemetry-panels/InfoTile.tsx",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/telemetry-panels/InfoTile.tsx",
+  "sourceLineCount": 32,
+  "coveredLineCount": 32,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 32 numbered source lines before editing.",
+    "L1 `import { cn } from '@/lib/cn'` -> DROPPED: the clsx/tailwind-merge class helper has no React Native analog (rule 4/6). Its only dynamic input was the `color` prop, which is now resolved to a native colour by the local `resolveValueColor` map instead of being merged into a className.",
+    "L2 `import { GlassPanel } from '@/components/ui'` -> native GlassPanel from ../../../../../components/ui/GlassPanel (5-level depth, identical to the sibling IconStatCard / HighlightCard ports). AppText (../../../../../components/ui/AppText) + theme colors (../../../../../theme/tokens) added for the text primitives.",
+    "L3 blank line -> preserved as import-group separation.",
+    "L4-10 InfoTileProps reproduced field-for-field: icon (L5) `React.ElementType` -> `ComponentType<{color?: string; size?: number}>` (the renderable contract a lucide icon satisfies; lucide-react is browser-only and forbidden in native output, rule 4 — the IconStatCard precedent); label: string (L6), value: string | number | boolean (L7), color?: string (L8), sub?: string (L9) verbatim; closing brace (L10) preserved.",
+    "L11 blank line -> preserved between the interface and the component.",
+    "L12-18 `export function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: InfoTileProps)` -> identical named export + `icon: Icon` rename + destructure with the SAME default `color = 'text-[var(--text-primary)]'` (L16) verbatim; typed `: React.ReactElement` and `InfoTile.displayName` added per the named-export parity convention.",
+    "L19 `const display = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value` -> preserved verbatim (with a trailing semicolon). 'Yes'/'No' are hardcoded English in the source (no i18n/t() call), so the i18n intent is faithfully none and they are kept as literals.",
+    "L20 `return (` -> preserved.",
+    "L21 `<GlassPanel className=\"p-4 overflow-hidden\">` -> `<GlassPanel style={styles.panel}>`: p-4 -> padding 16; overflow-hidden -> overflow 'hidden' (clips the truncated children to GlassPanel's rounded border, the web overflow-hidden intent).",
+    "L22 `<div className=\"flex items-center gap-2 text-[var(--text-muted)] text-xs mb-1.5 min-w-0\">` -> `<View style={styles.header}>`: flex items-center -> flexDirection row + alignItems center; gap-2 -> gap 8; mb-1.5 -> marginBottom 6; text-[var(--text-muted)] -> applied to the icon colour + the label tone='muted'; text-xs -> label fontSize 12; min-w-0 -> the label's flexShrink 1 (lets it shrink so truncate works).",
+    "L23 `<Icon className=\"h-3.5 w-3.5 shrink-0\" />` -> `<Icon color={colors.textMuted} size={14} />`: h-3.5 w-3.5 -> size 14 (ICON_SIZE); the icon has no explicit web colour so it inherits the header's text-[var(--text-muted)] currentColor -> color={colors.textMuted}; shrink-0 is implicit (the fixed-size native glyph does not flex-shrink).",
+    "L24 `<span className=\"truncate\">{label}</span>` -> `<AppText style={styles.label} tone=\"muted\" numberOfLines={1}>{label}</AppText>`: truncate -> numberOfLines 1 (ellipsised); text-xs -> fontSize 12 / lineHeight 16; --text-muted (inherited from L22) -> tone 'muted'; flexShrink 1 makes it truncate within the row (min-w-0).",
+    "L25 `</div>` -> closing </View> of the header row.",
+    "L26 `<p className={cn('text-lg font-semibold truncate', color)} title={String(display)}>` -> `<AppText style={[styles.value, {color: resolveValueColor(color)}]} numberOfLines={1}>`: text-lg -> fontSize 18 / lineHeight 28; font-semibold -> fontWeight '600'; truncate -> numberOfLines 1; the cn-merged `color` Tailwind class -> resolveValueColor(color) native colour applied inline (emerald/amber/rose-300 -> #6ee7b7/#fcd34d/#fda4af, the --text-primary/secondary/muted CSS vars + toned-down palette, default textPrimary). `title={String(display)}` is a DOM hover tooltip with no touch-RN analog -> dropped (value already renders; truncation handles overflow).",
+    "L27 `{display}` -> rendered inside the value AppText (RN Text accepts the string|number `display`).",
+    "L28 `</p>` -> closing </AppText> of the value.",
+    "L29 `{sub && <p className=\"text-[10px] text-[var(--text-muted)] mt-0.5\">{sub}</p>}` -> `{sub ? <AppText style={styles.sub} tone=\"muted\">{sub}</AppText> : null}`: text-[10px] -> fontSize 10 / lineHeight 14; --text-muted -> tone 'muted'; mt-0.5 -> marginTop 2. The `sub &&` short-circuit becomes the explicit `sub ? ... : null` ternary (RN cannot render a bare falsy/string outside <Text>), preserving the conditional-render behaviour.",
+    "L30 `</GlassPanel>` -> preserved.",
+    "L31 `)` -> preserved.",
+    "L32 `}` (function close) -> preserved.",
+    "No DOM/cn/lucide-react/Recharts/Leaflet/old web-UI imported; only React Native primitives (View/StyleSheet/Text-via-AppText), the native GlassPanel/AppText, and theme tokens are used. Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
