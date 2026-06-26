@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/features/admin/components/live-signal-inspector/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/live-signal-inspector/index.ts",
+  "sourceLineCount": 1,
+  "coveredLineCount": 1,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the single source line with its line number before porting. web L1 is a pure re-export barrel: `export { LiveSignalsTable } from './LiveSignalsTable';`. The native port keeps it a pure barrel and imports no DOM modules, browser HTML elements, Recharts, Leaflet, or old web UI components.",
+    "The one exported symbol, LiveSignalsTable (web L1), maps to a sibling module that has NOT yet been ported into the native parity tree (apps/native/src/web-parity/features/admin/components/live-signal-inspector contained no LiveSignalsTable, and the table's DataTable/Input/useSortToggle/Column/TimeStamp building blocks are likewise unported). Re-exporting it would point at a missing file and break `tsc --noEmit`, so per the established native-barrel convention it is enumerated in nativeLiveSignalInspectorBarrelCapabilities.pending.exports with a shared NATIVE_LIVE_SIGNAL_INSPECTOR_PENDING_REASON, giving an explicit unavailable state that keeps the source public API documented and discoverable. This mirrors the native feedback barrel (nativeFeedbackBarrelCapabilities) and charts barrel (nativeChartsBarrelCapabilities).",
+    "No native consumer currently imports LiveSignalsTable / live-signal-inspector (verified by grep across apps/native/src), so deferring the symbol breaks nothing; the web consumer LiveSignalInspectorPage.tsx is a separate, not-yet-ported file. When the loop converts LiveSignalsTable this barrel will be revisited and the symbol promoted from `pending` to a live re-export, exactly as Skeleton was promoted in the native feedback barrel.",
+    "The barrel carries no behavior, state names, API paths, unit handling, or i18n strings of its own beyond module re-export wiring, so there is nothing runtime to preserve; the deferred re-export is faithfully reproduced as an explicit pending capability record. The trailing newline carries no export and needs no port."
+  ]
+}
