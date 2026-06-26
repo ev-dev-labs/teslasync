@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/i18n/index.ts",
+  "outputPath": "apps/native/src/web-parity/i18n/index.ts",
+  "sourceLineCount": 28,
+  "coveredLineCount": 28,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 28 source lines line by line before editing; i18next/react-i18next (L1-2) and the @/lib/i18nDir DOM helper (L3) are unavailable on React Native, so the native output reimplements the i18next surface the app uses and inlines a native-safe direction helper instead of importing the DOM-only modules.",
+    "Preserved the i18n intent: the three resource registrations ar/en/he (L4-6, L10-12) become native resource constants registered through init; lng 'en' (L14), fallbackLng 'en' (L15), and interpolation.escapeValue false (L16) are applied verbatim onto the native singleton options.",
+    "The web boot side effects are mirrored 1:1: chainable use(initReactI18next).init({...}) (L8-17), applyDocumentDirection(i18n.language) on boot (L23), and the languageChanged listener that re-applies direction (L24-26); export default i18n is preserved (L28).",
+    "Browser-only behavior is replaced with explicit native-safe adaptations: <html dir>/<html lang> (L19-22 wiring) is applied through React Native I18nManager.allowRTL/forceRTL guarded by try/catch, and the 397 KB web en.json table is not bundled — English defaults resolve via t(key, defaultValue) per the established native parity convention. No DOM modules, browser HTML, Recharts, Leaflet, or web UI components are imported."
+  ]
+}
