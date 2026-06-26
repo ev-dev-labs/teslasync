@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/features/admin/components/security-access/SentryModeChart.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/security-access/SentryModeChart.tsx",
+  "sourceLineCount": 78,
+  "coveredLineCount": 78,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 78 source lines line by line before editing. Imports L1-18 (react-i18next, lucide-react Activity, GlassPanel, ChartTooltip, EmptyState, FadeIn, the eight Recharts primitives, formatDateShort, and the SentryDayBucket type) were each mapped to a React Native-safe equivalent and documented in the header comment.",
+    "L20-25 contract preserved: the SentryModeChartProps { sentryBuckets: SentryDayBucket[] } interface, the exported SentryModeChart({ sentryBuckets }) signature, the prop name sentryBuckets, and the useTranslation hook (inlined as useNativeTranslation returning the English fallback). SentryDayBucket {date, sentryOn, sentryOff} is declared locally because the native security-access helpers are not yet ported.",
+    "L27-32 FadeIn delay={0.2} -> Animated.View opacity 0->1 with a 200ms delay; GlassPanel p-4 mb-6 -> native GlassPanel with padding/marginBottom tokens; the <h2> text-lg/font-semibold/text-gray-200 title -> AppText (body/semibold/secondary) with t('admin.security.sentryChart','Sentry Mode Activity').",
+    "L33-67 the sentryBuckets.length>0 BarChart branch -> native stacked-bar visualization: ResponsiveContainer/BarChart/CartesianGrid/XAxis/YAxis/Tooltip/Legend/Bar are reproduced with View/ScrollView/AppText. sentryOn (#3b82f6) and sentryOff (#6b7280) keep their exact web fills, stackId 'sentry' -> stacked segments, radius [4,4,0,0] -> rounded top corners on the topmost segment, allowDecimals=false -> integer y-axis max/0 ticks, XAxis tickFormatter formatDateShort -> inline native 'MMM d' formatter, and the Legend names use t('admin.security.chart.sentryOn'/'sentryOff').",
+    "L68-74 the title-less EmptyState (Activity icon opacity-20 + t('common.noData','No data available') + py-8) -> inline centred SemanticIcon 'activity' dimmed to opacity 0.2 plus a muted AppText, because the native EmptyState requires a title; py-8 maps to a paddingVertical token. L75-78 closing JSX/function preserved as the native return tree.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI components are imported; only react, react-native primitives, and existing apps/native SemanticIcon/AppText/GlassPanel/theme tokens are used."
+  ]
+}
