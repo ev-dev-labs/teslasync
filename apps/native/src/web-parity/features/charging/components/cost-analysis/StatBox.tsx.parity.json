@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/charging/components/cost-analysis/StatBox.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/cost-analysis/StatBox.tsx",
+  "sourceLineCount": 25,
+  "coveredLineCount": 25,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 25 source lines (numbered) before editing.",
+    "L1 `import type { ReactNode } from 'react'` -> kept as `import React, {type ReactNode} from 'react'` (React added for the RN JSX runtime, matching the HighlightCard/SummaryStatsGrid precedent); `icon` stays a `ReactNode`.",
+    "L2 `import { GlassPanel } from '@/components/ui'` -> native GlassPanel from ../../../../../components/ui/GlassPanel (same 5-level depth as the sibling charging-curve ports). AppText + theme tokens (colors/spacing) added for the text/styling primitives.",
+    "L3 blank line -> preserved as import-group separation.",
+    "L4-10 StatBoxProps interface reproduced verbatim: icon: ReactNode (L5), label: string (L6), value: string (L7), sub?: string (L8), glow?: 'cyan' | 'green' | 'purple' (L9). The closing brace (L10) preserved.",
+    "L11 blank line -> preserved between the interface and the component.",
+    "L12 `export function StatBox({ icon, label, value, sub, glow }: StatBoxProps)` -> identical named export + destructure (typed `: React.ReactElement`).",
+    "L13 `return (` -> preserved.",
+    "L14 `<GlassPanel glow={glow ?? 'none'} hover className=\"p-4\">` -> `<GlassPanel style={[styles.panel, glowStyles[glow ?? 'none']]}>`: the `glow ?? 'none'` fallback preserved verbatim; `hover` dropped (no hover on a touch surface) and the hover-only glow applied STATICALLY as the exact web glowClasses shadow (rgba(34,211,238/74,222,128/192,132,252,0.1) at 15px blur -> shadowColor #22d3ee/#4ade80/#c084fc, shadowOpacity 0.1, shadowRadius 15), the HighlightCard precedent; className='p-4' -> styles.panel padding 16.",
+    "L15 `<div className=\"flex items-start gap-3\">` -> `<View style={styles.row}>` (flexDirection row, alignItems flex-start, gap spacing.md=12 for gap-3).",
+    "L16 `<div className=\"rounded-lg bg-[var(--surface-2)] p-2\">{icon}</div>` -> `<View style={styles.iconBox}>{icon}</View>`: rounded-lg -> borderRadius 8, bg-[var(--surface-2)] -> colors.surfaceRaised (the established --surface-2 inner-chip mapping per TagInput), p-2 -> padding spacing.sm=8; {icon} rendered inline unchanged.",
+    "L17 `<div className=\"min-w-0 flex-1\">` -> `<View style={styles.content}>` (flex 1 for flex-1, minWidth 0 for min-w-0).",
+    "L18 `<p className=\"truncate text-xs text-[var(--text-muted)]\">{label}</p>` -> `<AppText numberOfLines={1} tone=\"muted\" variant=\"caption\">{label}</AppText>`: truncate -> numberOfLines 1, text-xs -> caption (12px), text-[var(--text-muted)] -> tone muted.",
+    "L19 `<p className=\"mt-0.5 text-lg font-semibold text-white\">{value}</p>` -> `<AppText style={styles.value} weight=\"semibold\">{value}</AppText>`: mt-0.5 -> marginTop 2, text-lg -> fontSize 18, font-semibold -> weight semibold, text-white -> AppText default primary tone (the parity text-white convention).",
+    "L20 `{sub && <p className=\"mt-0.5 text-xs text-[var(--text-muted)]\">{sub}</p>}` -> `{sub ? <AppText style={styles.sub} tone=\"muted\" variant=\"caption\">{sub}</AppText> : null}`: behaviour-preserving ternary (RN cannot render a bare '' outside <Text>, so `sub &&` is hardened to `sub ? : null`); mt-0.5 -> marginTop 2, text-xs -> caption, text-muted -> tone muted.",
+    "L21 `</div>` (content column close) -> `</View>`.",
+    "L22 `</div>` (row close) -> `</View>`.",
+    "L23 `</GlassPanel>` -> preserved.",
+    "L24 `)` -> preserved.",
+    "L25 `}` (function close) -> preserved; StatBox.displayName = 'StatBox' added for parity with the other named-export parity components.",
+    "No DOM/Recharts/Leaflet/old web UI imported; only React Native primitives (View/StyleSheet), the native GlassPanel/AppText, and theme tokens are used.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
