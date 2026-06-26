@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-curve/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-curve/helpers.ts",
+  "sourceLineCount": 69,
+  "coveredLineCount": 69,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the web source line by line. This is a non-visual pure-logic/types utility module — every exported function is platform-agnostic TypeScript and is ported verbatim; no DOM, Recharts, Leaflet, framer-motion, lucide-react, or web UI imports exist or were introduced.",
+    "Imports L1-4: `import type { ChargingSession } from '@/api/types'` (L1) -> relative `../../../../api/types` (the converted native api/types already exports ChargingSession with all consumed fields: charger_type, peak_power_w, start_odometer_m, end_odometer_m, started_at, total_energy_added_wh, start_soc_pct, end_soc_pct). `formatDateShort` from @/lib/dateFormat (L2) and `fmtNumber` from @/lib/numberFormat (L3) -> inlined native-safe mirrors (those lib modules are not converted native targets yet, matching the established ChargingTab/EnergyFlowPage inlining pattern): fmtNumber reproduces toLocaleString(min/maxFractionDigits) with an en-US + toFixed fallback and a safe() nullish/non-finite->0 coercion (web safeNumber); formatDateShort reproduces the toLocaleDateString({month:'short',day:'numeric'}) device-locale output with the em-dash fallback for nullish/NaN. `import type { CurvePoint } from './types'` (L4) -> inlined `export interface CurvePoint { soc; power }` because the sibling ./types module is not a converted native target yet.",
+    "isDcSession L6-8: ported verbatim — truthiness of charger_type OR peak_power_w > 20_000. getChargerLabel L10-16: ported verbatim — Tesla/supercharger detection via charger_type === 'Tesla' or .toLowerCase().includes('tesla'), 'DC Fast' for any charger_type or peak_power_w > 20_000, else 'Home / AC'. durationMinutes L18-24: ported verbatim — Date.getTime() diff, Number.isFinite guards, end<=start -> 0, Math.round((end-start)/60000).",
+    "distanceAddedM L26-30: ported verbatim — null odometer guard, end-start delta, positive-only. sessionLabel L32-37: ported verbatim — formatDateShort(started_at) + getChargerLabel + total_energy_added_wh/1000 via fmtNumber(...,1) (else '?'), `${date} — ${label} — ${energy} kWh` template preserved. generateChargingCurve L39-65: JSDoc (L39) and full DC taper simulation (start_soc_pct??0, end_soc_pct??100, (peak_power_w??11_000)/1000, soc loop with <=50 flat / <=80 0.5 taper / >80 0.5*0.7 drop, Math.max(power,0)) ported verbatim. avg L67-69: ported verbatim — length-guarded reduce mean. L5/9/17/25/31/38/66 are blank separators; trailing L69 newline preserved.",
+    "Verified with cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
