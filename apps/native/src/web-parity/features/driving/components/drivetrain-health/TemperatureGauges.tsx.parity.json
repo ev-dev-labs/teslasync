@@ -1,0 +1,32 @@
+{
+  "sourcePath": "web/src/features/driving/components/drivetrain-health/TemperatureGauges.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drivetrain-health/TemperatureGauges.tsx",
+  "sourceLineCount": 53,
+  "coveredLineCount": 53,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 useTranslation -> inline useNativeTranslation() shim; t(key, fallback) returns fallback verbatim (drivetrain.tempGauges, sensor.labelKey/defaultLabel, drivetrain.maxLabel all preserved).",
+    "L2 lucide-react Thermometer -> decorative Unicode glyph '\\u{1F321}' in an AppText with importantForAccessibility=\"no\" (ClimateStatusWidget precedent for this exact icon); DOM/SVG icon lib not imported.",
+    "L4 GlassPanel from @/components/ui -> native parity components/ui/GlassPanel (translucent bordered surface).",
+    "L5 Grid from @/components/layout -> inline native Grid (onLayout width measure, Tailwind breakpoints default 2 / md>=768 -> 4, flex-wrap row, computed cell widths, gap-6 -> 24px).",
+    "L6 FadeIn from @/components/motion (framer-motion) -> inline native Animated FadeIn (opacity+slide-up, reduce-motion-aware), delay={0.15} preserved (seconds->ms).",
+    "L7 RadialGauge from @/components/charts/RadialGauge -> native parity RadialGauge (same value/max/label/unit/color API).",
+    "L8 useUnits from @/hooks/useUnits -> inline native useUnits() shim returning out-of-box temperature '°C' (useMemo-stable).",
+    "L9 fmtNumber from @/lib/numberFormat -> inline native-safe fmtNumber (toLocaleString, precision-2 / en-US defaults).",
+    "L11 type TempSensor from ./constants -> inlined local interface (key/labelKey/defaultLabel/value:number|null/maxTemp/color/icon:ReactNode).",
+    "L12 tempSeverityColor from ./helpers -> inlined port with its HEALTH_COLOR dependency; null -> '#6b7280', ratio>=0.85 critical, >=0.65 warning, else good; computed on raw SI Celsius (sensor.value/maxTemp), not display values.",
+    "L13 convertTempFromSI from @/lib/unitConversion -> inlined port (°C identity, °F (c*9/5)+32) with default case for TS exhaustiveness.",
+    "L15-17 TemperatureGaugesProps { sensors: TempSensor[] } preserved.",
+    "L19-24 component signature + derived toTemperatureDisplay and tempUnit names preserved exactly.",
+    "L26-27 FadeIn delay={0.15} wrapper preserved.",
+    "L28 GlassPanel className=\"p-6\" -> style padding 24.",
+    "L29-32 h3 (text-sm font-medium uppercase tracking-wider text-muted) + inline Thermometer -> headingRow View (mb-4 -> marginBottom 16, mr-2 -> gap 8) with decorative Glyph (16px) + AppText accessibilityRole=\"header\", muted tone, style fontSize 14 / fontWeight 500 / letterSpacing 1 / uppercase.",
+    "L33 Grid cols={{ default: 2, md: 4 }} gap={6} preserved (gap*4 -> 24px).",
+    "L34-35 sensors.map keyed by sensor.key; div flex flex-col items-center -> View sensorCell (alignItems center).",
+    "L36-42 RadialGauge props preserved: value = sensor.value !== null ? toTemperatureDisplay(sensor.value) : 0, max = toTemperatureDisplay(maxTemp), label = t(labelKey, defaultLabel), unit = tempUnit, color = tempSeverityColor(value, maxTemp).",
+    "L43-46 p (mt-2 text-xs text-muted) -> AppText caption muted, marginTop 8, textAlign center, content 'Max: <fmtNumber(display maxTemp,0)><tempUnit>' (JSX whitespace collapse means no space before unit, preserved).",
+    "L49-53 closing Grid/GlassPanel/FadeIn and component end; added TemperatureGauges.displayName for parity with sibling HealthGaugeGrid.",
+    "No DOM elements, Recharts, Leaflet, framer-motion, lucide, or web UI components imported; only RN primitives + existing native AppText/GlassPanel/RadialGauge + theme spacing token.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
