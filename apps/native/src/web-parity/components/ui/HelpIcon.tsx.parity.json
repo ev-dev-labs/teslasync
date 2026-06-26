@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/components/ui/HelpIcon.tsx",
+  "outputPath": "apps/native/src/web-parity/components/ui/HelpIcon.tsx",
+  "sourceLineCount": 107,
+  "coveredLineCount": 107,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 107-line numbered source before editing. Covered: imports (L1 KeyboardEvent type, L2 useTranslation, L3 lucide-react HelpCircle, L5 cn, L6 ./Tooltip), the field-vs-page doc contract (L8-35), HelpIconProps with i18nKey/content/for/side/ariaLabel/className (L36-54), the HelpIcon signature + side='top' default destructuring (L56-63), useTranslation (L64), the text = i18nKey ? t(key,{defaultValue}) : content fallback (L65), the render-nothing-when-empty short-circuit (L67-69), the ariaLabel/forId/help.tooltip.iconLabel label computation (L71-75), handleKeyDown Escape->blur (L77-83), the Tooltip+button+HelpCircle JSX with cn classes (L85-104), and HelpIcon.displayName (L107).",
+    "Mapped web->native: react-i18next t() -> local translate(key,{defaultValue,...vars}) shim with {{var}} interpolation (preserves a11y.helpFor {{field}} + help.tooltip.iconLabel keys/defaults); lucide-react <HelpCircle> -> '?' glyph in a rounded-full bordered <View> (h-4 w-4 rounded-full + h-3.5 icon intent); <button type=button> -> <Pressable accessibilityRole=button>; aria-label -> accessibilityLabel; the cn Tailwind classes (ml-1, text-muted, hover/focus-visible:text-secondary + ring) -> StyleSheet + theme tokens (marginLeft 4, colors.textMuted, active state -> colors.textSecondary).",
+    "Native-unavailable browser behavior documented + reimplemented: the shared <Tooltip> (CSS :hover/:focus-within reveal, not ported to native) -> native-safe inline tooltip bubble toggled by tap, honoring side ('top'|'bottom'|'left'|'right' absolute placement, approximated edge-anchored since RN cannot translate(-50%) without measuring the trigger) and the hardcoded multiline (max-w-[260px] wrap); the inverted-surface contract rendered as a light card (#f1f5f9) + dark text (#0f172a) for the dark native theme; onKeyDown Escape->blur -> re-tap toggles closed; aria-describedby `${for}-help` -> bubble nativeID; data-help-for -> trigger testID `help-icon-${for}`. className accepted-but-ignored; no DOM/lucide/Recharts/Leaflet/web-ui imports used."
+  ]
+}
