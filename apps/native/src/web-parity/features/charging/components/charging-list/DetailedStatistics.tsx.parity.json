@@ -1,0 +1,28 @@
+{
+  "sourcePath": "web/src/features/charging/components/charging-list/DetailedStatistics.tsx",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/charging-list/DetailedStatistics.tsx",
+  "sourceLineCount": 51,
+  "coveredLineCount": 51,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 useTranslation -> native English-default `t(key, fallback)` keeping every charging.stats.* key verbatim.",
+    "L2 lucide-react TrendingUp (h-4 w-4 text-neon-cyan) -> lightweight inline accent '↗' glyph (colors.accent) in the heading row; the boxed success-green SemanticIcon trendUp would change layout/tone (ChargingTab inline-icon-reduction idiom).",
+    "L3 GlassPanel from @/components/ui -> shared native GlassPanel; `p-5` -> styles.panel padding 20.",
+    "L4 AnimatedNumber + Currency from @/components/data-display -> inlined native AnimatedNumber (ease-out-quad count-up via requestAnimationFrame+Date.now, decimals=0) and Currency (symbol+fmtNumber, null/non-finite -> '—').",
+    "L5 fmtWithUnit from @/lib/numberFormat -> inlined fmtNumber (safeNumber guard, en-US grouping, global default precision 2) + fmtWithUnit.",
+    "L6 formatDuration from ../ChargingSessionCard (re-export of dateFormat.formatDurationMinutes) -> inlined verbatim formatDuration ('—' for invalid/negative, '{h}h {m}m'/'{m}m').",
+    "L7 type ChargingStats/EnhancedStats from ./helpers -> inlined interfaces (native ./helpers not yet a converted target; TimeToChargeSection ./types idiom).",
+    "L9-12 DetailedStatisticsProps {stats, enhanced} preserved verbatim.",
+    "L14-15 component signature + useTranslation -> native t; useSettings() added to derive currencySymbol (web Currency uses useFormatting; FleetComparePage settings idiom).",
+    "L17-22 GlassPanel + section-title h3 (index.css: text-lg font-semibold tracking-tight, color var(--text-primary)) -> titleRow View with accent icon glyph + AppText weight=semibold styles.title (18px, 600, letterSpacing -0.4, textPrimary).",
+    "L23 grid grid-cols-2 sm:3 md:6 gap-4 text-center -> flex-wrap row (styles.grid gap 16) of centered cells (flexBasis 28% -> ~3-up, responsive wrap, minWidth 88).",
+    "L24-27 cell 1: AnimatedNumber value=stats.count (text-lg font-bold text-[var(--text-primary)]) + Total Sessions label (text-[10px] text-muted).",
+    "L28-31 cell 2: formatDuration(enhanced.avgDuration) primary + Avg Duration label.",
+    "L32-35 cell 3: fmtWithUnit(stats.avgPower,'kW') text-purple-300 (#d8b4fe verbatim) + Avg Power label.",
+    "L36-39 cell 4: enhanced.mostCommonType[0] primary + 'Top Charger (NN×)' label using mostCommonType[1].",
+    "L40-43 cell 5: Currency value=stats.totalCost text-amber-300 (#fcd34d) + Total Cost label.",
+    "L44-47 cell 6: Currency value=stats.avgCostPerKwh precision={3} text-emerald-300 (#6ee7b7) + Avg $/kWh label.",
+    "L48-51 closing div/GlassPanel/component preserved; statValue style mirrors text-lg font-bold (fontSize 18, fontWeight 700, centered).",
+    "No DOM, lucide-react, Recharts, Leaflet, framer-motion, or old web UI components imported; native primitives + apps/native AppText/GlassPanel/tokens/useSettings only."
+  ]
+}
