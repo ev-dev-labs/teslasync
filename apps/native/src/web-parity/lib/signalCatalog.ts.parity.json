@@ -1,0 +1,21 @@
+{
+  "sourcePath": "web/src/lib/signalCatalog.ts",
+  "outputPath": "apps/native/src/web-parity/lib/signalCatalog.ts",
+  "sourceLineCount": 327,
+  "coveredLineCount": 327,
+  "conversionStatus": "converted",
+  "notes": [
+    "Pure DOM-free utility/type/data module — no React, HTML, Recharts, Leaflet, browser API or web-UI dependency exists to strip, so this is the contract's 'non-visual utility/type code -> port the logic/types faithfully' path. A native-port header comment was prepended above the original JSDoc; nothing browser-only was introduced.",
+    "L1-6 original '@module lib/signalCatalog' JSDoc (catalog of Tesla Fleet Telemetry signals, derived from internal/api/signals.go SubscribedSignals) preserved verbatim below the prepended native-port header.",
+    "L8-15 SignalMeta interface ported field-for-field: name:string, category:string, type:'number'|'string'|'boolean', unit?:string, description:string, enumValues?:string[]. Only native formatting (statement-terminating semicolons on members) added; field names/types/optionality unchanged.",
+    "L17-273 the `catalog: SignalMeta[]` array ported byte-for-byte: verified by tooling that all 230 entries match source 1:1 in order and content (name + category + type + unit + description + enumValues), only the prettier brace spacing differs ({ name } -> {name}). Section comment dividers (Charging, Powershare, Climate, Driving, Motor, Location, Media, Safety, Service/Tire Pressure, Vehicle State, Software, Vehicle Configuration, User Preferences) kept verbatim.",
+    "Units preserved exactly as stored by the web layer (kWh, kW, %, V, A, °C, mi, km/h, h, min, g, RPM, Nm, mph, bar, ms, kΩ, °, m/h) — 89 unit fields match source count. No SI conversion is performed here; per unit-conversion.instructions.md any display conversion still happens only at a render boundary via useUnits(), this catalog is metadata only. The Tesla proto field name 'ChargeRateMilePerHour' and its R2-audit-pin description (wire content is meters of range added per hour) are reproduced verbatim, honoring the proto-identifier paradox rule.",
+    "enumValues arrays preserved verbatim — 37 enumValues fields match source count, including the polymorphic GpsState set ['NoFix','Fix2D','Fix3D','GPSValid','GPSInvalid','true','false'] and its 'use normalizeGpsState() before display' description.",
+    "L275 `export const signalCatalog: SignalMeta[] = catalog` ported unchanged (semicolon added).",
+    "L277-280 `signalCategories` ported unchanged: [...new Set(catalog.map(s => s.category))].sort(). Set spread + Array.sort are standard ES2015+ available under Hermes/JSC; arrow kept paren-free per native prettier arrowParens:'avoid'.",
+    "L282-289 `_byName` Map<string,SignalMeta> + populating for-loop + getSignalMeta(name) lookup ported statement-for-statement; the for-loop body was wrapped in braces to satisfy the @react-native curly rule (behavior identical). Returns SignalMeta | undefined unchanged.",
+    "L291-296 GPS-normalisation banner comment and `export type GpsFixState = 'locked' | 'unlocked' | 'unknown'` preserved verbatim.",
+    "L298-327 normalizeGpsState(raw: string | null | undefined): GpsFixState ported statement-for-statement: null guard -> 'unknown', String(raw).trim().toLowerCase(), empty guard -> 'unknown', the locked branch (true/1/yes/gpsvalid/fix2d/fix3d/normal/good/strong/ok/valid) and the unlocked branch (false/0/no/gpsinvalid/nofix/invalid/none) with identical members and order, default -> 'unknown'. Multi-condition `if` bodies were given explicit braces (curly rule) and the OR-chains placed one-per-line; pure string logic, no browser dependency, no behavior change.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
