@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/hooks/useAchievementCelebrationPrefs.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useAchievementCelebrationPrefs.ts",
+  "sourceLineCount": 110,
+  "coveredLineCount": 110,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 import {useSyncExternalStore} from 'react' ported verbatim — same external-store primitive drives the native hook.",
+    "L3-20 doc block preserved: the localStorage-backed/useStatusBarPrefs-mirroring rationale, instant-toggle/offline-survival intent, cross-tab storage-event sync, and all four per-pref descriptions (showToasts on, playSound off opt-in, showOnDashboard on, pushOnUnlock on) are kept; the native header additionally documents that RN has no localStorage/storage-event so persistence is an injectable seam (matching the sibling StatusBar native port).",
+    "L21-26 AchievementCelebrationPrefs interface ported 1:1 (showToasts/playSound/showOnDashboard/pushOnUnlock booleans).",
+    "L28 STORAGE_KEY 'teslasync:achievement-celebration:v1' reused verbatim as the key for the injectable native storage seam.",
+    "L30-35 defaultPrefs ported verbatim (true/false/true/true).",
+    "L37-51 readPrefs: browser localStorage.getItem -> optional injected AchievementCelebrationPrefsStorage.getItem(STORAGE_KEY); the JSON.parse, per-field `typeof === 'boolean' ? : default` narrowing, no-raw fallback, and try/catch -> defaultPrefs are all preserved; with no store wired it returns defaultPrefs since RN has no localStorage.",
+    "L53-56 stable cache comment + cachedPrefs/cachedSerialized seeded from readPrefs() ported verbatim to keep useSyncExternalStore snapshots referentially equal and avoid React infinite-render.",
+    "L58-60 getSnapshot ported verbatim.",
+    "L62-69 refreshSnapshot ported verbatim; it backs the native external-change re-sync (called from setAchievementCelebrationPrefsStorage instead of the web storage event).",
+    "L71 listeners Set ported verbatim.",
+    "L73-85 subscribe: listener add/remove ported verbatim; the window 'storage' addEventListener/removeEventListener cross-tab bridge has no native analog and is replaced (documented inline) by re-sync through setAchievementCelebrationPrefsStorage.",
+    "L87-89 useAchievementCelebrationPrefs -> useSyncExternalStore(subscribe, getSnapshot, getSnapshot) ported verbatim incl. the getServerSnapshot third arg.",
+    "L91-110 setAchievementCelebrationPrefs ported with identical semantics: {...cachedPrefs, ...patch} merge, JSON serialize + early-return dedup against cachedSerialized, localStorage.setItem -> prefsStorage.setItem inside the same try/catch (the unavailable-storage comment preserved), then cache update + listener fan-out (for-of with braces per repo lint).",
+    "Added native-only AchievementCelebrationPrefsStorage seam + setAchievementCelebrationPrefsStorage (re-hydrate + emit) as the documented native equivalent of the web cross-tab storage re-sync, following the StatusBar.tsx sibling precedent; persistence is a no-op until a backend is injected, in-session reactive updates always apply.",
+    "No DOM/browser-only modules, HTML elements, Recharts, Leaflet, or web UI components imported; only react. Formatting matches repo prettier (single quotes, trailing commas, no bracket spacing). Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
