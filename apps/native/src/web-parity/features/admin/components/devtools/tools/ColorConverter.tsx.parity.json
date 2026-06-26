@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/admin/components/devtools/tools/ColorConverter.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/devtools/tools/ColorConverter.tsx",
+  "sourceLineCount": 53,
+  "coveredLineCount": 53,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 53 source lines before editing. L1-7 imports: L1 useState/useMemo kept; L2 react-i18next useTranslation -> local native-safe t(key, fallback?) shim (the web keys ARE the English strings, so the key is returned verbatim, preserving keys + rendered text); L3 lucide-react Palette dropped (browser-only icon — ToolCard's purple accent chip stands in); L4 @/components/ui Input -> labelled React Native TextInput; L5 ../ToolCard -> the canonical native ToolCard re-exported from the devtools barrel ('..'); L6 @/components/ui CopyButton dropped (navigator.clipboard is browser-only and no clipboard package is wired into the parity tree) — values are rendered selectable so they can still be long-pressed to copy; L7 ../helpers rgbToHsl inlined verbatim (this tool is its only parity-tree consumer and no native helpers module exists).",
+    "L9-22 logic ported verbatim: L9 export function ColorConverterTool; L10 t shim (useTranslation removed); L11 useState('#3b82f6'); L13-22 useMemo parse — strip '#', require 6 chars, parseInt r/g/b base 16, isNaN guard, rgbToHsl -> {r,g,b,h,s,l} | null, deps [hex]. State name `hex`, setter `setHex`, and `parsed` shape preserved.",
+    "L24-52 render ported: L25 ToolCard color=\"purple\" title={t('Color Converter')} description={t('Color Converter Desc')} (icon prop omitted — accent chip stands in); L26-30 input row <div> -> <View> with labelled TextInput (value/onChangeText=setHex, placeholder #3b82f6) and L29 swatch <div style backgroundColor:hex> -> <View style={[styles.swatch,{backgroundColor:hex}]}>; L31 {parsed && ...} -> {parsed ? ... : null} (faithful — web renders nothing for invalid hex; this is input validation, not a data empty-state); L32-48 sm:grid-cols-3 -> wrapping flex row of 3 result cards (RGB `rgb(r, g, b)` L35, HSL `hsl(h, s%, l%)` L40, HEX `hex` L45), each label + mono value; L36/L41/L46 CopyButton dropped (see above). L51-53 close.",
+    "No DOM-only modules, HTML elements, Recharts, Leaflet, lucide-react, or old web @/components/ui imports in the native output — only react, react-native (StyleSheet/TextInput/View), the native AppText, theme tokens (colors/spacing/typography), and the native ToolCard barrel. Tailwind classes (space-y/flex/grid/rounded/text-xs/text-sm/font-mono/var(--surface-overlay)/var(--text-secondary)) map to StyleSheet token styles; font-mono -> fontFamily 'monospace'.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles. Commit scoped to apps/native for this file only."
+  ]
+}
