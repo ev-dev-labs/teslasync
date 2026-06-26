@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/types/vehicle.ts",
+  "outputPath": "apps/native/src/web-parity/types/vehicle.ts",
+  "sourceLineCount": 34,
+  "coveredLineCount": 34,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. The file is pure non-visual TypeScript wire-type code for the vehicle domain with zero imports and no DOM/React/Recharts/Leaflet/browser deps, so the single exported Vehicle interface is ported 1:1 with identical names, members, types, optionality, and verbatim field names (contract rules 3 & 6). A short native-parity-port header precedes the ported declaration.",
+    "Vehicle interface (source L1-34): snake_case core fields ported exactly — id: number, vehicle_id: number, vin: string, display_name: string, model: string, trim_badging: string, exterior_color: string, wheel_type: string, state: string, healthy: boolean, timezone?: string, created_at: string, updated_at: string.",
+    "Source L12 JSDoc comment on timezone (IANA tz database name; 'UTC' = unknown / not yet learned) is preserved verbatim to keep the i18n/timezone intent. Source L16 comment '// Extended fields (from vehicle detail/state endpoints)' and the optional fields it documents are ported exactly: battery_level?, battery_range?, odometer?, latitude?, longitude? (all number), charging_state?: string.",
+    "Source L23 comment '// camelCase aliases (populated by API response transformer)' and its aliases ported verbatim: vehicleId?: number, displayName?: string, trimBadging?: string, exteriorColor?: string, wheelType?: string, createdAt?: string, updatedAt?: string, batteryLevel?: number, batteryRange?: number, chargingState?: string. Both snake_case and camelCase forms are kept so native consumers reference identical fields after camelCaseKeys transforms.",
+    "Source L34 (closing brace) and L35 (trailing newline) accounted for as structural lines; no logic, unit conversion, runtime behavior, or DOM coupling exists to adapt for React Native — the interface is erased at compile time. SI-canonical numeric fields (battery_range, odometer, etc.) are left as-is per the SI-cutover contract; conversion belongs only at the render boundary.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) PASS, npm run lint -- --quiet PASS, npm test -- --runInBand --detectOpenHandles PASS."
+  ]
+}
