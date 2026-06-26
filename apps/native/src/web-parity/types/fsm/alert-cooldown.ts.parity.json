@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/types/fsm/alert-cooldown.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/alert-cooldown.ts",
+  "sourceLineCount": 58,
+  "coveredLineCount": 58,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 58 numbered source lines before editing. alert-cooldown.ts is non-visual type/data code (an FSM definition: state union + entries, trigger/guard unions, a config interface, transition/edge/disallowed/coverage/scenario tables, and an aggregate FSMDefinition). It touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so it ports 1:1 to React Native-compatible TypeScript (contract rule 6).",
+    "L1-2 imports preserved verbatim: `import type { StateEntry, Edge, FSMDefinition, TransitionRow, DisallowedTransition, CoverageMatrix, Scenario } from './types'` and the value import `import { deriveEdges } from './types'`. `deriveEdges` is a runtime function (not type-only), so the sibling module must resolve at compile time.",
+    "Dependency `./types` did not yet exist in the native parity layer (no apps/native/src/web-parity/types/fsm/ directory). Following the established sibling-module precedent (apps/native/src/web-parity/api/types.ts exists as a real file rather than being inlined), web/src/types/fsm/types.ts was ported faithfully 1:1 to apps/native/src/web-parity/types/fsm/types.ts so the `from './types'` import resolves identically to the web. It is a pure, fully-portable TS module (BadgeVariant/StateStyle/StateEntry/Edge/FSMDefinition/TransitionRow/CoverageCell/CoverageMatrix/DisallowedTransition/Scenario/ToastMap/TruthTable types + deriveEdges/isValidTransition functions) with no DOM/browser/Recharts/Leaflet/web-UI dependencies. Inlining was rejected because ./types is shared by ~11 sibling fsm files and would duplicate deriveEdges across all of them (DRY).",
+    "L4-5 ALERT_COOLDOWN_STATES `['armed','fired','suppressed'] as const` and the `AlertCooldownState = (typeof ...)[number]` union ported verbatim.",
+    "L7-11 ALERT_COOLDOWN_STATE_ENTRIES ported verbatim: armed->{variant:'success'}, fired->{variant:'danger'}, suppressed->{variant:'warning'}. Record<AlertCooldownState, StateEntry> typing preserved.",
+    "L13-14 ALERT_COOLDOWN_TRIGGERS `['condition_met','cooldown_expired'] as const` + AlertCooldownTrigger union, and L16-17 ALERT_COOLDOWN_GUARDS `['within_cooldown','max_fires_per_hour'] as const` + AlertCooldownGuard union ported verbatim.",
+    "L19-23 AlertCooldownConfig interface ported verbatim (cooldownDuration: number, maxFiresPerHour: number, suppressInStates: string[]).",
+    "L25-31 ALERT_COOLDOWN_TRANSITIONS: all 5 TransitionRow entries ported with identical from/to/trigger/guard/timing values (armed->fired/condition_met/null, fired->suppressed/condition_met/within_cooldown, fired->armed/cooldown_expired/null, suppressed->suppressed/condition_met/within_cooldown, suppressed->armed/cooldown_expired/null; all timing 'immediate').",
+    "L33 ALERT_COOLDOWN_EDGES = deriveEdges(ALERT_COOLDOWN_TRANSITIONS) preserved as a runtime call to the shared helper.",
+    "L35-38 ALERT_COOLDOWN_DISALLOWED ported verbatim (armed->suppressed 'Must fire first'; suppressed->fired 'Must go through Armed (cooldown expired)').",
+    "L40-44 ALERT_COOLDOWN_COVERAGE matrix ported verbatim cell-for-cell (armed: self/valid/disallowed; fired: valid/self/valid; suppressed: valid/disallowed/self).",
+    "L46-52 ALERT_COOLDOWN_SCENARIOS: all 5 scenarios A1-A5 ported with identical id/description/transitions arrays.",
+    "L54-58 ALERT_COOLDOWN_FSM FSMDefinition aggregate ported verbatim (states/edges/transitions/disallowed/coverage/scenarios wired to the same consts). L59 trailing newline preserved.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported or introduced. Formatting normalized with the repo prettier config (prettier 2.8.8: singleQuote, trailingComma all, arrowParens avoid, default semi + bracketSpacing); prettier only wrapped long single-line transition/scenario rows across multiple lines — no value, key, type, or behavior change. Verified via: cd apps/native; npm run typecheck (exit 0); npm run lint -- --quiet (exit 0); npm test -- --runInBand --detectOpenHandles (17 suites, 83 tests passed)."
+  ]
+}
