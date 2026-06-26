@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/types/fsm/types.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/types.ts",
+  "sourceLineCount": 95,
+  "coveredLineCount": 95,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 95 source lines before editing; the source is a pure non-visual TypeScript type + helper module with zero imports and no DOM, React, Recharts, Leaflet, react-leaflet, or web UI dependencies — nothing browser-only to neutralize, so the port is 1:1.",
+    "L1-2 BadgeVariant, L4-10 StateStyle (badgeDot/bg/text/dot string fields), L12-18 StateEntry (variant + optional overrides), L20-21 Edge<S> tuple, L23-34 FSMDefinition<S,T>, L36-37 ResolvedStateStyle, L39 TransitionTiming, L41-47 TransitionRow<S,T>, L49 CoverageCell, L50 CoverageMatrix<S>, L52-56 DisallowedTransition<S>, L58-62 Scenario<S>, L64 ToastMap<S>, L66-70 TruthTableCell<S> union, L72 TruthTable<S,T> — all exported types/interfaces ported verbatim with identical names, generic params, defaults, optionality, and union members; source declaration order preserved (FSMDefinition forward-references later types, which TS hoists).",
+    "L74-87 deriveEdges<S,T>: Set-based dedupe keyed on `${from}\u2192${to}` (right-arrow U+2192 kept byte-for-byte) reproduced exactly; L89-95 isValidTransition<S> returns `coverage[from]?.[to] ?? null` unchanged. Both helpers remain exported with identical signatures and return types.",
+    "Preserved every doc/inline comment verbatim, including the StateStyle 'Tailwind class' field comments — these describe class-name token strings still carried as plain strings in the native port (consumed at the not-yet-ported FSM-visualisation boundary), so the wording stays accurate; a native parity header doc block was added at the top to document scope.",
+    "Reformatted to native conventions only (single quotes, semicolons, trailing commas, no manual column alignment, multi-line generic param lists) to satisfy @react-native eslint; no logic, identifiers, or type semantics changed. Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles` all pass."
+  ]
+}
