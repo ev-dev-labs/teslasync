@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/features/system/components/status/IncidentForm.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/status/IncidentForm.tsx",
+  "sourceLineCount": 132,
+  "coveredLineCount": 132,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 132 source lines before editing. Preserved the module JSDoc operator-UX + validation intent (L1-13) in the native header.",
+    "Imports (L15-22): useId/useState kept; FormEvent dropped (no DOM event — submit is a button onPress). web @/components/ui {Modal,Button,Input,Textarea,Select} -> RN Modal/TextInput/Pressable + native web-parity Select (../../../../components/ui/Select); web useToast (@/components/feedback/Toast, L17) -> inline native useToast backed by Alert.alert; useCreateIncident + IncidentSeverity/IncidentStatus imported from the ported ../../../../api/hooks/useIncidents (L18-22).",
+    "Props + state preserved verbatim (L24-38): IncidentFormProps{onClose}; toast, titleId/componentsId/messageId via useId; title/severity('minor')/status('investigating')/message/components useState; create = useCreateIncident().",
+    "handleSubmit logic identical (L40-63): e.preventDefault removed (no form event); const t = title.trim(); length<3 -> toast.error('Title must be at least 3 characters.') + return; mutateAsync({title:t, severity, status, initial_message: message.trim()||undefined, affected_components: components.split(',').map(trim).filter(Boolean)}); toast.success('Incident logged.') + onClose(); catch -> toast.error(err.message || 'Failed to log incident').",
+    "Render parity (L65-131): web <Modal open onClose title='Log an incident' size='md'> -> RN <Modal visible transparent animationType='fade' onRequestClose={onClose}> with overlay + backdrop Pressable(onClose) + a header title bar with close ✕ (mirrors the web Modal's title/close affordance); form space-y-4 -> ScrollView body gap:16.",
+    "Field parity: Title <Input id maxLength=200 required autoFocus placeholder> -> single-line TextInput (autoFocus, maxLength 200, editable while !pending; required is HTML-only and is enforced by the length<3 JS guard, noted via accessibility); two <Select label value onChange options> for Severity (minor/major/critical) and Status (investigating/identified/monitoring/resolved) in a 2-col grid -> native Select with onValueChange (no DOM event), same options/labels/values; Affected components <Input> + comma-separated/optional muted label; Initial timeline message <Textarea rows=3 maxLength=4000> -> multiline TextInput numberOfLines=3 maxLength 4000.",
+    "Actions (L123-128): ghost Cancel(onClose) + primary submit with pending label 'Logging…'/'Log incident', both disabled while create.isPending -> Pressable DialogAction (ghost/primary) with identical disabled gating and onPress wiring. htmlFor/id label linkage kept via label nativeID + TextInput accessibilityLabelledBy. Default + named export preserved (L28,132). No DOM/Recharts/Leaflet/web-UI imports; uses RN primitives + AppText + theme tokens + ported Select."
+  ]
+}
