@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/admin/components/devtools/ToolCard.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/devtools/ToolCard.tsx",
+  "sourceLineCount": 29,
+  "coveredLineCount": 29,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import type {ReactNode}` preserved (children stays ReactNode). L2 GlassPanel from '@/components/ui' -> shared native GlassPanel ('../../../../../components/ui/GlassPanel'). L3 cn from '@/lib/cn' is Tailwind/DOM-only -> dropped in favour of RN style arrays. L4 ICON_COLOR_MAP from './constants' -> inlined as TOOL_COLOR_STYLES because the native ./constants sibling is not ported yet (same precedent as the inlined ToolCard inside FleetApiSection.tsx).",
+    "L6-12 ToolCardProps ported: icon React.ElementType -> SemanticIconName (parity icon system), color/title/description: string, children: ReactNode. color kept as `string` (web is `Record<string,string>` wide) so the `?? cyan` runtime fallback is preserved verbatim.",
+    "L14 named `export function ToolCard({icon, color, title, description, children})` preserved (no default export added). L15-16 `<GlassPanel className=\"p-5\">` -> `<GlassPanel style={styles.toolCard}>` with padding spacing.lg (Tailwind p-5 === 20px).",
+    "L17 header `mb-4 flex items-start gap-3` -> View toolHeader (flexDirection row, alignItems flex-start, gap spacing.md); the mb-4 header/children gap is realised via gap spacing.md on the card, matching the FleetApiSection precedent. L18 colour box `cn('flex h-10 w-10 ... rounded-lg', ICON_COLOR_MAP[color] ?? ICON_COLOR_MAP.cyan)` -> View toolIcon (40x40, rounded, border) tinted from `TOOL_COLOR_STYLES[color] ?? TOOL_COLOR_STYLES.cyan` so an unknown colour still falls back to cyan exactly as the web does.",
+    "L19 `<Icon className=\"h-5 w-5\" />` -> AppText glyph `getSemanticIconDefinition(icon).glyph` coloured by tint.fg, so the box + icon colour come from the `color` prop (not the icon's intrinsic tone), matching the web. L20-21 inner `min-w-0` div -> View toolHeaderText (flex 1).",
+    "L22 `<h3 text-sm font-semibold text-white>{title}` -> AppText toolTitle weight='semibold' (14/20, textPrimary). L23 `<p text-xs text-[var(--text-secondary)]>{description}` -> AppText toolDesc tone='secondary' variant='caption' (textSecondary). L24-27 closing divs/panel preserved. L26 `{children}` rendered verbatim below the header. L28-29 function/return close.",
+    "Native-safe substitutions (rule 7): cn helper dropped; lucide ElementType -> SemanticIconName glyph; DOM div/h3/p -> View/AppText; ICON_COLOR_MAP Tailwind neon classes -> tinted-box tokens from theme/tokens. No DOM/lucide-react/Recharts/Leaflet/web-UI imports in the native output.",
+    "Gates: cd apps/native; npm run typecheck (tsc --noEmit) -> exit 0; npm run lint -- --quiet -> exit 0; npm test -- --runInBand --detectOpenHandles -> all suites passed."
+  ]
+}
