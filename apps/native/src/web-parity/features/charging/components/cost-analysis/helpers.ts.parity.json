@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/charging/components/cost-analysis/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/charging/components/cost-analysis/helpers.ts",
+  "sourceLineCount": 21,
+  "coveredLineCount": 21,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the web source line by line. Non-visual pure-logic utility module — both exported functions are platform-agnostic TypeScript and are ported verbatim; no DOM, Recharts, Leaflet, framer-motion, lucide-react, or web UI imports exist or were introduced.",
+    "Import L1: `import type { ChargingSession } from '@/api/types'` -> relative `../../../../api/types` (resolves to the converted native web-parity/api/types, which exports ChargingSession with all consumed fields: charger_type, peak_power_w, start_place). Import L2: `import { KWH_PER_GALLON } from './constants'` -> inlined `const KWH_PER_GALLON = 33.7` because the sibling ./constants module is not a converted native target yet, mirroring the established charging-curve/helpers.ts inlining pattern; value (33.7 kWh per US gallon) copied verbatim from web ./constants L6.",
+    "categorizeCharger L4-11: ported verbatim — charger_type lowercased, tesla/supercharger -> 'Supercharger', peak_power_w ?? 0 > 22_000 -> 'Public DC', start_place lowercased work/office -> 'Work / L2', else 'Home'. The L6 tesla/supercharger if was wrapped onto two lines by prettier (printWidth 80, same wrapping the converted charging-curve/helpers.ts uses) with identical behavior.",
+    "gasEquivalentCost L13-21: ported verbatim — signature (energyKwh, mpg, gasPrice): number preserved; gallonsEquiv = energyKwh / KWH_PER_GALLON; milesEquiv = gallonsEquiv * mpg; returns (milesEquiv / mpg) * gasPrice. L3/12 blank separators and trailing newline preserved.",
+    "Verified with cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
