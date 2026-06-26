@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/features/analytics/components/weekly-digest/index.ts",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/weekly-digest/index.ts",
+  "sourceLineCount": 12,
+  "coveredLineCount": 12,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the web barrel line by line. It is a pure re-export barrel of twelve sibling modules in the same directory: L1 HighlightCard, L2 MiniStat, L3 BatteryPill, L4 DigestSkeleton, L5 WeekSelector, L6 SummaryHeroCards, L7 DrivingSection, L8 ChargingSection, L9 BatteryHealthSection, L10 AlertsSection, L11 WeekOverWeekSummary, L12 useWeeklyDigest. No DOM, browser HTML, Recharts, Leaflet, framer-motion, lucide-react, or old web UI is referenced by the barrel itself — only relative './Sibling' specifiers.",
+    "Kept the native barrel a valid JSX-free .ts module that re-exports the exact public names from the exact './Sibling' relative paths the web barrel uses, preserving names and ordering byte-for-byte so each future re-export is a drop-in. This follows the established native dlq-inspector/index.ts barrel idiom for a re-export barrel whose siblings are separate conversion targets.",
+    "L9 BatteryHealthSection is the only sibling already ported (apps/native/.../weekly-digest/BatteryHealthSection.tsx exists with a named `export function BatteryHealthSection`), so it is re-exported live: `export { BatteryHealthSection } from './BatteryHealthSection';` — public name and source path unchanged.",
+    "L1-L8 and L10-L12 reference sibling modules that are not yet native conversion targets in this file-by-file loop. Actively re-exporting the not-yet-created './HighlightCard', './MiniStat', './BatteryPill', './DigestSkeleton', './WeekSelector', './SummaryHeroCards', './DrivingSection', './ChargingSection', './AlertsSection', './WeekOverWeekSummary', './useWeeklyDigest' would fail `tsc --noEmit`. Per the conversion contract's native-safe/unavailable-state rule these eleven exports are explicitly deferred and documented inline (each kept as the verbatim web export line in a comment block) so the barrel grows by uncommenting one line as each sibling is ported. This was chosen over fabricating render-nothing placeholder components (which the engineering rules prohibit) and over fully porting eleven out-of-scope chart-heavy siblings; deferral also fails loudly later for any consumer that needs an unported sibling rather than silently rendering an unavailable state.",
+    "Verified no native code imports this barrel today (grep across apps/native/src) so the partial public surface is non-breaking. Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
