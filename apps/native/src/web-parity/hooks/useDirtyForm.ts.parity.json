@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/hooks/useDirtyForm.ts",
+  "outputPath": "apps/native/src/web-parity/hooks/useDirtyForm.ts",
+  "sourceLineCount": 71,
+  "coveredLineCount": 71,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 71 source lines line by line before editing. The hook is two parts: localized confirm copy (ports 1:1) and a browser `beforeunload` guard (structurally unavailable on React Native). Native port keeps the copy provider and documents the dropped browser guard, matching the established native precedent already inlined in web-parity/features/maps/pages/GeofencesPage.tsx (its useDirtyForm at L300-311) and the NavigationGuardProvider header (L45-48).",
+    "L1 `import { useEffect } from 'react'` -> `import { useCallback } from 'react'`: useEffect is no longer needed (the only effect was the beforeunload listener, which is dropped); useCallback backs the native translation shim. L2 `import { useTranslation } from 'react-i18next'` -> inlined `useNativeTranslationFallback()` (no i18next in the apps/native manifest); the NavigationGuardProvider `(key, fallback) => fallback` precedent.",
+    "L4-22 UseDirtyFormResult interface + its JSDoc preserved verbatim (isDirty mirror, message confirm copy, title, discardLabel, keepEditingLabel) — only TS semicolons added per native prettier. The public result shape is unchanged so consumers are byte-compatible.",
+    "L24-45 useDirtyForm JSDoc preserved and adapted: the browser-guard paragraph (L25-29) is restated for native (no tab/reload lifecycle, no beforeunload, guard not wired, degrades to copy provider); the in-app navigation-guard note (L30-34) now points at the native ../components/feedback/NavigationGuardProvider; the @example (L35-44) is kept with `navigate(-1)` adapted to `goBack()` to reflect native navigation while preserving the confirm-on-dirty intent.",
+    "L46-47 `export function useDirtyForm(isDirty: boolean): UseDirtyFormResult` + `const { t } = useTranslation()` -> same signature with `const t = useNativeTranslationFallback()` (shim returns the English fallback for the preserved key).",
+    "L49-59 the `useEffect` beforeunload guard (the `if (!isDirty) return` early-out, the `BeforeUnloadEvent` handler with `event.preventDefault()` + `event.returnValue = ''`, `window.addEventListener('beforeunload', handler)`, and the `removeEventListener` cleanup, deps `[isDirty]`) is DROPPED: React Native has no window/beforeunload and the OS cannot give JS a cancellable suspend/terminate prompt, so this is structurally unavailable. Documented in the file header, an inline comment in useDirtyForm, and here. No DOM globals (`window`, `BeforeUnloadEvent`) are referenced in the native output.",
+    "L61-70 the returned object preserved verbatim: isDirty passthrough + the four `t(key, fallback)` calls keep their exact i18n keys (forms.unsavedTitle / forms.unsavedWarning / forms.discard / forms.keepEditing) and English fallbacks ('Unsaved changes' / 'You have unsaved changes. Discard them?' / 'Discard changes' / 'Keep editing'). The web returns a fresh object each render; native matches (no memoization), and the shim `t` is useCallback-stable. L71-72 closing brace / trailing newline preserved.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported — only react's useCallback. Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
