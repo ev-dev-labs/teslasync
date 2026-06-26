@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/types/fsm/cross-fsm.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/cross-fsm.ts",
+  "sourceLineCount": 39,
+  "coveredLineCount": 39,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 39 source lines before editing; pure non-visual FSM type/constant code with no DOM, React, Recharts, Leaflet, or web UI dependencies, so it ports verbatim and is fully React Native compatible.",
+    "L1 `import type { VehicleState } from './vehicle'` -> L16 `import type {VehicleStatus as VehicleState} from '../../api/types'`. The sibling fsm/vehicle.ts is not yet ported; native already consolidated that identical 7-member union ('online'|'driving'|'charging'|'parked'|'updating'|'asleep'|'offline') into api/types.ts as VehicleStatus ('single source from @/types/fsm'), so it is reused via a type-only alias to stay DRY and keep typecheck green rather than duplicating the union or depending on an unported module.",
+    "L3-7 FSMAction union ported with all 11 members identical (CreateDriveSubFSM, FinalizeDriveSubFSM, ReconcileDriveSubFSM, CreateChargeSubFSM, FinalizeChargeSubFSM, ReconcileChargeSubFSM, ResumeOrCreateChargeSubFSM, PauseChargeSubFSM, MarkChargeInterrupted, PersistState, LogTransition); prettier reformatted to one-member-per-line.",
+    "L9-26 VEHICLE_TRANSITION_ACTIONS ported verbatim: same Partial<Record<`${VehicleState}\u2192${VehicleState}`, FSMAction[]>> type and all 16 transition keys (online/parked/asleep/offline->driving, driving->parked/charging/offline, online/parked/asleep/offline->charging, charging->parked/driving/online/asleep/offline) with identical action arrays and order; the \u2192 (U+2192) separator and template-literal key typing are preserved.",
+    "L28-32 FAILURE_ISOLATION_RULES (3 entries) and L34-39 OUT_OF_SCOPE_STATES (Fault, Updating, Valet / Service, Summon / Smart Park with their reasons) ported 1:1 as `as const` tuples; em-dash text preserved exactly.",
+    "L40 trailing newline preserved. No API paths, units, or i18n strings exist in this file, so nothing unit/i18n-related needed remapping.",
+    "Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles` all pass; the file was normalized with `eslint --fix` so it is prettier/prettier clean."
+  ]
+}
