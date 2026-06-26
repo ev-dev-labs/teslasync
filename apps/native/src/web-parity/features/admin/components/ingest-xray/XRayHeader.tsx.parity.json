@@ -1,0 +1,32 @@
+{
+  "sourcePath": "web/src/features/admin/components/ingest-xray/XRayHeader.tsx",
+  "outputPath": "apps/native/src/web-parity/features/admin/components/ingest-xray/XRayHeader.tsx",
+  "sourceLineCount": 59,
+  "coveredLineCount": 59,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 59 source lines line by line before editing. Every line is accounted for below; behavior, prop names (data/loading/windowSel), i18n keys + default strings, the WINDOW_LABEL map, and the loading-vs-value routing are preserved exactly.",
+    "L1-9 file doc comment (Ingest X-Ray header strip: three StatCards summarising total samples, distinct fields, and the selected window length echoed back): preserved and expanded in the native file header doc.",
+    "L10 `import { useTranslation } from 'react-i18next'`: no native i18next module in the apps/native manifest. Replaced by an inlined useNativeTranslation() returning a useCallback-stable (key, fallback, options?) => fallback shim that reproduces i18next `{{name}}` interpolation against the English fallback copy (the established ChangesPanel / QueryError pattern). Every t(key, default) call keeps its exact key + default string, including the L53 template-literal key.",
+    "L11 `import { Activity, Layers, Clock } from 'lucide-react'`: DOM SVG icon lib is forbidden in native output. Mapped to the native SemanticIcon: Activity -> name='activity' (exact semantic match), Layers -> name='layoutTemplate' (closest stacked-layers visual; database/layoutGrid considered but layoutTemplate best preserves the lucide Layers stacked-sheets visual intent for 'distinct fields'), Clock -> name='clock' (exact match). The web icons use className='h-5 w-5' with no aria-label, so each is rendered `decorative` at size='sm'.",
+    "L12 blank line: n/a.",
+    "L13 `import { StatCard } from '@/components/data-display'`: mapped to the already-ported native web-parity StatCard via the data-display barrel (../../../../components/data-display). The native StatCard's label/value/icon/sublabel props match the web contract one-for-one.",
+    "L14 `import { Grid } from '@/components/layout'`: no native Grid. Replaced by a native flex-wrap row (styles.grid: flexDirection row, flexWrap wrap, gap 16 = Tailwind gap-4). The web `cols={{ default: 1, sm: 3 }}` responsiveness is reproduced with useWindowDimensions(): below the Tailwind `sm` 640px breakpoint each item is flexBasis '100%' (1-up); at/above it each item is flexBasis '30%' + flexGrow 1 (3-up). No data is hidden at any width.",
+    "L15 `import { fmtInt } from '@/lib/numberFormat'`: native numberFormat module not ported; inlined a faithful fmtInt port (n.toLocaleString('en-US', {min/maxFractionDigits: 0}); non-finite/nullish coerced to 0; catch -> String(Math.round(n))), matching web fmtInt = fmtNumber(v, 0) semantics for integer formatting with locale separators.",
+    "L16-19 `import type { IngestXRayResponse, IngestXRayWindow } from '@/types/admin-diagnostics'`: native types module not yet ported, so the full ingest X-Ray type block is mirrored locally and exported (IngestXRayWindow '5m'|'15m'|'1h'|'6h'|'24h'; IngestXRayBucket; IngestXRayValueKind=number; IngestXRayFieldStat; IngestXRayBucketPoint; IngestXRayResponse with vehicle_id/window/bucket/generated_at/total_samples/unique_fields/fields/buckets) byte-for-byte from web types/admin-diagnostics.ts, keeping the file self-contained and typecheck-clean.",
+    "L20 blank line: n/a.",
+    "L21-25 `interface XRayHeaderProps { data: IngestXRayResponse | undefined; loading: boolean; windowSel: IngestXRayWindow }`: ported verbatim; field names/types preserved exactly.",
+    "L26 blank line: n/a.",
+    "L27-33 `const WINDOW_LABEL: Record<IngestXRayWindow, string>` ('5m'->'5 minutes', '15m'->'15 minutes', '1h'->'1 hour', '6h'->'6 hours', '24h'->'24 hours'): ported verbatim (same type, same five mappings).",
+    "L34 blank line: n/a.",
+    "L35 `export function XRayHeader({ data, loading, windowSel }: XRayHeaderProps) {`: ported verbatim with the same exported function name and destructured props.",
+    "L36 `const { t } = useTranslation()`: -> `const t = useNativeTranslation()`.",
+    "L37-38 `return (<Grid cols={{ default: 1, sm: 3 }} gap={4}>`: -> `<View style={styles.grid}>` with per-item wrapper Views whose style switches between styles.itemSingle (1-up) and styles.itemTriple (3-up) via the SM_BREAKPOINT check; gap-4 -> gap 16.",
+    "L39-44 first StatCard (Total samples): label t('admin.xray.stats.samples','Total samples'); value `loading ? '—' : fmtInt(data?.total_samples ?? 0)` (the web does NOT use a skeleton — it renders the em-dash while loading — so the native StatCard `loading` prop is intentionally NOT used, preserving exact visual behavior); icon <Activity className='h-5 w-5'/> -> <SemanticIcon decorative name='activity' size='sm'/>; sublabel t('admin.xray.stats.samplesSub','within selected window'). All preserved verbatim.",
+    "L45-50 second StatCard (Distinct fields): label t('admin.xray.stats.fields','Distinct fields'); value `loading ? '—' : fmtInt(data?.unique_fields ?? 0)`; icon <Layers/> -> <SemanticIcon decorative name='layoutTemplate' size='sm'/>; sublabel t('admin.xray.stats.fieldsSub','unique signal names'). All preserved verbatim.",
+    "L51-56 third StatCard (Window): label t('admin.xray.stats.window','Window'); value t(`admin.xray.windowLabel.${windowSel}`, WINDOW_LABEL[windowSel]) (the template-literal key + WINDOW_LABEL fallback are reproduced exactly by the native t shim, which returns the fallback); icon <Clock/> -> <SemanticIcon decorative name='clock' size='sm'/>; sublabel t('admin.xray.stats.windowSub','observation horizon'). All preserved verbatim.",
+    "L57 `</Grid>`: -> closing `</View>` of styles.grid.",
+    "L58-59 close of return + component: ported.",
+    "Native-only additions documented: SM_BREAKPOINT (640, the Tailwind sm breakpoint driving cols.default=1 vs cols.sm=3); StyleSheet token mapping (grid flex-wrap + gap 16 for gap-4, item flexGrow, itemSingle flexBasis '100%', itemTriple flexBasis '30%'). The web Grid's md/lg/xl breakpoints are unused by this call (only default + sm are passed) and so are not reproduced. Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
