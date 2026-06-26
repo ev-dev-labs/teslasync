@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/features/system/components/chatbot/SuggestedPrompts.tsx",
+  "outputPath": "apps/native/src/web-parity/features/system/components/chatbot/SuggestedPrompts.tsx",
+  "sourceLineCount": 80,
+  "coveredLineCount": 80,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 80 numbered source lines before editing. Header docstrings L5-12 (const factory rationale + i18nKey/defaultValue contract) and L48-52 (compact 4-chip empty-state intent) are preserved verbatim as JSDoc/header comments in the native file.",
+    "Imports L1-3: react-i18next useTranslation L1 -> inlined useNativeTranslationFallback() returning the web English fallback verbatim (native parity tree has no i18n runtime; DatePresetChips/PinButton/ImpersonationBanner convention); lucide-react Sparkles L2 -> tintable '✦' (U+2726) AppText glyph at 14px (PinButton's lucide->glyph precedent); @/components/ui Button L3 -> inline Pressable + AppText chip (native AppButton has no size/ghost/rounded-full chip surface), so NO web UI/DOM module is imported.",
+    "ChatSuggestion interface L13-16 (i18nKey + defaultValue) ported one-for-one and still exported. getChatSuggestions() L18-37 ported verbatim — pure DOM-free data returning the same four suggestions (fleetYesterday, chargingCost30d, socDropping, efficientDrive) with identical i18nKey + defaultValue strings, in the same order, kept as a const factory.",
+    "SuggestedPromptsProps L39-46 kept as a LOCAL non-exported interface exactly as web (web does not export it); the onPick(text) contract L45 + the 'fills+focuses input but does NOT auto-submit' note L41-44 are preserved. onClick L69 -> onPress, calling onPick(text) identically (web L69).",
+    "Component L53-80: useTranslation L54 -> native t; getChatSuggestions() L55 unchanged; const text = t(s.i18nKey, s.defaultValue) L63 unchanged. <ul> L58 (flex flex-wrap gap-2 justify-center max-w-2xl mx-auto list-none p-0 m-0) -> View styles.row (flexDirection row, flexWrap wrap, gap spacing.sm=8, justifyContent center, alignSelf center, maxWidth 672); aria-label L60 -> View accessibilityLabel t('chatbot.aria.suggestions','Suggested prompts').",
+    "Chip map L62-77: each <li key=s.i18nKey> L65 collapses into its Pressable (li was list-none p-0 m-0 — purely semantic), keyed by s.i18nKey. Button variant=ghost size=sm L66-68 -> styles.chip (transparent bg, rounded-full borderRadius 999, borderWidth 1 borderColor=--border-subtle, px-3=12 / h-8=minHeight 32, gap-2). icon Sparkles h-3.5 w-3.5 L70 -> '✦' AppText fontSize 14, importantForAccessibility=no. className hover:border-purple-500/30 hover:text-purple-300 L71 -> pressed highlight: chipPressed border rgba(168,85,247,0.3) + surfaceRaised bg lift, and icon+label color #d8b4fe (purple-300) via render-prop {pressed}; resting color --text-primary. {text} child L73 rendered via AppText label (text-xs/font-medium).",
+    "Closing brace L80 + the implicit display name preserved. No DOM elements (ul/li/button/svg), no lucide-react, no @/components import in native output; only React, react-native primitives, AppText, and theme tokens.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit) clean; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles green."
+  ]
+}
