@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/analytics/components/review/DriveHighlightSlide.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/review/DriveHighlightSlide.tsx",
+  "sourceLineCount": 105,
+  "coveredLineCount": 105,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 105 source lines with numbered output before editing; no DOM, react-i18next, lucide-react, framer-motion, Recharts, Leaflet, or web UI-kit modules are imported into the native output.",
+    "L1 motion from @/components/motion (framer-motion) -> local Animated.View wrappers PopIn (emoji) + SlideUp (label/card); used at L42-49/51-58/60-65.",
+    "L2 react-i18next useTranslation -> inlined native useTranslation() returning the English fallback (or key); every key preserved verbatim (L26 'yearReview.noDriveData', L87 'yearReview.duration').",
+    "L3 useUnits from @/hooks/useUnits -> derived from native useSettings(); L18-19 unitPrefs.distance reproduced via deriveDistance(settings.unit_of_length === 'mi' ? 'mi' : 'km').",
+    "L4 convertDistanceFromSI from @/lib/unitConversion -> inlined km/mi branches (meters/1000 or meters/1609.344) matching the web lib constants; used at L35.",
+    "L5 type YearReviewDriveHighlight from @/api/types -> imported from native web-parity api/types; the {drive | null, label, emoji} Props (L10-14) preserved.",
+    "L6 lucide-react MapPin/Clock/Zap/ArrowRight -> native SemanticIcon glyphs (location/clock/bolt/forward) rendered inline as muted text via InlineIcon (L68/70/84/91).",
+    "L8 KM_PER_MILE = 1.609344 -> preserved verbatim as a module constant; applied at L37 effDisplay (Wh/km -> Wh/mi).",
+    "L10-14 Props interface (drive/label/emoji) -> preserved verbatim.",
+    "L16-20 component signature + useTranslation + useUnits.distance + efficiencyUnit ('Wh/mi' vs 'Wh/km') -> preserved.",
+    "L22-29 null-drive branch -> centered View with the static (un-animated, matching web) emoji text-6xl + 'No drive data for this year' secondary text; px-8/h-full/items-center/justify-center reproduced as container styles.",
+    "L31-33 hours/mins/durationStr from duration_min (hours>0 ? `${h}h ${m}m` : `${m}m`) -> preserved verbatim.",
+    "L34-38 SI comment + distDisplay=convertDistanceFromSI(distance_km*1000) + effDisplay (mi -> *KM_PER_MILE else identity) -> preserved verbatim.",
+    "L40-49 outer container + motion.span emoji (scale 0->1, rotate -10deg->0, spring stiffness 180 / damping 14) -> View + PopIn(Animated.spring stiffness 180/damping 14/mass 1) wrapping the emoji AppText; text-5xl md:text-6xl -> fontSize 56.",
+    "L51-58 motion.p label (y 20->0, opacity 0->1, delay 0.2, duration 0.4, uppercase, tracking-wider) -> SlideUp distance=20/delay=0.2/duration=0.4 with uppercase letterSpacing label style.",
+    "L60-65 motion.div card (y 30->0, opacity 0->1, delay 0.4, duration 0.5; bg-white/[0.05] rounded-2xl p-6 max-w-sm w-full border) -> SlideUp distance=30/delay=0.4/duration=0.5 carrying the card style (maxWidth 384, padding 24, radius 16, white border/fill).",
+    "L66-72 Route row -> View row: MapPin->location glyph, start_address || em-dash (numberOfLines=1 for truncate), ArrowRight->forward glyph, end_address || em-dash.",
+    "L74-98 3-column stats grid -> flex row of 3 statCols: distance Math.round(distDisplay)+distanceUnit; Clock glyph + durationStr + 'duration'; Zap glyph + (efficiency_wh_km>0 ? Math.round(effDisplay) : em-dash) + efficiencyUnit; text-2xl/font-bold/text-white -> statValue, text-xs/text-muted -> statUnit.",
+    "L100-101 Date -> muted text-xs mt-4 AppText rendering drive.date.",
+    "L102-105 motion.div/div/return/function close -> preserved.",
+    "All three entry animations honour the OS reduce-motion setting (AccessibilityInfo) and render the resting state when enabled, mirroring the FadeIn parity port; reduced-motion path matches web initial={false} behaviour.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
