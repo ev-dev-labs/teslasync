@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/gear.ts",
+  "outputPath": "apps/native/src/web-parity/lib/gear.ts",
+  "sourceLineCount": 37,
+  "coveredLineCount": 37,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-5 parseGear JSDoc preserved verbatim (Tesla ShiftState enum -> gear letter, lists the five ShiftState* inputs and the 'D'/'R'/'P'/'N'/null outputs). A native-port header comment was prepended above it documenting the faithful 1:1 logic/data port.",
+    "L6-15 parseGear ported statement-for-statement: L7 null/<nil>/'' guard -> null, L8 strip-prefix comment kept verbatim, L9 raw.toUpperCase().replace('SHIFTSTATE','') (note the source uppercases first, so 'ShiftState' is matched as 'SHIFTSTATE'), L10-13 the D/DRIVE, R/REVERSE, P/PARK, N/NEUTRAL branches in identical order, L14 default return null. Return type union 'D'|'R'|'P'|'N'|null unchanged. Pure logic, no browser/React dependency.",
+    "L17-22 GEAR_COLORS Record<string,string> ported byte-for-byte: D text-emerald-300, R text-rose-300, P text-cyan-300, N text-amber-300. Kept as the same Tailwind text class-name lookup table the web layer resolves at its render boundary (non-visual utility data, not rendering code), so the semantic gear->colour mapping is preserved; a native consumer maps the class name to a theme token at its own render boundary.",
+    "L24-29 GEAR_BG_COLORS Record<string,string> ported byte-for-byte: D bg-neon-green/10 text-neon-green, R bg-neon-red/10 text-neon-red, P bg-neon-cyan/10 text-neon-cyan, N bg-neon-amber/10 text-neon-amber. Same class-name lookup-table rationale as GEAR_COLORS.",
+    "L31 '/** Badge color name for the shared Badge component */' comment preserved verbatim.",
+    "L32-37 GEAR_BADGE_COLORS ported byte-for-byte with identical value type Record<string, 'green'|'red'|'cyan'|'amber'|'neutral'> and entries D green, R red, P cyan, N amber. These are abstract Badge-variant names (not Tailwind classes) consumed by a shared Badge on either platform, so no transform is needed. The generic type args were wrapped across three lines only to satisfy the native prettier printWidth (80); no value change.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported or referenced — pure native-compatible TypeScript. Only native formatting (statement-terminating semicolons; long Record<> generic wrapped) was added vs the web source.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
