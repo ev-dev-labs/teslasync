@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/analytics/components/AchievementBadge.tsx",
+  "outputPath": "apps/native/src/web-parity/features/analytics/components/AchievementBadge.tsx",
+  "sourceLineCount": 97,
+  "coveredLineCount": 97,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read source lines 1-97 line by line. L5-15 AchievementData interface ported verbatim (id/name/description/icon/unlocked/unlocked_at/progress/target/current). L17-20 AchievementBadgeProps ported (achievement + size 'sm'|'md'|'lg', default 'md').",
+    "L22-26 sizeConfig: Tailwind class strings resolved to native numerics — ring/stroke unchanged (56/3, 72/4, 96/5); iconSize text-xl/3xl/4xl -> font 20/30/36 with Tailwind line-heights 28/36/40; gap gap-1/2/3 -> 4/8/12; textSize text-xs/sm/base -> name font 12/14/16 with leading-tight line-heights 15/18/20.",
+    "L28-33 component: useTranslation, cfg, isNearComplete (!unlocked && progress>=0.8), and pct (round(progress*100)) preserved verbatim, including pct feeding both the ring value and the percent label.",
+    "L34-44 outer div -> Animated.View column (relative, rounded-xl=borderRadius 12, p-3=padding 12, items-center, per-size gap). Locked/unlocked surface+border mapped to literal yellow-500/white-alpha tints matching the exact Tailwind values. transition-all duration-normal has no RN analog (dropped). isNearComplete && animate-pulse reproduced via Animated.loop oscillating container opacity 1->0.5->1 (compounds with the locked icon opacity like CSS, with stop() cleanup).",
+    "L45-67 badge circle + ProgressRing + icon: ProgressRing (L48-55) inlined as native-safe AchievementProgressRing — the web SVG <circle> strokeDasharray/strokeDashoffset arc cannot render in RN (no react-native-svg), so it is approximated with positioned View segments (track=colors.border, progress=color) exactly like the existing RadialGauge native port; value/max/size/strokeWidth/color all passed through and the '#eab308' vs '#6b7280' computed ternary colour preserved verbatim. Icon span (L56-66) -> AppText glyph: role=img/aria-label -> accessibilityRole='image'/accessibilityLabel={name}; select-none is a native no-op; when locked the icon is absolutely centred over the ring with opacity-50, and the CSS grayscale filter is UNAVAILABLE on RN colour emoji (dimmed only, documented).",
+    "L70-78 name span -> AppText (font-semibold=600, text-center, leading-tight per-size lineHeight, text-yellow-400 #facc15 when unlocked else --text-secondary=colors.textSecondary). L81-83 description -> AppText (text-xs 12/15 leading-tight, --text-muted=colors.textMuted, centred).",
+    "L86-94 status: unlocked branch -> AppText (text-xs 12/16, font-medium=500, text-yellow-500/70 rgba(234,179,8,0.7)) rendering t('lifetime.unlocked','✓ Unlocked'); locked branch -> AppText (text-xs 12/16, --text-muted, fontVariant tabular-nums) rendering `${pct}%`. L95-97 closers.",
+    "Module mapping: cn (@/lib/cn) dropped — className-only merger, classes became StyleSheet/inline styles. ProgressRing (@/components/data-display) inlined native-safe (no react-native-svg). react-i18next useTranslation -> local fallback shim returning inline English, lifetime.unlocked key retained. No DOM-only modules, HTML elements, Recharts, Leaflet, or old web UI components imported.",
+    "Native-unavailable behaviors: CSS `grayscale` filter on the locked colour emoji (no RN equivalent — icon is dimmed via opacity only); CSS `transition-all duration-normal` (no RN layout/colour transition — dropped). Both preserve visual intent as closely as native allows."
+  ]
+}
