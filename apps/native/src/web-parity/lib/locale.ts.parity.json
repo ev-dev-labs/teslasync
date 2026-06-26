@@ -1,0 +1,16 @@
+{
+  "sourcePath": "web/src/lib/locale.ts",
+  "outputPath": "apps/native/src/web-parity/lib/locale.ts",
+  "sourceLineCount": 17,
+  "coveredLineCount": 17,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-13 the JSDoc block is preserved verbatim (BCP-47 fallback rationale: settings API can return locale:'' , ?? does not catch empty strings, passing '' to new Intl.NumberFormat('')/Intl.DateTimeFormat('') throws RangeError: Invalid language tag, so use this helper at every Intl.* site). A native-port header comment was prepended above it documenting the faithful 1:1 logic port and noting the Intl.* references are caller-behaviour documentation only — resolveLocale itself never calls Intl, so it is Hermes/JSC-safe regardless of ICU availability.",
+    "L14 export function resolveLocale(locale: string | null | undefined): string { — signature ported unchanged (same param name 'locale', same string|null|undefined union, same string return type).",
+    "L15 the guard 'if (typeof locale === 'string' && locale.trim().length > 0) return locale' ported statement-for-statement; only a terminating semicolon was added per the apps/native prettier config (web source is semicolon-free).",
+    "L16 'return 'en-US'' fallback ported unchanged; terminating semicolon added.",
+    "L17 closing brace preserved. (Source line 18 is the trailing newline, not counted in the 17-line total.)",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported or referenced — pure native-compatible TypeScript. The only diff vs the web source is the added statement-terminating semicolons and the prepended native-port header comment.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
