@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/lib/typeGuards.ts",
+  "outputPath": "apps/native/src/web-parity/lib/typeGuards.ts",
+  "sourceLineCount": 45,
+  "coveredLineCount": 45,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 45 source lines (numbered) before editing. The module is a pure, non-visual set of four runtime type guards from the Go backend; no JSX, no Recharts/Leaflet, no react-router-dom, no web UI components, and zero imports. The only language surfaces are `typeof`, `String.prototype.length`, and `Number.isFinite` — all core ECMAScript (es2015+) that run identically under Hermes/React Native, so there is no browser-only behavior to substitute and the logic + type signatures port byte-for-byte.",
+    "L1-25 the module-level JSDoc block (purpose: defensive type guards for runtime values from the Go backend; the per-field MQTT cutover serializing raw signal.SignalValue from /security/latest; the bool/int/string per-signal value table with all enumerated signal names; the older `string | null` TS-type hazard where consumers called .trim()/.toLowerCase()/.split() and crashed with 'e.trim is not a function'; and the NEVER-coerce-non-string-to-string invariant with the String(false)==='false' closed-door-as-Open caveat) is preserved verbatim above the functions. A leading // file header additionally records that this is a pure non-visual port with no browser coupling.",
+    "L26 blank separator line preserved.",
+    "L27-30 asNonEmptyString: the JSDoc `/** Returns v only when it is a non-empty string; null otherwise. */` and the body `export function asNonEmptyString(v: unknown): string | null { return typeof v === 'string' && v.length > 0 ? v : null; }` ported character-for-character (same `unknown` param, same `string | null` return, same single-quoted 'string', same length>0 guard).",
+    "L31-35 asString: JSDoc `/** Returns v when it is a string (including empty); null otherwise. */` and body `export function asString(v: unknown): string | null { return typeof v === 'string' ? v : null; }` ported verbatim.",
+    "L36-40 asFiniteNumber: JSDoc `/** Returns v when it is a finite number; null otherwise. */` and body `export function asFiniteNumber(v: unknown): number | null { return typeof v === 'number' && Number.isFinite(v) ? v : null; }` ported verbatim — Number.isFinite is es2015 core (present in the native es2019 lib), not a DOM API.",
+    "L41-44 asBoolean: JSDoc `/** Returns v when it is a boolean; null otherwise. */` and body `export function asBoolean(v: unknown): boolean | null { return typeof v === 'boolean' ? v : null; }` ported verbatim.",
+    "L45 trailing newline preserved. Formatting (2-space indent, single quotes, semicolons, trailing newline) already matches the apps/native .prettierrc.js (singleQuote:true, trailingComma:all) and the @react-native eslint config; identical to the safeUUID.ts precedent.",
+    "No new tests added — no web-parity/lib utility has a dedicated test file (matches the cn.ts / safeUUID.ts / broadcastTopics.ts precedent). Gates run from apps/native: `npm run typecheck` (tsc --noEmit) PASS; `npm run lint -- --quiet` (eslint . --quiet) PASS; `npm test -- --runInBand --detectOpenHandles` full existing suite PASS. Commit scoped to apps/native only; pre-existing EOL-only dirty web files left untouched."
+  ]
+}
