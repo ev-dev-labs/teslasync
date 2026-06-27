@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+  "outputPath": "apps/native/src/web-parity/features/telemetry/components/LiveSignalTail.tsx",
+  "sourceLineCount": 208,
+  "coveredLineCount": 208,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 208 source lines. Docstring L1-9 preserved as the native header comment (pure-render tail, state owned by useLiveSignalStream, placeable anywhere, used by LiveSignalMonitorPage + SignalsWorkspacePage).",
+    "Imports L11-20: useEffect/useMemo/useRef/useState kept (+ ReactNode); react-i18next useTranslation (L12) -> inlined useNativeTranslation() (key,fallback)->fallback shim; lucide Activity/ArrowDown/ArrowUpDown/Pause/Play/Radio/Trash2 (L13) -> SemanticIcon glyphs activity/arrowDown/arrowUpDown/pause/play + a pulsing red LiveDot (for Radio) + delete (Trash2); @/components/ui GlassPanel (L15) -> shared native GlassPanel, Badge -> inline TypeBadge, Button -> inline ActionButton, Input -> TextInput, DataTable+Column -> static native SignalTable; StatCard/FreshnessIndicator (L16) -> ported native data-display barrel; FadeIn (L17) -> local Animated.View mount fade; formatTime (L18) -> inlined native formatTime; cn (L19) dropped (no Tailwind); SignalEntry (L20) mirrored+re-exported locally.",
+    "TYPE_VALUE_COLOR L22-26 (number text-cyan-400, string text-green-400, boolean text-amber-400) -> native Record mapping number->colors.accent, string->colors.success, boolean->colors.warning; reused for both the value-cell color and the TypeBadge tone.",
+    "Props interface L28-45 preserved verbatim: entries/rate/paused/onPauseToggle/onClear/bufferMax/showStats?(=true)/title?/headerExtra?(ReactNode)/maxHeight?(string,='65vh')/className?. className kept on the public interface but inert (renamed _className); maxHeight stays a string and is resolved to px by resolveMaxHeight (vh -> % of Dimensions window height; px/number parsed direct).",
+    "Component signature + defaults L47-59 preserved (showStats=true, maxHeight default). useNativeTranslation t (L60); autoScroll useState(true) (L61); filter useState('') (L62); the web tableRef HTMLDivElement (L63) -> a native ScrollView ref.",
+    "filtered useMemo L65-68 ported verbatim (filter ? entries.filter(name.toLowerCase().includes(filter.toLowerCase())) : entries).",
+    "autoScroll effect L70-72 ported: web tableRef.current.scrollTop=0 -> scrollRef.current?.scrollTo({y:0,animated:false}) on [entries,autoScroll].",
+    "columns useMemo L74-112 ([t]) ported one-for-one: time -> mono muted formatTime(entry.timestamp); signal -> mono primary entry.name; value -> mono entry.value colored by TYPE_VALUE_COLOR[entry.type]; type -> TypeBadge (web Badge variant number=info/boolean=warning/string=success preserved); freshness -> FreshnessIndicator timestamp size='sm'. Header strings keep their i18n keys + English defaults (liveMonitor.time/signal/value/type/freshness).",
+    "uniqueSignals useMemo L114 ported verbatim: new Set(entries.map(e=>e.name)).size.",
+    "Render L116-207: FadeIn>GlassPanel (L117-118) preserved. Header L119-162: title block (web Radio red animate-pulse -> pulsing red LiveDot + section title) shown only when title set; filter Input (L126-133) -> TextInput with the same placeholder/aria-label i18n keys, value, onChange; controls row (L134-161) renders headerExtra then Pause/Resume (icon play/pause, onPauseToggle), Auto-scroll (icon arrowDown, toggles autoScroll, cyan active highlight = web bg-cyan-500/10 text-cyan-400 border-cyan-500/20), Clear (danger, icon delete, onClear).",
+    "Stats L164-188 (showStats gate) ported: 4 StatCards — Signals/sec (rate, activity), Buffer Size (entries.length, unit `/ ${bufferMax}`, arrowUpDown), Unique Signals (uniqueSignals, activity), Filtered (filtered.length, activity). All i18n keys + English defaults preserved; lucide icons -> SemanticIcon glyphs.",
+    "Scrolling table L190-204: web overflow-auto rounded border div with style{maxHeight} -> ScrollView (nestedScrollEnabled, ref, maxHeight via resolveMaxHeight, bordered/rounded) wrapping SignalTable. DataTable props preserved: tableId 'telemetry:live-signal-tail' -> testID + the static header/rows keyed by entry.id (keyExtractor), compact density, pagination defaultPageSize:50 -> internal page state + prev/next pager, emptyMessage = entries.length===0 ? liveMonitor.waiting 'Waiting for signals…' : liveMonitor.noMatch 'No signals match filter'.",
+    "Closing L205-208 (GlassPanel/FadeIn close + EOF) accounted for. No DOM modules, HTML elements, react-i18next, lucide-react, Recharts, Leaflet, or web @/ UI imports remain.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
