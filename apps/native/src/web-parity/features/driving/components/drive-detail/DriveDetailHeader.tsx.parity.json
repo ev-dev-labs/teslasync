@@ -1,0 +1,28 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/DriveDetailHeader.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/DriveDetailHeader.tsx",
+  "sourceLineCount": 55,
+  "coveredLineCount": 55,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 55 source lines line by line before editing.",
+    "L1 react-router-dom Link -> Pressable + an optional onNavigate(to) callback prop (the established native-parity nav idiom: VehicleHeroCard/TeslaAuthCard/EmptyState); both link targets carried verbatim ('/drives' for back, `/drives/${driveId}/replay` for replay).",
+    "L2 react-i18next useTranslation -> inlined native useTranslation()/TFunc returning the English fallback (or key); all 3 t(key, fallback) call sites preserved verbatim (driveDetail.title/driveDetail.replay/driveDetail.share), plus an a11y-only driveDetail.back label for the icon-only back control.",
+    "L3 lucide-react ArrowLeft/Route/Play/Share2 -> canonical native SemanticIcon glyphs back '<' / trip 'TR' / play 'PL' / share 'SH' (getSemanticIconDefinition(...).glyph) rendered as decorative accessibility-hidden AppText; ArrowLeft colored text-[var(--text-muted)] -> colors.textMuted, Route colored text-cyan-400 -> colors.accent, Play/Share inherit the ghost button text color.",
+    "L4 Button from '@/components/ui' -> inline ghost Pressables reproducing the web ghost size='sm' styling (h-8 minHeight 32, px-3 paddingHorizontal spacing.md, rounded-md borderRadius 6, inline-flex row + items-center + gap-2 spacing.sm, text-xs 12px) with a leading glyph + label; hover:bg -> pressed colors.surfaceHover.",
+    "L5 FadeIn from '@/components/motion' -> native parity FadeIn ('../../../../components/motion/FadeIn'), wrapping the whole header.",
+    "L6 DateTime from '@/components/data-display' (used at L33 date, L35 time showTz, L39 time) -> inlined @/lib/dateFormat formatDate (toLocaleDateString year/month/day) + formatTime (toLocaleTimeString hour/minute '2-digit') + tzAbbreviation (Intl.DateTimeFormat timeZoneName 'short') off the native useSettings query locale; in='vehicle' useTimezone is not ported, so resolveDeviceTimeZone() (device IANA zone) stands in, matching the KioskOverlay/RouteMapSection/MotorHistoryWidget precedent; em-dash fallback for null/invalid preserved.",
+    "L7 DriveDetail from '@/types/driving' -> imported from the canonical native home '../../../../api/hooks/useDriving' (its Drive base supplies startTs/endTs/startAddress/endAddress); no type duplication.",
+    "L9-L14 DriveDetailHeaderProps preserved (drive/driveId/vehicleName/onShare) plus the documented optional onNavigate(to) replacing <Link>.",
+    "L16-L17 component signature + useTranslation preserved; useSettings added to source the locale/zone the web DateTime read from providers.",
+    "L19-L21 FadeIn > flex items-center gap-4 div -> FadeIn > View row (flexDirection row, alignItems center, gap 16).",
+    "L22-L24 back Link to='/drives' (rounded-xl p-2.5 text-muted hover:bg-surface-2) + ArrowLeft -> Pressable(onNavigate('/drives')) borderRadius 12 / padding 10, pressed -> colors.surfaceRaised, with the decorative back glyph in textMuted.",
+    "L25 flex-1 title div -> titleCol View (flexGrow 1 / flexShrink 1 / flexBasis 0).",
+    "L26-L31 h1 text-2xl font-bold flex items-center gap-3 with Route (text-cyan-400) + (startAddress -> endAddress | 'Drive Details') -> titleRow View (row, gap spacing.md) with the accent Route glyph + bold title (text-2xl -> 22px); the start->end string uses U+2192 and the t('driveDetail.title','Drive Details') fallback when either address is missing, exactly as the source ternary.",
+    "L32-L42 muted <p> (text-sm mt-0.5) vehicleName + ' \\u00B7 ' + DateTime(startTs,date) + ' \\u00B7 ' + DateTime(startTs,time,showTz) + (endTs ? ' \\u2192 ' + DateTime(endTs,time)) -> single subtitle AppText composing `${vehicleName} \\u00B7 ${startDate} \\u00B7 ${startTime}`, the showTz abbreviation as a nested ml-1 text-xs span (smaller muted Text), and the optional ' \\u2192 endTime' tail only when drive.endTs is set.",
+    "L44-L48 replay Link to=`/drives/${driveId}/replay` wrapping a ghost Button icon=Play 'Replay' -> Pressable(onNavigate(`/drives/${driveId}/replay`)) styled as the ghost button with the play glyph + t('driveDetail.replay','Replay').",
+    "L49-L51 ghost Button onClick={onShare} icon=Share2 'Share' -> Pressable(onPress=onShare) styled as the ghost button with the share glyph + t('driveDetail.share','Share').",
+    "L52-L55 closing div/FadeIn + component close preserved; displayName added; text-[var(--text-primary)]/[var(--text-muted)]/text-secondary -> colors.textPrimary/textMuted/textSecondary, text-2xl/text-sm/text-xs -> 22/14/12 px.",
+    "No DOM elements, react-router-dom, react-i18next, lucide-react, Recharts, Leaflet, react-dom, or web UI-kit modules are imported into the native output."
+  ]
+}
