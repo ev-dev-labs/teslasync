@@ -1360,48 +1360,6 @@ export default function Layout({
           </View>
         </GlassPanel>
       )}
-
-      {/* Documented global surfaces the web Layout mounts around <Outlet />. */}
-      <GlassPanel style={styles.surfacesPanel}>
-        <View style={styles.surfacesHeader}>
-          <AppText variant="title" weight="bold">
-            {t('nav.globalSurfaces', 'Global app surfaces')}
-          </AppText>
-          <StatusPill label={t('nav.nativeSafe', 'Native-safe')} state="warning" />
-        </View>
-        <AppText tone="secondary">
-          {t(
-            'nav.globalSurfacesHint',
-            'These banners, modals, and overlays wrap the route content on web. They are browser-only or separately ported feedback components, documented here for parity.',
-          )}
-        </AppText>
-        {LAYOUT_GLOBAL_SURFACES.map(surface => (
-          <View key={surface.name} style={styles.surfaceRow}>
-            <View style={styles.bullet} />
-            <View style={styles.surfaceCopy}>
-              <AppText weight="semibold">{surface.name}</AppText>
-              <AppText variant="caption" tone="muted">
-                {surface.role}
-              </AppText>
-            </View>
-          </View>
-        ))}
-      </GlassPanel>
-
-      {/* Browser-only adaptations applied in this native port. */}
-      <GlassPanel style={styles.surfacesPanel}>
-        <AppText variant="title" weight="bold">
-          {t('nav.adaptations', 'Browser-only adaptations')}
-        </AppText>
-        {BROWSER_ONLY_ADAPTATIONS.map(adaptation => (
-          <View key={adaptation} style={styles.surfaceRow}>
-            <View style={styles.bullet} />
-            <AppText tone="secondary" style={styles.surfaceCopy}>
-              {adaptation}
-            </AppText>
-          </View>
-        ))}
-      </GlassPanel>
     </ScrollView>
   );
 
