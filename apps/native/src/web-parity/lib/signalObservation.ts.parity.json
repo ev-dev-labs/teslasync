@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/lib/signalObservation.ts",
+  "outputPath": "apps/native/src/web-parity/lib/signalObservation.ts",
+  "sourceLineCount": 22,
+  "coveredLineCount": 22,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source file line by line before editing; it is pure non-visual TypeScript with no DOM, browser, Recharts, Leaflet, or web UI dependencies.",
+    "Source line 1 imports `SignalObservation` from the web `@/types/signals` alias, which the native parity layer does not expose; the interface and its `SignalSource` union are inlined verbatim, matching the documented inlining used by the native useTelemetry parity hook.",
+    "Ported latestNumeric (lines 3-8), latestBool (lines 10-15), and latestText (lines 17-22) unchanged, preserving names, JSDoc, the `SignalObservation[] | undefined` parameter type, optional-chaining + `?? null` null-safety, and the value_numeric/value_bool/value_text field accessors.",
+    "Blank lines 2, 9, 16 and trailing newline 23 preserved as spacing; formatting follows the native prettier config (single quotes, trailing commas, no bracket spacing)."
+  ]
+}
