@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "language": "ar",
+    "name": "العربية",
+    "direction": "rtl",
+    "status": "placeholder",
+    "note": "Phase-46 / Prompt 48 — placeholder file. All keys fall back to en.json via i18next's fallbackLng. Translation work is tracked as a follow-up sweep."
+  }
+}
