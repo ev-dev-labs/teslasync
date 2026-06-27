@@ -41,7 +41,7 @@
 // No DOM / cn / lucide-react / Recharts / Leaflet / old web-UI imports — RN
 // primitives only. See the .parity.json sidecar for the line-by-line map.
 
-import React, {type ComponentType} from 'react';
+import React, {type ReactNode} from 'react';
 import {StyleSheet, View} from 'react-native';
 
 import {AppText} from '../../../../../components/ui/AppText';
@@ -52,14 +52,12 @@ import {colors} from '../../../../../theme/tokens';
 // contract a lucide icon satisfies; `value` keeps the string|number|boolean
 // union; `color` stays the Tailwind text-colour class string (resolved below).
 interface InfoTileProps {
-  icon: ComponentType<{color?: string; size?: number}>;
+  icon: ReactNode;
   label: string;
   value: string | number | boolean;
   color?: string;
   sub?: string;
 }
-
-const ICON_SIZE = 14; // web `h-3.5 w-3.5`
 
 // Resolve the web `color` Tailwind text-colour class to a native colour. Covers
 // the values TelemetryGrid passes (emerald/amber/rose-300 + the --text-primary/
@@ -83,7 +81,7 @@ function resolveValueColor(colorClass: string): string {
 }
 
 export function InfoTile({
-  icon: Icon,
+  icon,
   label,
   value,
   color = 'text-[var(--text-primary)]',
@@ -93,7 +91,7 @@ export function InfoTile({
   return (
     <GlassPanel style={styles.panel}>
       <View style={styles.header}>
-        <Icon color={colors.textMuted} size={ICON_SIZE} />
+        {icon}
         <AppText style={styles.label} tone="muted" numberOfLines={1}>
           {label}
         </AppText>

@@ -11,13 +11,12 @@
 export {StatusHero, type StatusHeroProps, type HeroStatus} from './StatusHero';
 export {
   StickyChipBar,
-  nativeStickyChipBarCapabilities,
+  stickyChipBarCapabilities,
   type StickyChipBarProps,
   type ChipItem,
 } from './StickyChipBar';
 export {
   StickyCompactHero,
-  nativeStickyCompactHeroCapabilities,
   type StickyCompactHeroProps,
 } from './StickyCompactHero';
 export {HealthRow, type HealthRowProps} from './HealthRow';
@@ -30,7 +29,6 @@ export {
 } from './ResourcesPanel';
 export {
   UptimeHeatmap,
-  nativeUptimeHeatmapCapabilities,
   type UptimeHeatmapProps,
   type UptimeDay,
 } from './UptimeHeatmap';

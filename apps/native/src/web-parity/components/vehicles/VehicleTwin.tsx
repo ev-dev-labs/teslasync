@@ -42,6 +42,13 @@ import type {
   WindowState,
 } from './_vehicleState';
 
+export type {
+  DoorStates,
+  TurnSignalState,
+  VehicleTwinState,
+  WindowState,
+} from './_vehicleState';
+
 const SIZE_MAP = {sm: 300, md: 440, lg: 560} as const;
 const VIEWBOX_WIDTH = 560;
 const VIEWBOX_HEIGHT = 220;

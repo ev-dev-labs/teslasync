@@ -102,7 +102,7 @@ interface BuildIconOptions {
  * Pure function (web appIcon L48-105) — same inputs always produce byte-identical
  * output. Ported verbatim; contains no DOM or browser dependency.
  */
-function buildAppIconSvg(opts: BuildIconOptions): string {
+export function buildAppIconSvg(opts: BuildIconOptions): string {
   const primary = safeHex(opts.primary, '#00f0ff');
   const accent = safeHex(opts.accent, '#10b981');
   const mode: AppIconMode = opts.mode ?? 'standard';
@@ -184,7 +184,7 @@ function encodeBase64Ascii(input: string): string {
  * L107-127). Byte-stable for the same input. Uses the local encoder above rather
  * than the browser `btoa`.
  */
-function svgToDataUrl(svg: string): string {
+export function svgToDataUrl(svg: string): string {
   return `data:image/svg+xml;base64,${encodeBase64Ascii(svg)}`;
 }
 
@@ -196,7 +196,7 @@ function svgToDataUrl(svg: string): string {
  * null, taking exactly that documented skip path. See
  * {@link DYNAMIC_APP_ICON_PNG_UNAVAILABLE_REASON}.
  */
-function renderSvgToPngDataUrl(
+export function renderSvgToPngDataUrl(
   _svg: string,
   _size: number,
 ): Promise<string | null> {
@@ -312,6 +312,112 @@ function publishDynamicAppIcon(snapshot: DynamicAppIconSnapshot | null): void {
     listener(snapshot);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Pure parity surface (testable without mounting the hook)           */
+/* ------------------------------------------------------------------ */
+
+/** The pure, DOM-free brand-artwork computation shared with the hook (web L61-115). */
+export interface DynamicAppIconComputed {
+  signature: string;
+  primary: string;
+  accent: string;
+  dynamicMark: string;
+  themeColor: string;
+  faviconSvg: string;
+  faviconHref: string;
+  appleSvg: string;
+  standardSvg: string;
+  maskableSvg: string;
+}
+
+/**
+ * Compute the themed app-icon artwork (favicon/apple/standard/maskable SVGs + the
+ * favicon data URL) for a primary/accent pair. Pure — no DOM, no side effects —
+ * so it runs identically on device, under Jest, and inside the hook's effect.
+ */
+export function computeDynamicAppIconSnapshot(
+  primary: string,
+  accent: string,
+): DynamicAppIconComputed {
+  const faviconSvg = buildAppIconSvg({primary, accent, mode: 'standard'});
+  const standardSvg = buildAppIconSvg({primary, accent, mode: 'standard'});
+  const appleSvg = buildAppIconSvg({primary, accent, mode: 'apple'});
+  const maskableSvg = buildAppIconSvg({primary, accent, mode: 'maskable'});
+  return {
+    signature: `${primary}|${accent}`,
+    primary,
+    accent,
+    dynamicMark: DYNAMIC_MARK,
+    themeColor: primary,
+    faviconSvg,
+    faviconHref: svgToDataUrl(faviconSvg),
+    appleSvg,
+    standardSvg,
+    maskableSvg,
+  };
+}
+
+/** Build the synthetic Web App Manifest (web L135-150) from a theme colour + the 4 PNG rasters. */
+export function buildDynamicAppIconManifest(
+  themeColor: string,
+  pngs: {
+    std192: string | null;
+    std512: string | null;
+    msk192: string | null;
+    msk512: string | null;
+  },
+): DynamicAppIconManifest {
+  return {
+    name: 'TeslaSync',
+    short_name: 'TeslaSync',
+    start_url: '/',
+    display: 'standalone',
+    background_color: FALLBACK_BG,
+    theme_color: themeColor,
+    orientation: 'any',
+    categories: ['auto', 'utilities'],
+    icons: [
+      {src: pngs.std192, sizes: '192x192', type: 'image/png', purpose: 'any'},
+      {src: pngs.std512, sizes: '512x512', type: 'image/png', purpose: 'any'},
+      {src: pngs.msk192, sizes: '192x192', type: 'image/png', purpose: 'maskable'},
+      {src: pngs.msk512, sizes: '512x512', type: 'image/png', purpose: 'maskable'},
+    ],
+  };
+}
+
+/** One browser-chrome layer's native availability + the reason it is (un)available. */
+export interface DynamicAppIconCapability {
+  available: boolean;
+  reason: string;
+}
+
+/**
+ * Which of the web hook's five layers survive on React Native: the four
+ * browser-chrome injection layers are unavailable; only the pure icon computation
+ * runs natively. Mirrors the native a11y/capabilities barrel pattern (rule 7).
+ */
+export const dynamicAppIconNativeCapabilities: {
+  favicon: DynamicAppIconCapability;
+  themeColorMeta: DynamicAppIconCapability;
+  appleTouchIcon: DynamicAppIconCapability;
+  manifest: DynamicAppIconCapability;
+  iconComputation: DynamicAppIconCapability;
+} = {
+  favicon: {
+    available: false,
+    reason: `React Native has no <link rel="icon"> to tag with ${DYNAMIC_MARK}. ${DYNAMIC_APP_ICON_DOM_UNAVAILABLE_REASON}`,
+  },
+  themeColorMeta: {available: false, reason: DYNAMIC_APP_ICON_DOM_UNAVAILABLE_REASON},
+  appleTouchIcon: {available: false, reason: DYNAMIC_APP_ICON_PNG_UNAVAILABLE_REASON},
+  manifest: {available: false, reason: DYNAMIC_APP_ICON_DOM_UNAVAILABLE_REASON},
+  iconComputation: {
+    available: true,
+    reason:
+      'The pure SVG artwork computation (buildAppIconSvg / svgToDataUrl) is DOM-free and runs identically on React Native.',
+  },
+};
+
 
 /* ------------------------------------------------------------------ */
 /*  The hook                                                           */

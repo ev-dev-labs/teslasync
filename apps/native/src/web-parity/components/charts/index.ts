@@ -94,6 +94,11 @@ export {
   ChartHiddenSeriesProvider,
   useChartHiddenSeries,
 } from './ChartHiddenSeriesContext';
+export {
+  SmallMultiplesChart,
+  SMALL_MULTIPLES_NATIVE_CAPABILITIES,
+  type SmallMultiplesChartProps,
+} from './SmallMultiplesChart';
 
 export const NATIVE_RECHARTS_UNAVAILABLE_REASON =
   'Recharts depends on browser DOM/SVG layout and is unavailable in React Native parity components.' as const;
