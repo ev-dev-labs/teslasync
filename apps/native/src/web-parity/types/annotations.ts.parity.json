@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/types/annotations.ts",
+  "outputPath": "apps/native/src/web-parity/types/annotations.ts",
+  "sourceLineCount": 108,
+  "coveredLineCount": 108,
+  "notes": [
+    "Read the full 108-line source line by line before editing; this is non-visual type/utility code with zero imports and no DOM, browser, Recharts, Leaflet, or web UI dependencies, so it ports 1:1 into React Native-safe TypeScript.",
+    "Preserved the DataAnnotation interface (L1-17), AnnotationCategory union (L19-25), AnnotationScope union and its sync comment referencing internal/api/chart_annotation_handler.go (L27-41), and the ANNOTATION_SCOPES readonly const array (L43-52).",
+    "Preserved the ChartAnnotationRow wire shape with snake_case fields and nullable members (L54-72) and the toDataAnnotation projection function with its ?? undefined / scope[0] ?? '' null-safety exactly (L74-90).",
+    "Preserved ANNOTATION_COLORS hex map (L92-99) and ANNOTATION_CATEGORY_LABELS string map (L101-108) verbatim; i18n intent unchanged since the source uses plain English labels with no translation layer.",
+    "conversionStatus converted: every source line considered and represented; no behavior, field name, API path comment, or color value altered."
+  ],
+  "conversionStatus": "converted"
+}

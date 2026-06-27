@@ -1,0 +1,13 @@
+{
+  "sourcePath": "web/src/components/data-display/DataFreshness.tsx",
+  "outputPath": "apps/native/src/web-parity/components/data-display/DataFreshness.tsx",
+  "sourceLineCount": 302,
+  "coveredLineCount": 302,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the full 302-line source with numbered lines before editing; covered the DataFreshnessProps/FreshnessStatus/FRESHNESS_COLORS exports, STATUS_CONFIG mapping, local i18n-aware relative time formatter, DataFreshness state derivation, 30s tick refresh, background-refetch pulse distinction, reduced-motion handling, refresh callback guard, accessibility labels/live-region intent, compact mode, FreshnessQuery subset, DataFreshnessAuto wrapper, refetchable flag, and forceStaleAfterMs override.",
+    "Converted DOM span/title/role/aria/Tailwind/lucide-react usage to React Native View/Pressable/Animated/AppText/StyleSheet primitives, native design tokens, accessibilityHint/accessibilityLiveRegion/accessibilityState, and small native glyphs for Wifi/Refresh/WifiOff without importing browser-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components.",
+    "Preserved i18n intent with the original freshness.* and a11y.dataFreshness keys plus fallback interpolation; the web useDateFormat hook is represented by a native-safe local time formatter for the last-updated accessibility hint because that web settings hook is not available in the native parity surface.",
+    "Preserved reduced-motion semantics through React Native AccessibilityInfo.isReduceMotionEnabled and reduceMotionChanged; when motion is allowed, the fetching ring, background pulse, and refresh glyph spin mirror the web animate-ping/animate-pulse/animate-spin intent."
+  ]
+}
