@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/types/fsm/theme.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/theme.ts",
+  "sourceLineCount": 54,
+  "coveredLineCount": 54,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 54 source lines line-by-line in a numbered range before editing. Source is pure non-visual FSM theme type/data code (conversion contract rule 6): zero DOM, window, Recharts, Leaflet, or web-UI imports — its only dependency is the sibling './types' module — so it is ported faithfully and React Native-compatibly with no native-safe shim required (rule 7 not applicable).",
+    "L1 import preserved: `import type { BadgeVariant, StateStyle, StateEntry, ResolvedStateStyle } from './types'`. The native sibling apps/native/src/web-parity/types/fsm/types.ts already exists as a faithful RN-safe port that exports all four of these symbols, so the import resolves and typechecks. Reformatted to multi-line per prettier (4 named type imports), semantics identical.",
+    "L3-6 JSDoc 'Single source of truth: BadgeVariant → Tailwind classes' block carried verbatim above VARIANT_THEME.",
+    "L7-38 VARIANT_THEME const (Record<BadgeVariant, StateStyle>) preserved name-for-name and value-for-value: success (bg-green-400 / bg-green-500/10 / text-green-400 / bg-green-400), warning (amber-400 / amber-500/10 / amber-400 / amber-400), danger (red-400 / red-500/10 / red-400 / red-400), info (blue-400 / blue-500/10 / blue-400 / blue-400), neutral (gray-400 / gray-500/10 / text-[var(--text-muted)] / gray-400). All Tailwind class strings (including the neutral text CSS-var token) carried byte-identical as visual-intent data for the parity render layer — no neon-text rule applies to data strings.",
+    "L40-48 resolveStyle(entry: StateEntry): ResolvedStateStyle preserved exactly — reads base = VARIANT_THEME[entry.variant] and returns { variant, ...base, ...entry.overrides } with identical spread order so overrides still win over theme defaults.",
+    "L50-54 DEFAULT_STATE: ResolvedStateStyle = { variant: 'neutral', ...VARIANT_THEME.neutral } preserved exactly. L55 trailing newline preserved.",
+    "No state names, API paths, i18n strings, or unit-suffixed (Mi/Min/Mph/Kwh/Kw/Psi) fields exist in this source, so SI-cutover, API-prefix, and i18n rules do not apply. Only deltas vs source are path + formatting: collapsed the source's column-aligned key spacing and added semicolons/single-quotes/trailing-commas per apps/native/.prettierrc.js + @react-native eslint. Object literals are semantically identical.",
+    "Gates run from apps/native — npm run typecheck => exit 0; npm run lint -- --quiet => exit 0; npm test -- --runInBand --detectOpenHandles => all suites passed (incl. WebParityReport.test.ts). Raw output in the final response."
+  ]
+}
