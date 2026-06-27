@@ -1,0 +1,14 @@
+{
+  "sourcePath": "web/src/lib/preferredRange.ts",
+  "outputPath": "apps/native/src/web-parity/lib/preferredRange.ts",
+  "sourceLineCount": 51,
+  "coveredLineCount": 51,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 51 source lines line by line. Pure, non-visual selection utility — no DOM, JSX, Recharts, Leaflet, browser HTML elements, or old web UI imports. Only constructs are type/interface declarations, one string constant, and a single pure function using strict equality, nullish-coalescing, and optional chaining, all available on Hermes and in the Jest/Node gate, so the logic ports verbatim with no native-safe shim; a native-port header docblock was prepended per contract rule 6 documenting the no-DOM/identical-behavior reasoning plus SI-metres/'rated'-fallback/i18n-label preservation.",
+    "L1-16 module docblock (preferred_range General-Settings rationale: rated_range vs ideal_range both SI metres, primary range surfaces Glance/vehicle-list-cards/charge-status/dashboard-hero, the RangeBarWidget/BatteryRangePanel comparison-surface exclusion, and the pure-no-React reuse rationale for certificates/server-side/file-export) ported byte-identically.",
+    "L17 `export type RangeType = 'rated' | 'ideal'` and L19-22 `export interface PreferredRangeFields { rated_range?: number | null; ideal_range?: number | null }` ported verbatim — both fields preserved as SI metres optionals, snake_case JSON field names kept to match the Go API response shape (no unit-suffixed renames needed; '_range' is already SI metres under Phase-42/48).",
+    "L24-33 `export interface PreferredRangeResult` ported byte-identically: `meters: number | null` (SI metres + JSDoc), `source: RangeType`, `labelKey: 'idealRange' | 'ratedRange'`, `defaultLabel: 'Ideal Range' | 'Rated Range'` with all four per-field JSDoc comments preserved. The labelKey/defaultLabel English strings are i18n fallback suffixes/values (consumed via t('common.idealRange') style calls at the caller's display edge), so i18n intent is preserved by keeping them verbatim rather than introducing a native i18n call here.",
+    "L35 `const FALLBACK_TYPE: RangeType = 'rated'` and L37-51 `selectPreferredRange(state, rangeType)` ported verbatim: rangeType === 'ideal' ? 'ideal' : FALLBACK_TYPE type pick, the `state?.ideal_range ?? null` / `state?.rated_range ?? null` null-safe SI-metres selection, and the ternary returning the matching {meters, source, labelKey, defaultLabel} object. The 'rated' default for missing/mistyped preference (matching the backend useSettings default) is preserved exactly. No API paths, browser-only behavior, or unit conversion exist in source — nothing to shim. Verified from apps/native: npm run typecheck, npm run lint -- --quiet, and npm test -- --runInBand --detectOpenHandles all pass."
+  ]
+}
