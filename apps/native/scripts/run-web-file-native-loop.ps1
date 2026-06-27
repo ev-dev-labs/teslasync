@@ -272,6 +272,19 @@ $fullManifest = @(
         }
     }
 )
+
+# Optional drain mode: restrict to an explicit relPath allow-list (one per line)
+# and re-index sequentially so a reduced tail set shards evenly across all workers
+# instead of staying jammed in whichever natural shard it happened to fall in.
+$onlyListPath = $env:RN_PARITY_ONLY_LIST
+if (-not [string]::IsNullOrWhiteSpace($onlyListPath) -and (Test-Path $onlyListPath)) {
+    $onlySet = @{}
+    foreach ($line in (Get-Content $onlyListPath)) { $t = $line.Trim(); if ($t) { $onlySet[$t] = $true } }
+    $filtered = @($fullManifest | Where-Object { $onlySet.ContainsKey($_.relPath) })
+    for ($k = 0; $k -lt $filtered.Count; $k++) { $filtered[$k].index = $k + 1 }
+    $fullManifest = $filtered
+    Write-Host "ONLY-LIST active: $($fullManifest.Count) files from $onlyListPath (re-indexed for even sharding)"
+}
 $manifest = @($fullManifest | Where-Object { (($_.index - 1) % $ShardCount) -eq $ShardIndex })
 $manifest | ConvertTo-Json -Depth 6 | Set-Content -Path $manifestPath -Encoding UTF8
 
