@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/gpx.ts",
+  "outputPath": "apps/native/src/web-parity/lib/gpx.ts",
+  "sourceLineCount": 42,
+  "coveredLineCount": 42,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-2 imports formatDate(./dateFormat) + fmtNumber(./numberFormat): those parity siblings are not ported yet (pre-creating them would collide with their own conversion slots), so both are inlined as module-private helpers reproducing the exact web behavior the gpx call sites use — formatDate=date-only 'Apr 4, 2026' path (dateFormat L65-72) with '—' fallback; fmtNumber=safeNumber (numberFormat L32-34) at explicit precision with default global locale 'en-US' (numberFormat L50-65).",
+    "L4 export function exportDriveAsGPX(drive, positions, vehicleName): name + params preserved; becomes async returning GpxExportResult because the native delivery (Share) is promise-based. drive/positions typed via GpxDrive/GpxPosition interfaces instead of `any` (project anti-any rule).",
+    "L5-31 the GPX 1.1 template is ported byte-for-byte into the pure buildDriveGpx(): xml header (L5), <gpx> + xmlns/xsi attrs (L6-9), <metadata> name with vehicleName + formatDate (L10-11), <desc> Distance fmtNumber(distance,1) km + Duration Math.round(duration_min) min (L12), <time> start_date.toISOString() (L13-14), <trk>/<name>Drive id (L15-16), <trkseg> (L17).",
+    "L18-28 positions.filter(p => p.latitude && p.longitude) truthy filter preserved, .map -> per-<trkpt> lat/lon (L20), <ele> elevation||0 (L21), <time> created_at.toISOString() (L22), <extensions> speed||0/battery_level||0/power||0 (L23-27), closing </trkpt> (L28), .join('\\n') preserved — exact indentation/newlines retained inside nested template literal.",
+    "L29-31 closing </trkseg>/</trk>/</gpx> preserved verbatim.",
+    "L33-41 browser file download (Blob L33, URL.createObjectURL L34, document.createElement('a') L35, a.href L36, a.download filename L37, document.body.appendChild L38, a.click L39, document.body.removeChild L40, URL.revokeObjectURL L41) is browser-only with no installed native file/share lib: replaced by the React Native Share OS share sheet, with the L37 filename surfaced as share title/subject/dialogTitle. L37 filename string ('teslasync-drive-{id}-{start_date.toISOString().slice(0,10)}.gpx') ported verbatim into driveGpxFilename().",
+    "L42 closing brace. Contract rule 7 explicit-unavailable state implemented: when Share rejects/unavailable the result is action:'unavailable' + unavailableReason (via reused getErrorMessage from the ported ./errorMessage sibling); dismissal -> action:'dismissed'. No DOM/Blob/URL/document/Recharts/Leaflet/web-UI symbol in the native output.",
+    "Gates from apps/native: npm run typecheck (tsc --noEmit) clean; npm run lint -- --quiet clean; npm test -- --runInBand --detectOpenHandles green (WebParityGpx.test.ts covers serialization, the lat/lon filter, ||0 fallbacks, filename, and the shared/dismissed/unavailable Share paths)."
+  ]
+}
