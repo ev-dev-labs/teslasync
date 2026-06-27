@@ -18,6 +18,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   define: {
     __DEV__: JSON.stringify(mode !== 'production'),
+    // react-native-web's Animated references `global`; map it to globalThis so
+    // animated widgets don't crash in the browser.
+    global: 'globalThis',
     'process.env.NODE_ENV': JSON.stringify(
       mode === 'production' ? 'production' : 'development',
     ),
@@ -35,5 +38,14 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: '.web-build',
     emptyOutDir: true,
+  },
+  server: {
+    proxy: {
+      // Forward API + SSE to the Go backend so the browser stays same-origin.
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
   },
 }));

@@ -23,6 +23,11 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Point the web-parity API client at this origin so requests are
+      // same-origin and the Vite dev proxy can forward /api -> :8080 (no CORS).
+      window.TESLASYNC_API_BASE_URL = window.location.origin;
+    </script>
     <script type="module" src="/index.web.tsx"></script>
   </body>
 </html>

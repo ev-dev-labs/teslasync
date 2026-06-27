@@ -83,6 +83,7 @@ import {
 import {AppText} from '../../../../components/ui/AppText';
 import {GlassPanel} from '../../../../components/ui/GlassPanel';
 import {colors, spacing} from '../../../../theme/tokens';
+import {DASHBOARD_WIDGET_COMPONENTS} from '../../../../web-parity-integration/dashboardWidgets.generated';
 
 /* ─── Inlined widget/layout types (web ../widgets/types) ─────────────────────
  * Reproduced self-contained — `../widgets/types` is not a native parity
@@ -174,7 +175,23 @@ interface SavedDashboard {
  * empty at this layer. `getWidgetDef` keeps the web lookup shape so a future
  * registry wiring is a drop-in; `renderWidgetBody` falls back to an explicit
  * WidgetUnavailable placeholder (rule 7) instead of the web blank screen. */
-const WIDGET_REGISTRY: WidgetDef[] = [];
+const WIDGET_DEFAULT_SIZE: WidgetSize = {cols: 2, rows: 2};
+const WIDGET_MIN_SIZE: WidgetSize = {cols: 1, rows: 1};
+const WIDGET_MAX_SIZE: WidgetSize = {cols: 6, rows: 6};
+
+// Wired from the generated registry of converted web-parity widget components
+// (the "drop-in" the comment above anticipated). Each id maps to its real widget.
+const WIDGET_REGISTRY: WidgetDef[] = Object.entries(
+  DASHBOARD_WIDGET_COMPONENTS,
+).map(([id, component]) => ({
+  id,
+  name: humanizeWidgetId(id),
+  description: '',
+  defaultSize: WIDGET_DEFAULT_SIZE,
+  minSize: WIDGET_MIN_SIZE,
+  maxSize: WIDGET_MAX_SIZE,
+  component: component as ComponentType<WidgetProps>,
+}));
 
 function getWidgetDef(widgetId: string): WidgetDef | undefined {
   return WIDGET_REGISTRY.find(w => w.id === widgetId);
