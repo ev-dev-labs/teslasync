@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/types/fsm/automation.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/automation.ts",
+  "sourceLineCount": 54,
+  "coveredLineCount": 54,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 54 source lines line by line before editing; this is a non-visual FSM type/data catalog with no DOM, browser, Recharts, Leaflet, or web-UI dependencies, so it ports 1:1 into React Native-safe TypeScript.",
+    "L1 `import { deriveEdges, TransitionRow, StateEntry, FSMDefinition } from './types'`: the sibling web/src/types/fsm/types.ts is not yet ported under web-parity, so importing it would break tsc --noEmit. The required type closure (BadgeVariant, StateStyle, StateEntry, Edge, TransitionTiming, TransitionRow, CoverageCell, CoverageMatrix, DisallowedTransition, Scenario, ToastMap, TruthTableCell, TruthTable, FSMDefinition) plus the deriveEdges helper are inlined verbatim from types.ts as module-local (non-exported) declarations — same approach used by the ported useFSM hook for @/types/fsm DTOs. ResolvedStateStyle and isValidTransition were intentionally omitted because automation.ts never references them (they belong to the eventual types.ts port). Public surface is unchanged: the web module never re-exported the './types' symbols.",
+    "L3-6 AUTOMATION_STATES `as const` 11-state tuple and L8 AutomationState = (typeof AUTOMATION_STATES)[number] preserved verbatim (state names idle/evaluating/executing/succeeded/partial/failed/retrying/gave_up/skipped/cooldown/disabled unchanged).",
+    "L10-22 AUTOMATION_STATE_ENTRIES Record<AutomationState, StateEntry> preserved exactly: every variant (neutral/info/warning/success/danger) and every override field (badgeDot/bg/text/dot) carried verbatim, including the Tailwind class strings 'text-[var(--text-secondary)]', 'bg-cyan-400', 'bg-cyan-500/10', 'text-cyan-400', 'bg-red-500', 'bg-red-600/10', 'text-red-500', 'bg-gray-500', 'bg-gray-600/10', 'text-[var(--text-muted)]', 'bg-purple-400', 'bg-purple-500/10', 'text-purple-400', 'bg-red-400/50', 'bg-red-500/5', 'text-red-400/50'. These are inert string data describing visual intent and are resolved by the native theme/render layer, mirroring the web theme.",
+    "L24-25 AUTOMATION_TRIGGERS ['manual'] as const and AutomationTrigger union preserved verbatim.",
+    "L27-46 AUTOMATION_TRANSITIONS: all 18 transition rows preserved verbatim with identical from/to/trigger/guard(null)/timing('immediate') values and ordering (idle->evaluating, evaluating->executing, evaluating->skipped, executing->succeeded|partial|failed, failed->retrying, retrying->executing|gave_up, succeeded->cooldown|idle, partial->cooldown|idle, gave_up->idle|disabled, skipped->idle, cooldown->idle, disabled->idle).",
+    "L48 AUTOMATION_EDGES = deriveEdges(AUTOMATION_TRANSITIONS) preserved; deriveEdges logic (Set dedupe keyed by `${from}\u2192${to}`, ordered first-seen edge push) inlined verbatim from types.ts.",
+    "L50-54 AUTOMATION_FSM: FSMDefinition<AutomationState, AutomationTrigger> assembling { states, edges, transitions } preserved verbatim. Blank lines L2/L7/L9/L23/L26/L47/L49 considered and represented as structural separators. conversionStatus converted: every source line considered; no behavior, state name, trigger, guard, timing, or Tailwind data altered.",
+    "Gates run from apps/native: npm run typecheck, npm run lint -- --quiet, npm test -- --runInBand --detectOpenHandles."
+  ]
+}
