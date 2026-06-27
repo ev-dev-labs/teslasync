@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/shared/WidgetMapView.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/shared/WidgetMapView.tsx",
+  "sourceLineCount": 45,
+  "coveredLineCount": 45,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 import { type ReactNode } from 'react' -> React + type ReactNode from 'react' (native also needs the JSX runtime).",
+    "L2 import { MapContainer, MapTileLayer } from '@/components/maps' -> Leaflet/react-leaflet renders tiles to the DOM with no native analogue: reimplemented as a static native 'map surface' View (the same dark-canvas treatment the sibling TripPlannerMap port uses). The interactive tile map, real tile fetching, and leaflet pan/zoom are DOM-only and intentionally unavailable on native (documented).",
+    "L3 import { EmptyState } from '@/components/feedback' -> native EmptyState (../../../../../components/feedback/EmptyState); the web message is preserved verbatim and a concise native-additive title (EMPTY_TITLE 'No map data') is supplied because native EmptyState requires a title (TripPlannerMap precedent).",
+    "L4 import { cn } from '@/lib/cn' -> cn only merged the DOM className onto the wrapper div; a React Native View has no className, so cn is unnecessary and dropped (documented).",
+    "L6-14 interface WidgetMapViewProps {center, zoom?, compact?, children?, className?, emptyMessage?, isEmpty?} -> ported verbatim; className is kept for prop-shape parity but is inert in native (mirrors the shared/index.ts barrel contract).",
+    "L16-24 component signature + defaults (zoom=13, compact=false, emptyMessage='No location data available', isEmpty=false) -> export function WidgetMapView with the same defaults (DEFAULT_ZOOM=13, DEFAULT_EMPTY_MESSAGE='No location data available'); prop names preserved.",
+    "L25-27 if (isEmpty) return <EmptyState message={emptyMessage} className='py-4' /> with the no-action transient-empty-state comment -> same early return: EmptyState message preserved verbatim, no-action comment preserved, web className='py-4' maps to native EmptyState's built-in vertical padding.",
+    "L29-30 outer div cn('h-full w-full rounded-lg overflow-hidden', className) -> native container View: flex:1 + width:'100%' (h-full w-full), borderRadius 8 (rounded-lg), overflow:'hidden' (overflow-hidden); className inert. A native-additive minHeight:160 keeps the dark surface visible when the parent leaves height unconstrained (web h-full has no intrinsic height).",
+    "L31-39 MapContainer center/zoom/scrollWheelZoom={!compact}/zoomControl={!compact}/dragging={!compact} className='h-full w-full' style={{background:'#1a1a2e'}} -> merged into the same surface View: background #1a1a2e preserved verbatim (MAP_BACKGROUND); center+zoom surfaced in accessibilityLabel ('centered near {lat},{lng} at zoom {zoom}'); the scrollWheelZoom/zoomControl/dragging interactivity (driven by compact) is leaflet DOM-only and dropped on the static native surface (documented), with compact itself surfaced in the a11y label ('Compact map' vs 'Map'); center read with ?? [0,0] null-safety.",
+    "L40 <MapTileLayer style='dark' /> -> faint GRID_LINES [25,50,75] dark-tile grid overlay (hairline colors.border lines) over the #1a1a2e backdrop, evoking the dark tile style.",
+    "L41 {children} -> rendered in an absolute-fill overlay View (pointerEvents box-none), the native analogue of leaflet's overlay panes; rendered only when present. Web leaflet overlay children are DOM-only and are not passed on native (per the barrel contract each consumer inlines native content).",
+    "L42-44 </MapContainer></div> close tags -> container View closes.",
+    "L45 export -> single named export WidgetMapView preserved.",
+    "No DOM/HTML/Recharts/Leaflet/react-leaflet/web-UI imports; only react, react-native primitives (View, StyleSheet, DimensionValue), the shared native EmptyState, and theme tokens (colors, spacing).",
+    "Verification gates run from apps/native: npm run typecheck (tsc --noEmit) PASS; npm run lint -- --quiet PASS; npm test -- --runInBand --detectOpenHandles PASS."
+  ]
+}
