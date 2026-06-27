@@ -1,0 +1,25 @@
+{
+  "sourcePath": "web/src/lib/webVitalsReporter.ts",
+  "outputPath": "apps/native/src/web-parity/lib/webVitalsReporter.ts",
+  "sourceLineCount": 167,
+  "coveredLineCount": 167,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 167 source lines before porting. The web reporter is a browser-only Web Vitals ingest path; the native port keeps the full public API + queue/coalesce/flush/consent pipeline and replaces every browser-only seam following the sibling lib ports (cookieConsent.ts, broadcast.ts, automationSSE.ts) and the api/queryClient.ts AppState bridge.",
+    "L1-19 module doc preserved (Core Web Vitals LCP/INP/CLS + FCP/TTFB, ~2s coalesced flush, sendBeacon-on-hide, best-effort never-throw); the native header additionally documents the conversion of each browser-only seam.",
+    "L21 `import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from 'web-vitals'` is web-only (web-vitals observes DOM metrics and is not a native dependency): replaced by a structural WebVitalsMetric type + a WebVitalsSource seam resolved via setWebVitalsSource (host injection) or an auto-detected global `webVitals`; pure native registers nothing and surfaces WEB_VITALS_UNAVAILABLE_REASON.",
+    "L22 `isReportingAllowed` import kept, repointed to the already-ported native './cookieConsent'.",
+    "L24-25 ENDPOINT '/api/v1/web-vitals' and FLUSH_INTERVAL_MS 2_000 preserved verbatim; the relative endpoint is resolved through apiUrl(ENDPOINT) so a device hits the same API path on the native base.",
+    "L27-41 the requireCookieConsent opt-in flag, its comment, and setVitalsConsentRequirement(required) ported verbatim (Boolean() coercion preserved).",
+    "L43-51 the VitalsPayload interface (name/value/id/rating/navigationType?/route/ts) ported verbatim.",
+    "L53-63 the ReporterState interface + state singleton (queue/flushScheduled/started) ported; one native-only field appStateSubscription is added so the test reset can drop the AppState listener.",
+    "L65-78 enqueue(metric) ported: pushes name/value/id/rating/navigationType then scheduleFlush(); browser-only `window.location.pathname` becomes currentRoute() (route provider or detected global location.pathname, default '/') and `performance.now()` becomes nowMs() (detected global performance.now, else 0) — both keep the web typeof guards' semantics.",
+    "L80-86 scheduleFlush() ported verbatim (flushScheduled guard + setTimeout(void flush(), FLUSH_INTERVAL_MS) on the native global setTimeout).",
+    "L88-122 flush() ported faithfully: clears flushScheduled, no-ops on an empty queue, drops + empties the queue when isReportingAllowed(requireCookieConsent) is false (GDPR lawful-basis comment kept), splices the batch, JSON.stringify({metrics}). The browser-only `navigator.sendBeacon` + `new Blob(...)` preference is reproduced via detected global navigator.sendBeacon + Blob (present on react-native-web / a host polyfill) and otherwise falls through to the React Native fetch; the sendBeacon-refused fall-through, the POST/Content-Type/keepalive fetch, and the silent catch are all preserved.",
+    "L124-155 startWebVitalsReporter() ported: started-guard idempotency, then onLCP/onINP/onCLS/onFCP/onTTFB registered against the resolved WebVitalsSource (warns WEB_VITALS_UNAVAILABLE_REASON when absent). The web `document` 'visibilitychange'->hidden (L143-149) and `window` 'pagehide' (L150-154) flushes become a React Native AppState 'change'->('background'|'inactive') flush (the established native analog, mirroring api/queryClient.ts), and the real document/window listeners are additionally wired via wireBrowserLifecycleFlush() when a DOM is present so react-native-web keeps exact web behavior.",
+    "L157-167 __resetWebVitalsReporterForTests() ported: resets queue/flushScheduled/started and re-clears requireCookieConsent (legacy always-send comment kept); additionally removes the AppState subscription and clears the native-only injectedSource/routeProvider seams so tests get a clean slate without leaked listeners (relevant for --detectOpenHandles).",
+    "Added native-only seams (setWebVitalsSource, setVitalsRouteProvider, WebVitalsSource/WebVitalsMetric types, WEB_VITALS_UNAVAILABLE_REASON) to make the browser-only dependencies explicit and the pipeline testable; no existing public symbol's signature changed.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported — only react-native AppState plus the sibling native api/client (apiUrl) and cookieConsent (isReportingAllowed) parity helpers. __tests__/WebVitalsReporter.test.ts mirrors every web webVitalsReporter.test.ts case (register-all, idempotent, coalesce+sendBeacon+route+url, fetch fallback when sendBeacon is absent/refuses, app-hide flush, empty-queue no-op, swallow network errors) plus the consent-gate drop.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
