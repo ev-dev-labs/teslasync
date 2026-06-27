@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/tourLauncher.ts",
+  "outputPath": "apps/native/src/web-parity/lib/tourLauncher.ts",
+  "sourceLineCount": 41,
+  "coveredLineCount": 41,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 41 source lines before porting. tourLauncher.ts is non-visual orchestration code — contract rule 6 (port logic/types faithfully). It has no DOM-only behavior of its own; every browser-only seam is already encapsulated by the sibling native broadcast.ts and tourRegistry.ts ports, so no new unavailable-state seam is needed here.",
+    "L1-22 module doc (purpose: single entry point for Settings/command palette/any UI surface to (re-)play a registered tour; clears the per-tour completion flag for a fresh run; triggers the tour state machine via TOUR_START_EVENT; broadcasts tour.replay-requested for peer sync; the 'Why two delivery paths?' section contrasting the same-surface synchronous dispatch vs the cross-surface async broadcast filtered by _from===TAB_ID) preserved. 'window CustomEvent'/'tabs' wording adapted to surface-neutral language to match the sibling broadcast.ts/queryBroadcast.ts/tourRegistry.ts native ports; intent unchanged. A native-conversion header (contract rule 6) was added documenting the 1:1 port and that the browser-only seams live in the already-ported deps.",
+    "L24 `import { broadcast } from './broadcast'` kept verbatim — resolves to the already-ported sibling apps/native/src/web-parity/lib/broadcast.ts whose broadcast() carries the identical `{type:'tour.replay-requested'; tourId}` envelope variant.",
+    "L25 `import { dispatchTourStart, resetTour } from './tourRegistry'` kept verbatim — resolves to the already-ported sibling apps/native/src/web-parity/lib/tourRegistry.ts which exports both functions with identical `(id: string): void` signatures (resetTour clears the per-tour storage keys; dispatchTourStart notifies in-process TOUR_START_EVENT subscribers and mirrors a global CustomEvent on the web build).",
+    "L27-36 startTour doc comment preserved verbatim (when to call, the @param id contract incl. that unknown ids are still broadcast+dispatched and Layout guards against them so outdated callers don't crash).",
+    "L37-41 startTour(id) body ported 1:1 with identical call order: resetTour(id); dispatchTourStart(id); broadcast({type:'tour.replay-requested', tourId: id}). Function name, parameter name, return type, and ordering all unchanged — ordering matters (reset before dispatch so the tour treats the run as fresh).",
+    "Formatting only: applied the native apps prettier config (singleQuote, trailingComma:all, arrowParens:avoid, semicolons) — object literal single-quoted and braces tightened; no logic, state names, API paths, or control flow changed.",
+    "No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components imported — only the two sibling native parity lib modules. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
