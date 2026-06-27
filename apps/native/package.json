@@ -43,11 +43,14 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.1",
+    "lucide-react": "^1.21.0",
+    "lucide-react-native": "^1.21.0",
     "react": "19.1.4",
     "react-dom": "^19.1.4",
     "react-native": "0.81.6",
     "react-native-macos": "^0.81.6",
     "react-native-safe-area-context": "^5.5.2",
+    "react-native-svg": "^15.15.5",
     "react-native-web": "^0.21.2",
     "react-native-windows": "^0.81.6",
     "zod": "^3.25.76"
