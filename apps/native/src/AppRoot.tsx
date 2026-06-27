@@ -31,8 +31,14 @@ import { VehiclesScreen } from './screens/VehiclesScreen';
 import { colors, spacing } from './theme/tokens';
 import { ShellVisualParityFrame } from './visual-parity/ShellVisualParityFrame';
 import { isVisualParityShellEnabled } from './visual-parity/visualParityMode';
+import {WebParityShell} from './web-parity-integration/WebParityShell';
 
 const COMPACT_SHELL_WIDTH = 760;
+
+// Render the full web-parity surface (all 100+ converted route pages) instead of
+// the legacy thin-screen summary shell. Flip to false to fall back to the legacy
+// 9-screen InteractiveAppRoot.
+const USE_WEB_PARITY_SHELL = true;
 
 export function AppRoot() {
   const scheme = useColorScheme();
@@ -47,6 +53,10 @@ export function AppRoot() {
         <ShellVisualParityFrame />
       </SafeAreaView>
     );
+  }
+
+  if (USE_WEB_PARITY_SHELL) {
+    return <WebParityShell />;
   }
 
   return <InteractiveAppRoot scheme={scheme} />;
