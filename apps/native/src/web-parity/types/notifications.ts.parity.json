@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/types/notifications.ts",
+  "outputPath": "apps/native/src/web-parity/types/notifications.ts",
+  "sourceLineCount": 90,
+  "coveredLineCount": 90,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 90 numbered source lines before editing; this is non-visual, type-only TypeScript with zero imports, so no DOM, browser HTML elements, Recharts, Leaflet, or web UI components were present or introduced (contract rules 4 & 6). Ported 1:1 to React Native-compatible TypeScript.",
+    "L1-7 leading JSDoc block preserved verbatim (explains the discriminated-union-by-`kind` design that replaced the loose `config: Record<string, any>` shape), retaining API/feature intent.",
+    "L9-16 NotificationChannelKind string-literal union ported verbatim: 'discord' | 'slack' | 'telegram' | 'email' | 'webhook' | 'ntfy' | 'pushover' (single quotes kept per apps/native/.prettierrc.js singleQuote).",
+    "L18-25 NotificationChannelBase ported verbatim: id, name, kind, enabled, created_at, updated_at — snake_case API-contract field names and types preserved exactly.",
+    "L27-32 NotificationChannelDiscord (kind:'discord', webhook_url, username|null, avatar_url|null) and L34-39 NotificationChannelSlack (kind:'slack', webhook_url, channel|null, username|null) ported verbatim with nullable unions preserved.",
+    "L41-45 NotificationChannelTelegram (kind:'telegram', bot_token, chat_id) and L47-56 NotificationChannelEmail (kind:'email', smtp_host, smtp_port:number, smtp_username, smtp_password, from_address, to_addresses:string[], use_tls:boolean) ported verbatim.",
+    "L58-64 NotificationChannelWebhook ported verbatim including method:'GET'|'POST'|'PUT' literal union, headers:Record<string,string>, body_template; L66-73 NotificationChannelNtfy ported verbatim including numeric-literal priority 1|2|3|4|5 and username|null/password|null.",
+    "L75-81 NotificationChannelPushover ported verbatim including signed numeric-literal priority -2|-1|0|1|2 and device|null.",
+    "L83-90 NotificationChannel discriminated-union type ported verbatim: each member intersects its base interface with { kind: '<kind>' } to keep narrowing parity. No fields added, removed, renamed, or retyped.",
+    "No units/i18n/visual concerns apply (pure API-contract type definitions); no SI unit-suffix fields present. Formatting matches repo prettier config (singleQuote, trailingComma all, arrowParens avoid). Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
