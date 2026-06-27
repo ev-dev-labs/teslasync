@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/settings/components/AISettings.tsx",
+  "outputPath": "apps/native/src/web-parity/features/settings/components/AISettings.tsx",
+  "sourceLineCount": 708,
+  "coveredLineCount": 708,
+  "conversionStatus": "converted",
+  "notes": [
+    "Header doc comment (web L1-28, ADR-015 §I1/§I7/§I9 + layout tree) preserved in the native file header with the full web→native dependency map.",
+    "Imports (web L30-51) mapped: react hooks kept (+useRef for inline FadeIn); react-i18next useTranslation→inline useNativeTranslationFallback with {{var}} interpolation; HelixMark→🧬 glyph; @/components/ui GlassPanel→native GlassPanel; IconBox/Button/PanelTitle/Subhead/HelperText/Caption/Input/Select/Toggle→inline native-safe primitives; FadeIn→Animated.View; Stack→View gap; useSettings/AppSettings, useSaveAiSettings, useValidateAiProvider, useAiUsageToday→ported native web-parity hooks; AI_FEATURE_IDS/AI_FEATURES/isKnownAiFeature/AiFeatureId→native registry.",
+    "Pure helpers ported verbatim: isAiMode (web L60-62), readProviderString (L68-76), readProviderConfigEntry (L94-103), LEGACY_TOP_LEVEL_KEYS+stripLegacyTopLevelKeys (L113-125), normaliseFeatureMap (L133-141), archiveHasRestorableEntries (L149-157).",
+    "AISettings component (web L159-562): serverMode/mode/features/provider/restoreDismissed state names + initial readers (L171-205), aiSnapshot useMemo (L218-226), reset useEffect keyed on aiSnapshot with §I9 off-mode key redaction (L228-262), handleModeChange off-clear (L272-281), handleSave off-omit + namespaced merge/strip + non-empty optional emit (L291-358), handleFeatureToggle (L360-362), handleProviderChange multi-provider preservation (L375-403), handleRestoreConfirm/Decline (L405-420), derived showProviderSection/showRestorePanel/isCloud (L424-429), full render tree incl. mode radiogroup, AIProviderSection, AIRestorePanel, AIFeatureToggleList, AIUsageCard, AICostCapSpendBar gate, Save button (L431-559).",
+    "ModeRadio (web L569-609) → native Pressable radio card with custom radio dot; AICostCapSpendBar (web L611-708) → micro-cents math, ok/warn/critical thresholds (80/100), progressbar with accessibilityValue, critical/warn hints; web cyan/amber/rose→native accent/warning/danger tokens.",
+    "Child components imported by the web file but absent from the native parity tree are inlined as faithful native ports (PrivacySection/TOTPEnrollmentSection inline-dependency precedent): AIProviderSection (provider/model/Azure flavor+api_version+deployment+embedding+base_url+api_key+cost_cap, local & cloud validate via /settings/ai/validate-config), AIFeatureToggleList (AI_FEATURE_IDS map → RN Switch rows), AIRestorePanel (archived preview labels + confirm/decline), AIUsageCard (/ai/usage/today tokens-in/out/cost with em-dash placeholders).",
+    "API paths, snake_case payload keys, state names, testIDs (ai-settings-panel, ai-settings-save, ai-mode-off/local/cloud, ai-provider-*, ai-feature-row/toggle-*, ai-restore-*, ai-usage-card/value, ai-cost-cap-spend-bar), and every i18n key + English fallback preserved 1:1.",
+    "Native-safe substitutions documented: useFormatting.formatCurrency + lib/numberFormat fmtInt → inline Intl.NumberFormat (USD) with try/catch manual fallbacks safe under Hermes and jest/node; <select> dropdown → labelled pressable option list (no DOM picker on native); HTML radio/checkbox → Pressable radio + RN Switch.",
+    "No DOM-only modules, HTML elements, react-i18next, lucide-react, Recharts, Leaflet, framer-motion, or web UI components imported — only react, react-native primitives, and ported native parity modules. Gates run: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
