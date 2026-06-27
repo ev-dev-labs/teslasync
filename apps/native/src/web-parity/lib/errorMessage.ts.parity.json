@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/lib/errorMessage.ts",
+  "outputPath": "apps/native/src/web-parity/lib/errorMessage.ts",
+  "sourceLineCount": 10,
+  "coveredLineCount": 10,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 10 source lines before editing. The JSDoc doc block (source L1-5) explaining that React Query errors are typed `unknown` and that the helper normalises Error objects, strings, and arbitrary values into a string is ported verbatim into the native output, plus a native header with per-line citations and the native-adaptation rationale.",
+    "Public surface preserved name-for-name and signature-for-signature: `getErrorMessage(err: unknown): string` (source L6) is the sole export — no exports added or removed.",
+    "Body ported byte-for-byte with identical branch ordering: `if (err instanceof Error) return err.message;` (source L7), then `if (typeof err === 'string') return err;` (source L8), then the verbatim fallback `return 'An unexpected error occurred';` (source L9). Closing brace (source L10) and trailing newline preserved.",
+    "Source has ZERO imports and ZERO DOM/window/Recharts/Leaflet/web-UI dependency; native output likewise imports nothing. The only runtime primitives used are the `instanceof Error` brand check, `typeof`, and a string literal — all Hermes-supported — so there is NO browser-only behavior to gate and NO 'unavailable' state to expose (contract rule 6, non-visual utility code).",
+    "No unit handling (no Mi/Min/Mph/Kwh suffixes), no API paths, and no i18n strings exist in this source — nothing to convert on those axes. The fallback string 'An unexpected error occurred' is a hard-coded English default in the web source (no t() call) and is preserved verbatim to keep behavior identical; i18n intent is unchanged because the source itself does not localize it.",
+    "Two native parity pages (features/maps/pages/TemperatureImpactPage.tsx, features/vehicle-systems/pages/SoftwareUpdatesPage.tsx) currently inline their own getErrorMessage copy and do NOT import this module, so adding the canonical standalone module conflicts with nothing and breaks no existing native suite (grep verified). No co-located parity test added, consistent with every other lib parity port in the tree.",
+    "Only mechanical difference vs source: native formatting conventions per apps/native/.prettierrc.js (singleQuote, trailingComma:'all', arrowParens:'avoid') + @react-native eslint — the source already uses single quotes, semicolons, and braceless `if (...) return x;`, so the port is effectively byte-identical in the function body.",
+    "Gates run from apps/native: `npm run typecheck` (tsc --noEmit), `npm run lint -- --quiet` (eslint .), and `npm test -- --runInBand --detectOpenHandles` (jest) — raw results in the final response."
+  ]
+}
