@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/types/automations.ts",
+  "outputPath": "apps/native/src/web-parity/types/automations.ts",
+  "sourceLineCount": 217,
+  "coveredLineCount": 217,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 217 source lines in a line-numbered range before editing. Source is a pure non-visual TypeScript type-declaration module with ZERO imports and ZERO DOM/window/Recharts/Leaflet/web-UI dependency, so per conversion contract rule 6 it is ported faithfully and React Native-compatibly with no native-safe shims required (rule 7 not applicable).",
+    "Every exported symbol is preserved name-for-name and shape-for-shape: interface Automation (L1-9), the kind unions AutomationTriggerKind/AutomationConditionKind/AutomationActionKind/AutomationStepKind (L11-32), AutomationStepLane (L34), the operator/event unions AutomationTriggerSignalOp/AutomationConditionSignalOp/AutomationGeofenceEvent/AutomationGeofenceState/AutomationEventType/AutomationOtherAutomationState (L36-80), AutomationStepSummary + AutomationStepBase (L82-95), all 12 discriminated AutomationStep* interfaces (L97-178), the step-group unions AutomationTriggerStep/AutomationConditionStep/AutomationActionStep/AutomationStep (L180-201), the non-exported generic helper AutomationStepInput<T> Omit (L203-206), the three *Input aliases (L208-210), and AutomationFull extends Automation (L212-217).",
+    "API/JSON field names preserved verbatim in snake_case to match Go JSON tags (vehicle_id, created_at, updated_at, step_order, automation_id, step_id, place_id, dwell_minutes, value_num/value_text/value_bool/value_min/value_max, cron_expr, event_type, start_time, end_time, days_of_week, command_name, command_params, channel_id, setting_key, other_automation_id, target_automation_id). No camelCase renaming, no API paths, and no i18n string literals exist in this source.",
+    "No unit-suffixed fields on the SI-cutover axis (no Mi/Min/Mph/Kwh/Kw/Psi). dwell_minutes is a schedule duration identifier carried verbatim from the source contract, not a physical-quantity display field, so no SI conversion applies.",
+    "This dedicated parity module mirrors the web file 1:1. The pre-existing native consolidation in api/hooks/useAutomations.ts (which already re-declares equivalent Automation* types and is re-exported by api/types.ts) is a separate TS module and is left untouched; the two modules do not collide because each symbol is module-scoped. Formatting matches apps/native/.prettierrc.js (singleQuote, trailingComma 'all') and the established native useAutomations.ts style (semicolon-terminated interface members), so output is byte-equivalent to the source apart from path.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles (jest). Raw results in the final response."
+  ]
+}
