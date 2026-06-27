@@ -1,0 +1,31 @@
+{
+  "sourcePath": "web/src/features/driving/components/drive-detail/JourneyDetailsPanel.tsx",
+  "outputPath": "apps/native/src/web-parity/features/driving/components/drive-detail/JourneyDetailsPanel.tsx",
+  "sourceLineCount": 65,
+  "coveredLineCount": 65,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1 `import { useTranslation } from 'react-i18next'` -> `useNativeTranslationFallback()` returning `(key, fallback) => fallback`; preserves every i18n key + English default (driveDetail.journeyDetails/start/destination/noAddress/inProgress/battery).",
+    "L2 `import { Navigation, MapPin, Flag } from 'lucide-react'` -> repo SemanticIcon names navigation/location/flag; glyphs read via getSemanticIconDefinition and tinted with the Tailwind hex the classes resolve to. No lucide-react import.",
+    "L3 `import { GlassPanel } from '@/components/ui'` -> native `../../../../../components/ui/GlassPanel` (style not className).",
+    "L4 `import { FadeIn } from '@/components/motion'` -> inlined static final-state wrapper (framer-motion reduced-motion branch; delay accepted + ignored), matching the sibling native ports.",
+    "L5 `import { DateTime } from '@/components/data-display'` -> inlined `formatVehicleDateTime` reproducing the web `formatDateTime` shape (year numeric/month short/day numeric/hour 2-digit/minute 2-digit, em-dash U+2014 for null/invalid). The `in=\"vehicle\"` tz resolution needs browser-only useTimezone+useSelectedVehicle providers (not in native parity), so it renders in device-local tz (the web back-compat path) with the settings locale.",
+    "L6 `import { fmtNumber } from '@/lib/numberFormat'` -> value-identical inline (safeNumber non-finite->0; locale-grouped toLocaleString with bad-locale en-US fallback) called at the web global precision via deriveGlobalPrecision (clamp settings.decimal_precision 0..20, else 2).",
+    "L7 `import type { DriveDetail } from '@/types/driving'` -> inlined local interface for the consumed subset (startTs/endTs/startAddress/endAddress/startLat/startLon/endLat/endLon/startBatteryPct/endBatteryPct, all matching the web Drive JSON shape); no native types/driving port exists yet.",
+    "L9-11 `interface JourneyDetailsPanelProps { drive: DriveDetail }` -> exported `JourneyDetailsPanelProps` with the inlined DriveDetail type.",
+    "L13-14 `export function JourneyDetailsPanel({ drive })` + `const { t } = useTranslation()` -> named export + destructure; native t fallback, plus settings-derived locale (resolveLocale) and globalPrecision from the ported useSettings query, and a useWindowDimensions-derived column count.",
+    "L16-18 `<FadeIn><GlassPanel className=\"p-5\">` -> native FadeIn wrapper + GlassPanel style padding 20.",
+    "L19-21 `<h3 ... flex items-center gap-2 mb-4>` with `<Navigation className=\"h-4 w-4 text-cyan-400\" /> {t('driveDetail.journeyDetails','Journey Details')}` -> a flex row (gap 8, mb 16): navigation glyph tinted #22d3ee (text-cyan-400) + the title AppText (text-sm font-semibold, primary).",
+    "L22 `<div className=\"grid grid-cols-1 sm:grid-cols-2 gap-4\">` -> a flex-wrap grid (gap-4 via -HALF_GAP gutter); columns = 2 at/above the sm 640 breakpoint else 1, per-cell width `${100/columns}%`.",
+    "L23-26 Start label row `<div className=\"flex items-center gap-2 text-green-400 mb-1\"><MapPin .../> {t('driveDetail.start','Start')}</div>` -> labelRow (gap 8, mb 4): location glyph + 'Start' label both tinted #4ade80 (text-green-400).",
+    "L27-33 Start address `<p className=\"font-bold ... text-sm\">` -> bold primary AppText: startAddress ? startAddress : (startLat && startLon ? <Text mono>{formatCoords(startLat, startLon)}</Text> : t('driveDetail.noAddress','No address data')). formatCoords ports L31 verbatim: signed lat fmtNumber + °N/S, abs(lon) fmtNumber + °E/W in a monospace span.",
+    "L34-36 Start time `<p className=\"text-xs text-[var(--text-muted)]\"><DateTime value={drive.startTs} in=\"vehicle\" /></p>` -> muted 12px AppText of formatVehicleDateTime(drive.startTs, locale).",
+    "L37-39 Start battery `<p className=\"text-xs text-[var(--text-secondary)]\">{t('driveDetail.battery','Battery')}: {drive.startBatteryPct ?? '?'}%</p>` -> secondary 12px AppText `Battery: {startBatteryPct ?? '?'}%` (nullish-coalescing preserved).",
+    "L41-44 Destination label row `<div className=\"flex items-center gap-2 text-red-400 mb-1\"><Flag .../> {t('driveDetail.destination','Destination')}</div>` -> labelRow: flag glyph + 'Destination' label both tinted #f87171 (text-red-400).",
+    "L45-51 Destination address `<p className=\"font-bold ... text-sm\">` -> bold primary AppText: endAddress ? endAddress : (endLat && endLon ? <Text mono>{formatCoords(endLat, endLon)}</Text> : (endTs ? t('driveDetail.noAddress','No address data') : t('driveDetail.inProgress','In progress'))). Nested ternary + endTs branch preserved verbatim.",
+    "L52-56 Destination time `<p className=\"text-xs text-[var(--text-muted)]\">{drive.endTs ? <DateTime value={drive.endTs} in=\"vehicle\" /> : t('driveDetail.inProgress','In progress')}</p>` -> muted 12px AppText: endTs ? formatVehicleDateTime(endTs, locale) : t('driveDetail.inProgress','In progress').",
+    "L57-59 Destination battery `<p className=\"text-xs text-[var(--text-secondary)]\">{t('driveDetail.battery','Battery')}: {drive.endBatteryPct ?? '?'}%</p>` -> secondary 12px AppText `Battery: {endBatteryPct ?? '?'}%`.",
+    "L60-65 closing `</div></div></GlassPanel></FadeIn>` + function/brace + trailing newline -> matching native closing JSX/braces, plus JourneyDetailsPanel.displayName and the StyleSheet. No DOM, lucide-react, framer-motion, Recharts, Leaflet, or web UI components imported.",
+    "Gates run from apps/native: `npm run typecheck`, `npm run lint -- --quiet`, and `npm test -- --runInBand --detectOpenHandles`."
+  ]
+}
