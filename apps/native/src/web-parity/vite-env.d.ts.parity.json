@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/vite-env.d.ts",
+  "outputPath": "apps/native/src/web-parity/vite-env.d.ts",
+  "sourceLineCount": 11,
+  "coveredLineCount": 11,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 11 source lines line by line before editing. The web file is a Vite ambient type-declaration file whose entire purpose is compile-time typing of Vite's build-time-injected import.meta.env global.",
+    "L1 `/// <reference types=\"vite/client\" />` — intentionally NOT reproduced. It is a Vite/DOM build-tool-only ambient module surface (import.meta.env, import.meta.hot HMR, *.svg/*.css asset-module declarations, DEV/PROD/MODE/BASE_URL/SSR). Pulling it into native output would violate contract rule 4 (no DOM-only modules). Its absence and rationale are documented in the file header and here per rule 7.",
+    "L2 blank line — preserved as structural separation in the ported output.",
+    "L3 `interface ImportMetaEnv {` — ported as `export interface ImportMetaEnv {`. The `export` makes this file a module so the interface is module-scoped instead of a global augmentation; this is the explicit native 'unavailable' state (rule 7): native code cannot silently rely on a typed import.meta.env that Metro/Hermes does not provide at runtime.",
+    "L4 `readonly VITE_APP_VERSION: string` — ported 1:1 (same field name, same `readonly`, same `string` type); only a statement-terminating semicolon was added per the apps/native prettier config.",
+    "L5 `readonly VITE_GIT_SHA: string` — ported 1:1; terminating semicolon added.",
+    "L6 `readonly VITE_PWA_DEV?: string` — ported 1:1 with the optional `?` modifier preserved exactly; terminating semicolon added.",
+    "L7 `}` — closing brace of ImportMetaEnv preserved.",
+    "L8 blank line — preserved as structural separation.",
+    "L9 `interface ImportMeta {` — ported as `export interface ImportMeta {` (module-scoped, see L3 rationale).",
+    "L10 `readonly env: ImportMetaEnv` — ported 1:1 (same `readonly env` member referencing the ported ImportMetaEnv); terminating semicolon added.",
+    "L11 `}` — closing brace of ImportMeta preserved.",
+    "Browser/build-tool-only behaviour (Vite's import.meta.env global injection) is genuinely unavailable under React Native's Metro/Hermes runtime; it is represented via module-scoped exported interfaces plus header documentation of the native equivalent (process.env / generated app-config), with no runtime code (a .d.ts cannot contain executable statements). No DOM-only modules, browser HTML elements, Recharts, Leaflet, or web UI components are imported or referenced.",
+    "Gates run from apps/native: npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
