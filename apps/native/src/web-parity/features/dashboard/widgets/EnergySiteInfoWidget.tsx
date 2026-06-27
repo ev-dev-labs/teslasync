@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/EnergySiteInfoWidget.tsx.
 //
 // The web widget is a dashboard tile that summarises the linked Tesla Energy
@@ -137,7 +138,7 @@ const HOME_GLYPH = getSemanticIconDefinition('home').glyph;
 
 type GlyphTone = 'green' | 'muted';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
   tone,

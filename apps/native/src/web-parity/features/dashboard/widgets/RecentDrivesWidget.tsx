@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/RecentDrivesWidget.tsx.
 //
 // The web widget is a dashboard tile listing the vehicle's five most recent
@@ -302,7 +303,7 @@ const ARROW_UP_RIGHT_GLYPH = getSemanticIconDefinition('forward').glyph;
 
 type GlyphTone = 'cyan' | 'muted';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   tone,
   style,

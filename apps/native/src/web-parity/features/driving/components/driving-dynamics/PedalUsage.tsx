@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/driving/components/driving-dynamics/PedalUsage.tsx.
 //
@@ -97,7 +98,7 @@ const INTERVALS = { REALTIME: 5_000 } as const;
 // ─── Decorative glyph (lucide Footprints substitute) ──────────
 // The lucide icon is decorative; the adjacent Badge + caption carry the
 // meaning, so the glyph is hidden from assistive tech.
-function Glyph({ children }: { children: string }) {
+function GlyphLegacyUnused({ children }: { children: string }) {
   return (
     <AppText
       accessibilityElementsHidden

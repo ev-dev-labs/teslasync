@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/automations/pages/AutomationCard.tsx.
 //
 // `AutomationCard` renders a single automation row inside a glass panel: a header
@@ -160,7 +161,7 @@ const statusStyles: Record<
 
 // ── Decorative glyph (lucide icon → native-safe text glyph) ─────────────────
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
 }: {

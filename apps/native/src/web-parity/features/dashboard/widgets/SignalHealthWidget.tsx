@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/SignalHealthWidget.tsx.
 //
 // The web widget is a responsive dashboard tile that summarises a vehicle's
@@ -175,7 +176,7 @@ const CLOCK_GLYPH = getSemanticIconDefinition('clock').glyph;
 
 type GlyphTone = 'cyan' | 'green' | 'amber' | 'red' | 'muted' | 'secondary';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   tone,
   style,

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/dashboard/widgets/ClimateControlPanelWidget.tsx.
 //
@@ -160,7 +161,7 @@ const COLOR_ORANGE = '#fb923c';
 const TINT_ORANGE = 'rgba(249, 115, 22, 0.1)';
 const TINT_BLUE = 'rgba(59, 130, 246, 0.1)';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   color,
   size = 13,

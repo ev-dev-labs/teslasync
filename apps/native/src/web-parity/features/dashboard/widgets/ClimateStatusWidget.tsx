@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/ClimateStatusWidget.tsx.
 //
 // The web widget is the dashboard "Climate" live tile. It resolves a vehicle id
@@ -148,7 +149,7 @@ const ICON_ZAP = '\u26A1'; // lucide Zap
 const GLYPH_REFRESH = '\u21BB';
 const EM_DASH = '\u2014';
 
-function Glyph({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText allowFontScaling={false} importantForAccessibility="no" style={style}>
       {glyph}

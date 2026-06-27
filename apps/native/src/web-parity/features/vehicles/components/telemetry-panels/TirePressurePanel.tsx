@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/vehicles/components/telemetry-panels/TirePressurePanel.tsx.
 //
@@ -213,7 +214,7 @@ function useUnits(): {
 // ─── Decorative glyph (lucide icon → native-safe text glyph) ──
 // The adjacent heading text carries the meaning, so the glyph is hidden from the
 // accessibility tree.
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
 }: {

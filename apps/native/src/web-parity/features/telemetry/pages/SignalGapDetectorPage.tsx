@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 /**
  * Native parity port of
  * web/src/features/telemetry/pages/SignalGapDetectorPage.tsx.
@@ -285,7 +286,7 @@ function useSelectedVehicle(): SelectedVehicleResult {
 /*  small native primitives                                            */
 /* ------------------------------------------------------------------ */
 
-function Glyph({
+function GlyphLegacyUnused({
   char,
   style,
 }: {

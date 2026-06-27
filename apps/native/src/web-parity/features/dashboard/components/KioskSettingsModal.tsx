@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/components/KioskSettingsModal.tsx.
 //
 // `KioskSettingsModal` is the configuration sheet that opens before a dashboard
@@ -157,7 +158,7 @@ const SLIDER_ACCESSIBILITY_ACTIONS = [
 ];
 
 // ── Decorative glyph (lucide stand-in) ──────────────────────────────────────
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
 }: {

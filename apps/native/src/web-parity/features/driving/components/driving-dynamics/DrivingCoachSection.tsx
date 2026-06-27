@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/driving/components/driving-dynamics/DrivingCoachSection.tsx.
 //
@@ -203,7 +204,7 @@ function formatDateShort(value: string | Date | null | undefined): string {
 // ─── Decorative glyph (lucide icon substitute) ────────────────
 // The lucide icons are decorative; the adjacent label always carries meaning,
 // so the glyph is hidden from assistive tech.
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/analytics/components/weekly-digest/BatteryHealthSection.tsx.
 //
@@ -115,7 +116,7 @@ const TEXT_MUTED = colors.textMuted;
 
 /* ─── Glyph slot stand-in for lucide icons (preserves deliberate colour) ──── */
 
-function Glyph({
+function GlyphLegacyUnused({
   label,
   color,
   size = 16,

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/ChargingScheduleWidget.tsx.
 //
 // The web widget is a responsive dashboard tile that summarises the vehicle's
@@ -188,7 +189,7 @@ const TIMELINE_LIMIT_COLOR = '#f59e0b';
 
 type GlyphTone = 'cyan' | 'green' | 'amber' | 'blue' | 'muted';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   tone,
   style,

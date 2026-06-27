@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/charging/pages/TeslaChargingSessionsPage.tsx.
 //
 // `TeslaChargingSessionsPage` is the fleet (business-account) charging-session
@@ -502,7 +503,7 @@ function buildMonthlyCost(
 }
 
 /* ── Decorative glyph (lucide icon substitute) ─────────────────────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

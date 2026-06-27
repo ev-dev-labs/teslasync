@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/automations/pages/AutomationBuilderPage.tsx.
 //
 // The web module is the typed Automation builder: a PageContainer wrapping a
@@ -251,7 +252,7 @@ const GLYPH_TONE_COLORS: Record<
   success: colors.success,
 };
 
-function Glyph({
+function GlyphLegacyUnused({
   char,
   tone = 'secondary',
 }: {

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/AutomationStatusWidget.tsx.
 //
 // The web widget is a responsive dashboard tile that summarises the user's
@@ -138,7 +139,7 @@ const ALERT_GLYPH = getSemanticIconDefinition('warning').glyph;
 
 type GlyphTone = 'cyan' | 'green' | 'amber' | 'red' | 'muted' | 'secondary';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   tone,
   style,

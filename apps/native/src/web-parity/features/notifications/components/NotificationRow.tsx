@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/notifications/components/NotificationRow.tsx.
 //
@@ -181,7 +182,7 @@ function severityToken(severity: string): SeverityToken {
 }
 
 // ─── glyph ────────────────────────────────────────────────────────────────────
-function Glyph({ glyph, style }: { glyph: string; style?: object }) {
+function GlyphLegacyUnused({ glyph, style }: { glyph: string; style?: object }) {
   return (
     <AppText
       accessibilityElementsHidden

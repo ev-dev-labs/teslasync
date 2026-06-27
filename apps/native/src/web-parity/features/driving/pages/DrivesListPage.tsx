@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // DrivesListPage — native parity port of
 // web/src/features/driving/pages/DrivesListPage.tsx.
 //
@@ -1081,7 +1082,7 @@ function useTimezone(_mode: 'vehicle' | 'local'): string | undefined {
 
 // ---- Small shared primitives ------------------------------------------------
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   color,
   size = 13,

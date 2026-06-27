@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/driving/components/drive-detail/CostSavingsPanel.tsx.
 //
@@ -294,7 +295,7 @@ interface DriveStats {
 // ─── Glyph (lucide DollarSign substitute) ─────────────────────
 // Decorative; the "Cost & Savings" heading text carries the meaning, so the
 // glyph is hidden from assistive tech.
-function Glyph({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
+function GlyphLegacyUnused({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
   return (
     <AppText
       accessibilityElementsHidden

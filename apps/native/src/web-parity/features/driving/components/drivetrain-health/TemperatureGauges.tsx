@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/driving/components/drivetrain-health/TemperatureGauges.tsx.
 //
@@ -161,7 +162,7 @@ function FadeIn({
 
 // Decorative glyph stand-in for a lucide icon (hidden from screen readers like
 // the web SVG, which carries no aria-label).
-function Glyph({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText allowFontScaling={false} importantForAccessibility="no" style={style}>
       {glyph}

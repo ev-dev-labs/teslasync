@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/charging/pages/ChargingDetailPage.tsx.
 //
 // `ChargingDetailPage` is the single-session deep dive: a header (back link,
@@ -504,7 +505,7 @@ function synthesizeCurve(
 }
 
 /* ─── decorative glyph (lucide icon substitute) ────────────────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

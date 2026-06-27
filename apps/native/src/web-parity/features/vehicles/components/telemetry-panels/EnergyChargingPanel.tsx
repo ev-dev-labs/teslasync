@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/vehicles/components/telemetry-panels/EnergyChargingPanel.tsx.
 //
@@ -193,7 +194,7 @@ function useUnits(): {
 // ─── Decorative glyph (lucide icon → native-safe text glyph) ──
 // The adjacent heading/label text carries the meaning, so each glyph is hidden
 // from the accessibility tree.
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
 }: {

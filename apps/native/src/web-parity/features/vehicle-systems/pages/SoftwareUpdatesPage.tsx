@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // SoftwareUpdatesPage — native parity port of
 // web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx.
 //
@@ -310,7 +311,7 @@ const ACCENT_HEX: Record<Accent, string> = {
 
 // ---- Small shared primitives ------------------------------------------------
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   color,
   size = 13,

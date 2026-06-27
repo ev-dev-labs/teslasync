@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/battery/pages/SleepEfficiencyPage.tsx.
 //
 // `SleepEfficiencyPage` analyses a vehicle's sleep patterns, vampire drain, and
@@ -337,7 +338,7 @@ function useRangeState(_options: UseRangeStateOptions = {}): {
 }
 
 /* ── Decorative glyph (lucide icon substitute) ─────────────────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

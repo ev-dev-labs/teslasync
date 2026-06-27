@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/LocationMapWidget.tsx.
 //
 // The web widget is the dashboard "Vehicle Location Map" live tile. It resolves a
@@ -135,7 +136,7 @@ const ICON_NAVIGATION = '\u{1F9ED}'; // lucide Navigation
 const GLYPH_REFRESH = '\u21BB';
 const DEGREE = '\u00B0';
 
-function Glyph({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText allowFontScaling={false} importantForAccessibility="no" style={style}>
       {glyph}

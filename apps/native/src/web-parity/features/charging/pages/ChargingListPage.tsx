@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // ChargingListPage — native parity port of
 // web/src/features/charging/pages/ChargingListPage.tsx.
 //
@@ -1464,7 +1465,7 @@ function useTimezone(mode: 'vehicle' | 'local'): string | undefined {
 
 // ---- Small shared primitives ------------------------------------------------
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   color,
   size = 13,

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/components/TemplateGallery.tsx.
 //
 // `TemplateGallery` is the modal that lets a user pick a starting dashboard
@@ -453,7 +454,7 @@ const TEMPLATE_DESCRIPTIONS: Record<string, {key: string; fallback: string}> = {
 };
 
 // ── Decorative glyph (lucide stand-in) ───────────────────────────────────────
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
 }: {

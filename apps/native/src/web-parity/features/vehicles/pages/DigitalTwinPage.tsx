@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // DigitalTwinPage — native parity port of
 // web/src/features/vehicles/pages/DigitalTwinPage.tsx.
 //
@@ -600,7 +601,7 @@ function windowLabel(state: WindowState): string {
 
 // ── Shared native primitives ───────────────────────────────────────────
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   color,
   size = 14,

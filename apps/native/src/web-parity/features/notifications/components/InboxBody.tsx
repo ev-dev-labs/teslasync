@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/notifications/components/InboxBody.tsx.
 //
@@ -574,7 +575,7 @@ function useContextMenu() {
 }
 
 // ─── small native primitives ──────────────────────────────────────────────────
-function Glyph({glyph, style}: {glyph: string; style?: object}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: object}) {
   return (
     <AppText
       accessibilityElementsHidden

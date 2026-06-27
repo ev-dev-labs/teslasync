@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/battery/pages/BatteryCellsPage.tsx.
 //
 // `BatteryCellsPage` is the per-vehicle cell-level battery surface. It resolves
@@ -401,7 +402,7 @@ function buildHistogram(cells: CellReading[]): {bucket: string; count: number}[]
 
 /* ── Decorative glyph (lucide icon substitute) ─────────────────── */
 
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

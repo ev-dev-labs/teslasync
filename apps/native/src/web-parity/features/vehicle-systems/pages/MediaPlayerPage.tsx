@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx.
 //
 // `MediaPlayerPage` is the in-car audio surface. It resolves the active vehicle,
@@ -284,7 +285,7 @@ function useRangeState(_options: UseRangeStateOptions = {}): {
 }
 
 /* ── Decorative glyph (lucide icon substitute) ─────────────────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx.
 //
@@ -214,7 +215,7 @@ function useUnits(): {
 // ─── Decorative glyph (lucide CircleDot → native-safe glyph) ──
 // The adjacent heading/message text carries the meaning, so the glyph is hidden
 // from the accessibility tree.
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
 }: {

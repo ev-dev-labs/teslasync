@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/DigitalTwinWidget.tsx.
 //
 // The web widget is the dashboard "Digital Twin" tile. It resolves a vehicle
@@ -120,7 +121,7 @@ const ICON_UNLOCK = '\u{1F513}'; // lucide Unlock
 const GLYPH_ARROW_UP_RIGHT = '\u2197'; // lucide ArrowUpRight
 const GLYPH_REFRESH = '\u21BB';
 
-function Glyph({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText allowFontScaling={false} importantForAccessibility="no" style={style}>
       {glyph}

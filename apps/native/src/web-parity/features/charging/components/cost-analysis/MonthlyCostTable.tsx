@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx.
 //
@@ -165,7 +166,7 @@ interface GlyphProps {
   color: string;
 }
 
-function Glyph({char, color}: GlyphProps): React.ReactElement {
+function GlyphLegacyUnused({char, color}: GlyphProps): React.ReactElement {
   return (
     <AppText
       accessibilityElementsHidden

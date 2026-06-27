@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/charging/components/charging-list/OptimizerSection.tsx.
 //
@@ -178,7 +179,7 @@ export interface ChargingOptimizerData {
 // ─── Decorative glyph (lucide icon → native-safe text glyph) ──
 // The adjacent label/heading text carries the meaning, so each glyph is hidden
 // from the accessibility tree.
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   style,
 }: {

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/dashboard/widgets/OnboardingChecklistWidget.tsx.
 //
@@ -166,7 +167,7 @@ const LAYOUT_GRID_GLYPH = getSemanticIconDefinition('layoutGrid').glyph; // Layo
 
 type GlyphTone = 'accent' | 'emerald' | 'muted' | 'secondary';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   tone,
   style,

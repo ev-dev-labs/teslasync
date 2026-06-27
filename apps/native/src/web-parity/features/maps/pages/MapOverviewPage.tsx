@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/maps/pages/MapOverviewPage.tsx.
 //
 // `MapOverviewPage` shows a vehicle's live GPS location and recent position
@@ -320,7 +321,7 @@ function useUrlEnum<E extends string>(
 }
 
 /* ── Decorative glyph (lucide icon substitute) ─────────────────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

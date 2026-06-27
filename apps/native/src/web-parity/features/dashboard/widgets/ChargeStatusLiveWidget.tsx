@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/ChargeStatusLiveWidget.tsx.
 //
 // The web widget is the dashboard "Charge Status" live tile. It resolves a
@@ -271,7 +272,7 @@ function useLoopingPulse(reduceMotion: boolean): Animated.Value {
 
 /* ─── glyph primitives ─────────────────────────────────────────────────────── */
 
-function Glyph({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText allowFontScaling={false} importantForAccessibility="no" style={style}>
       {glyph}

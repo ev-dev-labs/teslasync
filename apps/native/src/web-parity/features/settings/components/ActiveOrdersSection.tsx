@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/settings/components/ActiveOrdersSection.tsx.
 //
@@ -165,7 +166,7 @@ function formatOrderStatus(status: string | undefined | null): string {
 }
 
 /* ── Glyph (decorative lucide-icon stand-in) ──────────────────────── */
-function Glyph({children, style}: {children: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({children, style}: {children: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText accessibilityElementsHidden importantForAccessibility="no" style={style}>
       {children}

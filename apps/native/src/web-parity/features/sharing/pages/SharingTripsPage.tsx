@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/sharing/pages/SharingTripsPage.tsx.
 //
 // SharingTripsPage surfaces recent trips eligible for sharing, keeps the
@@ -209,7 +210,7 @@ function formatDuration(startDate: string, endDate: string | null): string {
 }
 
 /* ── Glyph (decorative emoji standing in for a lucide icon) ─────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

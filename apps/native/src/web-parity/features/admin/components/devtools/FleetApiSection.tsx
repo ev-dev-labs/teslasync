@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of web/src/features/admin/components/devtools/FleetApiSection.tsx.
 //
 // The web module is the Tesla Fleet API dev-tools section: a setup-wizard
@@ -304,7 +305,7 @@ const TELEMETRY_FIELDS: CategoryDef[] = [
 
 // Compact icon glyph for inline button / list affordances (the full
 // SemanticIcon box is reserved for the AlertBanner / ToolCard badges).
-function Glyph({name, color}: {name: SemanticIconName; color?: string}) {
+function GlyphLegacyUnused({name, color}: {name: SemanticIconName; color?: string}) {
   return (
     <AppText style={[styles.glyph, color ? {color} : null]} weight="bold">
       {getSemanticIconDefinition(name).glyph}

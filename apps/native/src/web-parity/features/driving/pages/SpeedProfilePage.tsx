@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/driving/pages/SpeedProfilePage.tsx.
 //
 // `SpeedProfilePage` analyses a vehicle's speed distribution and driving pattern.
@@ -272,7 +273,7 @@ function useRangeState(_options: UseRangeStateOptions = {}): {
 }
 
 /* ── Decorative glyph (lucide icon substitute) ─────────────────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

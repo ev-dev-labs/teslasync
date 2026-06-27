@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // LayoutSwitcher — native parity port of
 // web/src/features/dashboard/components/LayoutSwitcher.tsx.
 //
@@ -217,7 +218,7 @@ function useConfirm(): {
 }
 
 /* ─── Small shared primitives ────────────────────────────────────────────────*/
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   size = 14,
   color,

@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/dashboard/widgets/SecurityStatusWidget.tsx.
 //
 // The web widget is a dashboard tile that shows a vehicle's live security
@@ -147,7 +148,7 @@ const WINDOW_GLYPH = getSemanticIconDefinition('monitor').glyph;
 
 type GlyphTone = 'green' | 'muted' | 'secondary';
 
-function Glyph({
+function GlyphLegacyUnused({
   glyph,
   tone,
   style,

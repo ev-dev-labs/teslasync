@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/driving/pages/DriveDetailPage.tsx.
 //
 // `DriveDetailPage` is the single-drive deep dive. It resolves the `:id` route
@@ -1027,7 +1028,7 @@ function useDriveDetailData(id: string) {
 
 /* ─── Glyph (lucide-react icons -> decorative emoji) ───────────── */
 // Decorative only (accessibility-hidden); the adjacent label carries meaning.
-function Glyph({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
+function GlyphLegacyUnused({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
   return (
     <AppText
       accessibilityElementsHidden

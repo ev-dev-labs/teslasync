@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/trips/components/TripReplayCharts.tsx.
 //
@@ -351,7 +352,7 @@ export function nearestIndexByTime(
 }
 
 /* ── decorative glyph (lucide icon substitute) ─────────────────── */
-function Glyph({
+function GlyphLegacyUnused({
   children,
   style,
 }: {

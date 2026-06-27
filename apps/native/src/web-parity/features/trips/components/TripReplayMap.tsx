@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/trips/components/TripReplayMap.tsx.
 //
 // The web component is a thin wrapper around the trip-replay Leaflet map. It is
@@ -856,7 +857,7 @@ function MapLayerSwitcher({current, onChange}: MapLayerSwitcherProps) {
 
 /* ── Decorative glyph (lucide-react stand-in) ─────────────────────────────────── */
 
-function Glyph({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText allowFontScaling={false} importantForAccessibility="no" style={style}>
       {glyph}

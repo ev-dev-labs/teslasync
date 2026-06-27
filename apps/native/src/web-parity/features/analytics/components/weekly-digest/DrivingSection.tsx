@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/analytics/components/weekly-digest/DrivingSection.tsx.
 //
@@ -193,7 +194,7 @@ interface GlyphProps {
   size?: number;
 }
 
-function Glyph({char, color, size = 16}: GlyphProps) {
+function GlyphLegacyUnused({char, color, size = 16}: GlyphProps) {
   return (
     <AppText
       accessibilityElementsHidden

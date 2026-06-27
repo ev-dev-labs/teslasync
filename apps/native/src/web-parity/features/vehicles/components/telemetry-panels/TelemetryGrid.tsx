@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../../components/icons/Glyph';
 // Native parity port of
 // web/src/features/vehicles/components/telemetry-panels/TelemetryGrid.tsx.
 //
@@ -70,7 +71,7 @@ const EMERALD_300 = '#6ee7b7';
 const AMBER_300 = '#fcd34d';
 const ROSE_300 = '#fda4af';
 
-function Glyph({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
+function GlyphLegacyUnused({glyph, style}: {glyph: string; style?: StyleProp<TextStyle>}) {
   return (
     <AppText allowFontScaling={false} importantForAccessibility="no" style={style}>
       {glyph}

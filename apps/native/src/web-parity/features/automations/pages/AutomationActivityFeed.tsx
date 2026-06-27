@@ -1,3 +1,4 @@
+import {Glyph} from '../../../../components/icons/Glyph';
 // Native parity port of web/src/features/automations/pages/AutomationActivityFeed.tsx.
 //
 // Presentational "Recent Activity" panel for automations: a header (Activity
@@ -272,7 +273,7 @@ function Pulse({children}: {children: ReactNode}) {
 
 /* ── Glyph (lucide inline 16px icon) ─────────────────── */
 
-function Glyph({
+function GlyphLegacyUnused({
   text,
   color,
   pulse,
