@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/types/telemetry.ts",
+  "outputPath": "apps/native/src/web-parity/types/telemetry.ts",
+  "sourceLineCount": 81,
+  "coveredLineCount": 81,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 81 source lines in a line-numbered range before editing. Source is a pure non-visual TypeScript type-declaration module with ZERO imports and ZERO DOM/window/Recharts/Leaflet/web-UI dependency, so per conversion contract rule 6 it is ported faithfully and React Native-compatibly with no native-safe shims required (rule 7 not applicable).",
+    "Every exported symbol is preserved name-for-name and shape-for-shape: SignalPoint (L1-6), SignalStats (L8-13), SignalHistoryResponse (L15-22), SignalLogEntry (L24-29), SignalRow (L31-37), SignalEntry (L39-45), TelemetryStatus (L47-55), VehicleTelemetry (L57-74), RangeStats (L76-81). All optional markers (?), union members, and nested references (SignalPoint[], Record<string, VehicleTelemetry> | VehicleTelemetry[]) carried over verbatim.",
+    "Both camelCase and snake_case dual-shape fields preserved exactly as in source to match camelCaseKeys()-transformed API responses (uptimeSeconds/uptime_seconds, vehicleId/vehicle_id, signalCount/signal_count, batchCount/batch_count, signalsPerSecond/signals_per_second, lastReceived/last_received, plus snake_case-only is_streaming, data_source, latency_ms, streaming_vehicles). String-literal unions for SignalRow.category ('active'|'stale'|'never') and SignalEntry.type ('number'|'string'|'boolean') retained.",
+    "No unit-suffixed fields on the SI-cutover axis (no Mi/Min/Mph/Kwh/Kw/Psi). latency_ms and *Seconds/uptime_seconds are time-duration identifiers carried verbatim from the API contract, not display-boundary physical-quantity fields, so no SI conversion applies. No API paths or i18n string literals exist in this source.",
+    "This dedicated parity module mirrors the web file 1:1. Pre-existing equivalent declarations in native api/hooks/useTelemetry.ts, api/types.ts, and api/devtools.ts are separate TS modules with module-scoped symbols and are left untouched; no collision occurs. Formatting matches apps/native/.prettierrc.js (singleQuote, trailingComma 'all') and the established native type-module style (semicolon-terminated interface members); output is byte-equivalent to the source apart from path.",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles (jest). Raw results in the final response."
+  ]
+}
