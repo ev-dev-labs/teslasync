@@ -1,0 +1,15 @@
+{
+  "sourcePath": "web/src/lib/cleanNil.ts",
+  "outputPath": "apps/native/src/web-parity/lib/cleanNil.ts",
+  "sourceLineCount": 9,
+  "coveredLineCount": 9,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 9 source lines before porting. cleanNil.ts is non-visual utility code (a single pure string normalizer); it touches no DOM, no browser globals, no Recharts/Leaflet, and no web UI components, so the logic ports 1:1 to React Native-compatible TypeScript (contract rule 6). No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components imported (the file has zero imports).",
+    "L1-5 module JSDoc preserved verbatim (the Go fmt.Sprintf(\"%v\", nil) -> \"<nil>\" literal-string-in-DB rationale); a short native-conversion paragraph was appended documenting that this is a faithful 1:1 port with an identical public surface (contract rules 6 + 7).",
+    "L6 `export function cleanNil(v?: string | null): string | undefined` ported verbatim — identical signature, optional nullable string param, string|undefined return.",
+    "L7 guard `if (!v || v === '<nil>' || v === 'nil' || v === 'null') return undefined` ported 1:1 — all four falsy/sentinel checks identical; prettier added a trailing semicolon per the native .prettierrc.js (singleQuote, trailingComma all, arrowParens avoid; semicolons on by default). No behavior change.",
+    "L8 `return v` ported verbatim (semicolon added). L9 trailing newline preserved.",
+    "Style matches apps/native/.prettierrc.js and the @react-native eslint config. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
