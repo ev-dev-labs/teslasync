@@ -1,0 +1,22 @@
+{
+  "sourcePath": "web/src/lib/constants.ts",
+  "outputPath": "apps/native/src/web-parity/lib/constants.ts",
+  "sourceLineCount": 191,
+  "coveredLineCount": 191,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 191 source lines (numbered) before editing. The file is a pure, non-visual constants + utility module with ZERO imports and no JSX, Recharts, Leaflet, react-router-dom, DOM globals, or web UI components. The only language surfaces touched are `Date`, `Number.isFinite`, `Math.abs`, and the `Infinity` global — all core ECMAScript that runs identically under Hermes / React Native — so there is no browser-only behavior to substitute and every value/type/label/logic ports byte-for-byte. A leading // native-parity header documents the pure non-visual port; the original module JSDoc is preserved verbatim.",
+    "L1-5 module JSDoc (`Centralized application constants. Single source of truth for conversion factors, timeouts, pagination defaults.`) preserved verbatim below the native header. L6 blank separator kept.",
+    "L6-16 UNITS const: all 8 conversion factors ported exactly (MI_TO_KM 1.60934, KM_TO_MI 0.621371, PSI_TO_BAR 0.06895, BAR_TO_PSI 14.5038, KPA_TO_PSI 0.14504, PSI_TO_KPA 6.89476, KPA_TO_BAR 0.01, BAR_TO_KPA 100) with the `Tesla API sends miles/mph/PSI/°C` JSDoc and `as const` retained 1:1.",
+    "L18-25 TIMEOUTS const: API_REQUEST 15_000, SSE_RECONNECT 3_000, POLL_FAST 3_000, POLL_SLOW 30_000, STALE_SIGNAL 15*60*1000 (with its `15 minutes` inline comment) ported verbatim with numeric-separator literals preserved.",
+    "L27-45 INTERVALS const: CRITICAL/REALTIME/FAST/STANDARD/SLOW/ANALYTICS/RARE/STATIC ported with every per-key JSDoc; STATIC: Infinity kept (Infinity is a core ECMAScript global, not a DOM API). Computed values 5*60_000 and 60*60_000 left as expressions, not pre-evaluated, to keep source intent.",
+    "L47-71 STALE_TIMES const: all 11 keys (REALTIME, QUICK, MODERATE, FAST, STANDARD, SLOW, EXTENDED, ANALYTICS, RARE, DAILY 24*60*60_000, STATIC Infinity) with their JSDoc ported verbatim for TanStack Query staleTime usage.",
+    "L73-78 PAGINATION const: DEFAULT_LIMIT 50, MAX_LIMIT 1000, PAGE_SIZES [25,50,100] with the nested `as const` (and outer `as const`) preserved so the literal tuple type survives.",
+    "L80-87 FUEL const: CO2_PER_GALLON_KG 8.887, KG_CO2_PER_TREE_YEAR 22, DEFAULT_GAS_PRICE_USD 3.5, DEFAULT_MPG 30, GALLONS_TO_LITERS 3.78541 ported 1:1 for cost analysis.",
+    "L89-90 DAYS tuple `['Sun'..'Sat'] as const` (Sunday-first) ported verbatim.",
+    "L92-106 MONTHS, L108-121 COMMON_TIMEZONES, L123-131 NUMERIC_OPERATORS (=, ≠, >, <, ≥, ≤ — unicode label glyphs preserved), L133-137 BOOL_OPERATORS, L174-180 DAYS_OPTIONS, L182-191 CONDITION_TYPES: all dropdown/option `{ value: string; label: string }[]` tables ported with identical value keys and i18n-neutral English label strings (intent unchanged; these are pre-existing untranslated literals in the web source).",
+    "L139-146 TIME_RANGE_PRESETS `as const` array (1h/6h/24h/7d/30d -> hours 1/6/24/168/720) ported verbatim, preserving the literal type consumed by matchTimeRangePreset.",
+    "L148-172 matchTimeRangePreset: full JSDoc (incl. the ±60s tolerance rationale) and body ported byte-for-byte — empty-string guard returning null, `new Date(...).getTime()` parse, Number.isFinite validation, span = toMs - fromMs, loop over presets with p.hours*3600_000 and Math.abs(span-preset) <= toleranceMs, default toleranceMs = 60_000. No DOM dependency; Date/Number.isFinite/Math.abs are engine-agnostic.",
+    "Style preserved exactly as the web source (no semicolons, 2-space indent, single quotes, numeric separators), matching the broadcastTopics.ts pure-constants precedent in the same web-parity/lib dir and the apps/native .prettierrc.js (singleQuote, trailingComma:all). No consumer in web-parity imports this module yet, so it is a faithful standalone registry. Gates run from apps/native: `npm run typecheck` (tsc --noEmit), `npm run lint -- --quiet` (eslint .), and `npm test -- --runInBand --detectOpenHandles` (full existing suite). Commit scoped to apps/native only; pre-existing EOL-only dirty web files left untouched."
+  ]
+}
