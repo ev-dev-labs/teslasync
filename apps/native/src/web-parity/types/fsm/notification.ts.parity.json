@@ -1,0 +1,24 @@
+{
+  "sourcePath": "web/src/types/fsm/notification.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/notification.ts",
+  "sourceLineCount": 69,
+  "coveredLineCount": 69,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 69 source lines before editing; pure non-visual FSM type/constant/data module with two relative imports from './types' and zero DOM/browser/Recharts/Leaflet/web-UI/React-component dependencies, so it is React Native-compatible verbatim (byte-identical to source, SHA256 8ECAF7903153A89A105105099F909A1EE9CA8512FFA03FD16759F398AF084A67, 5073 bytes, LF, no BOM, trailing LF) and required no native-safe stubbing.",
+    "L1-2 imports preserved verbatim: L1 type-only import of 7 symbols (StateEntry, Edge, FSMDefinition, TransitionRow, DisallowedTransition, CoverageMatrix, Scenario) and L2 value import deriveEdges from './types'; the sibling dependency apps/native/src/web-parity/types/fsm/types.ts already exists (verbatim 95-line port with its own sidecar) and exports every imported symbol, so tsc resolves './types' identically to web.",
+    "L3 blank line preserved.",
+    "L4-5 NOTIFICATION_STATES as-const tuple (created/sending/delivered/partial/failed/retrying/dead) and L5 NotificationState = (typeof ...)[number] union ported verbatim, preserving the exact state names.",
+    "L7-15 NOTIFICATION_STATE_ENTRIES Record<NotificationState,StateEntry> ported verbatim including each BadgeVariant (neutral/info/success/warning/danger/neutral/danger) and the Tailwind override class-name strings for retrying(purple) and dead(red) badgeDot/bg/text/dot; these are data string literals (not JSX/DOM) carrying visual intent, RN-safe unchanged.",
+    "L16 blank line preserved.",
+    "L17-21 NOTIFICATION_TRIGGERS as-const tuple (7 triggers: delivery_start/all_channels_ok/some_channels_failed/all_channels_failed/retry/retry_scheduled/backoff_expired) + L21 NotificationTrigger union ported verbatim, preserving the two-line array layout.",
+    "L22-23 NOTIFICATION_GUARDS as-const tuple (under_max_retries/max_retries_reached) + L23 NotificationGuard union ported verbatim.",
+    "L24 blank line preserved.",
+    "L25-35 NOTIFICATION_TRANSITIONS TransitionRow<NotificationState,NotificationTrigger>[] (9 rows) ported verbatim preserving every from/to/trigger/guard(null where absent)/timing('immediate') and the column alignment.",
+    "L36 blank line preserved; L37 NOTIFICATION_EDGES Edge<NotificationState>[] = deriveEdges(NOTIFICATION_TRANSITIONS) ported verbatim (deriveEdges resolved from native ./types value import).",
+    "L38 blank line preserved; L39-45 NOTIFICATION_DISALLOWED DisallowedTransition<NotificationState>[] (5 rows with reason strings incl. em-dash on the dead->sending Terminal entry) ported verbatim.",
+    "L46 blank line preserved; L47-55 NOTIFICATION_COVERAGE CoverageMatrix<NotificationState> (7x7 self/valid/null cells) ported verbatim.",
+    "L56 blank line preserved; L57-63 NOTIFICATION_SCENARIOS Scenario<NotificationState>[] (N1..N5 id/description/transitions arrays) ported verbatim.",
+    "L64 blank line preserved; L65-69 NOTIFICATION_FSM FSMDefinition<NotificationState,NotificationTrigger> wiring states/edges/transitions/disallowed/coverage/scenarios ported verbatim. Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles all green; only apps/native changes committed."
+  ]
+}
