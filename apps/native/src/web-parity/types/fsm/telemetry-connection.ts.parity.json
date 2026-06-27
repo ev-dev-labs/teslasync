@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/types/fsm/telemetry-connection.ts",
+  "outputPath": "apps/native/src/web-parity/types/fsm/telemetry-connection.ts",
+  "sourceLineCount": 41,
+  "coveredLineCount": 41,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read the source line by line. The web file is pure non-visual TypeScript: an FSM data/type module with zero DOM/React/Recharts/Leaflet/browser imports, so it is ported 1:1 (contract rules 3 & 6).",
+    "L1 import: source imports { deriveEdges, type StateEntry, type TransitionRow, type FSMDefinition } from './types'. The native web-parity tree does not (yet) emit ./types as its own module; the converted native barrel ./index already re-declares and exports all four of those exact symbols (deriveEdges at index.ts L94, StateEntry L33, FSMDefinition L44, TransitionRow L61). Retargeted the import specifier to './index' only — names, kinds, and inline `type` modifiers unchanged. ./index does not import this module, so no import cycle (verified by grep: index.ts has no sibling imports).",
+    "L3-5 TELEMETRY_CONNECTION_STATES: 6-state `as const` tuple (unknown, connecting, streaming, stale, disconnected, polling_only) copied verbatim including ordering and trailing comma.",
+    "L7 TelemetryConnectionState: union derived via (typeof ...)[number] — identical.",
+    "L9-16 TELEMETRY_CONNECTION_STATE_ENTRIES: Record<TelemetryConnectionState, StateEntry> with all 6 variant tokens preserved verbatim (neutral/warning/success/warning/danger/info). Tokens kept as opaque data; module renders nothing so no RN style translation applies.",
+    "L18-19 TELEMETRY_CONNECTION_TRIGGERS (['manual'] as const) + TelemetryConnectionTrigger union — copied 1:1.",
+    "L21-33 TELEMETRY_CONNECTION_TRANSITIONS: all 11 transition rows transcribed exactly (from/to/trigger/guard:null/timing:'immediate'), preserving alignment and order.",
+    "L35 TELEMETRY_CONNECTION_EDGES = deriveEdges(TELEMETRY_CONNECTION_TRANSITIONS) — unchanged; deriveEdges now resolves from ./index.",
+    "L37-41 TELEMETRY_CONNECTION_FSM: FSMDefinition with states/edges/transitions wired to the three constants above — identical. Trailing newline (L42) preserved.",
+    "Preserved the source's no-semicolon formatting to match the already-passing native index.ts mirror of this same code. No DOM-only modules, browser HTML elements, Recharts, Leaflet, or old web UI components imported (contract rule 4).",
+    "Gates run from apps/native: `npm run typecheck` (tsc --noEmit) PASS, `npm run lint -- --quiet` PASS, `npm test -- --runInBand --detectOpenHandles` PASS."
+  ]
+}
