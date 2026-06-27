@@ -1,0 +1,18 @@
+{
+  "sourcePath": "web/src/features/dashboard/widgets/ClimateControlPanelWidget.tsx",
+  "outputPath": "apps/native/src/web-parity/features/dashboard/widgets/ClimateControlPanelWidget.tsx",
+  "sourceLineCount": 203,
+  "coveredLineCount": 203,
+  "conversionStatus": "converted",
+  "notes": [
+    "L1-13 imports: lucide icons -> tinted decorative text Glyphs; @/components/ui Badge -> inline Badge (success/neutral, sm); @/components/feedback EmptyState -> native EmptyState; useVehicles/useClimateLatest -> real native hooks; useUnits/convertTempFromSI/fmtInt/fmtNumber -> inlined verbatim; ./WidgetShell -> native WidgetShell port; ./types WidgetProps re-declared.",
+    "L15-25 main component: useVehicles + id = vehicleId ?? vehicles?.[0]?.id ?? 0; useClimateLatest(id, 5000) destructured (climateData/isLoading/isFetching/isStale/isError/dataUpdatedAt/refetch); useUnits().unitPrefs; toTemperatureDisplay (useCallback, identical output); tempUnit; isCompact = cols<=1 && rows<=1 — all preserved verbatim.",
+    "L27-49 temps + seatHeaters useMemo ported verbatim: inside/outside via fmtInt(toTemperatureDisplay(...)) when != null; five seat-heater >0 guards pushing {label,level} with the FL/FR/RL/RC/RR i18n keys.",
+    "L51-86 WidgetShell render: steeringHeat ?? 0; title/icon undefined when compact; loading/updatedAt/isFetching/isStale/isError/onRefresh forwarded; climateData ? (compact?CompactView:FullView) : EmptyState('No climate data') with the no-action comment.",
+    "L88-98 CompactView: centred Thermometer glyph + `${inside}${tempUnit}` or em dash.",
+    "L100-190 FullView: hvacOn = (hvac_power>0) || hvac_ac_enabled===true; Power glyph + success/neutral HVAC On/Off Badge + `${fmtNumber(hvac_power,1)} kW` when power>0; cabin (accent) / outside (blue-400) temp MetricCells; fan-speed + wheel-heat (`${n}/3` else Off) MetricCells; seat-heater chips (`label level/3`) or 'No seat heaters active'; defrost chip when defrost_mode && !== 'Off'; battery-heater chip when battery_heater_on.",
+    "L192-203 MetricCell: web icon ReactNode -> glyph+colour pair; label (10px muted) + value (semibold primary).",
+    "Behaviour/state names/API path (/climate/latest?vehicle_id=)/5000ms poll/SI degC->display temperature handling/i18n widget.climatePanel.* keys all preserved. No DOM, lucide-react, Recharts, Leaflet or web UI components imported.",
+    "Verified by ClimateControlPanelWidgetParity.test.tsx (compact, full all-sections, HVAC off/no-power/no-seat, empty, degF conversion, vehicleId fallback + explicit, loading skeleton) plus npm run typecheck, npm run lint --quiet, npm test."
+  ]
+}
