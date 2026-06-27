@@ -1,0 +1,23 @@
+{
+  "sourcePath": "web/src/types/admin.ts",
+  "outputPath": "apps/native/src/web-parity/types/admin.ts",
+  "sourceLineCount": 350,
+  "coveredLineCount": 350,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 350 source lines line by line before editing. The module is non-visual: pure TypeScript type/interface declarations for admin/system/notification/changelog/roadmap API DTOs. No React, JSX, DOM elements, Recharts, Leaflet, or web-UI components are referenced, so lines L1-330 and L343-350 port verbatim to React Native-compatible TypeScript; only the L336-341 re-export needed a native-safe rewrite. Output normalized to LF endings to match source and sibling web-parity/types modules.",
+    "L1-9 APIKey, L11-21 APICallLog, L23-32 APICallLogStats (incl. inline comment L29 and optional snake_case grouped breakdowns by_method?/by_service? L30-31) ported verbatim with all field names, literal unions (permissions 'read'|'read-write'|'admin'), and nullability preserved.",
+    "L34-47 BackupConfig (backupType 'full'|'incremental', provider 'local'|'s3'|'azure'|'gcs', providerConfig Record<string,string>, nullable lastRunAt/nextRunAt) and L49-58 BackupRun (status 'completed'|'failed'|'running'|'queued', nullable completedAt/durationMs) ported verbatim.",
+    "L60-75 ComponentStatus: JSDoc block (L60-69) and the string-literal union with the `(string & {})` open-ended fallback (L70-75) preserved exactly so unknown backend status keys still type-check.",
+    "L77-103 SystemHealthComponent (details Record<string,unknown>) and SystemHealth, including the operator service-mode banner JSDoc (L89-97) and optional snake_case mode/maintenance_message/maintenance_until/maintenance_updated_at/source fields, ported verbatim.",
+    "L105-124 MaintenanceState (JSDoc L105-109 + snake_case fields mirroring Go JSON tags) and MaintenanceUpdateInput ported verbatim, retaining the 'ok'|'degraded'|'maintenance' and 'env'|'db'|'default' literal unions.",
+    "L126-156 AuditLogEntry, WebErrorsSummary JSDoc (L134-142), WebErrorsSummaryEntry, and WebErrorsSummary (dual snake_case+camelCase keys window_seconds/windowSeconds and as_of/asOf preserved to match the post-camelCaseKeys runtime shape) ported verbatim.",
+    "L158-202 UserActivityEntry (JSDoc L158-161, snake_case entity_type/entity_id/user_agent) and SecurityEvent (comment L173-176 referencing web/src/lib/typeGuards.ts plus all string|boolean|null union signal fields) ported verbatim; comment intent kept even though the referenced helper path is web-side.",
+    "L204-262 TableInfo, DBStats, MigrationInfo, MigrationStatus, ConnectionPool, ExportJob (type/format/status literal unions, nullable recordCount/fileSize), VehicleState, StateTransition ported verbatim.",
+    "L264-298 Alert (severity 'info'|'warning'|'critical'), AlertRuleSeverity, AlertRuleOp full operator union, and AlertRule (all snake_case fields vehicle_id/signal_name/value_*/cooldown_min/msg_template/include_title/created_at/updated_at with inline JSDoc L292/L294) ported verbatim.",
+    "L300-330 NotificationChannel (type 7-member union, config Record<string,string>), NotificationLog, NotificationStats, ChatMessage ported verbatim.",
+    "L332-341 NATIVE-SAFE REWRITE: the web file re-exports type-only { ChangelogChange, ChangelogChangeType, ChangelogBadge, ChangelogEntry } from '@/generated/changelog' — a build-tool-generated artifact (web/scripts/buildChangelog.mjs) that does not exist in the native app, which also has no '@/*' tsconfig path alias. To preserve this module's exported type surface without an unavailable browser/build dependency, the four type shapes were inlined verbatim from web/src/generated/changelog.ts (ChangelogChangeType 6-member union, ChangelogChange {type,text}, ChangelogBadge 'latest'|'stable'|'beta', ChangelogEntry {version,date,badge,changes} with original field JSDoc). The original explanatory comment is retained and extended with a note documenting the native deviation. Net export surface of web-parity/types/admin is identical to web.",
+    "L343-350 RoadmapPhase ('done'|'current'|'next'|'future') and RoadmapItem (features string[]) ported verbatim.",
+    "Gates run green from apps/native: `npm run typecheck` (tsc --noEmit) exit 0; `npm run lint -- --quiet` (eslint . --quiet) exit 0; `npm test -- --runInBand --detectOpenHandles` => 66 suites / 489 tests passed. Only apps/native files committed for this conversion."
+  ]
+}
