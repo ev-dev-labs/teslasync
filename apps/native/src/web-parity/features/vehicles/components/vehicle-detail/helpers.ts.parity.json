@@ -1,0 +1,20 @@
+{
+  "sourcePath": "web/src/features/vehicles/components/vehicle-detail/helpers.ts",
+  "outputPath": "apps/native/src/web-parity/features/vehicles/components/vehicle-detail/helpers.ts",
+  "sourceLineCount": 56,
+  "coveredLineCount": 56,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 56 source lines with numbered output before editing; the file is pure platform-agnostic TypeScript utility/type logic (no DOM, browser, React, Recharts, Leaflet, or web UI), so every export is ported faithfully and is fully React Native compatible.",
+    "L1 `import type { VehicleState } from '@/api/types'` -> type-only import from the already-ported native `../../../../api/types` (same relative depth the sibling index.ts barrel uses); identical VehicleState shape.",
+    "L2 `import { fmtInt } from '@/lib/numberFormat'` -> the native web-parity tree ships no numberFormat module, so following the established sibling convention (QuickStatsGrid.tsx/BatteryRangePanel.tsx inline the numberFormat helpers they need) `safeNumber` + `fmtInt` are inlined field-for-field. Web `fmtInt(v)` === `fmtNumber(v, 0)` === `safeNumber(v).toLocaleString(locale, {min/maxFractionDigits: 0})`; numberFormat's module-default global locale is 'en-US'. `durationStr` only ever formats `minutes % 60` (0-59) where no locale yields grouping separators, so the integer rendering is identical for every reachable input; the web fmtNumber try/catch only guards a user-supplied locale tag and is intentionally elided since the constant 'en-US' can never throw.",
+    "L3 `export { deriveVehicleStatus as deriveStatus, statusVariant } from '@/api/types'` -> re-exported verbatim from native `../../../../api/types`, which already exports both `deriveVehicleStatus` and `statusVariant`; the `deriveStatus` alias is preserved so the web file's exact public surface is kept.",
+    "L5-8 `StateResponse` interface ({ state: VehicleState; live: boolean }) ported verbatim.",
+    "L10-14 `batteryColor(level)` ported verbatim: >60 -> '#10b981', >25 -> '#f59e0b', else '#ef4444' (exact hex preserved).",
+    "L16-32 tire-pressure doc block + `TIRE_PRESSURE_PA` Object.freeze({ LOW_CRITICAL: 206_800, LOW_WARNING: 241_300, HIGH_WARNING: 310_300, HIGH_CRITICAL: 344_700 } as const) ported verbatim, numeric separators and all per-field JSDoc retained.",
+    "L34-38 `paToKpa(pa)` ported verbatim: null/undefined/non-finite -> null, else pa / 1000.",
+    "L40-50 `tirePressureVariant(pa)` ported verbatim: nullish/non-finite -> 'neutral', < LOW_CRITICAL || > HIGH_CRITICAL -> 'danger', < LOW_WARNING || > HIGH_WARNING -> 'warning', else 'success' (return union 'success'|'warning'|'danger'|'neutral' preserved; multi-line wrapping only to satisfy native prettier printWidth 80, behavior identical).",
+    "L52-56 `durationStr(minutes)` ported verbatim: h = Math.floor(minutes/60), m = fmtInt(minutes%60), `${h}h ${m}m` when h>0 else `${m}m`.",
+    "L4/L9/L15/L22/L33/L39/L51/L57 are blank lines / trailing newline. Gates run from apps/native: `npm run typecheck` (tsc --noEmit), `npm run lint -- --quiet` (eslint), `npm test -- --runInBand --detectOpenHandles` (jest)."
+  ]
+}
