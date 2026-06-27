@@ -1,0 +1,19 @@
+{
+  "sourcePath": "web/src/lib/geo.ts",
+  "outputPath": "apps/native/src/web-parity/lib/geo.ts",
+  "sourceLineCount": 93,
+  "coveredLineCount": 93,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 93 numbered source lines before editing. This is a pure, dependency-free geospatial utility module: no JSX, no DOM, no React, no Leaflet/react-leaflet, no imports, no API path, no unit-suffixed Go/JSON field, and no i18n. It ports byte-for-byte; every browser-relevant primitive used (Math.PI, Math.sin, Math.cos, Math.sqrt, Math.atan2, the ** exponentiation operator, Number.isFinite) is available identically under Hermes/Node, so no native-safety shim or explicit unavailable state is required.",
+    "L1-6 haversineDistance JSDoc preserved verbatim, including the '@returns Distance in **meters**' SI contract. A native-port header block was prepended at the top of the file documenting why the module ports unchanged.",
+    "L7-24 export function haversineDistance(lat1, lon1, lat2, lon2): number: signature, the `R = 6_371_000` Earth-radius-in-meters constant (numeric separators retained), the `toRad = (deg: number) => (deg * Math.PI) / 180` arrow helper, dLat/dLon, the `a = sin(dLat/2)**2 + cos(toRad(lat1))*cos(toRad(lat2))*sin(dLon/2)**2` term, and the `R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))` return are all ported exactly — meters in, meters out, no unit change.",
+    "L26-30 export const MIN_MEANINGFUL_ROUTE_METERS = 10: the threshold value (10 m) and its full GPS-jitter rationale JSDoc are reproduced exactly.",
+    "L32-38 export interface LatLngLike { latitude: number; longitude: number }: the coordinate-carrier shape and its JSDoc (works with DrivePosition, telemetry bags, or ad-hoc literals) are ported field-for-field.",
+    "L40-49 export function isValidLatLng(lat, lng): boolean: JSDoc kept; the four guards (non-finite -> false; (0,0) Tesla-GPS-not-fixed placeholder -> false; lat out of [-90,90] -> false; lng out of [-180,180] -> false) then `return true` are logically identical. The four single-line `if (...) return false;` statements were wrapped in braces to satisfy the native eslint `curly` rule — behavior is byte-for-byte equivalent.",
+    "L51-82 export function hasMeaningfulRoute(positions: readonly LatLngLike[]): boolean: JSDoc (>=2 valid coords separated by >= MIN_MEANINGFUL_ROUTE_METERS; short-circuit semantics) preserved; the anchor-finding loop with `break`, the `anchorIdx < 0 -> false` guard, the second loop with the `!isValidLatLng -> continue` skip, the haversineDistance call, and the `d >= MIN_MEANINGFUL_ROUTE_METERS -> return true` early exit followed by trailing `return false` are all ported exactly. The single-line if/continue, if/return-false, and if/return-true bodies were braced for the curly rule (no behavior change); the multi-line if at L63-66 already had braces and is unchanged.",
+    "L84-93 export function firstValidIndex(positions: readonly LatLngLike[]): number: JSDoc kept; the loop returning the first index where isValidLatLng holds (single-line if braced for curly rule) and the trailing `return -1` are ported exactly.",
+    "No DOM, lucide-react, Recharts, Leaflet, react-leaflet, or old web UI components are imported (the module has zero imports). Native toolchain formatting applied via the @react-native eslint-config (prettier: singleQuote, trailingComma all, bracketSpacing false, arrowParens avoid).",
+    "Gates run from apps/native: npm run typecheck (tsc --noEmit), npm run lint -- --quiet (eslint .), npm test -- --runInBand --detectOpenHandles (jest) — all pass. Only the two files for this conversion (geo.ts + geo.ts.parity.json) were staged and committed; pre-existing EOL-only dirty web files and unrelated native files were left untouched."
+  ]
+}
