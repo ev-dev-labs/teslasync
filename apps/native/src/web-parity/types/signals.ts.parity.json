@@ -1,0 +1,17 @@
+{
+  "sourcePath": "web/src/types/signals.ts",
+  "outputPath": "apps/native/src/web-parity/types/signals.ts",
+  "sourceLineCount": 67,
+  "coveredLineCount": 67,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 67 numbered source lines before editing; this is non-visual TypeScript with zero imports (types + one pure narrowing function), so no DOM, browser HTML elements, Recharts, Leaflet, or web UI components were present or introduced (contract rules 4 & 6). Ported 1:1 to RN-compatible TypeScript.",
+    "L1 SignalSource union ('fleet_telemetry' | 'fleet_api' | 'manual' | 'backfill') preserved verbatim to honor the backend source enum contract.",
+    "L3-11 SignalObservation interface ported verbatim with snake_case API-contract field names (vehicle_id, ts, signal_name, value_numeric, value_text, value_bool, source) and nullable unions (number|null, string|null, boolean|null) preserved exactly.",
+    "L13 SignalValueType union ('numeric' | 'text' | 'bool') and L15-23 SignalCatalogEntry (name, value_type, source_module, unit|null, description|null, first_seen_at, last_seen_at) ported verbatim including nullable fields.",
+    "L25 leading comment '// Discriminated children — exactly one value_* is populated' preserved verbatim. L26-37 NumericSignalObservation/TextSignalObservation/BoolSignalObservation discriminated children (each extends SignalObservation with a value_type literal + concrete value) ported verbatim.",
+    "L39-42 TypedSignalObservation discriminated union (Numeric|Text|Bool) ported verbatim.",
+    "L44-48 JSDoc for narrowSignal preserved verbatim to retain narrowing-contract/malformed-row intent. L49-67 narrowSignal function ported verbatim: same signature (obs, catalog) with trailing-comma params, same exhaustive switch over catalog.value_type with object-spread narrowing and null-on-missing-value behavior for numeric/text/bool cases. No behavior, field name, unit, or null-safety semantics changed.",
+    "Source was already prettier-compliant for apps/native/.prettierrc.js (singleQuote, trailingComma all, arrowParens avoid), so the port is byte-faithful; the exhaustive switch needs no trailing return because value_type is fully covered. Verified via: cd apps/native; npm run typecheck; npm run lint -- --quiet; npm test -- --runInBand --detectOpenHandles."
+  ]
+}
