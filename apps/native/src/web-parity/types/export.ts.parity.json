@@ -1,0 +1,12 @@
+{
+  "sourcePath": "web/src/types/export.ts",
+  "outputPath": "apps/native/src/web-parity/types/export.ts",
+  "sourceLineCount": 11,
+  "coveredLineCount": 11,
+  "conversionStatus": "converted",
+  "notes": [
+    "Read all 11 source lines before editing; the file is a pure non-visual TypeScript type module with zero imports and no DOM, HTML, Recharts, Leaflet, or web-UI dependencies.",
+    "Ported the single ExportJob interface 1:1 (L1 declaration, L2-L10 fields id/format/vehicleId/fsmState plus optional filePath?/fileSize?/failedReason?/completedAt? and required createdAt, L11 closing brace) preserving exact field names, camelCase keys, types, and optionality.",
+    "No unit-suffixed fields, no i18n strings, and no browser-only behavior existed, so no SI conversion or native-safe shim was required; trailing newline preserved to match the source."
+  ]
+}
