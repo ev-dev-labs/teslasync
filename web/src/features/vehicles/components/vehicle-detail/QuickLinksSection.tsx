@@ -22,7 +22,7 @@ export function QuickLinksSection() {
   return (
     <GlassPanel className="p-6">
       <div className="flex items-center gap-2 mb-4">
-        <ChevronRight className="h-4 w-4 text-[var(--neon-cyan)]" />
+        <ChevronRight className="h-4 w-4 text-[var(--neon-cyan)]" aria-hidden={true} />
         <span className="text-lg font-bold text-[var(--text-primary)]">
           {t('vehicles.detail.quickLinks', 'Quick Links')}
         </span>
@@ -31,16 +31,20 @@ export function QuickLinksSection() {
         {quickLinks.map((link) => {
           const IconComp = link.icon
           return (
-            <Link key={link.to} to={link.to}>
+            <Link
+              key={link.to}
+              to={link.to}
+              className="block h-full rounded-xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-300"
+            >
               <GlassPanel
                 hover
                 glow="cyan"
                 className={cn(
-                  'flex flex-col items-center gap-2 p-4 text-center',
+                  'flex h-full flex-col items-center justify-center gap-2 p-4 text-center',
                   'transition-all cursor-pointer',
                 )}
               >
-                <IconComp className="h-5 w-5 text-[var(--text-muted)]" />
+                <IconComp className="h-5 w-5 text-[var(--text-muted)]" aria-hidden={true} />
                 <span className="text-xs font-medium text-[var(--text-primary)]">
                   {link.label}
                 </span>
