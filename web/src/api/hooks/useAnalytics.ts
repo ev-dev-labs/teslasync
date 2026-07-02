@@ -17,6 +17,7 @@ export const analyticsKeys = {
   stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
   weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
   lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
+  batteryCells: (vehicleId: string) => ['analytics', 'battery-cells', vehicleId] as const,
 };
 
 export function useAnalyticsSummary(days = 30) {
@@ -223,5 +224,75 @@ export function useYearReview(year: number, vehicleId?: string) {
       ),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STATIC,
+  });
+}
+
+/* ── Battery Cells ──────────────────────────────────────────────── */
+
+/**
+ * Per-cell deviation classification emitted by the backend
+ * (`internal/api/batterycells/handler.go`). The wire values are
+ * `normal | slight_deviation | significant_deviation` — NOT the legacy
+ * `low/high/critical` the page used to assume.
+ */
+export type CellStatus = 'normal' | 'slight_deviation' | 'significant_deviation';
+
+/**
+ * A single synthetic cell reading. The backend numbers cells from 1 via
+ * the `cell_number` JSON field (there is no `cell_id`). Voltage is volts
+ * (SI); `delta_from_avg` is millivolts.
+ */
+export interface CellReading {
+  cell_number: number;
+  voltage: number;
+  delta_from_avg: number;
+  status: CellStatus;
+}
+
+/** One hourly bucket of brick-voltage history (7-day window). */
+export interface CellHistoryPoint {
+  timestamp: string;
+  min_voltage: number;
+  max_voltage: number;
+  avg_voltage: number;
+  imbalance_mv: number;
+}
+
+/**
+ * GET /analytics/battery-cells response. Voltages are volts (SI),
+ * temperatures are °C (SI); format at the display boundary with
+ * `useUnits()`. `status === 'no_data'` signals an empty payload (vehicle
+ * has never emitted brick voltages).
+ */
+export interface BatteryCellData {
+  status?: string;
+  total_cells: number;
+  avg_voltage: number;
+  min_voltage: number;
+  max_voltage: number;
+  voltage_spread: number;
+  imbalance_mv: number;
+  pack_voltage: number;
+  avg_temperature: number;
+  min_temperature: number;
+  max_temperature: number;
+  temp_spread: number;
+  cells: CellReading[];
+  history: CellHistoryPoint[];
+  min_cell?: string;
+  max_cell?: string;
+}
+
+/**
+ * GET /analytics/battery-cells?vehicle_id=X — per-cell voltage snapshot
+ * plus a 7-day hourly imbalance history. Reads SI directly from the API;
+ * callers convert at the render boundary.
+ */
+export function useBatteryCells(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.batteryCells(vehicleId),
+    queryFn: ({ signal }) =>
+      request<BatteryCellData>(`/analytics/battery-cells?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
   });
 }
