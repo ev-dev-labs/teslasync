@@ -4663,6 +4663,7 @@
       "peakPower": "Peak (kW)",
       "duration": "Duration",
       "cost": "Cost",
+      "cost_decimal": "Cost",
       "rate": "Rate/kWh",
       "type": "Type",
       "month": "Month",
@@ -4677,6 +4678,7 @@
       "sessions": "Total Sessions",
       "energy": "Total Energy",
       "cost": "Total Cost",
+      "cost_decimal": "Total Cost",
       "avgCost": "Avg Cost/kWh",
       "peakPower": "Peak Power"
     },
@@ -4687,8 +4689,20 @@
     "table": "Charging Sessions",
     "noData": "No fleet charging sessions yet. Click \"Refresh from Tesla\" to import data.",
     "unknown": "Unknown",
+    "unknownType": "Unknown",
     "markerLabel": "{{name}} charging session",
-    "mapLabel": "Charging sessions map"
+    "mapLabel": "Charging sessions map",
+    "selectVehicle": "Select vehicle",
+    "businessNote": "Fleet charging session data is only available for Tesla business accounts. Personal accounts will receive a 403 error when syncing.",
+    "infoSection": "Fleet charging info",
+    "kpis": "Summary metrics",
+    "costSection": "Cost analysis",
+    "locationsSection": "Session locations",
+    "tableSection": "Charging sessions table",
+    "chargerType": "Energy by Charger Type",
+    "noChargerData": "No charger breakdown yet.",
+    "topLocations": "Top Locations by Cost",
+    "noLocationData": "No location breakdown yet."
   },
   "dashSettings": {
     "allVehicles": "All Vehicles",
