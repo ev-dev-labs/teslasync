@@ -109,6 +109,46 @@ registerRoute(
   }),
 )
 
+// TeslaSync REST API GETs — NetworkFirst so the dashboard always shows
+// live fleet data when online, but still renders the last-known
+// snapshot (vehicles, drives, charging, analytics, notifications, ...)
+// instead of a blank/broken screen when the network drops. This is
+// what makes the SPA shell (precached above) actually usable offline
+// rather than just installable.
+//
+// Deliberately EXCLUDED from this route (left to bypass the SW/cache
+// entirely and go straight to the network) because Workbox strategies
+// buffer/clone the full response before resolving, which would hang or
+// corrupt anything that never "completes":
+//   - Server-Sent Events (`/status/live`, `/events`) — EventSource
+//     always sends `Accept: text/event-stream`, so filtering on that
+//     header catches every current AND future SSE endpoint without a
+//     path allowlist.
+//   - The admin log tail (`/admin/logs/stream`) — long-lived
+//     fetch+ReadableStream, not EventSource, so it needs its own path
+//     check (`/stream` segment).
+//   - Export / backup file downloads (`/export/{type}`,
+//     `/exports/{jobID}/download`, `/backups/runs/{runID}/download`) —
+//     large binary payloads that would blow the entry cap or serve a
+//     stale ZIP; the `/download` and `/export/` segment checks cover
+//     both naming conventions used by those handlers.
+registerRoute(
+  ({ url, request, sameOrigin }) => {
+    if (!sameOrigin || request.method !== 'GET') return false
+    if (!url.pathname.startsWith('/api/')) return false
+    if (request.headers.get('accept')?.includes('text/event-stream')) return false
+    return !/\/(stream|export)(\/|$)|\/download(\/|$)/i.test(url.pathname)
+  },
+  new NetworkFirst({
+    cacheName: 'api-get',
+    networkTimeoutSeconds: 8,
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 150, maxAgeSeconds: 60 * 5 }),
+    ],
+  }),
+)
+
 // ── Web Push ────────────────────────────────────────────────────────────────
 
 interface PushPayload {
