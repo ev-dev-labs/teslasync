@@ -8123,6 +8123,7 @@
     "thinking": "Helix is thinking…",
     "placeholder": "Ask Helix about your fleet… (Shift+Enter for newline)",
     "inputLabel": "Message",
+    "aiError": "(AI error: {{message}})",
     "actions": {
       "send": "Send message",
       "stop": "Stop",
@@ -8160,7 +8161,8 @@
       "editMessage": "Edit message",
       "renameSession": "Rename conversation",
       "deleteSession": "Delete conversation",
-      "doubleClickRename": "Double-click to rename"
+      "doubleClickRename": "Double-click to rename",
+      "workspace": "Assistant workspace"
     },
     "llm": {
       "indicator": "Helix",
