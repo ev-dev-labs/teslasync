@@ -19,10 +19,14 @@ const DEFAULT_SIGNALS = [
   'PackCurrent',
 ];
 
+// Six visually distinct indicators — one per default signal row. NEON_COLORS is
+// ordered [cyan, emerald, purple, amber, indigo, red, pink, teal], so purple/amber
+// are indices 2/3 (not 1/2); pinning the exact indices keeps emerald below unique
+// instead of colliding with NEON_COLORS[1].
 const SIGNAL_COLORS = [
   NEON_COLORS[0], // cyan
-  NEON_COLORS[1], // purple
-  NEON_COLORS[2], // amber
+  NEON_COLORS[2], // purple
+  NEON_COLORS[3], // amber
   '#10b981',      // emerald
   '#3b82f6',      // blue
   '#f43f5e',      // rose
