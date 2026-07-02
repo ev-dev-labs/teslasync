@@ -11,7 +11,6 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from '@/components/charts';
@@ -74,7 +73,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
           data={monthlyTrend}
           margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
         >
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis dataKey="month" tick={axisTickSm} />
           <YAxis
             tick={axisTickSm}
@@ -106,11 +105,17 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
       </ResponsiveContainer>
       <div className="mt-3 flex gap-4 px-2">
         <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-          <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
+          <span
+            className="inline-block h-2 w-3 rounded-sm"
+            style={{ backgroundColor: palette[0] }}
+          />
           {t('charging.curve.dcFast', 'DC Fast')}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-          <span className="inline-block h-2 w-3 rounded-sm bg-emerald-500" />
+          <span
+            className="inline-block h-2 w-3 rounded-sm"
+            style={{ backgroundColor: palette[1] }}
+          />
           {t('charging.curve.acHome', 'AC / Home')}
         </div>
       </div>
