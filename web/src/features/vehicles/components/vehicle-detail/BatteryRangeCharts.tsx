@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui'
 import { AnimatedNumber } from '@/components/data-display'
 import {
   RadialGauge, ChartTooltip, CHART_COLORS,
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, chartGrid, axisTick,
   Tooltip, ResponsiveContainer, Legend,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts'
@@ -77,9 +77,9 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={batteryChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" fontSize={12} />
-              <YAxis stroke="rgba(255,255,255,0.4)" fontSize={12} domain={[0, 100]} />
+              {chartGrid}
+              <XAxis dataKey="name" tick={axisTick} />
+              <YAxis tick={axisTick} domain={[0, 100]} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -101,9 +101,9 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
               <AreaChart data={driveChartData}>
                 {areaGradient('driveTrendDistGrad', CHART_COLORS[0])}
                 {areaGradient('driveTrendDurGrad', CHART_COLORS[1])}
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
+                {chartGrid}
+                <XAxis dataKey="date" tick={axisTick} />
+                <YAxis tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Area
