@@ -88,11 +88,11 @@ export default function TripListPage() {
         .sort((a, b) => b.total_distance_m - a.total_distance_m)
         .slice(0, 10)
         .map((trip) => ({
-          name: trip.name ?? `Trip ${trip.id}`,
+          name: trip.name ?? `${t('trips.row.trip', 'Trip')} ${trip.id}`,
           distance: convertDistanceFromSI(trip.total_distance_m, unitPrefs.distance),
           energy: trip.total_energy_wh,
         })),
-    [allTrips, unitPrefs.distance],
+    [allTrips, unitPrefs.distance, t],
   );
 
   const handleExportCSV = () => {
