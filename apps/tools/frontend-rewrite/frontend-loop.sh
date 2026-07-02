@@ -138,7 +138,19 @@ while true; do
 
       prog_jobs="$(jobs_for "$prog")"
       log "launch wave: $RUNNER --program $prog --jobs $prog_jobs"
-      bash "$RUNNER" --program "$prog" --jobs "$prog_jobs" >> "$LOOP_LOG" 2>&1
+      # Run the wave in the background and poll done.txt every 60s so the
+      # status file reflects REAL per-unit progress during a long wave,
+      # instead of going stale for the wave's entire duration (a single
+      # p2-radix-primitives wave was observed stuck >1h on the status file
+      # while done.txt had already recorded 3 more real merges underneath —
+      # confusing to anyone monitoring live).
+      bash "$RUNNER" --program "$prog" --jobs "$prog_jobs" >> "$LOOP_LOG" 2>&1 &
+      wave_pid=$!
+      while kill -0 "$wave_pid" 2>/dev/null; do
+        sleep 60
+        kill -0 "$wave_pid" 2>/dev/null && write_status "$prog (wave in progress, pending=$(pending_for "$prog"))"
+      done
+      wait "$wave_pid"
       maybe_self_heal
 
       pend_after=$(pending_for "$prog")
