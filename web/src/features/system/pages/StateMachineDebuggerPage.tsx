@@ -736,19 +736,19 @@ export default function StateMachineDebuggerPage() {
                       paddingAngle={2}
                       dataKey="value"
                     >
-                      {pieData.map((entry, i) => (
-                        <Cell key={i} fill={entry.fill} stroke="transparent" />
+                      {pieData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} stroke="transparent" />
                       ))}
                     </Pie>
                     <Tooltip content={<ChartTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
-                  {pieData.map((entry, i) => (
+                  {pieData.map((entry) => (
                     <div key={entry.name} className="flex items-center gap-1.5 text-xs">
                       <span
                         className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                        style={{ backgroundColor: entry.fill }}
                       />
                       <span className="text-[var(--text-secondary)]">{entry.name}</span>
                       <span className="text-[var(--text-muted)]">{fmtInt(entry.value)}</span>
