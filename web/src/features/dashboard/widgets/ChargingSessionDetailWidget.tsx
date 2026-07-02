@@ -140,8 +140,11 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             interval="preserveStartEnd"
           />
 
+          {/* Primary (power) axis uses the default id 0 so the shared visx
+              `chartGrid` — which binds to axis id 0 — draws interior horizontal
+              grid lines. The right-hand SoC axis keeps its own id. */}
           <YAxis
-            yAxisId="power"
+            yAxisId={0}
             tick={tick}
             tickLine={false}
             axisLine={false}
@@ -164,7 +167,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           <Tooltip content={<ChartTooltip />} />
 
           <Area
-            yAxisId="power"
+            yAxisId={0}
             dataKey="power"
             stroke="#22c55e"
             fill="url(#charge-power-grad)"
