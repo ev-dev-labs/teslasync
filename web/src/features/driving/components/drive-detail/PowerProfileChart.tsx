@@ -65,10 +65,10 @@ export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) 
         )}
       </ChartContainer>
       {chartData.length > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
-          <span>{t('driveDetail.maxPower', 'Max Power')}: <strong className="text-amber-400">{fmtInt(stats.powerMax)} kW</strong></span>
-          <span>{t('driveDetail.maxRegen', 'Max Regen')}: <strong className="text-cyan-400">{fmtInt(stats.powerMin)} kW</strong></span>
-          <span>{t('driveDetail.avgLabel', 'Avg')}: <strong className="text-[var(--text-primary)]">{fmtNumber(stats.avgPower)} kW</strong></span>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 text-xs text-[var(--text-secondary)]">
+          <span className="whitespace-nowrap">{t('driveDetail.maxPower', 'Max Power')}: <strong className="text-amber-400">{fmtInt(stats.powerMax)} kW</strong></span>
+          <span className="whitespace-nowrap">{t('driveDetail.maxRegen', 'Max Regen')}: <strong className="text-cyan-400">{fmtInt(stats.powerMin)} kW</strong></span>
+          <span className="whitespace-nowrap">{t('driveDetail.avgLabel', 'Avg')}: <strong className="text-[var(--text-primary)]">{fmtNumber(stats.avgPower)} kW</strong></span>
         </div>
       )}
     </FadeIn>
