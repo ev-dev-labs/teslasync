@@ -10,7 +10,7 @@ import { StatCard } from '@/components/data-display';
 import { Spinner, EmptyState } from '@/components/feedback';
 import {
   ChartContainer, ChartGradient, chartGrid, axisTick,
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, LineChart, Line, XAxis, YAxis,
   Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
@@ -367,7 +367,7 @@ export default function SharedDrivePage() {
                   <defs>
                     <ChartGradient id="elevGrad" color="var(--theme-primary)" />
                   </defs>
-                  <CartesianGrid {...chartGrid} />
+                  {chartGrid}
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
@@ -402,7 +402,7 @@ export default function SharedDrivePage() {
             >
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={speedData}>
-                  <CartesianGrid {...chartGrid} />
+                  {chartGrid}
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
