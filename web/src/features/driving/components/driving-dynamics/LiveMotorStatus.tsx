@@ -17,6 +17,16 @@ interface LiveMotorStatusProps {
   tempUnit: TemperatureUnitPref;
 }
 
+// Fixed ceiling for the motor-temperature gauge: 200 °C, preserving the
+// historical gauge scale. Stored in SI (°C) because toTemperatureDisplay expects
+// SI input and the gauge value is also fed through it — under a Fahrenheit
+// preference the reading is converted to °F, so the ceiling must be converted
+// too (200 °C → 392 °F). Passing the literal 200 as an already-display value (as
+// before) left value and max in different units: an 80 °C motor (176 °F) filled
+// the gauge to ~88% and a 100 °C motor overflowed it. Mirrors the shared
+// TemperatureGauges pattern (max={toTemperatureDisplay(maxTemp)}).
+const MOTOR_TEMP_GAUGE_CEILING_C = 200;
+
 export default function LiveMotorStatus({ motorLatest, toTemperatureDisplay, tempUnit }: LiveMotorStatusProps) {
   const { t } = useTranslation();
 
@@ -70,7 +80,7 @@ export default function LiveMotorStatus({ motorLatest, toTemperatureDisplay, tem
             <div className="flex flex-col items-center gap-2">
               <RadialGauge
                 value={motorTempDisplay}
-                max={200}
+                max={toTemperatureDisplay(MOTOR_TEMP_GAUGE_CEILING_C)}
                 label={t('dynamics.motorTemp', 'Motor')}
                 unit={tempUnit}
                 color="#f59e0b"
