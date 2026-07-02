@@ -8,7 +8,7 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import { VehicleSelect } from '@/components/forms';
-import { GlassPanel, Badge, Button, DataTable, type Column, useSortToggle } from '@/components/ui';
+import { GlassPanel, Badge, Button, DataTable, Subhead, type Column, useSortToggle } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   ChartContainer, ChartTooltip, ChartGradient,
@@ -144,9 +144,9 @@ function CellHeatmap({
           50% { box-shadow: 0 0 8px currentColor; }
         }
       `}</style>
-      <span className="mb-3 block text-sm font-medium text-[var(--text-secondary)]">
+      <Subhead className="mb-3 block">
         {label}
-      </span>
+      </Subhead>
       <div
         className="grid gap-1"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
@@ -437,9 +437,9 @@ export default function BatteryCellsPage() {
       {/* ── Cell Voltage Heatmap ─── */}
       <FadeIn delay={0.05}>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[var(--text-secondary)]">
+          <Subhead>
             {t('Cell Voltage Heatmap')}
-          </span>
+          </Subhead>
           <Button
             variant="ghost"
             size="sm"
@@ -470,9 +470,9 @@ export default function BatteryCellsPage() {
       {/* ── Cell Voltage Bar Chart ─── */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-4">
-          <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+          <Subhead className="mb-2 block">
             {t('Cell Voltage Bar Chart')}
-          </span>
+          </Subhead>
           {data?.cells && data.cells.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={data.cells} margin={chartMarginLabeled}>
@@ -528,9 +528,9 @@ export default function BatteryCellsPage() {
         <div className={cn('grid gap-4 grid-cols-1 md:grid-cols-2')}>
           {/* Voltage Distribution Histogram */}
           <GlassPanel className="p-4">
-            <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+            <Subhead className="mb-2 block">
               {t('Voltage Distribution')}
-            </span>
+            </Subhead>
             {histogram.length > 0 ? (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={histogram} margin={chartMarginLabeled}>
@@ -564,9 +564,9 @@ export default function BatteryCellsPage() {
 
           {/* Imbalance Trend */}
           <GlassPanel className="p-4">
-            <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+            <Subhead className="mb-2 block">
               {t('Imbalance Trend')}
-            </span>
+            </Subhead>
             {data?.history && data.history.length > 0 ? (
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={data.history} margin={chartMargin}>
@@ -617,9 +617,9 @@ export default function BatteryCellsPage() {
       {/* ── Cell Voltage Over Time ─── */}
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4">
-          <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+          <Subhead className="mb-2 block">
             {t('Cell Voltage Over Time')}
-          </span>
+          </Subhead>
           {data?.history && data.history.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={data.history} margin={chartMarginLabeled}>
@@ -673,9 +673,9 @@ export default function BatteryCellsPage() {
       <FadeIn delay={0.25}>
         <GlassPanel className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-[var(--text-secondary)]">
+            <Subhead>
               {t('Cell Details')}
-            </span>
+            </Subhead>
             {data?.cells && (
               <Badge variant="neutral" size="sm">
                 {data.cells.length} {t('cells')}
