@@ -1,0 +1,106 @@
+name: chromatic
+
+# Visual regression testing for the shared component library
+# (frontend-gold-standard-rewrite / p1-tooling/0002-chromatic-ci-wiring).
+#
+# Publishes Storybook to Chromatic and flags UI diffs for human review on
+# every PR that touches a shared component. Phase 7
+# (p1-tooling/../p7-storybook-stories) backfills one story per component so
+# every one of the ~198 shared components (web/src/components/{ui,charts,
+# data-display,layout,feedback,forms,maps,motion,vehicles}/) gets real
+# snapshot coverage, not a sample.
+#
+# --- Setup (required before this workflow can publish anything) ---------
+# 1. Storybook itself is scaffolded by p1-tooling/0001-storybook-scaffold
+#    (adds the `build-storybook` npm script in web/). This workflow assumes
+#    that script exists — it has nothing to snapshot until that unit lands.
+# 2. Create a free project at https://www.chromatic.com linked to this
+#    repo, then add a `CHROMATIC_PROJECT_TOKEN` repository secret:
+#    GitHub → Settings → Secrets and variables → Actions →
+#    "New repository secret" → name it CHROMATIC_PROJECT_TOKEN, value from
+#    chromatic.com → your project → Manage → Configure.
+#    NEVER hardcode the token in this file or any workflow.
+# --------------------------------------------------------------------------
+
+on:
+  pull_request:
+    paths:
+      - 'web/src/components/**'
+      - '.github/workflows/chromatic.yml'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: ubuntu-latest
+
+concurrency:
+  group: chromatic-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  chromatic:
+    name: Chromatic (visual regression)
+    # Pinned to ubuntu-latest to match the Frontend CI job (ci.yml) and the
+    # Lighthouse job (perf.yml): building Storybook + uploading snapshots is
+    # CPU/network heavy and the self-hosted arc-runner image is
+    # resource-starved for this class of job.
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Chromatic diffs the new build against git history to pick the
+          # right baseline — a shallow clone (the default) breaks that.
+          fetch-depth: 0
+          # This workflow triggers on `pull_request` (per this unit's spec)
+          # even though Chromatic's own docs recommend `push`: the
+          # pull_request event checks out an ephemeral merge commit that
+          # isn't an ancestor of the PR branch, which can make Chromatic
+          # resolve the wrong baseline. Checking out the real PR head ref
+          # (falls back to the triggering ref on workflow_dispatch, since
+          # `github.event.pull_request` is unset there) + the
+          # CHROMATIC_BRANCH/SHA env vars below keeps baselines correct.
+          # https://www.chromatic.com/docs/github-actions/
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci --legacy-peer-deps
+
+      - name: Run Chromatic
+        uses: chromaui/action@v18
+        with:
+          # Storybook lives in web/, not the repo root — this is a monorepo
+          # (Go backend at the root, React SPA in web/).
+          workingDir: web
+          # ⚠️ Requires the CHROMATIC_PROJECT_TOKEN repository secret — see
+          # the setup comment at the top of this file. Provided via secret,
+          # never hardcoded.
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          # Visual changes need human review/approval in the Chromatic UI —
+          # they aren't code errors, so don't fail the required check on
+          # their own; Chromatic still reports the diff as a non-blocking
+          # status via its GitHub App. Genuine build/test errors (e.g. a
+          # story that throws) are reported as errors, not "changes", and
+          # still fail this job.
+          exitZeroOnChanges: true
+        env:
+          # Correct branch/SHA for the pull_request-triggered checkout
+          # above, so Chromatic diffs against the true PR history instead
+          # of the ephemeral merge commit GitHub generates for PR runs.
+          CHROMATIC_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          CHROMATIC_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CHROMATIC_SLUG: ${{ github.repository }}
