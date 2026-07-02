@@ -1,7 +1,12 @@
 export { RadialGauge } from './RadialGauge';
 export { MiniChart } from './MiniChart';
 export { SmallMultiplesChart, type SmallMultiplesChartProps } from './SmallMultiplesChart';
-export { ChartContainer } from './ChartContainer';
+export {
+  ChartContainer,
+  type ChartContainerPlot,
+  type ChartPlotSeries,
+  type ChartSeriesType,
+} from './ChartContainer';
 export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
 export { Sparkline } from './Sparkline';

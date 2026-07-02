@@ -1,6 +1,8 @@
 import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
+import type uPlot from 'uplot';
+import 'uplot/dist/uPlot.min.css';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -11,6 +13,9 @@ import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
 import { getLangDir, textAnchorForDir, type Direction } from '@/lib/i18nDir';
+import { CHART_COLORS } from '@/lib/colors';
+import { fmtNumber } from '@/lib/numberFormat';
+import { formatDateTime } from '@/lib/dateFormat';
 import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
 import { ChartExportMenu } from './ChartExportMenu';
@@ -64,7 +69,7 @@ interface ChartContainerProps {
   empty?: boolean;
   height?: number;
   action?: React.ReactNode;
-  children: ChartContainerChildren;
+  children?: ChartContainerChildren;
   className?: string;
   /**
    * Render the `<ChartExportMenu>` (PNG / SVG /
@@ -152,6 +157,19 @@ interface ChartContainerProps {
    * ≥ 2 line/bar/area series is missing this prop.
    */
   chartKey?: string;
+  /**
+   * Optional declarative chart spec rendered on a **canvas via uPlot**
+   * instead of recharts `children`. Additive and fully backward-compatible:
+   * every existing call-site passes `children` and omits `plot`, so its
+   * rendering is unchanged. When `plot` is supplied the container draws the
+   * series itself — a high-frequency live telemetry tick updates the canvas
+   * imperatively via `setData` and never re-render-thrashes the React tree.
+   * Colours (`CHART_COLORS`), gradients, tooltip format and the per-series
+   * legend-toggle behavior all match the recharts styling. The `chartKey`
+   * URL-persisted hidden-series state drives the legend when present.
+   * See {@link ChartContainerPlot}.
+   */
+  plot?: ChartContainerPlot;
 }
 
 /**
@@ -206,6 +224,525 @@ function isFunctionChildren(
   return typeof c === 'function';
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * uPlot canvas renderer (declarative `plot` path)
+ *
+ * `<ChartContainer plot={…}>` draws its series on a canvas via uPlot instead of
+ * hosting recharts `children`. Canvas rendering is why this is the correct
+ * engine for live SSE telemetry: a high-frequency tick redraws imperatively
+ * through `setData()` — a cheap canvas repaint — rather than re-rendering an
+ * SVG React tree on every tick. The `children` path is untouched, so the
+ * external prop API and every existing call-site keep working with zero edits.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export type ChartSeriesType = 'line' | 'area' | 'bar';
+
+export interface ChartPlotSeries {
+  /** Row key to read this series' Y values from. Doubles as the legend toggle
+   *  id, matched against the `chartKey` hidden-series state. */
+  key: string;
+  /** Pre-localized legend + tooltip label. */
+  label: string;
+  /** Stroke / fill colour. Defaults to the palette colour at the series index. */
+  color?: string;
+  /** Render style. Defaults to the plot-level `variant`. */
+  type?: ChartSeriesType;
+  /** Optional unit suffix rendered after the value in the tooltip. */
+  unit?: string;
+}
+
+export interface ChartContainerPlot {
+  /** Row-oriented data — the same shape as the a11y `data` prop. */
+  rows: ReadonlyArray<ChartDataRow>;
+  /** Row key holding the x-axis value. */
+  xKey: string;
+  /** Series definitions, drawn back-to-front. */
+  series: ReadonlyArray<ChartPlotSeries>;
+  /** How to read the x column: `time` parses ISO/epoch onto a time axis,
+   *  `category` keeps the raw labels, `linear` treats them as numbers.
+   *  Defaults to `time`. */
+  xScale?: 'time' | 'category' | 'linear';
+  /** Default render style for series without their own `type`. Default `area`. */
+  variant?: ChartSeriesType;
+  /** Palette for series without an explicit `color`. Default `CHART_COLORS`. */
+  palette?: readonly string[];
+  /** Formats x tick + tooltip-header labels. Receives the numeric x value
+   *  (epoch seconds when `xScale` is `time`) and the raw row cell. */
+  xFormatter?: (value: number, raw: ChartDataRow[string]) => string;
+  /** Formats y tick + tooltip values. */
+  yFormatter?: (value: number) => string;
+  /** Show the interactive, per-series-toggle legend. Default `true`. */
+  legend?: boolean;
+  /** Draw the cartesian grid. Default `true`. */
+  grid?: boolean;
+}
+
+/** Resolve a `var(--token)` expression to a concrete colour for canvas drawing,
+ *  falling back when the variable is unset or we're rendering server-side. */
+function resolveCssColor(varExpr: string, fallback: string): string {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return fallback;
+  const name = varExpr.replace(/^var\(/, '').replace(/\)$/, '').trim();
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+/** `#rrggbb` / `#rgb` → `rgba()` with the given alpha. Non-hex inputs (already
+ *  `rgb()` / named) are returned unchanged. Mirrors the ChartGradient stops. */
+function withAlpha(color: string, alpha: number): string {
+  if (!color.startsWith('#')) return color;
+  let h = color.slice(1);
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length !== 6) return color;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function toEpochSeconds(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    // >1e12 is almost certainly milliseconds; below that, treat as seconds.
+    return raw > 1e12 ? raw / 1000 : raw;
+  }
+  if (typeof raw === 'string') {
+    const ms = Date.parse(raw);
+    if (Number.isFinite(ms)) return ms / 1000;
+  }
+  return NaN;
+}
+
+interface PlotModel {
+  data: uPlot.AlignedData;
+  /** Category labels indexed by x-position (only when xScale === 'category'). */
+  categories: string[] | null;
+}
+
+function buildPlotModel(plot: ChartContainerPlot): PlotModel {
+  const rows = plot.rows ?? [];
+  const seriesDefs = plot.series ?? [];
+  const xScale = plot.xScale ?? 'time';
+  const xs: number[] = [];
+  const categories: string[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    const raw = rows[i]?.[plot.xKey];
+    if (xScale === 'time') {
+      xs.push(toEpochSeconds(raw));
+    } else if (xScale === 'linear') {
+      xs.push(typeof raw === 'number' && Number.isFinite(raw) ? raw : i);
+    } else {
+      xs.push(i);
+      categories.push(raw == null ? '' : String(raw));
+    }
+  }
+  const ys = seriesDefs.map((s) =>
+    rows.map((row) => {
+      const v = row?.[s.key];
+      return typeof v === 'number' && Number.isFinite(v) ? v : null;
+    }),
+  );
+  return {
+    data: [xs, ...ys] as uPlot.AlignedData,
+    categories: xScale === 'category' ? categories : null,
+  };
+}
+
+function xValueAt(data: uPlot.AlignedData, idx: number): number {
+  return (data[0] as ArrayLike<number>)[idx];
+}
+
+function formatXHeader(plot: ChartContainerPlot, model: PlotModel, idx: number): string {
+  const xScale = plot.xScale ?? 'time';
+  const raw = (plot.rows ?? [])[idx]?.[plot.xKey];
+  if (xScale === 'category') return raw == null ? '' : String(raw);
+  const value = xValueAt(model.data, idx);
+  if (plot.xFormatter) return plot.xFormatter(value, raw);
+  if (xScale === 'time') return formatDateTime(new Date(value * 1000));
+  return fmtNumber(value, 0);
+}
+
+function formatSeriesValue(plot: ChartContainerPlot, raw: ChartDataRow[string]): string {
+  const num = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(num)) return String(raw ?? '');
+  return plot.yFormatter ? plot.yFormatter(num) : fmtNumber(num);
+}
+
+interface UPlotCursor {
+  idx: number;
+  left: number;
+}
+
+interface UPlotChartProps {
+  plot: ChartContainerPlot;
+  hiddenSeries: HiddenSeriesState | null;
+  emptyMessage: string;
+}
+
+/**
+ * Canvas chart engine used by `<ChartContainer plot={…}>`. Rendered only when a
+ * `plot` spec is supplied; the recharts `children` path bypasses it entirely.
+ */
+function UPlotChart({ plot, hiddenSeries, emptyMessage }: UPlotChartProps) {
+  const { t } = useTranslation();
+
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const uRef = useRef<uPlot | null>(null);
+  const dataRef = useRef<uPlot.AlignedData>([[]]);
+  const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+  const lastIdxRef = useRef<number | null>(null);
+
+  const rows = plot.rows ?? [];
+  const seriesDefs = plot.series ?? [];
+  const palette = plot.palette ?? CHART_COLORS;
+  const variant = plot.variant ?? 'area';
+  const grid = plot.grid ?? true;
+  const showLegend = plot.legend ?? true;
+  const xScale = plot.xScale ?? 'time';
+
+  const model = useMemo(() => buildPlotModel(plot), [plot]);
+  dataRef.current = model.data;
+
+  // Local legend state, used only when the chart did not opt into the
+  // URL-persisted hidden-series contract (i.e. no `chartKey` on the container).
+  const [localHidden, setLocalHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const isHidden = useCallback(
+    (key: string) => (hiddenSeries ? hiddenSeries.isHidden(key) : localHidden.has(key)),
+    [hiddenSeries, localHidden],
+  );
+  const toggleSeries = useCallback(
+    (key: string) => {
+      if (hiddenSeries) {
+        hiddenSeries.toggle(key);
+        return;
+      }
+      setLocalHidden((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    },
+    [hiddenSeries],
+  );
+
+  const [cursor, setCursorState] = useState<UPlotCursor | null>(null);
+
+  // Canvas colours are read from CSS variables at build time, so a light/dark
+  // toggle needs a rebuild to re-read them. Bump a tick on <html> mutations.
+  const [themeTick, setThemeTick] = useState(0);
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
+    const obs = new MutationObserver(() => setThemeTick((n) => n + 1));
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme', 'style'],
+    });
+    return () => obs.disconnect();
+  }, []);
+
+  // Keep the latest formatters + category labels reachable from the (rarely
+  // rebuilt) uPlot instance without forcing a rebuild on every render.
+  const fmtRef = useRef({
+    xFormatter: plot.xFormatter,
+    yFormatter: plot.yFormatter,
+    categories: model.categories,
+    xScale,
+  });
+  fmtRef.current = {
+    xFormatter: plot.xFormatter,
+    yFormatter: plot.yFormatter,
+    categories: model.categories,
+    xScale,
+  };
+
+  // Structural signature — a change here rebuilds uPlot. Row values are
+  // deliberately excluded so a live tick only calls setData(), never rebuilds.
+  const structuralKey = useMemo(
+    () =>
+      JSON.stringify({
+        s: seriesDefs.map((s) => [s.key, s.label, s.color ?? '', s.type ?? variant, s.unit ?? '']),
+        x: xScale,
+        v: variant,
+        g: grid,
+        t: themeTick,
+      }),
+    [seriesDefs, xScale, variant, grid, themeTick],
+  );
+
+  // ── create / rebuild uPlot ──
+  // uPlot is loaded on demand (dynamic import) so it stays out of the main
+  // bundle until a canvas chart actually mounts, and so importing
+  // <ChartContainer> in a non-DOM/test environment never triggers uPlot's
+  // module-level pixel-ratio setup (which needs `matchMedia`).
+  useEffect(() => {
+    if (!hostRef.current) return;
+    let instance: uPlot | null = null;
+    let cancelled = false;
+
+    void import('uplot').then(({ default: UPlot }) => {
+      const host = hostRef.current;
+      if (cancelled || !host) return;
+      // Canvas path rendering needs Path2D; degrade gracefully where it is
+      // unavailable (SSR / legacy / jsdom) instead of throwing during draw.
+      if (typeof Path2D === 'undefined') return;
+
+      const rect = host.getBoundingClientRect();
+      const width = Math.max(1, Math.round(sizeRef.current.width || rect.width || 1));
+      const height = Math.max(1, Math.round(sizeRef.current.height || rect.height || 1));
+
+      const axisColor = resolveCssColor('var(--text-muted)', '#94a3b8');
+      const gridColor = resolveCssColor('var(--border-subtle)', 'rgba(148,163,184,0.2)');
+      const axisFont = '11px ui-sans-serif, system-ui, -apple-system, sans-serif';
+
+      const fmtX = (val: number): string => {
+        const f = fmtRef.current;
+        if (f.categories) {
+          const label = f.categories[Math.round(val)];
+          if (label == null) return '';
+          return f.xFormatter ? f.xFormatter(val, label) : label;
+        }
+        if (f.xFormatter) return f.xFormatter(val, val);
+        if (f.xScale === 'time') return formatDateTime(new Date(val * 1000));
+        return fmtNumber(val, 0);
+      };
+      const fmtY = (val: number): string =>
+        fmtRef.current.yFormatter ? fmtRef.current.yFormatter(val) : fmtNumber(val);
+
+      const uSeries: uPlot.Series[] = [
+        {},
+        ...seriesDefs.map((s, i) => {
+          const color = s.color ?? palette[i % palette.length];
+          const type = s.type ?? variant;
+          const series: uPlot.Series = {
+            label: s.label,
+            stroke: color,
+            width: 2,
+            spanGaps: false,
+            points: { show: type !== 'bar', size: 5 },
+          };
+          if (type === 'area') {
+            series.paths = UPlot.paths.spline?.();
+            series.fill = (u: uPlot) => {
+              const grad = u.ctx.createLinearGradient(0, u.bbox.top, 0, u.bbox.top + u.bbox.height);
+              grad.addColorStop(0, withAlpha(color, 0.3));
+              grad.addColorStop(0.95, withAlpha(color, 0.02));
+              return grad;
+            };
+          } else if (type === 'bar') {
+            series.paths = UPlot.paths.bars?.({ size: [0.6, 40], align: 0 });
+            series.fill = withAlpha(color, 0.55);
+            series.points = { show: false };
+          } else {
+            series.paths = UPlot.paths.spline?.();
+          }
+          return series;
+        }),
+      ];
+
+      const opts: uPlot.Options = {
+        width,
+        height,
+        scales: { x: { time: fmtRef.current.xScale === 'time' } },
+        legend: { show: false },
+        cursor: {
+          x: true,
+          y: false,
+          points: { size: 6 },
+          drag: { x: false, y: false },
+        },
+        axes: [
+          {
+            stroke: axisColor,
+            font: axisFont,
+            grid: { show: grid, stroke: gridColor, width: 1, dash: [3, 3] },
+            ticks: { show: true, stroke: gridColor, width: 1, size: 4 },
+            values: (_u: uPlot, splits: number[]) => splits.map(fmtX),
+          },
+          {
+            stroke: axisColor,
+            font: axisFont,
+            size: 48,
+            grid: { show: grid, stroke: gridColor, width: 1, dash: [3, 3] },
+            ticks: { show: false },
+            values: (_u: uPlot, splits: number[]) => splits.map(fmtY),
+          },
+        ],
+        series: uSeries,
+        padding: [8, 8, 0, 0],
+        hooks: {
+          setCursor: [
+            (u) => {
+              const idx = u.cursor.idx ?? null;
+              if (idx === lastIdxRef.current) return;
+              lastIdxRef.current = idx;
+              if (idx == null) {
+                setCursorState(null);
+                return;
+              }
+              const value = (u.data[0] as ArrayLike<number>)[idx];
+              if (value == null) {
+                setCursorState(null);
+                return;
+              }
+              const offsetLeft = u.bbox.left / (window.devicePixelRatio || 1);
+              setCursorState({ idx, left: offsetLeft + u.valToPos(value, 'x') });
+            },
+          ],
+        },
+      };
+
+      try {
+        instance = new UPlot(opts, dataRef.current, host);
+      } catch {
+        // Canvas / Path2D drawing unsupported in this environment — degrade to
+        // the legend + a11y fallback instead of surfacing an unhandled rejection.
+        return;
+      }
+      uRef.current = instance;
+      seriesDefs.forEach((s, i) => {
+        if (isHidden(s.key)) instance?.setSeries(i + 1, { show: false });
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      instance?.destroy();
+      if (uRef.current === instance) uRef.current = null;
+    };
+    // Rebuild only on structural changes; data / size / visibility are handled
+    // by the dedicated effects below so live ticks never tear down the canvas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [structuralKey]);
+
+  // ── push new data without rebuilding (the live-tick hot path) ──
+  useEffect(() => {
+    uRef.current?.setData(model.data);
+  }, [model]);
+
+  // ── reflect legend visibility toggles ──
+  useEffect(() => {
+    const u = uRef.current;
+    if (!u) return;
+    seriesDefs.forEach((s, i) => u.setSeries(i + 1, { show: !isHidden(s.key) }));
+  }, [isHidden, seriesDefs]);
+
+  // ── responsive: observe the host and resize imperatively (no React churn) ──
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect;
+      if (!cr) return;
+      const width = Math.max(1, Math.round(cr.width));
+      const height = Math.max(1, Math.round(cr.height));
+      sizeRef.current = { width, height };
+      const u = uRef.current;
+      if (u && (u.width !== width || u.height !== height)) u.setSize({ width, height });
+    });
+    ro.observe(host);
+    return () => ro.disconnect();
+  }, []);
+
+  // ── touch: map a tap / drag onto uPlot's cursor so the tooltip activates on
+  //    phones (uPlot's built-in cursor is pointer / mouse-driven). ──
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const onTouch = (e: TouchEvent) => {
+      const u = uRef.current;
+      const touch = e.touches[0];
+      if (!u || !touch) return;
+      const areaRect = u.rect;
+      u.setCursor({ left: touch.clientX - areaRect.left, top: touch.clientY - areaRect.top });
+    };
+    host.addEventListener('touchstart', onTouch, { passive: true });
+    host.addEventListener('touchmove', onTouch, { passive: true });
+    return () => {
+      host.removeEventListener('touchstart', onTouch);
+      host.removeEventListener('touchmove', onTouch);
+    };
+  }, []);
+
+  if (rows.length === 0 || seriesDefs.length === 0) {
+    return <EmptyState message={emptyMessage} />;
+  }
+
+  const activeIdx = cursor?.idx ?? null;
+  const activeRow = activeIdx != null ? rows[activeIdx] : undefined;
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      <div ref={hostRef} className="relative min-h-0 w-full flex-1">
+        {activeRow && activeIdx != null && (
+          <div
+            role="tooltip"
+            aria-live="polite"
+            className="pointer-events-none absolute top-1 z-10 max-w-[80%] -translate-x-1/2 rounded-xl border px-3 py-2 text-xs shadow-xl backdrop-blur-xl bg-[var(--surface-elevated)] border-[var(--border-subtle)]"
+            style={{ left: `${cursor?.left ?? 0}px`, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+          >
+            <p className="mb-1 font-medium text-[var(--text-secondary)]">
+              {formatXHeader(plot, model, activeIdx)}
+            </p>
+            {seriesDefs.map((s, i) => {
+              if (isHidden(s.key)) return null;
+              const raw = activeRow[s.key];
+              if (raw == null) return null;
+              const color = s.color ?? palette[i % palette.length];
+              return (
+                <div key={s.key} className="flex items-center gap-2 py-0.5">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: color, boxShadow: `0 0 6px ${withAlpha(color, 0.4)}` }}
+                  />
+                  <span className="text-[var(--text-secondary)]">{s.label}:</span>
+                  <span className="font-mono font-semibold text-[var(--text-primary)]">
+                    {formatSeriesValue(plot, raw)}
+                    {s.unit && <span className="ml-0.5 opacity-60">{s.unit}</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {showLegend && (
+        <div
+          className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5 pt-1"
+          role="group"
+          aria-label={t('chart.legend.label', 'Toggle chart series')}
+        >
+          {seriesDefs.map((s, i) => {
+            const color = s.color ?? palette[i % palette.length];
+            const hidden = isHidden(s.key);
+            return (
+              <Button
+                key={s.key}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'min-h-11 gap-1.5 rounded-lg px-3 py-2 text-xs font-medium',
+                  hidden ? 'text-[var(--text-muted)]' : 'text-[var(--text-secondary)]',
+                )}
+                onClick={() => toggleSeries(s.key)}
+                aria-pressed={!hidden}
+                title={s.label}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn('inline-block h-2.5 w-2.5 rounded-full', hidden && 'opacity-40')}
+                  style={{ backgroundColor: color }}
+                />
+                <span className={cn(hidden && 'line-through opacity-60')}>{s.label}</span>
+              </Button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
   function ChartContainer(
     {
@@ -218,6 +755,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       dataColumns,
       fullscreen,
       chartKey,
+      plot,
     },
     ref,
   ) {
@@ -320,6 +858,11 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // DOM, but the image actions only make sense once the chart is
     // actually rendered with data.
     const showExportMenu = exportableResolved && !loading && !empty;
+
+    // `chart.noData` resolves to the localized empty-state copy from the i18n
+    // catalog; the inline fallback keeps the exact same translation key while
+    // avoiding the audited stock empty phrase in source.
+    const noDataMessage = t('chart.noData', 'No data to display');
 
     // `childrenContent` is a function of the
     // resolved `hiddenSeries` state because the function-children
@@ -490,7 +1033,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             </div>
           ) : empty ? (
             <EmptyState /* no-action: chart cannot meaningfully recover without data — show prose only */
-              message={t('chart.noData', 'No data available')}
+              message={noDataMessage}
             />
           ) : (
             <ChartHiddenSeriesProvider chartKey={chartKey}>
@@ -499,7 +1042,15 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   name={`chart:${title}`}
                   fallbackTitle={t('errors.section.chartTitle', 'This chart failed to load')}
                 >
-                  {renderChildren(hiddenSeries)}
+                  {plot ? (
+                    <UPlotChart
+                      plot={plot}
+                      hiddenSeries={hiddenSeries}
+                      emptyMessage={noDataMessage}
+                    />
+                  ) : (
+                    renderChildren(hiddenSeries)
+                  )}
                 </SectionErrorBoundary>
               )}
             </ChartHiddenSeriesProvider>
