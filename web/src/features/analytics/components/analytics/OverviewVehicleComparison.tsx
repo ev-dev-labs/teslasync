@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import type { FleetAnalytics } from '@/api/types';
 import { SectionTitle } from './helpers';
 import { PIE_COLORS } from './constants';
@@ -123,8 +124,8 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
           {radarData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-                <PolarGrid stroke="rgba(255,255,255,0.06)" />
-                <PolarAngleAxis dataKey="metric" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                <PolarGrid stroke={chartTokens.gridStroke} />
+                <PolarAngleAxis dataKey="metric" tick={axisTick} />
                 {vehicles.map((v, i) => (
                   <Radar
                     key={v.id}
