@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
@@ -213,31 +213,66 @@ export default function ChargingHeatmapPage() {
 
             {/* Day rows */}
             {DAYS.map((dayLabel, day) => (
-              <>
-                <div key={`label-${day}`} className="flex items-center text-xs text-[var(--text-secondary)]">
+              <Fragment key={day}>
+                <div className="flex items-center text-xs text-[var(--text-secondary)]">
                   {dayLabel}
                 </div>
                 {Array.from({ length: 24 }).map((_, hour) => {
                   const cell = grid[day]?.[hour] ?? { count: 0, totalEnergy: 0 };
-                  const isHovered = hovered?.day === day && hovered?.hour === hour;
+                  const isActive = hovered?.day === day && hovered?.hour === hour;
+                  const hasData = cell.count > 0;
                   return (
                     <div
                       key={`${day}-${hour}`}
-                      className={`relative h-7 rounded-sm transition-transform ${isHovered ? 'z-10 scale-125' : ''}`}
+                      role={hasData ? 'button' : undefined}
+                      tabIndex={hasData ? 0 : undefined}
+                      aria-label={
+                        hasData
+                          ? t(
+                              'charging.heatmap.cellLabel',
+                              '{{day}} at {{hour}}:00 — {{count}} sessions, {{energy}} kWh',
+                              {
+                                day: DAYS[day],
+                                hour: hour.toString().padStart(2, '0'),
+                                count: cell.count,
+                                energy: fmtNumber(cell.totalEnergy, 1),
+                              },
+                            )
+                          : undefined
+                      }
+                      className={`relative h-7 rounded-sm transition-transform focus:outline-hidden ${hasData ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400/60' : ''} ${isActive ? 'z-10 scale-125' : ''}`}
                       style={{ backgroundColor: heatColor(cell.count, maxCount) }}
                       onMouseEnter={() => setHovered({ day, hour })}
                       onMouseLeave={() => setHovered(null)}
+                      onFocus={hasData ? () => setHovered({ day, hour }) : undefined}
+                      onBlur={hasData ? () => setHovered(null) : undefined}
+                      onClick={hasData ? () => setHovered({ day, hour }) : undefined}
+                      onKeyDown={
+                        hasData
+                          ? (e) => {
+                              if (e.key === 'Escape') setHovered(null);
+                            }
+                          : undefined
+                      }
                     >
-                      {isHovered && cell.count > 0 && (
-                        <div className="absolute -top-14 left-1/2 z-20 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-[10px] text-[var(--text-primary)] shadow-lg whitespace-nowrap">
+                      {isActive && hasData && (
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute -top-14 left-1/2 z-20 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-[10px] text-[var(--text-primary)] shadow-lg whitespace-nowrap"
+                        >
                           <div>{DAYS[day]} {hour}:00</div>
-                          <div>{cell.count} sessions · {fmtNumber(cell.totalEnergy, 1)} kWh avg</div>
+                          <div>
+                            {t('charging.heatmap.cellDetail', '{{count}} sessions · {{energy}} kWh avg', {
+                              count: cell.count,
+                              energy: fmtNumber(cell.totalEnergy, 1),
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
                   );
                 })}
-              </>
+              </Fragment>
             ))}
           </div>
 
@@ -265,13 +300,13 @@ export default function ChargingHeatmapPage() {
                 <XAxis type="number" tick={axisTickSm} />
                 <YAxis type="category" dataKey="name" tick={axisTickSm} width={120} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" fill="rgba(0, 240, 255, 0.6)" radius={[0, 4, 4, 0]} name="Sessions" />
+                <Bar dataKey="count" fill="rgba(0, 240, 255, 0.6)" radius={[0, 4, 4, 0]} name={t('charging.heatmap.sessions', 'Sessions')} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8 opacity-20" />}
-              message={t('common.noData', 'No data available')}
+              message={t('common.noData', 'No data to display')}
               className="py-8"
             />
           )}
