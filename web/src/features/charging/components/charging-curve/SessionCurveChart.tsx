@@ -9,7 +9,6 @@ import {
   Area,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   AREA_DEFAULTS,
@@ -47,7 +46,7 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
       <ResponsiveContainer width="100%" height={320}>
         <AreaChart data={curveData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           {areaGradient('curvePowerGrad', CHART_COLORS[0])}
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis
             dataKey="soc"
             tick={axisTickSm}
