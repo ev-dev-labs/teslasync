@@ -28,6 +28,12 @@ export function FleetStatsBar({
   const totalDistance = analytics?.total_distance_km ?? 0;
   const totalEnergy = analytics?.total_energy_kwh ?? 0;
 
+  // Null-safe trend series for the decorative MiniChart sparklines. Reversed so
+  // the line reads oldest → newest (left → right); `[0]` is a render-nothing
+  // fallback (MiniChart draws only with ≥2 finite points) when data is missing.
+  const distanceTrend = recentDrives?.map((d) => d.distance_m).reverse() ?? [0];
+  const energyTrend = recentCharges?.map((s) => s.total_energy_added_wh).reverse() ?? [0];
+
   return (
     <StaggerContainer className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       <StaggerItem>
@@ -48,7 +54,7 @@ export function FleetStatsBar({
           <p className="text-xl sm:text-2xl font-bold text-cyan-300">
             <AnimatedNumber value={toDistanceDisplay(totalDistance)} suffix={` ${distanceUnit}`} />
           </p>
-          <MiniChart data={recentDrives?.map((d) => d.distance_m).reverse() ?? [0]} color="#00f0ff" height={24} width={60} />
+          <MiniChart data={distanceTrend} color="#00f0ff" height={24} width={60} />
         </GlassPanel>
       </StaggerItem>
 
@@ -58,7 +64,7 @@ export function FleetStatsBar({
           <p className="text-xl sm:text-2xl font-bold text-emerald-300">
             <AnimatedNumber value={totalEnergy} decimals={1} suffix=" kWh" />
           </p>
-          <MiniChart data={recentCharges?.map((s) => s.total_energy_added_wh).reverse() ?? [0]} color="#10b981" height={24} width={60} />
+          <MiniChart data={energyTrend} color="#10b981" height={24} width={60} />
         </GlassPanel>
       </StaggerItem>
 
