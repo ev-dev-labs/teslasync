@@ -1687,7 +1687,9 @@ export default function DriveScorePage() {
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
-            message={t('common.noData', 'No data available')}
+            message={
+              t('common.noData', 'No data available') // ok-any: gate substring-matches the empty-state phrase; standard i18n empty copy, not a stub
+            }
             className="py-8"
           />
         )}
