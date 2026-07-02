@@ -690,7 +690,7 @@ export default function EnergyPage() {
                 ) : (
                   <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Activity className="h-8 w-8" />}
-                    message={t('common.noData', 'No data available')}
+                    message={t('common.noData', 'No data yet')}
                     className="py-8"
                   />
                 )}
@@ -753,7 +753,7 @@ export default function EnergyPage() {
                 ) : (
                   <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Activity className="h-8 w-8" />}
-                    message={t('common.noData', 'No data available')}
+                    message={t('common.noData', 'No data yet')}
                     className="py-8"
                   />
                 )}
