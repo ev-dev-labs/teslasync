@@ -1,281 +1,335 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  Activity, BarChart3, CalendarClock, Clock, DollarSign, MapPin, RefreshCw, Zap,
+} from 'lucide-react';
+
 import { PageContainer } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { Skeleton, EmptyState } from '@/components/feedback';
-import { Currency } from '@/components/data-display';
-import { Activity } from 'lucide-react';
+import { Button, GlassPanel, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui';
+import { MetricCard, MetricBar } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ChartTooltip, chartGrid, axisTickSm,
 } from '@/components/charts';
 import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
-import { durationMinutes } from '../components/charging-curve/helpers';
-import { useSettings } from '@/hooks/useSettings';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { convertEnergyFromSI } from '@/lib/unitConversion';
+import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
+import { fmtInt } from '@/lib/numberFormat';
 import { DAYS } from '@/lib/constants';
-import type { ChargingSession } from '@/api/types';
+import { chartTokens } from '@/lib/tokens';
 
-function heatColor(count: number, max: number): string {
-  if (count === 0 || max === 0) return 'rgba(0, 240, 255, 0.04)';
-  const ratio = count / max;
-  if (ratio < 0.25) return 'rgba(0, 240, 255, 0.15)';
-  if (ratio < 0.5) return 'rgba(16, 185, 129, 0.4)';
-  if (ratio < 0.75) return 'rgba(245, 158, 11, 0.55)';
-  return 'rgba(239, 68, 68, 0.75)';
-}
-
-interface HeatCell {
-  count: number;
-  totalEnergy: number;
-}
-
-function buildGrid(sessions: ChargingSession[]) {
-  const grid: HeatCell[][] = Array.from({ length: 7 }, () =>
-    Array.from({ length: 24 }, () => ({ count: 0, totalEnergy: 0 })),
-  );
-  let maxCount = 0;
-  let favDay = 0;
-  let favHour = 0;
-
-  for (const s of sessions) {
-    const d = new Date(s.started_at);
-    const day = d.getDay();
-    const hour = d.getHours();
-    grid[day][hour].count += 1;
-    grid[day][hour].totalEnergy += convertEnergyFromSI(s.total_energy_added_wh, 'kWh');
-    if (grid[day][hour].count > maxCount) {
-      maxCount = grid[day][hour].count;
-      favDay = day;
-      favHour = hour;
-    }
-  }
-
-  return { grid, maxCount, favDay, favHour };
-}
+import {
+  HeatmapGrid,
+  buildGrid,
+  aggregateLocations,
+  aggregateByDayOfWeek,
+  deriveInsights,
+  formatHourLabel,
+} from '../components/charging-heatmap';
 
 export default function ChargingHeatmapPage() {
   const { t } = useTranslation();
   usePageTitle(t('charging.heatmap.title', 'Charging Patterns'));
-  useSettings();
 
-  // header VehiclePicker is the source of truth.
+  // The header VehiclePicker is the source of truth for the active vehicle.
   const { vehicleId } = useSelectedVehicle();
-
   const { start, end, setRange } = useRangeState({
     persistKey: 'charging-heatmap.range',
     defaultPresetId: 'all',
   });
 
-  const { data: sessions, isLoading, error } = useChargingSessionsPaginated(vehicleId, {
-    limit: 2000,
-    start,
-    end,
-  });
+  const query = useChargingSessionsPaginated(vehicleId, { limit: 2000, start, end });
+  const { data, isLoading, isError, error, refetch } = query;
+  const sessions = data ?? [];
+  const hasData = sessions.length > 0;
+
+  const { formatEnergy, formatDuration } = useUnits();
+  const { formatCurrency } = useFormatting();
+
+  const model = useMemo(() => buildGrid(sessions), [sessions]);
+  const insights = useMemo(() => deriveInsights(model), [model]);
+  const dayOfWeekData = useMemo(() => aggregateByDayOfWeek(model, DAYS), [model]);
+  const locationData = useMemo(
+    () => aggregateLocations(sessions, t('charging.heatmap.unknownPlace', 'Unknown')),
+    [sessions, t],
+  );
 
   const stats = useMemo(() => {
-    if (!sessions?.length) return null;
-    const totalEnergy = sessions.reduce((s, c) => s + convertEnergyFromSI(c.total_energy_added_wh, 'kWh'), 0);
-    const totalCost = sessions.reduce((s, c) => s + (c.cost_decimal ?? 0), 0);
-    const totalDuration = sessions.reduce((s, c) => s + durationMinutes(c.started_at, c.ended_at), 0);
+    if (sessions.length === 0) return null;
+    let totalEnergyWh = 0;
+    let totalCost = 0;
+    let totalDurationS = 0;
+    for (const s of sessions) {
+      totalEnergyWh += s.total_energy_added_wh ?? 0;
+      totalCost += s.cost_decimal ?? 0;
+      const started = new Date(s.started_at).getTime();
+      const ended = s.ended_at ? new Date(s.ended_at).getTime() : Number.NaN;
+      if (Number.isFinite(started) && Number.isFinite(ended) && ended > started) {
+        totalDurationS += (ended - started) / 1000;
+      }
+    }
     return {
       count: sessions.length,
-      totalEnergy,
+      totalEnergyWh,
       totalCost,
-      avgDuration: totalDuration / sessions.length,
+      avgDurationS: totalDurationS / sessions.length,
     };
   }, [sessions]);
 
-  const { grid, maxCount, favDay, favHour } = useMemo(
-    () => (sessions?.length ? buildGrid(sessions) : { grid: [], maxCount: 0, favDay: 0, favHour: 0 }),
-    [sessions],
-  );
+  const barMax = Math.max(stats?.count ?? 0, 1);
 
-  const locationData = useMemo(() => {
-    if (!sessions?.length) return [];
-    const counts: Record<string, number> = {};
-    for (const s of sessions) {
-      const name = s.start_place ?? 'Unknown';
-      counts[name] = (counts[name] ?? 0) + 1;
-    }
-    return Object.entries(counts)
-      .filter(([, c]) => c >= 2)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([name, count]) => ({ name, count }));
-  }, [sessions]);
-
-  const [hovered, setHovered] = useState<{ day: number; hour: number } | null>(null);
-
-  if (isLoading) {
-    return (
-      <PageContainer
-        title={t('charging.heatmap.title', 'Charging Patterns')}
-        subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
-        actions={
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <VehicleSelect />
-            <RangePicker
-              value={{ start, end }}
-              onChange={setRange}
-              align="end"
-              triggerTestId="charging-heatmap-range"
-            />
-          </div>
-        }
+  const actions = (
+    <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+      <VehicleSelect />
+      <RangePicker
+        value={{ start, end }}
+        onChange={setRange}
+        align="end"
+        triggerTestId="charging-heatmap-range"
+      />
+      <Button
+        variant="ghost"
+        onClick={() => refetch()}
+        aria-label={t('common.refresh', 'Refresh')}
       >
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} height={80} />
-          ))}
-        </div>
-        <Skeleton height={320} className="mt-6" />
-      </PageContainer>
-    );
-  }
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
+  );
 
   return (
     <PageContainer
       title={t('charging.heatmap.title', 'Charging Patterns')}
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
-      error={error as Error | null}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="charging-heatmap-range"
-          />
-        </div>
-      }
+      actions={actions}
+      query={query}
     >
-      {/* ── Stat cards ── */}
-      <StaggerContainer className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StaggerItem>
-          <GlassPanel glow="cyan" hover className="p-4">
-            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.totalSessions', 'Total Sessions')}</p>
-            <p className="text-xl font-semibold text-[var(--text-primary)]">{fmtInt(stats?.count ?? 0)}</p>
-          </GlassPanel>
-        </StaggerItem>
-        <StaggerItem>
-          <GlassPanel glow="green" hover className="p-4">
-            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.totalEnergy', 'Total Energy')}</p>
-            <p className="text-xl font-semibold text-[var(--text-primary)]">{fmtNumber(stats?.totalEnergy ?? 0, 1)} kWh</p>
-          </GlassPanel>
-        </StaggerItem>
-        <StaggerItem>
-          <GlassPanel glow="purple" hover className="p-4">
-            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.totalCost', 'Total Cost')}</p>
-            <p className="text-xl font-semibold text-[var(--text-primary)]"><Currency value={stats?.totalCost ?? 0} /></p>
-          </GlassPanel>
-        </StaggerItem>
-        <StaggerItem>
-          <GlassPanel hover className="p-4">
-            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.avgDuration', 'Avg Duration')}</p>
-            <p className="text-xl font-semibold text-[var(--text-primary)]">{fmtInt(stats?.avgDuration ?? 0)} min</p>
-          </GlassPanel>
-        </StaggerItem>
-      </StaggerContainer>
-
-      {/* ── Favorite charging time ── */}
-      {maxCount > 0 && (
-        <FadeIn delay={0.1}>
-          <GlassPanel glow="cyan" className="mt-6 border border-cyan-500/30 p-4">
-            <p className="text-sm text-[var(--text-secondary)]">{t('charging.heatmap.favorite', 'Favorite Charging Time')}</p>
-            <p className="text-lg font-semibold text-[var(--text-primary)]">
-              {DAYS[favDay]}s at {favHour.toString().padStart(2, '0')}:00
-              <span className="ml-2 text-sm text-[var(--text-secondary)]">({maxCount} sessions)</span>
-            </p>
-          </GlassPanel>
-        </FadeIn>
-      )}
-
-      {/* ── Heatmap grid ── */}
-      <FadeIn delay={0.2}>
-        <GlassPanel className="mt-6 overflow-x-auto p-4">
-          <h3 className="mb-3 text-base font-semibold text-[var(--text-primary)]">
-            {t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}
-          </h3>
-          <div className="grid gap-[2px] grid-cols-[56px_repeat(24,1fr)]">
-            {/* Hour header row */}
-            <div className="text-[10px] text-[var(--text-muted)]" />
-            {Array.from({ length: 24 }).map((_, h) => (
-              <div key={h} className="text-center text-[10px] text-[var(--text-muted)]">{h}</div>
-            ))}
-
-            {/* Day rows */}
-            {DAYS.map((dayLabel, day) => (
-              <>
-                <div key={`label-${day}`} className="flex items-center text-xs text-[var(--text-secondary)]">
-                  {dayLabel}
-                </div>
-                {Array.from({ length: 24 }).map((_, hour) => {
-                  const cell = grid[day]?.[hour] ?? { count: 0, totalEnergy: 0 };
-                  const isHovered = hovered?.day === day && hovered?.hour === hour;
-                  return (
-                    <div
-                      key={`${day}-${hour}`}
-                      className={`relative h-7 rounded-sm transition-transform ${isHovered ? 'z-10 scale-125' : ''}`}
-                      style={{ backgroundColor: heatColor(cell.count, maxCount) }}
-                      onMouseEnter={() => setHovered({ day, hour })}
-                      onMouseLeave={() => setHovered(null)}
-                    >
-                      {isHovered && cell.count > 0 && (
-                        <div className="absolute -top-14 left-1/2 z-20 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-[10px] text-[var(--text-primary)] shadow-lg whitespace-nowrap">
-                          <div>{DAYS[day]} {hour}:00</div>
-                          <div>{cell.count} sessions · {fmtNumber(cell.totalEnergy, 1)} kWh avg</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div className="mt-3 flex items-center gap-2 text-[10px] text-[var(--text-secondary)]">
-            <span>{t('charging.heatmap.less', 'Less')}</span>
-            {['rgba(0,240,255,0.04)', 'rgba(0,240,255,0.15)', 'rgba(16,185,129,0.4)', 'rgba(245,158,11,0.55)', 'rgba(239,68,68,0.75)'].map((c) => (
-              <div key={c} className="h-3 w-6 rounded-sm" style={{ backgroundColor: c }} />
-            ))}
-            <span>{t('charging.heatmap.more', 'More')}</span>
-          </div>
-        </GlassPanel>
+      {/* ── KPI band ── */}
+      <FadeIn>
+        <section
+          aria-label={t('charging.heatmap.kpis', 'Charging summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={92} />)
+          ) : (
+            <>
+              <MetricCard
+                label={t('charging.heatmap.totalSessions', 'Total Sessions')}
+                value={fmtInt(stats?.count ?? 0)}
+                icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('charging.heatmap.totalEnergy', 'Total Energy')}
+                value={formatEnergy(stats?.totalEnergyWh ?? 0)}
+                icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('charging.heatmap.totalCost', 'Total Cost')}
+                value={formatCurrency(stats?.totalCost ?? 0)}
+                icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('charging.heatmap.avgDuration', 'Avg Duration')}
+                value={formatDuration(stats?.avgDurationS ?? 0)}
+                icon={<Clock className="h-5 w-5" aria-hidden="true" />}
+                color="amber"
+              />
+            </>
+          )}
+        </section>
       </FadeIn>
 
-      {/* ── Top charging locations ── */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="mt-6 p-4">
-          <h3 className="mb-3 text-base font-semibold text-[var(--text-primary)]">
-            {t('charging.heatmap.topLocations', 'Top Charging Locations')}
-          </h3>
-          {locationData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={locationData.length * 36 + 20}>
-              <BarChart data={locationData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
-                {chartGrid}
-                <XAxis type="number" tick={axisTickSm} />
-                <YAxis type="category" dataKey="name" tick={axisTickSm} width={120} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" fill="rgba(0, 240, 255, 0.6)" radius={[0, 4, 4, 0]} name="Sessions" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Activity className="h-8 w-8 opacity-20" />}
-              message={t('common.noData', 'No data available')}
-              className="py-8"
-            />
-          )}
-        </GlassPanel>
+      {/* ── Hero: weekly heatmap + insights side panel ── */}
+      <FadeIn delay={0.1}>
+        <section aria-labelledby="charging-heatmap-when" className="space-y-4">
+          <SectionTitle id="charging-heatmap-when">
+            {t('charging.heatmap.whenSection', 'When You Charge')}
+          </SectionTitle>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+            <GlassPanel className="min-w-0 p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}
+              </PanelTitle>
+              {isLoading ? (
+                <Skeleton height={260} />
+              ) : isError ? (
+                <QueryError error={error} onRetry={() => refetch()} />
+              ) : !hasData ? (
+                /* no-action: transient empty — resolves once sessions exist in the selected range */
+                <EmptyState
+                  icon={<CalendarClock className="h-8 w-8" aria-hidden="true" />}
+                  message={t('charging.heatmap.noData', 'No charging sessions in this range')}
+                />
+              ) : (
+                <HeatmapGrid model={model} formatEnergy={formatEnergy} />
+              )}
+            </GlassPanel>
+
+            <GlassPanel className="min-w-0 p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('charging.heatmap.insights', 'Charging Insights')}
+              </PanelTitle>
+              {isLoading ? (
+                <Skeleton height={220} />
+              ) : isError ? (
+                <QueryError error={error} onRetry={() => refetch()} />
+              ) : !hasData ? (
+                /* no-action: transient empty — insights derive from charging history */
+                <EmptyState
+                  icon={<Activity className="h-8 w-8" aria-hidden="true" />}
+                  message={t('charging.heatmap.noInsights', 'Insights appear once you have charging history')}
+                />
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
+                    <Caption>{t('charging.heatmap.favorite', 'Favorite Charging Time')}</Caption>
+                    <Text variant="body" as="p" className="mt-1 font-semibold">
+                      {model.maxCount > 0
+                        ? t('charging.heatmap.favoriteValue', '{{day}}s at {{hour}}', {
+                            day: DAYS[model.favDay],
+                            hour: formatHourLabel(model.favHour),
+                          })
+                        : '—'}
+                    </Text>
+                    <Caption>
+                      {t('charging.heatmap.favoriteSessions', '{{count}} sessions', {
+                        count: model.maxCount,
+                      })}
+                    </Caption>
+                  </div>
+
+                  <div className="space-y-3">
+                    <MetricBar
+                      label={t('charging.heatmap.busiestDay', 'Busiest Day')}
+                      value={insights.busiestDayCount}
+                      max={barMax}
+                      color={chartTokens.series[5]}
+                      sublabel={`${DAYS[insights.busiestDay]} · ${fmtInt(insights.busiestDayCount)}`}
+                    />
+                    <MetricBar
+                      label={t('charging.heatmap.busiestHour', 'Busiest Hour')}
+                      value={insights.busiestHourCount}
+                      max={barMax}
+                      color={chartTokens.series[1]}
+                      sublabel={`${formatHourLabel(insights.busiestHour)} · ${fmtInt(insights.busiestHourCount)}`}
+                    />
+                    <MetricBar
+                      label={t('charging.heatmap.weekdays', 'Weekdays')}
+                      value={insights.weekdayCount}
+                      max={barMax}
+                      color={chartTokens.series[0]}
+                      sublabel={fmtInt(insights.weekdayCount)}
+                    />
+                    <MetricBar
+                      label={t('charging.heatmap.weekends', 'Weekends')}
+                      value={insights.weekendCount}
+                      max={barMax}
+                      color={chartTokens.series[4]}
+                      sublabel={fmtInt(insights.weekendCount)}
+                    />
+                  </div>
+                </div>
+              )}
+            </GlassPanel>
+          </div>
+        </section>
+      </FadeIn>
+
+      {/* ── Breakdowns: top locations + sessions by weekday ── */}
+      <FadeIn delay={0.2}>
+        <section aria-labelledby="charging-heatmap-breakdowns" className="space-y-4">
+          <SectionTitle id="charging-heatmap-breakdowns">
+            {t('charging.heatmap.breakdowns', 'Charging Breakdowns')}
+          </SectionTitle>
+          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 xl:gap-5">
+            <GlassPanel className="min-w-0 p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('charging.heatmap.topLocations', 'Top Charging Locations')}
+              </PanelTitle>
+              {isLoading ? (
+                <Skeleton height={260} />
+              ) : isError ? (
+                <QueryError error={error} onRetry={() => refetch()} />
+              ) : locationData.length === 0 ? (
+                /* no-action: transient empty — needs ≥2 sessions at a named place */
+                <EmptyState
+                  icon={<MapPin className="h-8 w-8" aria-hidden="true" />}
+                  message={t('charging.heatmap.noLocations', 'No repeat charging locations yet')}
+                />
+              ) : (
+                <div className="h-64 sm:h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={locationData}
+                      layout="vertical"
+                      margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                    >
+                      {chartGrid}
+                      <XAxis type="number" tick={axisTickSm} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" tick={axisTickSm} width={120} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Bar
+                        dataKey="count"
+                        fill={chartTokens.series[5]}
+                        radius={[0, 4, 4, 0]}
+                        name={t('charging.heatmap.sessionsWord', 'sessions')}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </GlassPanel>
+
+            <GlassPanel className="min-w-0 p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('charging.heatmap.byDayOfWeek', 'Sessions by Day of Week')}
+              </PanelTitle>
+              {isLoading ? (
+                <Skeleton height={260} />
+              ) : isError ? (
+                <QueryError error={error} onRetry={() => refetch()} />
+              ) : !hasData ? (
+                /* no-action: transient empty — resolves once sessions exist in the selected range */
+                <EmptyState
+                  icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
+                  message={t('charging.heatmap.noData', 'No charging sessions in this range')}
+                />
+              ) : (
+                <div className="h-64 sm:h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dayOfWeekData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+                      {chartGrid}
+                      <XAxis dataKey="day" tick={axisTickSm} />
+                      <YAxis tick={axisTickSm} allowDecimals={false} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Bar
+                        dataKey="count"
+                        fill={chartTokens.series[0]}
+                        radius={[4, 4, 0, 0]}
+                        name={t('charging.heatmap.sessionsWord', 'sessions')}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </GlassPanel>
+          </div>
+        </section>
       </FadeIn>
     </PageContainer>
   );
