@@ -4,26 +4,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog, PinButton } from '@/components/ui';
+import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog, PinButton, PanelTitle, Text, Caption } from '@/components/ui';
 import {
   Zap, AlertTriangle, MoreVertical, Play, Copy, Download,
   Trash2, RotateCcw, Car, CheckCircle, XCircle, SkipForward,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
-import { formatDateTime } from '@/lib/dateFormat';
-
-// ─── Time-ago helper ──────────────────────────────────────────────────────────
-
-function timeAgo(iso: string | null): string {
-  if (!iso) return '—';
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
+import { formatDateTime, formatRelativeTime } from '@/lib/dateFormat';
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -94,17 +81,17 @@ export function AutomationCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-[var(--text-primary)]">{a.name}</h3>
+              <PanelTitle className="truncate">{a.name}</PanelTitle>
               <Badge variant={status.variant}>{t(`automations.status.${uiStatus}`, status.label)}</Badge>
               {isFiring && (
-                <span className="flex items-center gap-1 text-xs text-cyan-300 animate-pulse">
-                  <Zap className="h-3 w-3" />
+                <Caption className="flex items-center gap-1 text-cyan-300 animate-pulse">
+                  <Zap className="h-3 w-3" aria-hidden="true" />
                   {t('automations.firing', 'Firing')}
-                </span>
+                </Caption>
               )}
             </div>
             {a.description && (
-              <p className="mt-0.5 truncate text-sm text-[var(--text-secondary)]">{a.description}</p>
+              <Text as="p" variant="body" className="mt-0.5 truncate text-[var(--text-secondary)]">{a.description}</Text>
             )}
           </div>
 
@@ -187,85 +174,86 @@ export function AutomationCard({
         </div>
 
         {/* Vehicle row */}
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
-          {vehicleName && (
-            <span className="flex items-center gap-1">
-              <Car className="h-3 w-3" />
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {vehicleName ? (
+            <Caption className="flex items-center gap-1">
+              <Car className="h-3 w-3" aria-hidden="true" />
               {vehicleName}
-            </span>
-          )}
-          {!vehicleName && (
-            <span className="text-[var(--text-secondary)]">
-              {t('automations.allVehicles', 'All vehicles')}
-            </span>
+            </Caption>
+          ) : (
+            <Caption>{t('automations.allVehicles', 'All vehicles')}</Caption>
           )}
         </div>
 
         {/* Stats row */}
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--text-secondary)]">
-          <span className="flex items-center gap-1">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Caption className="flex items-center gap-1">
             {a.last_triggered_at ? (
               <>
-                <CheckCircle className="h-3 w-3 text-green-400" />
-                {t('automations.lastRun', 'Last')}: {timeAgo(a.last_triggered_at)}
+                <CheckCircle className="h-3 w-3 text-emerald-300" aria-hidden="true" />
+                {t('automations.lastRun', 'Last')}: {formatRelativeTime(a.last_triggered_at)}
               </>
             ) : (
               <>
-                <SkipForward className="h-3 w-3" />
+                <SkipForward className="h-3 w-3" aria-hidden="true" />
                 {t('automations.neverRun', 'Never run')}
               </>
             )}
-          </span>
-          <span className="text-[var(--text-muted)]">·</span>
-          <span>{t('automations.runs', 'Runs')}: {a.execution_count}</span>
+          </Caption>
+          <Caption aria-hidden="true">·</Caption>
+          <Caption>{t('automations.runs', 'Runs')}: {a.execution_count ?? 0}</Caption>
           {a.failure_count > 0 && (
             <>
-              <span className="text-[var(--text-muted)]">·</span>
-              <span className="flex items-center gap-1 text-red-400">
-                <XCircle className="h-3 w-3" />
+              <Caption aria-hidden="true">·</Caption>
+              <Caption className="flex items-center gap-1 text-rose-300">
+                <XCircle className="h-3 w-3" aria-hidden="true" />
                 {t('automations.fails', 'Fails')}: {a.failure_count}
-              </span>
+              </Caption>
             </>
           )}
           {a.next_fire_time && (
             <>
-              <span className="text-[var(--text-muted)]">·</span>
-              <span className="text-neon-cyan/70">
+              <Caption aria-hidden="true">·</Caption>
+              <Caption className="text-cyan-300">
                 {t('automations.nextFire', 'Next')}: {formatDateTime(a.next_fire_time)}
-              </span>
+              </Caption>
             </>
           )}
         </div>
 
         {/* Auto-disabled warning */}
         {a.auto_disabled && a.auto_disabled_reason && (
-          <div className="mt-2 flex items-start gap-2 rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-300">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{a.auto_disabled_reason}</span>
+          <div className="mt-2 flex items-start gap-2 rounded-md bg-red-500/10 px-3 py-2">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+            <Text as="span" variant="bodySm" className="text-rose-300">{a.auto_disabled_reason}</Text>
           </div>
         )}
 
         {/* Conflicts */}
         {conflicts.length > 0 && (
           <div className="mt-2 space-y-1">
-            {conflicts.map((c, i) => (
-              <div
-                key={`conflict-${a.id}-${i}`}
-                className={cn(
-                  'flex items-start gap-2 rounded-md px-3 py-1.5 text-xs',
-                  c.severity === 'warning'
-                    ? 'bg-amber-500/10 text-amber-300'
-                    : 'bg-blue-500/10 text-blue-300',
-                )}
-              >
-                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-                <span>
-                  {t('automations.conflictWith', 'Conflict with')}{' '}
-                  <span className="font-medium">"{c.automation_name}"</span>
-                  {' — '}{c.reason}
-                </span>
-              </div>
-            ))}
+            {conflicts.map((c, i) => {
+              const isWarning = c.severity === 'warning';
+              return (
+                <div
+                  key={`conflict-${a.id}-${i}`}
+                  className={cn(
+                    'flex items-start gap-2 rounded-md px-3 py-1.5',
+                    isWarning ? 'bg-amber-500/10' : 'bg-blue-500/10',
+                  )}
+                >
+                  <AlertTriangle
+                    className={cn('mt-0.5 h-3 w-3 shrink-0', isWarning ? 'text-amber-300' : 'text-blue-300')}
+                    aria-hidden="true"
+                  />
+                  <Text as="span" variant="bodySm" className={isWarning ? 'text-amber-300' : 'text-blue-300'}>
+                    {t('automations.conflictWith', 'Conflict with')}{' '}
+                    <span className="font-medium">"{c.automation_name}"</span>
+                    {' — '}{c.reason}
+                  </Text>
+                </div>
+              );
+            })}
           </div>
         )}
       </GlassPanel>

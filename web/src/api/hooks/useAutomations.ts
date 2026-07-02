@@ -55,6 +55,44 @@ export function useAutomationHistory(limit = 20) {
   });
 }
 
+/** Typed CTI automation export envelope accepted by `POST /automations/import`. */
+export interface AutomationImportEnvelope {
+  version: number;
+  exported_at?: string;
+  automations: unknown[];
+}
+
+export interface AutomationImportResult {
+  imported?: number;
+  skipped?: number;
+}
+
+/**
+ * useImportAutomations — POST /automations/import.
+ * Uploads a typed CTI automation export envelope, then invalidates the
+ * automations list + history so the newly imported rows surface without a
+ * full-page reload. Success/failure are surfaced through the toast system.
+ */
+export function useImportAutomations() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (envelope: AutomationImportEnvelope) =>
+      request<AutomationImportResult>('/automations/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(envelope),
+      }),
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
+      success('toast.automation.import.success', 'Automations imported');
+    },
+    onError: (err) =>
+      error(err, 'toast.automation.import.error', 'Failed to import automations'),
+  });
+}
+
 export function useToggleAutomation() {
   const { success, error } = useMutationToast();
   return useOptimisticMutation<
