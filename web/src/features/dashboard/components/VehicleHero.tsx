@@ -8,7 +8,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { FreshnessIndicator } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { RadialGauge } from '@/components/charts';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
