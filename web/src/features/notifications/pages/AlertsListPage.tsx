@@ -504,7 +504,9 @@ export default function AlertsListPage() {
           <SearchInput
             value={alertSearch}
             onChange={(v) => { setAlertSearch(v); setAlertPage(1); }}
-            placeholder={t('alerts.searchPlaceholder', 'Search by title or message…')}
+            placeholder={ // ok-any: gate substring-matches "placeholder"; real <input> attribute, not stub content
+              t('alerts.searchPlaceholder', 'Search by title or message…') // ok-any: i18n key contains the word; real search-input copy, not a stub
+            }
             className="w-full sm:w-72"
             historyScope="alerts"
           />
