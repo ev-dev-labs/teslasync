@@ -28,7 +28,9 @@ function ChargeLimitRing({ value, max, gaugeSize }: { value: number; max: number
       <svg
         width={gaugeSize}
         height={gaugeSize}
-        className="-rotate-90"
+        viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}
+        aria-hidden="true"
+        className="-rotate-90 max-w-full"
       >
         <circle
           cx={center}
