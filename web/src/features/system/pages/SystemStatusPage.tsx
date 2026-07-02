@@ -25,12 +25,12 @@ import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity, Database, Bell, ShieldCheck, Cpu, Server,
-  HardDrive, Package, Clock, RefreshCw, Boxes, Zap, AlertTriangle,
+  HardDrive, Package, Clock, RefreshCw, Boxes, AlertTriangle,
   Car, Inbox,
 } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, Badge } from '@/components/ui'
+import { GlassPanel, Button, Badge, PanelTitle, SectionTitle } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import {
   StatusHero, type HeroStatus,
@@ -457,7 +457,6 @@ export default function SystemStatusPage() {
       subtitle={t('At-a-glance health for your TeslaSync instance')}
       loading={false}
       error={null}
-      className="max-w-5xl mx-auto"
       actions={
         <div className="flex items-center gap-2">
           <LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />
@@ -506,7 +505,7 @@ export default function SystemStatusPage() {
             />
           </div>
 
-          <div className="space-y-5 [&_section]:scroll-mt-24">
+          <div className="space-y-6 [&_section]:scroll-mt-24">
             {/* 1 ─ Hero ───────────────────────────────────────────── */}
             <FadeIn>
               <StatusHero
@@ -534,17 +533,25 @@ export default function SystemStatusPage() {
             </FadeIn>
 
             {/* 2 ─ Sticky chip bar ─────────────────────────────────── */}
-            <div data-status-print-hide>
+            <div data-status-print-hide className="px-4">
               <StickyChipBar chips={chips} />
             </div>
 
+            {/* ══ Band A ─ Health & triage (full-width bento) ══════════ */}
+            <FadeIn>
+              <section aria-labelledby="triage-heading" className="space-y-3">
+                <SectionTitle id="triage-heading" className="px-1">
+                  {t('Health & triage')}
+                </SectionTitle>
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
+
             {/* 3 ─ Health rows ─────────────────────────────────────── */}
-            <section id="health" aria-label="Health summary">
-              <GlassPanel className="p-2 md:p-3">
-                <h3 className="px-3 pt-2 text-sm font-semibold text-[var(--text-primary)]">
+            <section id="health" aria-label={t('Health summary')}>
+              <GlassPanel className="h-full p-4 sm:p-5">
+                <PanelTitle className="mb-3">
                   {t('Health')}
-                </h3>
-                <div className="space-y-1 p-1">
+                </PanelTitle>
+                <div className="space-y-1">
                   <HealthRow
                     status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : okCount > totalCount / 2 ? 'degraded' : 'unhealthy'}
                     icon={<Server className="h-4 w-4" />}
@@ -690,6 +697,18 @@ export default function SystemStatusPage() {
             footnote={t('CPU %, memory bytes, and disk usage need a new /system/resources endpoint (Phase 2).')}
           />
         </section>
+
+                </div>
+              </section>
+            </FadeIn>
+
+            {/* ══ Band B ─ Systems & services (accordion bento) ═══════ */}
+            <FadeIn>
+              <section aria-labelledby="systems-heading" className="space-y-3">
+                <SectionTitle id="systems-heading" className="px-1">
+                  {t('Systems & services')}
+                </SectionTitle>
+                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2 2xl:grid-cols-3">
 
         {/* 6 ─ Services & components ──────────────────────────── */}
         <section id="services">
@@ -912,41 +931,57 @@ export default function SystemStatusPage() {
           </AccordionSection>
         </section>
 
-        {/* 15 ─ 30-day uptime heatmap ─────────────────────────── */}
-        <section id="uptime">
-          <UptimeHeatmap
-            days={uptimeDays}
-            footnote={t('Today reflects the current status. Day-level historical data ships with the backend health-history endpoint in Phase 2.')}
-          />
-        </section>
+                </div>
+              </section>
+            </FadeIn>
 
-        {/* 16 ─ SLO tracking ──────────────────────────────────── */}
-        <section id="slo" aria-label="Personal SLO tracking">
-          <SLOTrackingCard />
-        </section>
+            {/* ══ Band C ─ Reliability & history (full-width) ═════════ */}
+            <FadeIn>
+              <section aria-labelledby="reliability-heading" className="space-y-3">
+                <SectionTitle id="reliability-heading" className="px-1">
+                  {t('Reliability & history')}
+                </SectionTitle>
 
-        {/* 17 ─ Scheduled maintenance ─────────────────────────── */}
-        <section id="maintenance" aria-label="Scheduled maintenance">
-          <ScheduledMaintenanceCard now={now} />
-        </section>
+                {/* 15 ─ 30-day uptime heatmap ─────────────────────── */}
+                <section id="uptime">
+                  <UptimeHeatmap
+                    days={uptimeDays}
+                    footnote={t('Today reflects the current status. Day-level historical data ships with the backend health-history endpoint in Phase 2.')}
+                  />
+                </section>
 
-        {/* 18 ─ Subscribe / discover channels ─────────────────── */}
-        <section id="subscribe" aria-label="Notification channels">
-          <SubscribeCard />
-        </section>
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+                  {/* 16 ─ SLO tracking ────────────────────────────── */}
+                  <section id="slo" aria-label={t('Personal SLO tracking')}>
+                    <SLOTrackingCard />
+                  </section>
 
-        {/* 19 ─ Status API docs link ──────────────────────────── */}
-        <section id="api-docs" aria-label="Status API">
-          <div className="flex justify-center pt-1 pb-4 text-xs text-[var(--text-muted)]" data-status-print-hide>
-            <Link
-              to="/docs/status-api"
-              className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
-            >
-              {t('Stable Status API for your own dashboards')} →
-            </Link>
+                  {/* 17 ─ Scheduled maintenance ───────────────────── */}
+                  <section id="maintenance" aria-label={t('Scheduled maintenance')}>
+                    <ScheduledMaintenanceCard now={now} />
+                  </section>
+
+                  {/* 18 ─ Subscribe / discover channels ───────────── */}
+                  <section id="subscribe" aria-label={t('Notification channels')}>
+                    <SubscribeCard />
+                  </section>
+                </div>
+
+              </section>
+            </FadeIn>
+
+            {/* Footer ─ Status API docs link ──────────────────────── */}
+            <section id="api-docs" aria-label={t('Status API')}>
+              <div className="flex justify-center pt-1 pb-4 text-xs text-[var(--text-muted)]" data-status-print-hide>
+                <Link
+                  to="/docs/status-api"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                >
+                  {t('Stable Status API for your own dashboards')} →
+                </Link>
+              </div>
+            </section>
           </div>
-        </section>
-      </div>
         </>
       )}
     </PageContainer>
@@ -1049,6 +1084,3 @@ function SystemInfoRows({
 
   return <DefList rows={rows} />
 }
-
-// Reserved for the unified Tesla auth banner.
-void Zap
