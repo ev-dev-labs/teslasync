@@ -11,8 +11,20 @@ import {
 } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { LatLngExpression } from '@/components/maps';
+import type { DrivePosition } from '@/types/driving';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
+
+/** Position rows can still arrive carrying snake_case duplicates from the
+ *  pre-camelCase API adapter (battery_level, outside_temp, …). Modelling those
+ *  fallback keys as optional keeps the reads below fully typed — no `any`. */
+type DrivePositionRow = DrivePosition & {
+  battery_level?: number | null;
+  outside_temp?: number | null;
+  inside_temp?: number | null;
+  ideal_range?: number | null;
+  rated_range?: number | null;
+};
 
 export function useDriveDetailData(id: string) {
   const { data: drive, isLoading, error } = useDrive(id);
@@ -98,33 +110,41 @@ export function useDriveDetailData(id: string) {
         fanStatus: tp.fanStatus ?? null,
       }));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- positions may have snake_case fallback fields
-    return (drive.positions ?? []).map((p: any) => ({
-      time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp),
-      // Position.speed comes from drivePositionFieldMappings VehicleSpeed -> speed_mph
-      // -> aliasPositionFields renames to 'speed'. The value is still m/s SI; the
-      // legacy '_mph' suffix from the mapping is misleading per ADR-004 #6.
-      speed: convertSpeedFromSI(p.speed ?? 0, unitPrefs.speed),
-      battery: p.batteryLevel ?? p.battery_level ?? 0,
-      elevation: p.elevation ?? 0,
-      power: p.power ?? 0,
-      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI(p.outsideTemp ?? p.outside_temp, unitPrefs.temperature) : null,
-      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI(p.insideTemp ?? p.inside_temp, unitPrefs.temperature) : null,
-      driverTemp: null as number | null,
-      passengerTemp: null as number | null,
-      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistanceFromSI(p.idealRange ?? p.ideal_range, unitPrefs.distance) : null,
-      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistanceFromSI(p.ratedRange ?? p.rated_range, unitPrefs.distance) : null,
-      estRange: null as number | null,
-      odometer: p.odometer != null ? convertDistanceFromSI(p.odometer, unitPrefs.distance) : null,
-      soc: null as number | null,
-      usableSoc: null as number | null,
-      tireFl: null as number | null,
-      tireFr: null as number | null,
-      tireRl: null as number | null,
-      tireRr: null as number | null,
-      climateOn: p.isClimateOn ?? null,
-      fanStatus: p.fanStatus ?? null,
-    }));
+    return (drive.positions ?? []).map((p: DrivePositionRow) => {
+      // Merge camelCase + snake_case duplicates into locals so the null-guard
+      // narrows the value that flows into each SI converter (all converters
+      // take a strict `number`).
+      const outsideTempC = p.outsideTemp ?? p.outside_temp ?? null;
+      const insideTempC = p.insideTemp ?? p.inside_temp ?? null;
+      const idealRangeM = p.idealRange ?? p.ideal_range ?? null;
+      const ratedRangeM = p.ratedRange ?? p.rated_range ?? null;
+      return {
+        time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp),
+        // Position.speed comes from drivePositionFieldMappings VehicleSpeed -> speed_mph
+        // -> aliasPositionFields renames to 'speed'. The value is still m/s SI; the
+        // legacy '_mph' suffix from the mapping is misleading per ADR-004 #6.
+        speed: convertSpeedFromSI(p.speed ?? 0, unitPrefs.speed),
+        battery: p.batteryLevel ?? p.battery_level ?? 0,
+        elevation: p.elevation ?? 0,
+        power: p.power ?? 0,
+        outsideTemp: outsideTempC != null ? convertTempFromSI(outsideTempC, unitPrefs.temperature) : null,
+        insideTemp: insideTempC != null ? convertTempFromSI(insideTempC, unitPrefs.temperature) : null,
+        driverTemp: null as number | null,
+        passengerTemp: null as number | null,
+        idealRange: idealRangeM != null ? convertDistanceFromSI(idealRangeM, unitPrefs.distance) : null,
+        ratedRange: ratedRangeM != null ? convertDistanceFromSI(ratedRangeM, unitPrefs.distance) : null,
+        estRange: null as number | null,
+        odometer: p.odometer != null ? convertDistanceFromSI(p.odometer, unitPrefs.distance) : null,
+        soc: null as number | null,
+        usableSoc: null as number | null,
+        tireFl: null as number | null,
+        tireFr: null as number | null,
+        tireRl: null as number | null,
+        tireRr: null as number | null,
+        climateOn: p.isClimateOn ?? null,
+        fanStatus: p.fanStatus ?? null,
+      };
+    });
   }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure, formatTime]);
 
   /* ---- Computed stats ---- */
