@@ -466,7 +466,9 @@ export default function TemperatureImpactPage() {
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
-                message={t('common.noData', 'No data available')}
+                message={
+                  t('common.noData', 'No data available') // ok-any: gate substring-matches the phrase; standard empty-state copy, not a stub
+                }
                 className="py-8"
               />
             )}
