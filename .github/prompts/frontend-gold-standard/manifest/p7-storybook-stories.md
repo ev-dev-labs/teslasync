@@ -1,12 +1,12 @@
 # p7-storybook-stories manifest
 
-0 / 239 done
+1 / 239 done
 
 | unit | status | commit |
 |---|---|---|
 | 0001-story-ui-accordion | pending |  |
 | 0002-story-ui-badge | pending |  |
-| 0003-story-ui-button | pending |  |
+| 0003-story-ui-button | done |  |
 | 0004-story-ui-card | pending |  |
 | 0005-story-ui-checkbox | pending |  |
 | 0006-story-ui-commandpalette | pending |  |
