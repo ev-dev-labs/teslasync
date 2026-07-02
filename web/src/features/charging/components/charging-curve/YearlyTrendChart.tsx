@@ -109,15 +109,24 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
           </ResponsiveContainer>
           <div className="mt-3 flex flex-wrap gap-4 px-2">
             <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-              <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
+              <span
+                className="inline-block h-2 w-3 rounded-sm"
+                style={{ backgroundColor: CHART_COLORS[0] }}
+              />
               {t('charging.curve.avg10to80Line', '10→80% avg')}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-              <span className="inline-block h-2 w-3 rounded-sm bg-purple-500" />
+              <span
+                className="inline-block h-2 w-3 rounded-sm"
+                style={{ backgroundColor: CHART_COLORS[2] }}
+              />
               {t('charging.curve.avg20to80Line', '20→80% avg')}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-              <span className="inline-block h-2 w-3 rounded-sm bg-red-500 opacity-30" />
+              <span
+                className="inline-block h-2 w-3 rounded-sm opacity-30"
+                style={{ backgroundColor: CHART_COLORS[5] }}
+              />
               {t('charging.curve.dcSessions', 'DC Sessions')}
             </div>
           </div>
@@ -125,7 +134,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-8 w-8 opacity-20" />}
-          message={t('common.noData', 'No data available')}
+          message={t('common.noData', 'No data to display')}
           className="py-8"
         />
       )}
