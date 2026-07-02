@@ -68,6 +68,11 @@ coverage-by-package.txt
 web/coverage/
 *.test.log
 
+# Playwright E2E
+web/playwright-report/
+web/blob-report/
+web/playwright/.cache/
+
 PROMPT_COMMANDS.txt
 
 # Copilot session state (per-user, not committed)
