@@ -73,6 +73,9 @@ web/playwright-report/
 web/blob-report/
 web/playwright/.cache/
 
+# Storybook
+web/storybook-static/
+
 PROMPT_COMMANDS.txt
 
 # Copilot session state (per-user, not committed)
