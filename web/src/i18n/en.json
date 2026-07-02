@@ -3742,6 +3742,8 @@
   "statistics": {
     "title": "Statistics",
     "subtitle": "Lifetime vehicle statistics and records",
+    "selectVehicle": "Select Vehicle",
+    "averages": "Averages",
     "noData": "No Data",
     "noDataMsg": "No statistics available for this vehicle.",
     "totalDistance": "Total Distance",
