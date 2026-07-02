@@ -6,8 +6,10 @@
  * download, fullscreen toggle, a11y fallback table, and the standard
  * loading / empty states for free.
  *
- * No direct `recharts` import — the shared charts barrel re-exports
- * BarChart/Bar/XAxis/YAxis/CartesianGrid/Tooltip/ResponsiveContainer.
+ * No direct `recharts` import — the shared charts barrel re-exports the
+ * BarChart/Bar/XAxis/YAxis/Tooltip/ResponsiveContainer primitives, and the
+ * themed grid is the shared visx-backed `chartGrid` element (rendered
+ * directly as a child, not spread onto a `<CartesianGrid>`).
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +17,6 @@ import { useTranslation } from 'react-i18next';
 import {
   BarChart,
   Bar,
-  CartesianGrid,
   ChartContainer,
   ResponsiveContainer,
   Tooltip,
@@ -80,7 +81,7 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
     >
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={series} margin={chartMargin}>
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis
             dataKey="ts"
             type="number"
