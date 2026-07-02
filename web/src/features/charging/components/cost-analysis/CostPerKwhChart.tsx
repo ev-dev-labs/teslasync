@@ -3,7 +3,7 @@ import { BarChart3 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
@@ -27,7 +27,7 @@ export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
       {data.length > 0 ? (
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data}>
-            <CartesianGrid {...chartGrid} />
+            {chartGrid}
             <XAxis dataKey="date" {...axisTickSm} />
             <YAxis
               {...axisTickSm}
