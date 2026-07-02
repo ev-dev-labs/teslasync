@@ -1,49 +1,156 @@
-import { useMemo, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-import { GlassPanel, Badge } from '@/components/ui';
-import { BulkActionToolbar } from '@/components/data-display';
+import { Button, Input, Select, type SelectOption } from '@/components/ui';
+import { BulkActionToolbar, MetricCard } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, Skeleton, ErrorDisplay } from '@/components/feedback';
-import { VisuallyHidden } from '@/components/a11y';
+import { Skeleton } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useBulkSelection } from '@/hooks/useBulkSelection';
-
-import {
-  useAutomations,
-  useBulkAutomationsUpdate,
-} from '@/api/hooks/useAutomations';
+import { useAutomations, useBulkAutomationsUpdate } from '@/api/hooks/useAutomations';
+import { useVehicles } from '@/api/hooks/useVehicles';
 import type { Automation } from '@/api/types';
 import { Icons } from '@/lib/icons';
+import { fmtInt } from '@/lib/numberFormat';
+
+import { AutomationListTable } from './AutomationListTable';
+import { AutomationStatusPanel } from './AutomationStatusPanel';
+
+type RowKey = string | number;
+type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
 
 /**
- * AutomationListPage — focused list view of every automation with bulk
- * enable, disable, and delete actions.
+ * AutomationListPage — the streamlined "manage many at once" view.
  *
- * Acts as the streamlined "manage many at once" alternative to the
- * card-based AutomationsListPage, which surfaces the rich preview UI
- * for browsing one at a time. Both pages co-exist; users with dozens of
- * automations gain bulk control here.
+ * A full-width, mobile-first bulk-management surface: a KPI band summarizes the
+ * fleet of automations, a header toolbar filters by status/search, and a bento
+ * pairs the selectable table (hero) with a status-breakdown context panel. The
+ * card-based AutomationsListPage remains the rich single-item browse view; this
+ * page is the bulk-control alternative for users with dozens of automations.
  */
 export default function AutomationListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('automationList.title', 'Automations (list)'));
 
-  const { data: rowsRaw, isLoading, error } = useAutomations();
+  const automationsQuery = useAutomations();
+  const { data: rowsRaw, isLoading, error, refetch } = automationsQuery;
   const automations: Automation[] = useMemo(() => rowsRaw ?? [], [rowsRaw]);
-  const visibleIds = useMemo(() => automations.map((a) => a.id), [automations]);
 
-  const sel = useBulkSelection<number>();
+  const { data: vehiclesRaw } = useVehicles();
+  const vehicleLookup = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const v of vehiclesRaw ?? []) map.set(v.id, v.display_name || v.vin);
+    return map;
+  }, [vehiclesRaw]);
+
   const bulkUpdate = useBulkAutomationsUpdate();
 
-  const masterState = sel.masterState(visibleIds);
+  // ── Filters ────────────────────────────────────────────────────────────────
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [search, setSearch] = useState('');
 
-  const onMasterToggle = useCallback(() => {
-    sel.toggleAll(visibleIds);
-  }, [sel, visibleIds]);
+  const statusOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'all', label: t('automationList.filter.all', 'All statuses') },
+      { value: 'active', label: t('automationList.filter.active', 'Active') },
+      { value: 'disabled', label: t('automationList.filter.disabled', 'Disabled') },
+      { value: 'auto-disabled', label: t('automationList.filter.autoDisabled', 'Auto-disabled') },
+    ],
+    [t],
+  );
+
+  const filtered = useMemo(() => {
+    let result = automations;
+    if (statusFilter !== 'all') {
+      result = result.filter((a) => {
+        if (statusFilter === 'active') return a.enabled && !a.auto_disabled;
+        if (statusFilter === 'disabled') return !a.enabled && !a.auto_disabled;
+        return a.auto_disabled;
+      });
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter(
+        (a) =>
+          (a.name ?? '').toLowerCase().includes(q) ||
+          (a.description ?? '').toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [automations, statusFilter, search]);
+
+  // ── Summary stats (from the full, unfiltered set) ────────────────────────────
+  const stats = useMemo(() => {
+    let active = 0;
+    let disabled = 0;
+    let autoDisabled = 0;
+    let totalRuns = 0;
+    let totalFailures = 0;
+    for (const a of automations) {
+      if (a.auto_disabled) autoDisabled += 1;
+      else if (a.enabled) active += 1;
+      else disabled += 1;
+      totalRuns += a.execution_count ?? 0;
+      totalFailures += a.failure_count ?? 0;
+    }
+    return {
+      total: automations.length,
+      active,
+      disabled,
+      autoDisabled,
+      totalRuns,
+      totalFailures,
+    };
+  }, [automations]);
+
+  // ── Selection (native DataTable multi-select, pruned to visible rows) ────────
+  const [selectedKeys, setSelectedKeys] = useState<RowKey[]>([]);
+  const visibleIdSet = useMemo(() => new Set(filtered.map((a) => a.id)), [filtered]);
+  const effectiveSelected = useMemo(
+    () => selectedKeys.filter((k) => visibleIdSet.has(Number(k))),
+    [selectedKeys, visibleIdSet],
+  );
+  const clearSelection = useCallback(() => setSelectedKeys([]), []);
+
+  const runBulk = useCallback(
+    async (ids: RowKey[], op: 'enable' | 'disable' | 'delete') => {
+      await bulkUpdate.mutateAsync({ ids: ids.map((i) => Number(i)), op });
+      setSelectedKeys([]);
+    },
+    [bulkUpdate],
+  );
+
+  // ── Header toolbar (status filter + search + create) ─────────────────────────
+  const actions = (
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
+      <Select
+        options={statusOptions}
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+        aria-label={t('automationList.filter.statusAria', 'Filter automations by status')}
+        className="w-40"
+      />
+      <Input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={t('automationList.search', 'Search automations…')}
+        aria-label={t('automationList.searchAria', 'Search automations')}
+        icon={<Icons.search className="h-4 w-4" aria-hidden="true" />}
+        className="w-full sm:w-56"
+      />
+      <Button
+        variant="primary"
+        icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
+        onClick={() => navigate('/automations/new')}
+      >
+        {t('automationList.new', 'New')}
+      </Button>
+    </div>
+  );
 
   return (
     <PageContainer
@@ -52,165 +159,122 @@ export default function AutomationListPage() {
         'automationList.subtitle',
         'Bulk-manage automations. Click an automation to edit it in the builder.',
       )}
+      actions={actions}
+      query={automationsQuery}
     >
+      {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <BulkActionToolbar
-          selectedIds={Array.from(sel.selectedIds)}
-          total={visibleIds.length}
-          onClear={sel.clear}
-          itemNoun={{
-            one: t('automationList.noun.one', 'automation'),
-            other: t('automationList.noun.other', 'automations'),
-          }}
-          actions={[
-            {
-              id: 'enable',
-              label: t('automationList.bulk.enable', 'Enable'),
-              icon: <Icons.play className="h-4 w-4" />,
-              onClick: async (ids) => {
-                await bulkUpdate.mutateAsync({
-                  ids: ids.map((i) => Number(i)),
-                  op: 'enable',
-                });
-                sel.clear();
-              },
-            },
-            {
-              id: 'disable',
-              label: t('automationList.bulk.disable', 'Disable'),
-              icon: <Icons.pause className="h-4 w-4" />,
-              onClick: async (ids) => {
-                await bulkUpdate.mutateAsync({
-                  ids: ids.map((i) => Number(i)),
-                  op: 'disable',
-                });
-                sel.clear();
-              },
-            },
-            {
-              id: 'delete',
-              label: t('automationList.bulk.delete', 'Delete'),
-              variant: 'danger',
-              icon: <Icons.delete className="h-4 w-4" />,
-              confirm: {
-                title: t(
-                  'automationList.bulk.deleteConfirm.title',
-                  'Delete automations?',
-                ),
-                description: t(
-                  'automationList.bulk.deleteConfirm.body',
-                  'Selected automations will stop running and be removed permanently. This cannot be undone.',
-                ),
-                confirmLabel: t('common.delete', 'Delete'),
-              },
-              onClick: async (ids) => {
-                await bulkUpdate.mutateAsync({
-                  ids: ids.map((i) => Number(i)),
-                  op: 'delete',
-                });
-                sel.clear();
-              },
-            },
-          ]}
-        />
-
-        <GlassPanel className="overflow-hidden">
+        <section
+          aria-label={t('automationList.kpis', 'Automation summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
+        >
           {isLoading ? (
-            <div className="space-y-2 p-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : error ? (
-            <ErrorDisplay error={error} />
-          ) : automations.length === 0 ? (
-            <EmptyState
-              title={t('automationList.empty.title', 'No automations yet')}
-              message={t(
-                'automationList.empty.body',
-                'Create your first automation in the builder.',
-              )}
-              actionTo={{
-                label: t('automationList.empty.cta', 'Open builder'),
-                to: '/automations/new',
-              }}
-            />
+            Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
+            ))
           ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-2)] text-left text-[var(--text-secondary)]">
-                <tr>
-                  <th className="w-12 px-3 py-3">
-                    <VisuallyHidden as="label" htmlFor="automations-master">
-                      {t('bulk.selectAll', 'Select all')}
-                    </VisuallyHidden>
-                    <input
-                      id="automations-master"
-                      type="checkbox"
-                      checked={masterState === 'all'}
-                      ref={(el) => {
-                        if (el) el.indeterminate = masterState === 'some';
-                      }}
-                      onChange={onMasterToggle}
-                      className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-transparent"
-                      aria-label={t('bulk.selectAll', 'Select all')}
-                    />
-                  </th>
-                  <th className="px-3 py-3">{t('automationList.col.name', 'Name')}</th>
-                  <th className="px-3 py-3">{t('automationList.col.desc', 'Description')}</th>
-                  <th className="px-3 py-3">{t('automationList.col.runs', 'Runs')}</th>
-                  <th className="px-3 py-3">{t('automationList.col.status', 'Status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {automations.map((a) => {
-                  const checked = sel.isSelected(a.id);
-                  return (
-                    <tr
-                      key={a.id}
-                      className="border-b border-[var(--border-subtle)] hover:bg-[var(--surface-2)]"
-                      data-selected={checked || undefined}
-                    >
-                      <td className="px-3 py-3">
-                        <VisuallyHidden as="label" htmlFor={`automation-${a.id}`}>
-                          {t('bulk.selectRow', 'Select row')}
-                        </VisuallyHidden>
-                        <input
-                          id={`automation-${a.id}`}
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => sel.toggle(a.id)}
-                          className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-transparent"
-                          aria-label={t('automationList.selectAutomation', 'Select automation {{name}}', { name: a.name })}
-                        />
-                      </td>
-                      <td className="px-3 py-3 font-medium text-[var(--text-primary)]">
-                        <Link
-                          to={`/automations/${a.id}`}
-                          className="text-cyan-300 underline-offset-2 hover:underline"
-                        >
-                          {a.name}
-                        </Link>
-                      </td>
-                      <td className="px-3 py-3 text-[var(--text-secondary)]">
-                        {a.description ?? '—'}
-                      </td>
-                      <td className="px-3 py-3 text-[var(--text-secondary)]">
-                        {a.execution_count ?? 0}
-                      </td>
-                      <td className="px-3 py-3">
-                        {a.enabled ? (
-                          <Badge variant="success">{t('common.enabled', 'Enabled')}</Badge>
-                        ) : (
-                          <Badge variant="neutral">{t('common.disabled', 'Disabled')}</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <>
+              <MetricCard
+                label={t('automationList.kpi.total', 'Total')}
+                value={stats.total}
+                icon={<Icons.workflow className="h-5 w-5" />}
+              />
+              <MetricCard
+                label={t('automationList.kpi.active', 'Active')}
+                value={stats.active}
+                icon={<Icons.power className="h-5 w-5" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('automationList.kpi.disabled', 'Disabled')}
+                value={stats.disabled}
+                icon={<Icons.pause className="h-5 w-5" />}
+              />
+              <MetricCard
+                label={t('automationList.kpi.autoDisabled', 'Auto-disabled')}
+                value={stats.autoDisabled}
+                icon={<Icons.securityOff className="h-5 w-5" />}
+                color="red"
+              />
+              <MetricCard
+                label={t('automationList.kpi.runs', 'Total runs')}
+                value={fmtInt(stats.totalRuns)}
+                icon={<Icons.play className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('automationList.kpi.failures', 'Failures')}
+                value={fmtInt(stats.totalFailures)}
+                icon={<Icons.warning className="h-5 w-5" />}
+                color="amber"
+              />
+            </>
           )}
-        </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 2 — Bulk action bar (sticky; appears when rows are selected) */}
+      <BulkActionToolbar
+        selectedIds={effectiveSelected}
+        total={filtered.length}
+        onClear={clearSelection}
+        itemNoun={{
+          one: t('automationList.noun.one', 'automation'),
+          other: t('automationList.noun.other', 'automations'),
+        }}
+        actions={[
+          {
+            id: 'enable',
+            label: t('automationList.bulk.enable', 'Enable'),
+            icon: <Icons.play className="h-4 w-4" />,
+            onClick: (ids) => runBulk(ids, 'enable'),
+          },
+          {
+            id: 'disable',
+            label: t('automationList.bulk.disable', 'Disable'),
+            icon: <Icons.pause className="h-4 w-4" />,
+            onClick: (ids) => runBulk(ids, 'disable'),
+          },
+          {
+            id: 'delete',
+            label: t('automationList.bulk.delete', 'Delete'),
+            variant: 'danger',
+            icon: <Icons.delete className="h-4 w-4" />,
+            confirm: {
+              title: t('automationList.bulk.deleteConfirm.title', 'Delete automations?'),
+              description: t(
+                'automationList.bulk.deleteConfirm.body',
+                'Selected automations will stop running and be removed permanently. This cannot be undone.',
+              ),
+              confirmLabel: t('common.delete', 'Delete'),
+            },
+            onClick: (ids) => runBulk(ids, 'delete'),
+          },
+        ]}
+      />
+
+      {/* 3 — Bento: selectable table (hero) + status-breakdown context panel */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="xl:col-span-2">
+            <AutomationListTable
+              automations={filtered}
+              vehicleLookup={vehicleLookup}
+              selectedKeys={effectiveSelected}
+              onSelectionChange={setSelectedKeys}
+              isLoading={isLoading}
+              error={error}
+              onRetry={refetch}
+              totalCount={automations.length}
+            />
+          </div>
+          <AutomationStatusPanel
+            stats={stats}
+            isLoading={isLoading}
+            error={error}
+            onRetry={refetch}
+          />
+        </section>
       </FadeIn>
     </PageContainer>
   );
