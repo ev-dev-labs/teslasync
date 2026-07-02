@@ -11,7 +11,8 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
+  chartGrid,
+  axisTick,
   Tooltip,
   ResponsiveContainer,
 } from '@/components/charts';
@@ -171,9 +172,9 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
           {(coachData?.weekly_trend ?? []).length > 1 ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={coachData?.weekly_trend ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="week" tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} tickLine={false} axisLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} tickLine={false} axisLine={false} />
+                {chartGrid}
+                <XAxis dataKey="week" tick={axisTick} tickLine={false} axisLine={false} />
+                <YAxis domain={[0, 100]} tick={axisTick} tickLine={false} axisLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line {...AREA_DEFAULTS} dataKey="score" stroke="#22c55e" dot={{ fill: '#22c55e', r: 3 }} name={t('Score')} />
               </LineChart>
