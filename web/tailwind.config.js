@@ -7,6 +7,12 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        // Ultra-wide breakpoint for the modern-ui full-width redesign.
+        // Pages use `3xl:` grid columns so dashboards fill wide monitors
+        // (2K/ultrawide) instead of leaving dead space at the edges.
+        '3xl': '1920px',
+      },
       colors: {
         tesla: {
           red: '#e31937',

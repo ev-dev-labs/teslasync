@@ -7,10 +7,10 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, Select, DataTable, PanelTitle, type Column } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
-import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
+import { MetricCard, MetricBar, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -239,6 +239,17 @@ export default function TimelinePage() {
     return m;
   }, [summaryRows]);
 
+  // Per-state dwell time for the bento side panel — same summary payload as the
+  // KPIs, sorted so dominant states surface first, with a display color.
+  const timeByState = useMemo(
+    () =>
+      [...summaryRows]
+        .filter((r) => (r.total_seconds ?? 0) > 0)
+        .sort((a, b) => b.total_seconds - a.total_seconds)
+        .map((r) => ({ ...r, color: STATE_COLORS[r.state] ?? STATE_COLORS.offline })),
+    [summaryRows],
+  );
+
   const totalTransitions = summaryRows.reduce((s, r) => s + (r.transition_count ?? 0), 0);
   const drivingSec = summaryByState.driving?.totalSeconds ?? 0;
   const chargingSec = summaryByState.charging?.totalSeconds ?? 0;
@@ -360,9 +371,9 @@ export default function TimelinePage() {
         </AlertBanner>
       )}
 
-      {/* Summary metric cards */}
+      {/* Summary metric cards — full-width KPI band */}
       <FadeIn>
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section aria-label={t('timeline.kpis', 'Summary metrics')} className="mb-4 grid grid-cols-2 gap-4 sm:mb-6 lg:grid-cols-4">
           <MetricCard
             label={t('timeline.totalTransitions', 'Total Transitions')}
             value={totalTransitions}
@@ -385,15 +396,15 @@ export default function TimelinePage() {
             value={formatHoursFromSeconds(idleSec + sleepingSec)}
             icon={<Moon className="h-5 w-5" />}
           />
-        </div>
+        </section>
       </FadeIn>
 
       {/* State timeline bar — proportional state distribution from summary */}
       <FadeIn delay={0.1}>
-        <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
+        <GlassPanel className="mb-4 p-4 sm:mb-6 sm:p-5">
+          <PanelTitle className="mb-3">
             {t('timeline.stateTimeline', 'State Distribution')}
-          </p>
+          </PanelTitle>
           {summaryRows.length === 0 || totalSeconds === 0 ? (
             sumLoading ? (
               <Skeleton height={32} />
@@ -444,11 +455,12 @@ export default function TimelinePage() {
       {/* Daily breakdown — stacked transition counts per day, grouped
           into the four high-level state buckets shown in the legend. */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-            <BarChart3 className="h-4 w-4 text-cyan-300" />
+        <section className="mb-4 grid grid-cols-1 gap-4 sm:mb-6 xl:grid-cols-3">
+        <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('timeline.dailyBreakdown', 'Daily Breakdown')}
-          </p>
+          </PanelTitle>
           {dailyBreakdown.length === 0 ? (
             tlLoading ? (
               <Skeleton height={220} />
@@ -476,14 +488,47 @@ export default function TimelinePage() {
             </div>
           )}
         </GlassPanel>
+
+        {/* Time-by-state — dwell time per FSM state, derived from the same
+            summary payload; fills the width beside the daily chart on wide screens. */}
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('timeline.timeByState', 'Time by State')}
+          </PanelTitle>
+          {timeByState.length === 0 ? (
+            sumLoading ? (
+              <Skeleton height={220} />
+            ) : (
+              <EmptyState /* no-action: transient — no dwell data in the window */
+                icon={<Clock className="h-8 w-8" />}
+                message={t('timeline.noStateData', 'No state distribution available yet')}
+              />
+            )
+          ) : (
+            <div className="space-y-3">
+              {timeByState.map((row) => (
+                <MetricBar
+                  key={row.state}
+                  label={row.state.charAt(0).toUpperCase() + row.state.slice(1)}
+                  value={row.total_seconds}
+                  max={totalSeconds || row.total_seconds}
+                  color={row.color}
+                  sublabel={`${formatDurationFromSeconds(row.total_seconds)} · ${fmtPercent(row.percentage, 1)}`}
+                />
+              ))}
+            </div>
+          )}
+        </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* State transitions table */}
+      {/* State transitions table — full-width detail band */}
       <FadeIn delay={0.3}>
-        <GlassPanel className="p-4">
-          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3">
             {t('timeline.stateTransitions', 'State Transitions')}
-          </p>
+          </PanelTitle>
           <DataTable
             tableId="analytics:timeline-transitions"
             columns={columns}
