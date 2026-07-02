@@ -26,15 +26,16 @@ import {
 } from '@/api/hooks/useNotifications'
 import type { AlertRuleKind, ComputedMetricOp } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
-import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon, Toggle } from '@/components/ui'
-import { BulkActionsToolbar, type BulkAction, SeverityBadge, SeverityIcon } from '@/components/data-display'
+import { GlassPanel, Badge, Button as UiButton, Checkbox, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon, Tabs, Toggle, Text, PanelTitle, Caption, HelperText, ErrorText } from '@/components/ui'
+import { BulkActionsToolbar, type BulkAction, MetricCard, SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, DraftRecoveryBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
-import { SearchInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
+import { PillFilterBar, type PillItem, SearchInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { cn } from '@/lib/cn'
-import { severityTokens } from '@/lib/tokens'
+import { severityTokens, typography } from '@/lib/tokens'
+import { fmtInt } from '@/lib/numberFormat'
 import { formatDateTime } from '@/lib/dateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -153,6 +154,11 @@ const templateCategories = [...new Set(ruleTemplates.map(t => t.category))].sort
 const numericOperatorOptions: RuleOp[] = ['=', '!=', '<', '<=', '>', '>=', 'changed', 'between', 'outside']
 const scalarOperatorOptions: RuleOp[] = ['=', '!=', 'changed']
 const customSignalCategory = '__custom__'
+
+// Shared field-label classes built from the typography `label` role token so
+// every editor field uses the same theme-aware, non-ad-hoc styling.
+const fieldLabelCls = cn('mb-1 block', typography.role.label)
+const fieldLabelRowCls = cn('mb-1 flex items-center gap-1', typography.role.label)
 
 interface EditorState {
   id?: number
@@ -852,6 +858,38 @@ export default function AlertStudio() {
     ? t('notifications.alertStudio.rules.countOne', '1 rule')
     : t('notifications.alertStudio.rules.countMany', '{{count}} rules', { count: rulesList.length })
 
+  // Real, derived fleet-alert overview surfaced as the KPI band. Every value
+  // comes straight from the loaded rules/channels — no fabricated metrics.
+  const kpi = useMemo(() => {
+    let enabled = 0
+    let critical = 0
+    let snoozed = 0
+    for (const r of rulesList) {
+      if (r.enabled) enabled += 1
+      if (normalizeSeverity(r.severity) === 'critical') critical += 1
+      if (isSnoozeActive(r.snoozed_until)) snoozed += 1
+    }
+    return {
+      total: rulesList.length,
+      enabled,
+      disabled: rulesList.length - enabled,
+      critical,
+      snoozed,
+      channels: channelsList.length,
+    }
+  }, [rulesList, channelsList])
+
+  // Category pills for the template browser. "all" clears the filter; each
+  // category pill carries its live template count.
+  const categoryPills = useMemo<PillItem[]>(() => [
+    { key: 'all', label: t('notifications.alertStudio.templates.allCategory', 'All'), count: ruleTemplates.length },
+    ...templateCategories.map(cat => ({
+      key: cat,
+      label: getTemplateCategory(cat),
+      count: ruleTemplates.filter(x => x.category === cat).length,
+    })),
+  ], [getTemplateCategory, t])
+
   const severityOptions = useMemo(() => [
     { value: 'info', label: t('notifications.alertStudio.severity.info', 'Info') },
     { value: 'warn', label: t('notifications.alertStudio.severity.warn', 'Warning') },
@@ -1243,12 +1281,13 @@ export default function AlertStudio() {
 
     if (valueKind === 'range') {
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+            <label htmlFor="alert-value-min" className={fieldLabelCls}>
               {t('notifications.alertStudio.editor.minValueLabel', 'Minimum Value')}
             </label>
             <UiInput
+              id="alert-value-min"
               type="number"
               className="w-full"
               value={editor.value_min}
@@ -1256,10 +1295,11 @@ export default function AlertStudio() {
             />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+            <label htmlFor="alert-value-max" className={fieldLabelCls}>
               {t('notifications.alertStudio.editor.maxValueLabel', 'Maximum Value')}
             </label>
             <UiInput
+              id="alert-value-max"
               type="number"
               className="w-full"
               value={editor.value_max}
@@ -1273,10 +1313,11 @@ export default function AlertStudio() {
     if (valueKind === 'text') {
       return (
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+          <label htmlFor="alert-value-text" className={fieldLabelCls}>
             {t('notifications.alertStudio.editor.textValueLabel', 'Text Value')}
           </label>
           <UiInput
+            id="alert-value-text"
             className="w-full"
             placeholder={t('notifications.alertStudio.editor.textValuePlaceholder', 'Value to compare')}
             value={editor.value_text}
@@ -1289,10 +1330,11 @@ export default function AlertStudio() {
     if (valueKind === 'bool') {
       return (
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+          <label htmlFor="alert-value-bool" className={fieldLabelCls}>
             {t('notifications.alertStudio.editor.booleanValueLabel', 'Boolean Value')}
           </label>
           <UiSelect
+            id="alert-value-bool"
             className="w-full"
             value={String(editor.value_bool)}
             onChange={e => setEditor(s => ({ ...s, value_bool: e.target.value === 'true' }))}
@@ -1305,19 +1347,20 @@ export default function AlertStudio() {
     if (valueKind === 'none') {
       return (
         <GlassPanel className="p-3">
-          <p className="text-xs text-[var(--text-muted)]">
+          <HelperText>
             {t('notifications.alertStudio.editor.anyChangeDescription', 'This rule fires whenever the selected signal changes.')}
-          </p>
+          </HelperText>
         </GlassPanel>
       )
     }
 
     return (
       <div>
-        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+        <label htmlFor="alert-value-num" className={fieldLabelCls}>
           {t('notifications.alertStudio.editor.numericValueLabel', 'Numeric Value')}
         </label>
         <UiInput
+          id="alert-value-num"
           type="number"
           className="w-full"
           value={editor.value_num}
@@ -1344,93 +1387,121 @@ export default function AlertStudio() {
         </>
       }
     >
-      {/* Opt-in AI natural-language alert builder */}
-      {/* Renders only when ai_mode != 'off' AND the */}
-      {/* nl-alert-builder toggle is on. The withAiFeature HOC inside */}
-      {/* AINLAlertBuilder enforces the gate; the manual AlertStudio */}
-      {/* form below remains the canonical baseline in off mode */}
-      {/* (ADR-015 §I3). The component PROPOSES drafts only — saving */}
-      {/* still flows through the typed handler below */}
-      {/* (ADR-015 §I3 baseline-intact + PROPOSE-only contract). */}
+      {/* Opt-in AI natural-language alert builder. Renders only when
+          ai_mode != 'off' AND the nl-alert-builder toggle is on (withAiFeature
+          HOC gate). PROPOSES drafts only — saving still flows through the typed
+          handler below (ADR-015 §I3 baseline-intact + PROPOSE-only contract). */}
       <FadeIn delay={0.04}>
         <AINLAlertBuilder vehicleId={aiVehicleId ?? undefined} />
       </FadeIn>
 
+      {/* KPI band — live fleet-alert overview derived from the loaded rules and
+          channels. Full-width responsive metric grid (2 → 3 → 6 columns). */}
+      <FadeIn delay={0.06}>
+        <section
+          aria-label={t('notifications.alertStudio.kpis.title', 'Alert rule overview')}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+        >
+          <MetricCard
+            label={t('notifications.alertStudio.kpis.total', 'Total rules')}
+            value={fmtInt(kpi.total)}
+            icon={<Icons.notifications className="h-5 w-5" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('notifications.alertStudio.kpis.enabled', 'Enabled')}
+            value={fmtInt(kpi.enabled)}
+            icon={<Icons.notificationsActive className="h-5 w-5" />}
+            color="green"
+          />
+          <MetricCard
+            label={t('notifications.alertStudio.kpis.disabled', 'Disabled')}
+            value={fmtInt(kpi.disabled)}
+            icon={<Icons.notificationsMuted className="h-5 w-5" />}
+            color="blue"
+          />
+          <MetricCard
+            label={t('notifications.alertStudio.kpis.critical', 'Critical')}
+            value={fmtInt(kpi.critical)}
+            icon={<Icons.severityCritical className="h-5 w-5" />}
+            color="red"
+          />
+          <MetricCard
+            label={t('notifications.alertStudio.kpis.snoozed', 'Snoozed')}
+            value={fmtInt(kpi.snoozed)}
+            icon={<Icons.moonStar className="h-5 w-5" />}
+            color="amber"
+          />
+          <MetricCard
+            label={t('notifications.alertStudio.kpis.channels', 'Channels')}
+            value={fmtInt(kpi.channels)}
+            icon={<Icons.send className="h-5 w-5" />}
+            color="purple"
+          />
+        </section>
+      </FadeIn>
+
       {showTemplates && (
         <FadeIn>
-          <GlassPanel className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <PanelTitle>
                 {t('notifications.alertStudio.templates.header', 'Rule Templates - {{count}} pre-built rules', { count: ruleTemplates.length })}
-              </p>
+              </PanelTitle>
               <SearchInput
                 value={templateSearch}
                 onChange={setTemplateSearch}
                 placeholder={t('notifications.alertStudio.templates.searchPlaceholder', 'Search templates...')}
-                className="w-64"
+                className="w-full sm:w-64"
               />
             </div>
 
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              <UiButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setTemplateCategory(null)}
-                className={cn(
-                  '!text-[11px] border',
-                  templateCategory === null
-                    ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                    : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                )}
-              >
-                {t('notifications.alertStudio.templates.allCategory', 'All')} ({ruleTemplates.length})
-              </UiButton>
-              {templateCategories.map(cat => {
-                const count = ruleTemplates.filter(t => t.category === cat).length
-                return (
-                  <UiButton
-                    key={cat}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setTemplateCategory(cat === templateCategory ? null : cat)}
-                    className={cn(
-                      '!text-[11px] border',
-                      templateCategory === cat
-                        ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                        : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                    )}
-                  >
-                    {getTemplateCategory(cat)} ({count})
-                  </UiButton>
-                )
-              })}
-            </div>
+            <PillFilterBar
+              className="mb-4"
+              ariaLabel={t('notifications.alertStudio.templates.categoryFilter', 'Filter templates by category')}
+              items={categoryPills}
+              activeKey={templateCategory ?? 'all'}
+              onChange={key => setTemplateCategory(key === 'all' ? null : key)}
+            />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-6">
               {filteredTemplates.map(tpl => {
                 const Icon = tpl.icon
                 const tokens = severityTokens[tpl.severity]
                 return (
                   <GlassPanel
                     key={tpl.name}
-                    className="p-3 text-left hover:border-neon-cyan/30 transition-all group cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    className="group cursor-pointer p-3 text-left transition-all hover:border-cyan-400/30"
                     onClick={() => handleCloneTemplate(tpl)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleCloneTemplate(tpl)
+                      }
+                    }}
+                    aria-label={t('notifications.alertStudio.templates.useTemplate', 'Use template {{name}}', { name: getTemplateName(tpl) })}
                   >
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="mb-1.5 flex items-center gap-2">
                       <div className={cn('rounded-lg p-1.5', tokens.bg)}>
-                        <Icon className={cn('h-3.5 w-3.5', tokens.fg)} />
+                        <Icon className={cn('h-3.5 w-3.5', tokens.fg)} aria-hidden="true" />
                       </div>
-                      <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-cyan-300 transition-colors">{getTemplateName(tpl)}</span>
+                      <Text weight="medium" size="xs" color="primary" className="truncate transition-colors group-hover:text-cyan-300">
+                        {getTemplateName(tpl)}
+                      </Text>
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{getTemplateMessage(tpl)}</p>
-                    <div className="flex items-center justify-between mt-1.5">
+                    <Text as="p" size="2xs" color="muted" mono className="truncate">
+                      {getTemplateMessage(tpl)}
+                    </Text>
+                    <div className="mt-1.5 flex items-center justify-between">
                       <SeverityBadge severity={tpl.severity} size="sm" showIcon={false}>
                         {t(`notifications.alertStudio.severity.${tpl.severity}`, tpl.severity === 'warn' ? 'Warning' : tpl.severity)}
                       </SeverityBadge>
-                      <div className="flex items-center gap-1">
-                        <Icons.copy className="h-3 w-3 text-[var(--text-muted)]" />
-                        <span className="text-[10px] text-[var(--text-muted)]">{t('notifications.alertStudio.templates.use', 'Use')}</span>
-                      </div>
+                      <span className="flex items-center gap-1 text-[var(--text-muted)]">
+                        <Icons.copy className="h-3 w-3" aria-hidden="true" />
+                        <Caption>{t('notifications.alertStudio.templates.use', 'Use')}</Caption>
+                      </span>
                     </div>
                   </GlassPanel>
                 )
@@ -1449,12 +1520,15 @@ export default function AlertStudio() {
         </FadeIn>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-3">
-          <GlassPanel className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-[var(--text-primary)]">{t('notifications.alertStudio.rules.title', 'Rules')}</p>
-              <span className="text-[10px] text-[var(--text-muted)]">{rulesCountLabel}</span>
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-12">
+        <section
+          aria-label={t('notifications.alertStudio.rules.title', 'Rules')}
+          className="space-y-3 xl:col-span-5 2xl:col-span-4 3xl:col-span-3"
+        >
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <PanelTitle>{t('notifications.alertStudio.rules.title', 'Rules')}</PanelTitle>
+              <Caption>{rulesCountLabel}</Caption>
             </div>
 
             {rulesList.length > 3 && (
@@ -1501,7 +1575,7 @@ export default function AlertStudio() {
               }}
             />
 
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+            <ul className="max-h-[36rem] space-y-2 overflow-y-auto pr-1">
               {filteredRules.map(rule => {
                 const sev = normalizeSeverity(rule.severity)
                 const active = selectedId === rule.id
@@ -1509,113 +1583,112 @@ export default function AlertStudio() {
                 const triggerMode = normalizeTriggerMode(rule.trigger_mode)
                 const checked = bulkSelected.has(rule.id)
                 return (
-                  <GlassPanel
-                    key={rule.id}
-                    className={cn(
-                      'group p-3 transition-all',
-                      active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-[var(--border-subtle)]',
-                    )}
-                  >
-                    <div className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
-                        checked={checked}
-                        onClick={e => e.stopPropagation()}
-                        onChange={e => toggleBulkSelected(rule.id, e.target.checked)}
-                        aria-label={t('notifications.alertStudio.rules.selectRow', 'Select rule {{name}}', { name: rule.name || untitledRuleLabel })}
-                      />
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className="min-w-0 flex-1 cursor-pointer"
-                        onClick={() => handleSelectRule(rule)}
-                        onKeyDown={event => handleRuleRowKeyDown(event, rule)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <SeverityIcon severity={sev} className="h-3.5 w-3.5 shrink-0" />
-                          <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || untitledRuleLabel}</span>
-                          {triggerMode === 'once' && (
-                            <Badge variant="info" size="sm" title={t('notifications.alertStudio.rules.onceModeHint', 'Fires once until condition resets')}>
-                              {t('notifications.alertStudio.rules.onceMode', 'Once')}
-                            </Badge>
-                          )}
-                          {snoozed && rule.snoozed_until && (
-                            <Badge variant="warning" size="sm">
-                              <Icons.moonStar className="h-3 w-3" />
-                              {t('notifications.alertStudio.snooze.badge', 'Snoozed until {{time}}', { time: formatDateTime(rule.snoozed_until) })}
-                            </Badge>
-                          )}
+                  <li key={rule.id}>
+                    <GlassPanel
+                      className={cn(
+                        'group p-3 transition-all',
+                        active ? 'border-cyan-400/30 bg-cyan-500/5' : 'hover:border-[var(--border-strong)]',
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Checkbox
+                          className="mt-0.5 shrink-0"
+                          checked={checked}
+                          onChange={next => toggleBulkSelected(rule.id, next)}
+                          aria-label={t('notifications.alertStudio.rules.selectRow', 'Select rule {{name}}', { name: rule.name || untitledRuleLabel })}
+                        />
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="min-w-0 flex-1 cursor-pointer"
+                          onClick={() => handleSelectRule(rule)}
+                          onKeyDown={event => handleRuleRowKeyDown(event, rule)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <SeverityIcon severity={sev} className="h-3.5 w-3.5 shrink-0" />
+                            <Text weight="medium" size="xs" color="primary" className="flex-1 truncate">{rule.name || untitledRuleLabel}</Text>
+                            {triggerMode === 'once' && (
+                              <Badge variant="info" size="sm" title={t('notifications.alertStudio.rules.onceModeHint', 'Fires once until condition resets')}>
+                                {t('notifications.alertStudio.rules.onceMode', 'Once')}
+                              </Badge>
+                            )}
+                            {snoozed && rule.snoozed_until && (
+                              <Badge variant="warning" size="sm">
+                                <Icons.moonStar className="h-3 w-3" aria-hidden="true" />
+                                {t('notifications.alertStudio.snooze.badge', 'Snoozed until {{time}}', { time: formatDateTime(rule.snoozed_until) })}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className={cn('mt-1.5 flex items-center gap-3', typography.color.muted)}>
+                            <Text as="span" size="2xs" mono color="muted">{rule.signal_name} {rule.op}</Text>
+                            {rule.updated_at && (
+                              <span className="flex items-center gap-1">
+                                <Icons.clock className="h-3 w-3" aria-hidden="true" /> <Caption>{formatDateTime(rule.updated_at)}</Caption>
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
-                          <span className="font-mono">{rule.signal_name} {rule.op}</span>
-                          {rule.updated_at && (
-                            <span className="flex items-center gap-1">
-                              <Icons.clock className="h-3 w-3" /> {formatDateTime(rule.updated_at)}
-                            </span>
-                          )}
-                        </div>
+                        <UiButton
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 shrink-0 p-0"
+                          onClick={e => { e.stopPropagation(); setSnoozeTargetId(rule.id) }}
+                          title={snoozed
+                            ? t('notifications.alertStudio.snooze.manage', 'Manage snooze')
+                            : t('notifications.alertStudio.snooze.button', 'Snooze')}
+                          aria-label={snoozed
+                            ? t('notifications.alertStudio.snooze.manage', 'Manage snooze')
+                            : t('notifications.alertStudio.snooze.button', 'Snooze')}
+                        >
+                          <Icons.moonStar className={cn('h-3.5 w-3.5', snoozed ? 'text-amber-300' : 'text-[var(--text-muted)]')} aria-hidden="true" />
+                        </UiButton>
+                        <UiButton
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 shrink-0 p-0"
+                          onClick={e => { e.stopPropagation(); toggleRuleMut.mutate({ id: rule.id, enabled: !rule.enabled }) }}
+                          title={rule.enabled
+                            ? t('notifications.alertStudio.rules.disable', 'Disable')
+                            : t('notifications.alertStudio.rules.enable', 'Enable')}
+                          aria-label={rule.enabled
+                            ? t('notifications.alertStudio.rules.disableRule', 'Disable rule')
+                            : t('notifications.alertStudio.rules.enableRule', 'Enable rule')}
+                        >
+                          {rule.enabled
+                            ? <Icons.notificationsActive className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
+                            : <Icons.notificationsMuted className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />}
+                        </UiButton>
+                        <UiButton
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 shrink-0 p-0 opacity-100 transition-opacity hover:text-rose-300 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
+                          onClick={async e => {
+                            e.stopPropagation()
+                            const ruleName = rule.name || untitledRuleLabel
+                            const ok = await confirmDelete({
+                              title: t('notifications.alertStudio.rules.confirmDeleteTitle', 'Delete rule?'),
+                              message: t('notifications.alertStudio.rules.confirmDelete', 'Delete "{{name}}"?', { name: ruleName }),
+                              variant: 'danger',
+                              confirmLabel: t('common.delete', 'Delete'),
+                              cancelLabel: t('common.cancel', 'Cancel'),
+                            })
+                            if (ok) handleDelete(rule.id)
+                          }}
+                          title={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
+                          aria-label={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
+                        >
+                          <Icons.delete className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-rose-300" aria-hidden="true" />
+                        </UiButton>
                       </div>
-                      <UiButton
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 shrink-0 p-0"
-                        onClick={e => { e.stopPropagation(); setSnoozeTargetId(rule.id) }}
-                        title={snoozed
-                          ? t('notifications.alertStudio.snooze.manage', 'Manage snooze')
-                          : t('notifications.alertStudio.snooze.button', 'Snooze')}
-                        aria-label={snoozed
-                          ? t('notifications.alertStudio.snooze.manage', 'Manage snooze')
-                          : t('notifications.alertStudio.snooze.button', 'Snooze')}
-                      >
-                        <Icons.moonStar className={cn('h-3.5 w-3.5', snoozed ? 'text-amber-300' : 'text-[var(--text-muted)]')} />
-                      </UiButton>
-                      <UiButton
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 shrink-0 p-0"
-                        onClick={e => { e.stopPropagation(); toggleRuleMut.mutate({ id: rule.id, enabled: !rule.enabled }) }}
-                        title={rule.enabled
-                          ? t('notifications.alertStudio.rules.disable', 'Disable')
-                          : t('notifications.alertStudio.rules.enable', 'Enable')}
-                        aria-label={rule.enabled
-                          ? t('notifications.alertStudio.rules.disableRule', 'Disable rule')
-                          : t('notifications.alertStudio.rules.enableRule', 'Enable rule')}
-                      >
-                        {rule.enabled
-                          ? <Icons.notifications className="h-3.5 w-3.5 text-neon-green" />
-                          : <Icons.notificationsMuted className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                      </UiButton>
-                      <UiButton
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-rose-300"
-                        onClick={async e => {
-                          e.stopPropagation()
-                          const ruleName = rule.name || untitledRuleLabel
-                          const ok = await confirmDelete({
-                            title: t('notifications.alertStudio.rules.confirmDeleteTitle', 'Delete rule?'),
-                            message: t('notifications.alertStudio.rules.confirmDelete', 'Delete "{{name}}"?', { name: ruleName }),
-                            variant: 'danger',
-                            confirmLabel: t('common.delete', 'Delete'),
-                            cancelLabel: t('common.cancel', 'Cancel'),
-                          })
-                          if (ok) handleDelete(rule.id)
-                        }}
-                        title={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
-                        aria-label={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
-                      >
-                        <Icons.delete className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-neon-red" />
-                      </UiButton>
-                    </div>
-                  </GlassPanel>
+                    </GlassPanel>
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           </GlassPanel>
-        </div>
+        </section>
 
-        <div className="lg:col-span-8 space-y-4">
+        <div className="space-y-4 xl:col-span-7 2xl:col-span-8 3xl:col-span-9">
           {(rules?.length ?? 0) >= 2 && (
             // Opt-in AI cross-rule conflict
             // detection. Renders only when ai_mode != 'off' AND the
@@ -1656,14 +1729,14 @@ export default function AlertStudio() {
               />
             </FadeIn>
           )}
-          <GlassPanel className="p-4" data-tour="alert-studio-builder">
-            <div className="flex items-center gap-2 mb-4">
-              <Icons.pencil className="h-4 w-4 text-neon-cyan" />
-              <p className="text-sm font-medium text-[var(--text-primary)]">
+          <GlassPanel className="p-4 sm:p-5" data-tour="alert-studio-builder">
+            <div className="mb-4 flex items-center gap-2">
+              <Icons.pencil className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <PanelTitle>
                 {isEditing
                   ? t('notifications.alertStudio.editor.editTitle', 'Edit Rule')
                   : t('notifications.alertStudio.editor.newTitle', 'New Rule')}
-              </p>
+              </PanelTitle>
             </div>
 
             {hasDraft && (
@@ -1688,9 +1761,9 @@ export default function AlertStudio() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-name">
+                <label className={fieldLabelCls} htmlFor="alert-name">
                   {t('notifications.alertStudio.editor.nameLabel', 'Name')}
                 </label>
                 <UiInput
@@ -1702,10 +1775,11 @@ export default function AlertStudio() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className={fieldLabelCls} htmlFor="alert-enabled">
                   {t('notifications.alertStudio.editor.enabledLabel', 'Status')}
                 </label>
                 <UiSelect
+                  id="alert-enabled"
                   className="w-full"
                   value={String(editor.enabled)}
                   onChange={e => setEditor(s => ({ ...s, enabled: e.target.value === 'true' }))}
@@ -1714,9 +1788,9 @@ export default function AlertStudio() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-vehicle-picker">
+                <label className={fieldLabelRowCls} htmlFor="alert-vehicle-picker">
                   {t('notifications.alertStudio.editor.vehiclesLabel', 'Vehicles')}
                   <HelpIcon i18nKey="help.fields.alertStudio.vehicles" content="Choose 'All vehicles' to apply this rule to your entire fleet, including any cars you add later. Otherwise pick a specific subset." for="alert-vehicle-picker" />
                 </label>
@@ -1734,37 +1808,20 @@ export default function AlertStudio() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" id="alert-kind-label">
-                  {t('notifications.alertStudio.editor.kindLabel', 'Rule type')}
+                <div className={fieldLabelRowCls}>
+                  <span id="alert-kind-label">{t('notifications.alertStudio.editor.kindLabel', 'Rule type')}</span>
                   <HelpIcon i18nKey="help.fields.alertStudio.kind" content="Choose 'Signal threshold' to trigger when a raw telemetry signal crosses a value. Choose 'Computed metric' to trigger on a derived analytic such as efficiency or charging cost." for="alert-kind-label" />
-                </label>
-                <div className="inline-flex rounded-lg border border-[var(--border-subtle)] overflow-hidden">
-                  <button
-                    type="button"
-                    className={cn(
-                      'px-3 py-1.5 text-xs font-medium transition-colors',
-                      editor.kind === 'signal'
-                        ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                    )}
-                    onClick={() => setEditor(s => ({ ...s, kind: 'signal' }))}
-                  >
-                    {t('notifications.alertStudio.kind.signal', 'Signal threshold')}
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      'px-3 py-1.5 text-xs font-medium transition-colors border-l border-[var(--border-subtle)]',
-                      editor.kind === 'computed_metric'
-                        ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                    )}
-                    onClick={() => setEditor(s => ({ ...s, kind: 'computed_metric' }))}
-                  >
-                    {t('notifications.alertStudio.kind.computedMetric', 'Computed metric')}
-                  </button>
                 </div>
-                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                <Tabs
+                  ariaLabel={t('notifications.alertStudio.editor.kindLabel', 'Rule type')}
+                  activeTab={editor.kind}
+                  onChange={key => setEditor(s => ({ ...s, kind: key as AlertRuleKind }))}
+                  tabs={[
+                    { key: 'signal', label: t('notifications.alertStudio.kind.signal', 'Signal threshold') },
+                    { key: 'computed_metric', label: t('notifications.alertStudio.kind.computedMetric', 'Computed metric') },
+                  ]}
+                />
+                <HelperText className="mt-1">
                   {editor.kind === 'computed_metric'
                     ? t(
                         'notifications.alertStudio.kind.computedMetricHint',
@@ -1774,7 +1831,7 @@ export default function AlertStudio() {
                         'notifications.alertStudio.kind.signalHint',
                         'Fires when a raw telemetry signal crosses a threshold.',
                       )}
-                </p>
+                </HelperText>
               </div>
             </div>
 
@@ -1805,9 +1862,9 @@ export default function AlertStudio() {
               />
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-signal">
+                    <label className={fieldLabelCls} htmlFor="alert-signal">
                       {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
                     </label>
                     <UiSelect
@@ -1819,16 +1876,16 @@ export default function AlertStudio() {
                       options={signalSelectOptions}
                     />
                     {selectedSignal && (
-                      <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                      <HelperText className="mt-1">
                         {t('notifications.alertStudio.editor.signalTypeHint', '{{type}} signal from {{category}}', {
                           type: signalTypeLabels[selectedSignal.value_type],
                           category: getSignalCategoryLabel(selectedSignal.category),
                         })}
-                      </p>
+                      </HelperText>
                     )}
                   </div>
                   <div>
-                    <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-operator">
+                    <label className={fieldLabelRowCls} htmlFor="alert-operator">
                       {t('notifications.alertStudio.editor.operatorLabel', 'Operator')}
                       <HelpIcon i18nKey="help.fields.alertStudio.operator" content="The comparison applied between the live signal value and your typed value. Available operators depend on the signal's value type." for="alert-operator" />
                     </label>
@@ -1845,9 +1902,9 @@ export default function AlertStudio() {
               </>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-severity">
+                <label className={fieldLabelRowCls} htmlFor="alert-severity">
                   {t('notifications.alertStudio.editor.severityLabel', 'Severity')}
                   <HelpIcon i18nKey="help.fields.alertStudio.severity" content="Determines how the alert is presented and prioritised: Info is informational, Warning is actionable, Critical is urgent." for="alert-severity" />
                 </label>
@@ -1878,30 +1935,30 @@ export default function AlertStudio() {
               </div>
               {editor.kind !== 'computed_metric' && (
                 <GlassPanel className="p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  <Text as="p" variant="label" className="mb-1">
                     {t('notifications.alertStudio.editor.allowedOperatorsLabel', 'Allowed Operators')}
-                  </p>
-                  <p className="text-xs text-[var(--text-primary)]">
+                  </Text>
+                  <Text size="xs" color="primary">
                     {editor.signal_name.trim()
                       ? operatorSelectOptions.map(option => option.label).join('  ')
                       : t('notifications.alertStudio.editor.allowedOperatorsPlaceholder', 'Select a signal to see its operators')}
-                  </p>
+                  </Text>
                 </GlassPanel>
               )}
             </div>
 
             {editor.kind !== 'computed_metric' && (
               <div className="mb-4">
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
+                <Text as="p" variant="label" className="mb-2">
                   {t('notifications.alertStudio.editor.typedValueLabel', 'Typed Value')}
-                </label>
+                </Text>
                 {renderValueEditor()}
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-cooldown">
+                <label className={fieldLabelRowCls} htmlFor="alert-cooldown">
                   {t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')}
                   <HelpIcon i18nKey="help.fields.alertStudio.cooldown" content="Minimum minutes to wait between repeat firings of this rule. Helps prevent notification spam during prolonged threshold breaches." for="alert-cooldown" />
                 </label>
@@ -1915,7 +1972,7 @@ export default function AlertStudio() {
                 />
               </div>
               <div data-testid="alert-behavior-block">
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-trigger-mode">
+                <label className={fieldLabelRowCls} htmlFor="alert-trigger-mode">
                   {t('notifications.alertStudio.editor.alertBehaviorLabel', 'Alert Behavior')}
                   <HelpIcon i18nKey="help.fields.alertStudio.alertBehavior" content="Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'." for="alert-trigger-mode" />
                 </label>
@@ -1970,19 +2027,19 @@ export default function AlertStudio() {
                   aria-describedby={triggerModeBlocked ? 'alert-trigger-mode-error' : undefined}
                 />
                 {triggerModeBlocked && (
-                  <p
+                  <ErrorText
                     id="alert-trigger-mode-error"
-                    className="mt-1 text-[10px] text-red-500"
+                    className="mt-1"
                     data-testid="alert-behavior-force-choose"
                   >
                     {t(
                       'notifications.alertStudio.editor.alertBehavior.forceChoose',
                       'Pick how this alert should behave.',
                     )}
-                  </p>
+                  </ErrorText>
                 )}
                 {!triggerModeBlocked && editor.trigger_mode !== 'unset' && (
-                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  <HelperText className="mt-1">
                     {editor.trigger_mode === 'once'
                       ? t(
                           'notifications.alertStudio.editor.alertBehavior.onceDesc',
@@ -1993,12 +2050,12 @@ export default function AlertStudio() {
                           'Keeps firing every {{cooldown}} minutes while the condition stays true.',
                           { cooldown: editor.cooldown_min },
                         )}
-                  </p>
+                  </HelperText>
                 )}
               </div>
               {editor.trigger_mode === 'repeat' && (
                 <div className="sm:col-span-2">
-                  <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-max-fires">
+                  <label className={fieldLabelRowCls} htmlFor="alert-max-fires">
                     {t(
                       'notifications.alertStudio.editor.maxFiresLabel',
                       'Max alerts before condition resolves',
@@ -2024,17 +2081,17 @@ export default function AlertStudio() {
                       setEditor(s => ({ ...s, max_fires_per_resolution: e.target.value }))
                     }
                   />
-                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  <HelperText className="mt-1">
                     {t(
                       'notifications.alertStudio.editor.maxFiresHint',
                       'Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.',
                     )}
-                  </p>
+                  </HelperText>
                 </div>
               )}
               {editor.trigger_mode === 'repeat' && (
                 <div className="sm:col-span-2">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="mb-2 flex items-center gap-2">
                     <Toggle
                       id="alert-escalation-enabled"
                       checked={editor.escalation_enabled}
@@ -2050,12 +2107,12 @@ export default function AlertStudio() {
                       }
                       size="sm"
                     />
-                    <span className="text-xs text-[var(--text-primary)] font-medium">
+                    <Text size="xs" weight="medium" color="primary">
                       {t(
                         'notifications.alertStudio.editor.escalationCheckboxLabel',
                         'Escalate to a higher severity if the condition stays unresolved',
                       )}
-                    </span>
+                    </Text>
                     <HelpIcon
                       i18nKey="help.fields.alertStudio.escalation"
                       content="When the underlying condition stays true for at least the minutes you specify, subsequent fires use the escalated severity instead of the base one. Useful for a soft warn → critical promotion when a problem is being ignored."
@@ -2063,9 +2120,9 @@ export default function AlertStudio() {
                     />
                   </div>
                   {editor.escalation_enabled && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-escalation-after">
+                        <label className={fieldLabelCls} htmlFor="alert-escalation-after">
                           {t(
                             'notifications.alertStudio.editor.escalationAfterLabel',
                             'Escalate after (minutes)',
@@ -2088,7 +2145,7 @@ export default function AlertStudio() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-escalation-severity">
+                        <label className={fieldLabelCls} htmlFor="alert-escalation-severity">
                           {t(
                             'notifications.alertStudio.editor.escalationSeverityLabel',
                             'Escalated severity',
@@ -2118,12 +2175,12 @@ export default function AlertStudio() {
                           ]}
                         />
                       </div>
-                      <p className="sm:col-span-2 text-[10px] text-[var(--text-muted)]">
+                      <HelperText className="sm:col-span-2">
                         {t(
                           'notifications.alertStudio.editor.escalationHint',
                           'Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.',
                         )}
-                      </p>
+                      </HelperText>
                     </div>
                   )}
                 </div>
@@ -2163,21 +2220,21 @@ export default function AlertStudio() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
+              <Text as="p" variant="label" className="mb-2">
                 {t('notifications.alertStudio.channels.testTargetLabel', 'Test Delivery Target')}
-              </label>
+              </Text>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-[var(--text-primary)]">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                  <Text size="xs" color="primary">
                     {t('notifications.alertStudio.channels.browserToast', 'Browser toast notification (real-time via SSE)')}
-                  </span>
+                  </Text>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-[var(--text-primary)]">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                  <Text size="xs" color="primary">
                     {t('notifications.alertStudio.channels.alertHistory', 'Alert history (saved to database)')}
-                  </span>
+                  </Text>
                 </div>
 
                 <GlassPanel className="p-3" data-tour="alert-studio-channels">
@@ -2192,9 +2249,9 @@ export default function AlertStudio() {
                     <ErrorDisplay error={channelsError} compact />
                   ) : channelsList.length > 0 ? (
                     <div>
-                      <p className="text-xs text-[var(--text-muted)] mb-1.5">
+                      <HelperText className="mb-1.5">
                         {t('notifications.alertStudio.channels.externalChannels', 'External channels for test notifications:')}
-                      </p>
+                      </HelperText>
                       <div className="flex flex-wrap gap-2">
                         {channelsList.map(ch => {
                           const isSelected = testChannelIds === null || testChannelIds.includes(ch.id)
@@ -2203,15 +2260,16 @@ export default function AlertStudio() {
                               key={ch.id}
                               variant="ghost"
                               size="sm"
+                              aria-pressed={isSelected}
                               className={cn(
                                 'h-auto rounded-lg border px-3 py-1.5 text-xs transition-colors',
                                 isSelected
-                                  ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                                  : 'bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--border-strong)]',
+                                  ? 'border-neon-cyan/30 bg-neon-cyan/10 text-cyan-300'
+                                  : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--border-strong)]',
                               )}
                               onClick={() => handleToggleTestChannel(ch.id)}
                             >
-                              <Icons.notifications className="h-3 w-3" />
+                              <Icons.notifications className="h-3 w-3" aria-hidden="true" />
                               {ch.name} ({t(`notifications.alertStudio.channels.kind.${ch.kind}`, ch.kind)})
                             </UiButton>
                           )
@@ -2229,7 +2287,7 @@ export default function AlertStudio() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
+            <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
               <UiButton
                 variant="primary"
                 size="sm"
@@ -2294,7 +2352,8 @@ export default function AlertStudio() {
               )}
             </p>
             {snoozeTargetActive && snoozeTargetRule.snoozed_until && (
-              <div className="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              <div className="flex items-center gap-2 rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                <Icons.moonStar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 {t('notifications.alertStudio.snooze.currentlySnoozed', 'Currently snoozed until {{time}}', {
                   time: formatDateTime(snoozeTargetRule.snoozed_until),
                 })}
