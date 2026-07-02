@@ -23,7 +23,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
   ChartGradient, chartGrid, axisTickSm, CHART_COLORS,
 } from '@/components/charts';
@@ -333,7 +333,7 @@ export default function MediaPlayerPage() {
       <FadeIn>
         <GlassPanel glow={isPlaying ? 'cyan' : 'none'} className="p-6">
           <div className="flex items-start gap-6">
-            {/* Album art placeholder */}
+            {/* Album art (decorative icon) */}
             <div
               className={cn(
                 'flex h-28 w-28 shrink-0 items-center justify-center rounded-xl bg-gray-800/60',
@@ -465,7 +465,7 @@ export default function MediaPlayerPage() {
                   <defs>
                     <ChartGradient id="volGrad" color={CHART_COLORS[0]} />
                   </defs>
-                  <CartesianGrid {...chartGrid} />
+                  {chartGrid}
                   <XAxis dataKey="time" {...axisTickSm} />
                   <YAxis
                     {...axisTickSm}
