@@ -1,0 +1,13 @@
+<!--
+  Injected into the <head> of the Storybook preview iframe.
+  Mirrors the font/meta tags in web/index.html so stories render with the
+  exact same typography as the production app shell instead of falling back
+  to the `system-ui` link in the `--font-sans` Tailwind theme token.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<meta name="color-scheme" content="dark" />
