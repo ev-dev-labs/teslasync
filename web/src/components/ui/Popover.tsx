@@ -1,13 +1,14 @@
-import {
-  type ReactNode,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type RefObject,
-} from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, type ComponentProps, type ReactNode, type RefObject } from 'react';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { cn } from '@/lib/cn';
+
+/**
+ * Radix types `Popover.Anchor`'s `virtualRef` as `RefObject<Measurable>`
+ * (`Measurable` comes from the internal `@radix-ui/rect` package, which isn't
+ * one of our direct dependencies — so it's derived here via `ComponentProps`
+ * instead of imported by name).
+ */
+type PopoverVirtualRef = ComponentProps<typeof PopoverPrimitive.Anchor>['virtualRef'];
 
 export type PopoverAlign = 'start' | 'end' | 'center';
 export type PopoverSide = 'bottom' | 'top';
@@ -36,12 +37,29 @@ export interface PopoverProps {
 }
 
 /**
- * Lightweight popover primitive. Portals content to <body>, positions it
- * relative to `anchorRef`, and closes on Esc / click-outside / blur-out.
- * Intentionally NOT a focus trap (popovers should let users tab back to the
- * trigger and beyond). When you need a focus trap, use {@link Modal}.
- * Auto-flips `side` when the requested side overflows the viewport, and
- * shifts horizontally to keep the content within the viewport.
+ * Lightweight popover primitive built on Radix UI's `Popover`. Portals content
+ * to `<body>` and positions it relative to `anchorRef` via Radix's
+ * Popper/floating-ui placement engine — auto-flip and viewport clamping are
+ * built in, and position tracks the anchor live on scroll/resize instead of
+ * the old manual `resize`/`scroll` listener pair.
+ *
+ * Not a hard focus trap: Tab/Shift+Tab loop within the open content (Radix's
+ * standard Popover keyboard contract) but Escape, an outside pointerdown, or
+ * tabbing focus all the way out of the content close it and return focus to
+ * the anchor. When you need a true modal focus trap, use {@link Modal}.
+ *
+ * The trigger button lives entirely OUTSIDE this component (owned by the
+ * caller — see `anchorRef`), so placement is anchored to it via
+ * `Popover.Anchor`'s `virtualRef` instead of rendering a `Popover.Trigger`.
+ * Two consequences of that, both handled explicitly below:
+ *   1. Radix's built-in "restore focus to the trigger on close" only knows
+ *      about a real `Popover.Trigger`, so `onCloseAutoFocus` does it instead.
+ *   2. Radix's built-in "clicking the trigger toggles, doesn't re-dismiss"
+ *      also only knows about a real `Popover.Trigger`, so
+ *      `onPointerDownOutside` explicitly ignores pointerdowns that land on
+ *      the anchor — otherwise a caller's `onClick={() => setOpen(o => !o)}`
+ *      trigger button would have its toggle-closed cancelled out by Radix's
+ *      own dismiss-then-reopen sequence.
  */
 export function Popover({
   open,
@@ -54,132 +72,61 @@ export function Popover({
   ariaLabel,
   children,
 }: PopoverProps) {
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; resolvedSide: PopoverSide } | null>(
-    null,
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) onClose();
+    },
+    [onClose],
   );
 
-  useLayoutEffect(() => {
-    if (!open || typeof window === 'undefined') return;
-
-    const compute = () => {
-      const anchor = anchorRef.current;
-      const content = contentRef.current;
-      if (!anchor || !content) return;
-
-      const a = anchor.getBoundingClientRect();
-      const c = content.getBoundingClientRect();
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const margin = 8;
-
-      // Resolve side: flip if requested side overflows.
-      let resolvedSide: PopoverSide = side;
-      const spaceBelow = vh - a.bottom - sideOffset - margin;
-      const spaceAbove = a.top - sideOffset - margin;
-      if (side === 'bottom' && c.height > spaceBelow && spaceAbove > spaceBelow) {
-        resolvedSide = 'top';
-      } else if (side === 'top' && c.height > spaceAbove && spaceBelow > spaceAbove) {
-        resolvedSide = 'bottom';
-      }
-
-      let top: number;
-      if (resolvedSide === 'bottom') {
-        top = a.bottom + sideOffset;
-      } else {
-        top = a.top - sideOffset - c.height;
-      }
-
-      let left: number;
-      if (align === 'start') {
-        left = a.left;
-      } else if (align === 'end') {
-        left = a.right - c.width;
-      } else {
-        left = a.left + a.width / 2 - c.width / 2;
-      }
-
-      // Clamp horizontally to viewport.
-      if (left + c.width + margin > vw) left = vw - c.width - margin;
-      if (left < margin) left = margin;
-
-      // Clamp vertically (rare — only if both sides overflow).
-      if (top + c.height + margin > vh) top = vh - c.height - margin;
-      if (top < margin) top = margin;
-
-      setPos({ top, left, resolvedSide });
-    };
-
-    compute();
-    window.addEventListener('resize', compute);
-    window.addEventListener('scroll', compute, true);
-    return () => {
-      window.removeEventListener('resize', compute);
-      window.removeEventListener('scroll', compute, true);
-    };
-  }, [open, side, align, sideOffset, anchorRef]);
-
-  // Restore focus to trigger when the popover closes.
-  const wasOpenRef = useRef(false);
-  useEffect(() => {
-    if (open) {
-      wasOpenRef.current = true;
-    } else if (wasOpenRef.current) {
-      wasOpenRef.current = false;
-      anchorRef.current?.focus?.();
-    }
-  }, [open, anchorRef]);
-
-  // Esc + click-outside (pointerdown so it fires before focus changes).
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      if (!target) return;
-      if (contentRef.current?.contains(target)) return;
-      if (anchorRef.current?.contains(target)) return;
-      onClose();
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open, onClose, anchorRef]);
-
-  if (!open || typeof document === 'undefined') return null;
-
-  const content = (
-    <div
-      ref={contentRef}
-      role="dialog"
-      aria-label={ariaLabel}
-      aria-modal="false"
-      style={{
-        position: 'fixed',
-        top: pos?.top ?? -9999,
-        left: pos?.left ?? -9999,
-        visibility: pos ? 'visible' : 'hidden',
-        zIndex: 60,
-      }}
-      className={cn(
-        'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl',
-        'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
-        className,
-      )}
-    >
-      {children}
-    </div>
+  return (
+    <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
+      {/*
+        `virtualRef`'s `current` is typed non-null, but our `anchorRef` is
+        `RefObject<HTMLElement | null>` — the anchor may not be mounted yet
+        on first render. `HTMLElement` structurally satisfies `Measurable`
+        (`getBoundingClientRect()`); Radix's own implementation reads
+        `virtualRef.current` defensively and is fine with `null` at runtime
+        (it feeds straight into a nullable `anchor` state internally), so
+        this cast only relaxes a type that's stricter than the library's own
+        null-safe runtime behavior.
+      */}
+      <PopoverPrimitive.Anchor virtualRef={anchorRef as unknown as PopoverVirtualRef} />
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          side={side}
+          align={align}
+          sideOffset={sideOffset}
+          collisionPadding={8}
+          aria-label={ariaLabel}
+          aria-modal="false"
+          onOpenAutoFocus={(e) => {
+            // The original primitive never moved focus on open — callers
+            // like the alert-message template autocomplete rely on focus
+            // staying in their own `<textarea>` while suggestions render
+            // alongside it.
+            e.preventDefault();
+          }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            anchorRef.current?.focus?.();
+          }}
+          onPointerDownOutside={(e) => {
+            const target = e.target;
+            if (anchorRef.current && target instanceof Node && anchorRef.current.contains(target)) {
+              e.preventDefault();
+            }
+          }}
+          className={cn(
+            'z-[60] rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl',
+            'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+            'scale-in',
+            className,
+          )}
+        >
+          {children}
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   );
-
-  return createPortal(content, document.body);
 }
