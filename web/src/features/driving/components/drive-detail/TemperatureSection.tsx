@@ -36,7 +36,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
 
   return (
     <FadeIn className="h-full">
-      {/* chart-a11y:no-table dense per-sample temperature trace; min/avg stats appear above the chart in the stat tiles */}
+      {/* chart-a11y:no-table dense per-sample temperature trace; summary temperature, climate and fan stats appear above the chart in the stat tiles */}
       <ChartContainer
         title={t('driveDetail.temperatures', 'Temperatures')}
         ariaLabel={t('driveDetail.temperatures.aria', 'Inside, outside, driver and passenger temperature lines over the drive timeline')}
