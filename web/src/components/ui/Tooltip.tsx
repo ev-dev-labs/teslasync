@@ -1,13 +1,16 @@
 import {
-  Children,
   cloneElement,
   isValidElement,
+  useCallback,
   useEffect,
   useId,
   useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactElement,
   type ReactNode,
 } from 'react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { cn } from '@/lib/cn';
 
 export interface TooltipProps {
@@ -98,7 +101,24 @@ const sideClasses = {
 } as const;
 
 /**
- * Hover/focus tooltip.
+ * Hover/focus tooltip, built on Radix UI's `Tooltip` primitive.
+ *
+ * Radix owns the accessible trigger contract — the WAI-ARIA tooltip state
+ * machine (pointer intent, focus/blur, single-open coordination through
+ * `Tooltip.Provider`, and the `data-state` attribute) is delegated to
+ * `Tooltip.Root`/`Tooltip.Trigger` instead of the previous hand-rolled event
+ * wiring. Radix primitives are unstyled, so this file owns the visual layer:
+ * the inverted glass surface, placement, motion, and the always-rendered
+ * `role="tooltip"` body.
+ *
+ * The body is rendered by THIS component (not `Tooltip.Content`) on purpose:
+ * the shared visual contract requires a single `role="tooltip"` element that
+ * carries the intrinsic `text-gray-100 dark:text-gray-900` pair and is wired
+ * to the trigger via a stable `aria-describedby`, which the audit script and
+ * contract tests pin. Radix's `Tooltip.Content` renders a *separate*
+ * visually-hidden `role="tooltip"` node and only wires `aria-describedby`
+ * while open, so the trigger machinery is reused while the description node
+ * stays owned here.
  *
  * Visual contract — inverted surface:
  *   - dark mode  → light card (`bg-gray-100`) with dark text (`text-gray-900`)
@@ -120,9 +140,10 @@ const sideClasses = {
  * - When `children` is a single element, the tooltip id is added to that
  *   element's `aria-describedby` (preserving any existing value) so screen
  *   readers announce the tooltip text after the trigger's own name.
- * - The visibility CSS handles both `:hover` AND `:focus-within` so keyboard
- *   users (Tab into a button wrapped in a tooltip) get the same affordance as
- *   mouse users.
+ * - Radix reveals the body on hover AND keyboard focus; `Escape` dismisses it
+ *   while the trigger keeps focus (WAI-ARIA tooltip pattern), and the CSS
+ *   `:focus-within` reveal keeps it visible for the remaining cases (touch
+ *   tap, non-Radix focus).
  *
  * Touch devices:
  * - Wrap a focusable trigger (e.g. <button>) and tapping it grants focus,
@@ -135,6 +156,19 @@ const sideClasses = {
  */
 export function Tooltip({ content, side = 'top', multiline, children }: TooltipProps) {
   const tooltipId = useId();
+
+  // Radix owns the open-state machine (hover intent, focus/blur, single-open
+  // coordination); we mirror it into local state to drive the visual reveal
+  // and the `Escape`-to-dismiss guard.
+  const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  const handleOpenChange = useCallback((next: boolean) => {
+    setOpen(next);
+    // A fresh hover/focus clears a prior Escape dismissal so the tooltip can
+    // reappear on the next interaction.
+    if (next) setDismissed(false);
+  }, []);
 
   // Stable per-mount fingerprint for the dev-time warn so we don't
   // de-duplicate across distinct callsites that happen to share the same
@@ -149,46 +183,84 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
   // We try to attach `aria-describedby` directly to the trigger element so
   // assistive tech reads the tooltip after the trigger name. This works when
   // children is a single React element (the common case — wrapping one
-  // <button>/<IconBox>/etc.). For text-only or multiple children we fall back
-  // to the wrapper span, which still satisfies role="tooltip" semantics.
-  const child = Children.count(children) === 1 ? Children.only(children) : null;
+  // <button>/<IconBox>/etc.). For text-only, array, or empty children we fall
+  // back to a wrapper span, which still satisfies role="tooltip" semantics
+  // (and never throws the way `Children.only` would on a bare string).
+  const child = isValidElement(children) ? children : null;
   const enrichedChild =
-    child && isValidElement(child)
-      ? (cloneElement(child as ReactElement<{ 'aria-describedby'?: string }>, {
-          'aria-describedby': [
-            (child.props as { 'aria-describedby'?: string })['aria-describedby'],
-            tooltipId,
-          ]
-            .filter(Boolean)
-            .join(' '),
-        }) as ReactNode)
+    child
+      ? (cloneElement(
+          child as ReactElement<{
+            'aria-describedby'?: string;
+            onKeyDown?: (event: ReactKeyboardEvent<HTMLElement>) => void;
+          }>,
+          {
+            'aria-describedby': [
+              (child.props as { 'aria-describedby'?: string })['aria-describedby'],
+              tooltipId,
+            ]
+              .filter(Boolean)
+              .join(' '),
+            onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => {
+              (
+                child.props as {
+                  onKeyDown?: (event: ReactKeyboardEvent<HTMLElement>) => void;
+                }
+              ).onKeyDown?.(event);
+              if (event.key === 'Escape') {
+                setOpen(false);
+                setDismissed(true);
+              }
+            },
+          },
+        ) as ReactNode)
       : children;
 
   return (
-    <span className="relative inline-flex group/tip">
-      {enrichedChild}
-      <span
-        id={tooltipId}
-        role="tooltip"
-        className={cn(
-          'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
-          multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
-          'bg-gray-900 text-gray-100 shadow-lg dark:bg-gray-100 dark:text-gray-900',
-          // Forced-colors mode suppresses
-          // box-shadow and remaps the bg-gray to Canvas, so the tooltip
-          // body would otherwise blend into surrounding panels. Pin a
-          // system-colour border + opaque Canvas bg so the inverted
-          // surface still reads as a separate floating layer in
-          // Windows High Contrast.
-          'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
-          'opacity-0 scale-95 transition-all duration-fast motion-reduce:transition-none',
-          'group-hover/tip:opacity-100 group-hover/tip:scale-100',
-          'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
-          sideClasses[side],
-        )}
-      >
-        {content}
-      </span>
-    </span>
+    <TooltipPrimitive.Provider delayDuration={0} disableHoverableContent>
+      <TooltipPrimitive.Root open={open} onOpenChange={handleOpenChange}>
+        <span className="relative inline-flex group/tip">
+          {child ? (
+            <TooltipPrimitive.Trigger asChild>{enrichedChild}</TooltipPrimitive.Trigger>
+          ) : (
+            <TooltipPrimitive.Trigger asChild>
+              <span aria-describedby={tooltipId} className="inline-flex">
+                {children}
+              </span>
+            </TooltipPrimitive.Trigger>
+          )}
+          <span
+            id={tooltipId}
+            role="tooltip"
+            data-state={open ? 'open' : 'closed'}
+            data-dismissed={dismissed ? 'true' : undefined}
+            className={cn(
+              'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
+              multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
+              'bg-gray-900 text-gray-100 shadow-lg dark:bg-gray-100 dark:text-gray-900',
+              // Forced-colors mode suppresses
+              // box-shadow and remaps the bg-gray to Canvas, so the tooltip
+              // body would otherwise blend into surrounding panels. Pin a
+              // system-colour border + opaque Canvas bg so the inverted
+              // surface still reads as a separate floating layer in
+              // Windows High Contrast.
+              'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
+              'opacity-0 scale-95 transition-all duration-fast motion-reduce:transition-none',
+              'group-hover/tip:opacity-100 group-hover/tip:scale-100',
+              'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
+              // Radix drives the open state on hover/focus; mirror it so the
+              // reveal stays in lock-step with the primitive's `data-state`.
+              'data-[state=open]:opacity-100 data-[state=open]:scale-100',
+              // `Escape` force-hides the body even while the trigger keeps
+              // focus (overrides the reveal above until the next interaction).
+              'data-[dismissed=true]:!opacity-0 data-[dismissed=true]:!scale-95',
+              sideClasses[side],
+            )}
+          >
+            {content}
+          </span>
+        </span>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   );
 }
