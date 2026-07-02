@@ -22,6 +22,9 @@ import { parseSettingEnum } from '@/lib/parseSettingEnum'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
+/** Exact miles/hour → SI meters/second factor (1609.344 m ÷ 3600 s). */
+const MPS_PER_MPH = 0.44704;
+
 interface VehicleChartsProps {
   state: VehicleState
   positions: Position[] | undefined
@@ -38,7 +41,13 @@ export function VehicleCharts({
   const { t } = useTranslation()
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
-  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  // Position.speed_mph carries miles/hour, not SI m/s (ADR-005: the positions
+  // hypertable keeps Tesla source units and the API converts m/s→mph on read —
+  // see internal/models/telemetry/position.go + position/repo.go). Normalize
+  // that legacy mph reading to SI so the canonical boundary converter renders
+  // it in the user's chosen speed unit (mph or km/h).
+  const toSpeedDisplay = (mph: number) =>
+    convertSpeedFromSI(mph * MPS_PER_MPH, unitPrefs.speed);
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
 
   const trail: LatLngExpression[] =
