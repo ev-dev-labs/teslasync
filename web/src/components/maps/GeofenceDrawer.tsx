@@ -140,7 +140,7 @@ function FenceLabel({ position, name }: { position: [number, number]; name: stri
     <Marker
       position={position}
       icon={
-        <span className="whitespace-nowrap rounded bg-slate-900/80 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm ring-1 ring-white/10">
+        <span className="whitespace-nowrap rounded bg-[var(--surface-2)]/80 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm ring-1 ring-white/10">
           {name}
         </span>
       }

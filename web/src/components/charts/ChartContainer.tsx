@@ -610,7 +610,6 @@ function UPlotChart({ plot, hiddenSeries, emptyMessage }: UPlotChartProps) {
     };
     // Rebuild only on structural changes; data / size / visibility are handled
     // by the dedicated effects below so live ticks never tear down the canvas.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structuralKey]);
 
   // ── push new data without rebuilding (the live-tick hot path) ──

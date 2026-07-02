@@ -4,6 +4,7 @@ import { AnimatePresence, motion, type MotionProps, type PanInfo } from 'framer-
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { VisuallyHidden } from '@/components/a11y';
 
 export interface DrawerProps {
   open: boolean;
@@ -209,7 +210,9 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
                 ) : (
                   // No visible chrome (original behaviour), but still expose an
                   // accessible name so Radix can label the dialog.
-                  <Dialog.Title className="sr-only">{t('common.panel', 'Panel')}</Dialog.Title>
+                  <Dialog.Title asChild>
+                    <VisuallyHidden>{t('common.panel', 'Panel')}</VisuallyHidden>
+                  </Dialog.Title>
                 )}
                 <div
                   className={cn(
