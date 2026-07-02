@@ -16,8 +16,8 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
 
   return (
     <GlassPanel className="p-6">
-      <h3 className="section-title mb-4 flex items-center gap-2">
-        <BatteryCharging className="h-4 w-4 text-neon-amber" />
+      <h3 className="section-title mb-4 flex flex-wrap items-center gap-2">
+        <BatteryCharging className="h-4 w-4 shrink-0 text-neon-amber" />
         {t('charging.charts.batteryLevelAtStart', 'Battery Level at Charge Start')}
         <span className="text-xs text-[var(--text-muted)] font-normal ml-2">
           {t('charging.charts.batteryLevelHint', 'How low do you typically go before charging?')}
@@ -30,7 +30,7 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
             <XAxis dataKey="range" tick={axisTickSm} />
             <YAxis tick={axisTickSm} />
             <Tooltip content={<ChartTooltip />} />
-            <Bar dataKey="count" name="Sessions" fill="#f59e0b" fillOpacity={0.6} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="count" name={t('charging.charts.sessions', 'Sessions')} fill="#f59e0b" fillOpacity={0.6} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
