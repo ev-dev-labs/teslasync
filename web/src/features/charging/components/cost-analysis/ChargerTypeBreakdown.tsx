@@ -3,7 +3,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { Zap } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import {
-  ChartTooltip, PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import type { ChargerTypeData } from './types';
@@ -11,6 +11,53 @@ import type { ChargerTypeData } from './types';
 interface ChargerTypeBreakdownProps {
   data: ChargerTypeData[];
   totalCost: number;
+}
+
+interface ChargerTypeTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload?: ChargerTypeData }>;
+  formatCurrency: (amount: number, decimals?: number) => string;
+  sessionsLabel: string;
+}
+
+// recharts builds a Pie tooltip payload item WITHOUT a top-level `color`/`fill`
+// (the segment data — including its colour — sits under `payload[0].payload`),
+// so the generic shared <ChartTooltip> can't resolve the per-segment swatch.
+// This pie-aware renderer reads the segment directly, matching the glass styling
+// of the migrated ChartTooltip. `pointer-events-none` keeps it tap-friendly on
+// touch devices; `role="tooltip"` announces it to assistive tech.
+function ChargerTypeTooltip({
+  active,
+  payload,
+  formatCurrency,
+  sessionsLabel,
+}: ChargerTypeTooltipProps) {
+  const entry = payload?.[0]?.payload;
+  if (!active || !entry) return null;
+  return (
+    <div
+      role="tooltip"
+      className="pointer-events-none max-w-[min(16rem,90vw)] select-none rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 text-xs shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl"
+    >
+      <div className="mb-1.5 flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: entry.color }}
+        />
+        <span className="font-medium text-[var(--text-secondary)]">
+          {entry.name ?? '—'}
+        </span>
+      </div>
+      <div className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
+        {formatCurrency(entry.cost ?? 0, 2)}
+      </div>
+      <div className="mt-0.5 text-[var(--text-muted)]">
+        {fmtInt(entry.sessions ?? 0)} {sessionsLabel} ·{' '}
+        {fmtWithUnit(entry.energy ?? 0, 'kWh', 1)}
+      </div>
+    </div>
+  );
 }
 
 export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownProps) {
@@ -44,7 +91,14 @@ export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownPr
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip
+                  content={
+                    <ChargerTypeTooltip
+                      formatCurrency={formatCurrency}
+                      sessionsLabel={t('costAnalysis.chargerType.sessions', 'sessions')}
+                    />
+                  }
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
