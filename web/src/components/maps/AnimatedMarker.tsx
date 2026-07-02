@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Marker, useMap } from './MapTileLayer';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Marker, useMap } from 'react-map-gl/maplibre';
 
 interface AnimatedMarkerProps {
   position: [number, number];
@@ -33,20 +33,31 @@ const EASE = 0.3;
 const EPSILON = 1e-7;
 
 /**
+ * Decorative markers must not swallow touch input. With `pointer-events: none`
+ * a pinch / drag / two-finger rotate that lands on the car icon still reaches
+ * the MapLibre GL canvas beneath it, so native map gestures keep working on
+ * touch devices. Hoisted to a stable reference so react-map-gl only re-applies
+ * the style once instead of on every animation frame.
+ */
+const NON_INTERACTIVE: CSSProperties = { pointerEvents: 'none' };
+
+/**
  * Map marker that smoothly tracks a moving position on MapLibre GL.
  *
+ * Rendered as a native react-map-gl `<Marker>` (WebGL vector map, no Leaflet).
  * Each animation frame eases the *currently displayed* coordinate toward the
  * latest `position` (never a stale origin), so rapid updates or timeline
  * scrubbing converge smoothly to the newest point with a small bounded lag and
  * no rubber-band snap-back. The marker is kept in view (without changing zoom)
- * by panning when it leaves the current viewport.
+ * by panning when it leaves the current viewport — MapLibre honours
+ * `prefers-reduced-motion` for that camera move automatically.
  */
 export function AnimatedMarker({ position, heading, color = '#00b4d8' }: AnimatedMarkerProps) {
   const [pos, setPos] = useState<[number, number]>(position);
   const targetRef = useRef<[number, number]>(position);
   const posRef = useRef<[number, number]>(position);
   const rafRef = useRef<number | null>(null);
-  const map = useMap();
+  const { current: map } = useMap();
 
   useEffect(() => {
     targetRef.current = position;
@@ -66,8 +77,12 @@ export function AnimatedMarker({ position, heading, color = '#00b4d8' }: Animate
       rafRef.current = requestAnimationFrame(step);
     }
 
-    if (!map.getBounds().contains(position)) {
-      map.panTo(position, { duration: 300 });
+    if (map) {
+      const [lat, lng] = position;
+      const lngLat: [number, number] = [lng, lat];
+      if (!map.getBounds().contains(lngLat)) {
+        map.panTo(lngLat, { duration: 300 });
+      }
     }
   }, [position, map]);
 
@@ -78,5 +93,10 @@ export function AnimatedMarker({ position, heading, color = '#00b4d8' }: Animate
     [],
   );
 
-  return <Marker position={pos} icon={<CarIcon color={color} heading={heading} />} />;
+  const [lat, lng] = pos;
+  return (
+    <Marker longitude={lng} latitude={lat} anchor="center" style={NON_INTERACTIVE}>
+      <CarIcon color={color} heading={heading} />
+    </Marker>
+  );
 }
