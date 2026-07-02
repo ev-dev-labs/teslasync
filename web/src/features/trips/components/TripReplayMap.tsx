@@ -24,7 +24,7 @@ import {
 import type { DrivePosition } from '@/types/driving';
 
 /**
- * Thin wrapper around the trip-replay leaflet map.
+ * Thin wrapper around the trip-replay MapLibre GL map.
  *
  * Owns: speed-coloured polyline rendering, start/end pins, the animated
  * (or snap-on-reduced-motion) playhead marker, the layer switcher, and the
@@ -101,7 +101,7 @@ function FitBounds({ trail, fallbackCenter }: { trail: LatLngExpression[]; fallb
         ),
       );
       /* `bounds.isValid()` reports true even for zero-extent rectangles built
-       * from N identical coordinates. Without checking spread, leaflet zooms
+       * from N identical coordinates. Without checking spread, the map zooms
        * to maxZoom and the user sees a single dot at street-corner zoom even
        * though they expected to see a route. Fall back to a hand-set view at
        * a recognisable zoom whenever the bbox collapses. */
