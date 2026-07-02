@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/feedback';
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
@@ -38,7 +39,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   const chartData = useMemo(
     () => dailyBreakdown.map((d) => ({
       date: d.date,
-      energy: d.energy_wh ?? 0,
+      energy: convertEnergyFromSI(d.energy_wh ?? 0, 'kWh'),
     })),
     [dailyBreakdown],
   );
@@ -107,13 +108,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   // ── Compact (1×2): large number only ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber
