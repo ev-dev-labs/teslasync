@@ -442,6 +442,7 @@ function LiveMap({
   homeGeofence: { latitude: number; longitude: number; radius: number; name: string } | null;
   events: GuardEvent[];
 }) {
+  const { t } = useTranslation();
   const [mapStyle] = useState<MapStyle>('dark');
 
   // GuardEvent records are state-change rows (locked,
@@ -450,14 +451,20 @@ function LiveMap({
   // shows only the live vehicle position + home geofence circle.
   const eventPositions: [number, number][] = useMemo(() => [], [events]);
 
+  // The migrated MapLibre GL <Marker> renders an interactive marker (one with a
+  // popup) as a focusable button whose accessible name comes from `title`; feed
+  // it the vehicle name so keyboard / screen-reader users get a meaningful label
+  // rather than the generic fallback.
+  const markerLabel = vehicleName || t('guard.vehicleMarker', 'Vehicle');
+
   return (
     <MapContainer center={[vehicleLat, vehicleLng]} zoom={15} scrollWheelZoom className="h-full w-full z-0">
       <MapTileLayer style={mapStyle} />
       <MapInvalidator />
 
       {/* Vehicle marker */}
-      <Marker position={[vehicleLat, vehicleLng]} icon={vehicleIcon()}>
-        <MapPopup vehicleName={vehicleName} lat={vehicleLat} lng={vehicleLng} />
+      <Marker position={[vehicleLat, vehicleLng]} icon={vehicleIcon()} title={markerLabel}>
+        <MapPopup vehicleName={markerLabel} lat={vehicleLat} lng={vehicleLng} />
       </Marker>
 
       {/* Home geofence circle */}
@@ -486,7 +493,7 @@ function MapPopup({ vehicleName, lat, lng }: { vehicleName: string; lat: number;
   return (
     <Popup>
       <div className="text-sm">
-        <strong>{vehicleName || 'Vehicle'}</strong>
+        <strong>{vehicleName}</strong>
         <br />
         <span className="text-xs text-[var(--text-muted)]">
           {lat.toFixed(6)}, {lng.toFixed(6)}
