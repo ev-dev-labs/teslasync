@@ -3164,7 +3164,17 @@
     "next": "Next",
     "noData": "No {{label}}",
     "showing": "Showing {{from}}–{{to}} of {{total}}",
-    "pageOf": "Page {{page}} of {{total}}"
+    "pageOf": "Page {{page}} of {{total}}",
+    "service": "Service",
+    "method": "Method",
+    "status": "Status",
+    "endpoint": "Endpoint",
+    "logTitle": "API Call Log",
+    "totalCount": "{{count}} total",
+    "noServices": "No service activity yet",
+    "noLogsTitle": "No API call logs",
+    "na": "N/A",
+    "copyBody": "Copy {{label}}"
   },
   "backup": {
     "title": "Backup & Restore",
