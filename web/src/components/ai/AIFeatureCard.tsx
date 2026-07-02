@@ -50,7 +50,7 @@
 //   - AiOutputPanel is rendered with the same `text/state/error`
 //     props, so `getByTestId('ai-output-panel')` keeps working.
 
-import type { ReactNode } from 'react'
+import type { JSX, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'

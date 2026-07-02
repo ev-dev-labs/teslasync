@@ -33,7 +33,7 @@ export function useKeyboardShortcuts(): ShortcutState {
   const navigate = useNavigate();
   const [mode, setMode] = useState<ShortcutMode>('idle');
   const [showCheatSheet, setShowCheatSheet] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const toggleCheatSheet = useCallback(() => {
     setShowCheatSheet(prev => !prev);

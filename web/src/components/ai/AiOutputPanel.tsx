@@ -23,7 +23,7 @@
 // sanitiser. `whitespace-pre-wrap` preserves paragraph breaks and
 // is sufficient for the current prompts.
 
-import type { ReactNode } from 'react'
+import type { JSX, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'

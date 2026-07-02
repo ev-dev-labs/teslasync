@@ -21,7 +21,7 @@ export interface PopoverProps {
    * Ref to the trigger element. Position is computed relative to its bounding
    * rect; focus is restored to it on close.
    */
-  anchorRef: RefObject<HTMLElement>;
+  anchorRef: RefObject<HTMLElement | null>;
   /** Side relative to the anchor. Auto-flips when there isn't enough viewport space. */
   side?: PopoverSide;
   /** Alignment along the cross axis. */

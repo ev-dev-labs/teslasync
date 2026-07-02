@@ -17,6 +17,7 @@
 // implemented purely via tailwind's `motion-safe:` variant —
 // nothing JS-side checks the media query.
 
+import type { JSX } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'

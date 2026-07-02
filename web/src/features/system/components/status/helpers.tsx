@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { fmtNumber } from '@/lib/numberFormat';
 

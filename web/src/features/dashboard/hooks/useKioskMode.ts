@@ -55,9 +55,9 @@ export function useKioskMode(
   const [isDimmed, setIsDimmed] = useState(false);
   const [isCursorHidden, setIsCursorHidden] = useState(false);
 
-  const cursorTimer = useRef<ReturnType<typeof setTimeout>>();
-  const dimTimer = useRef<ReturnType<typeof setTimeout>>();
-  const rotateTimer = useRef<ReturnType<typeof setInterval>>();
+  const cursorTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const dimTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const rotateTimer = useRef<ReturnType<typeof setInterval>>(undefined);
 
   // Sanitize dashboardIds against actual dashboards
   const validIds = useMemo(() => {

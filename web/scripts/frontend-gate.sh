@@ -73,8 +73,22 @@ fi
 rm -f "$TSC_OUT"
 
 # --- Target-scoped eslint ----------------------------------------------------
+# eslint.config.js only registers `files` blocks for .ts/.tsx (see its own
+# header comment: "We apply the linter to every .ts / .tsx file in the
+# project"). Non-source targets (package.json, *.yml, *.md, ...) don't match
+# any block, so ESLint's flat config treats them as uncovered and emits a
+# "File ignored because of a matching ignore pattern" warning when passed
+# explicitly on the CLI — a false positive unrelated to code quality that
+# would fail every unit whose target list includes a non-JS/TS file (e.g.
+# dependency-bump units that only touch package.json). Filter to extensions
+# ESLint is actually configured to lint before invoking it.
 EXISTING_TARGETS=()
-for t in "${TARGETS[@]}"; do [ -f "$t" ] && EXISTING_TARGETS+=("$t"); done
+for t in "${TARGETS[@]}"; do
+  [ -f "$t" ] || continue
+  case "$t" in
+    *.ts | *.tsx | *.js | *.jsx | *.mjs | *.cjs) EXISTING_TARGETS+=("$t") ;;
+  esac
+done
 ESLINT_ERR=0
 if [ ${#EXISTING_TARGETS[@]} -gt 0 ]; then
   npx eslint "${EXISTING_TARGETS[@]}" --max-warnings 0 > /tmp/frontend-eslint.out 2>&1
