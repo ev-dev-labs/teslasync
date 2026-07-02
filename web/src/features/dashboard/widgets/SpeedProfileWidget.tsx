@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
 } from '@/components/charts';
 import { useSpeedProfile } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -220,20 +220,21 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 width={40}
                 tickFormatter={(v: number) => fmt(v, 0)}
               />
+              {/* Shared themed tooltip. The Bar carries unit="%" so one
+                  valueFormatter renders both the % frequency series and the
+                  raw efficiency series; each series' translated `name` prop
+                  supplies the human-readable row label. */}
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(value: number, name: string) => {
-                  if (name === 'frequency') {
-                    return [`${fmtNumber(value, 1)}%`, t('widget.speedProfile.frequency', 'Frequency')];
-                  }
-                  return [fmtNumber(value, 1), t('widget.speedProfile.efficiency', 'Wh/mi')];
-                }}
-                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                cursor={{ fill: 'rgba(148,163,184,0.15)' }}
+                content={
+                  <ChartTooltip
+                    valueFormatter={(value, _name, unit) =>
+                      typeof value === 'number'
+                        ? `${fmtNumber(value, 1)}${unit ?? ''}`
+                        : '—'
+                    }
+                  />
+                }
               />
               <Bar
                 yAxisId="freq"
@@ -241,7 +242,8 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 radius={[4, 4, 0, 0]}
                 maxBarSize={32}
                 fill="#6366f1"
-                name="frequency"
+                name={t('widget.speedProfile.frequency', 'Frequency')}
+                unit="%"
               />
               <Line
                 yAxisId="eff"
@@ -250,7 +252,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 stroke="#f59e0b"
                 strokeWidth={2}
                 dot={{ r: 3, fill: '#f59e0b' }}
-                name="efficiency"
+                name={t('widget.speedProfile.efficiency', 'Wh/mi')}
               />
             </ComposedChart>
           </ResponsiveContainer>
