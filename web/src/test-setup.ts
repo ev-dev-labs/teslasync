@@ -133,6 +133,32 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = MockResizeObserver as any
 }
 
+// Polyfill matchMedia for jsdom (not implemented). Two distinct classes of
+// caller need it: (1) components that read `prefers-color-scheme` /
+// `prefers-reduced-motion` (ThemeProvider, useMediaQuery), and (2) — critically
+// for chart-consuming tests — uPlot, which invokes `matchMedia` at MODULE-LOAD
+// time inside its pixel-ratio setup. The shared charts barrel
+// (@/components/charts) eagerly pulls in uPlot via AreaChartWrapper, so ANY
+// test that transitively imports the barrel (e.g. a feature panel using
+// RadialGauge) used to crash on load with "matchMedia is not a function"
+// before a single test ran. Installing a no-op global here (mirroring the
+// ResizeObserver / IntersectionObserver polyfills above, and identical to the
+// per-file mock CommandPalette.test.tsx installs) removes the per-test
+// boilerplate and fixes the load-time crash.
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList
+}
+
 // Mock EventSource for SSE tests (not available in jsdom)
 global.EventSource = class EventSource {
   static CONNECTING = 0
