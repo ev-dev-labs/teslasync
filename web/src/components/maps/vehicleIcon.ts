@@ -1,34 +1,21 @@
-import L from 'leaflet';
+import { createElement, type ReactElement } from 'react';
 
 /**
- * Custom vehicle marker icon using CSS — replaces broken default Leaflet markers.
- * Renders as a pulsing dot with a theme-colored glow.
+ * Vehicle marker visual — a pulsing, glowing dot rendered as a React element
+ * (consumed by `<Marker icon={vehicleIcon()} />`). Replaces the previous
+ * Leaflet `DivIcon`; no Leaflet dependency.
  */
-export function vehicleIcon(color = '#00f0ff'): L.DivIcon {
-  return L.divIcon({
-    className: '',
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
-    html: `
-      <div style="width:28px;height:28px;position:relative">
-        <div style="
-          position:absolute;inset:0;border-radius:50%;
-          background:${color};opacity:0.25;
-          animation:vehicle-pulse 2s ease-in-out infinite;
-        "></div>
-        <div style="
-          position:absolute;inset:5px;border-radius:50%;
-          background:${color};border:2px solid white;
-          box-shadow:0 0 10px ${color};
-        "></div>
-      </div>
-      <style>
-        @keyframes vehicle-pulse {
-          0%, 100% { transform: scale(1); opacity: 0.25; }
-          50% { transform: scale(1.6); opacity: 0; }
-        }
-      </style>
-    `,
-  });
+export function vehicleIcon(color = '#00f0ff'): ReactElement {
+  return createElement(
+    'div',
+    { className: 'relative h-7 w-7', 'aria-hidden': true },
+    createElement('span', {
+      className: 'absolute inset-0 rounded-full animate-ping',
+      style: { backgroundColor: color, opacity: 0.25 },
+    }),
+    createElement('span', {
+      className: 'absolute inset-[5px] rounded-full border-2 border-white',
+      style: { backgroundColor: color, boxShadow: `0 0 10px ${color}` },
+    }),
+  );
 }

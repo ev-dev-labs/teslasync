@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Marker, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { useEffect, useRef, useState } from 'react';
+import { Marker, useMap } from './MapTileLayer';
 
 interface AnimatedMarkerProps {
   position: [number, number];
@@ -8,61 +7,76 @@ interface AnimatedMarkerProps {
   color?: string;
 }
 
-/** Custom car icon rendered as a pulsing CSS circle with optional heading arrow. */
-function createCarIcon(color: string, heading?: number): L.DivIcon {
-  const rotation = heading != null ? `transform:rotate(${heading}deg)` : '';
-  return L.divIcon({
-    className: '',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    html: `
-      <div style="width:24px;height:24px;position:relative">
-        <div style="
-          position:absolute;inset:0;border-radius:50%;
-          background:${color};opacity:0.3;
-          animation:replay-pulse 1.5s ease-in-out infinite;
-        "></div>
-        <div style="
-          position:absolute;inset:4px;border-radius:50%;
-          background:${color};border:2px solid white;
-          box-shadow:0 0 8px ${color};
-          ${rotation}
-        "></div>
-      </div>
-    `,
-  });
+/** Car marker icon: a pulsing CSS dot with an optional heading rotation. */
+function CarIcon({ color, heading }: { color: string; heading?: number }) {
+  return (
+    <div className="relative h-6 w-6" aria-hidden>
+      <span
+        className="absolute inset-0 rounded-full animate-ping"
+        style={{ backgroundColor: color, opacity: 0.3 }}
+      />
+      <span
+        className="absolute inset-[4px] rounded-full border-2 border-white"
+        style={{
+          backgroundColor: color,
+          boxShadow: `0 0 8px ${color}`,
+          transform: heading != null ? `rotate(${heading}deg)` : undefined,
+        }}
+      />
+    </div>
+  );
 }
 
+/** Fraction of the remaining distance closed each animation frame. */
+const EASE = 0.3;
+/** Below this coordinate delta the marker snaps to the target and the loop idles. */
+const EPSILON = 1e-7;
+
 /**
- * Animated map marker that smoothly transitions between positions.
+ * Map marker that smoothly tracks a moving position on MapLibre GL.
  *
- * Uses Leaflet's `setLatLng` for positioning (Leaflet owns the transform)
- * and an inner child for heading rotation (no transform conflict).
+ * Each animation frame eases the *currently displayed* coordinate toward the
+ * latest `position` (never a stale origin), so rapid updates or timeline
+ * scrubbing converge smoothly to the newest point with a small bounded lag and
+ * no rubber-band snap-back. The marker is kept in view (without changing zoom)
+ * by panning when it leaves the current viewport.
  */
 export function AnimatedMarker({ position, heading, color = '#00b4d8' }: AnimatedMarkerProps) {
-  const markerRef = useRef<L.Marker | null>(null);
+  const [pos, setPos] = useState<[number, number]>(position);
+  const targetRef = useRef<[number, number]>(position);
+  const posRef = useRef<[number, number]>(position);
+  const rafRef = useRef<number | null>(null);
   const map = useMap();
 
-  // Smoothly update position without re-mounting
   useEffect(() => {
-    const marker = markerRef.current;
-    if (!marker) return;
+    targetRef.current = position;
 
-    const target = L.latLng(position[0], position[1]);
-    marker.setLatLng(target);
-    marker.setIcon(createCarIcon(color, heading));
-
-    // Keep marker in view (but don't reset zoom)
-    if (!map.getBounds().contains(target)) {
-      map.panTo(target, { animate: true, duration: 0.3 });
+    if (rafRef.current == null) {
+      const step = () => {
+        const [clat, clng] = posRef.current;
+        const [tlat, tlng] = targetRef.current;
+        const nlat = clat + (tlat - clat) * EASE;
+        const nlng = clng + (tlng - clng) * EASE;
+        const done = Math.abs(tlat - nlat) < EPSILON && Math.abs(tlng - nlng) < EPSILON;
+        const next: [number, number] = done ? [tlat, tlng] : [nlat, nlng];
+        posRef.current = next;
+        setPos(next);
+        rafRef.current = done ? null : requestAnimationFrame(step);
+      };
+      rafRef.current = requestAnimationFrame(step);
     }
-  }, [position, heading, color, map]);
 
-  return (
-    <Marker
-      ref={markerRef}
-      position={position}
-      icon={createCarIcon(color, heading)}
-    />
+    if (!map.getBounds().contains(position)) {
+      map.panTo(position, { duration: 300 });
+    }
+  }, [position, map]);
+
+  useEffect(
+    () => () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    },
+    [],
   );
+
+  return <Marker position={pos} icon={<CarIcon color={color} heading={heading} />} />;
 }
