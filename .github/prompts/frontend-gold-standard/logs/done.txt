@@ -10,3 +10,6 @@ p2-radix-primitives/0003-radix-popover.prompt.md
 p2-radix-primitives/0006-radix-tabnav.prompt.md
 p2-radix-primitives/0005-radix-tabs.prompt.md
 p2-radix-primitives/0009-radix-rangeslider.prompt.md
+p2-radix-primitives/0002-radix-confirmdialog.prompt.md
+p2-radix-primitives/0007-radix-toggle.prompt.md
+p2-radix-primitives/0008-radix-slider.prompt.md
