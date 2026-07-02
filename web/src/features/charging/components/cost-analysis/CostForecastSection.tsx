@@ -5,7 +5,7 @@ import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import {
   ChartTooltip, chartGrid, axisTickSm, AREA_DEFAULTS, areaGradient,
-  ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ComposedChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
@@ -53,7 +53,7 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
                   })),
                 ]}
               >
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 {areaGradient('forecastBand', '#a855f7', 0.15)}
                 {areaGradient('actualCostFill', palette[0], 0.3)}
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
@@ -83,7 +83,7 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
           {hasCostPerKwhTrend ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={historicalData}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit="$" />
                 <Tooltip content={<ChartTooltip />} />
