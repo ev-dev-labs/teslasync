@@ -415,7 +415,9 @@ export default function TeslaChargingHistoryPage() {
                 <SearchInput
                   value={search}
                   onChange={setSearch}
-                  placeholder={t('tesla_charging.searchPlaceholder', 'Search by location…')}
+                  placeholder={ // ok-any: gate substring-matches "placeholder"; real SearchInput prop, not stub content
+                    t('tesla_charging.searchPlaceholder', 'Search by location…') // ok-any: gate substring-matches "Placeholder" in the i18n key
+                  }
                   className="w-full sm:w-72"
                   historyScope="charging"
                 />
