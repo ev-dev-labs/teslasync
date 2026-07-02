@@ -176,9 +176,11 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 axisLine={false}
                 tickFormatter={(v: string) => formatTime(v)}
               />
-              {/* Left Y-axis — Torque (Nm) */}
+              {/* Left Y-axis — Torque (Nm). Uses the default id 0 so the shared
+                  visx chartGrid (injected by recharts as yAxisId={0}) resolves a
+                  real y-axis and can draw interior horizontal gridlines. */}
               <YAxis
-                yAxisId="torque"
+                yAxisId={0}
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
@@ -232,7 +234,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               />
               {/* Torque line — cyan */}
               <Line
-                yAxisId="torque"
+                yAxisId={0}
                 type="monotone"
                 dataKey="torque"
                 stroke="#06b6d4"
@@ -255,7 +257,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               {/* Wide mode: g-force overlays */}
               {isWide && (
                 <Line
-                  yAxisId="torque"
+                  yAxisId={0}
                   type="monotone"
                   dataKey="lateralG"
                   stroke="#a78bfa"
@@ -268,7 +270,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               )}
               {isWide && (
                 <Line
-                  yAxisId="torque"
+                  yAxisId={0}
                   type="monotone"
                   dataKey="longitudinalG"
                   stroke="#34d399"
