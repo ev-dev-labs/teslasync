@@ -4,16 +4,14 @@ description: "Frontend gold-standard rewrite — Verify map migration — src/fe
 
 # Verify src/features/dashboard/widgets/LocationMapWidget.tsx against the migrated (MapLibre GL) map components
 
-### Personas (both required — this is not optional)
+### Your role: Implementer (a SEPARATE independent process reviews your work)
 
-**Persona 1 — Senior Frontend Engineer (implementer).** Do the migration work
-described below completely. No partial coverage, no "simplified" version, no
-deferring part of this unit to "a follow-up".
-
-**Persona 2 — Staff UI/UX Reviewer (gold-standard bar).** Before committing,
-switch hats and critique the Persona-1 output as a skeptical senior reviewer
-whose job is literally to block anything that is not gold-standard. Check
-explicitly against ALL FOUR program requirements:
+Do the migration work described below completely. No partial coverage, no
+"simplified" version, no deferring part of this unit to "a follow-up". You
+will NOT be the one approving this work — after the gate passes, a fresh,
+independent `copilot` process with no memory of your reasoning reviews the
+diff and can reject it. Write it as if a skeptical staff reviewer who has
+never seen your intentions is about to judge it against:
   1. **Mobile-friendly** — touch targets ≥44px, responsive at 375px width, no
      hover-only affordances, gestures work (swipe/pinch where relevant).
   2. **Best UI on the internet** — matches the polish bar of Linear/Vercel/Stripe:
@@ -22,8 +20,8 @@ explicitly against ALL FOUR program requirements:
      that fight peer deps, no APIs marked deprecated in current docs.
   4. **True gold standard, no partial** — every branch/state/variant of the
      original is preserved (loading/error/empty), nothing silently dropped.
-If Persona 2 finds a gap, go back to Persona 1 and fix it BEFORE running the
-gate. Do not commit anything Persona 2 would not personally approve.
+Self-review against this list before running the gate, but do not treat
+your own approval as sufficient — the independent reviewer has veto power.
 
 ### Non-negotiable ground rules
 - **No partial work.** Every file/component in this unit's scope must be fully
@@ -52,7 +50,7 @@ MapLibre GL in the `p5-maps-shared` program. Verify and fix:
 - Pinch/pan/zoom gesture behavior works correctly on mobile viewport.
 - Loading/empty/error states around the map are intact.
 
-## Gate (run exactly; commit only if GATE=PASS)
+## Gate (run exactly)
 
 ```bash
 cd web
@@ -60,13 +58,46 @@ bash scripts/frontend-gate.sh 'src/features/dashboard/widgets/LocationMapWidget.
 echo "GATE_EXIT=$?"
 ```
 
-- `GATE=PASS` ⇒ commit, print `EXIT=0` / `STATUS=DONE`.
-- `GATE=FAIL` ⇒ fix and re-run (Persona 2 should have caught most of these
-  before you even got here). If truly blocked by a missing sibling this unit
-  depends on, print `EXIT=1` / `STATUS=BLOCKED` naming the missing module —
-  the driver re-runs pending units after siblings land. Never commit on red.
+- `GATE=FAIL` ⇒ fix and re-run. If truly blocked by a missing sibling this
+  unit depends on, print `EXIT=1` / `STATUS=BLOCKED` naming the missing
+  module — the driver re-runs pending units after siblings land.
+- `GATE=PASS` ⇒ proceed to the Independent Review below. Do NOT commit yet.
 
-## Commit (only after GATE=PASS)
+## Independent Review (REQUIRED — do not skip, do not self-approve)
+
+Spawn a FRESH, separate `copilot` process to review your diff. It must have
+ZERO memory of your implementation reasoning — this is a genuinely
+independent check, not you re-reading your own work:
+
+```bash
+cd web
+git diff --stat > /tmp/review-stat-$$.txt
+git diff > /tmp/review-diff-$$.txt
+{
+  echo "You are an independent staff reviewer with NO context on why this";
+  echo "change was made beyond what follows. Read the diff below. Reject if";
+  echo "ANY of these hold: (1) not mobile-friendly (missing touch targets,";
+  echo "hover-only affordances), (2) below Linear/Vercel/Stripe-grade polish";
+  echo "(missing focus states, layout shift, jank), (3) uses an";
+  echo "experimental/deprecated dependency or pattern, (4) drops ANY branch,";
+  echo "state, i18n key, or null-safety guard the diff removes without an";
+  echo "equivalent replacement, (5) the external prop API of any shared";
+  echo "component changed. Respond with EXACTLY one line: either";
+  echo "REVIEW=APPROVE or REVIEW=REJECT: <specific reasons>. Nothing else.";
+  echo "";
+  cat /tmp/review-stat-$$.txt;
+  echo "";
+  cat /tmp/review-diff-$$.txt;
+} | copilot --yolo --autopilot -s > /tmp/review-result-$$.txt 2>&1
+tail -5 /tmp/review-result-$$.txt
+grep -o "REVIEW=APPROVE\|REVIEW=REJECT" /tmp/review-result-$$.txt | tail -1
+```
+
+- `REVIEW=REJECT` ⇒ read the stated reasons, fix them, re-run BOTH the gate
+  and this independent review again. Never commit rejected work.
+- `REVIEW=APPROVE` ⇒ proceed to Commit below.
+
+## Commit (only after GATE=PASS AND REVIEW=APPROVE)
 
 ```bash
 git add web/src/features/dashboard/widgets/LocationMapWidget.tsx

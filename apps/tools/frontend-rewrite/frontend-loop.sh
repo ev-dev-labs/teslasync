@@ -33,18 +33,26 @@ RUNNER="$PROMPTS/run-prompts.sh"
 DONE="$PROMPTS/logs/done.txt"
 STATUS="$PROMPTS/logs/frontend-loop-status.txt"
 
-# Per-program concurrency override. Evidence from p2-radix-primitives this
-# session: 5/9 completed units hit CONFLICT (content): web/package.json +
-# package-lock.json — every unit in p2/p3/p5 adds its own new dependency
-# (@radix-ui/react-*, visx/uPlot, MapLibre GL packages), so N parallel
-# workers race to merge the SAME two files, and only the first wins cleanly.
-# Conflicted units aren't lost (never added to done.txt, retried next wave)
-# but repeatedly re-conflicting wastes real wall-clock/compute across a
-# 599-unit run. Programs that don't add new deps (page/story/e2e
-# verification) keep full concurrency.
+# Per-program concurrency override.
+#
+# p2/p3/p5 add a new package.json dependency per unit (each Radix/visx/
+# uPlot/MapLibre component pulls in its own package), so N parallel workers
+# racing to merge package.json/package-lock.json will sometimes conflict.
+# This is no longer a DATA-LOSS risk (run-prompts.sh now fast-forwards the
+# real branch after every single merge, not just at the end of a wave) —
+# it's purely a wasted-retry-cycles cost, and only ~25 units total remain
+# in these three programs, so a moderate concurrency is fine.
+#
+# p0/p1 are done. p4/p6/p7/p8 (559 units — 93% of the whole backlog:
+# chart/map page verification, Storybook stories, Playwright specs) touch
+# ONLY their own target file each — zero shared-file risk — so they get
+# aggressive concurrency. This machine has 20 cores; each unit is one
+# subprocess (its own git worktree, symlinked node_modules) so CPU/memory
+# is the real ceiling, not merge contention.
 jobs_for() {
   case "$1" in
-    p2-radix-primitives|p3-charts-shared|p5-maps-shared) echo 2 ;;
+    p2-radix-primitives|p3-charts-shared|p5-maps-shared) echo 4 ;;
+    p4-charts-pages|p6-maps-pages|p7-storybook-stories|p8-e2e-pages) echo 10 ;;
     *) echo "$JOBS" ;;
   esac
 }
