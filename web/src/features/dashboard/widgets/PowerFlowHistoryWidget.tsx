@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
 } from '@/components/charts';
 import { useTeslaEnergyLiveStatusHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -222,17 +222,14 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 tickFormatter={(v: number) => fmt(v, 1)}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(value: number, name: string) => [
-                  `${fmtNumber(value, 2)} kW`,
-                  name,
-                ]}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                content={
+                  <ChartTooltip
+                    valueFormatter={(value) =>
+                      typeof value === 'number' ? `${fmtNumber(value, 2)} kW` : '—'
+                    }
+                  />
+                }
               />
               <defs>
                 <linearGradient id={`${widgetId}-solarGrad`} x1="0" y1="0" x2="0" y2="1">
