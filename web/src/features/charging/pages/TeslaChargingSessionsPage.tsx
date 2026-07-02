@@ -404,10 +404,14 @@ export default function TeslaChargingSessionsPage() {
         <ChartContainer
           title={t('tesla_sessions.monthlyCost', 'Monthly Charging Cost')}
           ariaLabel={t('tesla_sessions.monthlyCost.aria', 'Monthly Tesla charging cost bar chart')}
-          data={monthlyData.map((m) => ({ month: m.month, total: m.total }))}
+          data={monthlyData}
           dataColumns={[
             { key: 'month', label: t('tesla_sessions.col.month', 'Month') },
-            { key: 'total', label: t('tesla_sessions.col.total', 'Total ($)') },
+            {
+              key: 'total',
+              label: t('tesla_sessions.col.total', 'Total ($)'),
+              format: (v) => (v == null ? '—' : formatCurrency(Number(v), 2)),
+            },
           ]}
           height={280}
         >
@@ -418,10 +422,28 @@ export default function TeslaChargingSessionsPage() {
                   <ChartGradient id="sessionCostGrad" color="#22d3ee" opacity={0.6} />
                 </defs>
                 {chartGrid}
-                <XAxis dataKey="month" tick={axisTickSm} />
+                <XAxis
+                  dataKey="month"
+                  tick={axisTickSm}
+                  tickFormatter={(v: string) => {
+                    const parts = v.split('-');
+                    return parts.length === 2 ? `${parts[1]}/${parts[0].slice(2)}` : v;
+                  }}
+                />
                 <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v, 0)} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="total" fill="url(#sessionCostGrad)" radius={[4, 4, 0, 0]} />
+                <Tooltip
+                  content={
+                    <ChartTooltip
+                      valueFormatter={(v) => (typeof v === 'number' ? formatCurrency(v, 2) : '—')}
+                    />
+                  }
+                />
+                <Bar
+                  dataKey="total"
+                  name={t('tesla_sessions.stats.cost_decimal', 'Total Cost')}
+                  fill="url(#sessionCostGrad)"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           ) : (
