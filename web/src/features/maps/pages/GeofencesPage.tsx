@@ -553,7 +553,7 @@ export default function GeofencesPage() {
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
-                message={t('common.noData', 'No data available')}
+                message={t('common.noData', 'No data available')} // ok-any: real empty-state copy, not a stub
                 className="col-span-full py-8"
               />
             )}
@@ -589,7 +589,7 @@ export default function GeofencesPage() {
                 'geofences.aiSuggest.pickLocation',
                 'Pick a visited location to draft a geofence around',
               )}
-              placeholder="501"
+              placeholder="501" // ok-any: real input hint, not stub content
               className="sm:max-w-xs"
             />
           </div>
@@ -642,7 +642,7 @@ export default function GeofencesPage() {
                 <SearchInput
                   value={search}
                   onChange={setSearch}
-                  placeholder={t('geofences.searchPlaceholder', 'Search by name…')}
+                  placeholder={t('geofences.searchPlaceholder', 'Search by name…')} // ok-any: real search input hint, not stub content
                   className="w-full sm:w-72"
                   historyScope="geofences"
                 />
@@ -766,7 +766,7 @@ export default function GeofencesPage() {
           ) : (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8 opacity-20" />}
-              message={t('common.noData', 'No data available')}
+              message={t('common.noData', 'No data available')} // ok-any: real empty-state copy, not a stub
               className="py-8"
             />
           )}
@@ -875,7 +875,7 @@ export default function GeofencesPage() {
             label={t('Name')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder={t('Home')}
+            placeholder={t('Home')} // ok-any: real input hint, not stub content
             error={fieldErrors.name}
           />
 
@@ -886,7 +886,7 @@ export default function GeofencesPage() {
               step="any"
               value={form.latitude}
               onChange={(e) => setForm({ ...form, latitude: e.target.value })}
-              placeholder="37.7749"
+              placeholder="37.7749" // ok-any: real input hint, not stub content
               icon={<Globe className="h-4 w-4" />}
               error={fieldErrors.latitude}
             />
@@ -896,7 +896,7 @@ export default function GeofencesPage() {
               step="any"
               value={form.longitude}
               onChange={(e) => setForm({ ...form, longitude: e.target.value })}
-              placeholder="-122.4194"
+              placeholder="-122.4194" // ok-any: real input hint, not stub content
               icon={<Globe className="h-4 w-4" />}
               error={fieldErrors.longitude}
             />
@@ -907,7 +907,7 @@ export default function GeofencesPage() {
             type="number"
             value={form.radius}
             onChange={(e) => setForm({ ...form, radius: e.target.value })}
-            placeholder="100"
+            placeholder="100" // ok-any: real input hint, not stub content
             icon={<Ruler className="h-4 w-4" />}
             hint={t('Minimum 10m, maximum 50000m')}
             error={fieldErrors.radius}
