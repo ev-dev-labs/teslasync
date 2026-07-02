@@ -128,7 +128,7 @@ describe('ResetSection — per-section reset', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-button-alert_rules'));
     await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     });
     // No request should be issued before the user confirms.
     expect(mockedRequest).not.toHaveBeenCalled();
@@ -137,11 +137,11 @@ describe('ResetSection — per-section reset', () => {
   it('cancels cleanly when the user dismisses the per-section dialog', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-button-alert_rules'));
-    await waitFor(() => screen.getByRole('dialog'));
-    const dialog = screen.getByRole('dialog');
+    await waitFor(() => screen.getByRole('alertdialog'));
+    const dialog = screen.getByRole('alertdialog');
     fireEvent.click(within(dialog).getByText('Cancel'));
     await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
     expect(mockedRequest).not.toHaveBeenCalled();
   });
@@ -154,9 +154,9 @@ describe('ResetSection — per-section reset', () => {
 
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-button-alert_rules'));
-    await waitFor(() => screen.getByRole('dialog'));
+    await waitFor(() => screen.getByRole('alertdialog'));
 
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('alertdialog');
     fireEvent.click(within(dialog).getByText('Reset'));
 
     await waitFor(() => {
@@ -170,7 +170,7 @@ describe('ResetSection — per-section reset', () => {
     });
     // Dialog closes after the mutation resolves.
     await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
   });
 
@@ -182,9 +182,9 @@ describe('ResetSection — per-section reset', () => {
 
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-button-geofences'));
-    await waitFor(() => screen.getByRole('dialog'));
+    await waitFor(() => screen.getByRole('alertdialog'));
 
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('alertdialog');
     fireEvent.click(within(dialog).getByText('Reset'));
 
     await waitFor(() => {
@@ -203,19 +203,19 @@ describe('ResetSection — danger zone', () => {
   it('opens the typed-confirmation dialog for the global reset', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-reset-all'));
-    await waitFor(() => screen.getByRole('dialog'));
-    const dialog = screen.getByRole('dialog');
+    await waitFor(() => screen.getByRole('alertdialog'));
+    const dialog = screen.getByRole('alertdialog');
     // The typed-confirmation input is rendered.
-    expect(within(dialog).getByPlaceholderText('RESET')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Type RESET to confirm')).toBeInTheDocument();
   });
 
   it('keeps the confirm button disabled until "RESET" is typed', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-reset-all'));
-    await waitFor(() => screen.getByRole('dialog'));
+    await waitFor(() => screen.getByRole('alertdialog'));
 
-    const dialog = screen.getByRole('dialog');
-    const input = within(dialog).getByPlaceholderText('RESET');
+    const dialog = screen.getByRole('alertdialog');
+    const input = within(dialog).getByLabelText('Type RESET to confirm');
     const confirmBtn = within(dialog).getByText('Reset everything')
       .closest('button');
     expect(confirmBtn).not.toBeNull();
@@ -239,10 +239,10 @@ describe('ResetSection — danger zone', () => {
 
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-reset-all'));
-    await waitFor(() => screen.getByRole('dialog'));
+    await waitFor(() => screen.getByRole('alertdialog'));
 
-    const dialog = screen.getByRole('dialog');
-    fireEvent.change(within(dialog).getByPlaceholderText('RESET'), {
+    const dialog = screen.getByRole('alertdialog');
+    fireEvent.change(within(dialog).getByLabelText('Type RESET to confirm'), {
       target: { value: 'RESET' },
     });
     fireEvent.click(within(dialog).getByText('Reset everything'));
@@ -261,11 +261,11 @@ describe('ResetSection — danger zone', () => {
   it('cancels the global reset cleanly when the user dismisses', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('reset-section-reset-all'));
-    await waitFor(() => screen.getByRole('dialog'));
-    const dialog = screen.getByRole('dialog');
+    await waitFor(() => screen.getByRole('alertdialog'));
+    const dialog = screen.getByRole('alertdialog');
     fireEvent.click(within(dialog).getByText('Cancel'));
     await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
     expect(mockedRequest).not.toHaveBeenCalled();
   });

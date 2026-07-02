@@ -7648,6 +7648,8 @@
     "electricityCost": "Electricity Cost (per kWh)"
   },
   "confirm": {
+    "close": "Close",
+    "typedConfirmationHint": "Type exactly: \"{{value}}\"",
     "silence": {
       "checkbox": "Don't ask again for this action"
     }

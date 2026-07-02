@@ -217,7 +217,7 @@ describe('ActiveSessionsSection — forward-auth + non-empty list', () => {
 
     // Confirm dialog opens — locate it via the dialog role + scope to
     // avoid colliding with row-level "Sign out" buttons.
-    const dialog = await screen.findByRole('dialog')
+    const dialog = await screen.findByRole('alertdialog')
     const confirmBtn = within(dialog).getByRole('button', { name: /^Sign out$/ })
     fireEvent.click(confirmBtn)
 
@@ -272,7 +272,7 @@ describe('ActiveSessionsSection — all-others revoke', () => {
 
     fireEvent.click(screen.getByTestId('active-sessions-revoke-all-others'))
 
-    const dialog = await screen.findByRole('dialog')
+    const dialog = await screen.findByRole('alertdialog')
     const confirmBtn = within(dialog).getByRole('button', { name: /^Sign out all others$/ })
     fireEvent.click(confirmBtn)
 

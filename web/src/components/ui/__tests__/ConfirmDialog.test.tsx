@@ -169,8 +169,8 @@ describe('ConfirmDialog — silenceKey', () => {
     });
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    // Modal is suppressed entirely so no dialog renders.
-    expect(screen.queryByRole('dialog')).toBeNull();
+    // AlertDialog is suppressed entirely so no dialog renders.
+    expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 
   it('still renders normally when silenced flag exists for a danger variant', async () => {
@@ -192,7 +192,7 @@ describe('ConfirmDialog — silenceKey', () => {
 
     // onConfirm did NOT auto-fire — the dialog is shown for confirmation.
     expect(onConfirm).not.toHaveBeenCalled();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 
   it('resets the checkbox between successive opens of the same dialog instance', () => {

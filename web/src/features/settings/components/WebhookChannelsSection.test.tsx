@@ -314,10 +314,10 @@ describe('WebhookChannelsSection — delete', () => {
 
     fireEvent.click(screen.getByTestId('webhook-delete-21'));
 
-    // The ConfirmDialog renders inside a role="dialog". Scope the
+    // The ConfirmDialog renders inside a role="alertdialog". Scope the
     // confirm-button lookup to that dialog so we don't collide with
     // the row's "Delete webhook" icon button (same accessible name).
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('alertdialog');
     fireEvent.click(within(dialog).getByRole('button', { name: /delete webhook/i }));
 
     await waitFor(() => {

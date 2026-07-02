@@ -203,7 +203,7 @@ describe('VehiclePhotoUpload — happy paths', () => {
     renderUpload(42)
     const removeBtn = await screen.findByTestId('vehicle-photo-remove')
     fireEvent.click(removeBtn)
-    // ConfirmDialog renders with role=dialog; find the confirm
+    // ConfirmDialog renders with role=alertdialog; find the confirm
     // button by its localized label.
     const confirmBtn = await screen.findByRole('button', { name: 'Remove' })
     await act(async () => {

@@ -333,9 +333,10 @@ describe('TOTPEnrollmentSection — forward-auth + active', () => {
     })
     fireEvent.click(screen.getByTestId('totp-disable'))
     await waitFor(() => {
-      // ConfirmDialog renders an input that requires typing DISABLE.
-      // Match by placeholder which is set to the typed-confirmation token.
-      expect(screen.getByPlaceholderText('DISABLE')).toBeTruthy()
+      // ConfirmDialog renders an input labeled with the typed-confirmation
+      // instructions (a persistent hint also shows the exact "DISABLE"
+      // token — see ConfirmDialog's `hint` prop).
+      expect(screen.getByLabelText('Type DISABLE to confirm')).toBeTruthy()
     })
   })
 })

@@ -50,13 +50,13 @@ afterEach(() => {
 describe('useConfirm', () => {
   it('renders nothing until confirm() is called', () => {
     render(<Harness />)
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
   it('opens a dialog with the supplied title and message', () => {
     render(<Harness />)
     openDialog()
-    expect(screen.getByRole('dialog', { name: 'Delete rule?' })).toBeInTheDocument()
+    expect(screen.getByRole('alertdialog', { name: 'Delete rule?' })).toBeInTheDocument()
     expect(screen.getByText('This cannot be undone.')).toBeInTheDocument()
   })
 
@@ -71,7 +71,7 @@ describe('useConfirm', () => {
 
     expect(resolved).toBe(true)
     // Dialog dismisses after resolution.
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
   it('resolves false when the cancel button is clicked', async () => {
@@ -84,7 +84,7 @@ describe('useConfirm', () => {
     })
 
     expect(resolved).toBe(false)
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
   it('resolves false when the Escape key is pressed', async () => {
@@ -93,29 +93,35 @@ describe('useConfirm', () => {
     openDialog()
 
     await act(async () => {
-      fireEvent.keyDown(window, { key: 'Escape' })
+      // Radix's AlertDialog listens for Escape on `document` (not `window`).
+      fireEvent.keyDown(document, { key: 'Escape' })
     })
 
     expect(resolved).toBe(false)
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
-  it('resolves false when the Modal backdrop (click-outside) is clicked', async () => {
+  it('does NOT resolve when the overlay (click-outside) is clicked', async () => {
     let resolved: boolean | undefined
     render(<Harness onResult={(ok) => { resolved = ok }} />)
     openDialog()
 
-    // The Modal renders its backdrop as a sibling of the dialog, marked
-    // `aria-hidden="true"`. Modal portals to `document.body` so query the
-    // whole document (not the test's render container).
-    const backdrop = document.body.querySelector('[aria-hidden="true"]') as HTMLElement | null
-    expect(backdrop).not.toBeNull()
+    // ConfirmDialog is built on Radix's `AlertDialog`, which — per the
+    // WAI-ARIA Alert Dialog pattern — intentionally does NOT dismiss on an
+    // outside/overlay click (only Cancel, the header close button, or
+    // Escape do). This is Radix's hard-coded `onPointerDownOutside`/
+    // `onInteractOutside` behavior for `AlertDialogContent`, not a bug.
+    // `AlertDialog.Overlay` renders as the sole `[data-state="open"]`
+    // element without an accessible role, so query it directly.
+    const overlay = document.body.querySelector('[data-state="open"]') as HTMLElement | null
+    expect(overlay).not.toBeNull()
     await act(async () => {
-      fireEvent.click(backdrop!)
+      fireEvent.pointerDown(overlay!)
+      fireEvent.click(overlay!)
     })
 
-    expect(resolved).toBe(false)
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(resolved).toBeUndefined()
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
   })
 
   it('disables the confirm button until requireTypedConfirmation matches exactly', () => {
@@ -191,11 +197,12 @@ describe('useConfirm', () => {
     openDialog()
 
     await act(async () => {
-      fireEvent.keyDown(window, { key: 'Escape' })
+      // Radix's AlertDialog listens for Escape on `document` (not `window`).
+      fireEvent.keyDown(document, { key: 'Escape' })
     })
 
     // Dialog stays open and the promise has not resolved.
-    expect(screen.queryByRole('dialog')).not.toBeNull()
+    expect(screen.queryByRole('alertdialog')).not.toBeNull()
     expect(resolved).toBeUndefined()
   })
 
@@ -222,7 +229,7 @@ describe('useConfirm', () => {
 
     expect(resolved).toBe(true)
     // Dialog must NOT mount when the action is silenced.
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
   it('does NOT short-circuit silenceKey on a danger variant', async () => {
@@ -245,7 +252,7 @@ describe('useConfirm', () => {
     openDialog()
 
     expect(resolved).toBeUndefined()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
   })
 
   it('does NOT short-circuit silenceKey when requireTypedConfirmation is set', async () => {
@@ -269,6 +276,6 @@ describe('useConfirm', () => {
     openDialog()
 
     expect(resolved).toBeUndefined()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
   })
 })

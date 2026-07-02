@@ -10,7 +10,8 @@
  *
  * Coverage:
  * - <Modal> — the canonical primitive
- * - <ConfirmDialog> — composed on top of <Modal>; verifies inheritance
+ * - <ConfirmDialog> — built on Radix's `AlertDialog` primitive (its own
+ *   focus trap, not inherited from <Modal>); verifies the trap still holds
  * - <Drawer> — independent implementation; was unaudited
  *
  * <CommandPalette> is intentionally NOT covered here: it implements its
@@ -178,7 +179,7 @@ describe('focus trap — Phase-45 / Prompt 13', () => {
   });
 
   describe('<ConfirmDialog>', () => {
-    it('inherits focus trap from <Modal>', () => {
+    it('traps focus via its Radix AlertDialog primitive', () => {
       render(
         <ConfirmDialog
           open
@@ -188,12 +189,16 @@ describe('focus trap — Phase-45 / Prompt 13', () => {
           onCancel={() => {}}
         />,
       );
-      const dialog = screen.getByRole('dialog');
+      // ConfirmDialog is built on Radix's `AlertDialog`, which renders
+      // `role="alertdialog"` (not the generic `role="dialog"` Modal/Drawer
+      // use) — this is the correct WAI-ARIA role for a confirm/decision
+      // prompt and is verified explicitly here.
+      const dialog = screen.getByRole('alertdialog');
       expect(dialog.contains(document.activeElement)).toBe(true);
 
       const focusables = getFocusables(dialog);
-      // ConfirmDialog renders Cancel + Confirm + the Modal's Close (X)
-      // header button — at least three focusable controls.
+      // ConfirmDialog renders Cancel + Confirm + the header Close (X)
+      // button — at least three focusable controls.
       expect(focusables.length).toBeGreaterThanOrEqual(2);
 
       const last = focusables[focusables.length - 1];

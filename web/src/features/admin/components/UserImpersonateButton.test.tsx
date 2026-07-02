@@ -85,18 +85,18 @@ describe('UserImpersonateButton', () => {
   it('opens the ConfirmDialog with the target subject', () => {
     renderButton({ subject: 'alice' })
     fireEvent.click(screen.getByTestId('user-impersonate-button-alice'))
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     expect(screen.getByText(/alice/)).toBeInTheDocument()
   })
 
   it('cancel closes the dialog without firing the mutation', async () => {
     renderButton({ subject: 'alice' })
     fireEvent.click(screen.getByTestId('user-impersonate-button-alice'))
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('alertdialog')
     const cancel = within(dialog).getByRole('button', { name: /cancel/i })
     fireEvent.click(cancel)
     await waitFor(() => {
-      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(screen.queryByRole('alertdialog')).toBeNull()
     })
     expect(mockedRequest).not.toHaveBeenCalled()
   })
@@ -110,7 +110,7 @@ describe('UserImpersonateButton', () => {
     })
     renderButton({ subject: 'alice' })
     fireEvent.click(screen.getByTestId('user-impersonate-button-alice'))
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('alertdialog')
     const confirm = within(dialog).getByRole('button', { name: /start impersonation/i })
     fireEvent.click(confirm)
     await waitFor(() => {
@@ -129,6 +129,6 @@ describe('UserImpersonateButton', () => {
     const btn = screen.getByTestId('user-impersonate-button-alice')
     expect(btn).toBeDisabled()
     fireEvent.click(btn)
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 })
