@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { useMatch, useSearchParams } from 'react-router-dom';
+import { useMatch, useSearchParams } from 'react-router';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSelectedVehicleStore } from '@/store/selectedVehicle';
 import type { Vehicle } from '@/types/vehicle';

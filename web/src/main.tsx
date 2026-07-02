@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { createQueryClient } from './api/queryClient'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'

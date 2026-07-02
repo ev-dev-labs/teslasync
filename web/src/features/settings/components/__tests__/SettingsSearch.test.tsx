@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import '@/i18n';
 import { SettingsSearch } from '../SettingsSearch';
 import { fuzzyMatch, searchSettings, getSettingsIndex } from '../../searchIndex';

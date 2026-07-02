@@ -28,7 +28,7 @@ export interface UseDirtyFormResult {
  * an external link. The listener is removed automatically when the form is
  * saved/reset (`isDirty` flips back to false) or the component unmounts.
  * **In-app navigation guard:** TeslaSync uses `<BrowserRouter>` (not the
- * data-router API), so `react-router-dom`'s `useBlocker` is unavailable.
+ * data-router API), so `react-router`'s `useBlocker` is unavailable.
  * For in-app Cancel buttons, back links, etc. pair this hook with
  * {@link useConfirm} to show a confirm dialog using the localized
  * `title` / `message` / `discardLabel` / `keepEditingLabel` returned here.

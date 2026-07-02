@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router';
 
 /**
  * Wires the URL query string into the

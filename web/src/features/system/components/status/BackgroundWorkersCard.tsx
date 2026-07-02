@@ -16,7 +16,7 @@
  * automatically renders the additional rows under the same group.
  */
 
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Activity, AlertTriangle, Boxes, Server } from 'lucide-react'
 
 import type { WorkersHealth, WorkerStatus } from '@/api/types'

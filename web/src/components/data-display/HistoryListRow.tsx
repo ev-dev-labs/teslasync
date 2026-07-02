@@ -1,5 +1,5 @@
 import { type ReactNode, type MouseEventHandler } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { cn } from '@/lib/cn';

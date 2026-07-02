@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { AlertTriangle, AlertCircle, AlertOctagon, Plus, ChevronRight } from 'lucide-react'
 import { GlassPanel, Button, Badge } from '@/components/ui'
 import { cn } from '@/lib/cn'

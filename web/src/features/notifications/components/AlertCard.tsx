@@ -7,7 +7,7 @@
  * future surfaces (rule preview, drillthrough, etc.).
  */
 
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { TFunction } from 'i18next';
 import { cn } from '@/lib/cn';
 import { severityTokens, normalizeSeverity } from '@/lib/tokens';

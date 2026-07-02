@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react'
-import { Link, NavLink, useNavigate, type LinkProps, type NavLinkProps } from 'react-router-dom'
+import { Link, NavLink, useNavigate, type LinkProps, type NavLinkProps } from 'react-router'
 import { useNavigationGuardContext } from './NavigationGuardProvider'
 
 /**
@@ -16,7 +16,7 @@ function shouldSkipGuard(e: MouseEvent<HTMLAnchorElement>, target?: string): boo
 }
 
 /**
- * Drop-in replacement for `react-router-dom`'s `<Link>` that prompts the
+ * Drop-in replacement for `react-router`'s `<Link>` that prompts the
  * user when any registered {@link useNavigationGuard} reports dirty before
  * navigating. Cancels navigation if the user chooses "Keep editing".
  *
@@ -50,7 +50,7 @@ export function GuardedLink({ to, onClick, children, replace, state, relative, t
 }
 
 /**
- * Drop-in replacement for `react-router-dom`'s `<NavLink>` (the
+ * Drop-in replacement for `react-router`'s `<NavLink>` (the
  * active-styling variant of `<Link>`). Same guard semantics as
  * {@link GuardedLink}; preserves `<NavLink>`'s function-as-children and
  * function-as-className API.

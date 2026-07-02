@@ -1,5 +1,5 @@
 import { lazy, useEffect, useRef } from 'react'
-import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'

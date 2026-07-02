@@ -5,7 +5,7 @@
  * that navigates to the builder with the preset pre-filled.
  */
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, Button as UiButton, Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';

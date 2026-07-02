@@ -12,7 +12,7 @@
  *   /alerts?tab=preferences       → /notifications/quiet-hours
  */
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 
 const TAB_TO_ROUTE: Record<string, string> = {
   alerts: '/notifications/alerts',

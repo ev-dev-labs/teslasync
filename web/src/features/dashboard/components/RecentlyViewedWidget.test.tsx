@@ -10,13 +10,13 @@
  *
  * We rely on the lib's own test seam (`__resetRecentPagesForTests`) so
  * the localStorage namespace is clean per test, and use a wrapping
- * `<MemoryRouter>` because the widget renders `react-router-dom`'s
+ * `<MemoryRouter>` because the widget renders `react-router`'s
  * `<Link>` for each row.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { RecentlyViewedWidget } from './RecentlyViewedWidget'
 import {
   __resetRecentPagesForTests,

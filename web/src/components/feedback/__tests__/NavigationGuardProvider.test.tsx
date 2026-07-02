@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import '@/i18n'
 import { NavigationGuardProvider, useNavigationGuardContext } from '../NavigationGuardProvider'
 import { GuardedLink, GuardedNavLink } from '../GuardedLink'

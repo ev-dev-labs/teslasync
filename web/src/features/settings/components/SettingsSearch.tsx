@@ -7,7 +7,7 @@
 // covers substring + keyword + fuzzy-subsequence (e.g. "lng" → "Language").
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui';

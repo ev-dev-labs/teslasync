@@ -8,7 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';

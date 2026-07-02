@@ -18,7 +18,7 @@
 // every entry is present; updating one MUST update the other.
 
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import {
   ArrowRight,
   BookOpen,

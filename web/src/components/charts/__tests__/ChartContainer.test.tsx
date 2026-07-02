@@ -13,7 +13,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { ChartContainer } from '../ChartContainer';
 import { ChartLegend } from '../ChartLegend';
 import { useChartHiddenSeries } from '../ChartHiddenSeriesContext';
@@ -141,7 +141,7 @@ describe('ChartContainer chartKey + ChartLegend toggle (Phase-46/67)', () => {
 
   it('does not provide context when chartKey is omitted (no Router needed by descendants)', () => {
     // No MemoryRouter — purposefully test that a chart without chartKey
-    // does NOT pull react-router-dom into the dependency graph. If this
+    // does NOT pull react-router into the dependency graph. If this
     // test fails it means useHiddenSeries() is being called even when
     // chartKey is unset — that would break every ChartContainer test
     // that doesn't already wrap in a Router.

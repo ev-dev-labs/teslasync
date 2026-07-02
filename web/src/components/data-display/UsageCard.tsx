@@ -16,7 +16,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { AlertTriangle, ExternalLink } from 'lucide-react'
 
 /** Visual intent driving accent colour for bars / banners / values. */

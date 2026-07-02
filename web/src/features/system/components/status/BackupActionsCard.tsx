@@ -15,7 +15,7 @@
 import { type ReactNode, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Play, ExternalLink } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Button } from '@/components/ui'
 import { useToast } from '@/components/feedback/Toast'
 import { triggerQuickBackup } from '@/api/devtools'

@@ -17,7 +17,7 @@ export function useChartHiddenSeries(): HiddenSeriesState | null {
 /**
  * Internal wrapper used by `<ChartContainer>`. Calls
  * {@link useHiddenSeries} only when `chartKey` is truthy so charts that
- * have not adopted toggling don't incur a `react-router-dom`
+ * have not adopted toggling don't incur a `react-router`
  * `useSearchParams()` dependency (which throws when no `<Router>` is in
  * scope — the default in many isolated unit tests).
  *

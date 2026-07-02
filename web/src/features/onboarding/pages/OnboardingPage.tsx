@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { Sparkles, RefreshCw, ArrowRight, BookOpen, ExternalLink, SkipForward } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';

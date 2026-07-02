@@ -13,7 +13,7 @@
  * the inbox visually telegraphs which rows are still pending attention.
  */
 
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, ChevronRight, MailOpen, Mail } from 'lucide-react';
 import { cn } from '@/lib/cn';

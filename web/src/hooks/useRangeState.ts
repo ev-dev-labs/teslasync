@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import {
   DATE_PRESETS,
   getDatePreset,

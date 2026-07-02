@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router';
 import {
   Car, Zap, DollarSign, Leaf, Globe, Moon,
   Clock, Award, Flame, TreePine, Home,

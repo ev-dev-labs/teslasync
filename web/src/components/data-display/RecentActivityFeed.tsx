@@ -10,7 +10,7 @@
  *   - relative timestamp
  *   - optional click-through to the entity (e.g. /vehicles/:id, /drives/:id)
  */
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Timeline } from './Timeline';
 import { EmptyState } from '@/components/feedback/EmptyState';

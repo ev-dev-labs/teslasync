@@ -107,7 +107,7 @@ export default function ApiLogsPage() {
     defaultPresetId: 'all',
   });
 
-  // Multi-key URL writer — react-router-dom v6's setSearchParams uses a
+  // Multi-key URL writer — react-router v6's setSearchParams uses a
   // ref that doesn't refresh between two synchronous calls, so chaining
   // setFilter(...) + setPage(0) silently drops the first write. Every
   // filter change (method, status, endpoint, service, from, to, etc.)

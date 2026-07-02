@@ -8,7 +8,7 @@
 
 import { useDeferredValue, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { PageContainer, Grid } from '@/components/layout';
 import {
   GlassPanel, Input as ControlInput, Select as ControlSelect, TabNav, Pagination,

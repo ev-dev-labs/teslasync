@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router'
 import { GuardedNavLink } from '../feedback/GuardedLink'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'

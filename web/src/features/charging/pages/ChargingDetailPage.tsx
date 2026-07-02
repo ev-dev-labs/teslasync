@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { ChargingSession, ChargeTelemetryReading } from '@/api/types';
 import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';

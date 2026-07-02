@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, UserPlus, UserMinus, XCircle, Users, Mail, Shield } from 'lucide-react';
 

@@ -26,7 +26,7 @@
  *     hub never surfaces something the sidebar would hide.
  */
 import { useMemo, useRef, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout/PageContainer';

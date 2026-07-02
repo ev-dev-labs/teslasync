@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';

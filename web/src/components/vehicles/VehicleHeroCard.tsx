@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';

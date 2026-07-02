@@ -8,7 +8,7 @@
  *   /notifications?tab=channels   → /notifications/channels
  */
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 
 const TAB_TO_ROUTE: Record<string, string> = {
   inbox: '/notifications/inbox',

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
 import { Activity, Route, Zap, Clock, BatteryCharging, TrendingUp } from 'lucide-react';

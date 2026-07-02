@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import {
   Heart, Battery, BatteryFull, Gauge, RefreshCcw, Clock,
   Zap, ArrowRight, Lightbulb, AlertTriangle,

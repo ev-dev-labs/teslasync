@@ -3,7 +3,7 @@
  * preserving any search params.
  */
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 
 export default function LegacyAlertRulesRedirect() {
   const { search } = useLocation();

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
 import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
 

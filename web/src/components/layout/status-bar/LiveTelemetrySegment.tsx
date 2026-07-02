@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
 import { Tooltip } from '@/components/ui';

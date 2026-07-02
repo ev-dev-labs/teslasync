@@ -22,7 +22,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import {
   Archive,
   ArchiveRestore,
@@ -189,7 +189,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     // Bridge the existing controlled-component contract back into the
     // discrete URL params so the FilterBar UI stays untouched. All seven
     // keys are written atomically via useUrlBatch — without this, the
-    // react-router-dom v6 setSearchParams race would discard 6 of 7
+    // react-router v6 setSearchParams race would discard 6 of 7
     // updates whenever a saved view applied multi-key filters.
     const readValue =
       next.read === undefined ? null : next.read ? 'read' : 'unread';

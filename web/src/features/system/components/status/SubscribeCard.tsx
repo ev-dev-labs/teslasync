@@ -13,7 +13,7 @@
  */
 
 import { Bell, MessageSquare, Hash, Webhook, Mail, Smartphone } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { GlassPanel } from '@/components/ui'
 
 interface ChannelTileProps {

@@ -17,7 +17,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import type { ReactNode } from 'react'
 
 // Mock the resilience-aware request helper used by useSubmitFeedback.

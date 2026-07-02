@@ -1,5 +1,5 @@
 import type { MouseEvent, FocusEvent } from 'react'
-import type { LinkProps } from 'react-router-dom'
+import type { LinkProps } from 'react-router'
 import { GuardedLink } from '../feedback/GuardedLink'
 import { prefetchRoute } from '@/lib/routePrefetch'
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef } from 'react'
-import { useNavigate, type NavigateOptions, type To } from 'react-router-dom'
+import { useNavigate, type NavigateOptions, type To } from 'react-router'
 import { useNavigationGuardContext } from '@/components/feedback/NavigationGuardProvider'
 
 /**

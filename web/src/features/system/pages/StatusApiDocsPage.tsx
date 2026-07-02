@@ -7,7 +7,7 @@
  * handler. Static content — no backend round-trip.
  */
 
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Server, ArrowLeft, Code } from 'lucide-react'
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, Badge } from '@/components/ui'

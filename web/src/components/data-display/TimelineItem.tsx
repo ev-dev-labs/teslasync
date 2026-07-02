@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 /** Timeline item for activity feeds. When `href` is provided, the entire row
  *  becomes a navigable link for alert drill-through. */

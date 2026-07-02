@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Spinner } from '@/components/feedback';
 import { Badge, Button as ControlButton } from '@/components/ui';

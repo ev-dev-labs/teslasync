@@ -14,7 +14,7 @@
  */
 
 import { useMemo, useState, type FormEvent } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router'
 import {
   ArrowLeft, AlertTriangle, AlertCircle, AlertOctagon,
   CheckCircle2, Clock, MessageSquare,

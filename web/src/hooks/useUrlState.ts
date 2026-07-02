@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 
 /**
  * useUrlState — small `useState`-compatible hook that mirrors a single piece
@@ -57,7 +57,7 @@ export interface UrlStateSetOptions {
 /**
  * Setter for a single URL-mirrored value. Safe in isolation, but DO NOT
  * call ≥ 2 of these setters in the same synchronous handler — under
- * react-router-dom v6 the second `navigate(replace)` will discard the
+ * react-router v6 the second `navigate(replace)` will discard the
  * first because both callbacks read the SAME `searchParamsRef` snapshot.
  * Use {@link useUrlBatch} for multi-key updates.
  */
@@ -238,7 +238,7 @@ export interface UrlBatchSetOptions {
  * useUrlBatch — atomically write multiple URL params in a single
  * `setSearchParams` call.
  *
- * Why: react-router-dom v6's `useSearchParams` setter reads from a ref
+ * Why: react-router v6's `useSearchParams` setter reads from a ref
  * that is only refreshed on the NEXT render. Two synchronous setter
  * calls within the same tick both see the SAME `prev` snapshot, and the
  * second `navigate(..., { replace: true })` discards the first.

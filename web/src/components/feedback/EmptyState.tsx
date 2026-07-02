@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { cn } from '@/lib/cn';
 import { Button as CtaButton } from '@/components/ui/Button';
 import { Heading, Text } from '@/components/ui/Typography';

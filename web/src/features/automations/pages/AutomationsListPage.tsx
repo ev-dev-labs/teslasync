@@ -5,7 +5,7 @@
  * and a live activity feed powered by SSE.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button as UiButton, Input as UiInput, Select as UiSelect, Badge } from '@/components/ui';

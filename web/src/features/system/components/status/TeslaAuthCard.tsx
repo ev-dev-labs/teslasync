@@ -13,7 +13,7 @@
  */
 
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { ShieldCheck, ShieldAlert, ShieldX, ExternalLink } from 'lucide-react'
 import { GlassPanel, Badge } from '@/components/ui'
 

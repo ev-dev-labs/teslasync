@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 import { GlassPanel, Badge } from '@/components/ui';
 import { BulkActionToolbar } from '@/components/data-display';

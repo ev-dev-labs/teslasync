@@ -25,7 +25,7 @@
  * polling entirely once Fleet Telemetry is wired up.
  */
 
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Battery, Car, ExternalLink, Radio, Wifi, WifiOff } from 'lucide-react'
 

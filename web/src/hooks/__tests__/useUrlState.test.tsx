@@ -1,6 +1,6 @@
 import { act, fireEvent, render, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import {
   useUrlArray,
@@ -278,7 +278,7 @@ describe('useUrlBatch', () => {
 
   it('REGRESSION: two same-tick useUrlString setters lose the first write', () => {
     // This test documents the structural bug useUrlBatch fixes. If this
-    // test starts FAILING, react-router-dom batching may have changed —
+    // test starts FAILING, react-router batching may have changed —
     // re-evaluate whether useUrlBatch is still necessary.
     function Probe() {
       const [from, setFrom] = useUrlString('from', '');

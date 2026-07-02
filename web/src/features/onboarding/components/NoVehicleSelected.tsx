@@ -1,6 +1,6 @@
 import { Car } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';

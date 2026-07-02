@@ -30,7 +30,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { GuardedNavLink } from '../../feedback/GuardedLink'
 import { Button } from '@/components/ui'

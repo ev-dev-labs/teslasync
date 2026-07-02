@@ -4,7 +4,7 @@
  * draft restore links + email CTAs working.
  */
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 
 export default function LegacyAlertStudioRedirect() {
   const { search } = useLocation();

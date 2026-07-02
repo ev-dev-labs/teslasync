@@ -1,5 +1,5 @@
 import { PrefetchLink } from './PrefetchLink';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Home, Car, BatteryCharging, HeartPulse, MapPin } from 'lucide-react';
 import { cn } from '@/lib/cn';

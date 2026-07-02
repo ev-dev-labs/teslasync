@@ -1,4 +1,4 @@
-import type { NavigateFunction } from 'react-router-dom'
+import type { NavigateFunction } from 'react-router'
 import type { TFunction } from 'i18next'
 import type { ModeId, ThemeId } from '@/components/ui/ThemeProvider'
 import { Icons, type LucideIcon } from '@/lib/icons'

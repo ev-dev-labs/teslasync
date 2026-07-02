@@ -5,7 +5,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { usePageTitle } from '@/hooks/usePageTitle';

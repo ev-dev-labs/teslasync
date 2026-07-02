@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { type ReactNode, useRef } from 'react'
-import { matchPath, useLocation } from 'react-router-dom'
+import { matchPath, useLocation } from 'react-router'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 
 /**

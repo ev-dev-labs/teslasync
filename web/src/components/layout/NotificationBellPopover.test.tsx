@@ -20,7 +20,7 @@ import {
   act,
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router'
 import type { ReactNode } from 'react'
 import '../../i18n'
 

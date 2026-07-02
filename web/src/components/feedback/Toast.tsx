@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 import { useMotionPreference } from '@/hooks/useMotionPreference'

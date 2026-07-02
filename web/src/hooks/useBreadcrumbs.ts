@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useLocation, useParams, matchPath } from 'react-router-dom';
+import { useLocation, useParams, matchPath } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { BreadcrumbItem } from '@/components/layout/Breadcrumbs';
 import { ROUTE_META, type RouteMeta } from '@/lib/routeMeta';

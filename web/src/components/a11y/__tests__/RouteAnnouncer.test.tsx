@@ -15,7 +15,7 @@ import {
   Routes,
   Route,
   useNavigate,
-} from 'react-router-dom';
+} from 'react-router';
 import { RouteAnnouncer } from '../RouteAnnouncer';
 
 /**
