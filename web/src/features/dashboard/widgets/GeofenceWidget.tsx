@@ -162,7 +162,11 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
         <div className="flex h-full flex-col">
           {/* Map section */}
           {showMap && (
-            <div className="h-40 min-h-[120px] flex-shrink-0">
+            <div
+              className="h-40 min-h-[120px] flex-shrink-0"
+              role="application"
+              aria-label={t('widget.geofence.mapLabel', 'Geofence zones map')}
+            >
               <WidgetMapView
                 center={[vLat, vLon]}
                 zoom={12}
