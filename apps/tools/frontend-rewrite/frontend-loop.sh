@@ -85,6 +85,22 @@ run_full_gate() {
   log "phase-boundary full gate after $prog: exit=$rc (see $GATE_FULL_LOG)"
 }
 
+# Self-healing audit: fires every 25 fleet-wide completions (never on a
+# partial multiple already audited this run). Fully autonomous — see
+# apps/tools/frontend-rewrite/self-heal-audit.mjs and the mission doc at
+# .github/prompts/frontend-gold-standard/0000-methodology.prompt.md.
+# Never blocks/pauses the loop; only logs + remediates.
+LAST_AUDITED_DONE=0
+maybe_self_heal() {
+  local done_now
+  done_now=$(wc -l < "$DONE" 2>/dev/null | tr -d ' '); done_now=${done_now:-0}
+  if [ $(( (done_now / 25) - (LAST_AUDITED_DONE / 25) )) -ge 1 ]; then
+    log "=== SELF-HEAL AUDIT triggered at $done_now completions (fleet-wide) ==="
+    node "$SCRIPT_DIR/self-heal-audit.mjs" >> "$LOOP_LOG" 2>&1
+    LAST_AUDITED_DONE=$done_now
+  fi
+}
+
 log "frontend-loop START jobs=$JOBS programs=${PROGRAMS[*]}"
 
 gpass=0
@@ -106,6 +122,7 @@ while true; do
 
       log "launch wave: $RUNNER --program $prog --jobs $JOBS"
       bash "$RUNNER" --program "$prog" --jobs "$JOBS" >> "$LOOP_LOG" 2>&1
+      maybe_self_heal
 
       pend_after=$(pending_for "$prog")
       log "program=$prog pending_after=$pend_after"
