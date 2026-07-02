@@ -19,7 +19,7 @@ import {
   AREA_DEFAULTS, areaGradient,
   ChartBrush,
 } from '@/components/charts';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
@@ -479,7 +479,12 @@ export default function BatteryDegradationPage() {
           </ChartContainer>
         </FadeIn>
       ) : (
-        <Skeleton height={280} />
+        <FadeIn delay={0.15}>
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<TrendingDown className="h-12 w-12" />}
+            message={t('battery.degradation.noTrend', 'Health trend and projection will appear once history is available.')}
+          />
+        </FadeIn>
       )}
 
       {/* ── Range Loss Chart ──────────────────────────── */}
