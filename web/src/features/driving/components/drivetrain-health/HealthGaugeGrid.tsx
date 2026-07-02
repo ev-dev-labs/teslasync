@@ -6,7 +6,7 @@ import { Grid } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { RadialGauge } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
