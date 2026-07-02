@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@/components/ui';
+import { Gauge, MapPin, Clock, Thermometer, TrendingUp, Timer, Activity } from 'lucide-react';
 import {
   ChartTooltip, ChartGradient,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
@@ -8,23 +8,25 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ZAxis,
   AREA_DEFAULTS,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
-import type { FleetAnalytics } from '@/api/types';
-import { SectionTitle } from './helpers';
+import { AnalyticsPanel } from './AnalyticsPanel';
 import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 import { DrivingTemperatureStats } from './DrivingTemperatureStats';
+import type { FleetAnalyticsQuery } from './constants';
 
 const KM_PER_MILE = 1.609344;
 
-export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
+export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const tempUnit = unitPrefs.temperature;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
+
+  const { data, isLoading, isError, error, refetch } = query;
+  const err = isError ? error : undefined;
 
   const da = data?.drive_analytics;
   const speedDist = da?.speed_distribution ?? [];
@@ -36,157 +38,198 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
   const effTrend = useMemo(() => dailyTrend.filter((d) => safe(d.efficiency) > 0), [dailyTrend]);
 
   return (
-    <FadeIn className="space-y-4 mt-4">
-      <DrivingPerformanceCards data={data} />
+    <FadeIn className="mt-4 space-y-4 xl:space-y-5">
+      <DrivingPerformanceCards query={query} />
 
-      {/* Speed Distribution */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.driving.speedDist', 'Speed Distribution')}</SectionTitle>
-        {speedDist.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={speedDist} margin={chartMarginLabeled} {...chartAnimation}>
-              {chartGrid}
-              <XAxis dataKey="range" tick={axisTickSm} />
-              <YAxis tick={axisTick} />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noSpeed', 'No speed data')} />
-        )}
-      </GlassPanel>
+      <section
+        aria-label={t('analytics.tabs.driving', 'Driving')}
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5 2xl:grid-cols-3"
+      >
+        {/* Speed Distribution */}
+        <AnalyticsPanel
+          title={t('analytics.driving.speedDist', 'Speed Distribution')}
+          icon={<Gauge className="h-4 w-4" />}
+          loading={isLoading}
+          error={err}
+          onRetry={refetch}
+          isEmpty={speedDist.length === 0}
+          emptyMessage={t('analytics.driving.noSpeed', 'No speed data')}
+        >
+          <div className="h-64 sm:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={speedDist} margin={chartMarginLabeled} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="range" tick={axisTickSm} />
+                <YAxis tick={axisTick} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </AnalyticsPanel>
 
-      {/* Trip Distance Distribution */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.driving.distDist', 'Trip Distance Distribution')}</SectionTitle>
-        {distDist.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={distDist} margin={chartMarginLabeled} {...chartAnimation}>
-              {chartGrid}
-              <XAxis dataKey="range" tick={axisTickSm} />
-              <YAxis tick={axisTick} />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noDistDist', 'No distance distribution data')} />
-        )}
-      </GlassPanel>
+        {/* Trip Distance Distribution */}
+        <AnalyticsPanel
+          title={t('analytics.driving.distDist', 'Trip Distance Distribution')}
+          icon={<MapPin className="h-4 w-4" />}
+          loading={isLoading}
+          error={err}
+          onRetry={refetch}
+          isEmpty={distDist.length === 0}
+          emptyMessage={t('analytics.driving.noDistDist', 'No distance distribution data')}
+        >
+          <div className="h-64 sm:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={distDist} margin={chartMarginLabeled} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="range" tick={axisTickSm} />
+                <YAxis tick={axisTick} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </AnalyticsPanel>
 
-      {/* Hourly Driving Pattern */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.driving.hourlyPattern', 'Hourly Driving Pattern')}</SectionTitle>
-        {hourly.length > 0 ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={hourly} margin={chartMarginLabeled} {...chartAnimation}>
-              {chartGrid}
-              <XAxis dataKey="hour" tick={axisTickSm} tickFormatter={(h: number) => `${h}:00`} />
-              <YAxis yAxisId="left" tick={axisTick} />
-              <YAxis yAxisId="right" orientation="right" tick={axisTick} />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend />
-              <Bar yAxisId="left" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
-              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="distance" name={t('analytics.driving.distance', 'Distance')} stroke={CHART_COLORS[3]} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noHourly', 'No hourly data')} />
-        )}
-      </GlassPanel>
+        {/* Hourly Driving Pattern */}
+        <AnalyticsPanel
+          title={t('analytics.driving.hourlyPattern', 'Hourly Driving Pattern')}
+          icon={<Clock className="h-4 w-4" />}
+          loading={isLoading}
+          error={err}
+          onRetry={refetch}
+          isEmpty={hourly.length === 0}
+          emptyMessage={t('analytics.driving.noHourly', 'No hourly data')}
+        >
+          <div className="h-64 sm:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={hourly} margin={chartMarginLabeled} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="hour" tick={axisTickSm} tickFormatter={(h: number) => `${h}:00`} />
+                <YAxis yAxisId="left" tick={axisTick} />
+                <YAxis yAxisId="right" orientation="right" tick={axisTick} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend />
+                <Bar yAxisId="left" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="distance" name={t('analytics.driving.distance', 'Distance')} stroke={CHART_COLORS[3]} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </AnalyticsPanel>
 
-      {/* Temp vs Efficiency */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.driving.tempVsEff', 'Temperature vs Efficiency')}</SectionTitle>
-        {tempEff.length > 0 ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <ScatterChart margin={chartMarginLabeled}>
-              {chartGrid}
-              <XAxis dataKey="temp" name={t('analytics.driving.temp', 'Temp')} tick={axisTick} unit={tempUnit} type="number" />
-              <YAxis dataKey="efficiency" name={t('analytics.driving.efficiency', 'Efficiency')} tick={axisTick} unit={` ${efficiencyUnit}`} type="number" />
-              <ZAxis dataKey="distance" range={[30, 300]} name={distanceUnit} />
-              <Tooltip content={<ChartTooltip />} />
-              <Scatter
-                data={tempEff.map((d) => ({
-                  // backend `temp_vs_efficiency` is { °C, Wh/km, km } — convert at boundary.
-                  temp: convertTempFromSI(safe(d.temp), tempUnit),
-                  efficiency: distanceUnit === 'mi' ? safe(d.efficiency) * KM_PER_MILE : safe(d.efficiency),
-                  distance: convertDistanceFromSI(safe(d.distance) * 1000, distanceUnit),
-                }))}
-                fill={CHART_COLORS[1]}
-              />
-            </ScatterChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noTempEff', 'No temperature data')} />
-        )}
-      </GlassPanel>
+        {/* Temp vs Efficiency */}
+        <AnalyticsPanel
+          title={t('analytics.driving.tempVsEff', 'Temperature vs Efficiency')}
+          icon={<Thermometer className="h-4 w-4" />}
+          loading={isLoading}
+          error={err}
+          onRetry={refetch}
+          isEmpty={tempEff.length === 0}
+          emptyMessage={t('analytics.driving.noTempEff', 'No temperature data')}
+        >
+          <div className="h-64 sm:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={chartMarginLabeled}>
+                {chartGrid}
+                <XAxis dataKey="temp" name={t('analytics.driving.temp', 'Temp')} tick={axisTick} unit={tempUnit} type="number" />
+                <YAxis dataKey="efficiency" name={t('analytics.driving.efficiency', 'Efficiency')} tick={axisTick} unit={` ${efficiencyUnit}`} type="number" />
+                <ZAxis dataKey="distance" range={[30, 300]} name={distanceUnit} />
+                <Tooltip content={<ChartTooltip />} />
+                <Scatter
+                  data={tempEff.map((d) => ({
+                    // backend `temp_vs_efficiency` is { °C, Wh/km, km } — convert at boundary.
+                    temp: convertTempFromSI(safe(d.temp), tempUnit),
+                    efficiency: distanceUnit === 'mi' ? safe(d.efficiency) * KM_PER_MILE : safe(d.efficiency),
+                    distance: convertDistanceFromSI(safe(d.distance) * 1000, distanceUnit),
+                  }))}
+                  fill={CHART_COLORS[1]}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </AnalyticsPanel>
 
-      {/* Daily Driving Trend */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.driving.dailyTrend', 'Daily Driving Trend')}</SectionTitle>
-        {dailyTrend.length > 0 ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={dailyTrend} margin={chartMarginLabeled} {...chartAnimation}>
-              {chartGrid}
-              <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
-              <YAxis yAxisId="left" tick={axisTick} />
-              <YAxis yAxisId="right" orientation="right" tick={axisTick} />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend />
-              <defs>
-                <ChartGradient id="dailyDistGrad" color={CHART_COLORS[0]} />
-              </defs>
-              <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="distance" name={distanceUnit} stroke={CHART_COLORS[0]} fill="url(#dailyDistGrad)" />
-              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} stroke={CHART_COLORS[3]} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noDailyTrend', 'No daily trend data')} />
-        )}
-      </GlassPanel>
+        {/* Daily Driving Trend */}
+        <AnalyticsPanel
+          title={t('analytics.driving.dailyTrend', 'Daily Driving Trend')}
+          icon={<TrendingUp className="h-4 w-4" />}
+          loading={isLoading}
+          error={err}
+          onRetry={refetch}
+          isEmpty={dailyTrend.length === 0}
+          emptyMessage={t('analytics.driving.noDailyTrend', 'No daily trend data')}
+        >
+          <div className="h-64 sm:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={dailyTrend} margin={chartMarginLabeled} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis yAxisId="left" tick={axisTick} />
+                <YAxis yAxisId="right" orientation="right" tick={axisTick} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend />
+                <defs>
+                  <ChartGradient id="dailyDistGrad" color={CHART_COLORS[0]} />
+                </defs>
+                <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="distance" name={distanceUnit} stroke={CHART_COLORS[0]} fill="url(#dailyDistGrad)" />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} stroke={CHART_COLORS[3]} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </AnalyticsPanel>
 
-      {/* Drive Duration Distribution */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.driving.durationDist', 'Drive Duration Distribution')}</SectionTitle>
-        {durationDist.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={durationDist} margin={chartMarginLabeled} {...chartAnimation}>
-              {chartGrid}
-              <XAxis dataKey="range" tick={axisTickSm} />
-              <YAxis tick={axisTick} />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="count" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[4]} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noDurationData', 'Not enough drive data for distribution chart')} />
-        )}
-      </GlassPanel>
+        {/* Drive Duration Distribution */}
+        <AnalyticsPanel
+          title={t('analytics.driving.durationDist', 'Drive Duration Distribution')}
+          icon={<Timer className="h-4 w-4" />}
+          loading={isLoading}
+          error={err}
+          onRetry={refetch}
+          isEmpty={durationDist.length === 0}
+          emptyMessage={t('analytics.driving.noDurationData', 'Not enough drive data for distribution chart')}
+        >
+          <div className="h-64 sm:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={durationDist} margin={chartMarginLabeled} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="range" tick={axisTickSm} />
+                <YAxis tick={axisTick} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="count" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[4]} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </AnalyticsPanel>
 
-      {/* Efficiency Trend */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.driving.effTrend', 'Efficiency Trend')}</SectionTitle>
-        {effTrend.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={effTrend} margin={chartMarginLabeled} {...chartAnimation}>
-              {chartGrid}
-              <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
-              <YAxis tick={axisTick} />
-              <Tooltip content={<ChartTooltip />} />
-              <defs>
-                <ChartGradient id="effTrendGrad" color={CHART_COLORS[1]} />
-              </defs>
-              <Area {...AREA_DEFAULTS} dataKey="efficiency" name={efficiencyUnit} stroke={CHART_COLORS[1]} fill="url(#effTrendGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noEffTrend', 'No efficiency trend data')} />
-        )}
-      </GlassPanel>
+        {/* Efficiency Trend — hero band */}
+        <AnalyticsPanel
+          className="md:col-span-2 2xl:col-span-3"
+          title={t('analytics.driving.effTrend', 'Efficiency Trend')}
+          icon={<Activity className="h-4 w-4" />}
+          loading={isLoading}
+          error={err}
+          onRetry={refetch}
+          isEmpty={effTrend.length === 0}
+          emptyMessage={t('analytics.driving.noEffTrend', 'No efficiency trend data')}
+        >
+          <div className="h-64 sm:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={effTrend} margin={chartMarginLabeled} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis tick={axisTick} />
+                <Tooltip content={<ChartTooltip />} />
+                <defs>
+                  <ChartGradient id="effTrendGrad" color={CHART_COLORS[1]} />
+                </defs>
+                <Area {...AREA_DEFAULTS} dataKey="efficiency" name={efficiencyUnit} stroke={CHART_COLORS[1]} fill="url(#effTrendGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </AnalyticsPanel>
+      </section>
 
-      <DrivingTemperatureStats data={data} />
+      <DrivingTemperatureStats query={query} />
     </FadeIn>
   );
 }

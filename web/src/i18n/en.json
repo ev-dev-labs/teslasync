@@ -3526,7 +3526,8 @@
       "energy": "Energy",
       "efficiency": "Efficiency",
       "gasSavings": "Gas Savings",
-      "co2Saved": "CO₂ Saved"
+      "co2Saved": "CO₂ Saved",
+      "kpis": "Fleet summary metrics"
     },
     "overview": {
       "distByVehicle": "Distance by Vehicle",
@@ -3547,7 +3548,13 @@
       "vehicleComparison": "Vehicle Comparison",
       "noComparison": "Need 2+ vehicles for comparison",
       "energyActivity": "Energy & Activity",
-      "energykWh": "Energy (kWh)"
+      "energykWh": "Energy (kWh)",
+      "radar": {
+        "distance": "Distance",
+        "energy": "Energy",
+        "drives": "Drives",
+        "efficiency": "Efficiency"
+      }
     },
     "weeklyDigest": {
       "alertsSection": "Alerts",
@@ -3615,6 +3622,7 @@
       "charging": "Charging",
       "battery": "Battery"
     },
+    "tabsNav": "Analytics sections",
     "subtitle": "Comprehensive fleet performance insights"
   },
   "yearReview": {

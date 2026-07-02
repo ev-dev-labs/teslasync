@@ -5,12 +5,13 @@ import { safe } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
-import type { FleetAnalytics } from '@/api/types';
+import { MetricBandSkeleton } from './helpers';
+import type { FleetAnalyticsQuery } from './constants';
 
 const SECONDS_PER_HOUR = 3600;
 const METERS_PER_KM = 1000;
 
-export function DrivingPerformanceCards({ data }: { data: FleetAnalytics | undefined }) {
+export function DrivingPerformanceCards({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -19,6 +20,11 @@ export function DrivingPerformanceCards({ data }: { data: FleetAnalytics | undef
   const fromKmh = (kmh: number) => convertSpeedFromSI((kmh * METERS_PER_KM) / SECONDS_PER_HOUR, speedUnit);
   // backend `distance_stats` is km; SI floor is meters.
   const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
+
+  const { data, isLoading } = query;
+  if (isLoading) {
+    return <MetricBandSkeleton count={6} />;
+  }
 
   const da = data?.drive_analytics;
   const ss = da?.speed_stats;
