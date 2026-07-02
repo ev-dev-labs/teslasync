@@ -10070,26 +10070,60 @@
   },
   "alertRules": {
     "title": "Alert rules",
+    "subtitle": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio.",
+    "kpis": "Alert rule metrics",
     "noun": {
       "one": "rule",
       "other": "rules"
+    },
+    "kpi": {
+      "total": "Total rules",
+      "computed": "Computed"
+    },
+    "status": {
+      "snoozed": "Snoozed"
+    },
+    "insights": {
+      "severity": "Severity distribution",
+      "noSeverity": "No rules to summarise yet",
+      "status": "Status breakdown",
+      "noStatus": "No rules to summarise yet",
+      "topSignals": "Top monitored signals",
+      "noSignals": "No monitored signals yet"
+    },
+    "kind": {
+      "signal": "Signal",
+      "metric": "Metric"
+    },
+    "scope": {
+      "all": "All vehicles",
+      "count": "{{count}} vehicles",
+      "none": "—"
+    },
+    "table": {
+      "title": "All rules",
+      "empty": "No alert rules match"
     },
     "bulk": {
       "enable": "Enable",
       "disable": "Disable",
       "delete": "Delete",
       "deleteConfirm": {
-        "title": "Delete alert rules?"
+        "title": "Delete alert rules?",
+        "body": "These rules will stop firing immediately. This cannot be undone."
       }
     },
     "empty": {
       "title": "No alert rules yet",
+      "body": "Create your first alert rule in the Alert Studio.",
       "cta": "Open Alert Studio"
     },
     "col": {
       "name": "Name",
+      "type": "Type",
       "signal": "Signal",
       "severity": "Severity",
+      "scope": "Scope",
       "status": "Status"
     },
     "selectRule": "Select rule {{name}}",
@@ -10097,6 +10131,11 @@
       "nameTooLong": "Max 120 characters"
     },
     "openStudio": "Open Alert Studio"
+  },
+  "severity": {
+    "info": "Info",
+    "warn": "Warning",
+    "critical": "Critical"
   },
   "advanced": {
     "restoreConfirms": {
