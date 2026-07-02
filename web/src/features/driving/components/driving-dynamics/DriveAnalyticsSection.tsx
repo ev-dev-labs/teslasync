@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Gauge } from 'lucide-react';
 
 import { Grid } from '@/components/layout';
 import {
@@ -22,6 +23,7 @@ import {
   ReferenceLine,
   Legend,
 } from '@/components/charts';
+import { EmptyState } from '@/components/feedback';
 import { RangePicker } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -110,6 +112,13 @@ export default function DriveAnalyticsSection({
     }));
   }, [filteredDrives]);
 
+  const noData = (
+    <EmptyState /* no-action: transient empty state — surfaces when no drives match the selected date range; the range picker above is the recovery control */
+      icon={<Gauge className="h-5 w-5" />}
+      message={t('common.noDrives', 'No drives recorded yet')}
+    />
+  );
+
   return (
     <>
       {/* Header + date filter */}
@@ -144,18 +153,22 @@ export default function DriveAnalyticsSection({
             exportable
             exportFilename="speed-distribution"
           >
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={speedDistribution}>
-                <defs>
-                  <ChartGradient id="speedFill" color="#3b82f6" />
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="range" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" fill="url(#speedFill)" radius={[4, 4, 0, 0]} name={t('dynamics.drives', 'Drives')} />
-              </BarChart>
-            </ResponsiveContainer>
+            {filteredDrives.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={speedDistribution}>
+                  <defs>
+                    <ChartGradient id="speedFill" color="#3b82f6" />
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="range" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                  <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="count" fill="url(#speedFill)" radius={[4, 4, 0, 0]} name={t('dynamics.drives', 'Drives')} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              noData
+            )}
           </ChartContainer>
 
           {/* chart-a11y:no-table scatter chart of every drive — a per-row table here would be too dense; CSV export available */}
@@ -167,23 +180,25 @@ export default function DriveAnalyticsSection({
             exportable
             exportFilename="acceleration-patterns"
           >
-            <ResponsiveContainer width="100%" height={300}>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="distance" type="number" name={t('dynamics.distance', 'Distance')} unit={` ${distanceUnit}`} tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
-                <YAxis dataKey="powerMax" type="number" name={t('dynamics.peakPower', 'Peak Power')} unit=" kW" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
-                <Tooltip content={<ChartTooltip />} />
-                <Scatter data={accelPatterns} fill="#a855f7" name={t('dynamics.drives', 'Drives')} />
-                {accelPatterns.length > 0 && (
+            {accelPatterns.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="distance" type="number" name={t('dynamics.distance', 'Distance')} unit={` ${distanceUnit}`} tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                  <YAxis dataKey="powerMax" type="number" name={t('dynamics.peakPower', 'Peak Power')} unit=" kW" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Scatter data={accelPatterns} fill="#a855f7" name={t('dynamics.drives', 'Drives')} />
                   <ReferenceLine
                     y={accelPatterns.reduce((sum, p) => sum + p.powerMax, 0) / accelPatterns.length}
                     stroke="#eab308"
                     strokeDasharray="4 4"
                     label={{ value: t('dynamics.avg', 'Avg'), fill: '#eab308', fontSize: 11 }}
                   />
-                )}
-              </ScatterChart>
-            </ResponsiveContainer>
+                </ScatterChart>
+              </ResponsiveContainer>
+            ) : (
+              noData
+            )}
           </ChartContainer>
         </Grid>
       </FadeIn>
@@ -208,20 +223,24 @@ export default function DriveAnalyticsSection({
           exportable
           exportFilename="power-profile"
         >
-          <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={powerProfile}>
-              {areaGradient('powerMaxGrad', '#3b82f6')}
-              {areaGradient('powerMinGrad', '#ef4444', 0.25)}
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} unit=" kW" />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} />
-              <Area {...AREA_DEFAULTS} dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {powerProfile.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={powerProfile}>
+                {areaGradient('powerMaxGrad', '#3b82f6')}
+                {areaGradient('powerMinGrad', '#ef4444', 0.25)}
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} unit=" kW" />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
+                <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} />
+                <Area {...AREA_DEFAULTS} dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            noData
+          )}
         </ChartContainer>
       </FadeIn>
     </>
