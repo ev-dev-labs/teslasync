@@ -522,6 +522,17 @@ worker_main() { # $1 = manifest line number (1-based)
                 -m "merge(parallel): $relpath" "auto/$PP_RUN_ID/$n" >>"$logfile" 2>&1; then
             grep -Fxq "$relpath" "$DONE_FILE" 2>/dev/null || printf '%s\n' "$relpath" >> "$DONE_FILE"
             verdict="MERGED"; reason=""
+            # CRITICAL: fast-forward the REAL launch branch immediately, not just
+            # at the very end of the whole invocation. Waiting until the end means
+            # any interruption (a restart to apply a fix, a crash, the operator
+            # killing a stalled wave) strands every already-merged, done.txt-recorded
+            # unit on the temporary integration branch — done.txt then LIES about
+            # what's actually on the real branch. Root-caused after exactly this
+            # happened to 7 real, gate-passed Radix-migration units this session.
+            # Still under pp_lock, so concurrent workers can't race this.
+            if ! git -C "$PP_REPO_ROOT" -c gc.auto=0 merge --ff-only "$PP_INT_BRANCH" >>"$logfile" 2>&1; then
+                echo "WARNING: could not fast-forward $PP_LAUNCH_BRANCH onto $PP_INT_BRANCH after merging $relpath (main checkout likely has uncommitted changes) -- work is safe on $PP_INT_BRANCH but NOT yet on the real branch; done.txt is now ahead of reality until this is reconciled" >>"$logfile"
+            fi
         else
             pp_integration_recover
             # Deterministic salvage before giving up to an expensive regenerate.
@@ -539,6 +550,9 @@ worker_main() { # $1 = manifest line number (1-based)
                     --message "merge(parallel salvage): $relpath" >>"$logfile" 2>&1; then
                 grep -Fxq "$relpath" "$DONE_FILE" 2>/dev/null || printf '%s\n' "$relpath" >> "$DONE_FILE"
                 verdict="MERGED"; reason="salvaged"
+                if ! git -C "$PP_REPO_ROOT" -c gc.auto=0 merge --ff-only "$PP_INT_BRANCH" >>"$logfile" 2>&1; then
+                    echo "WARNING: could not fast-forward $PP_LAUNCH_BRANCH after salvage-merging $relpath -- see note above" >>"$logfile"
+                fi
             else
                 pp_integration_recover
                 verdict="CONFLICT"; reason="merge conflict into integration branch"
@@ -670,6 +684,7 @@ run_parallel() {
     export PP_REPO_ROOT="$REPO_ROOT" PP_LOG_DIR="$LOG_DIR" PP_DONE_FILE="$DONE_FILE"
     export PP_RUN_LOG="$RUN_LOG" PP_STATE="$state" PP_MANIFEST="$manifest"
     export PP_INT_WT="$int_wt" PP_INT_GITDIR="$int_gitdir" PP_INT_BRANCH="$int_branch"
+    export PP_LAUNCH_BRANCH="$launch_branch"
     export PP_WT_ROOT="$wt_root" PP_RUN_ID="$RUN_ID" PP_LOCKDIR="$state/git-mutex.lock"
     export PP_BASE_TIP="$base_tip" PP_MODEL="$MODEL" PP_TIMEOUT_MIN="$TIMEOUT_MINUTES"
     export PP_COPILOT_BIN="$COPILOT_BIN" PP_LOG_REL=".github/prompts/frontend-gold-standard/logs"
