@@ -5043,14 +5043,30 @@
   },
   "quickStats": {
     "title": "Quick Stats",
+    "subtitle": "Fleet snapshot · last 30 days",
     "defaultName": "Tesla",
+    "selectVehicle": "Select vehicle",
+    "kpis": "Fleet metrics",
+    "spotlight": "Vehicle spotlight",
     "noVehicle": "No vehicle found",
-    "distance": "{{unit}} Driven",
+    "noData": "No fleet metrics available yet",
+    "distanceDriven": "Distance Driven",
     "drives": "Drives",
-    "energy": "kWh Used",
-    "cost": "Total Cost",
+    "chargingSessions": "Charging Sessions",
+    "energyUsed": "Energy Used",
+    "totalCost": "Total Cost",
+    "avgEfficiency": "Avg Efficiency",
+    "co2Saved": "CO₂ Saved",
+    "fleetVehicles": "Fleet Vehicles",
+    "vehicleDetails": "Vehicle Details",
+    "viewAnalytics": "View Analytics",
     "footer": "Powered by TeslaSync",
-    "openDashboard": "Open Dashboard"
+    "openDashboard": "Open Dashboard",
+    "fleet": {
+      "title": "Fleet Comparison",
+      "empty": "No fleet comparison data yet",
+      "unnamed": "Unnamed"
+    }
   },
   "widget": {
     "alertFeed": "Alert Feed",
