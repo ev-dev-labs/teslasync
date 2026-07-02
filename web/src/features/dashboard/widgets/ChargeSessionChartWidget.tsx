@@ -133,19 +133,30 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                   width={36}
                   tickFormatter={(v: number) => `${fmt(v, 0)}`}
                 />
+                {/* Raw recharts <Tooltip> (not the shared <ChartTooltip>): each
+                    bar labels its OWN charger type via the per-datum formatter,
+                    and <ChartTooltip>'s (value, name, unit) formatter has no
+                    access to payload.type. Themed with the same CSS vars as
+                    <ChartTooltip> so the card + text stay readable in the light
+                    theme — the old hard-coded rgba(0,0,0,0.85) surface rendered
+                    the inherited (dark) date label invisible on light surfaces. */}
                 <Tooltip
                   contentStyle={{
-                    background: 'rgba(0,0,0,0.85)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'var(--surface-elevated)',
+                    border: '1px solid var(--border-subtle)',
                     borderRadius: 8,
                     fontSize: 12,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                    backdropFilter: 'blur(12px)',
                   }}
+                  labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+                  itemStyle={{ color: 'var(--text-primary)' }}
                   formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
                     `${fmt(value, 1)} kWh`,
                     CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? '',
                   ]}
                   labelFormatter={(label: string) => label}
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  cursor={{ fill: 'rgba(148,163,184,0.15)' }}
                 />
                 <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
                   {chartData.map((d, i) => (
