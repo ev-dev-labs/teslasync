@@ -32,6 +32,22 @@ PROMPTS="$REPO_ROOT/.github/prompts/frontend-gold-standard"
 RUNNER="$PROMPTS/run-prompts.sh"
 DONE="$PROMPTS/logs/done.txt"
 STATUS="$PROMPTS/logs/frontend-loop-status.txt"
+
+# Per-program concurrency override. Evidence from p2-radix-primitives this
+# session: 5/9 completed units hit CONFLICT (content): web/package.json +
+# package-lock.json — every unit in p2/p3/p5 adds its own new dependency
+# (@radix-ui/react-*, visx/uPlot, MapLibre GL packages), so N parallel
+# workers race to merge the SAME two files, and only the first wins cleanly.
+# Conflicted units aren't lost (never added to done.txt, retried next wave)
+# but repeatedly re-conflicting wastes real wall-clock/compute across a
+# 599-unit run. Programs that don't add new deps (page/story/e2e
+# verification) keep full concurrency.
+jobs_for() {
+  case "$1" in
+    p2-radix-primitives|p3-charts-shared|p5-maps-shared) echo 2 ;;
+    *) echo "$JOBS" ;;
+  esac
+}
 LOOP_LOG="$PROMPTS/logs/frontend-loop-$(date '+%Y-%m-%d_%H-%M-%S').log"
 GATE_FULL_LOG="$PROMPTS/logs/frontend-loop-full-gate.log"
 
@@ -120,8 +136,9 @@ while true; do
       log "pass=$gpass program=$prog pending=$pend_before stalls=$stalls"
       if [ "$pend_before" -le 0 ]; then log "program=$prog COMPLETE"; break; fi
 
-      log "launch wave: $RUNNER --program $prog --jobs $JOBS"
-      bash "$RUNNER" --program "$prog" --jobs "$JOBS" >> "$LOOP_LOG" 2>&1
+      prog_jobs="$(jobs_for "$prog")"
+      log "launch wave: $RUNNER --program $prog --jobs $prog_jobs"
+      bash "$RUNNER" --program "$prog" --jobs "$prog_jobs" >> "$LOOP_LOG" 2>&1
       maybe_self_heal
 
       pend_after=$(pending_for "$prog")
