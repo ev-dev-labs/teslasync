@@ -20,6 +20,7 @@ import {
   type LatLngExpression,
 } from '@/components/maps';
 import Logo from '@/components/ui/Logo';
+import { useTheme } from '@/components/ui/ThemeProvider';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
@@ -153,6 +154,7 @@ export default function SharedDrivePage() {
   const { data: rawData, isLoading, error } = useSharedDrive(token ?? '');
   const data = useMemo(() => normalizeSharedDriveData(rawData), [rawData]);
   const { unitPrefs, formatDistance, formatSpeed } = useUnits();
+  const { theme } = useTheme();
   const distancePref = unitPrefs.distance;
   const speedPref = unitPrefs.speed;
   const elevPref = elevationLabel(distancePref);
@@ -246,7 +248,11 @@ export default function SharedDrivePage() {
               <MapTileLayer style="dark" />
               <Polyline
                 positions={mapPoints}
-                pathOptions={{ color: 'var(--theme-primary)', weight: 3, opacity: 0.8 }}
+                // MapLibre paints the route on a WebGL canvas, so line-color
+                // must be a resolved value — CSS custom properties like
+                // var(--theme-primary) don't resolve there (unlike the Recharts
+                // SVG traces below). Feed the active theme's primary hex.
+                pathOptions={{ color: theme.primary, weight: 3, opacity: 0.8 }}
               />
               {startPos && (
                 <CircleMarker
