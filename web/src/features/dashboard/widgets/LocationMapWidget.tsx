@@ -48,9 +48,12 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
           />
         </WidgetMapView>
 
-        {/* Status overlay */}
+        {/* Status overlay — pointer-events-none so pinch/pan/zoom gestures that
+            land on the informational chips still reach the MapLibre GL canvas
+            beneath (mirrors AnimatedMarker's NON_INTERACTIVE + the migrated map
+            overlay convention). z-[400] matches the shared map overlay layer. */}
         {hasCoords && !isCompact && (
-          <div className="absolute bottom-2 left-2 z-[1000] flex flex-col gap-1">
+          <div className="pointer-events-none absolute bottom-2 left-2 z-[400] flex flex-col gap-1">
             {!isLive && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-[10px] text-amber-400 backdrop-blur-sm">
                 <MapPin className="h-2.5 w-2.5" />
