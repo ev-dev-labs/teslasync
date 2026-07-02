@@ -1,7 +1,7 @@
-import 'leaflet/dist/leaflet.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
+// ── Shared map building blocks (MapLibre GL) ────────────────────────────────
 export { MapLayerSwitcher } from './MapLayerSwitcher';
-export { MapTileLayer, MapInvalidator, type MapStyle } from './MapTileLayer';
 export { AnimatedMarker } from './AnimatedMarker';
 export { vehicleIcon } from './vehicleIcon';
 export {
@@ -22,17 +22,54 @@ export {
   type PlaybackPoint,
   type RoutePlaybackProps,
 } from './RoutePlayback';
-export { latLngBounds } from 'leaflet';
-export type { LatLngExpression } from 'leaflet';
-// Re-export react-leaflet components through shared maps module
+
+// ── MapLibre GL map core + Leaflet-compatible primitives ────────────────────
+// The whole maps module renders on a single engine (MapLibre GL via
+// react-map-gl). MapContainer/Marker/Popup/Polyline/CircleMarker/Circle/
+// Rectangle/FeatureGroup/useMap/latLngBounds keep the previous Leaflet-style
+// external prop API so the 268+ call-sites across 20 feature domains compose
+// them unchanged.
 export {
   MapContainer,
-  Polyline,
+  MapTileLayer,
+  MapInvalidator,
+  MapFullscreenControl,
   Marker,
   Popup,
+  Polyline,
   CircleMarker,
   Circle,
   Rectangle,
   FeatureGroup,
   useMap,
-} from 'react-leaflet';
+  latLngBounds,
+  LatLngBoundsCompat,
+  type MapStyle,
+  type LatLngExpression,
+  type LatLngLike,
+  type MapContainerProps,
+  type MapTileLayerProps,
+  type MapFullscreenControlProps,
+  type MarkerProps,
+  type PopupProps,
+  type PolylineProps,
+  type CircleMarkerProps,
+  type CircleProps,
+  type RectangleProps,
+  type FeatureGroupProps,
+  type PathOptions,
+  type LeafletMapCompat,
+} from './MapTileLayer';
+
+// ── Low-level MapLibre GL primitives (via react-map-gl/maplibre) ────────────
+// Direct GeoJSON <Source>/<Layer> access + map controls for advanced overlays.
+export {
+  Source,
+  Layer,
+  NavigationControl,
+  ScaleControl,
+  AttributionControl,
+  useControl,
+  MapProvider,
+} from 'react-map-gl/maplibre';
+export type { MapRef, SourceProps, LayerProps } from 'react-map-gl/maplibre';
