@@ -272,7 +272,11 @@ export default function MapOverviewPage() {
       <FadeIn>
         <GlassPanel className="relative overflow-hidden h-[400px]">
           {hasValidLocation ? (
-            <>
+            <div
+              role="application"
+              aria-label={t('mapOverview.mapLabel', 'Live vehicle location map')}
+              className="relative h-full w-full"
+            >
               <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
               <MapContainer
                 center={[latest!.latitude, latest!.longitude]}
@@ -289,7 +293,7 @@ export default function MapOverviewPage() {
                   <Polyline positions={trailPositions} color="#00f0ff" weight={3} opacity={0.7} />
                 )}
               </MapContainer>
-            </>
+            </div>
           ) : (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MapPin className="h-8 w-8" />}
