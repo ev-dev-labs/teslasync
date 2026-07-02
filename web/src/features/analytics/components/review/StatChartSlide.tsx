@@ -17,8 +17,8 @@ export function StatChartSlide({ data }: Props) {
 
   const chartData = useMemo(() =>
     (data.monthly_stats ?? []).map((m) => ({
-      name: MONTH_LABELS[m.month - 1] ?? `M${m.month}`,
-      drives: m.drives,
+      name: MONTH_LABELS[(m.month ?? 0) - 1] ?? `M${m.month ?? 0}`,
+      drives: m.drives ?? 0,
     })),
     [data.monthly_stats],
   );
