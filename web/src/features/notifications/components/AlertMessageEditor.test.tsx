@@ -152,8 +152,11 @@ describe('AlertMessageEditor', () => {
 
   it('reflects includeTitle and notifies parent on toggle', () => {
     const { onIncludeTitleChange } = renderEditor({ includeTitle: true })
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement
-    expect(checkbox.checked).toBe(true)
+    // The Checkbox primitive is now a Radix button[role="checkbox"]; its
+    // state is exposed via aria-checked rather than a native input's
+    // `.checked` property.
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).toHaveAttribute('aria-checked', 'true')
     fireEvent.click(checkbox)
     expect(onIncludeTitleChange).toHaveBeenCalledWith(false)
   })

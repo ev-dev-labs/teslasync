@@ -308,8 +308,9 @@ describe('TreeSelect', () => {
     const speedRow = screen.getByRole('treeitem', { name: 'Speed' });
     // The decorative checkbox sits inside the row. A click in jsdom
     // bubbles up the DOM, so simulate a click on the inner checkbox
-    // input — the row should still see exactly one toggle, not two.
-    const innerCheckbox = speedRow.querySelector('input[type="checkbox"]');
+    // control — the row should still see exactly one toggle, not two.
+    // (The Checkbox primitive is now a Radix button[role="checkbox"].)
+    const innerCheckbox = speedRow.querySelector('button[role="checkbox"]');
     expect(innerCheckbox).not.toBeNull();
     fireEvent.click(innerCheckbox as HTMLElement);
     // After exactly one toggle, Speed should be selected.
