@@ -14,9 +14,9 @@ import { EmptyState, Skeleton, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartContainer, ChartTooltip, AREA_DEFAULTS,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend, BarChart, Bar,
-  chartMarginLabeled, axisTick, chartAnimation,
+  chartGrid, chartMarginLabeled, axisTick, chartAnimation,
 } from '@/components/charts';
 
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
@@ -618,18 +618,10 @@ export default function FleetComparePage() {
           {monthlyChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlyChartData} margin={chartMarginLabeled}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                {chartGrid}
                 <XAxis dataKey="month" tick={axisTick} />
                 <YAxis tick={axisTick} />
-                <Tooltip
-                  content={({ active, payload, label }) => (
-                    <ChartTooltip
-                      active={active}
-                      payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
-                      label={label as string}
-                    />
-                  )}
-                />
+                <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Line
                   {...AREA_DEFAULTS}
@@ -665,18 +657,10 @@ export default function FleetComparePage() {
             {drivesChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={drivesChartData} margin={chartMarginLabeled}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  {chartGrid}
                   <XAxis dataKey="month" tick={axisTick} />
                   <YAxis tick={axisTick} />
-                  <Tooltip
-                    content={({ active, payload, label }) => (
-                      <ChartTooltip
-                        active={active}
-                        payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
-                        label={label as string}
-                      />
-                    )}
-                  />
+                  <Tooltip content={<ChartTooltip />} />
                   <Legend />
                   <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
                   <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
