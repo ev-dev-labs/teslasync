@@ -3,7 +3,7 @@ import { Clock } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
@@ -31,7 +31,7 @@ export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysis
           {hourlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={hourlyData}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis
                   dataKey="label"
                   {...axisTickSm}
