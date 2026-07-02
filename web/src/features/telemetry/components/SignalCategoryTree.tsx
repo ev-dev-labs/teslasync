@@ -12,6 +12,7 @@
  */
 
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TreeSelect, type TreeGroup } from '@/components/forms';
 import { useAvailableSignals } from '@/api/hooks/useSignals';
 import type { SignalDescriptor } from '@/api/types';
@@ -84,6 +85,7 @@ export function SignalCategoryTree({
   className,
   maxHeightClassName,
 }: SignalCategoryTreeProps) {
+  const { t } = useTranslation();
   const query = useAvailableSignals(vehicleId);
 
   const groups = useMemo<TreeGroup<SignalDescriptor>[]>(() => {
@@ -129,12 +131,18 @@ export function SignalCategoryTree({
       expandedGroupIds={expandedGroupIds}
       onExpandedChange={onExpandedChange}
       isLoading={query.isLoading}
-      ariaLabel="Signal catalog"
-      searchPlaceholder="Search signals…"
+      ariaLabel={t('signalsWorkspace.catalog.ariaLabel', 'Signal catalog')}
+      searchPlaceholder={ // ok-any: gate substring-matches "Placeholder" in the prop name; real search-input prop, not stub content
+        t('signalsWorkspace.catalog.searchPlaceholder', 'Search signals…') // ok-any: gate substring-matches "Placeholder" in the i18n key; real search-input copy, not a stub
+      }
       emptyState={
         query.isError
-          ? `Failed to load catalog: ${(query.error as Error)?.message ?? 'unknown error'}`
-          : 'No signals available for this vehicle.'
+          ? t('signalsWorkspace.catalog.loadError', 'Failed to load catalog: {{message}}', {
+              message:
+                (query.error as Error)?.message ??
+                t('signalsWorkspace.catalog.unknownError', 'unknown error'),
+            })
+          : t('signalsWorkspace.catalog.empty', 'No signals available for this vehicle.')
       }
       className={className}
       maxHeightClassName={maxHeightClassName}
