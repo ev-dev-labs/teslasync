@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ThermometerSun } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
 } from '@/components/charts';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -164,20 +164,16 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tickFormatter={(v: number) => `${fmt(v, 0)}°`}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                labelFormatter={(v: string) => formatTime(v)}
-                formatter={(value: number, name: string) => {
-                  const label =
-                    name === 'inside'
-                      ? t('widget.climateHistory.cabin', 'Cabin')
-                      : t('widget.climateHistory.outside', 'Outside');
-                  return [`${fmtInt(value)}${tempUnit}`, label];
-                }}
+                content={
+                  <ChartTooltip
+                    labelFormatter={(label) =>
+                      typeof label === 'string' ? formatTime(label) : '—'
+                    }
+                    valueFormatter={(value) =>
+                      typeof value === 'number' ? `${fmtInt(value)}${tempUnit}` : '—'
+                    }
+                  />
+                }
               />
               <Area
                 type="monotone"
@@ -186,7 +182,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 strokeWidth={2}
                 fill="url(#gradInside)"
                 connectNulls
-                name="inside"
+                name={t('widget.climateHistory.cabin', 'Cabin')}
               />
               <Area
                 type="monotone"
@@ -195,7 +191,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 strokeWidth={2}
                 fill="url(#gradOutside)"
                 connectNulls
-                name="outside"
+                name={t('widget.climateHistory.outside', 'Outside')}
               />
             </AreaChart>
           </ResponsiveContainer>
