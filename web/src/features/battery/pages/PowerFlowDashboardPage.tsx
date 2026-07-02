@@ -335,11 +335,11 @@ export default function PowerFlowDashboardPage() {
                 <XAxis
                   dataKey="time"
                   tickFormatter={(v) => formatDateShort(new Date(v).toISOString())}
-                  {...axisTick}
+                  tick={axisTick}
                 />
                 <YAxis
                   tickFormatter={(v: number) => fmtWatts(v)}
-                  {...axisTick}
+                  tick={axisTick}
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
@@ -395,9 +395,9 @@ export default function PowerFlowDashboardPage() {
                 <XAxis
                   dataKey="time"
                   tickFormatter={(v) => formatDateShort(new Date(v).toISOString())}
-                  {...axisTick}
+                  tick={axisTick}
                 />
-                <YAxis domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} {...axisTick} />
+                <YAxis domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line
                   {...AREA_DEFAULTS}
