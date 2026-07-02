@@ -4,7 +4,7 @@ import {
   Route, BatteryCharging, Battery, Thermometer, BarChart3, Settings, ChevronRight,
 } from 'lucide-react'
 
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, PanelTitle, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 
 export function QuickLinksSection() {
@@ -21,12 +21,10 @@ export function QuickLinksSection() {
 
   return (
     <GlassPanel className="p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <ChevronRight className="h-4 w-4 text-[var(--neon-cyan)]" />
-        <span className="text-lg font-bold text-[var(--text-primary)]">
-          {t('vehicles.detail.quickLinks', 'Quick Links')}
-        </span>
-      </div>
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <ChevronRight className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('vehicles.detail.quickLinks', 'Quick Links')}
+      </PanelTitle>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {quickLinks.map((link) => {
           const IconComp = link.icon
@@ -40,10 +38,10 @@ export function QuickLinksSection() {
                   'transition-all cursor-pointer',
                 )}
               >
-                <IconComp className="h-5 w-5 text-[var(--text-muted)]" />
-                <span className="text-xs font-medium text-[var(--text-primary)]">
+                <IconComp className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />
+                <Text size="xs" weight="medium" color="primary" className="text-center">
                   {link.label}
-                </span>
+                </Text>
               </GlassPanel>
             </Link>
           )

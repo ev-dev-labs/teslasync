@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Battery, Route } from 'lucide-react'
 
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, PanelTitle, Text } from '@/components/ui'
 import { AnimatedNumber } from '@/components/data-display'
 import {
   RadialGauge, ChartTooltip, CHART_COLORS,
@@ -14,6 +14,8 @@ import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { formatDate } from '@/lib/dateFormat'
+import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import type { VehicleState, Drive } from '@/api/types'
 import { batteryColor } from './helpers'
 
@@ -21,6 +23,8 @@ interface BatteryRangeChartsProps {
   state: VehicleState
   drives: Drive[] | undefined
 }
+
+const valueClass = cn('block', typography.size.xl, typography.weight.bold, typography.color.primary)
 
 export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   const { t } = useTranslation()
@@ -40,15 +44,13 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   [drives, unitPrefs.distance])
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Battery bar chart */}
       <GlassPanel className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Battery className="h-4 w-4 text-[var(--neon-cyan)]" />
-          <span className="text-lg font-bold text-[var(--text-primary)]">
-            {t('vehicles.detail.batteryOverview', 'Battery Overview')}
-          </span>
-        </div>
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Battery className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t('vehicles.detail.batteryOverview', 'Battery Overview')}
+        </PanelTitle>
         <div className="flex items-center gap-4 mb-4">
           <RadialGauge
             value={state.battery_level}
@@ -60,16 +62,16 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
           />
           <div className="flex-1">
             <GlassPanel className="p-3 mb-2">
-              <span className="text-xs text-[var(--text-muted)]">{t('common.battery', 'Battery')}</span>
-              <AnimatedNumber value={state.battery_level} suffix="%" className="block text-xl font-bold text-[var(--text-primary)]" />
+              <Text variant="caption">{t('common.battery', 'Battery')}</Text>
+              <AnimatedNumber value={state.battery_level} suffix="%" className={valueClass} />
             </GlassPanel>
             <GlassPanel className="p-3">
-              <span className="text-xs text-[var(--text-muted)]">{t('common.range', 'Range')}</span>
+              <Text variant="caption">{t('common.range', 'Range')}</Text>
               <AnimatedNumber
                 value={convertDistanceFromSI(state.rated_range, unitPrefs.distance)}
                 decimals={0}
                 suffix={` ${unitPrefs.distance}`}
-                className="block text-xl font-bold text-[var(--text-primary)]"
+                className={valueClass}
               />
             </GlassPanel>
           </div>
@@ -89,12 +91,10 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
 
       {/* Recent drives distance trend chart */}
       <GlassPanel className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Route className="h-4 w-4 text-[var(--neon-cyan)]" />
-          <span className="text-lg font-bold text-[var(--text-primary)]">
-            {t('vehicles.detail.driveTrend', 'Drive Distance Trend')}
-          </span>
-        </div>
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t('vehicles.detail.driveTrend', 'Drive Distance Trend')}
+        </PanelTitle>
         {driveChartData.length > 0 ? (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">

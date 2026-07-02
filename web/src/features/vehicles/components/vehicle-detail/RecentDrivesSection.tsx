@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Route, ChevronRight } from 'lucide-react'
 
-import { GlassPanel, DataTable, type Column } from '@/components/ui'
+import { GlassPanel, DataTable, PanelTitle, type Column } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion'
@@ -52,18 +52,16 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
 
   return (
     <GlassPanel className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Route className="h-4 w-4 text-[var(--neon-cyan)]" />
-          <span className="text-lg font-bold text-[var(--text-primary)]">
-            {t('common.recentDrives', 'Recent Drives')}
-          </span>
-        </div>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <PanelTitle className="flex items-center gap-2">
+          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t('common.recentDrives', 'Recent Drives')}
+        </PanelTitle>
         <Link
           to="/drives"
-          className="text-xs text-[var(--text-muted)] hover:text-[var(--neon-cyan)] transition-colors flex items-center gap-1"
+          className="flex items-center gap-1 text-xs text-[var(--text-muted)] transition-colors hover:text-cyan-300"
         >
-          {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" />
+          {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
         </Link>
       </div>
       {drives && drives.length > 0 ? (

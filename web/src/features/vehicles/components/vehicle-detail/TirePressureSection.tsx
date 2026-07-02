@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { CircleDot } from 'lucide-react'
 
-import { GlassPanel, Badge } from '@/components/ui'
+import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import type { TirePressureSnapshot } from '@/api/types'
@@ -26,20 +26,18 @@ export function TirePressureSection({ tireData }: TirePressureSectionProps) {
 
   return (
     <GlassPanel className="p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <CircleDot className="h-4 w-4 text-[var(--neon-cyan)]" />
-        <span className="text-lg font-bold text-[var(--text-primary)]">
-          {t('vehicles.detail.tirePressure', 'Tire Pressure')}
-        </span>
-      </div>
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <CircleDot className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('vehicles.detail.tirePressure', 'Tire Pressure')}
+      </PanelTitle>
       {tireData ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {tirePressures.map((tp) => (
             <GlassPanel key={tp.label} className="p-4 text-center">
-              <p className="text-xs text-[var(--text-muted)] mb-1">{tp.label}</p>
-              <p className="text-2xl font-bold text-[var(--text-primary)]">
+              <Text as="p" variant="caption" className="mb-1">{tp.label}</Text>
+              <Text as="p" size="2xl" weight="bold" color="primary" className="tabular-nums">
                 {formatPressure(paToKpa(tp.value))}
-              </p>
+              </Text>
               <Badge
                 variant={tirePressureVariant(tp.value)}
                 size="sm"

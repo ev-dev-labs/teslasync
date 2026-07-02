@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Power } from 'lucide-react'
 
-import { GlassPanel, Badge, Button } from '@/components/ui'
+import { GlassPanel, Badge, Button, Text } from '@/components/ui'
 import type { Vehicle, VehicleStatus } from '@/api/types'
 import { statusVariant } from './helpers'
 
@@ -21,9 +21,10 @@ export function VehicleHeader({ vehicle, status, onWake, waking }: VehicleHeader
       <div className="flex items-center gap-4">
         <Link
           to="/vehicles"
-          className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] transition-all"
+          aria-label={t('common.back', 'Back')}
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl p-2.5 text-[var(--text-muted)] transition-all hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
@@ -34,9 +35,9 @@ export function VehicleHeader({ vehicle, status, onWake, waking }: VehicleHeader
               {vehicle?.model ?? ''} {vehicle?.trim_badging ?? ''}
             </Badge>
           </div>
-          <p className="text-sm text-[var(--text-muted)] mt-1 truncate font-mono">
+          <Text as="p" size="sm" color="muted" mono className="mt-1 truncate">
             {vehicle?.vin ?? ''}
-          </p>
+          </Text>
         </div>
         <Button
           onClick={onWake}

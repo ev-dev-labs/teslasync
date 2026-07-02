@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, PanelTitle } from '@/components/ui'
 import { KVList } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
 import type { VehicleConfigSnapshot } from '@/api/types'
@@ -33,12 +33,10 @@ export function VehicleConfigSection({ vehicleConfig, softwareVersion }: Vehicle
 
   return (
     <GlassPanel className="p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Settings className="h-4 w-4 text-[var(--neon-cyan)]" />
-        <span className="text-lg font-bold text-[var(--text-primary)]">
-          {t('vehicles.detail.vehicleConfig', 'Vehicle Configuration')}
-        </span>
-      </div>
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Settings className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('vehicles.detail.vehicleConfig', 'Vehicle Configuration')}
+      </PanelTitle>
       {configItems.length > 0 ? (
         <KVList items={configItems} columns={2} />
       ) : (
