@@ -29,10 +29,10 @@ export {
 // Rectangle/FeatureGroup/useMap/latLngBounds keep the previous Leaflet-style
 // external prop API so the 268+ call-sites across 20 feature domains compose
 // them unchanged.
+export { MapInvalidator } from './MapInvalidator';
 export {
   MapContainer,
   MapTileLayer,
-  MapInvalidator,
   MapFullscreenControl,
   Marker,
   Popup,
