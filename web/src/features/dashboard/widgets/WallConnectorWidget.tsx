@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plug } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
 } from '@/components/charts';
 import { useTeslaWCChargingHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -222,17 +222,14 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
                 tickFormatter={(v: number) => fmt(v, 0)}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(value: number) => [
-                  `${fmtNumber(value, 1)} kWh`,
-                  t('widget.wallConnector.energy', 'Energy'),
-                ]}
-                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                content={
+                  <ChartTooltip
+                    valueFormatter={(value) =>
+                      typeof value === 'number' ? `${fmtNumber(value, 1)} kWh` : '—'
+                    }
+                  />
+                }
+                cursor={{ fill: 'rgba(148,163,184,0.15)' }}
               />
               <Bar
                 dataKey="energy_kwh"
