@@ -7702,7 +7702,21 @@
     "events": "Notify me about",
     "alerts": "Alerts",
     "exportStatus": "Export completions",
-    "hint": "Notifications only fire when the app tab is in the background."
+    "hint": "Notifications only fire when the app tab is in the background.",
+    "summaryAria": "Notification status summary",
+    "status": {
+      "granted": "Enabled",
+      "denied": "Blocked",
+      "default": "Not enabled",
+      "unsupported": "Unsupported"
+    },
+    "kpi": {
+      "permission": "Browser permission",
+      "pushEvents": "Push events",
+      "tabSignals": "Tab signals",
+      "soundChannels": "Sound channels",
+      "activeOfTotal": "{{active}} of {{total}} on"
+    }
   },
   "notificationSounds": {
     "title": "Notification sounds",
