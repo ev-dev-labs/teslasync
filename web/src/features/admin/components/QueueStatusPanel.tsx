@@ -88,7 +88,7 @@ function WorkerCard({ stat, onOpen }: WorkerCardProps) {
     <button
       type="button"
       onClick={handleOpen}
-      className="text-left w-full rounded-xl border border-white/[0.06] bg-[var(--surface-1)]/40 p-4 transition-colors hover:bg-[var(--surface-1)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+      className="text-left w-full rounded-xl border border-white/[0.06] bg-[var(--surface-1)]/40 p-4 transition-colors hover:bg-[var(--surface-1)]/70 focus:outline-hidden focus:ring-2 focus:ring-[var(--accent-primary)]"
       data-testid={`queue-worker-card-${stat.worker}`}
       aria-label={t('queueStatus.openDrawer', 'Show recent {{worker}} jobs', {
         worker: stat.display_name,

@@ -47,7 +47,7 @@ export default function StatusApiDocsPage() {
       title="Status API"
       subtitle="Stable contract for external integrations"
       actions={
-        <Link to="/system-status" className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50">
+        <Link to="/system-status" className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.08] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/50">
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to System Status
         </Link>

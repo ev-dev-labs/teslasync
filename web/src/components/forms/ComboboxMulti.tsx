@@ -464,7 +464,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
               aria-label={t('combobox.removeChip', 'Remove {{label}}', {
                 label: (getChipLabel ?? getOptionLabel)(opt),
               })}
-              className="touch-target-overlay rounded p-0.5 transition-colors hover:bg-[var(--surface-overlay)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="touch-target-overlay rounded p-0.5 transition-colors hover:bg-[var(--surface-overlay)] focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               <X className="h-3 w-3" aria-hidden="true" />
             </button>
@@ -497,7 +497,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
-          className="min-w-[6rem] flex-1 bg-transparent text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+          className="min-w-[6rem] flex-1 bg-transparent text-[var(--text-primary)] outline-hidden placeholder:text-[var(--text-muted)]"
         />
         <div className="ml-auto flex items-center gap-1">
           {loading && (
@@ -528,7 +528,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
                   ? t('combobox.closeListAria', 'Hide options')
                   : t('combobox.openListAria', 'Show options')
               }
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronDown
                 className={cn(

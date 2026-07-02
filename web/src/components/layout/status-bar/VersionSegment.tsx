@@ -92,7 +92,7 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
           onClick={() => setOpen(true)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
-            'text-[var(--text-muted)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+            'text-[var(--text-muted)] hover:bg-white/[0.04] focus:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
           )}
         >
           <Tag className="h-3 w-3 shrink-0" aria-hidden />

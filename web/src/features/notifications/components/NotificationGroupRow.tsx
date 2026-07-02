@@ -166,7 +166,7 @@ export function NotificationGroupRow({
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs',
                     'border-cyan-400/30 bg-cyan-400/10 text-cyan-200',
-                    'hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                    'hover:bg-cyan-400/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                   )}
                   data-testid="group-expand-toggle"
                 >

@@ -224,7 +224,7 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
         aria-controls={open ? `${headingId}-panel` : undefined}
         aria-label={triggerLabel}
         onClick={handleTriggerClick}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500"
       >
         <Icons.notifications className="h-5 w-5" aria-hidden="true" />
         {count > 0 && (
@@ -406,7 +406,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
             type="button"
             onClick={onClose}
             aria-label={t('common.close', 'Close')}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <Icons.close className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -466,7 +466,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                     <button
                       type="button"
                       onClick={() => onNavigate('/notifications/inbox')}
-                      className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
+                      className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
                     >
                       <span
                         aria-label={tone.label}
@@ -512,7 +512,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
             type="button"
             onClick={handleMarkAllRead}
             disabled={!hasLogs || bulkMarkRead.isPending}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Icons.confirm className="h-3.5 w-3.5" aria-hidden="true" />
             <span>
@@ -522,7 +522,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
           <button
             type="button"
             onClick={() => onNavigate('/notifications/inbox')}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-cyan-300 hover:bg-white/[0.06] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-cyan-300 hover:bg-white/[0.06] hover:text-cyan-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <span>{t('notifications.bellPopover.viewAll', 'View all')}</span>
             <Icons.next className="h-3.5 w-3.5" aria-hidden="true" />

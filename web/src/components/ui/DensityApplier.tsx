@@ -11,7 +11,7 @@ import { useDensitySync } from '@/hooks/useDensitySync'
  *   body[data-density="compact"]  { --density-row-h: 32px; ... }
  *   body[data-density="spacious"] { --density-row-h: 56px; ... }
  *
- * See `web/src/index.css` and `web/tailwind.config.js` for the tokens.
+ * See `web/src/index.css` (`@theme inline` block) for the tokens.
  */
 export function DensityApplier(): null {
   useDensitySync()

@@ -86,7 +86,7 @@ export function DateRangeFilter({
           aria-label={t('date.range.start', 'Start date')}
           value={startDate}
           onChange={e => onStartDateChange(e.target.value)}
-          className="bg-transparent text-xs text-[var(--text-primary)] outline-none [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
+          className="bg-transparent text-xs text-[var(--text-primary)] outline-hidden [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
         />
         <span className="text-gray-600 text-xs">→</span>
         <input
@@ -94,7 +94,7 @@ export function DateRangeFilter({
           aria-label={t('date.range.end', 'End date')}
           value={endDate}
           onChange={e => onEndDateChange(e.target.value)}
-          className="bg-transparent text-xs text-[var(--text-primary)] outline-none [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
+          className="bg-transparent text-xs text-[var(--text-primary)] outline-hidden [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
         />
       </div>
       {onApply && (

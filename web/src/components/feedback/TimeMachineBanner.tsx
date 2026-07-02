@@ -181,7 +181,7 @@ export function TimeMachineBanner({
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   data-testid="time-machine-banner-input"
-                  className="rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-2 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-2 py-1 text-xs text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <Button

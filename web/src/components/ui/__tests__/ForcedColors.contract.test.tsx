@@ -70,14 +70,16 @@ describe('Forced-colors contract — critical components', () => {
 });
 
 describe('Forced-colors contract — Tailwind variant registration', () => {
-  it('tailwind.config.js registers the forced-colors variant via plugin', () => {
-    const cfg = readFileSync('tailwind.config.js', 'utf8');
-    // Either the explicit addVariant call we added, or the literal
-    // `@media (forced-colors: active)` template, or the plain
+  it('index.css registers the forced-colors variant via @custom-variant', () => {
+    const css = readFileSync(join('src', 'index.css'), 'utf8');
+    // Tailwind v4 CSS-first config (was a `tailwindcss/plugin` →
+    // `addVariant('forced-colors', ...)` call in tailwind.config.js).
+    // Either the `@custom-variant forced-colors (...)` registration, or a
+    // literal `@media (forced-colors: active)` template, or the plain
     // `forced-colors` variant string — any of these proves the
     // registration is in place.
-    const hasAddVariant = /addVariant\(\s*['"]forced-colors['"]/.test(cfg);
-    const hasMediaLiteral = MEDIA_RE.test(cfg);
-    expect(hasAddVariant || hasMediaLiteral).toBe(true);
+    const hasCustomVariant = /@custom-variant\s+forced-colors\b/.test(css);
+    const hasMediaLiteral = MEDIA_RE.test(css);
+    expect(hasCustomVariant || hasMediaLiteral).toBe(true);
   });
 });

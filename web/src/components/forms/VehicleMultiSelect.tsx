@@ -238,7 +238,7 @@ export function VehicleMultiSelect({
           hasError
             ? 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
             : 'border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus-visible:ring-[var(--accent)]',
-          'focus-visible:outline-none focus-visible:ring-2',
+          'focus-visible:outline-hidden focus-visible:ring-2',
           (disabled || isFleetEmpty) && 'cursor-not-allowed opacity-60',
         )}
       >

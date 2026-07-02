@@ -59,7 +59,7 @@ export function CommandSelectDialog({
                 'h-auto w-full flex-col items-start gap-0.5 rounded-lg p-3 text-left font-normal transition-all duration-normal',
                 'bg-[var(--surface-2)] border border-[var(--border-subtle)]',
                 'hover:bg-[var(--surface-2)] hover:border-neon-cyan/30',
-                'focus:outline-none focus:ring-2 focus:ring-neon-cyan/30',
+                'focus:outline-hidden focus:ring-2 focus:ring-neon-cyan/30',
                 loading && 'opacity-50 cursor-not-allowed',
               )}
             >

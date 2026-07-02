@@ -203,7 +203,7 @@ export function SavedViewMenu({
                     setOpen(false);
                     setManageOpen(true);
                   }}
-                  className="text-[10px] font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
+                  className="text-[10px] font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-hidden focus-visible:underline"
                 >
                   {t('savedViews.manage', 'Manage views')}
                 </button>
@@ -311,7 +311,7 @@ export function SavedViewMenu({
                   setOpen(false);
                   setSaveOpen(true);
                 }}
-                className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
+                className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs text-cyan-300 hover:text-cyan-200 focus-visible:outline-hidden focus-visible:underline"
               >
                 <Plus className="h-3.5 w-3.5" />
                 {t('savedViews.saveCurrent', 'Save current view…')}
@@ -328,7 +328,7 @@ export function SavedViewMenu({
           <button
             type="button"
             onClick={handleClear}
-            className="touch-target-overlay ml-1.5 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500"
+            className="touch-target-overlay ml-1.5 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-cyan-500"
             aria-label={t('savedViews.clearApplied', 'Clear applied view')}
           >
             <X className="h-3 w-3" />

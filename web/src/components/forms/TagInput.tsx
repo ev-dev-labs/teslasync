@@ -501,7 +501,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
                 }}
                 className={cn(
                   'touch-target-overlay inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                  'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500',
+                  'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-blue-500',
                   'disabled:cursor-not-allowed disabled:opacity-50',
                 )}
                 aria-label={t('tagInput.removeTag', 'Remove {{tag}}', { tag })}
@@ -530,7 +530,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
             aria-describedby={describedByIds}
             aria-invalid={error ? 'true' : undefined}
             className={cn(
-              'min-w-[8ch] flex-1 bg-transparent text-[var(--text-primary)] outline-none',
+              'min-w-[8ch] flex-1 bg-transparent text-[var(--text-primary)] outline-hidden',
               'placeholder:text-[var(--text-muted)]',
               'disabled:cursor-not-allowed',
             )}

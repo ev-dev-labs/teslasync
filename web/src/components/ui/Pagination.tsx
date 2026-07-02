@@ -38,7 +38,7 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
             value={pageSize}
             onChange={e => onPageSizeChange(Number(e.target.value))}
             aria-label={t('pagination.pageSize', 'Rows per page')}
-            className="rounded-md bg-white/[0.04] px-2 py-1 text-xs text-[var(--text-secondary)] outline-none ring-1 ring-white/[0.08]"
+            className="rounded-md bg-white/[0.04] px-2 py-1 text-xs text-[var(--text-secondary)] outline-hidden ring-1 ring-white/[0.08]"
           >
             {pageSizeOptions.map(s => (
               <option key={s} value={s} className="bg-[var(--bg)]">

@@ -99,7 +99,7 @@ export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBar
               onClick={() => handleClick(chip.id)}
               className={cn(
                 'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                'min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                'min-h-[32px] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                 active
                   ? 'bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30'
                   : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',

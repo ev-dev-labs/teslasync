@@ -87,7 +87,7 @@ function MatrixGrid({ payload, draft, editing, onToggle }: MatrixGridProps) {
           type="checkbox"
           checked={allowed}
           onChange={(e) => onToggle(roleID, permID, e.target.checked)}
-          className="h-4 w-4 cursor-pointer rounded border-[var(--border-subtle)] bg-transparent accent-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          className="h-4 w-4 cursor-pointer rounded border-[var(--border-subtle)] bg-transparent accent-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-400"
           aria-label={t('rbac.cell.toggle', 'Toggle {{role}} / {{perm}}', {
             role: roleID,
             perm: permID,

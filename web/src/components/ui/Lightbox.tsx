@@ -401,7 +401,7 @@ export function Lightbox({
         // child re-enables pointer-events with pointer-events-auto.
         // Not migrated to <Modal>; see backdrop rationale above.
         // eslint-disable-next-line no-restricted-syntax
-        className="pointer-events-none fixed inset-0 z-[71] flex flex-col outline-none"
+        className="pointer-events-none fixed inset-0 z-[71] flex flex-col outline-hidden"
       >
       {/* Top bar — counter (left) + close (right). */}
       <div className="pointer-events-auto flex shrink-0 items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-6">
@@ -423,7 +423,7 @@ export function Lightbox({
           className={cn(
             'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
             'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
             'forced-colors:border forced-colors:border-[CanvasText]',
           )}
         >
@@ -475,7 +475,7 @@ export function Lightbox({
                 'pointer-events-auto absolute left-2 top-1/2 -translate-y-1/2 sm:left-4',
                 'inline-flex h-12 w-12 items-center justify-center rounded-full',
                 'bg-[var(--surface-1)]/80 text-[var(--text-primary)]',
-                'hover:bg-[var(--surface-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'hover:bg-[var(--surface-elevated)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                 'disabled:cursor-not-allowed disabled:opacity-40',
                 'forced-colors:border forced-colors:border-[CanvasText]',
               )}
@@ -492,7 +492,7 @@ export function Lightbox({
                 'pointer-events-auto absolute right-2 top-1/2 -translate-y-1/2 sm:right-4',
                 'inline-flex h-12 w-12 items-center justify-center rounded-full',
                 'bg-[var(--surface-1)]/80 text-[var(--text-primary)]',
-                'hover:bg-[var(--surface-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'hover:bg-[var(--surface-elevated)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                 'disabled:cursor-not-allowed disabled:opacity-40',
                 'forced-colors:border forced-colors:border-[CanvasText]',
               )}
@@ -523,7 +523,7 @@ export function Lightbox({
             className={cn(
               'inline-flex h-9 w-9 items-center justify-center rounded-full',
               'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+              'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
               'disabled:cursor-not-allowed disabled:opacity-40',
             )}
           >
@@ -545,7 +545,7 @@ export function Lightbox({
             className={cn(
               'inline-flex h-9 w-9 items-center justify-center rounded-full',
               'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+              'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
               'disabled:cursor-not-allowed disabled:opacity-40',
             )}
           >
@@ -560,7 +560,7 @@ export function Lightbox({
             className={cn(
               'inline-flex h-9 w-9 items-center justify-center rounded-full',
               'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+              'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
               'disabled:cursor-not-allowed disabled:opacity-40',
             )}
           >

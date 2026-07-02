@@ -126,7 +126,7 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
           onClick={() => setOpen((o) => !o)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
-            'text-[var(--text-secondary)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+            'text-[var(--text-secondary)] hover:bg-white/[0.04] focus:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
           )}
         >
           <Car className="h-3 w-3 shrink-0" aria-hidden />
@@ -164,7 +164,7 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
                 onClick={() => pick(v.id)}
                 className={cn(
                   'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs',
-                  'hover:bg-white/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+                  'hover:bg-white/[0.06] focus:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
                   selected ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
                 )}
               >

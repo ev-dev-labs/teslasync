@@ -90,7 +90,7 @@ export function StickyCompactHero({
         <button
           type="button"
           onClick={handleScrollTop}
-          className="flex flex-1 items-center gap-2 text-left transition-colors hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 rounded"
+          className="flex flex-1 items-center gap-2 text-left transition-colors hover:text-cyan-200 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60 rounded"
           aria-label="Scroll to top of page"
         >
           <Icon className={cn('h-4 w-4 shrink-0', text)} />
@@ -110,7 +110,7 @@ export function StickyCompactHero({
             className={cn(
               'shrink-0 rounded-md p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
               'min-h-[36px] min-w-[36px] flex items-center justify-center',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+              'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
               refreshing && 'opacity-60',
             )}
           >

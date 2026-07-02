@@ -143,7 +143,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             aria-label={!title ? (ariaLabel ?? undefined) : undefined}
             tabIndex={-1}
             className={cn(
-              'relative z-10 flex w-full flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl outline-none',
+              'relative z-10 flex w-full flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl outline-hidden',
               'border border-[var(--glass-border)]',
               // Pin the dialog edge to a system
               // colour so the modal frame remains perceivable when the
@@ -167,7 +167,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
                   className={cn(
                     'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
                     'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                    'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
                     'active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]',
                   )}
                 >

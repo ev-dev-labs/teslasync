@@ -60,7 +60,7 @@ function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['ct
   const baseClasses = cn(
     'inline-flex items-center gap-1 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium',
     'min-h-[36px] transition-colors hover:bg-[var(--surface-2)]',
-    'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+    'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
     severityText,
   )
 

@@ -72,7 +72,7 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
   const baseClasses = cn(
     'flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left',
     'min-h-[44px]',
-    (to || onClick) && 'transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+    (to || onClick) && 'transition-colors hover:bg-white/[0.04] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
   )
 
   if (to) {

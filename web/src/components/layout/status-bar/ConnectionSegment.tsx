@@ -65,7 +65,7 @@ export function ConnectionSegment({ iconOnly = false }: ConnectionSegmentProps) 
         aria-label={ariaLabel}
         className={cn(
           'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
-          'hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+          'hover:bg-white/[0.04] focus:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
           v.text,
         )}
       >

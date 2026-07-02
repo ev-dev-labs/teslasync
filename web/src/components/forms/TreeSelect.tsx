@@ -523,7 +523,7 @@ export function TreeSelect<T>({
                     tabIndex={isGroupFocused ? 0 : -1}
                     data-tree-row-index={groupRowIndex}
                     className={cn(
-                      'flex items-center gap-2 px-2 py-1.5 cursor-pointer outline-none',
+                      'flex items-center gap-2 px-2 py-1.5 cursor-pointer outline-hidden',
                       'hover:bg-[var(--surface-2)]',
                       'focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset',
                     )}
@@ -594,7 +594,7 @@ export function TreeSelect<T>({
                             data-tree-row-index={leafRowIndex}
                             title={reason}
                             className={cn(
-                              'flex items-center gap-2 pl-9 pr-2 py-1 outline-none',
+                              'flex items-center gap-2 pl-9 pr-2 py-1 outline-hidden',
                               !leafDisabled && 'cursor-pointer hover:bg-[var(--surface-2)]',
                               leafDisabled && 'opacity-50 cursor-not-allowed',
                               'focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset',

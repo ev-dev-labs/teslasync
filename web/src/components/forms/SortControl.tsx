@@ -76,7 +76,7 @@ export function SortControl<F extends string = string>({
         className={cn(
           'inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)]/40',
           'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+          'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500',
         )}
       >
         {direction === 'asc' ? (

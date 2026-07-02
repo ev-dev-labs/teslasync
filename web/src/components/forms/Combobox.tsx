@@ -155,7 +155,7 @@ function defaultFilter<T>(
 const INPUT_BASE = cn(
   'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
   'px-3 py-2 text-sm',
-  'placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
+  'placeholder:text-[var(--text-muted)] focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
   'disabled:cursor-not-allowed disabled:opacity-50',
 );
 
@@ -575,7 +575,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleClear}
               aria-label={t('combobox.clearAria', 'Clear selection')}
-              className="touch-target-overlay rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="touch-target-overlay rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
@@ -600,7 +600,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
                   ? t('combobox.closeListAria', 'Hide options')
                   : t('combobox.openListAria', 'Show options')
               }
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronDown
                 className={cn(

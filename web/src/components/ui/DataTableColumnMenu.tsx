@@ -135,7 +135,7 @@ export function DataTableColumnMenu({
             'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
             'border border-white/[0.08] bg-white/[0.03]',
             'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
             'transition-colors',
           )}
         >
@@ -166,7 +166,7 @@ export function DataTableColumnMenu({
                 onReset()
               }}
               data-testid="datatable-column-menu-reset"
-              className="inline-flex items-center gap-1 text-[10px] font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
+              className="inline-flex items-center gap-1 text-[10px] font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-hidden focus-visible:underline"
             >
               <RotateCcw className="h-3 w-3" aria-hidden="true" />
               <span>{t('table.columns.reset', 'Reset')}</span>
@@ -218,7 +218,7 @@ export function DataTableColumnMenu({
                           className={cn(
                             'inline-flex h-6 w-6 items-center justify-center rounded',
                             'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                             'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                           )}
                         >
@@ -235,7 +235,7 @@ export function DataTableColumnMenu({
                           className={cn(
                             'inline-flex h-6 w-6 items-center justify-center rounded',
                             'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                             'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                           )}
                         >

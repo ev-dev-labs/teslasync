@@ -53,7 +53,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             'w-full rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]',
             sizeClasses[size],
             'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-            'focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30',
+            'focus:border-cyan-500/50 focus:outline-hidden focus:ring-1 focus:ring-cyan-500/30',
             'resize-y transition-colors',
             error && 'border-red-500/50',
             className,

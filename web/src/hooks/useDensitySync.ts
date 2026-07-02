@@ -4,7 +4,7 @@ import { useSettings } from '@/api/hooks/useSettings'
 /**
  * Allowed values for the `ui_density` setting. Kept in lockstep with the
  * backend validator in `internal/api/settings_handler.go` and the Tailwind
- * tokens in `web/tailwind.config.js`.
+ * tokens in `web/src/index.css` (`@theme inline` block).
  */
 export type Density = 'compact' | 'comfortable' | 'spacious'
 

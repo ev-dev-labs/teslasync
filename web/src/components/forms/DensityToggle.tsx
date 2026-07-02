@@ -86,7 +86,7 @@ export function DensityToggle({
             data-testid={testId ? `${testId}-${opt}` : undefined}
             className={cn(
               'inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+              'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500',
               selected
                 ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)]/50',

@@ -83,7 +83,7 @@ export function PinButton({
         data-testid="pin-button"
         className={cn(
           'inline-flex items-center justify-center gap-1.5 rounded-md transition-colors',
-          'focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--text-secondary)]',
+          'focus:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--text-secondary)]',
           'disabled:opacity-60 disabled:cursor-not-allowed',
           showLabel ? 'px-2' : SIZE_CLASS[size],
           isPinned

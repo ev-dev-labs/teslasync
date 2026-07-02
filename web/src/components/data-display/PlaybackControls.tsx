@@ -406,7 +406,7 @@ export function PlaybackControls({
             <button
               type="button"
               aria-label={t('replay.shortcuts.help', 'Show keyboard shortcuts')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-hidden focus-visible:ring-1 focus-visible:ring-white/40"
             >
               <Keyboard className="h-3.5 w-3.5" aria-hidden />
             </button>

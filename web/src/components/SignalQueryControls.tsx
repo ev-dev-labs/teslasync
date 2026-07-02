@@ -231,7 +231,7 @@ interface DateTimeRangeProps {
 export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange, onPreset }: DateTimeRangeProps) {
   const { t } = useTranslation()
   const activePresetHours = matchTimeRangePreset(fromStr, toStr)
-  const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
+  const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-hidden focus:border-neon-cyan/40"
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
@@ -292,7 +292,7 @@ export function QueryControls({ perPage, onPerPageChange, onQuery, disabled, loa
         <select
           value={perPage}
           onChange={e => onPerPageChange(Number(e.target.value))}
-          className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
+          className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-hidden focus:border-neon-cyan/40"
         >
           {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>

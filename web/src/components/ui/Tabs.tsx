@@ -87,7 +87,7 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
             onKeyDown={(e) => handleKeyDown(e, tab.key)}
             className={cn(
               'px-4 py-2 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+              'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500',
               selected
                 ? 'border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
                 : 'text-[var(--text-muted)] hover:text-gray-700 dark:text-[var(--text-muted)] dark:hover:text-gray-200',

@@ -87,7 +87,7 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
             <li key={inc.id}>
               <Link
                 to={`/system-status/incidents/${inc.id}`}
-                className="flex items-start gap-3 rounded-md px-2 py-2 text-sm hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                className="flex items-start gap-3 rounded-md px-2 py-2 text-sm hover:bg-white/[0.04] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400/50"
               >
                 <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', tone.cls)} aria-hidden />
                 <div className="flex-1 min-w-0">

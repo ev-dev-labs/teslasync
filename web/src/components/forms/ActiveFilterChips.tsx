@@ -185,7 +185,7 @@ export function ActiveFilterChips({
             className={cn(
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium',
               'border-[var(--border-subtle)] bg-[var(--surface-2)]/40 text-[var(--text-secondary)]',
-              'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+              'hover:bg-white/[0.06] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
             )}
           >
             {t('filters.moreCount', '+{{count}} more', { count: overflow.length })}
@@ -224,7 +224,7 @@ export function ActiveFilterChips({
           className={cn(
             'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
             'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
           )}
         >
           {t('filters.clearAll', 'Clear all')}
@@ -271,7 +271,7 @@ function Chip({ descriptor, onRemove, onKey, fullWidth }: ChipProps) {
         className={cn(
           'touch-target-overlay inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
           'text-[var(--text-muted)] hover:bg-white/[0.08] hover:text-[var(--text-primary)]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+          'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
         )}
       >
         <Icon icon={Icons.close} size="xs" />

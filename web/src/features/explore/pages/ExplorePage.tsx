@@ -283,7 +283,7 @@ function RecentStrip({
                   'border border-[var(--glass-border)] bg-[var(--surface-1)]',
                   'text-xs text-[var(--text-primary)]',
                   'hover:bg-[var(--surface-2)]',
-                  'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+                  'outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
                   'transition-colors',
                 )}
               >
@@ -322,7 +322,7 @@ function SectionAnchorStrip({
             'bg-white/[0.04] text-[var(--text-secondary)]',
             'hover:bg-white/[0.08] hover:text-[var(--text-primary)]',
             'border border-[var(--glass-border)]',
-            'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+            'outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
             'transition-colors',
           )}
         >
@@ -411,7 +411,7 @@ function FeatureCard({
         className={cn(
           'group block h-full rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4',
           'hover:border-[var(--glass-border-strong,rgba(255,255,255,0.18))] hover:bg-[var(--surface-2)]',
-          'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+          'outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
           'transition-colors',
         )}
       >
@@ -568,7 +568,7 @@ function EmptyResult({
                     'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm',
                     'bg-white/[0.04] text-[var(--text-primary)]',
                     'hover:bg-white/[0.08]',
-                    'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+                    'outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
                     'transition-colors',
                   )}
                 >
@@ -588,7 +588,7 @@ function EmptyResult({
           'mt-5 inline-flex items-center gap-2 rounded-md px-3 py-1.5',
           'bg-white/[0.06] text-sm text-[var(--text-primary)]',
           'hover:bg-white/[0.10]',
-          'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+          'outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
           'transition-colors',
         )}
       >

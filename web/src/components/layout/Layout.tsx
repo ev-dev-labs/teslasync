@@ -1442,7 +1442,7 @@ export default function Layout() {
           role="main"
           tabIndex={-1}
           className={cn(
-            'flex-1 overflow-y-auto outline-none pb-16 lg:pb-0',
+            'flex-1 overflow-y-auto outline-hidden pb-16 lg:pb-0',
             // Reserve space for the footer status bar
             // so it never overlaps page content. On mobile it stacks ABOVE
             // the BottomTabBar (which already adds 56px via pb-16), so we

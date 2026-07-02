@@ -74,7 +74,7 @@ export function InlineCallout({
     'inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 ring-1 transition-colors',
     v.bg,
     v.ring,
-    action && 'hover:bg-white/[0.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+    action && 'hover:bg-white/[0.03] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
     className,
   );
 

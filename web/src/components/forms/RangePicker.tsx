@@ -208,7 +208,7 @@ export function RangePicker({
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'inline-flex items-center gap-1.5 rounded-lg ring-1 ring-white/[0.08] bg-white/[0.04] text-left',
-          'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+          'hover:bg-white/[0.06] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500',
           'forced-colors:border forced-colors:border-[ButtonBorder]',
           size === 'md' ? 'h-10 px-3 text-sm' : 'h-8 px-2.5 text-xs',
           className,
@@ -246,7 +246,7 @@ export function RangePicker({
                     onClick={() => handlePreset(p.id)}
                     className={cn(
                       'w-full text-left rounded-md px-3 py-1.5 text-xs whitespace-nowrap',
-                      'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+                      'hover:bg-white/[0.06] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500',
                       active
                         ? 'bg-blue-600 text-white hover:bg-blue-600'
                         : 'text-[var(--text-primary)]',

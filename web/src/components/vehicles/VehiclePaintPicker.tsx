@@ -59,7 +59,7 @@ export function VehiclePaintPicker({
               onClick={() => setPaint(p.id)}
               className={cn(
                 'relative h-7 w-7 rounded-full border-2 transition-all duration-fast',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900',
+                'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900',
                 selected
                   ? 'border-white scale-110 shadow-lg shadow-cyan-500/20'
                   : 'border-[var(--border-strong)] hover:border-[var(--border-strong)] hover:scale-105',

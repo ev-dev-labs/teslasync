@@ -58,7 +58,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
               sizeClasses[size],
-              'placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
+              'placeholder:text-[var(--text-muted)] focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
               'disabled:cursor-not-allowed disabled:opacity-50',
               error && 'border-red-500',
               icon && 'pl-10',

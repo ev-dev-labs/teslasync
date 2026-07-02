@@ -733,7 +733,7 @@ export function DataTable<T>({
               className={cn(
                 'touch-target-overlay inline-flex h-5 w-5 items-center justify-center rounded',
                 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                 'transition-colors',
               )}
             >
@@ -907,7 +907,7 @@ export function DataTable<T>({
                   'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
                   'border border-white/[0.08] bg-white/[0.03]',
                   'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                  'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                   'transition-colors',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                 )}
@@ -1016,7 +1016,7 @@ export function DataTable<T>({
                           className={cn(
                             'inline-flex items-center gap-1 cursor-pointer select-none rounded',
                             'hover:text-[var(--text-secondary)]',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
                           )}
                         >
                           <span>{col.header}</span>

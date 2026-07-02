@@ -123,7 +123,7 @@ export function PageHeaderSticky({
         <button
           type="button"
           onClick={handleScrollTop}
-          className={cn(innerClass, 'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60')}
+          className={cn(innerClass, 'w-full text-left focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60')}
           aria-label={`${ariaLabel} — scroll to top`}
         >
           {content}

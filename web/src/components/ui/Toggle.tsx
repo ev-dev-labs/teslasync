@@ -61,7 +61,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           onClick={() => onChange(!checked)}
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
             // Forced-colors mode flattens the
             // track tint to a system colour, making on/off visually
             // identical. Add a system-colour border on the track and

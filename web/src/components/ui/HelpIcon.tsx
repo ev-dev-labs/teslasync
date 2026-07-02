@@ -94,7 +94,7 @@ export function HelpIcon({
           'ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full align-middle',
           'text-[var(--text-muted)] transition-colors',
           'hover:text-[var(--text-secondary)]',
-          'focus:outline-none focus-visible:text-[var(--text-secondary)] focus-visible:ring-1 focus-visible:ring-[var(--text-secondary)]',
+          'focus:outline-hidden focus-visible:text-[var(--text-secondary)] focus-visible:ring-1 focus-visible:ring-[var(--text-secondary)]',
           className,
         )}
       >

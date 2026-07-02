@@ -1,6 +1,227 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+/* Belt-and-suspenders alongside v4's automatic content detection (which
+ * already scans this project from web/ respecting .gitignore) — pins the
+ * Vite entry HTML explicitly since it lives one directory above this file. */
+@source "../index.html";
+
+/* Tailwind CSS v4 migration (v3 tailwind.config.js → CSS-first config).
+ * `darkMode: 'class'` replacement — `dark:` utilities apply whenever a
+ * `.dark` class exists on an ancestor (or the element itself). */
+@custom-variant dark (&:where(.dark, .dark *));
+/* Replacement for the v3 `tailwindcss/plugin` → `addVariant('forced-colors', ...)`
+ * registration. Produces the same `forced-colors:<utility>` variant consumed
+ * across components/ui, components/feedback, components/charts,
+ * components/maps and audited by scripts/audit-forced-colors.mjs. */
+@custom-variant forced-colors (@media (forced-colors: active));
+
+/* `@tailwindcss/container-queries` is dropped — container queries (`@container`,
+ * `@xs:` … `@7xl:`) are native in v4 with an identical class vocabulary and
+ * default size scale, so no plugin registration or config is needed anymore. */
+
+@theme {
+  /* --- colors (was theme.extend.colors) --- */
+  --color-tesla-red: #e31937;
+  --color-tesla-blue: #3e6ae1;
+  --color-tesla-dark: #0a0a0f;
+  --color-tesla-darker: #050508;
+  --color-tesla-gray: #393c49;
+
+  --color-neon-cyan: #00f0ff;
+  --color-neon-blue: #4f46e5;
+  --color-neon-purple: #a855f7;
+  --color-neon-pink: #ec4899;
+  --color-neon-green: #10b981;
+  --color-neon-amber: #f59e0b;
+  --color-neon-red: #ef4444;
+
+  --color-glass-light: rgba(255, 255, 255, 0.05);
+  --color-glass-medium: rgba(255, 255, 255, 0.08);
+  --color-glass-heavy: rgba(255, 255, 255, 0.12);
+  --color-glass-border: rgba(255, 255, 255, 0.10);
+
+  --color-surface-1: #0f1019;
+  --color-surface-2: #151621;
+  --color-surface-3: #1a1b2e;
+  --color-surface-4: #1f2037;
+
+  /* --- background images (was theme.extend.backgroundImage) --- */
+  --background-image-gradient-radial: radial-gradient(var(--tw-gradient-stops));
+  --background-image-glow-cyan: radial-gradient(ellipse at center, rgba(0,240,255,0.15) 0%, transparent 70%);
+  --background-image-glow-purple: radial-gradient(ellipse at center, rgba(168,85,247,0.15) 0%, transparent 70%);
+  --background-image-glow-blue: radial-gradient(ellipse at center, rgba(79,70,229,0.15) 0%, transparent 70%);
+  --background-image-mesh-gradient: linear-gradient(135deg, #0f1019 0%, #1a1040 25%, #0f1019 50%, #0a1628 75%, #0f1019 100%);
+
+  /* --- box shadows (was theme.extend.boxShadow) --- */
+  --shadow-glow-sm: 0 0 15px rgba(0, 240, 255, 0.1);
+  --shadow-glow-md: 0 0 30px rgba(0, 240, 255, 0.15);
+  --shadow-glow-lg: 0 0 60px rgba(0, 240, 255, 0.2);
+  --shadow-glow-red: 0 0 30px rgba(227, 25, 55, 0.2);
+  --shadow-glow-green: 0 0 30px rgba(16, 185, 129, 0.2);
+  --shadow-glow-purple: 0 0 30px rgba(168, 85, 247, 0.2);
+  --shadow-inner-glow: inset 0 1px 0 rgba(255,255,255,0.05);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* --- border radius (was theme.extend.borderRadius) ---
+   * Values already match v4's own defaults; pinned explicitly so a future
+   * upstream default change can't silently reflow these corners. */
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  /* --- fonts (was theme.extend.fontFamily) --- */
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* --- font sizes (was theme.extend.fontSize) --- */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.875rem;
+
+  /* --- animations (was theme.extend.animation + keyframes) ---
+   * `pulse-slow` / `spin-slow` reference Tailwind's own built-in `pulse` /
+   * `spin` @keyframes (always present in v4's default theme), so only the
+   * custom keyframes below need to be declared. `shimmer`'s @keyframes is
+   * intentionally NOT redeclared here — an identical `@keyframes shimmer`
+   * already exists later in this file (see "ANIMATIONS" section) for the
+   * plain `.shimmer` utility class; Tailwind resolves `animate-shimmer`
+   * against that single global-scope definition. */
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-glow-pulse: glowPulse 2s ease-in-out infinite alternate;
+  --animate-slide-up: slideUp 0.5s ease-out;
+  --animate-fade-in: fadeIn 0.3s ease-out;
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-border-flow: borderFlow 3s linear infinite;
+  --animate-shimmer: shimmer 2s infinite linear;
+  --animate-skeleton-wave: skeletonWave 1.8s ease-in-out infinite;
+  --animate-chart-grow: chartGrow 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-number-pop: numberPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 5px rgba(0, 240, 255, 0.1); }
+    100% { box-shadow: 0 0 20px rgba(0, 240, 255, 0.3); }
+  }
+  @keyframes slideUp {
+    0% { transform: translateY(10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes borderFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+  @keyframes skeletonWave {
+    0% { opacity: 0.03; }
+    50% { opacity: 0.08; }
+    100% { opacity: 0.03; }
+  }
+  @keyframes chartGrow {
+    0% { transform: scaleY(0); opacity: 0; }
+    100% { transform: scaleY(1); opacity: 1; }
+  }
+  @keyframes numberPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* --- v3 → v4 default-ring compatibility shim ---
+   * v4 changed the bare `ring` utility from 3px/blue-500 to 1px/currentColor.
+   * These two special theme variables (recognized by Tailwind itself, see
+   * upgrade guide § "Default ring width and color") restore the exact v3
+   * rendering for any existing bare `ring` usage without touching markup. */
+  --default-ring-width: 3px;
+  --default-ring-color: var(--color-blue-500);
+}
+
+/* --- v3 → v4 named-tier compatibility shims ---
+ * v4 shifted the "sm" tier of shadow/radius/blur down one step (what v3
+ * called the bare/DEFAULT tier is now reachable as "-sm"; what v3 called
+ * "-sm" is now "-xs"). Existing literal classes in this codebase
+ * (`shadow-sm`, `rounded-sm`, `blur-sm`, `backdrop-blur-sm`) were written
+ * against v3's "sm" values, so the tier is pinned back to those exact
+ * values here rather than touching every call site. Bare/unsuffixed
+ * `shadow` / `rounded` / `blur` utilities are unaffected by this shim —
+ * v4 compiles them to static values that already match the old v3
+ * defaults exactly, verified empirically against the compiled output.
+ * A follow-up unit may drop this block by renaming call sites to the
+ * idiomatic v4 `-xs` tier instead. */
+@theme {
+  --radius-sm: 0.125rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --blur-sm: 4px;
+}
+
+/* --- v3 → v4 density-aware tokens (was theme.extend.spacing / fontSize.d-base) ---
+ * These reference `--density-*` custom properties set by `body[data-density]`
+ * further down in this file. `@theme inline` is required (rather than plain
+ * `@theme`) so the compiled utility references `var(--density-*)` directly;
+ * without `inline`, Tailwind would resolve `var(--density-*)` once at `:root`
+ * (where it is never defined — only `body[data-density]` sets it), baking in
+ * an invalid value instead of tracking the live per-density override.
+ * Verified empirically against the compiled CSS output. */
+@theme inline {
+  --text-d-base: var(--density-text);
+  --text-d-base--line-height: 1.5;
+  --spacing-d-pad-x: var(--density-pad-x);
+  --spacing-d-pad-y: var(--density-pad-y);
+  --spacing-d-gap: var(--density-gap);
+  --spacing-d-row: var(--density-row-h);
+  /* was theme.extend.transitionTimingFunction */
+  --ease-standard: var(--motion-easing-standard);
+  --ease-accelerate: var(--motion-easing-accelerate);
+  --ease-decelerate: var(--motion-easing-decelerate);
+}
+
+/* --- v3 → v4 motion duration tokens (was theme.extend.transitionDuration) ---
+ * v4 has no themeable `--duration-*` namespace (verified empirically — a
+ * `--duration-fast` theme variable produces no utility), so the three
+ * semantic buckets are hand-rolled via the `@utility` API instead. Still
+ * consumed by `duration-fast|normal|slow` class names everywhere and still
+ * collapse to 0ms under `prefers-reduced-motion` via the `--motion-duration-*`
+ * override further down in this file. Audited by scripts/auditMotionTokens.mjs. */
+@utility duration-fast {
+  transition-duration: var(--motion-duration-fast);
+}
+@utility duration-normal {
+  transition-duration: var(--motion-duration-normal);
+}
+@utility duration-slow {
+  transition-duration: var(--motion-duration-slow);
+}
+
+/* Unused-by-name-but-always-emitted keyframes (parity with v3, where every
+ * `theme.extend.keyframes` entry compiled to a global `@keyframes` rule
+ * regardless of whether an `animation` name referenced it). Neither is
+ * currently wired to an `--animate-*` token or referenced by any component,
+ * but both remain available for inline `style`/arbitrary-value use exactly
+ * as they were pre-migration. */
+@keyframes boltPulse {
+  0% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+@keyframes carGlow {
+  0% { stroke-opacity: 0.7; }
+  100% { stroke-opacity: 1; }
+}
+
+/* --- v3 → v4 Preflight compatibility shims ---
+ * v4 changed three more Preflight defaults; restore the v3 rendering
+ * globally rather than auditing every border/input/button call site. */
+@layer base {
+  /* v4 default border/divide color is `currentColor` (was `gray-200`). */
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+  /* v4 default placeholder color is `currentColor` at 50% opacity (was `gray-400`). */
+  input::placeholder, textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+  /* v4 buttons default to `cursor: default` (was `cursor: pointer`). */
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -59,9 +280,10 @@
    *
    * Three semantic buckets so transition timings stay consistent across the
    * app. Tailwind's `duration-fast | duration-normal | duration-slow`
-   * utilities (see tailwind.config.js → transitionDuration) reference these
-   * variables. Components that consume the vars directly get reduced-motion
-   * support for free via the @media override further down in this file.
+   * utilities (see index.css → `@utility duration-fast/normal/slow`, near
+   * the top of this file) reference these variables. Components that
+   * consume the vars directly get reduced-motion support for free via the
+   * @media override further down in this file.
    */
   --motion-duration-fast: 150ms;
   --motion-duration-normal: 250ms;
@@ -129,15 +351,25 @@ select option:checked {
 }
 
 /* === GLASS MORPHISM === */
-@layer components {
-  .glass-panel {
-    @apply relative overflow-hidden rounded-2xl;
-    border: 1px solid var(--glass-border);
-    background: linear-gradient(135deg, rgba(128,128,128,0.04) 0%, rgba(128,128,128,0.01) 100%);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  }
+/* `.glass-panel` is defined via `@utility` (not `@layer components`) because
+ * `.glass-panel-hover` composes it with `@apply glass-panel`. Tailwind v4's
+ * `@layer components`/`@layer utilities` are real native CSS cascade layers —
+ * classes declared there are plain CSS and are no longer automatically
+ * `@apply`-able the way v3's hijacked `@layer` made them. `@utility` is the
+ * v4 replacement API for "a custom class that other utilities/`@apply`
+ * calls can compose with". Verified empirically: `@apply <custom-name>`
+ * against a `@layer components` class fails the v4 build with "Cannot apply
+ * unknown utility class"; the same call against an `@utility`-declared name
+ * compiles correctly. */
+@utility glass-panel {
+  @apply relative overflow-hidden rounded-2xl;
+  border: 1px solid var(--glass-border);
+  background: linear-gradient(135deg, rgba(128,128,128,0.04) 0%, rgba(128,128,128,0.01) 100%);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
 
+@layer components {
   .glass-panel-hover {
     @apply glass-panel transition-all duration-300;
   }
@@ -154,7 +386,7 @@ select option:checked {
   }
 
   .glass-input {
-    @apply w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200;
+    @apply w-full rounded-xl px-4 py-3 text-sm outline-hidden transition-all duration-200;
     border: 1px solid var(--glass-border);
     background: var(--surface-1);
     color: var(--text-primary);
@@ -1077,12 +1309,13 @@ select option:checked {
  * a system colour for low-vision users.
  *
  * Component overrides live with the components themselves via the
- * Tailwind `forced-colors:` variant (registered in `tailwind.config.js`
- * and audited by `scripts/audit-forced-colors.mjs`). This block covers
+ * Tailwind `forced-colors:` variant (registered via `@custom-variant` in
+ * this file's CSS-first theme config, near the top) and audited by
+ * `scripts/audit-forced-colors.mjs`. This block covers
  * what cannot be expressed as a class on a single element:
  *
  *   - `:focus-visible` outlines that need to win over component-level
- *     `outline-none` + neon ring tokens (rings are box-shadow, which is
+ *     `outline-hidden` + neon ring tokens (rings are box-shadow, which is
  *     suppressed under forced-colors → keyboard users lose their focus
  *     indicator entirely without an `outline` fallback).
  *   - Recharts SVG axes, grid lines, ticks, legend, and default tooltip

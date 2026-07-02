@@ -36,7 +36,7 @@ export function DataTableBulkBar({ count, onClear, children, className }: DataTa
           className={cn(
             'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
             'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+            'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
             'transition-colors',
           )}
           aria-label={t('table.bulkActions.clear', 'Clear selection')}

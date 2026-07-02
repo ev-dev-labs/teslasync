@@ -318,7 +318,7 @@ export function EditableText({
             className={cn(
               'rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
               'px-2 py-1 placeholder:text-[var(--text-muted)]',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500',
+              'focus:outline-hidden focus:ring-2 focus:ring-blue-500',
               'disabled:cursor-not-allowed disabled:opacity-60',
               sizeClass,
               error && 'border-rose-400',
@@ -370,7 +370,7 @@ export function EditableText({
       className={cn(
         'group inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left',
         'text-[var(--text-primary)] transition-colors',
-        'hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+        'hover:bg-[var(--surface-2)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500',
         'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent',
         sizeClass,
         isPlaceholder && 'text-[var(--text-muted)] italic',

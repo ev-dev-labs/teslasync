@@ -68,7 +68,7 @@ export default function NotFoundPage() {
                 <li key={s.path}>
                   <Link
                     to={s.path}
-                    className="rounded px-1 text-cyan-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                    className="rounded px-1 text-cyan-300 hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
                   >
                     {t(s.i18nKey, s.label)}
                     <span className="ml-2 text-xs text-[var(--text-muted)]">

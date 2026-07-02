@@ -145,7 +145,7 @@ export function RangeSlider({
     'accent-cyan-500',
     '[&::-webkit-slider-thumb]:pointer-events-auto',
     '[&::-moz-range-thumb]:pointer-events-auto',
-    'focus-visible:outline-none',
+    'focus-visible:outline-hidden',
     'disabled:cursor-not-allowed disabled:opacity-50',
   );
 

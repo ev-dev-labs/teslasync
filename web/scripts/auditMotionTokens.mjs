@@ -2,9 +2,12 @@
 // Motion duration token consistency audit.
 //
 // Flags any raw `duration-NNN` Tailwind class outside the token system. The
-// token system exposes three semantic buckets via `tailwind.config.js →
-// transitionDuration`, backed by `--motion-duration-*` CSS variables in
-// index.css that collapse to 0ms under `prefers-reduced-motion: reduce`:
+// token system exposes three semantic buckets via custom `@utility
+// duration-fast/normal/slow` rules in `index.css` (Tailwind v4 has no
+// themeable `--duration-*` namespace, so these are hand-rolled utilities
+// rather than `@theme` tokens), backed by `--motion-duration-*` CSS
+// variables in index.css that collapse to 0ms under
+// `prefers-reduced-motion: reduce`:
 //
 // duration-fast → 150ms (hover, focus, micro-feedback)
 // duration-normal → 250ms (entrance, exit, panel transitions)

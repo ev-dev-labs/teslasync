@@ -137,7 +137,7 @@ export function PillFilterBar({
           variant === 'pills'
             ? cn(
                 'inline-flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                 selected
                   ? ACCENT_PILL[accent].active
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/[0.04]',
@@ -145,7 +145,7 @@ export function PillFilterBar({
               )
             : cn(
                 'inline-flex items-center gap-1.5 shrink-0 px-3 py-2 text-sm font-medium border-b-2 transition-colors',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                 selected
                   ? ACCENT_TAB[accent]
                   : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]',

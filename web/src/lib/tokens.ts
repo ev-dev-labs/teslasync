@@ -88,7 +88,7 @@ export const tableTokens = {
   resizer:
     'absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none ' +
     'opacity-0 hover:opacity-100 hover:bg-cyan-400/40 transition-opacity ' +
-    'focus-visible:opacity-100 focus-visible:bg-cyan-400/60 outline-none',
+    'focus-visible:opacity-100 focus-visible:bg-cyan-400/60 outline-hidden',
   /** Cell holding `renderExpanded` content under an expanded row. */
   expandedCell:
     'px-4 py-3 bg-white/[0.02] border-l-2 border-cyan-500/40',
@@ -119,10 +119,10 @@ export const transitions = {
 //   - slow   (400ms): page transitions, large layout shifts
 //
 // Tailwind exposes the same buckets as `duration-fast | duration-normal |
-// duration-slow` (see tailwind.config.js → transitionDuration), backed by the
-// `--motion-duration-*` CSS variables in index.css. The CSS variables
-// collapse to 0ms under `prefers-reduced-motion: reduce`, so every consumer
-// of the tokens automatically respects the user's OS-level motion
+// duration-slow` (see index.css → `@utility duration-fast/normal/slow`),
+// backed by the `--motion-duration-*` CSS variables in index.css. The CSS
+// variables collapse to 0ms under `prefers-reduced-motion: reduce`, so every
+// consumer of the tokens automatically respects the user's OS-level motion
 // preference — no per-component branching required.
 //
 // `auditMotionTokens.mjs` flags any raw `duration-NNN` Tailwind class

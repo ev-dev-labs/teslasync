@@ -7,7 +7,8 @@ content.
 
 ## Breakpoint Contract
 
-Matches `tailwind.config.js` (default Tailwind breakpoints, no overrides):
+Matches Tailwind's default breakpoint scale (`web/src/index.css` — no
+`--breakpoint-*` overrides in the CSS-first theme config):
 
 | Token        | Width range       | Devices                              |
 |--------------|-------------------|--------------------------------------|

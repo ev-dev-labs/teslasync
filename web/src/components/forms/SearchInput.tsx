@@ -254,7 +254,7 @@ export function SearchInput({
           <button
             type="button"
             onClick={handleClear}
-            className="touch-target-overlay rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="touch-target-overlay rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             aria-label={label}
           >
             <X className="h-3.5 w-3.5" />
@@ -291,7 +291,7 @@ export function SearchInput({
                       onClick={() => selectEntry(entry)}
                       onMouseEnter={() => setActiveIdx(i)}
                       className={cn(
-                        'flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)] focus:outline-none',
+                        'flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)] focus:outline-hidden',
                         isActive && 'bg-[var(--surface-2)]',
                       )}
                     >
@@ -303,7 +303,7 @@ export function SearchInput({
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => handleRemoveEntry(entry)}
                       aria-label={t('search.history.removeAria', 'Remove "{{query}}" from search history', { query: entry })}
-                      className="touch-target-overlay rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="touch-target-overlay rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     >
                       <X className="h-3 w-3" aria-hidden />
                     </button>
@@ -317,7 +317,7 @@ export function SearchInput({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleClearAll}
-              className="w-full rounded px-2 py-1 text-left text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded px-2 py-1 text-left text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               {t('search.history.clear', 'Clear history')}
             </button>

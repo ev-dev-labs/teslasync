@@ -92,7 +92,7 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
               <button
                 type="button"
                 onClick={() => navigate(`/lifetime?achievement=${encodeURIComponent(a.id)}`)}
-                className="rounded-lg p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/50"
+                className="rounded-lg p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-yellow-500/50"
                 aria-label={t('achievements.viewNamed', 'View achievement: {{name}}', { name: a.name })}
               >
                 <AchievementBadge achievement={a} size="sm" />

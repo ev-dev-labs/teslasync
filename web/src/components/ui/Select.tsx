@@ -61,7 +61,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           className={cn(
             'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
             sizeClasses[size],
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
+            'focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
             'disabled:cursor-not-allowed disabled:opacity-50',
             error && 'border-red-500',
             className,

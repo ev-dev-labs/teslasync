@@ -106,7 +106,7 @@ export function UptimeHeatmap({
                 aria-label={`${day.date}: ${STATUS_LABEL[day.status]}`}
                 className={cn(
                   'h-3 w-3 shrink-0 rounded-sm transition-colors',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                  'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                   SQUARE_BG[day.status],
                 )}
               />

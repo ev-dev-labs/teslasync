@@ -143,7 +143,7 @@ export function SessionList({
                       onDoubleClick={() => startRename(session)}
                       className={cn(
                         'w-full text-left px-3 py-2 pr-8 rounded-lg flex flex-col gap-0.5',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40',
+                        'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-purple-500/40',
                       )}
                       aria-current={isActive ? 'true' : undefined}
                       title={t('chatbot.aria.doubleClickRename', 'Double-click to rename')}
@@ -179,7 +179,7 @@ export function SessionList({
                         'absolute top-1.5 right-1.5 p-1.5 rounded',
                         'opacity-0 group-hover:opacity-100 focus:opacity-100',
                         'text-[var(--text-muted)] hover:text-rose-300 hover:bg-rose-500/10',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40',
+                        'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-rose-500/40',
                       )}
                       aria-label={t('chatbot.aria.deleteSession', 'Delete conversation')}
                     >

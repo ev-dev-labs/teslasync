@@ -127,7 +127,7 @@ function LinearNavLink({
         data-tour={dataTour}
         className={cn(
           'flex min-w-0 flex-1 items-center gap-2.5 rounded-md py-1 pe-2 ps-3 text-[13px] transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-0',
+          'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-0',
           active
             ? 'bg-white/[0.04] font-medium text-[var(--text-primary)]'
             : 'text-[var(--text-secondary)] hover:bg-white/[0.03] hover:text-[var(--text-primary)]',
@@ -169,7 +169,7 @@ function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeader
         'group flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left',
         'text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]',
         'transition-colors hover:text-[var(--text-secondary)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+        'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
       )}
     >
       <Icons.next
@@ -444,7 +444,7 @@ export function LinearSidebar({
               <button
                 type="button"
                 onClick={() => setFilter('')}
-                className="mt-2 rounded-md px-2 py-1 text-[12px] text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
+                className="mt-2 rounded-md px-2 py-1 text-[12px] text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
               >
                 {t('nav.filterClear', 'Clear filter')}
               </button>

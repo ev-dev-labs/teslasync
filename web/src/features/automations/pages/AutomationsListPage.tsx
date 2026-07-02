@@ -345,7 +345,7 @@ export default function AutomationsListPage() {
         <GlassPanel className="p-5">
           <details className="group">
             <summary
-              className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[var(--text-primary)] select-none rounded-md -m-1 p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 [&::-webkit-details-marker]:hidden [&::marker]:content-none"
+              className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[var(--text-primary)] select-none rounded-md -m-1 p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/50 [&::-webkit-details-marker]:hidden [&::marker]:content-none"
               aria-label={t('automations.presets.toggleAria', 'Show or hide quick start templates')}
             >
               <ChevronRight

@@ -424,7 +424,7 @@ function ContextMenuView({ state }: ContextMenuViewProps) {
         // the OS Canvas, so make the border explicit so the menu remains a
         // distinct rectangle.
         'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
-        'focus-visible:outline-none',
+        'focus-visible:outline-hidden',
       )}
     >
       <ul className="space-y-0.5" role="none">
@@ -449,7 +449,7 @@ function ContextMenuView({ state }: ContextMenuViewProps) {
               className={cn(
                 'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
                 'transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                 item.disabled
                   ? 'cursor-not-allowed text-[var(--text-muted)] opacity-60'
                   : item.destructive

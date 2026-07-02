@@ -176,7 +176,7 @@ export function NotificationFilterBar({
                 aria-pressed={active}
                 className={cn(
                   'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                  'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500',
                   active
                     ? cn(opt.bg, opt.text, 'border-transparent ring-1', opt.ring)
                     : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-white/[0.06]',

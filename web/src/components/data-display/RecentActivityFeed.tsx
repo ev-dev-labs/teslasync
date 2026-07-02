@@ -97,7 +97,7 @@ export function RecentActivityFeed({ entries, className, emptyMessage }: RecentA
         // visually anchored.
         <Link
           to={href}
-          className="text-cyan-300 underline-offset-2 hover:underline focus:underline focus:outline-none"
+          className="text-cyan-300 underline-offset-2 hover:underline focus:underline focus:outline-hidden"
         >
           {title}
         </Link>

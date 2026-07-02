@@ -74,7 +74,7 @@ export function BackgroundWorkSegment({ iconOnly = false }: BackgroundWorkSegmen
           onClick={() => setOpen((o) => !o)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
-            'text-amber-300 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+            'text-amber-300 hover:bg-white/[0.04] focus:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
           )}
         >
           <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />

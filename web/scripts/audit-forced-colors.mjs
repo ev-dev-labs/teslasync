@@ -4,7 +4,8 @@
  *
  * Walks the critical-component allow-list below and fails when any of
  * the listed files lacks an explicit `forced-colors:` Tailwind variant
- * occurrence (registered in `tailwind.config.js`) or an
+ * occurrence (registered via `@custom-variant forced-colors` in
+ * `web/src/index.css` — Tailwind v4 CSS-first config) or an
  * `@media (forced-colors: active)` block.
  *
  * Why this exists
@@ -47,10 +48,11 @@ const CRITICAL_COMPONENTS = [
   'src/components/maps/MapLayerSwitcher.tsx',
 ];
 
-// The Tailwind variant we register in `tailwind.config.js` produces
-// `forced-colors:<utility>` class names. We accept either the variant
-// directly or a raw `@media (forced-colors: active)` block (some
-// callers may prefer raw CSS-in-JS or styled overrides).
+// The Tailwind variant we register via `@custom-variant` in
+// `web/src/index.css` produces `forced-colors:<utility>` class names. We
+// accept either the variant directly or a raw
+// `@media (forced-colors: active)` block (some callers may prefer raw
+// CSS-in-JS or styled overrides).
 const VARIANT_RE = /\bforced-colors:[\w[\]/#-]+/;
 const MEDIA_RE = /@media\s*\(\s*forced-colors\s*:\s*active\s*\)/;
 

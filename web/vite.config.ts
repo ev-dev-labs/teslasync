@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -40,6 +41,12 @@ export default defineConfig({
         plugins: ['babel-plugin-react-compiler'],
       },
     }),
+    // Tailwind CSS v4 Oxide engine — replaces the v3 PostCSS pipeline
+    // (postcss.config.js is removed; autoprefixer/postcss-import are no
+    // longer needed since Lightning CSS handles vendor prefixing and
+    // @import resolution internally). See web/src/index.css for the
+    // CSS-first @theme configuration that replaced tailwind.config.js.
+    tailwindcss(),
     VitePWA({
       // Auto-apply SW updates instead of waiting for a user "Reload now"
       // prompt. The previous 'prompt' mode stranded mobile/PWA users on

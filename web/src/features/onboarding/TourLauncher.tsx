@@ -174,7 +174,7 @@ export function TourLauncher() {
           <button
             type="button"
             onClick={handleResetAll}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden />
             {t('tour.launcher.resetAll', 'Reset all tours')}

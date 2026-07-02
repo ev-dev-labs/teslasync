@@ -156,7 +156,7 @@ export default function HelpPage() {
               key={link.id}
               to={link.to}
               data-testid={`help-baseline-link-${link.id}`}
-              className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 rounded-2xl"
+              className="group block focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-300 rounded-2xl"
             >
               <GlassPanel>
                 <div className="flex items-start gap-3">

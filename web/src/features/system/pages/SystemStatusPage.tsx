@@ -940,7 +940,7 @@ export default function SystemStatusPage() {
           <div className="flex justify-center pt-1 pb-4 text-xs text-[var(--text-muted)]" data-status-print-hide>
             <Link
               to="/docs/status-api"
-              className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/50"
             >
               {t('Stable Status API for your own dashboards')} →
             </Link>
@@ -1002,7 +1002,7 @@ function DetailLink({ to, label }: { to: string; label: string }) {
     <div className="flex justify-end pt-2">
       <Link
         to={to}
-        className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+        className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60"
       >
         {label}
       </Link>

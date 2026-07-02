@@ -28,7 +28,7 @@ export function SkipToContent() {
       focusable
       data-testid="skip-to-content"
       href="#main-content"
-      className="focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-lg focus:bg-[var(--surface-1)] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-[var(--text-primary)] focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"
+      className="focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-lg focus:bg-[var(--surface-1)] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-[var(--text-primary)] focus:shadow-lg focus:outline-hidden focus:ring-2 focus:ring-[var(--theme-primary)]"
       onClick={(e) => {
         e.preventDefault();
         const main = document.getElementById('main-content');

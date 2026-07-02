@@ -238,7 +238,7 @@ function ChangelogModalEntry({ entry, defaultOpen }: EntryProps) {
         className={cn(
           'flex w-full items-center justify-between gap-3 px-4 py-3 text-left',
           'rounded-lg transition-colors hover:bg-white/[0.02]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+          'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
         )}
       >
         <div className="flex min-w-0 items-center gap-3">

@@ -167,7 +167,7 @@ export function ListExportMenu({
             className={cn(
               'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
               'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              'focus-visible:outline-hidden focus-visible:bg-white/[0.06]',
             )}
           >
             <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden />
@@ -181,7 +181,7 @@ export function ListExportMenu({
             className={cn(
               'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
               'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              'focus-visible:outline-hidden focus-visible:bg-white/[0.06]',
             )}
           >
             <FileJson className="h-3.5 w-3.5" aria-hidden />

@@ -26,7 +26,7 @@ export default function InboxPage() {
       actions={
         <Link
           to="/notifications/archived"
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60"
         >
           <Archive className="h-3.5 w-3.5" />
           {t('notifications.inbox.viewArchived', 'View archived')}
