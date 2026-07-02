@@ -5456,7 +5456,8 @@
       "accel": "Accel",
       "brake": "Brake",
       "lateral": "Lateral",
-      "distribution": "G-Force Distribution"
+      "distribution": "G-Force Distribution",
+      "samples": "Samples"
     },
     "energyFlowAnimated": {
       "idle": "Idle",

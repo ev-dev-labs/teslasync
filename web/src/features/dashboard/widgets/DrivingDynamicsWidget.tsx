@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
+import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ChartTooltip, axisTick, axisTickSm, chartGrid, chartAnimation, useThemeChartPalette } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
@@ -11,6 +11,9 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 const G_MAX = 1.2;
+
+// Hoisted so the memoized chart children don't see a new object reference each render.
+const HISTOGRAM_MARGIN = { top: 4, right: 4, bottom: 0, left: -10 } as const;
 
 type Severity = 'calm' | 'normal' | 'sporty' | 'aggressive';
 
@@ -210,15 +213,17 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                 {t('widget.drivingDynamics.distribution', 'G-Force Distribution')}
               </p>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={histogramData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+                <BarChart data={histogramData} margin={HISTOGRAM_MARGIN} {...chartAnimation}>
                   {chartGrid}
                   <XAxis dataKey="range" tick={axisTickSm} />
                   <YAxis tick={axisTick} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                    labelFormatter={(v) => `${v}g`}
+                  <Tooltip content={<ChartTooltip labelFormatter={(v) => `${v ?? ''}g`} />} />
+                  <Bar
+                    dataKey="count"
+                    name={t('widget.drivingDynamics.samples', 'Samples')}
+                    fill={palette.series[0] ?? '#22d3ee'}
+                    radius={[2, 2, 0, 0]}
                   />
-                  <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
