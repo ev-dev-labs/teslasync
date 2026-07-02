@@ -6,7 +6,7 @@ export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
 export { Sparkline } from './Sparkline';
 export { ChartTooltip, ChartTooltipBase, type ChartTooltipProps } from './ChartTooltip';
-export { ChartGradient, ChartGradientBase } from './ChartGradient';
+export { ChartGradient, ChartGradientBase, type ChartGradientProps } from './ChartGradient';
 export { chartGrid, axisTick, axisTickSm, chartMargin, chartMarginLabeled, chartAnimation, safe, fmt, CHART_COLORS, NEON_COLORS } from './chartUtils';
 export { useThemeChartPalette, buildChartPalette, type ChartPalette } from '../../lib/colors';
 export { ElevationProfile, type ElevationDataPoint } from './ElevationProfile';
