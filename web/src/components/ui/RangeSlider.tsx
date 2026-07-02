@@ -1,7 +1,9 @@
 import { useCallback, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import * as SliderPrimitive from '@radix-ui/react-slider';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
+import { getLangDir } from '@/lib/i18nDir';
 import { Caption } from './Typography';
 
 export interface RangeSliderProps {
@@ -49,23 +51,63 @@ export interface RangeSliderProps {
 /**
  * Dual-thumb range slider primitive.
  *
- * Built from two stacked native `<input type="range">` elements so every
- * keyboard interaction from the WAI-ARIA APG slider pattern works on
- * each thumb (Arrow keys step by `step`, PageUp/Down by ~10%, Home → min,
- * End → max), and so screen readers announce each thumb individually
- * via `aria-valuetext`.
+ * Built on Radix UI's `Slider` primitive in range mode (a `value`/
+ * `onValueChange` array with two entries renders two independently
+ * focusable `Slider.Thumb`s), replacing the previous two-stacked-native-
+ * `<input type="range">` implementation. Radix supplies, for free,
+ * everything the hand-rolled version had to build manually:
  *
- * Thumb-swap: if the user drags the low thumb past the high thumb (or
- * vice versa), the callback receives a sorted `[low, high]` tuple and
- * the focused input remains the *new* low or high. This matches the
- * APG-recommended behaviour for range sliders.
+ * - Full WAI-ARIA "slider" role per thumb, with `aria-valuemin`/
+ *   `aria-valuenow`/`aria-valuemax` kept in sync automatically. This
+ *   component layers `aria-valuetext` on top (via `formatValue`) exactly
+ *   as before, since Radix doesn't know about unit-aware display text.
+ * - Multi-thumb keyboard semantics per the WAI-ARIA APG "Slider (Multi-
+ *   Thumb)" pattern: each thumb is its own `tabIndex=0` stop (Tab/
+ *   Shift+Tab move between the two thumbs, and out of the control
+ *   entirely, like any other pair of focusable elements — there is no
+ *   roving tabindex and no focus trap for this pattern, same rationale
+ *   as `TabNav`'s "Escape/focus-trap don't apply" note). On a focused
+ *   thumb: ArrowUp/ArrowRight increment by `step`, ArrowDown/ArrowLeft
+ *   decrement, Home/End jump to `min`/`max`, PageUp/PageDown jump by
+ *   10×`step`. Arrow-key left/right meaning mirrors automatically in
+ *   RTL because `dir` is threaded through below.
+ * - Thumb-swap: Radix's internal `updateValues` re-sorts the whole
+ *   values array on every change (ascending), so dragging the low thumb
+ *   past the high thumb (or vice versa) already yields the same sorted
+ *   `[low, high]` tuple the old manual swap logic produced — no extra
+ *   sorting needed in `handleValueChange` below. Focus follows the
+ *   thumb whose value actually moved, matching the previous behaviour.
+ * - Pointer/touch dragging via the Pointer Events API (works uniformly
+ *   across mouse, touch and pen) with `touch-none` on the root so a
+ *   vertical touch-drag on the thumb can't also pan the page.
  *
- * Stacking trick: each input has `pointer-events: none` on its track and
- * `pointer-events: auto` on its thumb (via `[&::-webkit-slider-thumb]:`
- * and `[&::-moz-range-thumb]:` arbitrary variants), so both thumbs are
- * grabbable even though the inputs overlap. The thumb closer to the
- * far end gets a higher `z-index` so it is always reachable when the
- * thumbs sit on top of each other.
+ * RTL: Radix's own direction detection only reads an explicit `dir` prop
+ * or a `DirectionProvider` context (never the ambient `document.dir`
+ * this app sets via `applyDocumentDirection`), so `dir` is resolved from
+ * the active i18n language the same way `useChartLabelAnchor` does in
+ * `ChartContainer.tsx` and threaded into `Slider.Root` explicitly —
+ * otherwise arrow-key direction and pointer-drag math would silently
+ * stay LTR for Arabic/Hebrew/Persian/Urdu users even though the track
+ * visually mirrors (flex layout mirrors for free from the inherited
+ * `dir`; the slide-value *math* does not).
+ *
+ * Touch targets: the visual thumb stays a small 16px dot (matching the
+ * original native-thumb footprint) but gets `.touch-target-overlay`
+ * (see `index.css`), the same invisible ≥44px hit-area extender used by
+ * `TimelineScrubber`'s marker handles, so mobile dragging doesn't
+ * require pixel-perfect precision on a visually tiny target.
+ *
+ * Stacking: mirrors the old "closer-to-the-far-edge wins" trick via an
+ * explicit `zIndex` style per thumb (Radix has no built-in equivalent)
+ * so the low thumb stays reachable once it crosses the midpoint toward
+ * the high thumb's side, and vice versa.
+ *
+ * Forced-colors (Windows High Contrast): the previous version hid its
+ * decorative fill divs and let the *native* `<input>` render its own
+ * high-contrast slider chrome. Since the track/range/thumb are now this
+ * component's own styled elements rather than native controls, each one
+ * pins an explicit system colour instead so the control stays visible
+ * and legible with OS colours forced.
  */
 export function RangeSlider({
   value,
@@ -82,7 +124,8 @@ export function RangeSlider({
   id,
   className,
 }: RangeSliderProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dir = getLangDir(i18n.language);
   const reactId = useId();
   const baseId = id ?? `range-${reactId}`;
   const lowId = `${baseId}-low`;
@@ -102,51 +145,29 @@ export function RangeSlider({
   const ariaLow = minThumbLabel ?? t('slider.thumbMin', '{{label}} minimum', { label });
   const ariaHigh = maxThumbLabel ?? t('slider.thumbMax', '{{label}} maximum', { label });
 
-  /**
-   * Thumb-swap is enforced by sorting the resulting tuple. When the user
-   * drags the low thumb past the high thumb, the callback receives
-   * `[high, newLow]` so the high thumb effectively becomes the new low
-   * value. The browser keeps focus on the input that initiated the
-   * change, so after a swap the focused input is now the *high* thumb.
-   */
-  const handleLowChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const next = Number(e.currentTarget.value);
-      if (Number.isNaN(next)) return;
-      if (next > high) onChange([high, next]);
-      else onChange([next, high]);
+  const handleValueChange = useCallback(
+    (next: number[]) => {
+      const nextLow = next[0] ?? min;
+      const nextHigh = next[1] ?? max;
+      onChange([nextLow, nextHigh]);
     },
-    [high, onChange],
+    [onChange, min, max],
   );
-
-  const handleHighChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const next = Number(e.currentTarget.value);
-      if (Number.isNaN(next)) return;
-      if (next < low) onChange([next, low]);
-      else onChange([low, next]);
-    },
-    [low, onChange],
-  );
-
-  // Decorative fill positions — kept hidden in forced-colors mode so the
-  // native browser-rendered thumbs stand alone.
-  const range = max - min;
-  const lowPct = range > 0 ? Math.max(0, Math.min(100, ((low - min) / range) * 100)) : 0;
-  const highPct = range > 0 ? Math.max(0, Math.min(100, ((high - min) / range) * 100)) : 100;
 
   // When the low thumb is past the midpoint, render it on top so the
   // user can still grab it when the two thumbs collide near the right
   // edge. Symmetrical for the high thumb near the left edge.
+  const range = max - min;
+  const lowPct = range > 0 ? Math.max(0, Math.min(100, ((low - min) / range) * 100)) : 0;
   const lowOnTop = lowPct > 50;
 
-  const inputClasses = cn(
-    'pointer-events-none absolute inset-0 h-full w-full appearance-none bg-transparent',
-    'accent-cyan-500',
-    '[&::-webkit-slider-thumb]:pointer-events-auto',
-    '[&::-moz-range-thumb]:pointer-events-auto',
-    'focus-visible:outline-hidden',
-    'disabled:cursor-not-allowed disabled:opacity-50',
+  const thumbClasses = cn(
+    'touch-target-overlay block h-4 w-4 rounded-full border-2 border-[var(--surface-1)] bg-cyan-500 shadow-sm transition-transform',
+    'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+    'forced-colors:border-[ButtonText] forced-colors:bg-[Highlight]',
+    disabled
+      ? 'cursor-not-allowed opacity-50'
+      : 'cursor-grab hover:scale-110 active:scale-125 active:cursor-grabbing',
   );
 
   return (
@@ -161,46 +182,34 @@ export function RangeSlider({
           </Caption>
         </div>
       )}
-      <div className="relative h-6">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--surface-2)] forced-colors:hidden"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-cyan-500/60 forced-colors:hidden"
-          style={{
-            left: `${Math.min(lowPct, highPct)}%`,
-            right: `${100 - Math.max(lowPct, highPct)}%`,
-          }}
-        />
-        <input
+      <SliderPrimitive.Root
+        className="relative flex h-6 w-full touch-none select-none items-center"
+        dir={dir}
+        min={min}
+        max={max}
+        step={step}
+        value={[low, high]}
+        onValueChange={handleValueChange}
+        disabled={disabled}
+      >
+        <SliderPrimitive.Track className="relative h-1 w-full grow rounded-full bg-[var(--surface-2)] forced-colors:border forced-colors:border-[CanvasText]">
+          <SliderPrimitive.Range className="absolute h-full rounded-full bg-cyan-500/60 forced-colors:bg-[Highlight]" />
+        </SliderPrimitive.Track>
+        <SliderPrimitive.Thumb
           id={lowId}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={low}
-          disabled={disabled}
-          onChange={handleLowChange}
           aria-label={ariaLow}
           aria-valuetext={displayLow}
-          className={cn(inputClasses, lowOnTop ? 'z-20' : 'z-10')}
+          style={{ zIndex: lowOnTop ? 20 : 10 }}
+          className={thumbClasses}
         />
-        <input
+        <SliderPrimitive.Thumb
           id={highId}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={high}
-          disabled={disabled}
-          onChange={handleHighChange}
           aria-label={ariaHigh}
           aria-valuetext={displayHigh}
-          className={cn(inputClasses, lowOnTop ? 'z-10' : 'z-20')}
+          style={{ zIndex: lowOnTop ? 10 : 20 }}
+          className={thumbClasses}
         />
-      </div>
+      </SliderPrimitive.Root>
     </div>
   );
 }
