@@ -157,9 +157,134 @@ output pasted); all self-healing audit logs retained in
 traffic during the loop (in-place modernization, not a parallel rewrite —
 there is no "old app" to keep running side-by-side).
 
-## STATUS AT TIME OF WRITING
+## STATUS AT TIME OF LAST HANDOFF (2026-07-02, machine handoff)
 
-Phase 0 (foundation) + Phase 1 scaffolding: **4/4 + tooling scaffolds done**,
-verified with full gate green. Phases 2–8 (595 remaining prompts): queued,
-loop was paused this session to fix the integration-merge bug above and is
-being resumed now under this mission.
+**208/599 prompts done.** Phases 0–6 fully complete (foundation, tooling,
+Radix primitives, charts-shared, charts-pages, maps-shared, maps-pages).
+Phase 7 (Storybook stories, 239 units) just started (1/239). Phase 8 (E2E,
+153 units) not started. The loop was stopped cleanly on the previous
+machine (no in-flight work lost — verified via the done.txt reconciliation
+check) so work can resume on a new machine.
+
+## RESUME INSTRUCTIONS (for the agent picking this up on a new machine)
+
+**1. Get the code:**
+```bash
+git clone https://github.com/ev-dev-labs/teslasync.git
+cd teslasync
+git checkout refactor/frontend-gold-standard-rewrite
+git pull origin refactor/frontend-gold-standard-rewrite
+```
+
+**2. Verify prerequisites:**
+```bash
+node --version   # need a recent Node (this mission was run on Node 26)
+copilot --version  # the GitHub Copilot CLI must be installed and authenticated
+cd web && npm install   # installs node_modules incl. all radix/visx/uplot/maplibre deps
+```
+
+**3. Verify current state before touching anything — run these three checks
+in order, exactly as done at every restart this session:**
+```bash
+cd /path/to/teslasync
+git diff --quiet && echo "CLEAN" || echo "DIRTY -- investigate before proceeding"
+cat .github/prompts/frontend-gold-standard/logs/frontend-loop-status.txt
+node apps/tools/frontend-rewrite/self-heal-audit.mjs   # reconciles done.txt, cleans stale worktrees, runs full gate
+```
+If `self-heal-audit.mjs` reports anything under "CHECK 1 (done.txt
+reconciliation)" other than "all done.txt entries reachable from HEAD",
+STOP and investigate before launching — see the CRITICAL LESSON below.
+
+**4. Regenerate prompts (idempotent, safe to re-run; picks up any generator
+changes and re-derives the file list from the current repo state):**
+```bash
+node apps/tools/frontend-rewrite/gen-frontend-prompts.mjs
+```
+
+**5. Launch the loop (detached, survives session end via nohup+disown):**
+```bash
+JOBS=4 MAX_STALLS=3 nohup bash apps/tools/frontend-rewrite/frontend-loop.sh \
+  > .github/prompts/frontend-gold-standard/logs/frontend-loop-nohup.out 2>&1 &
+disown
+```
+(Equivalently, `bash .github/prompts/frontend-gold-standard/frontend-loop.sh`
+— a thin wrapper that execs the same script, kept here for discoverability
+alongside this mission doc.)
+
+**6. Monitor:**
+```bash
+cat .github/prompts/frontend-gold-standard/logs/frontend-loop-status.txt
+ps aux | grep -E "frontend-loop|copilot --yolo" | grep -v grep
+git log --oneline -10
+```
+Set up a periodic check-in (every 1-2h) rather than polling continuously —
+this is a multi-hour/multi-day run.
+
+**7. To stop the loop safely (REQUIRED procedure — do not just `kill` the
+top-level PID and walk away):**
+```bash
+# a) find and kill: the frontend-loop.sh PID, the run-prompts.sh --program PID,
+#    the xargs -P PID, and EVERY copilot --yolo + its wrapper bash PID (see below)
+ps aux | grep -E "frontend-loop|copilot --yolo|run-prompts.sh" | grep -v grep
+kill <each PID individually>   # NEVER pkill/killall — kill one PID at a time
+sleep 3
+ps aux | grep -E "frontend-loop|copilot --yolo|run-prompts.sh" | grep -v grep  # must be empty
+# b) MANDATORY: reconcile before doing anything else
+git diff --quiet && echo CLEAN || git status --short
+node apps/tools/frontend-rewrite/self-heal-audit.mjs
+```
+
+### CRITICAL LESSON FROM THIS SESSION — read before restarting anything
+
+Early in this mission, killing the loop mid-wave (to apply fixes) **silently
+stranded 7 fully-completed, gate-passed Radix component migrations** on an
+abandoned temporary integration branch, while `done.txt` incorrectly
+claimed they were on the real branch. Root cause: the parallel runner used
+to fast-forward the real branch onto its temp integration branch only at
+the very end of an entire wave invocation — interrupting it early skipped
+that step. **This is now fixed** (`run-prompts.sh` fast-forwards after
+EVERY individual merge, and `self-heal-audit.mjs`'s Check 1 auto-detects +
+recovers any future recurrence via cherry-pick), but the lesson stands:
+**always run `self-heal-audit.mjs` immediately after stopping the loop,
+before assuming the state is trustworthy, and especially before generating
+a status report to the user.**
+
+A second lesson: the original design used one Copilot process to both
+implement AND self-review its own work ("Persona 1 / Persona 2" in the
+same context). This was called out as insufficient — real independent
+verification now requires a **second, genuinely separate `copilot` process
+with zero memory of the implementation**, gated on `REVIEW=APPROVE` (see
+the "Independent Review" section every generated prompt now contains, and
+`gen-frontend-prompts.mjs`'s `gate()` function). If you ever modify the
+prompt generator, preserve this — do not revert to self-review.
+
+A third lesson: concurrency must match each phase's shared-file risk.
+`p2-radix-primitives` / `p3-charts-shared` / `p5-maps-shared` (all
+complete now, but relevant if any units get re-queued) each add a new
+`package.json` dependency per unit, so `JOBS=4` there (not higher — verified
+empirically that higher concurrency there just means more merge-conflict
+retries). `p7-storybook-stories` / `p8-e2e-pages` (the two remaining
+phases, 392 units total) touch only their own target file each — `JOBS=10`
+is safe and was the single biggest throughput lever found this session
+(went from ~2 units/hour to ~60 units/hour once applied to the bulk
+phases). See `jobs_for()` in `frontend-loop.sh`.
+
+A fourth, environment-specific note: if this machine also runs other
+unrelated apps, check `lsof -i :8080` before assuming `web/vite.config.ts`'s
+API proxy target is free — on the original machine, an unrelated EVNest
+container occupied :8080, causing TeslaSync's dev-server auth-redirect
+logic to loop. If you hit `/outpost.goauthentik.io/start` redirect loops
+while running `npm run dev`, that's why — repoint the proxy or free the port,
+but never commit a repointed proxy target (it must stay `:8080` for
+anyone else / CI / the real backend).
+
+## STOP CONDITION (only exit) — unchanged, restated for convenience
+
+599/599 prompts done (or explicitly `blocked` with a documented reason);
+zero `grep -rE "from '(recharts|react-leaflet|react-router-dom)'" web/src/features`
+hits outside the wrapper layer; Chromatic baseline for all 239 components;
+Playwright green for all 164 pages on both projects; global
+`npm run build && npm run lint && npm test` green (raw output pasted,
+modulo the 2 documented pre-existing test failures and the pre-existing
+rtl-budget drift, both out of this mission's scope); all self-healing audit
+logs retained.
