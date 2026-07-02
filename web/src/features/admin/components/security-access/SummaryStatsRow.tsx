@@ -25,7 +25,12 @@ export function SummaryStatsRow({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+        role="status"
+        aria-busy={true}
+        aria-label={t('common.loading', 'Loading…')}
+      >
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} height={88} />
         ))}
@@ -39,25 +44,25 @@ export function SummaryStatsRow({
         <MetricCard
           label={t('admin.security.stat.status', 'Current Status')}
           value={isSecure ? t('admin.security.secure', 'Secure') : t('admin.security.unsecure', 'Unsecure')}
-          icon={<ShieldCheck className="h-5 w-5" />}
+          icon={<ShieldCheck className="h-5 w-5" aria-hidden={true} />}
           color={isSecure ? 'green' : 'red'}
         />
         <MetricCard
           label={t('admin.security.stat.lastLock', 'Last Lock Change')}
           value={timeSince(lastLockChange)}
-          icon={<Clock className="h-5 w-5" />}
+          icon={<Clock className="h-5 w-5" aria-hidden={true} />}
           color="cyan"
         />
         <MetricCard
           label={t('admin.security.stat.sentryUptime', 'Sentry Uptime')}
           value={`${fmtInt(sentryUptime)}%`}
-          icon={<Activity className="h-5 w-5" />}
+          icon={<Activity className="h-5 w-5" aria-hidden={true} />}
           color="blue"
         />
         <MetricCard
           label={t('admin.security.stat.totalEvents', 'Total Events')}
           value={totalEvents}
-          icon={<BarChart3 className="h-5 w-5" />}
+          icon={<BarChart3 className="h-5 w-5" aria-hidden={true} />}
           color="purple"
         />
       </div>
