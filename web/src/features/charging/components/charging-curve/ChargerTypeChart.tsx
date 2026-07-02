@@ -13,7 +13,6 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Cell,
@@ -81,7 +80,7 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
           data={chargerTypeStats}
           margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
         >
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis dataKey="label" tick={axisTickSm} />
           <YAxis yAxisId="kw" tick={axisTickSm} orientation="left" />
           <YAxis yAxisId="kwh" tick={axisTickSm} orientation="right" />
