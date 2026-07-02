@@ -76,7 +76,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
       <FadeIn>
         <GlassPanel className="p-6">
           <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-            <Fuel className="h-4 w-4 text-neon-green" />
+            <Fuel className="h-4 w-4 shrink-0 text-neon-green" />
             {t('costAnalysis.forecast.savings', 'Gas vs EV Savings')}
           </h3>
           {forecastData ? (
@@ -124,7 +124,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
       <FadeIn>
         <GlassPanel className="p-6">
           <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-            <Lightbulb className="h-4 w-4 text-neon-amber" />
+            <Lightbulb className="h-4 w-4 shrink-0 text-neon-amber" />
             {t('costAnalysis.forecast.insights', 'Insights')}
           </h3>
           {(forecastData?.insights ?? []).length > 0 ? (
