@@ -1,73 +1,83 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  Download,
+  PlayCircle,
+  Rocket,
+  Ruler,
+  Thermometer,
+  Gauge,
+  Languages,
+  CircleDollarSign,
+  Zap,
+} from 'lucide-react'
+
 import { useSettings } from '@/api/hooks/useSettings'
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, IconBox } from '@/components/ui'
+import { Button, SectionTitle } from '@/components/ui'
+import { StatCard } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
+import { EditConflictBanner } from '@/components/feedback'
+import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useEditLease } from '@/hooks/useEditLease'
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry'
 import { restartChecklist } from '@/features/onboarding/checklist'
-import { useToast } from '@/components/feedback/Toast'
-import { EditConflictBanner } from '@/components/feedback'
-import { useEditLease } from '@/hooks/useEditLease'
-import { ExternalLink, Download, PlayCircle, Rocket } from 'lucide-react'
 
 import {
   GeneralSettings,
   AppearanceSettings,
   AdvancedSettings,
   SettingsSearch,
+  SettingsActionCard,
 } from '../components'
-// Settings export/import has moved to the
-// dedicated Backup & Restore page (/backup) so the DATA category owns
-// every backup/restore surface. The component is still imported there
-// from features/settings/components.
-// ActiveSessionsSection moved to its own page
-// (ActiveSessionsPage). Direct import retained for the same reason.
-//
-// Reset to defaults. Same direct-import
-// rationale as above; the components barrel is outside the prompt's
-// allowed-files regex.
+// ResetSection is imported directly because the components barrel is
+// outside the redesign prompt's allowed-files regex.
 import { ResetSection } from '../components/ResetSection'
-// PrivacySection moved to its own page
-// (PrivacyPage at /account/privacy). Browser-local privacy controls
-// (recently viewed pages, cookies / GDPR consent) now live under the
-// Account side-nav category alongside 2FA and Active Sessions.
-//
-// Tesla integration redirect cluster (Tesla Account, Feature Flags,
-// Region & API, Active Orders, Gas Price Auto-Poll) and the Fleet API
-// link card were removed: every target is reachable from the
-// Integrations side-nav group, so the in-page placeholders were just
-// duplicate redirects.
-//
-// Helix (AI integration) moved to its own page at /integrations/helix
-// for the same reason — it is a service connection with credentials +
-// cost ceiling, not a "preference". A small breadcrumb card below
-// keeps it discoverable from /settings, and the legacy /settings#ai
-// deep link redirects automatically.
+
+// The Tesla integration redirect cluster (Tesla Account, Feature Flags,
+// Region & API, Active Orders, Gas Price Auto-Poll), the Fleet API link
+// card, Privacy, Active Sessions, and Helix (AI) were all promoted out of
+// /settings into dedicated Integrations/Account pages — every target is
+// reachable from the side-nav + Cmd-K palette, so the in-page placeholders
+// were duplicate redirects. The legacy /settings#ai deep link still
+// redirects to /integrations/helix via the effect below.
+
+/** Short human labels for the stored `language` code shown in the KPI band. */
+const LANGUAGE_LABELS: Record<string, string> = {
+  en: 'English',
+  de: 'Deutsch',
+  fr: 'Français',
+  es: 'Español',
+  zh: '中文',
+}
+
+interface OverviewCard {
+  icon: ReactNode
+  label: string
+  value: string
+  sublabel?: string
+}
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
-  const { isLoading } = useSettings()
+  const settingsQuery = useSettings()
+  const { data: settings, isLoading } = settingsQuery
   const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Claim an edit lease for the entire settings
-  // page so a second tab editing the same settings sees a banner before
-  // their save can silently overwrite this tab's changes. The lease is
-  // scoped per-origin (no per-user scoping yet because TeslaSync's
-  // settings are single-tenant); future work can append a user subject
-  // when multi-tenant settings land.
+  // Claim an edit lease for the whole settings page so a second tab editing
+  // the same settings sees a banner before its save can silently overwrite
+  // this tab's changes. Scoped per-origin (settings are single-tenant today).
   const settingsLeaseKey = 'settings/general'
   useEditLease(settingsLeaseKey)
 
-  // Legacy /settings#ai → /integrations/helix redirect. Fires before
-  // the hash-anchor scroll effect below so #ai never resolves to a
-  // missing section. Replaces history so the back button still works
-  // intuitively (skips the stale /settings entry).
+  // Legacy /settings#ai → /integrations/helix redirect. Fires before the
+  // hash-anchor scroll effect below so #ai never resolves to a missing
+  // section. Replaces history so the back button skips the stale entry.
   useEffect(() => {
     if (location.hash === '#ai') {
       navigate('/integrations/helix', { replace: true })
@@ -76,7 +86,7 @@ export default function SettingsPage() {
 
   // Hash-anchor scroll: when /settings#appearance (or any other anchor)
   // loads, scroll the corresponding <section id="..."> into view. Triggered
-  // by the onboarding-checklist CTAs.
+  // by the onboarding-checklist CTAs and the settings search box.
   useEffect(() => {
     if (!location.hash) return
     const id = location.hash.slice(1)
@@ -89,114 +99,162 @@ export default function SettingsPage() {
     return () => window.clearTimeout(timer)
   }, [location.hash])
 
+  // ── Derived "preferences at a glance" values (null-safe, display only) ──
+  const languageCode = settings?.language ? settings.language.toUpperCase() : '—'
+  const languageName = settings?.language ? LANGUAGE_LABELS[settings.language] : undefined
+  const currencySymbol = settings?.currency_symbol ?? '$'
+  const rangeLabel = settings
+    ? settings.preferred_range === 'ideal'
+      ? t('app.ideal', 'Ideal')
+      : t('app.rated', 'Rated')
+    : undefined
+
+  const overviewCards: OverviewCard[] = [
+    {
+      icon: <Ruler className="h-5 w-5" aria-hidden="true" />,
+      label: t('overview.distance', 'Distance'),
+      value: settings?.unit_of_length ?? '—',
+      sublabel: rangeLabel,
+    },
+    {
+      icon: <Thermometer className="h-5 w-5" aria-hidden="true" />,
+      label: t('overview.temperature', 'Temperature'),
+      value: settings ? (settings.unit_of_temp === 'F' ? '°F' : '°C') : '—',
+    },
+    {
+      icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
+      label: t('overview.pressure', 'Pressure'),
+      value: settings?.unit_of_pressure ?? '—',
+    },
+    {
+      icon: <Languages className="h-5 w-5" aria-hidden="true" />,
+      label: t('overview.language', 'Language'),
+      value: languageCode,
+      sublabel: languageName,
+    },
+    {
+      icon: <CircleDollarSign className="h-5 w-5" aria-hidden="true" />,
+      label: t('overview.currency', 'Currency'),
+      value: settings ? currencySymbol : '—',
+    },
+    {
+      icon: <Zap className="h-5 w-5" aria-hidden="true" />,
+      label: t('overview.energyCost', 'Energy cost'),
+      value: settings ? `${currencySymbol}${(settings.base_cost_per_kwh ?? 0).toFixed(2)}` : '—',
+      sublabel: t('overview.perKwh', 'per kWh'),
+    },
+  ]
+
   return (
     <PageContainer
       title={t('title', 'Settings')}
       subtitle={t('subtitle', 'Configure TeslaSync preferences and Tesla account connection')}
-      loading={isLoading}
+      actions={<SettingsSearch className="w-full sm:w-72" />}
+      query={settingsQuery}
     >
-      <SettingsSearch className="mb-2" />
-
       <EditConflictBanner
         resourceKey={settingsLeaseKey}
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
       />
 
-      {/* Tesla integration redirect cluster + Fleet API link card were
-          removed in favor of the Integrations side-nav group. Every
-          target page (/tesla-account, /tesla-features, /tesla-region,
-          /tesla-orders, /gas-price, /fleet-api) is reachable from the
-          sidebar, and Cmd-K palette entries in searchIndex.ts already
-          point directly at those pages, so the in-page placeholders
-          were duplicate redirects with no remaining purpose. */}
-
-      <section id="general">
-        <GeneralSettings />
-      </section>
-      <section id="appearance">
-        <AppearanceSettings />
-      </section>
-      {/* Helix (AI) was promoted out of /settings to /integrations/helix
-          because it's a service connection (provider, key, cost cap),
-          not a preference. The legacy `/settings#ai` hash is still
-          redirected by the effect above, and the settings search box
-          retains a cross-page entry pointing to the new home. */}
-      <section id="advanced">
-        <AdvancedSettings />
-      </section>
-      <section id="reset">
-        <ResetSection />
-      </section>
-
-      {/* Data Export — link */}
-      <FadeIn delay={0.18}>
-        <a href="/data-export" className="block">
-          <GlassPanel className="p-5 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors cursor-pointer group">
-            <IconBox color="green">
-              <Download className="h-5 w-5" />
-            </IconBox>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('export.title', 'Data Export')}</h2>
-              <p className="text-xs text-[var(--text-muted)]">{t('export.subtitle', 'Export drives, charging, analytics, or full backup as CSV/JSON')}</p>
-            </div>
-            <ExternalLink className="h-4 w-4 text-[var(--text-muted)] group-hover:text-neon-cyan transition-colors shrink-0" />
-          </GlassPanel>
-        </a>
+      {/* 1 — Preferences at a glance: full-width KPI band that reflows to
+          6 columns on wide screens. */}
+      <FadeIn>
+        <section
+          aria-label={t('overview.aria', 'Current preferences overview')}
+          className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+        >
+          {overviewCards.map((card) => (
+            <StatCard
+              key={card.label}
+              label={card.label}
+              value={card.value}
+              sublabel={card.sublabel}
+              icon={card.icon}
+              loading={isLoading}
+            />
+          ))}
+        </section>
       </FadeIn>
 
-      {/* Onboarding Tour */}
-      <FadeIn delay={0.2}>
-        <GlassPanel className="p-5 flex items-center gap-4" data-tour="settings-tour">
-          <IconBox color="cyan">
-            <PlayCircle className="h-5 w-5" />
-          </IconBox>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('tour.title', 'Onboarding Tour')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">{t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}</p>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => dispatchTourLauncherOpen()}
-          >
-            <PlayCircle className="h-4 w-4 mr-2" />
-            {t('tour.restart', 'Open Tour Launcher')}
-          </Button>
-        </GlassPanel>
-      </FadeIn>
+      {/* 2 — Preference sections: full-width bento; each self-titled panel
+          owns its own loading/empty state and keeps its #anchor for the
+          settings search + onboarding deep links. Two columns on 2xl+. */}
+      <section
+        aria-label={t('preferences.aria', 'Preference sections')}
+        className="grid grid-cols-1 items-start gap-4 xl:gap-5 2xl:grid-cols-2"
+      >
+        <section id="general">
+          <GeneralSettings />
+        </section>
+        <section id="appearance">
+          <AppearanceSettings />
+        </section>
+        <section id="advanced">
+          <AdvancedSettings />
+        </section>
+        <section id="reset">
+          <ResetSection />
+        </section>
+      </section>
 
-      {/* Setup Checklist — restart affordance */}
-      <FadeIn delay={0.22}>
-        <GlassPanel className="p-5 flex items-center gap-4">
-          <IconBox color="cyan">
-            <Rocket className="h-5 w-5" />
-          </IconBox>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">
-              {t('checklist.settings.title', 'Setup Checklist')}
-            </h2>
-            <p className="text-xs text-[var(--text-muted)]">
-              {t(
+      {/* 3 — Quick actions: equal-height utility cards that fill the width
+          (1 → 2 → 3 columns). */}
+      <FadeIn delay={0.1}>
+        <section aria-label={t('quickActions.aria', 'Settings shortcuts')} className="space-y-3">
+          <SectionTitle>{t('quickActions.title', 'Quick actions')}</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <SettingsActionCard
+              href="/data-export"
+              iconColor="green"
+              icon={<Download className="h-5 w-5" aria-hidden="true" />}
+              title={t('export.title', 'Data Export')}
+              description={t(
+                'export.subtitle',
+                'Export drives, charging, analytics, or full backup as CSV/JSON',
+              )}
+            />
+            <SettingsActionCard
+              dataTour="settings-tour"
+              iconColor="cyan"
+              icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
+              title={t('tour.title', 'Onboarding Tour')}
+              description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
+              action={
+                <Button variant="ghost" onClick={() => dispatchTourLauncherOpen()}>
+                  <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {t('tour.restart', 'Open Tour Launcher')}
+                </Button>
+              }
+            />
+            <SettingsActionCard
+              iconColor="cyan"
+              icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
+              title={t('checklist.settings.title', 'Setup Checklist')}
+              description={t(
                 'checklist.settings.description',
                 'Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.',
               )}
-            </p>
+              action={
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    restartChecklist()
+                    toast.success(
+                      t(
+                        'checklist.settings.restarted',
+                        'Setup checklist restarted — re-add the widget from the dashboard customizer if needed.',
+                      ),
+                    )
+                  }}
+                >
+                  <Rocket className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {t('checklist.settings.restart', 'Restart Checklist')}
+                </Button>
+              }
+            />
           </div>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              restartChecklist()
-              toast.success(
-                t(
-                  'checklist.settings.restarted',
-                  'Setup checklist restarted — re-add the widget from the dashboard customizer if needed.',
-                ),
-              )
-            }}
-          >
-            <Rocket className="h-4 w-4 mr-2" />
-            {t('checklist.settings.restart', 'Restart Checklist')}
-          </Button>
-        </GlassPanel>
+        </section>
       </FadeIn>
     </PageContainer>
   )
