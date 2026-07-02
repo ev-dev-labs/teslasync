@@ -5,7 +5,7 @@ import { Activity, Route, Zap, Clock, BatteryCharging, TrendingUp } from 'lucide
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Timeline } from '@/components/data-display/Timeline';
 import { Currency } from '@/components/data-display';
-import { AreaChartWrapper } from '@/components/charts/AreaChartWrapper';
+import { AreaChartWrapper } from '@/components/charts';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
