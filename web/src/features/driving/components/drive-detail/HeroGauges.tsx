@@ -14,6 +14,14 @@ interface HeroGaugesProps {
   stats: DriveStats;
 }
 
+// Fixed ceiling for the Max Speed gauge: 250 mph (≈402 km/h), preserving the
+// historical gauge scale. Stored in SI (m/s) because toSpeedDisplay expects SI
+// input — 250 mph is exactly 111.76 m/s, which renders as 250 mph / 402 km/h.
+// The pre-SI code passed the literal 250 through an mph-based converter; the SI
+// cutover must reproduce a 250 mph ceiling, NOT treat 250 as m/s (which would
+// balloon the ceiling to ~559 mph / ~900 km/h and leave the gauge under-filled).
+const MAX_SPEED_GAUGE_CEILING_MPS = 111.76;
+
 export function HeroGauges({ drive, stats }: HeroGaugesProps) {
   const { t } = useTranslation();
   const { isMiles } = useSettings();
@@ -41,7 +49,7 @@ export function HeroGauges({ drive, stats }: HeroGaugesProps) {
           />
           <RadialGauge
             value={Math.round(stats.maxSpd)}
-            max={toSpeedDisplay(250)}
+            max={toSpeedDisplay(MAX_SPEED_GAUGE_CEILING_MPS)}
             label={t('driveDetail.maxSpeed', 'Max Speed')}
             unit={speedUnit}
             color="#a855f7"
