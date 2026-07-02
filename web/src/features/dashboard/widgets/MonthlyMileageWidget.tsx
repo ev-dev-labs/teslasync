@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
 } from '@/components/charts';
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -171,17 +171,12 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 tickFormatter={(v: number) => fmt(v, 0)}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(value: number) => [
-                  `${fmtNumber(value, 1)} ${distanceUnit}`,
-                  t('widget.monthlyMileage.distance', 'Distance'),
-                ]}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                content={
+                  <ChartTooltip
+                    valueFormatter={(value) => `${fmtNumber(value, 1)} ${distanceUnit}`}
+                  />
+                }
               />
               <Bar
                 dataKey="distance"
