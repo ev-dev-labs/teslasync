@@ -13,8 +13,8 @@ import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, chartMarginLabeled, axisTick, chartAnimation,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, Legend, chartGrid, chartMarginLabeled, axisTick, chartAnimation,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -380,14 +380,10 @@ export default function PeriodComparePage() {
               </p>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={chartData} margin={chartMarginLabeled}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--glass-border)"
-                    strokeOpacity={0.4}
-                  />
+                  {chartGrid}
                   <XAxis dataKey="name" tick={axisTick} />
                   <YAxis tick={axisTick} />
-                  <Tooltip content={({ active, payload, label }) => <ChartTooltip active={active} payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]} label={label as string} />} />
+                  <Tooltip content={<ChartTooltip />} />
                   <Legend />
                   <Bar
                     dataKey="A"
