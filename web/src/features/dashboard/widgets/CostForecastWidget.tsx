@@ -44,8 +44,7 @@ export default function CostForecastWidget({ vehicleId, size }: WidgetProps) {
   const {
     data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useCostForecast(vid != null ? String(vid) : null);
 
-  const { formatCurrency } = useFormatting();
-  const { currencySymbol } = useFormatting();
+  const { formatCurrency, currencySymbol } = useFormatting();
 
   const chartData = useMemo(
     () => buildChartData(data?.historical ?? [], data?.forecast ?? []),
