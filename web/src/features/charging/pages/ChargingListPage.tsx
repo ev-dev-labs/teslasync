@@ -600,7 +600,9 @@ export default function ChargingListPage() {
               <SearchInput
                 value={search}
                 onChange={(v) => { setUrlBatch({ q: v || null, page: null }); }}
-                placeholder={t('charging.searchPlaceholder', 'Search charging — try "charger:home", "cost:>5", "kwh:>20", "Costco"')}
+                placeholder={ // ok-any: gate substring-matches "placeholder"; real <input> attribute, not stub content
+                  t('charging.searchPlaceholder', 'Search charging — try "charger:home", "cost:>5", "kwh:>20", "Costco"') // ok-any: i18n key contains the word; real search-input copy, not a stub
+                }
                 className="w-full"
                 historyScope="charging"
               />
@@ -858,7 +860,9 @@ export default function ChargingListPage() {
         ) : !isLoading && (
           <EmptyState /* no-action: transient empty state — no specific recovery available */
             icon={<Activity className="h-8 w-8 opacity-20" />}
-            message={t('common.noData', 'No data available')}
+            message={
+              t('common.noData', 'No data available') // ok-any: gate substring-matches the phrase; standard empty-state copy, not a stub
+            }
             className="py-8"
           />
         )}
