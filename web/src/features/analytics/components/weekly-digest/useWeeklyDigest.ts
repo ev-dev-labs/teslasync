@@ -180,7 +180,10 @@ export function useWeeklyDigest() {
     const bins = DAY_LABELS.map((label) => ({ day: label, distance: 0 }));
     for (const d of weekDrives) {
       const idx = dayOfWeekIndex(d.start_date);
-      bins[idx].distance += d.distance;
+      // A malformed date yields a NaN index, and bins[NaN] is undefined at
+      // runtime — guard so the chart never receives NaN bars or crashes.
+      const bin = bins[idx];
+      if (bin) bin.distance += d.distance ?? 0;
     }
     return bins;
   }, [weekDrives]);
@@ -190,7 +193,10 @@ export function useWeeklyDigest() {
     const bins = DAY_LABELS.map((label) => ({ day: label, energy: 0 }));
     for (const c of weekCharging) {
       const idx = dayOfWeekIndex(c.start_ts);
-      bins[idx].energy += c.total_energy_added_wh;
+      // A malformed date yields a NaN index, and bins[NaN] is undefined at
+      // runtime — guard so the chart never receives NaN bars or crashes.
+      const bin = bins[idx];
+      if (bin) bin.energy += c.total_energy_added_wh ?? 0;
     }
     return bins;
   }, [weekCharging]);
