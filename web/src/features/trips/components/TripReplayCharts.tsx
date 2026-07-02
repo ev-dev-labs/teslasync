@@ -7,7 +7,6 @@ import {
   Area,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
@@ -139,7 +138,7 @@ function TimelineChart({
           >
             {areaGradient('speedGrad', CHART_COLORS[0])}
             {areaGradient('powerGrad', CHART_COLORS[1])}
-            <CartesianGrid {...chartGrid} />
+            {chartGrid}
             <XAxis
               dataKey="time"
               type="number"
