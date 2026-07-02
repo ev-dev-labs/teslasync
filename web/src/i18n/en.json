@@ -6170,6 +6170,33 @@
     "frequency": "Most Frequent Anomalies",
     "count": "Anomalies",
     "noFrequency": "Anomaly frequency data will appear after detection runs.",
+    "noData": "No data available yet.",
+    "kpis": "Summary metrics",
+    "aiInsights": "AI insights",
+    "selectVehicle": "Select a vehicle to view its anomaly analysis.",
+    "frequencyAria": "Bar chart of the most frequently anomalous signals",
+    "category": {
+      "battery": "Battery",
+      "tires": "Tires",
+      "motors": "Motors",
+      "hvac": "Climate",
+      "charging": "Charging"
+    },
+    "status": {
+      "normal": "Normal",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "type": {
+      "z_score": "Statistical",
+      "range": "Range",
+      "trend": "Trend"
+    },
     "aiExplanation": {
       "title": "Helix explanation",
       "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
