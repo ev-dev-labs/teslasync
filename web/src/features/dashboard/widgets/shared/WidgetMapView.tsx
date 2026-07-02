@@ -35,6 +35,11 @@ export function WidgetMapView({
         zoomControl={!compact}
         dragging={!compact}
         className="h-full w-full"
+        // Backdrop set inline (not via a bg-* utility) on purpose: an inline
+        // declaration always wins the cascade, whereas Tailwind v4 emits bg-*
+        // into @layer utilities, which the unlayered global map/background
+        // rules in index.css outrank — so a utility could silently drop to
+        // var(--bg) and flash white behind the dark tiles before MapLibre paints.
         style={{ background: '#1a1a2e' }}
       >
         <MapTileLayer style="dark" />
