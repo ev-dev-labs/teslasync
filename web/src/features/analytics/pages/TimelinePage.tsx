@@ -325,11 +325,15 @@ export default function TimelinePage() {
   const actions = (
     <div className="flex items-center gap-3">
       {vehicles.length > 0 && (
+        // `aria-label` gives the native <select> a real accessible name — a
+        // vehicle is always selected here (first-vehicle fallback in
+        // useSelectedVehicle) so no empty prompt is needed. Mirrors the
+        // canonical VehicleSelect picker, which also labels via aria-label.
         <Select
           options={vehicleOptions}
           value={activeId}
           onChange={(e) => onPickVehicle(e.target.value)}
-          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
+          aria-label={t('timeline.selectVehicle', 'Select Vehicle')}
         />
       )}
       <RangePicker
