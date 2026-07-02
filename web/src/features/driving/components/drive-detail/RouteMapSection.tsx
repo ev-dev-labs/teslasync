@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Flag, Navigation2 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
@@ -21,13 +21,17 @@ import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } 
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 /* Auto-fit map bounds to trail. Special-cases two cluster degeneracies that
- * leaflet otherwise zooms past the maxZoom for: (1) trail with N identical
- * coords (zero-extent bbox passes isValid()) and (2) trail with cluster
- * smaller than the spread floor. Falls back to a hand-set view at the
+ * the map engine otherwise zooms past the maxZoom for: (1) trail with N
+ * identical coords (zero-extent bbox passes isValid()) and (2) trail with
+ * cluster smaller than the spread floor. Falls back to a hand-set view at the
  * anchor coord at zoom 15 so the user sees recognisable streets. */
 function FitBounds({ trail, fallbackCenter }: { trail: LatLngExpression[]; fallbackCenter?: [number, number] }) {
   const map = useMap();
-  useMemo(() => {
+  /* Imperative camera moves are side effects, so they run in an effect (not in
+   * render/useMemo). The migrated MapLibre `useMap()` is an async facade that
+   * queues camera ops until the WebGL map is ready, so fitting on mount still
+   * lands once the map loads; re-running on trail/anchor changes re-fits live. */
+  useEffect(() => {
     if (trail.length > 1) {
       const bounds = latLngBounds(
         trail.map((p) => (Array.isArray(p) ? [p[0] as number, p[1] as number] as [number, number] : [0, 0] as [number, number])),
