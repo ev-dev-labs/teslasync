@@ -17,7 +17,6 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { FadeIn } from '@/components/motion';
 import { generateChargingCurve, getChargerLabel } from './helpers';
 
 interface SessionComparisonChartProps {
@@ -51,9 +50,8 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
   }, [comparisonSessions]);
 
   return (
-    <FadeIn delay={0.15}>
-      {/* chart-a11y:no-table dense overlay of up to 10 power curves; per-session detail available on the session page */}
-      <ChartContainer
+    // chart-a11y:no-table dense overlay of up to 10 power curves; per-session detail available on the session page
+    <ChartContainer
         title={t('charging.curve.sessionComparison', 'Session Comparison')}
         subtitle={t(
           'charging.curve.sessionComparisonDesc',
@@ -115,6 +113,5 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
           ))}
         </div>
       </ChartContainer>
-    </FadeIn>
   );
 }
