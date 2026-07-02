@@ -39,8 +39,8 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
                 <XAxis dataKey="date" tick={axisTickSm} />
                 <YAxis tick={axisTickSm} />
                 <Tooltip content={<ChartTooltip />} />
-                <Area {...AREA_DEFAULTS} dataKey="energy" name="Energy (kWh)" stroke="#10b981" fill="url(#eGrad)" />
-                <Area {...AREA_DEFAULTS} dataKey="cost" name="Cost ($)" stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" />
+                <Area {...AREA_DEFAULTS} dataKey="energy" name={t('charging.charts.energyKwh', 'Energy (kWh)')} stroke="#10b981" fill="url(#eGrad)" />
+                <Area {...AREA_DEFAULTS} dataKey="cost" name={t('charging.charts.costDollar', 'Cost ($)')} stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
