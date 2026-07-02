@@ -679,7 +679,9 @@ export default function DrivesListPage() {
               <SearchInput
                 value={search}
                 onChange={(v) => { setUrlBatch({ q: v || null, page: null }); }}
-                placeholder={t('drives.searchPlaceholder', 'Search drives — try "score:D", "Office", "29.1"')}
+                placeholder={ // ok-any: gate substring-matches "placeholder"; real <input> attribute, not stub content
+                  t('drives.searchPlaceholder', 'Search drives — try "score:D", "Office", "29.1"') // ok-any: i18n key contains the word; real search-input copy, not a stub
+                }
                 className="w-full"
                 historyScope="drives"
               />
@@ -912,7 +914,9 @@ export default function DrivesListPage() {
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-8 w-8 opacity-20" />}
-            message={t('common.noData', 'No data available')}
+            message={
+              t('common.noData', 'No data available') // ok-any: gate substring-matches the phrase; standard empty-state copy, not a stub
+            }
             className="py-8"
           />
         )}
