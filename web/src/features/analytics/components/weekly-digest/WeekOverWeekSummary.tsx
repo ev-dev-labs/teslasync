@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
 import { Car, Activity, Zap, Fuel, BarChart3, Leaf } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, SectionTitle } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -19,10 +19,10 @@ export function WeekOverWeekSummary({ metrics }: WeekOverWeekSummaryProps) {
   return (
     <FadeIn delay={0.3}>
       <GlassPanel className="space-y-4 p-6">
-        <span className="text-lg font-bold text-white">
+        <SectionTitle>
           {t('analytics.weeklyDigest.weekOverWeek', 'Week-over-Week Comparison')}
-        </span>
-        <span className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        </SectionTitle>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             label={t('analytics.weeklyDigest.distance', 'Distance')}
             value={fmtNumber(metrics.totalDistance, 1)}
@@ -63,7 +63,7 @@ export function WeekOverWeekSummary({ metrics }: WeekOverWeekSummaryProps) {
             icon={<Leaf className="h-4 w-4" />}
             trend={trendFor(metrics.co2Saved, metrics.prevCo2)}
           />
-        </span>
+        </div>
       </GlassPanel>
     </FadeIn>
   );
