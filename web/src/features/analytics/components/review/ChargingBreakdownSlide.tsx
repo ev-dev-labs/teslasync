@@ -51,11 +51,13 @@ export function ChargingBreakdownSlide({ data }: Props) {
         {t('yearReview.avgStartSOC', { soc: Math.round(data.avg_charge_start_soc), defaultValue: 'Average plug-in at {{soc}}% battery' })}
       </motion.p>
 
+      {/* Decorative donut — the identical breakdown is announced to assistive tech via the text legend below */}
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.6 }}
         className="w-56 h-56 relative"
+        aria-hidden="true"
       >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -81,7 +83,7 @@ export function ChargingBreakdownSlide({ data }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.4 }}
-        className="flex gap-6 mt-4"
+        className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4"
       >
         {chartData.map((item, i) => (
           <div key={item.name} className="flex items-center gap-2">
