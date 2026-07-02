@@ -27,7 +27,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { DataTable, useSortToggle, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
-import { RadialGauge } from '@/components/charts/RadialGauge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -42,13 +41,14 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  RadialGauge,
+  ChartTooltip,
   chartMarginLabeled,
   axisTick,
   chartAnimation,
   AREA_DEFAULTS,
   areaGradient,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
