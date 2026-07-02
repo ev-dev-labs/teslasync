@@ -199,7 +199,7 @@ export default function LocationsPage() {
               <BarChart data={visitsChartData} layout="vertical" margin={{ left: 120 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#9ca3af' }} width={110} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} width={110} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="visits" name={t('Visits')} fill="#10b981" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -219,7 +219,7 @@ export default function LocationsPage() {
               <BarChart data={timeChartData} layout="vertical" margin={{ left: 120 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#9ca3af' }} width={110} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} width={110} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="hours" name={t('Hours')} fill="#a855f7" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -236,7 +236,9 @@ export default function LocationsPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder={t('Search by address…')}
+              placeholder={ // ok-any: gate substring-matches "placeholder"; real SearchInput prop, not stub content
+                t('Search by address…')
+              }
               className="w-full sm:w-72"
               historyScope="locations"
             />
