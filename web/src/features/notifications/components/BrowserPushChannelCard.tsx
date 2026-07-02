@@ -22,7 +22,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BellRing, BellOff, Smartphone, Trash2, AlertCircle } from 'lucide-react';
 
-import { Badge, Button, GlassPanel } from '@/components/ui';
+import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';
 import { useWebPush } from '@/hooks/useWebPush';
 import { usePushSubscriptions, useUnsubscribePush, usePushPublicKey } from '@/api/hooks/usePush';
 import { formatRelative } from '@/lib/dateFormat';
@@ -82,18 +82,18 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="rounded-xl p-2.5 ring-1 ring-cyan-300/30 bg-cyan-300/10">
-              <BellRing className="h-5 w-5 text-cyan-300" />
+              <BellRing className="h-5 w-5 text-cyan-300" aria-hidden="true" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">
+              <Heading level="panel" as="h3">
                 {t('webpush.title', 'Browser push')}
-              </h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              </Heading>
+              <Text as="p" variant="bodySm" className="mt-0.5">
                 {t(
                   'webpush.subtitle',
                   'Get OS-level notifications even when TeslaSync is closed.',
                 )}
-              </p>
+              </Text>
             </div>
           </div>
           {!isUnsupported && (
@@ -110,36 +110,36 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
 
         {isUnsupported ? (
           <div className="flex items-start gap-2 rounded-lg bg-amber-300/5 p-3 ring-1 ring-amber-300/20">
-            <AlertCircle className="h-4 w-4 text-amber-300 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-100/80">{disabledReason}</p>
+            <AlertCircle className="h-4 w-4 text-amber-300 mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <Text as="p" size="xs" className="text-amber-300">{disabledReason}</Text>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {isSubscribed ? (
               <Button variant="secondary" size="sm" onClick={handleDisable} aria-label={t('webpush.disable', 'Disable on this device')}>
-                <BellOff className="h-4 w-4 mr-2" />
+                <BellOff className="h-4 w-4 mr-2" aria-hidden="true" />
                 {t('webpush.disable', 'Disable on this device')}
               </Button>
             ) : (
               <Button variant="primary" size="sm" onClick={handleEnable} aria-label={t('webpush.enable', 'Enable on this device')}>
-                <BellRing className="h-4 w-4 mr-2" />
+                <BellRing className="h-4 w-4 mr-2" aria-hidden="true" />
                 {t('webpush.enable', 'Enable on this device')}
               </Button>
             )}
-            <p className="text-xs text-[var(--text-secondary)]">
+            <Text as="p" variant="bodySm">
               {t(
                 'webpush.iosNote',
                 'iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.',
               )}
-            </p>
+            </Text>
           </div>
         )}
 
         {rows.length > 0 && (
           <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+            <Heading level="sub" as="h4" className="text-xs uppercase tracking-wide">
               {t('webpush.devices.title', 'Registered devices')}
-            </h4>
+            </Heading>
             <ul className="space-y-2">
               {rows.map((row) => {
                 const isThisDevice = currentEndpoint !== null && currentEndpoint === row.endpoint;
@@ -155,17 +155,17 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
                     className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-2.5 ring-1 ring-white/5"
                   >
                     <div className="flex items-start gap-2 min-w-0">
-                      <Smartphone className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" />
+                      <Smartphone className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
-                        <p className="text-xs text-[var(--text-primary)] truncate" title={ua}>
+                        <Text as="p" size="xs" color="primary" className="truncate" title={ua}>
                           {ua}
                           {isThisDevice && (
-                            <span className="ml-2 text-cyan-300">
+                            <Text as="span" size="xs" className="ml-2 text-cyan-300">
                               {t('webpush.devices.thisDevice', '(this device)')}
-                            </span>
+                            </Text>
                           )}
-                        </p>
-                        <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{last}</p>
+                        </Text>
+                        <Text as="p" size="xs" color="secondary" className="mt-0.5">{last}</Text>
                       </div>
                     </div>
                     <Button
@@ -175,7 +175,7 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
                       aria-label={t('webpush.devices.remove', 'Remove this device')}
                       title={t('webpush.devices.remove', 'Remove this device')}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </li>
                 );
