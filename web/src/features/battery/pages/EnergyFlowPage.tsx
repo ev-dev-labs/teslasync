@@ -28,6 +28,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import { useEnergyFlow } from '@/api/hooks/useEnergy';
@@ -108,6 +109,7 @@ export default function EnergyFlowPage() {
   const { vehicleId } = useSelectedVehicle();
   const { unitPrefs, formatDistance, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
+  const energyUnit = unitPrefs.energy;
   const { start, end, setRange } = useRangeState({
     persistKey: 'energy-flow.range',
     defaultPresetId: '7d',
@@ -148,12 +150,16 @@ export default function EnergyFlowPage() {
 
   const dailyChartData = useMemo(
     () =>
+      // Charts render at the user's display unit: the API returns SI
+      // (watt-hours, meters) so every point is converted here at the render
+      // boundary — matching the MetricCards/table which use formatEnergy /
+      // formatDistance for the same fields.
       dailyBreakdown.map((d) => ({
         date: formatDateShort(d.date),
-        energy_wh: d.energy_wh,
-        distance: d.distance_m,
+        energy: convertEnergyFromSI(d.energy_wh ?? 0, unitPrefs.energy),
+        distance: convertDistanceFromSI(d.distance_m ?? 0, distanceUnit),
       })),
-    [dailyBreakdown, distanceUnit],
+    [dailyBreakdown, distanceUnit, unitPrefs.energy],
   );
 
   const efficiencyChartData = useMemo(
@@ -167,7 +173,7 @@ export default function EnergyFlowPage() {
               ? Number((d.efficiency_wh_per_m * 1000).toFixed(0))
               : d.efficiency_wh_per_m * 1609.344,
         })),
-    [dailyBreakdown],
+    [dailyBreakdown, distanceUnit],
   );
 
   /* ─── Derived: stat values with unit conversion ─── */
@@ -477,8 +483,8 @@ export default function EnergyFlowPage() {
                 <Legend />
                 <Area
                   {...AREA_DEFAULTS}
-                  dataKey="energy_wh"
-                  name={t('Energy')}
+                  dataKey="energy"
+                  name={`${t('Energy')} (${energyUnit})`}
                   stroke={CHART_COLORS[0]}
                   fill="url(#gradEnergy)"
                 />
