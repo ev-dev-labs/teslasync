@@ -52,7 +52,7 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
   }, [socCurve, chargeStops]);
 
   if (chartData.length === 0) {
-    // chart-a11y:no-table empty-state branch wraps a placeholder, no series available to tabulate
+    // chart-a11y:no-table empty-state branch renders EmptyState only, no series available to tabulate
     return (
       <ChartContainer
         title={t('tripPlanner.socChart.title', 'Battery Along Route')}
