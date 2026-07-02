@@ -3774,6 +3774,64 @@
     "energy": "Energy (kWh)",
     "singleVehicle": "Add more vehicles to compare"
   },
+  "apiKeys": {
+    "title": "API Keys",
+    "subtitle": "Manage programmatic access to TeslaSync",
+    "createKey": "Create Key",
+    "newKey": "New API Key",
+    "keyCreated": "API Key Created",
+    "copyWarning": "Copy this key now — it won't be shown again.",
+    "revealAria": "API key, click to reveal",
+    "copyAria": "Copy API key",
+    "copy": "Copy",
+    "done": "Done",
+    "name": "Name",
+    "namePlaceholder": "My Application",
+    "permissions": "Permissions",
+    "generate": "Generate Key",
+    "cancel": "Cancel",
+    "expired": "Expired",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "neverUsed": "Never used",
+    "unnamed": "Unnamed key",
+    "revoke": "Revoke",
+    "revokeAria": "Revoke key {{name}}",
+    "delete": "Delete",
+    "deleteAria": "Delete key {{name}}",
+    "deleteTitle": "Delete API Key",
+    "deleteConfirm": "Are you sure you want to permanently delete the key \"{{name}}\"?",
+    "resource": "API key",
+    "keysPanel": "Your API Keys",
+    "count": "{{count}} total",
+    "accessLevels": "Access Levels",
+    "accessLevelsEmpty": "Permission usage appears once you create a key.",
+    "kpi": {
+      "aria": "API key summary",
+      "total": "Total Keys",
+      "active": "Active",
+      "expired": "Expired",
+      "admin": "Admin Access"
+    },
+    "empty": {
+      "title": "No API keys",
+      "message": "Create an API key to enable programmatic access to TeslaSync data and controls."
+    },
+    "guidance": {
+      "title": "About API Keys",
+      "secret": "Treat keys like passwords — never commit them to source control.",
+      "leastPrivilege": "Grant the lowest permission level each integration actually needs.",
+      "rotate": "Revoke keys you no longer use and rotate them periodically."
+    },
+    "perm": {
+      "read": "Read",
+      "readDesc": "Read-only access to fleet data.",
+      "readWrite": "Read-Write",
+      "readWriteDesc": "Read data and send vehicle commands.",
+      "admin": "Admin",
+      "adminDesc": "Full administrative access to every resource."
+    }
+  },
   "timeline": {
     "title": "Timeline",
     "time": "Time",
