@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -32,6 +33,18 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
 
   const tempUnit = unitPrefs.temperature;
 
+  // Convert stored SI (°C) outside-temperature to the user's display unit at
+  // the render boundary so the plotted line, the reference lines, the Y-axis
+  // unit and the a11y fallback table all read on one consistent scale.
+  const displayData = useMemo(
+    () =>
+      data.map((d) => ({
+        date: d.date,
+        outsideTemp: d.outsideTemp != null ? convertTempFromSI(d.outsideTemp, tempUnit) : null,
+      })),
+    [data, tempUnit],
+  );
+
   if (data.length <= 1) return null;
 
   return (
@@ -40,7 +53,7 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
         title={t('drivetrain.tempHistory', 'Temperature Trend')}
         subtitle={t('drivetrain.tempHistorySub', 'Outside temperature recorded during recent drives')}
         ariaLabel={t('drivetrain.tempHistory.aria', 'Outside temperature trend line chart per recent drive')}
-        data={data.map((d) => ({ date: d.date, outsideTemp: d.outsideTemp }))}
+        data={displayData}
         dataColumns={[
           { key: 'date', label: t('drivetrain.col.date', 'Date') },
           { key: 'outsideTemp', label: `${t('drivetrain.col.outside', 'Outside')} (${tempUnit})` },
@@ -48,7 +61,7 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
         height={300}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={displayData}>
             <defs>
               <ChartGradient id="dtTempGrad" color="#06b6d4" />
             </defs>
