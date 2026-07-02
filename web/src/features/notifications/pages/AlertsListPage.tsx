@@ -14,7 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { PanelTitle } from '@/components/ui/Typography';
+import { Pagination } from '@/components/ui/Pagination';
 import { TabNav } from '@/components/ui/TabNav';
 import { PinButton } from '@/components/ui/PinButton';
 import { PrintButton } from '@/components/ui/PrintButton';
@@ -62,6 +63,17 @@ import { Modal } from '@/components/ui/Modal';
 import { AlertCard } from '../components/AlertCard';
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
+
+/**
+ * Hex fills for the stacked severity trend bars. Held as a const map (never
+ * inline hex in JSX) and aligned with `severityTokens` semantics so the chart
+ * reads the same as the severity badges: info=sky, warning=amber, critical=red.
+ */
+const SEVERITY_HEX: Record<AlertSeverity, string> = {
+  info: '#38bdf8',
+  warning: '#f59e0b',
+  critical: '#ef4444',
+};
 
 interface QuietHours { start: string; end: string; enabled: boolean }
 
@@ -178,7 +190,9 @@ export default function AlertsListPage() {
   const priorReadRatePct = priorTotal > 0 ? Math.round((priorRead / priorTotal) * 100) : null;
   const priorHasData = priorTotal > 0;
   const periodLabel = `${start} – ${end}`;
-  const priorLabel = prior ? `vs ${prior.start} – ${prior.end}` : undefined;
+  const priorLabel = prior
+    ? t('common.vsRange', 'vs {{range}}', { range: `${prior.start} – ${prior.end}` })
+    : undefined;
 
   const alertsByType = useMemo(() => {
     if (!alerts?.length) return [];
@@ -418,88 +432,119 @@ export default function AlertsListPage() {
         )}
       </FadeIn>
 
-      {totalCount > 0 && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <FadeIn>
-            <GlassPanel className="p-4 sm:p-6">
-              <span className="section-title mb-4 flex items-center gap-2">
-                <Icons.notifications className="h-4 w-4 text-cyan-300" /> {t('Alert Trend (7 Days)')}
-              </span>
-              <div className="h-40 sm:h-48">
+      {/* Insights bento — trend + type distribution + watchlist. Reflows
+          1-col → 2-col (md) → 3-col (xl); each panel owns its own state. */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('alerts.insights', 'Alert insights')}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5"
+        >
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Icons.notifications className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('Alert Trend (7 Days)')}
+            </PanelTitle>
+            <div className="h-48 sm:h-56">
+              {isLoading ? (
+                <Skeleton className="h-full w-full" />
+              ) : weekAlertCount === 0 ? (
+                <EmptyState
+                  /* no-action: transient — no alert activity in the trailing 7-day window */
+                  icon={<Icons.notifications className="h-8 w-8" />}
+                  message={t('alerts.noTrend', 'No alert activity in the last 7 days.')}
+                />
+              ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={alertsByDay}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="day" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                     <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="critical" name={t('Critical')} stackId="a" fill="#ef4444" fillOpacity={0.7} radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="warning" name={t('Warning')} stackId="a" fill="#f59e0b" fillOpacity={0.6} />
-                    <Bar dataKey="info" name={t('Info')} stackId="a" fill="#00f0ff" fillOpacity={0.5} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="critical" name={t('Critical')} stackId="a" fill={SEVERITY_HEX.critical} fillOpacity={0.75} />
+                    <Bar dataKey="warning" name={t('Warning')} stackId="a" fill={SEVERITY_HEX.warning} fillOpacity={0.7} />
+                    <Bar dataKey="info" name={t('Info')} stackId="a" fill={SEVERITY_HEX.info} fillOpacity={0.6} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            </GlassPanel>
-          </FadeIn>
-
-          <FadeIn>
-            <GlassPanel className="p-4 sm:p-6">
-              <span className="section-title mb-4 flex items-center gap-2">
-                <Icons.filter className="h-4 w-4 text-purple-300" /> {t('Alerts by Type')}
-              </span>
-              <div className="h-40 sm:h-48 flex flex-col sm:flex-row items-center">
-                <ResponsiveContainer width="60%" height="100%">
-                  <PieChart>
-                    <Pie data={alertsByType} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} dataKey="value">
-                      {alertsByType.map((entry, i) => <Cell key={i} fill={entry.fill} stroke="transparent" />)}
-                    </Pie>
-                    <Tooltip content={<ChartTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex-1 space-y-1.5">
-                  {alertsByType.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: d.fill }} />
-                      <span className="text-[var(--text-secondary)] truncate">{d.name}</span>
-                      <span className="ml-auto text-[var(--text-primary)] font-mono">{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </GlassPanel>
-          </FadeIn>
-        </div>
-      )}
-
-      {pinnedRules.length > 0 && (
-        <FadeIn>
-          <GlassPanel className="p-4 space-y-3">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-amber-300">
-              <Icons.notifications className="h-4 w-4" />
-              <span className="font-medium">{t('pinned.section.watching', 'Watching')}</span>
-              <span className="text-[var(--text-muted)] normal-case tracking-normal">({pinnedRules.length})</span>
+              )}
             </div>
-            <ul className="divide-y divide-white/5">
-              {pinnedRules.map(rule => (
-                <li key={rule.id} className="flex items-center justify-between gap-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-[var(--text-primary)] truncate">{rule.name || `${t('alerts.rule', 'Rule')} #${rule.id}`}</span>
-                      {rule.enabled ? (
-                        <Badge variant="success" size="sm">{t('common.enabled', 'Enabled')}</Badge>
-                      ) : (
-                        <Badge variant="neutral" size="sm">{t('common.disabled', 'Disabled')}</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <PinButton itemType="alert_rule" itemId={rule.id} size="sm" />
-                </li>
-              ))}
-            </ul>
           </GlassPanel>
-        </FadeIn>
-      )}
 
-      <FadeIn>
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Icons.filter className="h-4 w-4 text-purple-300" aria-hidden="true" />
+              {t('Alerts by Type')}
+            </PanelTitle>
+            {isLoading ? (
+              <Skeleton className="h-48 w-full sm:h-56" />
+            ) : alertsByType.length === 0 ? (
+              <EmptyState
+                /* no-action: transient — nothing to categorize until alerts arrive */
+                icon={<Icons.filter className="h-8 w-8" />}
+                message={t('alerts.noTypes', 'No alerts to categorize yet.')}
+              />
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
+                <div className="h-40 sm:h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={alertsByType} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} dataKey="value">
+                        {alertsByType.map((entry, i) => <Cell key={i} fill={entry.fill} stroke="transparent" />)}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <ul className="space-y-1.5">
+                  {alertsByType.map((d, i) => (
+                    <li key={i} className="flex items-center gap-2 text-xs">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: d.fill }} aria-hidden="true" />
+                      <span className="truncate text-[var(--text-secondary)]">{d.name}</span>
+                      <span className="ml-auto font-mono text-[var(--text-primary)]">{d.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5 md:col-span-2 xl:col-span-1">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Icons.notifications className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              {t('pinned.section.watching', 'Watching')}
+              {pinnedRules.length > 0 && (
+                <span className="text-xs font-normal text-[var(--text-muted)]">({pinnedRules.length})</span>
+              )}
+            </PanelTitle>
+            {pinnedRules.length === 0 ? (
+              <EmptyState
+                /* no-action: user-curated watchlist is empty until a rule is pinned */
+                icon={<Icons.notifications className="h-8 w-8" />}
+                message={t('alerts.noWatching', 'Pin an alert rule to keep an eye on it here.')}
+              />
+            ) : (
+              <ul className="divide-y divide-white/5">
+                {pinnedRules.map(rule => (
+                  <li key={rule.id} className="flex items-center justify-between gap-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-[var(--text-primary)]">{rule.name || `${t('alerts.rule', 'Rule')} #${rule.id}`}</span>
+                        {rule.enabled ? (
+                          <Badge variant="success" size="sm">{t('common.enabled', 'Enabled')}</Badge>
+                        ) : (
+                          <Badge variant="neutral" size="sm">{t('common.disabled', 'Disabled')}</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <PinButton itemType="alert_rule" itemId={rule.id} size="sm" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      <FadeIn delay={0.15}>
         <FilterBar>
           <SearchInput
             value={alertSearch}
@@ -554,55 +599,55 @@ export default function AlertsListPage() {
         />
       </FadeIn>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-20" />)}
-        </div>
-      ) : filteredAlerts.length > 0 ? (
-        <div data-tour="alerts-list">
-          <StaggerContainer className="space-y-2">
-            {pagedAlerts.map(a => (
-              <StaggerItem key={a.id}>
-                <AlertCard
-                  alert={a}
-                  onMarkRead={() => handleMarkRead(a.id)}
-                  onAcknowledge={() => setAckDialogId(a.id)}
-                  onReopen={() => handleReopen(a.id)}
-                  onOpenDetail={() => setDetailId(a.id)}
-                  t={t}
-                />
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
+      {/* Alerts detail band — full-width list; reflows to two columns on 2xl+
+          so ultra-wide monitors keep filling the width instead of a narrow strip. */}
+      <FadeIn delay={0.2}>
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-2 2xl:grid-cols-2 2xl:gap-3">
+            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
+          </div>
+        ) : filteredAlerts.length > 0 ? (
+          <div data-tour="alerts-list">
+            <StaggerContainer className="grid grid-cols-1 gap-2 2xl:grid-cols-2 2xl:gap-3">
+              {pagedAlerts.map(a => (
+                <StaggerItem key={a.id}>
+                  <AlertCard
+                    alert={a}
+                    onMarkRead={() => handleMarkRead(a.id)}
+                    onAcknowledge={() => setAckDialogId(a.id)}
+                    onReopen={() => handleReopen(a.id)}
+                    onOpenDetail={() => setDetailId(a.id)}
+                    t={t}
+                  />
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-4">
-              <span className="text-xs text-[var(--text-muted)]">
-                Showing {(safeAlertPage - 1) * alertsPerPage + 1}–{Math.min(safeAlertPage * alertsPerPage, filteredAlerts.length)} of {filteredAlerts.length}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" disabled={safeAlertPage <= 1} onClick={() => setAlertPage(1)}>«</Button>
-                <Button variant="ghost" size="sm" disabled={safeAlertPage <= 1} onClick={() => setAlertPage(p => Math.max(1, p - 1))}>‹</Button>
-                <span className="px-3 text-xs text-[var(--text-secondary)]">{safeAlertPage} / {totalPages}</span>
-                <Button variant="ghost" size="sm" disabled={safeAlertPage >= totalPages} onClick={() => setAlertPage(p => Math.min(totalPages, p + 1))}>›</Button>
-                <Button variant="ghost" size="sm" disabled={safeAlertPage >= totalPages} onClick={() => setAlertPage(totalPages)}>»</Button>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Icons.notificationsMuted className="h-8 w-8" />}
-          title={t('No alerts')}
-          message={
-            alertSearch
-              ? t('No alerts match your search.')
-              : filter === 'all'
-                ? t('Your fleet is running smoothly. Alerts will appear here.')
-                : t(`No ${filter} alerts right now.`)
-          }
-        />
-      )}
+            {totalPages > 1 && (
+              <Pagination
+                page={safeAlertPage}
+                pageSize={alertsPerPage}
+                total={filteredAlerts.length}
+                onPageChange={setAlertPage}
+              />
+            )}
+          </div>
+        ) : (
+          <GlassPanel className="p-6">
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+              icon={<Icons.notificationsMuted className="h-8 w-8" />}
+              title={t('No alerts')}
+              message={
+                alertSearch
+                  ? t('No alerts match your search.')
+                  : filter === 'all'
+                    ? t('Your fleet is running smoothly. Alerts will appear here.')
+                    : t('alerts.noneForFilter', 'No {{filter}} alerts right now.', { filter })
+              }
+            />
+          </GlassPanel>
+        )}
+      </FadeIn>
 
       <AcknowledgeAlertDialog
         open={ackDialogId !== null}
