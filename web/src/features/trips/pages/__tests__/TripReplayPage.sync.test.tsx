@@ -452,14 +452,16 @@ describe('Phase-45 / Prompt 26 — shared seek handler integration', () => {
   });
 
   it('chart cursor → seek → map marker updates on next render', () => {
-    let currentIndex = 0;
-    const seek = vi.fn((i: number) => {
-      currentIndex = i;
-    });
-
+    // Uses real React state (not a mutable closure variable) so `Harness`
+    // is a pure function of its own state — anything else is an "impure
+    // render" anti-pattern that the React Compiler will (correctly)
+    // optimize as if the component never needs to re-render, since from
+    // its perspective a zero-prop, zero-state component's output can
+    // never change. This also better represents production wiring, where
+    // `currentIndex` genuinely is `useTripReplay`-owned React state.
     function Harness() {
-      // Re-render whenever seek runs by reading currentIndex on each
-      // render; in production this is replay.currentIndex from useTripReplay.
+      const [currentIndex, setCurrentIndex] = React.useState(0);
+      const seek = vi.fn((i: number) => setCurrentIndex(i));
       return (
         <ChartTimeRangeProvider syncId="trip-replay-int-1" syncMethod="value">
           <TripReplayMap
@@ -478,15 +480,12 @@ describe('Phase-45 / Prompt 26 — shared seek handler integration', () => {
       );
     }
 
-    const { rerender, getByTestId } = render(withQuery(<Harness />));
+    const { getByTestId } = render(withQuery(<Harness />));
 
     act(() => setCursorSyncPosition('trip-replay-int-1', 4));
-    expect(seek).toHaveBeenCalledWith(4);
-    expect(currentIndex).toBe(4);
 
-    // Force a re-render so the map marker picks up the new currentIndex
-    // (production wiring re-renders automatically via React state).
-    rerender(withQuery(<Harness />));
+    // The state update from `seek` inside the cursor-sync effect flows
+    // through React's own re-render — no manual `rerender()` needed.
     const marker = getByTestId('animated-marker');
     expect(marker.getAttribute('data-lat')).toBe(
       String(FIXTURE_POSITIONS[4].latitude),

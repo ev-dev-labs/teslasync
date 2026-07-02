@@ -29,7 +29,15 @@ if [ "$1" = "--full" ]; then
   LINT_EXIT=$?
   npx tsc --noEmit
   TSC_EXIT=$?
-  npm test -- --run
+  # NODE_OPTIONS workaround: Node >=22 introduced an experimental global
+  # `localStorage` that collides with jsdom's own implementation in this
+  # test environment, causing ~198 unrelated test files to fail with
+  # "Cannot read properties of undefined (reading 'clear')". CI pins Node 20
+  # (predates this global) so it never hits this; local sandboxes on newer
+  # Node need the flag disabled. Verified pre-existing/unrelated-to-any-diff
+  # by the p0-foundation/0001-react-19-upgrade unit (byte-identical failing
+  # set before/after that change). Harmless no-op on Node <22.
+  NODE_OPTIONS="--no-experimental-webstorage" npm test -- --run
   TEST_EXIT=$?
   echo "GATE_FULL_LINT_EXIT=$LINT_EXIT"
   echo "GATE_FULL_TSC_EXIT=$TSC_EXIT"
