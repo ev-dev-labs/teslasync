@@ -280,7 +280,7 @@ export default function TrueCostPage() {
         <GlassPanel className="p-8">
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-10 w-10 text-[var(--text-muted)]" />}
-            message={t('tco.noData', 'No data available. Start charging to see your cost analysis.')}
+            message={t('tco.noData', 'No cost data yet. Start charging to see your cost analysis.')}
           />
         </GlassPanel>
       ) : null}
