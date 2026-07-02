@@ -30,7 +30,16 @@ export default defineConfig({
     'import.meta.env.VITE_GIT_SHA': JSON.stringify(gitSha),
   },
   plugins: [
-    react(),
+    react({
+      // React Compiler auto-memoizes components/hooks at build time so we
+      // stop hand-rolling useMemo/useCallback for every derived value.
+      // Targets React 19 by default (our pinned major) — no `target` option
+      // or extra runtime package needed; React 19 ships the compiler
+      // runtime (`react/compiler-runtime`) built in.
+      babel: {
+        plugins: ['babel-plugin-react-compiler'],
+      },
+    }),
     VitePWA({
       // Auto-apply SW updates instead of waiting for a user "Reload now"
       // prompt. The previous 'prompt' mode stranded mobile/PWA users on

@@ -321,6 +321,17 @@ export function getCurrentLease(resourceKey: string): LeaseState | null {
  * disable the lease without violating the rules-of-hooks ordering.
  */
 export function useEditLease(resourceKey: string): UseEditLeaseResult {
+  // React Compiler opt-out: this hook reads `leases.get(resourceKey)`
+  // directly in the render body — a module-level mutable registry, not
+  // props/state/context. That read is impure from the compiler's point of
+  // view, so auto-memoization can serve a stale cached result after
+  // `force()` re-renders following an out-of-band registry mutation
+  // (election timeout, peer broadcast). Confirmed via the test suite: the
+  // memoized build silently kept `isOwner`/`otherTab` stale across
+  // `force()` re-renders. A `useSyncExternalStore` rewrite would be the
+  // long-term fix; that's out of scope for the compiler-adoption unit.
+  'use no memo'
+
   const [, force] = useState(0)
 
   useEffect(() => {
