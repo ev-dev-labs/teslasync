@@ -4,7 +4,7 @@ import { Thermometer } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { RadialGauge } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 
