@@ -1,34 +1,35 @@
 /**
- * ActiveSessionsSection contract.
+ * ActiveSessionsPage contract.
+ *
+ * Migrated from the old `ActiveSessionsSection.test.tsx` when the sessions
+ * experience was promoted into a full modern-UI page (KPI band + device
+ * breakdown bento + active-devices table). The behavioural contract is
+ * unchanged — same endpoints, same data-testids, same confirm-dialog copy —
+ * so the assertions below mirror the originals; only the render target (the
+ * whole page) and the "wait for data-dependent element" style changed, since
+ * the redesigned page keeps every section panel mounted (with skeletons)
+ * during the initial load instead of swapping the whole body for a spinner.
  *
  * Coverage:
- *   1. Open mode (status.mode='open') renders the inline placeholder
- *      and never lists rows. The /auth/sessions endpoint IS hit (the
- *      open-mode signal comes back as a 501) but no DELETE call is
- *      made.
- *   2. Forward-auth + non-empty list renders one row per session,
- *      flags the "current" row with the data-testid pill, and never
- *      shows a per-row revoke button on the current row.
- *   3. Per-row revoke opens the ConfirmDialog. Clicking confirm fires
- *      DELETE /auth/sessions/{id} and refetches the list.
- *   4. "Sign out all other devices" opens its own ConfirmDialog and
- *      fires DELETE /auth/sessions/all-others.
- *   5. Empty-list response (no sessions for the subject) renders the
- *      "no active sessions" placeholder, no revoke buttons, and the
- *      footer all-others button is hidden (no others to sign out).
- *   6. The error path on the LIST query surfaces the inline error
- *      banner via the data-testid="active-sessions-error" hook.
+ *   1. Open mode (AUTH_MODE_OPEN 501) renders the inline placeholder and never
+ *      lists rows or the all-others action.
+ *   2. Forward-auth + non-empty list renders one row per session, flags the
+ *      "current" row, and never shows a per-row revoke button on it.
+ *   3. Per-row revoke opens the ConfirmDialog and fires DELETE
+ *      /auth/sessions/{id} on confirm.
+ *   4. "Sign out all other devices" opens its own ConfirmDialog and fires
+ *      DELETE /auth/sessions/all-others.
+ *   5. Empty / single-current lists hide the all-others action and surface the
+ *      DataTable empty placeholder.
  *
- * The shared `request` helper is mocked so the real hooks run end-to-
- * end without a network. i18n is stubbed to fall back to defaults.
- * Test file colocated NEXT TO the component (NOT under __tests__/)
- * because the gate's allowed-files regex 'features/settings/components/
- * ActiveSessions' is a substring match.
+ * The shared `request` helper is mocked so the real hooks run end-to-end
+ * without a network; i18n is stubbed to fall back to defaults.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 vi.mock('@/api/client', async () => {
@@ -75,11 +76,11 @@ vi.mock('react-i18next', async () => {
 
 import { request, ApiError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
-import { ActiveSessionsSection } from './ActiveSessionsSection'
+import ActiveSessionsPage from './ActiveSessionsPage'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
-function renderSection() {
+function renderPage() {
   const qc = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -87,11 +88,13 @@ function renderSection() {
     },
   })
   return render(
-    <QueryClientProvider client={qc}>
-      <ToastProvider>
-        <ActiveSessionsSection />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>
+        <ToastProvider>
+          <ActiveSessionsPage />
+        </ToastProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   )
 }
 
@@ -99,7 +102,7 @@ beforeEach(() => {
   mockedRequest.mockReset()
 })
 
-describe('ActiveSessionsSection — open mode', () => {
+describe('ActiveSessionsPage — open mode', () => {
   it('renders inline placeholder and never lists rows', async () => {
     // The open-mode response surfaces as an ApiError(501) carrying
     // code AUTH_MODE_OPEN; the hook normalises it to {mode:'open'}.
@@ -110,7 +113,7 @@ describe('ActiveSessionsSection — open mode', () => {
       throw new Error(`unexpected request to ${path}`)
     })
 
-    renderSection()
+    renderPage()
 
     await waitFor(() => {
       expect(screen.getByTestId('active-sessions-open-mode')).toBeTruthy()
@@ -120,7 +123,7 @@ describe('ActiveSessionsSection — open mode', () => {
   })
 })
 
-describe('ActiveSessionsSection — forward-auth + non-empty list', () => {
+describe('ActiveSessionsPage — forward-auth + non-empty list', () => {
   it('renders one row per session and flags the current row', async () => {
     mockedRequest.mockImplementation(async (path: string) => {
       if (path === '/auth/sessions') {
@@ -149,14 +152,16 @@ describe('ActiveSessionsSection — forward-auth + non-empty list', () => {
       throw new Error(`unexpected request to ${path}`)
     })
 
-    renderSection()
+    renderPage()
 
+    // Wait for a data-dependent element — the current pill only renders once
+    // the list query resolves and the DataTable paints its rows.
     await waitFor(() => {
-      expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
+      expect(
+        screen.getByTestId('active-sessions-current-pill-11111111-1111-1111-1111-111111111111'),
+      ).toBeTruthy()
     })
-    expect(
-      screen.getByTestId('active-sessions-current-pill-11111111-1111-1111-1111-111111111111'),
-    ).toBeTruthy()
+    expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
     // The current row MUST NOT have a revoke button.
     expect(
       screen.queryByTestId('active-sessions-revoke-11111111-1111-1111-1111-111111111111'),
@@ -165,7 +170,7 @@ describe('ActiveSessionsSection — forward-auth + non-empty list', () => {
     expect(
       screen.getByTestId('active-sessions-revoke-22222222-2222-2222-2222-222222222222'),
     ).toBeTruthy()
-    // Footer "all others" shows because hasOthers=true.
+    // Header "all others" shows because hasOthers=true.
     expect(screen.getByTestId('active-sessions-revoke-all-others')).toBeTruthy()
   })
 
@@ -203,7 +208,7 @@ describe('ActiveSessionsSection — forward-auth + non-empty list', () => {
       throw new Error(`unexpected ${init?.method ?? 'GET'} ${path}`)
     })
 
-    renderSection()
+    renderPage()
 
     await waitFor(() => {
       expect(
@@ -232,7 +237,7 @@ describe('ActiveSessionsSection — forward-auth + non-empty list', () => {
   })
 })
 
-describe('ActiveSessionsSection — all-others revoke', () => {
+describe('ActiveSessionsPage — all-others revoke', () => {
   it('opens confirm and fires DELETE /auth/sessions/all-others', async () => {
     mockedRequest.mockImplementation(async (path: string, init?: RequestInit) => {
       if (path === '/auth/sessions' && (!init || init.method !== 'DELETE')) {
@@ -264,7 +269,7 @@ describe('ActiveSessionsSection — all-others revoke', () => {
       throw new Error(`unexpected ${init?.method ?? 'GET'} ${path}`)
     })
 
-    renderSection()
+    renderPage()
 
     await waitFor(() => {
       expect(screen.getByTestId('active-sessions-revoke-all-others')).toBeTruthy()
@@ -286,8 +291,8 @@ describe('ActiveSessionsSection — all-others revoke', () => {
   })
 })
 
-describe('ActiveSessionsSection — empty list', () => {
-  it('hides the "all others" footer button when no other sessions exist', async () => {
+describe('ActiveSessionsPage — empty list', () => {
+  it('hides the "all others" action when no other sessions exist', async () => {
     mockedRequest.mockImplementation(async (path: string) => {
       if (path === '/auth/sessions') {
         return {
@@ -307,11 +312,15 @@ describe('ActiveSessionsSection — empty list', () => {
       throw new Error(`unexpected request to ${path}`)
     })
 
-    renderSection()
+    renderPage()
 
+    // Wait for the single row's current pill so the query has resolved.
     await waitFor(() => {
-      expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
+      expect(
+        screen.getByTestId('active-sessions-current-pill-eeee1111-1111-1111-1111-111111111111'),
+      ).toBeTruthy()
     })
+    expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
     expect(screen.queryByTestId('active-sessions-revoke-all-others')).toBeNull()
   })
 
@@ -323,13 +332,14 @@ describe('ActiveSessionsSection — empty list', () => {
       throw new Error(`unexpected request to ${path}`)
     })
 
-    renderSection()
+    renderPage()
 
+    // DataTable's empty state surfaces our message verbatim once the query
+    // resolves (during load it shows a skeleton instead).
     await waitFor(() => {
-      expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
+      expect(screen.getByText(/No active sessions for this account\./i)).toBeTruthy()
     })
+    expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
     expect(screen.queryByTestId('active-sessions-revoke-all-others')).toBeNull()
-    // DataTable's empty state surfaces our message verbatim.
-    expect(screen.getByText(/No active sessions for this account\./i)).toBeTruthy()
   })
 })
