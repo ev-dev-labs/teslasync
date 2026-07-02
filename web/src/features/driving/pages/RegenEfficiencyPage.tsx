@@ -324,8 +324,9 @@ export default function RegenEfficiencyPage() {
                 </div>
               ) : (
                 <EmptyState
+                  /* no-action: transient empty state — no regen drives in the selected window; no specific recovery action applies */
                   icon={<Activity className="h-8 w-8 opacity-20" />}
-                  message={t('common.noData', 'No data available')}
+                  message={t('regen.noDrives', 'No regen drives recorded in this period')}
                   className="py-8"
                 />
               )}
