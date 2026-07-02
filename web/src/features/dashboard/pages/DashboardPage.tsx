@@ -1,19 +1,16 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
-import { useSyncVehicles } from '@/api/hooks/useVehicles';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { PrintButton } from '@/components/ui/PrintButton';
+import { useSyncVehicles, useVehicles } from '@/api/hooks/useVehicles';
+import { useAlerts } from '@/api/hooks/useAlerts';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Button, PrintButton, Heading, Text, Caption } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
+import { AlertBanner, LiveStaleDataBanner, Skeleton } from '@/components/feedback';
 import { LiveIndicator, DataFreshnessAuto } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback/Skeleton';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTheme } from '@/components/ui/ThemeProvider';
@@ -38,7 +35,6 @@ import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import { markCustomizeDashboardCompleted } from '@/features/onboarding/checklist';
-import type { Vehicle, Alert } from '../types';
 import type { WidgetConfig, SavedDashboard } from '../widgets/types';
 
 import { Icons } from '@/lib/icons';
@@ -129,8 +125,8 @@ function ThemeFirstRunBanner() {
 }
 
 export default function DashboardPage() {
-  usePageTitle('Dashboard');
   const { t } = useTranslation('dashboard');
+  usePageTitle(t('title', 'Command Center'));
   const queryClient = useQueryClient();
 
   /* ——— Dashboard layout state ——— */
@@ -215,19 +211,14 @@ export default function DashboardPage() {
     onFallbackToPolling: () => queryClient.invalidateQueries(),
   });
 
-  /* ——— Core data queries ——— */
-  const vehiclesQuery = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  /* ——— Core data queries (shared TanStack hooks) ——— */
+  const vehiclesQuery = useVehicles();
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
-  const { data: alerts, error: alertsError } = useQuery({
-    queryKey: ['alerts'],
-    queryFn: () => request<Alert[]>('/alerts?limit=10'),
-  });
+  const { data: alerts, error: alertsError } = useAlerts();
 
   /* ——— Derived values ——— */
-  const unreadAlerts = alerts?.filter((a) => !a.is_read).length ?? 0;
+  const vehicleList = vehicles ?? [];
+  const unreadAlerts = (alerts ?? []).filter((a) => !a.is_read).length;
   const anyError = [vehiclesError, alertsError].find(Boolean) as Error | undefined;
 
   /* ——— Refresh logic ——— */
@@ -335,7 +326,7 @@ export default function DashboardPage() {
               onClick={undo}
               disabled={!canUndo}
               aria-label={t('dashboard.undo', 'Undo')}
-              className="text-[var(--text-secondary)] hover:text-white disabled:opacity-30"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
             >
               <Icons.undoAlt className="h-4 w-4" />
             </Button>
@@ -345,14 +336,14 @@ export default function DashboardPage() {
               onClick={redo}
               disabled={!canRedo}
               aria-label={t('dashboard.redo', 'Redo')}
-              className="text-[var(--text-secondary)] hover:text-white disabled:opacity-30"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
             >
               <Icons.redo className="h-4 w-4" />
             </Button>
             {canUndo && (
-              <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+              <Caption className="tabular-nums" aria-hidden="true">
                 {undoCount}
-              </span>
+              </Caption>
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
@@ -397,10 +388,14 @@ export default function DashboardPage() {
         </>
       )}
       {!editMode && unreadAlerts > 0 && (
-        <Link to="/notifications/alerts" className="relative">
-          <Icons.notifications className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neon-red text-[9px] font-bold text-[var(--text-primary)]">
-            {unreadAlerts}
+        <Link
+          to="/notifications/alerts"
+          className="relative rounded-lg p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          aria-label={t('dashboard.unreadAlerts', '{{count}} unread alerts', { count: unreadAlerts })}
+        >
+          <Icons.notifications className="h-5 w-5" aria-hidden="true" />
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-neon-red/30 bg-neon-red/90 px-1 text-2xs font-bold tabular-nums text-white">
+            {unreadAlerts > 99 ? '99+' : unreadAlerts}
           </span>
         </Link>
       )}
@@ -416,57 +411,53 @@ export default function DashboardPage() {
     <PageContainer
       title={t('title', 'Command Center')}
       subtitle={t('subtitle', 'Real-time fleet intelligence and control')}
-      loading={vehiclesLoading}
       actions={headerActions}
     >
-      <div className="space-y-4">
-        {/* First-run prompt to surface the theme picker. */}
-        <ThemeFirstRunBanner />
+      <div className="space-y-6">
+        {/* Transient banner cluster — first-run theme prompt, live-pipe
+            stale warning, customize hint, load error, and Tesla auth
+            warning. Each child self-hides when its condition is inactive. */}
+        <div className="space-y-3">
+          <ThemeFirstRunBanner />
+          <LiveStaleDataBanner />
 
-        {/* Live-pipe stale-data warning (only shows after >2 min disconnected) */}
-        <LiveStaleDataBanner />
+          {/* Soft hint that the dashboard is customizable. Shows after
+              CUSTOMIZE_HINT_DELAY_MS for users still on the seeded default
+              layout, and disappears the moment they add a widget or dismiss. */}
+          {hintReady && !editMode && (
+            <AlertBanner
+              variant="info"
+              icon={<Icons.add className="h-4 w-4" />}
+              onClose={dismissHint}
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="min-w-0 flex-1">
+                  {t(
+                    'dashboard.customizeHint',
+                    'You can customize this dashboard. Tap the + to add widgets.',
+                  )}
+                </span>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    setCatalogueOpen(true);
+                    dismissHint();
+                  }}
+                >
+                  {t('dashboard.customizeHintCta', 'Add widgets')}
+                </Button>
+              </div>
+            </AlertBanner>
+          )}
 
-        {/* Soft hint that the dashboard is customizable.
-            Shows after CUSTOMIZE_HINT_DELAY_MS for users still on the seeded
-            default layout, and disappears the moment they add a widget or
-            dismiss the banner. */}
-        {hintReady && !editMode && (
-          <AlertBanner
-            variant="info"
-            icon={<Icons.add className="h-4 w-4" />}
-            onClose={dismissHint}
-          >
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="flex-1 min-w-0">
-                {t(
-                  'dashboard.customizeHint',
-                  'You can customize this dashboard. Tap the + to add widgets.',
-                )}
-              </span>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setCatalogueOpen(true);
-                  dismissHint();
-                }}
-              >
-                {t('dashboard.customizeHintCta', 'Add widgets')}
-              </Button>
-            </div>
-          </AlertBanner>
-        )}
+          {anyError && (
+            <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
+              {t('error.loadFailed', 'Failed to load data')}: {anyError.message}
+            </AlertBanner>
+          )}
 
-        {/* Error banner */}
-        {anyError && (
-          <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
-            {t('error.loadFailed', 'Failed to load data')}: {anyError.message}
-          </AlertBanner>
-        )}
-
-        {/* Auth warning */}
-        {auth && !auth.authenticated && (
-          <FadeIn>
+          {auth && !auth.authenticated && (
             <AlertBanner
               variant="warning"
               icon={<Icons.alertCircle className="h-5 w-5" />}
@@ -478,63 +469,70 @@ export default function DashboardPage() {
               </Link>{' '}
               {t('auth.toStart', 'to start tracking.')}
             </AlertBanner>
+          )}
+        </div>
+
+        {/* Recently viewed — renders an empty placeholder for first-run
+            users so they still discover the affordance. */}
+        <FadeIn>
+          <section aria-label={t('dashboard.recentlyViewed', 'Recently viewed')}>
+            <RecentlyViewedWidget />
+          </section>
+        </FadeIn>
+
+        {/* Layout switcher + manager — shown whenever saved dashboards exist. */}
+        {dashboards.length > 0 && (
+          <FadeIn delay={0.05}>
+            <section
+              aria-label={t('dashboard.layoutsRegion', 'Dashboard layouts')}
+              className="space-y-2"
+            >
+              <LayoutSwitcher
+                dashboards={dashboards}
+                activeId={activeId}
+                dirty={dirty}
+                editMode={editMode}
+                onSwitch={switchDashboard}
+                onCreate={(name) => createDashboard(name)}
+                onDuplicate={duplicateDashboard}
+                onReset={resetToDefault}
+                onToggleEdit={() => setEditMode(!editMode)}
+                onPinToVehicle={pinToVehicle}
+              />
+              <LayoutManager
+                dashboards={dashboards}
+                activeId={activeId}
+                onSwitch={switchDashboard}
+                onCreate={createDashboard}
+                onRename={renameDashboard}
+                onDelete={deleteDashboard}
+                onReorder={reorderDashboards}
+                onDuplicate={duplicateDashboard}
+                onOpenSettings={(id) => setShowDashSettings(id)}
+                onOpenTemplates={() => setShowTemplates(true)}
+              />
+            </section>
           </FadeIn>
         )}
 
-        {/* Recently viewed widget. Renders an empty
-            placeholder until the user navigates around the app, so first-run
-            users still see the affordance and learn what it does. */}
-        <FadeIn>
-          <RecentlyViewedWidget />
-        </FadeIn>
-
-        {/* Layout Manager — always show when there are dashboards */}
-        {dashboards.length > 0 && (
-          <div className="space-y-2">
-            <LayoutSwitcher
-              dashboards={dashboards}
-              activeId={activeId}
-              dirty={dirty}
-              editMode={editMode}
-              onSwitch={switchDashboard}
-              onCreate={(name) => createDashboard(name)}
-              onDuplicate={duplicateDashboard}
-              onReset={resetToDefault}
-              onToggleEdit={() => setEditMode(!editMode)}
-              onPinToVehicle={pinToVehicle}
-            />
-            <LayoutManager
-              dashboards={dashboards}
-              activeId={activeId}
-              onSwitch={switchDashboard}
-              onCreate={createDashboard}
-              onRename={renameDashboard}
-              onDelete={deleteDashboard}
-              onReorder={reorderDashboards}
-              onDuplicate={duplicateDashboard}
-              onOpenSettings={(id) => setShowDashSettings(id)}
-              onOpenTemplates={() => setShowTemplates(true)}
-            />
-          </div>
-        )}
-
+        {/* Primary surface — the customizable widget bento (hero). Owns its
+            own loading + empty states so the rest of the page stays live. */}
         {vehiclesLoading ? (
           <LoadingSkeleton />
-        ) : vehicles && vehicles.length > 0 ? (
-          <>
-            {/* Edit mode hint */}
-            {editMode && (
-              <FadeIn>
+        ) : vehicleList.length > 0 ? (
+          <FadeIn delay={0.1}>
+            <section
+              aria-label={t('dashboard.widgetsRegion', 'Dashboard widgets')}
+              className="space-y-4"
+            >
+              {editMode && (
                 <div className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-center">
-                  <p className="text-sm text-[var(--text-secondary)]">
+                  <Text as="p" size="sm" color="secondary">
                     {t('dashboard.editHint', 'Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.')}
-                  </p>
+                  </Text>
                 </div>
-              </FadeIn>
-            )}
+              )}
 
-            {/* Widget Grid */}
-            <FadeIn>
               <div data-tour="dashboard-grid">
                 <DashboardGrid
                   dashboard={activeDashboard}
@@ -548,10 +546,10 @@ export default function DashboardPage() {
                   showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
                 />
               </div>
-            </FadeIn>
-          </>
+            </section>
+          </FadeIn>
         ) : (
-          <FadeIn>
+          <FadeIn delay={0.1}>
             <EmptyOnboarding
               authenticated={auth?.authenticated ?? false}
               onSync={() => syncVehicles.mutate()}
@@ -620,7 +618,7 @@ export default function DashboardPage() {
           open={!!showDashSettings}
           onClose={() => setShowDashSettings(null)}
           dashboard={dashboards.find((d) => d.id === showDashSettings) ?? activeDashboard}
-          vehicles={(vehicles ?? []).map((v) => ({ id: v.id, display_name: v.display_name }))}
+          vehicles={vehicleList.map((v) => ({ id: v.id, display_name: v.display_name }))}
           onUpdate={(settings) => updateDashboardSettings(showDashSettings, settings)}
           onRename={(name) => renameDashboard(showDashSettings, name)}
           onChangeIcon={(icon) => updateDashboardIcon(showDashSettings, icon)}
@@ -687,58 +685,72 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
   isSyncing: boolean;
 }) {
   const { t } = useTranslation('dashboard');
+  const features = [
+    { icon: Icons.efficiency, label: t('onboarding.tracking', 'Real-time Tracking'), tone: 'text-cyan-300' },
+    { icon: Icons.drive, label: t('onboarding.drives', 'Drive History'), tone: 'text-purple-300' },
+    { icon: Icons.batteryCharging, label: t('onboarding.charging', 'Charge Analytics'), tone: 'text-emerald-300' },
+    { icon: Icons.security, label: t('onboarding.control', 'Vehicle Control'), tone: 'text-rose-300' },
+  ];
   return (
-    <GlassPanel className="p-12 text-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.02] via-transparent to-neon-purple/[0.02]" />
-      <div className="relative">
-        <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
-          {authenticated
-            ? t('onboarding.syncTitle', 'Sync Your Vehicles')
-            : t('onboarding.title', 'Welcome to TeslaSync')}
-        </h2>
-        <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-8">
-          {authenticated
-            ? t('onboarding.syncDesc', 'Your Tesla account is connected. Sync your vehicles to start tracking.')
-            : t('onboarding.desc', 'The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.')}
-        </p>
-        <div className="flex items-center justify-center gap-4">
-          {authenticated ? (
-            <Button onClick={onSync} loading={isSyncing} icon={<Icons.refresh className="h-4 w-4" />}>
-              {t('onboarding.sync', 'Sync Vehicles')}
-            </Button>
-          ) : (
-            <Link to="/settings">
-              <Button variant="primary">
-                {t('onboarding.connect', 'Connect Tesla Account')} <Icons.drillThrough className="h-4 w-4 ms-1 inline-block" />
+    <GlassPanel className="relative overflow-hidden p-6 text-center sm:p-10">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.03] via-transparent to-neon-purple/[0.03]"
+      />
+      <div className="relative space-y-8">
+        <div className="mx-auto max-w-lg space-y-3">
+          <Heading level="section">
+            {authenticated
+              ? t('onboarding.syncTitle', 'Sync Your Vehicles')
+              : t('onboarding.title', 'Welcome to TeslaSync')}
+          </Heading>
+          <Text as="p" size="base" color="secondary">
+            {authenticated
+              ? t('onboarding.syncDesc', 'Your Tesla account is connected. Sync your vehicles to start tracking.')
+              : t('onboarding.desc', 'The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.')}
+          </Text>
+          <div className="flex items-center justify-center gap-4 pt-1">
+            {authenticated ? (
+              <Button onClick={onSync} loading={isSyncing} icon={<Icons.refresh className="h-4 w-4" />}>
+                {t('onboarding.sync', 'Sync Vehicles')}
               </Button>
-            </Link>
-          )}
+            ) : (
+              <Link to="/settings">
+                <Button variant="primary">
+                  {t('onboarding.connect', 'Connect Tesla Account')}{' '}
+                  <Icons.drillThrough className="ms-1 inline-block h-4 w-4" aria-hidden="true" />
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
-        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-2xl mx-auto">
-          {[
-            { icon: Icons.efficiency, label: t('onboarding.tracking', 'Real-time Tracking'), color: '#00f0ff' },
-            { icon: Icons.drive, label: t('onboarding.drives', 'Drive History'), color: '#a855f7' },
-            { icon: Icons.batteryCharging, label: t('onboarding.charging', 'Charge Analytics'), color: '#10b981' },
-            { icon: Icons.security, label: t('onboarding.control', 'Vehicle Control'), color: '#ef4444' },
-          ].map((f) => (
-            <GlassPanel key={f.label} className="p-3 text-center">
-              <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />
-              <p className="text-xs font-medium text-[var(--text-secondary)]">{f.label}</p>
-            </GlassPanel>
+
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          {features.map((f) => (
+            <li key={f.label}>
+              <GlassPanel className="flex h-full flex-col items-center gap-2 p-4 text-center">
+                <f.icon className={`h-6 w-6 ${f.tone}`} aria-hidden="true" />
+                <Text as="span" size="xs" weight="medium" color="secondary">
+                  {f.label}
+                </Text>
+              </GlassPanel>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </GlassPanel>
   );
 }
 
-/* ——— Loading Skeleton ——— */
+/* ——— Loading Skeleton — mirrors the switcher strip + widget bento ——— */
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6">
-      <Skeleton className="h-72" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
+    <div className="space-y-4" aria-hidden="true">
+      <Skeleton className="h-10 w-full sm:w-2/3" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} className="h-40" />
+        ))}
       </div>
     </div>
   );
