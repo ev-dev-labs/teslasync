@@ -15,7 +15,7 @@ import { ResultPanel } from './ResultPanel'
 import { TelemetryErrorsPanel } from './TelemetryErrorsPanel'
 import { apiFetch, extractTelemetryErrors, useVehicleOptions } from './helpers'
 import type { TelemetryError } from './types'
-import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
+import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
 import { Icons } from '@/lib/icons';
 
 /* ─── Fleet API Config Tool ───────────────────────────────────────────── */
