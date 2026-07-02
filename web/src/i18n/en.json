@@ -6850,6 +6850,15 @@
     "topSpeed": "Top Speed",
     "costPerKmLabel": "Est. Cost/km",
     "noInsights": "No energy insights available yet",
+    "overview": "Efficiency Overview",
+    "efficiencyLabel": "Efficiency",
+    "kgUnit": "kg",
+    "section": {
+      "kpis": "Key Metrics",
+      "overview": "Overview & Trend",
+      "analysis": "Speed & Temperature Analysis",
+      "breakdown": "Breakdown & Insights"
+    },
     "col": {
       "date": "Date",
       "range": "Speed range"
