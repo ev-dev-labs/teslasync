@@ -1,21 +1,21 @@
-import { useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Thermometer, Snowflake, Sun, Lightbulb, TrendingUp, Activity, AlertCircle,
+  Thermometer, Snowflake, Sun, Lightbulb, TrendingUp, Activity,
+  BarChart3, CalendarRange, Car,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, PanelTitle, Caption, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { AlertBanner, EmptyState } from '@/components/feedback';
-import { getErrorMessage } from '@/lib/errorMessage';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { VehicleSelect } from '@/components/forms';
 import {
   ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
-  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
+  ScatterChart, Scatter, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend, ReferenceLine,
+  ComposedChart, Bar,
 } from '@/components/charts';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -23,20 +23,16 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertTempFromSI } from '@/lib/unitConversion';
-import { cn } from '@/lib/cn';
-import { request } from '@/api/client';
+import { formatDate } from '@/lib/dateFormat';
+import {
+  useTemperatureImpact,
+  type TemperatureImpactPoint,
+} from '@/api/hooks/useAnalytics';
 import { AICabinTemperatureImpactNarrative } from '@/components/ai/AICabinTemperatureImpactNarrative';
 
 /* ----------------------------------------------------------------*/
 /*  Types */
 /* ----------------------------------------------------------------*/
-
-interface TempEfficiencyPoint {
-  outside_temp: number;
-  efficiency_wh_km: number;
-  distance_km: number;
-  drive_date: string;
-}
 
 interface BucketDef {
   label: string;
@@ -52,13 +48,17 @@ interface BucketAvg {
   color: string;
 }
 
+interface DriveRow extends TemperatureImpactPoint {
+  id: number;
+}
+
 /* ----------------------------------------------------------------*/
 /*  Constants */
 /* ----------------------------------------------------------------*/
 
-/* Wh/km -> Wh/mi conversion factor.
-   No convertEfficiencyFromSI helper exists in
-   lib/unitConversion.ts, so we keep the inline km-per-mile factor here. */
+/* Wh/km -> Wh/mi and km -> mi conversion factor. No efficiency helper
+   exists in lib/unitConversion.ts, so we keep the km-per-mile factor here.
+   Temperature and distance still round-trip through the SI-floor helpers. */
 const KM_PER_MILE = 1.609344;
 
 const TEMP_BUCKETS_C = [
@@ -91,33 +91,30 @@ function bucketLabel(
 
 export default function TemperatureImpactPage() {
   const { t } = useTranslation();
-  usePageTitle(t('temperature.title', 'Temperature Impact'));
+  usePageTitle(t('tempImpact.title', 'Temperature Impact'));
 
   /* --- unit conversion (SI display) ---
-     Backend `/analytics/temperature-impact` emits points with:
-       outside_temp: °C SI (from ambient_temp_c_avg)
-       efficiency_wh_km: Wh/km (already derived in SQL)
-       distance_km: km (already derived in SQL)
-     We convert outside_temp via convertTempFromSI (mathematically
-     identical to legacy toTemperatureDisplay) and Wh/km -> Wh/mi inline using
-     KM_PER_MILE because there is no convertEfficiencyFromSI helper. */
-  const { unitPrefs } = useUnits();
+     Backend `/analytics/temperature-impact` emits SI: outside_temp °C,
+     efficiency_wh_km Wh/km, distance_km km, avg_temp °C. We convert at the
+     render boundary via useUnits()/convertTempFromSI and the inline
+     KM_PER_MILE factor (no efficiency formatter exists yet). */
+  const { unitPrefs, formatTemperature, formatDistance } = useUnits();
   const tempUnit = unitPrefs.temperature;
   const isMiles = unitPrefs.distance === 'mi';
-  const effLabel = isMiles ? 'Wh/mi' : 'Wh/km';
+  const effLabel = isMiles ? t('tempImpact.whPerMi', 'Wh/mi') : t('tempImpact.whPerKm', 'Wh/km');
 
   const toTemperatureDisplay = useCallback(
     (c: number) => convertTempFromSI(c, tempUnit),
     [tempUnit],
   );
 
-  /* Efficiency: API returns Wh/km — convert to Wh/mi if user prefers miles */
+  /* Efficiency: API returns Wh/km — convert to Wh/mi if the user prefers miles. */
   const toDispEff = useCallback(
-    (whKm: number): number => isMiles ? whKm * KM_PER_MILE : whKm,
+    (whKm: number): number => (isMiles ? whKm * KM_PER_MILE : whKm),
     [isMiles],
   );
 
-  /* Build display bucket labels */
+  /* Build display bucket labels. */
   const tempBuckets: BucketDef[] = useMemo(
     () => TEMP_BUCKETS_C.map((b, i) => ({
       label: bucketLabel(b, toTemperatureDisplay, tempUnit, i),
@@ -128,73 +125,123 @@ export default function TemperatureImpactPage() {
     [toTemperatureDisplay, tempUnit],
   );
 
-  /* --- vehicles ---*/
+  /* --- vehicle scope --- */
   const { vehicleId: selectedId } = useSelectedVehicle();
   const vehicleId = selectedId != null ? String(selectedId) : '';
+  const noVehicle = vehicleId === '';
 
-  /* --- temperature data ---*/
-  const { data: points, isLoading, error: dataError } = useQuery({
-    queryKey: ['temperature-impact', vehicleId],
-    queryFn: async () => {
-      const res = await request<{ points: TempEfficiencyPoint[] }>(
-        `/analytics/temperature-impact?vehicle_id=${vehicleId}`,
-      );
-      return res.points ?? [];
-    },
-    enabled: vehicleId !== '',
-  });
+  /* --- data --- */
+  const query = useTemperatureImpact(vehicleId);
+  const { data, isLoading, isError } = query;
+  const points = useMemo<TemperatureImpactPoint[]>(() => data?.points ?? [], [data]);
+  const monthlyTrend = useMemo(() => data?.monthly_trend ?? [], [data]);
 
-  const anyError = dataError as Error | undefined;
-
-  /* --- derived stats ---*/
+  /* --- derived stats (client-side buckets over the efficiency_wh_km points) --- */
   const stats = useMemo(() => {
-    if (!points?.length) return null;
+    if (points.length === 0) return null;
 
     const avgEff =
-      points.reduce((s, p) => s + p.efficiency_wh_km, 0) / points.length;
+      points.reduce((s, p) => s + (p.efficiency_wh_km ?? 0), 0) / points.length;
 
     const bucketCounts = new Map<number, number[]>();
     for (const p of points) {
-      const idx = getTempBucketIndex(p.outside_temp);
+      const idx = getTempBucketIndex(p.outside_temp ?? 0);
       const arr = bucketCounts.get(idx) ?? [];
-      arr.push(p.efficiency_wh_km);
+      arr.push(p.efficiency_wh_km ?? 0);
       bucketCounts.set(idx, arr);
     }
 
     const bucketAvgs: BucketAvg[] = tempBuckets.map((b, i) => {
       const vals = bucketCounts.get(i) ?? [];
-      const avg = vals.length
-        ? vals.reduce((s, v) => s + v, 0) / vals.length
-        : 0;
+      const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
       return { label: b.label, avg: toDispEff(avg), count: vals.length, color: b.color };
     });
 
     const withData = bucketAvgs.filter((b) => b.count > 0);
-    const best = withData.reduce(
-      (a, b) => (b.avg < a.avg ? b : a),
-      withData[0],
-    );
-    const worst = withData.reduce(
-      (a, b) => (b.avg > a.avg ? b : a),
-      withData[0],
-    );
+    const best = withData.reduce((a, b) => (b.avg < a.avg ? b : a), withData[0]);
+    const worst = withData.reduce((a, b) => (b.avg > a.avg ? b : a), withData[0]);
 
     return { avgEff: toDispEff(avgEff), bucketAvgs, best, worst, total: points.length };
   }, [points, tempBuckets, toDispEff]);
 
-  /* --- scatter data with colour per point ---*/
+  const bestLabel = stats?.best?.label;
+
+  /* --- scatter data with colour per point --- */
   const scatterData = useMemo(
     () =>
-      (points ?? []).map((p) => ({
+      points.map((p) => ({
         ...p,
-        outside_temp: toTemperatureDisplay(p.outside_temp),
-        efficiency_wh_km: toDispEff(p.efficiency_wh_km),
-        fill: TEMP_BUCKETS_C[getTempBucketIndex(p.outside_temp)].color,
+        outside_temp: toTemperatureDisplay(p.outside_temp ?? 0),
+        efficiency_wh_km: toDispEff(p.efficiency_wh_km ?? 0),
+        fill: TEMP_BUCKETS_C[getTempBucketIndex(p.outside_temp ?? 0)].color,
       })),
     [points, toTemperatureDisplay, toDispEff],
   );
 
-  /* --- contextual tips ---*/
+  /* --- monthly seasonal trend: drive count (bars) + avg temp (line) --- */
+  const monthlyData = useMemo(
+    () =>
+      monthlyTrend.map((m) => ({
+        month: m.month ?? '—',
+        drives: m.drive_count ?? 0,
+        temp: Math.round(toTemperatureDisplay(m.avg_temp ?? 0) * 10) / 10,
+      })),
+    [monthlyTrend, toTemperatureDisplay],
+  );
+
+  /* --- recent drives table rows --- */
+  const driveRows = useMemo<DriveRow[]>(
+    () => points.map((p, i) => ({ ...p, id: i })),
+    [points],
+  );
+
+  const driveColumns = useMemo<Column<DriveRow>[]>(
+    () => [
+      {
+        key: 'drive_date',
+        header: t('tempImpact.driveDate', 'Date'),
+        sortable: true,
+        render: (row) => (
+          <span className="text-sm text-[var(--text-primary)]">
+            {row.drive_date ? formatDate(row.drive_date) : '—'}
+          </span>
+        ),
+      },
+      {
+        key: 'outside_temp',
+        header: t('tempImpact.temperature', 'Temperature'),
+        sortable: true,
+        render: (row) => (
+          <span className="text-sm tabular-nums text-[var(--text-secondary)]">
+            {formatTemperature(row.outside_temp)}
+          </span>
+        ),
+      },
+      {
+        key: 'efficiency_wh_km',
+        header: t('tempImpact.efficiency', 'Efficiency'),
+        sortable: true,
+        render: (row) => (
+          <span className="text-sm tabular-nums text-cyan-300">
+            {fmtNumber(toDispEff(row.efficiency_wh_km ?? 0))} {effLabel}
+          </span>
+        ),
+      },
+      {
+        key: 'distance_km',
+        header: t('tempImpact.distance', 'Distance'),
+        sortable: true,
+        render: (row) => (
+          <span className="text-sm tabular-nums text-[var(--text-secondary)]">
+            {formatDistance((row.distance_km ?? 0) * 1000)}
+          </span>
+        ),
+      },
+    ],
+    [t, formatTemperature, formatDistance, toDispEff, effLabel],
+  );
+
+  /* --- contextual tips --- */
   const tips = useMemo(() => {
     const items: { icon: React.ElementType; text: string; variant: 'info' | 'warning' | 'success' }[] = [];
     if (!stats) return items;
@@ -227,11 +274,34 @@ export default function TemperatureImpactPage() {
     return items;
   }, [stats, t]);
 
-  /* --- vehicle selector action ---*/
-  const vehicleSelector = <VehicleSelect />;
+  /* Contextual empty copy: prompt for a vehicle when none is scoped. */
+  const emptyMessage = noVehicle
+    ? t('tempImpact.selectVehicle', 'Select a vehicle to view temperature impact')
+    : t('tempImpact.noData', 'No drive data available yet');
 
-  // hasData removed
-  const bestLabel = stats?.best?.label;
+  /* Shared loading/error fallback for a data section. Returns `null` when the
+     section is ready to render its own content, so every panel owns its
+     loading + error + empty states independently. */
+  const sectionFallback = useCallback(
+    (isEmpty: boolean, opts: { skeletonHeight: number; icon: ReactNode }): ReactNode | null => {
+      if (isLoading) return <Skeleton height={opts.skeletonHeight} />;
+      if (isError) return <QueryError error={query.error} onRetry={() => query.refetch()} />;
+      if (isEmpty) {
+        return (
+          <EmptyState
+            icon={opts.icon}
+            message={emptyMessage}
+            className="py-10"
+          />
+        );
+      }
+      return null;
+    },
+    [isLoading, isError, query, emptyMessage],
+  );
+
+  const hasPoints = points.length > 0;
+  const hasMonthly = monthlyData.length > 0;
 
   /* ================================================================ */
   /*  Render */
@@ -241,221 +311,270 @@ export default function TemperatureImpactPage() {
     <PageContainer
       title={t('tempImpact.title', 'Temperature Impact')}
       subtitle={t('tempImpact.subtitle', 'How outside temperature affects driving efficiency')}
-      loading={isLoading}
-      actions={vehicleSelector}
+      actions={<VehicleSelect />}
+      query={query}
     >
-      <div className="space-y-6">
-        {anyError && (
-          <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
-            {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
-          </AlertBanner>
-        )}
+      {/* AI cabin-temperature-impact narrator. Rendered ABOVE the deterministic
+          charts so the narration contextualises the bucketed-efficiency chart
+          and seasonal trend below. The withAiFeature HOC gates visibility — in
+          ai_mode='off' this section is entirely absent from the DOM. */}
+      <AICabinTemperatureImpactNarrative vehicleId={vehicleId !== '' ? vehicleId : undefined} />
 
-        {/* AI cabin-temperature-impact narrator */}
-        {/* Rendered ABOVE the deterministic charts so the narration */}
-        {/* contextualises the bucketed-efficiency chart and seasonal */}
-        {/* trend the user is about to read. The withAiFeature HOC */}
-        {/* gates visibility — in ai_mode='off' this section is */}
-        {/* entirely absent from the DOM (ADR-015 §I5 + §I6). */}
-        <AICabinTemperatureImpactNarrative vehicleId={vehicleId !== '' ? vehicleId : undefined} />
+      {/* ── KPI band ─────────────────────────────────────────── */}
+      <FadeIn>
+        <section
+          aria-label={t('tempImpact.kpis', 'Summary metrics')}
+          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+        >
+          <MetricCard
+            label={t('tempImpact.avgEfficiency', 'Avg Efficiency')}
+            value={stats ? `${fmtNumber(stats.avgEff)} ${effLabel}` : '—'}
+            icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('tempImpact.bestRange', 'Best Temp Range')}
+            value={stats?.best?.label ?? '—'}
+            icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
+            color="green"
+            subtitle={stats?.best ? `${fmtNumber(stats.best.avg)} ${effLabel}` : undefined}
+          />
+          <MetricCard
+            label={t('tempImpact.worstRange', 'Worst Temp Range')}
+            value={stats?.worst?.label ?? '—'}
+            icon={<Sun className="h-4 w-4" aria-hidden="true" />}
+            color="purple"
+            subtitle={stats?.worst ? `${fmtNumber(stats.worst.avg)} ${effLabel}` : undefined}
+          />
+          <MetricCard
+            label={t('tempImpact.totalPoints', 'Total Data Points')}
+            value={stats?.total ?? 0}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+            color="cyan"
+          />
+        </section>
+      </FadeIn>
 
-        {/* ── Summary MetricCards ───────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <FadeIn>
-            <MetricCard
-              label={t('tempImpact.avgEfficiency', 'Avg Efficiency')}
-              value={stats ? `${fmtNumber(stats.avgEff)} ${effLabel}` : '—'}
-              icon={<Thermometer className="h-4 w-4" />}
-              color="cyan"
-            />
-          </FadeIn>
-          <FadeIn delay={0.05}>
-            <MetricCard
-              label={t('tempImpact.bestRange', 'Best Temp Range')}
-              value={stats?.best?.label ?? '—'}
-              icon={<TrendingUp className="h-4 w-4" />}
-              color="green"
-              subtitle={stats?.best ? `${fmtNumber(stats.best.avg)} ${effLabel}` : undefined}
-            />
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <MetricCard
-              label={t('tempImpact.worstRange', 'Worst Temp Range')}
-              value={stats?.worst?.label ?? '—'}
-              icon={<Sun className="h-4 w-4" />}
-              color="purple"
-              subtitle={stats?.worst ? `${fmtNumber(stats.worst.avg)} ${effLabel}` : undefined}
-            />
-          </FadeIn>
-          <FadeIn delay={0.15}>
-            <MetricCard
-              label={t('tempImpact.totalPoints', 'Total Data Points')}
-              value={stats?.total ?? 0}
-              icon={<Thermometer className="h-4 w-4" />}
-              color="cyan"
-            />
-          </FadeIn>
-        </div>
-
-        {/* ── Scatter Chart: Temperature vs Efficiency ─────────── */}
-        <FadeIn delay={0.2}>
-          <GlassPanel className="p-6">
-            <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
+      {/* ── Row A: scatter hero + optimal analysis ───────────── */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('tempImpact.scatterTitle', 'Temperature vs Efficiency')}
-            </h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="outside_temp"
-                    type="number"
-                    name={`${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`}
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                    label={{
-                      value: `${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`,
-                      position: 'insideBottom',
-                      offset: -5,
-                      style: { fill: 'var(--text-muted)', fontSize: 10 },
-                    }}
-                  />
-                  <YAxis
-                    dataKey="efficiency_wh_km"
-                    type="number"
-                    name={`${t('tempImpact.efficiency', 'Efficiency')} (${effLabel})`}
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                    label={{
-                      value: effLabel,
-                      angle: -90,
-                      position: 'insideLeft',
-                      style: { fill: 'var(--text-muted)', fontSize: 10 },
-                    }}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  {stats && (
-                    <ReferenceLine
-                      y={stats.avgEff}
-                      stroke={CHART_COLORS[1]}
-                      strokeDasharray="4 4"
-                      strokeOpacity={0.6}
-                    />
-                  )}
-                  <Scatter
-                    data={scatterData}
-                    name={t('tempImpact.scatterName', 'Drives')}
-                    fill={CHART_COLORS[0]}
-                  />
-                </ScatterChart>
-              </ResponsiveContainer>
-            </div>
+            </PanelTitle>
+            {sectionFallback(!hasPoints, {
+              skeletonHeight: 288,
+              icon: <Thermometer className="h-8 w-8" aria-hidden="true" />,
+            }) ?? (
+              <>
+                <div className="h-72 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis
+                        dataKey="outside_temp"
+                        type="number"
+                        name={`${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`}
+                        tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                      />
+                      <YAxis
+                        dataKey="efficiency_wh_km"
+                        type="number"
+                        name={`${t('tempImpact.efficiency', 'Efficiency')} (${effLabel})`}
+                        tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                        width={44}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      {stats && (
+                        <ReferenceLine
+                          y={stats.avgEff}
+                          stroke={CHART_COLORS[1]}
+                          strokeDasharray="4 4"
+                          strokeOpacity={0.6}
+                        />
+                      )}
+                      <Scatter data={scatterData} name={t('tempImpact.scatterName', 'Drives')}>
+                        {scatterData.map((d, i) => (
+                          <Cell key={i} fill={d.fill} />
+                        ))}
+                      </Scatter>
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                  {tempBuckets.map((b) => (
+                    <div key={b.label} className="flex items-center gap-1.5">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: b.color }}
+                        aria-hidden="true"
+                      />
+                      <Caption>{b.label}</Caption>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </GlassPanel>
-        </FadeIn>
 
-        {/* ── Line Chart: Efficiency by Temperature Range ──────── */}
-        <FadeIn delay={0.25}>
-          <GlassPanel className="p-6">
-            <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
-              {t('tempImpact.bucketTitle', 'Efficiency by Temperature Range')}
-            </h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={stats?.bucketAvgs ?? []}
-                  margin={{ top: 10, right: 20, bottom: 10, left: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                  <YAxis
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                    label={{
-                      value: effLabel,
-                      angle: -90,
-                      position: 'insideLeft',
-                      style: { fill: 'var(--text-muted)', fontSize: 10 },
-                    }}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend />
-                  <Line
-                    {...AREA_DEFAULTS}
-                    dataKey="avg"
-                    name={`${t('tempImpact.avgEff', 'Avg Efficiency')} (${effLabel})`}
-                    stroke={CHART_COLORS[0]}
-                    dot={{ r: 5, fill: CHART_COLORS[0] }}
-                    activeDot={{ r: 7 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </GlassPanel>
-        </FadeIn>
-
-        {/* ── Optimal Temperature Analysis ─────────────────────── */}
-        {stats?.best && (
-          <FadeIn delay={0.3}>
-            <GlassPanel glow="green" className="p-6">
-              <div className="flex items-start gap-4">
-                <Thermometer className="h-8 w-8 shrink-0 text-emerald-400" />
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                    {t('tempImpact.optimalTitle', 'Optimal Temperature Analysis')}
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    {t('tempImpact.optimalDesc', {
-                      range: stats.best.label,
-                      efficiency: fmtNumber(stats.best.avg),
+          <GlassPanel glow="green" className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('tempImpact.optimalTitle', 'Optimal Temperature Analysis')}
+            </PanelTitle>
+            {sectionFallback(!stats?.best, {
+              skeletonHeight: 220,
+              icon: <Thermometer className="h-8 w-8" aria-hidden="true" />,
+            }) ?? (stats?.best ? (
+              <div className="space-y-3">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  {t('tempImpact.optimalDesc', {
+                    range: stats.best.label,
+                    efficiency: fmtNumber(stats.best.avg),
+                    unit: effLabel,
+                    count: stats.best.count,
+                    defaultValue:
+                      'Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.',
+                  })}
+                </p>
+                {stats.worst && stats.best.label !== stats.worst.label && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t('tempImpact.optimalDelta', {
+                      worst: stats.worst.label,
+                      delta: fmtNumber(stats.worst.avg - stats.best.avg),
                       unit: effLabel,
-                      count: stats.best.count,
                       defaultValue:
-                        'Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.',
+                        'Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.',
                     })}
                   </p>
-                  {stats.worst && stats.best.label !== stats.worst.label && (
-                    <p className="mt-2 text-xs text-[var(--text-muted)]">
-                      {t('tempImpact.optimalDelta', {
-                        worst: stats.worst.label,
-                        delta: fmtNumber(stats.worst.avg - stats.best.avg),
-                        unit: effLabel,
-                        defaultValue:
-                          'Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.',
-                      })}
-                    </p>
-                  )}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {stats.bucketAvgs
-                      .filter((b) => b.count > 0)
-                      .map((b) => (
-                        <Badge
-                          key={b.label}
-                          variant={b.label === bestLabel ? 'success' : 'neutral'}
-                          size="sm"
-                        >
-                          {b.label}: {fmtNumber(b.avg)} {effLabel}
-                        </Badge>
-                      ))}
-                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {stats.bucketAvgs
+                    .filter((b) => b.count > 0)
+                    .map((b) => (
+                      <Badge
+                        key={b.label}
+                        variant={b.label === bestLabel ? 'success' : 'neutral'}
+                        size="sm"
+                      >
+                        {b.label}: {fmtNumber(b.avg)} {effLabel}
+                      </Badge>
+                    ))}
                 </div>
               </div>
-            </GlassPanel>
-          </FadeIn>
-        )}
+            ) : null)}
+          </GlassPanel>
+        </section>
+      </FadeIn>
 
-        {/* ── Tips & Recommendations ──────────────────────────── */}
-        <FadeIn delay={0.35}>
-          <GlassPanel className="p-6">
-            <h3
-              className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]"
-            >
-              <Lightbulb className="h-4 w-4 text-amber-400" />
+      {/* ── Row B: bucket line + monthly seasonal trend ──────── */}
+      <FadeIn delay={0.2}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('tempImpact.bucketTitle', 'Efficiency by Temperature Range')}
+            </PanelTitle>
+            {sectionFallback(!hasPoints, {
+              skeletonHeight: 240,
+              icon: <BarChart3 className="h-8 w-8" aria-hidden="true" />,
+            }) ?? (
+              <div className="h-56 sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={stats?.bucketAvgs ?? []}
+                    margin={{ top: 10, right: 16, bottom: 8, left: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} width={44} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line
+                      {...AREA_DEFAULTS}
+                      dataKey="avg"
+                      name={`${t('tempImpact.avgEff', 'Avg Efficiency')} (${effLabel})`}
+                      stroke={CHART_COLORS[0]}
+                      dot={{ r: 5, fill: CHART_COLORS[0] }}
+                      activeDot={{ r: 7 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <CalendarRange className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('tempImpact.monthlyTitle', 'Monthly Seasonal Trend')}
+            </PanelTitle>
+            {sectionFallback(!hasMonthly, {
+              skeletonHeight: 240,
+              icon: <CalendarRange className="h-8 w-8" aria-hidden="true" />,
+            }) ?? (
+              <div className="h-56 sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthlyData} margin={{ top: 10, right: 8, bottom: 8, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                      allowDecimals={false}
+                      width={36}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                      width={40}
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar
+                      yAxisId="left"
+                      dataKey="drives"
+                      name={t('tempImpact.driveCount', 'Drives')}
+                      fill={CHART_COLORS[0]}
+                      fillOpacity={0.75}
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Line
+                      yAxisId="right"
+                      {...AREA_DEFAULTS}
+                      dataKey="temp"
+                      name={`${t('tempImpact.avgTemp', 'Avg Temp')} (${tempUnit})`}
+                      stroke={CHART_COLORS[3] ?? CHART_COLORS[1]}
+                      dot={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* ── Row C: recommendations + recent drives ───────────── */}
+      <FadeIn delay={0.3}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />
               {t('tempImpact.tipsTitle', 'Recommendations')}
-            </h3>
-            {tips.length > 0 ? (
-              <ul className={cn('space-y-2')}>
+            </PanelTitle>
+            {sectionFallback(tips.length === 0, {
+              skeletonHeight: 180,
+              icon: <Lightbulb className="h-8 w-8" aria-hidden="true" />,
+            }) ?? (
+              <ul className="space-y-2">
                 {tips.map((tip) => {
                   const Icon = tip.icon;
                   return (
                     <li key={tip.text} className="flex items-start gap-3">
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-current opacity-60" />
+                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                       <Badge variant={tip.variant} size="sm" dot>
                         {tip.text}
                       </Badge>
@@ -463,16 +582,30 @@ export default function TemperatureImpactPage() {
                   );
                 })}
               </ul>
-            ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                icon={<Activity className="h-8 w-8 opacity-20" />}
-                message={t('common.noData', 'No data available')}
-                className="py-8"
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('tempImpact.recentDrivesTitle', 'Recent Drives')}
+            </PanelTitle>
+            {sectionFallback(!hasPoints, {
+              skeletonHeight: 260,
+              icon: <Car className="h-8 w-8" aria-hidden="true" />,
+            }) ?? (
+              <DataTable
+                tableId="maps:temperature-impact-drives"
+                columns={driveColumns}
+                data={driveRows}
+                keyExtractor={(row) => row.id}
+                emptyMessage={t('tempImpact.noData', 'No drive data available yet')}
+                pagination
               />
             )}
           </GlassPanel>
-        </FadeIn>
-      </div>
+        </section>
+      </FadeIn>
     </PageContainer>
   );
 }
