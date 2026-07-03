@@ -3,13 +3,17 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Car, Calendar, TrendingUp, Zap, Gauge, DollarSign, Leaf, Lightbulb, ArrowLeftRight,
+  Car, Calendar, TrendingUp, Zap, Gauge, DollarSign, Leaf, Lightbulb,
+  ArrowLeftRight, RefreshCw, BarChart3,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
+import {
+  GlassPanel, Badge, Button, Select, PanelTitle, Text,
+  DataTable, type SelectOption, type Column,
+} from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip,
@@ -130,10 +134,16 @@ export default function PeriodComparePage() {
     enabled: !!activeVehicle,
   });
 
-  const isLoading = statsA.isLoading || statsB.isLoading;
-  const error = statsA.error ?? statsB.error;
+  // Section-level state flags — every data section owns its own loading /
+  // empty / error branch instead of gating the whole page behind one guard.
+  const bothLoading = statsA.isLoading || statsB.isLoading;
+  const loadError = statsA.error ?? statsB.error;
   const a = statsA.data;
   const b = statsB.data;
+  const refetchAll = () => {
+    void statsA.refetch();
+    void statsB.refetch();
+  };
 
   // Hide the disambiguation banner for accounts with only one vehicle —
   // they can't usefully cross-navigate to fleet comparison anyway.
@@ -171,17 +181,17 @@ export default function PeriodComparePage() {
     // backend `total_distance` is SI km; `avg_efficiency` is SI Wh/km. Convert
     // both to the user's preferred display unit so chart / table values match
     // the unit label and don't silently mis-render for mi-unit users.
-    const distA = convertDistanceFromSI(a.total_distance * METERS_PER_KM, distanceUnit);
-    const distB = convertDistanceFromSI(b.total_distance * METERS_PER_KM, distanceUnit);
-    const effA = distanceUnit === 'mi' ? a.avg_efficiency * KM_PER_MILE : a.avg_efficiency;
-    const effB = distanceUnit === 'mi' ? b.avg_efficiency * KM_PER_MILE : b.avg_efficiency;
+    const distA = convertDistanceFromSI((a.total_distance ?? 0) * METERS_PER_KM, distanceUnit);
+    const distB = convertDistanceFromSI((b.total_distance ?? 0) * METERS_PER_KM, distanceUnit);
+    const effA = distanceUnit === 'mi' ? (a.avg_efficiency ?? 0) * KM_PER_MILE : (a.avg_efficiency ?? 0);
+    const effB = distanceUnit === 'mi' ? (b.avg_efficiency ?? 0) * KM_PER_MILE : (b.avg_efficiency ?? 0);
     return [
-      { key: 'distance', label: t('compare.totalDistance', 'Total Distance'), icon: <Car className="h-4 w-4" />, a: distA, b: distB, unit: distanceUnit, color: 'cyan' as const },
-      { key: 'drives', label: t('compare.totalDrives', 'Total Drives'), icon: <TrendingUp className="h-4 w-4" />, a: a.total_drives, b: b.total_drives, unit: '', color: 'green' as const },
-      { key: 'energy', label: t('compare.energyUsed', 'Energy Used'), icon: <Zap className="h-4 w-4" />, a: a.energy_used, b: b.energy_used, unit: 'kWh', color: 'purple' as const },
-      { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg Efficiency'), icon: <Gauge className="h-4 w-4" />, a: effA, b: effB, unit: efficiencyUnit, color: 'cyan' as const },
-      { key: 'cost', label: t('compare.totalCost', 'Total Cost'), icon: <DollarSign className="h-4 w-4" />, a: a.total_cost, b: b.total_cost, unit: '$', color: 'green' as const },
-      { key: 'co2', label: t('compare.co2Saved', 'CO₂ Saved'), icon: <Leaf className="h-4 w-4" />, a: a.co2_saved, b: b.co2_saved, unit: 'kg', color: 'purple' as const },
+      { key: 'distance', label: t('compare.totalDistance', 'Total Distance'), icon: <Car className="h-4 w-4" aria-hidden="true" />, a: distA, b: distB, unit: distanceUnit, color: 'cyan' as const },
+      { key: 'drives', label: t('compare.totalDrives', 'Total Drives'), icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />, a: a.total_drives ?? 0, b: b.total_drives ?? 0, unit: '', color: 'green' as const },
+      { key: 'energy', label: t('compare.energyUsed', 'Energy Used'), icon: <Zap className="h-4 w-4" aria-hidden="true" />, a: a.energy_used ?? 0, b: b.energy_used ?? 0, unit: 'kWh', color: 'purple' as const },
+      { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg Efficiency'), icon: <Gauge className="h-4 w-4" aria-hidden="true" />, a: effA, b: effB, unit: efficiencyUnit, color: 'cyan' as const },
+      { key: 'cost', label: t('compare.totalCost', 'Total Cost'), icon: <DollarSign className="h-4 w-4" aria-hidden="true" />, a: a.total_cost ?? 0, b: b.total_cost ?? 0, unit: '$', color: 'green' as const },
+      { key: 'co2', label: t('compare.co2Saved', 'CO₂ Saved'), icon: <Leaf className="h-4 w-4" aria-hidden="true" />, a: a.co2_saved ?? 0, b: b.co2_saved ?? 0, unit: 'kg', color: 'purple' as const },
     ];
   }, [a, b, t, distanceUnit, efficiencyUnit]);
 
@@ -212,7 +222,7 @@ export default function PeriodComparePage() {
       {
         key: 'metric',
         header: t('compare.metric', 'Metric'),
-        render: (r) => <span className="font-medium">{r.metric}</span>,
+        render: (r) => <Text variant="body" className="font-medium">{r.metric}</Text>,
       },
       {
         key: 'periodA',
@@ -231,7 +241,7 @@ export default function PeriodComparePage() {
         header: t('compare.change', 'Change'),
         sortable: true,
         render: (r) => (
-          <span className={cn(r.positive ? 'text-emerald-300' : 'text-rose-300')}>
+          <span className={cn('tabular-nums', r.positive ? 'text-emerald-300' : 'text-rose-300')}>
             {r.positive ? '↑' : '↓'} {fmtNumber(Math.abs(r.change))}
           </span>
         ),
@@ -251,9 +261,9 @@ export default function PeriodComparePage() {
 
   const insights = useMemo(() => {
     if (!a || !b) return [];
-    const distPct = pctChange(a.total_distance, b.total_distance);
-    const effPct = pctChange(a.avg_efficiency, b.avg_efficiency);
-    const costPct = pctChange(a.total_cost, b.total_cost);
+    const distPct = pctChange(a.total_distance ?? 0, b.total_distance ?? 0);
+    const effPct = pctChange(a.avg_efficiency ?? 0, b.avg_efficiency ?? 0);
+    const costPct = pctChange(a.total_cost ?? 0, b.total_cost ?? 0);
     return [
       t('compare.insightDistance', 'Distance traveled was {{pct}} {{dir}} in Period A vs Period B.', {
         pct: distPct.value,
@@ -270,14 +280,52 @@ export default function PeriodComparePage() {
     ];
   }, [a, b, t]);
 
+  /* ── Toolbar (vehicle + both periods + refresh) ── */
+
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Select
+        aria-label={t('compare.vehicle', 'Vehicle')}
+        options={vehicleOptions}
+        value={activeVehicle}
+        onChange={(e) => setVehicleId(e.target.value)}
+        placeholder={t('compare.selectVehicle', 'Select vehicle')}
+        className="w-full sm:w-44"
+      />
+      <Select
+        aria-label={t('compare.periodA', 'Period A')}
+        options={periodOptions}
+        value={periodA}
+        onChange={(e) => setPeriodA(e.target.value as PeriodValue)}
+        className="w-full sm:w-36"
+      />
+      <Text variant="caption" aria-hidden="true">{t('compare.vs', 'vs')}</Text>
+      <Select
+        aria-label={t('compare.periodB', 'Period B')}
+        options={periodOptions}
+        value={periodB}
+        onChange={(e) => setPeriodB(e.target.value as PeriodValue)}
+        className="w-full sm:w-36"
+      />
+      <Button
+        variant="ghost"
+        onClick={refetchAll}
+        aria-label={t('compare.refresh', 'Refresh')}
+        title={t('compare.refresh', 'Refresh')}
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+
   /* ── Render ── */
 
   return (
     <PageContainer
       title={t('compare.title', 'Period Comparison')}
       subtitle={t('compare.subtitle', 'Compare key metrics across two time periods')}
-      loading={isLoading}
-      error={error as Error | null}
+      actions={actions}
+      query={[statsA, statsB]}
     >
       {/* Disambiguation banner — points users who wanted the fleet view to the
           right page. Hidden for single-vehicle accounts and once dismissed. */}
@@ -285,9 +333,8 @@ export default function PeriodComparePage() {
         <FadeIn>
           <AlertBanner
             variant="info"
-            icon={<ArrowLeftRight className="h-4 w-4" />}
+            icon={<ArrowLeftRight className="h-4 w-4" aria-hidden="true" />}
             onClose={dismissBanner}
-            className="mb-4"
           >
             {t(
               'compare.banner.toFleetPrefix',
@@ -295,7 +342,7 @@ export default function PeriodComparePage() {
             )}{' '}
             <Link
               to="/vehicle-comparison"
-              className="font-medium text-neon-cyan underline-offset-2 hover:underline"
+              className="font-medium text-cyan-300 underline-offset-2 hover:underline"
             >
               {t('compare.banner.toFleetCta', 'Open Fleet comparison →')}
             </Link>
@@ -303,151 +350,162 @@ export default function PeriodComparePage() {
         </FadeIn>
       )}
 
-      {/* Selectors */}
-      <FadeIn>
-        <GlassPanel className="mb-6 flex flex-wrap items-end gap-4 p-4">
-          <Select
-            label={t('compare.vehicle', 'Vehicle')}
-            options={vehicleOptions}
-            value={activeVehicle}
-            onChange={(e) => setVehicleId(e.target.value)}
-            className="w-48"
-          />
-          <Select
-            label={t('compare.periodA', 'Period A')}
-            options={periodOptions}
-            value={periodA}
-            onChange={(e) => setPeriodA(e.target.value as PeriodValue)}
-            className="w-44"
-          />
-          <Select
-            label={t('compare.periodB', 'Period B')}
-            options={periodOptions}
-            value={periodB}
-            onChange={(e) => setPeriodB(e.target.value as PeriodValue)}
-            className="w-44"
-          />
-        </GlassPanel>
-      </FadeIn>
-
       {/* AI period-compare narration; opt-in and hidden when ai_mode='off'. */}
       <FadeIn delay={0.025}>
-        <div className="mb-6">
-          <AIPeriodCompareNarration
-            vehicleId={activeVehicle}
-            daysA={daysA}
-            daysB={daysB}
-          />
-        </div>
+        <AIPeriodCompareNarration
+          vehicleId={activeVehicle}
+          daysA={daysA}
+          daysB={daysB}
+        />
       </FadeIn>
 
-      {!a || !b ? (
-        isLoading ? (
-          <Skeleton lines={6} />
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Calendar className="h-10 w-10" />}
-            message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
-          />
-        )
-      ) : (
-        <>
-          {/* Metric cards */}
-          <FadeIn delay={0.05}>
-            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* 1 — KPI band: full-width responsive metric grid (2 → 3 → 6 cols). */}
+      <FadeIn delay={0.05}>
+        <section aria-label={t('compare.kpis', 'Comparison metrics')}>
+          {loadError ? (
+            <GlassPanel className="p-4 sm:p-5">
+              <QueryError error={loadError} onRetry={refetchAll} />
+            </GlassPanel>
+          ) : bothLoading ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} height={92} />
+              ))}
+            </div>
+          ) : metrics.length === 0 ? (
+            <GlassPanel className="p-4 sm:p-5">
+              <EmptyState /* no-action: transient empty state — surfaces when a vehicle/period pair has no source data */
+                icon={<Calendar className="h-10 w-10" aria-hidden="true" />}
+                message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
+              />
+            </GlassPanel>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
               {metrics.map((m) => {
                 const pct = pctChange(m.a, m.b);
                 return (
                   <MetricCard
                     key={m.key}
                     label={m.label}
-                    value={`${fmtNumber(m.a)} ${m.unit}`}
+                    value={`${fmtNumber(m.a)} ${m.unit}`.trim()}
                     icon={m.icon}
                     color={m.color}
-                    subtitle={`${t('compare.periodB', 'Period B')}: ${fmtNumber(m.b)} ${m.unit}`}
+                    subtitle={`${t('compare.periodB', 'Period B')}: ${fmtNumber(m.b)} ${m.unit}`.trim()}
                     change={pct}
                   />
                 );
               })}
             </div>
-          </FadeIn>
+          )}
+        </section>
+      </FadeIn>
 
-          {/* Bar chart */}
-          <FadeIn delay={0.1}>
-            <GlassPanel className="mb-6 p-4">
-              <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-                {t('compare.chartTitle', 'Side-by-Side Comparison')}
-              </p>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={chartData} margin={chartMarginLabeled}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--glass-border)"
-                    strokeOpacity={0.4}
-                  />
-                  <XAxis dataKey="name" tick={axisTick} />
-                  <YAxis tick={axisTick} />
-                  <Tooltip content={({ active, payload, label }) => <ChartTooltip active={active} payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]} label={label as string} />} />
-                  <Legend />
-                  <Bar
-                    dataKey="A"
-                    name={t('compare.periodA', 'Period A')}
-                    fill={palette[0]}
-                    radius={[4, 4, 0, 0]}
-                    {...chartAnimation}
-                  />
-                  <Bar
-                    dataKey="B"
-                    name={t('compare.periodB', 'Period B')}
-                    fill={palette[1]}
-                    radius={[4, 4, 0, 0]}
-                    {...chartAnimation}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </GlassPanel>
-          </FadeIn>
-
-          {/* Data table */}
-          <FadeIn delay={0.15}>
-            <GlassPanel className="mb-6 p-4">
-              <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-                {t('compare.tableTitle', 'Comparison Details')}
-              </p>
-              <DataTable
-                tableId="analytics:period-compare"
-                columns={columns}
-                data={tableRows}
-                keyExtractor={(r) => r.metric}
-                compact
-                pagination
+      {/* 2 — Primary bento: side-by-side chart (hero) + insights column. */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {/* Side-by-side comparison — the hero, spans two of three columns. */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('compare.chartTitle', 'Side-by-Side Comparison')}
+            </PanelTitle>
+            {loadError ? (
+              <QueryError error={loadError} onRetry={refetchAll} />
+            ) : bothLoading ? (
+              <Skeleton height={288} />
+            ) : chartData.length === 0 ? (
+              <EmptyState /* no-action: transient empty state — no comparable metrics until both periods load */
+                icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
+                message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
               />
-            </GlassPanel>
-          </FadeIn>
-
-          {/* Insights */}
-          <FadeIn delay={0.2}>
-            <GlassPanel className="p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-neon-amber" />
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  {t('compare.insights', 'Insights')}
-                </p>
+            ) : (
+              <div className="h-64 sm:h-72 xl:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={chartMarginLabeled}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--glass-border)"
+                      strokeOpacity={0.4}
+                    />
+                    <XAxis dataKey="name" tick={axisTick} />
+                    <YAxis tick={axisTick} />
+                    <Tooltip content={({ active, payload, label }) => <ChartTooltip active={active} payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]} label={label as string} />} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar
+                      dataKey="A"
+                      name={t('compare.periodA', 'Period A')}
+                      fill={palette[0]}
+                      radius={[4, 4, 0, 0]}
+                      {...chartAnimation}
+                    />
+                    <Bar
+                      dataKey="B"
+                      name={t('compare.periodB', 'Period B')}
+                      fill={palette[1]}
+                      radius={[4, 4, 0, 0]}
+                      {...chartAnimation}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-              <ul className="space-y-1.5">
+            )}
+          </GlassPanel>
+
+          {/* Insights — plain-language deltas beside the chart on wide screens. */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              {t('compare.insights', 'Insights')}
+            </PanelTitle>
+            {loadError ? (
+              <QueryError error={loadError} onRetry={refetchAll} />
+            ) : bothLoading ? (
+              <Skeleton lines={3} />
+            ) : insights.length === 0 ? (
+              <EmptyState /* no-action: transient empty state — insights derive from both periods' stats */
+                icon={<Lightbulb className="h-8 w-8" aria-hidden="true" />}
+                message={t('compare.insightsEmpty', 'Insights appear once both periods have data.')}
+              />
+            ) : (
+              <ul className="space-y-2.5">
                 {insights.map((line, idx) => (
-                  <li
-                    key={idx}
-                    className="text-xs text-[var(--text-secondary)]"
-                  >
-                    • {line}
+                  <li key={idx} className="flex gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70"
+                    />
+                    <Text as="span" variant="bodySm">{line}</Text>
                   </li>
                 ))}
               </ul>
-            </GlassPanel>
-          </FadeIn>
-        </>
-      )}
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 3 — Detail band: full-width comparison table. */}
+      <FadeIn delay={0.15}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3">
+            {t('compare.tableTitle', 'Comparison Details')}
+          </PanelTitle>
+          {loadError ? (
+            <QueryError error={loadError} onRetry={refetchAll} />
+          ) : bothLoading ? (
+            <Skeleton height={220} />
+          ) : (
+            <DataTable
+              tableId="analytics:period-compare"
+              columns={columns}
+              data={tableRows}
+              keyExtractor={(r) => r.metric}
+              emptyMessage={t('compare.empty', 'Select a vehicle and two periods to compare.')}
+              compact
+              pagination
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }
