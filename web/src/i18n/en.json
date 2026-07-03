@@ -4863,14 +4863,58 @@
   },
   "powershare": {
     "title": "Powershare",
+    "subtitle": "Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions.",
     "selectVehicle": "Select vehicle",
+    "refresh": "Refresh Powershare data",
+    "noVehicle": "Select a vehicle to view its Powershare telemetry.",
     "statusSection": "Powershare Status",
     "type": "Type",
     "typeSub": "Powershare destination",
     "outputPower": "Output Power",
     "outputPowerSub": "Instantaneous power draw",
     "hoursLeft": "Hours Remaining",
-    "stopReasonSection": "Stop Reason"
+    "stopReasonSection": "Stop Reason",
+    "kpi": {
+      "sectionLabel": "Powershare metrics",
+      "status": "Status",
+      "statusSub": "Current sharing state",
+      "type": "Type",
+      "typeSub": "Powershare destination",
+      "outputPower": "Output Power",
+      "outputPowerSub": "Instantaneous power draw",
+      "hoursRemaining": "Hours Remaining",
+      "hoursRemainingSub": "Runtime at current output"
+    },
+    "powerTrend": {
+      "title": "Output Power Trend",
+      "noData": "No power readings yet. The chart fills in as your vehicle streams Powershare telemetry."
+    },
+    "hoursTrend": {
+      "title": "Remaining Runtime Trend",
+      "noData": "No runtime readings yet. Estimated hours appear once Powershare reports telemetry."
+    },
+    "runtime": {
+      "title": "Live Session",
+      "statusLabel": "Status",
+      "statusUnknown": "Unknown",
+      "typeLabel": "Destination",
+      "outputPower": "Output Power",
+      "hoursRemaining": "Hours Remaining",
+      "noData": "No live Powershare session. Details appear when your vehicle starts sharing power."
+    },
+    "stopReason": {
+      "title": "Stop Reason",
+      "help": "Last recorded reason Powershare was halted.",
+      "noData": "No stop reason recorded. Powershare has not been halted, or the signal has not yet been reported."
+    },
+    "snapshot": {
+      "title": "Signal Snapshot",
+      "subtitle": "Latest raw Powershare telemetry",
+      "signal": "Signal",
+      "value": "Value",
+      "updated": "Updated",
+      "noData": "No Powershare signals received yet."
+    }
   },
   "tesla_charging": {
     "title": "Tesla Charging History",
