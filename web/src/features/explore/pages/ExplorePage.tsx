@@ -342,14 +342,13 @@ function RecentStrip({
                 className={cn(
                   'inline-flex min-h-11 items-center gap-2 rounded-full px-3.5 py-2',
                   'border border-[var(--glass-border)] bg-[var(--surface-1)]',
-                  'text-sm text-[var(--text-primary)]',
                   'hover:bg-[var(--surface-2)]',
                   'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
                   'transition-colors',
                 )}
               >
                 <Icon className={cn('h-4 w-4 shrink-0', entry.color)} aria-hidden="true" />
-                <span>{entry.label}</span>
+                <Text variant="body">{entry.label}</Text>
               </a>
             </li>
           );
@@ -378,7 +377,7 @@ function SectionAnchorStrip({
           key={section}
           href={`#explore-section-${slugify(section)}`}
           className={cn(
-            'inline-flex min-h-11 items-center gap-2 rounded-full px-3 py-1.5 text-sm',
+            'inline-flex min-h-11 items-center gap-2 rounded-full px-3 py-1.5',
             'bg-white/[0.04] text-[var(--text-secondary)]',
             'hover:bg-white/[0.08] hover:text-[var(--text-primary)]',
             'border border-[var(--glass-border)]',
@@ -386,7 +385,7 @@ function SectionAnchorStrip({
             'transition-colors',
           )}
         >
-          <span>{section}</span>
+          <Text as="span" size="sm">{section}</Text>
           <Caption
             className="tabular-nums"
             aria-label={t('explore.anchorCountAria', '{{count}} features', { count })}
