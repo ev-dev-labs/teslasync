@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import {
   Lock,
   Unlock,
@@ -123,7 +124,7 @@ export function EventTimeline({ timelineEvents, isLoading, error, onRetry, class
                 </div>
                 <TimeStamp
                   value={ev.timestamp}
-                  className="shrink-0 whitespace-nowrap text-2xs text-[var(--text-muted)]"
+                  className={cn('shrink-0 whitespace-nowrap', typography.size['2xs'], 'text-[var(--text-muted)]')}
                 />
               </li>
             );

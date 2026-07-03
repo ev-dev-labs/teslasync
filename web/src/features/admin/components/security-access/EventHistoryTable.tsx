@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { Badge, GlassPanel, PanelTitle, DataTable, type Column } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
@@ -26,7 +27,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
         header: t('admin.security.col.time', 'Time'),
         sortable: true,
         render: (row) => (
-          <TimeStamp value={row.createdAt} className="whitespace-nowrap text-xs text-[var(--text-muted)]" />
+          <TimeStamp value={row.createdAt} className={cn('whitespace-nowrap', typography.size.xs, 'text-[var(--text-muted)]')} />
         ),
       },
       {
@@ -51,7 +52,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
         key: 'doorState',
         header: t('admin.security.col.doors', 'Doors'),
         render: (row) => (
-          <span className={cn('text-sm', doorClosed(row.doorState) ? 'text-emerald-300' : 'text-amber-300')}>
+          <span className={cn(typography.size.sm, doorClosed(row.doorState) ? 'text-emerald-300' : 'text-amber-300')}>
             {asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : '—')}
           </span>
         ),
@@ -60,7 +61,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
         key: 'windows',
         header: t('admin.security.col.windows', 'Windows'),
         render: (row) => (
-          <span className={cn('text-sm', allWindowsClosed(row) ? 'text-emerald-300' : 'text-amber-300')}>
+          <span className={cn(typography.size.sm, allWindowsClosed(row) ? 'text-emerald-300' : 'text-amber-300')}>
             {windowSummary(row, t)}
           </span>
         ),
