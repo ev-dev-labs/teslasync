@@ -98,7 +98,7 @@ export default function YearReviewPage() {
         <Button variant="ghost" size="sm" onClick={() => goYear(year - 1)} aria-label={t('yearReview.prevYear', 'Previous year')}>
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Text variant="body" className="min-w-[3.5ch] text-center font-semibold tabular-nums">{year}</Text>
+        <Text size="sm" weight="semibold" color="primary" className="min-w-[3.5ch] text-center tabular-nums">{year}</Text>
         <Button variant="ghost" size="sm" onClick={() => goYear(year + 1)} disabled={year >= currentYear} aria-label={t('yearReview.nextYear', 'Next year')}>
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>

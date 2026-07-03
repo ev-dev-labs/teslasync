@@ -36,7 +36,7 @@ export function YearSummaryCard({ data }: Props) {
           <Caption>{t('yearReview.title', 'Year in Review')}</Caption>
         </div>
         <div className="text-end">
-          <Text variant="body" className="block font-semibold">{data.vehicle?.display_name ?? '—'}</Text>
+          <Text size="sm" weight="semibold" color="primary" className="block">{data.vehicle?.display_name ?? '—'}</Text>
           <Caption>{data.vehicle?.model ?? ''}</Caption>
         </div>
       </div>

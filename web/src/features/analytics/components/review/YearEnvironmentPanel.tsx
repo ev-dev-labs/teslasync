@@ -46,7 +46,7 @@ export function YearEnvironmentPanel({ data }: Props) {
 
       <div className="mt-auto flex flex-wrap gap-1.5" aria-hidden="true">
         {treeIcons.map((i) => (
-          <span key={i} className="text-xl leading-none">🌳</span>
+          <Text as="span" key={i} size="xl" className="leading-none">🌳</Text>
         ))}
         {trees > MAX_TREES && (
           <Text variant="bodySm" className="self-end">
