@@ -3349,6 +3349,13 @@
     "value": "Value",
     "type": "Type",
     "category": "Category",
+    "categoryName": {
+      "Battery": "Battery",
+      "Charging": "Charging",
+      "Driving": "Driving",
+      "Climate": "Climate",
+      "Other": "Other"
+    },
     "title": "Redis Signal Viewer",
     "subtitle": "Inspect cached signal values in Redis",
     "selectVehicle": "Select vehicle…",
