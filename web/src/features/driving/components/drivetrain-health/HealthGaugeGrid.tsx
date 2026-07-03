@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
@@ -66,9 +66,9 @@ export function HealthGaugeGrid({
                 color={healthColor}
                 size={140}
               />
-              <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
+              <Text as="p" variant="caption" className="mt-3 text-center">
                 {t('drivetrain.healthScoreDesc', 'Overall drivetrain condition rating')}
-              </p>
+              </Text>
             </>
           )}
         </GlassPanel>
@@ -102,9 +102,9 @@ export function HealthGaugeGrid({
               />
               <div className="mt-4 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-                <span className="text-xs text-[var(--text-muted)]">
+                <Caption>
                   {t('drivetrain.realTime', 'Real-time telemetry active')}
-                </span>
+                </Caption>
               </div>
             </>
           )}
