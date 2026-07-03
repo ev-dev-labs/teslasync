@@ -22,10 +22,10 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, CopyButton } from '@/components/ui';
 import {
+  GlassPanel, Button, CopyButton,
   SectionTitle, PanelTitle, Text, Caption, Label, MetricValue, Code,
-} from '@/components/ui/Typography';
+} from '@/components/ui';
 import { SeverityBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
