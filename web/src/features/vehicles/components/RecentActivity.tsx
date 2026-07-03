@@ -66,7 +66,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       value={`${Math.floor(d.duration_s / 3600)}h ${fmtInt(Math.floor((d.duration_s % 3600) / 60))}m`}
                     />
                     {d.start_soc_pct != null && d.end_soc_pct != null && (
-                      <span className="text-[10px] text-[var(--text-muted)]">
+                      <span className="text-2xs text-[var(--text-muted)]">
                         {d.start_soc_pct}% → {d.end_soc_pct}%
                       </span>
                     )}
@@ -126,7 +126,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       value={`${Math.floor(s.duration_min / 60)}h ${fmtInt(s.duration_min % 60)}m`}
                     />
                     {s.end_soc_pct != null && (
-                      <span className="text-[10px] text-[var(--text-muted)]">
+                      <span className="text-2xs text-[var(--text-muted)]">
                         {s.start_soc_pct}% → {s.end_soc_pct}%
                       </span>
                     )}

@@ -98,16 +98,16 @@ function TransitionRow({
   return (
     <div className="flex items-center justify-between min-h-[44px] gap-2">
       <div className="flex items-center gap-1.5 min-w-0">
-        <Badge variant="neutral" className="text-[10px] capitalize truncate max-w-[72px]">
+        <Badge variant="neutral" className="text-2xs capitalize truncate max-w-[72px]">
           {t(`widget.fsmDistribution.state.${from}`, from)}
         </Badge>
-        <span className="text-[10px] text-[var(--text-muted)]">→</span>
-        <Badge variant="neutral" className="text-[10px] capitalize truncate max-w-[72px]">
+        <span className="text-2xs text-[var(--text-muted)]">→</span>
+        <Badge variant="neutral" className="text-2xs capitalize truncate max-w-[72px]">
           {t(`widget.fsmDistribution.state.${to}`, to)}
         </Badge>
       </div>
       <span className="flex-shrink-0">
-        <TimeStamp value={timestamp} className="text-[10px] text-[var(--text-muted)] tabular-nums" />
+        <TimeStamp value={timestamp} className="text-2xs text-[var(--text-muted)] tabular-nums" />
       </span>
     </div>
   );
@@ -237,10 +237,10 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                   className="inline-block h-2 w-2 rounded-full flex-shrink-0"
                   style={{ backgroundColor: stateColor(seg.state) }}
                 />
-                <span className="text-[10px] text-[var(--text-secondary)] capitalize">
+                <span className="text-2xs text-[var(--text-secondary)] capitalize">
                   {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
                 </span>
-                <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                   {fmtInt(seg.pct)}%
                 </span>
               </div>
@@ -250,7 +250,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
           {/* Transitions feed */}
           {transitions.length > 0 && (
             <div className="flex flex-col gap-0.5 overflow-y-auto">
-              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+              <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
                 {t('widget.fsmDistribution.recentTransitions', 'Recent Transitions')}
               </span>
               {transitions.map((tr) => (

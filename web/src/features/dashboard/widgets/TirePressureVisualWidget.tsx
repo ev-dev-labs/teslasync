@@ -143,13 +143,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
             {/* Left column: FL / RL values */}
             <div className="flex flex-col justify-between h-full py-2 text-right min-w-[50px]">
               <div>
-                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireFL', 'FL')}</p>
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireFL', 'FL')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[0].status].text}`}>
                   {formatPressure(tires[0].value)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireRL', 'RL')}</p>
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireRL', 'RL')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[2].status].text}`}>
                   {formatPressure(tires[2].value)}
                 </p>
@@ -164,13 +164,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
             {/* Right column: FR / RR values */}
             <div className="flex flex-col justify-between h-full py-2 text-left min-w-[50px]">
               <div>
-                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireFR', 'FR')}</p>
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireFR', 'FR')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[1].status].text}`}>
                   {formatPressure(tires[1].value)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireRR', 'RR')}</p>
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireRR', 'RR')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[3].status].text}`}>
                   {formatPressure(tires[3].value)}
                 </p>
@@ -185,7 +185,7 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
                 ? t('widget.tireAllNormal', 'All Normal')
                 : t('widget.tireWarning', 'Check Pressure')}
             </Badge>
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-2xs text-[var(--text-muted)]">
               {pressureUnit} · {formatTimestamp(latestReading, t)}
             </span>
           </div>

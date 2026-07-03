@@ -83,7 +83,7 @@ function StandardView({
 
       {/* Drivers section */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <p className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide mb-1">
+        <p className="text-2xs uppercase text-[var(--text-muted)] tracking-wide mb-1">
           {t('widget.vehicleAccessAuthorized', 'Authorized Drivers')}
         </p>
         <WidgetDetailCard
@@ -97,7 +97,7 @@ function StandardView({
       {/* Invitations section */}
       {invitationEntries.length > 0 && (
         <div className="flex-shrink-0 border-t border-white/[0.06] pt-2">
-          <p className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide mb-1">
+          <p className="text-2xs uppercase text-[var(--text-muted)] tracking-wide mb-1">
             {t('widget.vehicleAccessPending', 'Pending Invitations')}
           </p>
           <WidgetDetailCard

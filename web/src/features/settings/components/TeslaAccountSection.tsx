@@ -113,7 +113,7 @@ export function TeslaAccountSection() {
                   {expiringSoon !== null && (
                     <span
                       data-testid="tesla-expiring-soon-pill"
-                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300"
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-amber-300"
                     >
                       <AlertTriangle className="h-3 w-3" aria-hidden />
                       {t('tesla.expiringSoon', 'Expires in {{days}}d', { days: expiringSoon })}
@@ -121,7 +121,7 @@ export function TeslaAccountSection() {
                   )}
                 </div>
                 {auth.expires_at && (
-                  <p className="text-[11px] text-[var(--text-muted)]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     {t('tesla.tokenExpires', 'Token expires')} {formatDateTime(auth.expires_at)}
                   </p>
                 )}
@@ -139,7 +139,7 @@ export function TeslaAccountSection() {
                     : t('tesla.notConnected', 'Not connected')}
                 </p>
                 {pillDisconnected && (
-                  <p className="text-[11px] text-[var(--text-muted)]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     {t('tesla.reauth.body', 'Reconnect to resume live data and commands.')}
                   </p>
                 )}

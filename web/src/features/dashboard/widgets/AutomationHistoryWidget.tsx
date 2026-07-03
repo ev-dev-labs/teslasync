@@ -49,7 +49,7 @@ function CompactView({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(successRate, 1)}%</span>
-      <span className="text-[10px] text-[var(--text-muted)]">{t('widget.successRate', 'Success Rate')}</span>
+      <span className="text-2xs text-[var(--text-muted)]">{t('widget.successRate', 'Success Rate')}</span>
       {lastRunTime && (
         <TimeStamp value={lastRunTime} className="text-xs text-[var(--text-secondary)]" />
       )}
@@ -130,7 +130,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
               {fmtNumber(successRate, 1)}% {t('widget.successRate', 'Success Rate')}
             </Badge>
             {summary && (
-              <span className="text-[10px] text-[var(--text-muted)]">
+              <span className="text-2xs text-[var(--text-muted)]">
                 {fmtInt(summary.total_executions)} {t('widget.totalRuns', 'runs')}
               </span>
             )}

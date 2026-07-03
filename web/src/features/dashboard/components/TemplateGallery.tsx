@@ -206,7 +206,7 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
           : t('templates.title', 'Dashboard Templates')
       }
       size="lg"
-      className="bg-[#0f1218] border border-white/[0.08] text-white max-h-[80vh] overflow-y-auto"
+      className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)] max-h-[80vh] overflow-y-auto"
     >
       {selectedTemplate ? (
         <TemplateDetail

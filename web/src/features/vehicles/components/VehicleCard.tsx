@@ -55,7 +55,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
             <div className="flex items-center gap-3 mb-1.5">
               <Link
                 to={`/vehicles/${vehicle.id}`}
-                className="text-base font-semibold text-gray-900 dark:text-white hover:text-cyan-400 transition-colors truncate"
+                className="text-base font-semibold text-[var(--text-primary)] hover:text-cyan-400 transition-colors truncate"
               >
                 {vehicle.display_name || vehicle.vin}
               </Link>
@@ -78,29 +78,29 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                     label=""
                   />
                   <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="text-sm font-bold text-[var(--text-primary)]">
                       {state.battery_level}%
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+                    <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {formatDistance(state.rated_range)}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-center">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
                     {formatTemperature(state.inside_temp)}
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+                  <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                     {t('card.interior', 'Interior')}
                   </p>
                 </div>
 
                 <div className="text-center">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
                     {fmtInt(convertDistanceFromSI(state.odometer ?? 0, unitPrefs.distance))}
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+                  <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                     {unitPrefs.distance}
                   </p>
                 </div>
@@ -110,7 +110,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                     <p className="text-sm font-medium text-green-500">
                       {state.charger_power} kW
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+                    <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {t('card.charging', 'Charging')}
                     </p>
                   </div>

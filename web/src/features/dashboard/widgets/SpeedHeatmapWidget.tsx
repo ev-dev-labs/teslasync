@@ -130,7 +130,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
           <span className="text-2xl font-bold text-[var(--text-primary)]">
             {maxSpeed > 0 ? fmtNumber(maxSpeed, 0) : '—'}
           </span>
-          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+          <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
             {t('widget.speedHeatmap.peak', 'Peak')} {unitPrefs.speed}
           </span>
         </div>
@@ -183,7 +183,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
 
           {/* Legend */}
           <div className="flex items-center justify-between pt-1 flex-shrink-0">
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-2xs text-[var(--text-muted)]">
               {t('widget.speedHeatmap.slow', 'Slow')}
             </span>
             <div className="flex gap-px">
@@ -195,7 +195,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
                 />
               ))}
             </div>
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-2xs text-[var(--text-muted)]">
               {t('widget.speedHeatmap.fast', 'Fast')}
             </span>
           </div>
@@ -243,7 +243,7 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: Heatma
           y={topMargin - 3}
           textAnchor="middle"
           className="fill-white/30"
-          style={{ fontSize: '6px' }}
+          fontSize={6}
         >
           {h}
         </text>
@@ -257,7 +257,7 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: Heatma
           y={topMargin + i * 12 + 8}
           textAnchor="end"
           className="fill-white/40"
-          style={{ fontSize: '6px' }}
+          fontSize={6}
         >
           {label}
         </text>

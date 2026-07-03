@@ -120,7 +120,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
               value={(data.total_wh ?? 0) / 1000}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {unitPrefs.energy}
             </span>
           </div>

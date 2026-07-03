@@ -86,7 +86,7 @@ export function VehicleCharts({
               </MapContainer>
             </div>
             <div className="p-3 text-center">
-              <p className="text-[10px] text-[var(--text-muted)] font-mono">
+              <p className="text-2xs text-[var(--text-muted)] font-mono">
                 {fmtNumber(state.latitude)}, {fmtNumber(state.longitude)}
               </p>
             </div>
@@ -194,7 +194,7 @@ export function VehicleCharts({
               <Settings className="h-4 w-4 text-neon-amber" />
               {t('common.carPreferences', 'Car Display Preferences')}
             </h3>
-            <p className="text-[10px] text-[var(--text-muted)] mb-3">
+            <p className="text-2xs text-[var(--text-muted)] mb-3">
               These are your vehicle&apos;s display settings — you can sync your app to match
               them from the Settings page.
             </p>

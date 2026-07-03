@@ -35,7 +35,7 @@ function ServiceRow({ label, status }: { label: string; status: ServiceStatus })
         <StatusDot status={status} />
         <span className="text-xs text-[var(--text-secondary)]">{label}</span>
       </div>
-      <Badge variant={statusVariant(status)} className="text-[10px]">
+      <Badge variant={statusVariant(status)} className="text-2xs">
         {status === 'ok' || status === 'healthy' ? 'OK' : status}
       </Badge>
     </div>
@@ -81,7 +81,7 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
         <div className="flex flex-col gap-2 h-full">
           {/* Overall status badge */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+            <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
               {t('widget.uptime.overall', 'Overall')}
             </span>
             <Badge variant={statusVariant(overallStatus as ServiceStatus)}>
@@ -110,11 +110,11 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
           {/* Extended detail in tall mode */}
           {isTall && !isCompact && (
             <div className="mt-auto pt-2 border-t border-white/[0.06]">
-              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+              <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
                 <span>{t('widget.uptime.dbSize', 'DB Size')}</span>
                 <span className="text-[var(--text-secondary)]">{data.databaseSize ?? '—'}</span>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+              <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
                 <span>{t('widget.uptime.tables', 'Tables')}</span>
                 <span className="text-[var(--text-secondary)]">{data.tableCount ?? '—'}</span>
               </div>

@@ -42,7 +42,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
 
   return (
     <GlassPanel className="p-5">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
         <Activity className="h-4 w-4 text-cyan-400" />
         {t('fleet.batteryStatus', 'Fleet Battery Status')}
       </h3>
@@ -52,7 +52,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
           const color = batteryColor(level);
           return (
             <div key={vehicle.id} className="flex items-center gap-3">
-              <span className="text-xs text-gray-600 dark:text-[var(--text-secondary)] w-24 truncate">
+              <span className="text-xs text-[var(--text-secondary)] w-24 truncate">
                 {vehicle.display_name || vehicle.vin}
               </span>
               <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
@@ -65,10 +65,10 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
                   }}
                 />
               </div>
-              <span className="text-xs font-medium text-gray-900 dark:text-white w-10 text-right">
+              <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">
                 {level}%
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] w-16 text-right">
+              <span className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] w-16 text-right">
                 {formatDistance(state.rated_range ?? 0)}
               </span>
             </div>

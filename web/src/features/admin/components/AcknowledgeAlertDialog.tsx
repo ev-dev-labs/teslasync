@@ -93,7 +93,7 @@ export function AcknowledgeAlertDialog({
           disabled={submitting}
           error={tooLong ? t('alerts.ack.noteHint', 'Up to {{max}} characters. Shared in the audit timeline.', { max: NOTE_MAX }) : undefined}
         />
-        <p id={hintId} className="text-[11px] text-[var(--text-muted)]">
+        <p id={hintId} className="text-xs text-[var(--text-muted)]">
           {t('alerts.ack.noteHint', 'Up to {{max}} characters. Shared in the audit timeline.', { max: NOTE_MAX })}
         </p>
         <div className="flex items-center justify-end gap-2 pt-2">

@@ -41,7 +41,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       actions={
         <Link
           to="/drives"
-          className="text-[10px] text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
+          className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.viewAll', 'View all')} <ArrowUpRight className="h-3 w-3" />
         </Link>
@@ -56,12 +56,12 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
                   <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                     {fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance), 1)} {unitPrefs.distance}
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)]">
+                  <p className="text-2xs text-[var(--text-muted)]">
                     {fmtInt((d.duration_s ?? 0) / 60)} min · {d.start_soc_pct ?? '?'}% →{' '}
                     {d.end_soc_pct ?? '?'}%
                   </p>
                 </div>
-                <span className="text-[10px] text-[var(--text-muted)] shrink-0">
+                <span className="text-2xs text-[var(--text-muted)] shrink-0">
                   {formatDateShort(d.start_ts)}
                 </span>
               </div>

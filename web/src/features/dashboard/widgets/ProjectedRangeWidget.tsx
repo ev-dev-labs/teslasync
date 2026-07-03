@@ -138,7 +138,7 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
 
             {/* Factors list */}
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
+              <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 {t('widget.projectedRange.factors', 'Range Factors')}
               </p>
               <div className="flex flex-col gap-1.5">
@@ -207,7 +207,7 @@ function ComparisonBar({
 }) {
   return (
     <div className="flex-shrink-0">
-      <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] mb-1">
+      <div className="flex items-center justify-between text-2xs text-[var(--text-muted)] mb-1">
         <span>{t('widget.projectedRange.projected', 'Projected')}</span>
         <span>
           {t('widget.projectedRange.epa', 'EPA')}: {epaRange != null ? `${fmtNumber(epaRange, 0)} ${distanceUnit}` : '—'}
@@ -223,7 +223,7 @@ function ComparisonBar({
         />
       </div>
       {rangePct != null && (
-        <p className="text-[10px] text-[var(--text-muted)] mt-0.5 text-center">
+        <p className="text-2xs text-[var(--text-muted)] mt-0.5 text-center">
           {rangePct}% {t('widget.projectedRange.ofEpa', 'of EPA rated')}
         </p>
       )}

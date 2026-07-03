@@ -111,7 +111,7 @@ function CompactChargingView({ power, batteryLevel }: { power: number; batteryLe
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <BatteryCharging className="h-5 w-5 text-neon-green animate-pulse" />
       <AnimatedNumber value={power} decimals={1} suffix=" kW" className="text-lg font-bold text-neon-green" />
-      <span className="text-[10px] text-[var(--text-muted)]">{batteryLevel}%</span>
+      <span className="text-2xs text-[var(--text-muted)]">{batteryLevel}%</span>
     </div>
   );
 }
@@ -122,7 +122,7 @@ function CompactIdleView({ batteryLevel, t }: { batteryLevel: number; t: (k: str
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <Plug className="h-5 w-5 text-[var(--text-muted)]" />
       <span className="text-lg font-bold text-[var(--text-primary)]">{batteryLevel}%</span>
-      <span className="text-[10px] text-[var(--text-muted)]">{t('widget.notCharging', 'Not Charging')}</span>
+      <span className="text-2xs text-[var(--text-muted)]">{t('widget.notCharging', 'Not Charging')}</span>
     </div>
   );
 }
@@ -239,7 +239,7 @@ function IdleView({ metrics, latestSession, t }: IdleViewProps) {
       </div>
       {latestSession && (
         <div className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] w-full">
-          <p className="text-[10px] text-[var(--text-muted)] mb-0.5">
+          <p className="text-2xs text-[var(--text-muted)] mb-0.5">
             {t('widget.lastSession', 'Last Session')}
           </p>
           <p className="text-xs font-medium text-[var(--text-secondary)]">
@@ -257,7 +257,7 @@ function MetricCell({ icon, label, value }: { icon: React.ReactNode; label: stri
     <div className="flex items-start gap-1.5 min-w-0">
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[10px] text-[var(--text-muted)] truncate">{label}</p>
+        <p className="text-2xs text-[var(--text-muted)] truncate">{label}</p>
         <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{value}</p>
       </div>
     </div>

@@ -48,7 +48,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
             <p className="text-2xl font-bold text-cyan-300">
               {fmtNumber(ratedConverted, 0)}
             </p>
-            <p className="text-[10px] text-[var(--text-muted)]">
+            <p className="text-2xs text-[var(--text-muted)]">
               {distanceUnit} {t('widget.rated', 'rated')}
             </p>
           </div>
@@ -69,7 +69,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
               sublabel={`${fmtNumber(idealConverted, 0)} ${distanceUnit}`}
             />
             {rated > 0 && ideal > 0 && (
-              <p className="text-[10px] text-[var(--text-muted)] text-right">
+              <p className="text-2xs text-[var(--text-muted)] text-right">
                 {t('widget.epaComparison', 'EPA variance')}{' '}
                 <span className="text-[var(--text-secondary)] font-mono">
                   {ideal >= rated ? '+' : ''}

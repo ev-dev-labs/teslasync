@@ -24,9 +24,9 @@ export function QuickNav() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">{t(nav.labelKey, nav.label)}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{t(nav.descKey, nav.desc)}</p>
+                <p className="text-2xs text-[var(--text-muted)]">{t(nav.descKey, nav.desc)}</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-[var(--text-secondary)] transition-colors" />
+              <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors" />
             </div>
           </GlassPanel>
         </Link>

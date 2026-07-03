@@ -172,7 +172,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
               {chips.map((chip) => (
                 <span
                   key={chip.label}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border border-white/[0.06] bg-white/[0.02]"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border border-white/[0.06] bg-white/[0.02]"
                 >
                   <chip.icon className="h-3 w-3" style={{ color: chip.color }} />
                   <span className="text-[var(--text-secondary)]">{chip.label}</span>

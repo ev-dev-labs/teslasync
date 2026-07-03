@@ -116,7 +116,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
             <span className="text-sm font-bold text-[var(--text-primary)] truncate">{chartVersion}</span>
-            <Badge variant="neutral" className="text-[10px]">
+            <Badge variant="neutral" className="text-2xs">
               {truncatedSha}
             </Badge>
           </div>

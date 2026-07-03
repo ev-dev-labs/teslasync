@@ -88,7 +88,7 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
 
       {/* Label + value */}
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-[var(--text-secondary)] truncate leading-tight">
+        <p className="text-2xs text-[var(--text-secondary)] truncate leading-tight">
           {formatSignalName(signal)}
         </p>
         <p className="text-xs font-bold text-[var(--text-primary)] leading-tight">
@@ -105,7 +105,7 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
           height={20}
         />
       ) : (
-        <span className="text-[9px] text-[var(--text-muted)] w-14 text-center">
+        <span className="text-2xs text-[var(--text-muted)] w-14 text-center">
           {t('widget.noHistory', 'no data')}
         </span>
       )}

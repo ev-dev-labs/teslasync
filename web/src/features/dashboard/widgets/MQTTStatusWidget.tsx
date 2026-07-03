@@ -68,7 +68,7 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
           <div className="flex flex-col gap-3 h-full">
             {/* Connection status row */}
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+              <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
                 {t('widget.mqtt.status', 'Status')}
               </span>
               <StatusBadge status={connected ? 'online' : 'offline'} size="sm" />
@@ -88,13 +88,13 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
 
             {/* Last message & broker */}
             <div className="mt-auto pt-2 border-t border-white/[0.06] space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+              <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
                 <span>{t('widget.mqtt.lastMessage', 'Last Message')}</span>
                 <span className="text-[var(--text-secondary)] truncate ml-2">
                   {stats.lastMessage ? formatRelative(stats.lastMessage) : '—'}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+              <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
                 <span>{t('widget.mqtt.broker', 'Broker')}</span>
                 <span className="text-[var(--text-secondary)] truncate ml-2">{broker}</span>
               </div>

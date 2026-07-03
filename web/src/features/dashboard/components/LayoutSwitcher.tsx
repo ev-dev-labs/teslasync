@@ -147,12 +147,12 @@ export function LayoutSwitcher({
         </span>
         <span className="max-w-[10rem] truncate">{activeName}</span>
         {dirty && (
-          <Badge variant="warning" className="ml-1 px-1.5 py-0 text-[10px]">
+          <Badge variant="warning" className="ml-1 px-1.5 py-0 text-2xs">
             {t('layout.modified', 'modified')}
           </Badge>
         )}
         {pinnedLabel && (
-          <Badge variant="neutral" className="ml-1 px-1.5 py-0 text-[10px]">
+          <Badge variant="neutral" className="ml-1 px-1.5 py-0 text-2xs">
             <Pin className="mr-1 inline h-2.5 w-2.5" aria-hidden="true" />
             {pinnedLabel}
           </Badge>
@@ -223,7 +223,7 @@ export function LayoutSwitcher({
                     <span className="flex min-w-0 items-center gap-2">
                       <span className="truncate">{d.name}</span>
                       {d.isDefault && (
-                        <Badge variant="neutral" className="px-1 py-0 text-[10px]">
+                        <Badge variant="neutral" className="px-1 py-0 text-2xs">
                           {t('layout.defaultBadge', 'default')}
                         </Badge>
                       )}
@@ -280,7 +280,7 @@ export function LayoutSwitcher({
 
           <div className="my-1 h-px bg-white/[0.06]" />
 
-          <p className="flex items-center gap-2 px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+          <p className="flex items-center gap-2 px-2 py-1 text-2xs uppercase tracking-wider text-[var(--text-muted)]">
             <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
             {t('layout.menuFooter', 'Manage layouts in the tab strip below')}
           </p>

@@ -236,7 +236,7 @@ export function LayoutManager({
                 <span className="text-sm leading-none">{d.icon ?? '📊'}</span>
                 <span className="truncate max-w-[120px]">{d.name}</span>
                 {d.isDefault && (
-                  <span className="text-[9px] text-[var(--text-muted)]">
+                  <span className="text-2xs text-[var(--text-muted)]">
                     {t('dashboard.default', 'default')}
                   </span>
                 )}

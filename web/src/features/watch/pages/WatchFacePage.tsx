@@ -78,7 +78,7 @@ export default function WatchFacePage() {
     watchContent = (
       <>
         {/* Vehicle name */}
-        <div className="text-[10px] text-[var(--text-muted)] text-center truncate px-2">
+        <div className="text-2xs text-[var(--text-muted)] text-center truncate px-2">
           {data.vehicle_name}
         </div>
 
@@ -102,7 +102,7 @@ export default function WatchFacePage() {
           <Badge
             variant={watchStateVariant(data.state)}
             size="sm"
-            className={cn('mt-2 text-[10px] font-medium', watchStateClassName(data.state))}
+            className={cn('mt-2 text-2xs font-medium', watchStateClassName(data.state))}
           >
             {data.state}
           </Badge>
@@ -132,7 +132,7 @@ export default function WatchFacePage() {
         </div>
 
         {/* Last updated */}
-        <div className="text-[8px] text-[var(--text-muted)] text-center">
+        <div className="text-2xs text-[var(--text-muted)] text-center">
           {formatRelativeTime(data.last_updated)}
         </div>
 
@@ -164,7 +164,7 @@ export default function WatchFacePage() {
 
 function WatchShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen bg-black text-white flex flex-col p-3 select-none overflow-hidden">
+    <div className="h-screen bg-black text-[var(--text-on-accent)] flex flex-col p-3 select-none overflow-hidden">
       {children}
     </div>
   );
@@ -201,7 +201,7 @@ function BatteryGauge({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-3xl font-bold">{level}%</span>
-        <span className="text-[10px] text-[var(--text-secondary)]">
+        <span className="text-2xs text-[var(--text-secondary)]">
           {Math.round(rangeDisplay)} {distanceUnit}
         </span>
       </div>
@@ -242,7 +242,7 @@ function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: Stat
       aria-label={label}
     >
       <Icon className="h-4 w-4" />
-      {label && <span className="text-[8px] mt-0.5">{label}</span>}
+      {label && <span className="text-2xs mt-0.5">{label}</span>}
     </ControlButton>
   );
 }

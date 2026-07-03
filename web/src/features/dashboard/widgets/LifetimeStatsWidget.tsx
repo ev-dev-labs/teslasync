@@ -115,7 +115,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
               value={displayDistance}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit} {t('widget.lifetimeStats.lifetime', 'lifetime')}
             </span>
           </div>

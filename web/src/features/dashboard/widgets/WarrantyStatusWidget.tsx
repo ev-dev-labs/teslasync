@@ -216,7 +216,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
               <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {daysRemaining != null ? fmtInt(Math.max(daysRemaining, 0)) : '—'}
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.warranty.daysLeft', 'days left')}
               </span>
               <Badge

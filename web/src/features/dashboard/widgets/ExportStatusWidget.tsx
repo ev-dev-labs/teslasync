@@ -156,7 +156,7 @@ function JobRow({
 
       {/* Relative time */}
       <span className="shrink-0 w-14 text-right">
-        <TimeStamp value={job.createdAt} className="text-[10px] text-[var(--text-muted)]" />
+        <TimeStamp value={job.createdAt} className="text-2xs text-[var(--text-muted)]" />
       </span>
 
       {/* Download link — wide only */}
@@ -164,7 +164,7 @@ function JobRow({
         job.filePath && status === 'ready' ? (
           <a
             href={`/api/v1/export/download/${job.id}`}
-            className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-cyan-300 hover:text-white transition-colors"
+            className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-cyan-300 hover:text-[var(--text-primary)] transition-colors"
             title={t('widget.exportDownload', 'Download')}
           >
             <Download className="h-3.5 w-3.5" />

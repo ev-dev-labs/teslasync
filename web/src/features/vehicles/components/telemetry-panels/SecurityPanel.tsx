@@ -51,7 +51,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
                       ? t('common.locked', 'Locked')
                       : t('common.unlocked', 'Unlocked')}
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)]">
+                  <p className="text-2xs text-[var(--text-muted)]">
                     {t('telemetry.lockStatus', 'Vehicle lock status')}
                   </p>
                 </div>
@@ -64,7 +64,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
                 </span>
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',
                     securityData.sentry_mode
                       ? 'border-red-500/30 bg-red-500/10 text-red-400'
                       : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
@@ -117,7 +117,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
               </div>
 
               {securityData.detail && (
-                <div className="text-[11px] text-[var(--text-muted)] italic">
+                <div className="text-xs text-[var(--text-muted)] italic">
                   {securityData.detail}
                 </div>
               )}

@@ -48,7 +48,7 @@ function CompactView({
       <span className="text-lg font-bold text-[var(--text-primary)]">
         {enabled}/{automations.length}
       </span>
-      <span className="text-[10px] text-[var(--text-muted)]">{t('widget.active', 'Active')}</span>
+      <span className="text-2xs text-[var(--text-muted)]">{t('widget.active', 'Active')}</span>
       {failing > 0 && (
         <Badge variant="warning" size="sm" dot>
           {failing} {t('widget.failing', 'Failing')}
@@ -83,13 +83,13 @@ function AutomationRow({
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           {lastRun && (
-            <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
+            <span className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5">
               <Clock className="h-2.5 w-2.5" />
               {formatRelativeTime(lastRun, t)}
             </span>
           )}
           {automation.next_fire_time && (
-            <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
+            <span className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5">
               ⏰ {formatRelativeTime(automation.next_fire_time, t)}
             </span>
           )}

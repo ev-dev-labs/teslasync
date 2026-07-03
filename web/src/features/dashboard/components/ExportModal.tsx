@@ -57,7 +57,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
       onClose={onClose}
       title={t('export.title', 'Export Dashboard')}
       size="md"
-      className="bg-[#0f1218] border border-white/[0.08] text-white"
+      className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)]"
     >
       <div className="space-y-5">
         {/* Dashboard summary */}

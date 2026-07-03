@@ -49,7 +49,7 @@ export function ActiveOrdersSection() {
           </div>
           <div className="flex items-center gap-3">
             {ordersData?.fetched_at && (
-              <span className="text-[11px] text-[var(--text-muted)]">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('orders.lastSynced', 'Synced')} {formatDateTime(ordersData.fetched_at)}
               </span>
             )}

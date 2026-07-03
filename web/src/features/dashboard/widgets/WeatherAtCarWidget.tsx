@@ -60,7 +60,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
                 {t('widget.outsideTemp', 'Outside Temperature')}
               </span>
               {state?.latitude != null && state?.longitude != null && (
-                <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                   {state.latitude.toFixed(2)}°, {state.longitude.toFixed(2)}°
                 </span>
               )}

@@ -35,7 +35,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
             </span>
             <span
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',
                 motorData.shift_state === 'D'
                   ? 'border-green-500/30 bg-green-500/10 text-green-400'
                   : motorData.shift_state === 'R'
@@ -80,7 +80,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
                 />
               )}
             </div>
-            <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-0.5">
+            <div className="flex justify-between text-2xs text-[var(--text-muted)] mt-0.5">
               <span>-300</span>
               <span>0</span>
               <span>+300</span>

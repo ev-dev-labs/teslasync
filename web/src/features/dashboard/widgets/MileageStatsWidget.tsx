@@ -100,7 +100,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
               value={dailyAvgDisplay}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit}/{t('widget.mileageStats.day', 'day')}
             </span>
           </div>

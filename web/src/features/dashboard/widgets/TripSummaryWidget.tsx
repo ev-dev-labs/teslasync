@@ -55,10 +55,10 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
           {lastTrip && (
             <div className="rounded-lg bg-white/[0.03] p-3">
               <div className="flex items-center gap-1.5 mb-2">
-                <Badge className="text-[10px]">
+                <Badge className="text-2xs">
                   {t('widget.lastTrip', 'Last Trip')}
                 </Badge>
-                <span className="text-[10px] text-[var(--text-muted)]">
+                <span className="text-2xs text-[var(--text-muted)]">
                   {formatDate(lastTrip.start_date)}
                 </span>
               </div>
@@ -97,7 +97,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
           {/* Recent trips list */}
           {recentTrips.length > 1 && (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-              <h4 className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <h4 className="text-2xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.recentTrips', 'Recent Trips')}
               </h4>
               {recentTrips.slice(1).map((trip) => (
@@ -109,7 +109,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                     <p className="text-xs text-[var(--text-secondary)] truncate">
                       {trip.name ?? t('widget.tripUnnamed', 'Unnamed trip')}
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)]">
+                    <p className="text-2xs text-[var(--text-muted)]">
                       {formatDate(trip.start_date)}
                     </p>
                   </div>
@@ -118,10 +118,10 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                       <span className="text-xs text-[var(--text-secondary)] tabular-nums">
                         {fmtNumber(displayDist(trip.total_distance_m ?? 0), 1)} {distanceUnit}
                       </span>
-                      <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                      <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                         {formatDurationRange(trip.start_date, trip.end_date)}
                       </span>
-                      <Badge className="text-[10px]">
+                      <Badge className="text-2xs">
                         {fmtInt(trip.drive_count ?? 0)} {t('widget.drivesShort', 'drv')}
                       </Badge>
                     </div>

@@ -45,7 +45,7 @@ export function VehicleHero({
       <div className="relative p-4 sm:p-6 lg:p-8">
         {/* Vehicle name + status */}
         <div className="flex items-center gap-3 mb-1">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">
             {vehicle.display_name || vehicle.vin}
           </h2>
           <StatusBadge status={status} size="md" />
@@ -105,17 +105,17 @@ export function VehicleHero({
                   </div>
                   <div>
                     <p className="text-[var(--text-secondary)]">{t('hero.chargeRate', 'Rate')}</p>
-                    <p className="text-sm font-bold text-white">
+                    <p className="text-sm font-bold text-[var(--text-primary)]">
                       {fmtInt(toDistanceDisplay(state.charge_rate ?? 0))} {distanceUnit}/h
                     </p>
                   </div>
                   <div>
                     <p className="text-[var(--text-secondary)]">{t('hero.timeToFull', 'Time to Full')}</p>
-                    <p className="text-sm font-bold text-white">
+                    <p className="text-sm font-bold text-[var(--text-primary)]">
                       {state.time_to_full_charge > 0 ? `${fmtNumber(state.time_to_full_charge, 1)}h` : '—'}
                     </p>
                     {state.time_to_full_charge > 0 && (
-                      <p className="text-[10px] text-[var(--text-secondary)]">
+                      <p className="text-2xs text-[var(--text-secondary)]">
                         {t('hero.doneAt', 'Done')} ~{formatTime(new Date(Date.now() + state.time_to_full_charge * 3_600_000))}
                       </p>
                     )}
@@ -136,8 +136,8 @@ export function VehicleHero({
                 >
                   <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
                   <div className="min-w-0">
-                    <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">{item.label}</p>
-                    <p className="text-sm font-semibold text-white truncate">{item.value}</p>
+                    <p className="text-2xs text-[var(--text-secondary)] uppercase tracking-wider">{item.label}</p>
+                    <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.value}</p>
                   </div>
                 </div>
               ))}

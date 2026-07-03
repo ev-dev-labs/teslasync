@@ -414,8 +414,8 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                           key={bit}
                           className={
                             on
-                              ? 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-purple-300/10 text-purple-300 ring-1 ring-purple-300/30'
-                              : 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] text-[var(--text-muted)] ring-1 ring-[var(--border-subtle)]'
+                              ? 'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-300/10 text-purple-300 ring-1 ring-purple-300/30'
+                              : 'inline-flex items-center px-2 py-0.5 rounded-md text-xs text-[var(--text-muted)] ring-1 ring-[var(--border-subtle)]'
                           }
                         >
                           {t(key, fallback)}

@@ -52,7 +52,7 @@ export function WidgetDetailCard({
             i < visible.length - 1 && 'border-b border-white/[0.06]',
           )}
         >
-          <span className="min-w-0 truncate text-[10px] uppercase text-[var(--text-muted)] tracking-wide">
+          <span className="min-w-0 truncate text-2xs uppercase text-[var(--text-muted)] tracking-wide">
             {entry.label}
           </span>
           <span className="flex min-w-0 items-center gap-2">

@@ -74,7 +74,7 @@ export function RecentActivity({
           <h3 className="section-title flex items-center gap-2">
             <Activity className="h-4 w-4 text-cyan-300" /> {t('activity.title', 'Recent Activity')}
           </h3>
-          <Link to="/drives" className="text-[10px] text-[var(--text-muted)] hover:text-cyan-300 transition-colors">
+          <Link to="/drives" className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors">
             {t('activity.viewAll', 'View all')}
           </Link>
         </div>
@@ -94,7 +94,7 @@ export function RecentActivity({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Clock className="h-6 w-6 text-gray-600 mb-2" />
+            <Clock className="h-6 w-6 text-[var(--text-muted)] mb-2" />
             <p className="text-xs text-[var(--text-muted)]">{t('activity.empty', 'No activity yet. Start driving!')}</p>
           </div>
         )}
@@ -119,7 +119,7 @@ export function RecentActivity({
             </div>
           ) : (
             <div className="h-36 sm:h-48 flex items-center justify-center">
-              <p className="text-xs text-gray-600">{t('battery.empty', 'Charge data will appear here')}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('battery.empty', 'Charge data will appear here')}</p>
             </div>
           )}
         </GlassPanel>
@@ -148,7 +148,7 @@ export function RecentActivity({
             </div>
             {analytics?.most_efficient_vehicle && (
               <div className="mt-3 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
-                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{t('perf.mostEfficient', 'Most Efficient')}</p>
+                <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">{t('perf.mostEfficient', 'Most Efficient')}</p>
                 <p className="text-sm font-semibold text-emerald-300">{analytics.most_efficient_vehicle.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {fmtInt(toEfficiencyDisplay(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}

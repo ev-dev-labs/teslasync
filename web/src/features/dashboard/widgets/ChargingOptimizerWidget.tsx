@@ -134,7 +134,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
               <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {formatHour(optimalStartHour)}
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] truncate">
+              <span className="text-2xs text-[var(--text-muted)] truncate">
                 {t('widget.chargingOptimizer.optimalStart', 'Optimal start')}
               </span>
             </div>
@@ -143,7 +143,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
               <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {fmtInt(targetSoc)}%
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] truncate">
+              <span className="text-2xs text-[var(--text-muted)] truncate">
                 {t('widget.chargingOptimizer.targetSoc', 'Target SOC')}
               </span>
             </div>
@@ -152,7 +152,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
               <span className="text-sm font-semibold text-[var(--text-primary)]">
                 ${fmtNumber(monthlySavings, 0)}
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] truncate">
+              <span className="text-2xs text-[var(--text-muted)] truncate">
                 {t('widget.chargingOptimizer.savingsLabel', 'Savings/mo')}
               </span>
             </div>
@@ -173,7 +173,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           {/* Wide mode: 24h timeline bar */}
           {isWide && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.chargingOptimizer.rateTimeline', '24h Rate Timeline')}
               </span>
               <div className="flex h-6 rounded-md overflow-hidden border border-white/[0.06]">
@@ -201,7 +201,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
                   );
                 })}
               </div>
-              <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+              <div className="flex justify-between text-2xs text-[var(--text-muted)]">
                 <span>12 AM</span>
                 <span>6 AM</span>
                 <span>12 PM</span>

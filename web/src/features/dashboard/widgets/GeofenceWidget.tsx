@@ -202,7 +202,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
                     <span className="truncate text-sm font-medium text-[var(--text-primary)]">
                       {f.name}
                     </span>
-                    <span className="text-[10px] text-[var(--text-muted)]">
+                    <span className="text-2xs text-[var(--text-muted)]">
                       {t('widget.geofence.radius', 'Radius')}: {fmtRadius(f.radius)}
                     </span>
                   </div>

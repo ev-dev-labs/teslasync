@@ -148,7 +148,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
           <span className="text-lg font-bold text-[var(--text-primary)]">
             {fmtInt(analysis.totalSignals)}
           </span>
-          <span className="text-[10px] text-[var(--text-secondary)]">
+          <span className="text-2xs text-[var(--text-secondary)]">
             {t('widget.signalHealth.signals', 'signals')}
           </span>
           {analysis.freshnessAge != null && (
@@ -186,10 +186,10 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
 
           {/* Health badge */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+            <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
               {t('widget.signalHealth.status', 'Status')}
             </span>
-            <Badge variant={healthBadgeVariant} className="text-[10px]">
+            <Badge variant={healthBadgeVariant} className="text-2xs">
               {healthLevel === 'green'
                 ? t('widget.signalHealth.healthy', 'Healthy')
                 : healthLevel === 'amber'
@@ -203,7 +203,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
           {/* Wide view: stale signal list */}
           {isWide && analysis.gapSignals.length > 0 && (
             <div className="mt-auto pt-2 border-t border-white/[0.06] flex-1 min-h-0 overflow-y-auto">
-              <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] mb-1.5">
+              <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] mb-1.5">
                 {t('widget.signalHealth.staleSignals', 'Stale / Gap Signals')}
               </h4>
               <div className="space-y-1">
@@ -212,7 +212,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
                     <span className="text-xs text-[var(--text-secondary)] truncate max-w-[45%]">
                       {sig.name}
                     </span>
-                    <span className="text-[10px] text-[var(--text-muted)] truncate">
+                    <span className="text-2xs text-[var(--text-muted)] truncate">
                       {sig.lastSeen ? formatRelative(sig.lastSeen) : '—'}
                     </span>
                   </div>

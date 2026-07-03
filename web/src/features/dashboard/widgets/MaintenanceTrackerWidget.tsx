@@ -131,7 +131,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
               <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {fmtInt(nextItem.intervalMonths ?? 0)}
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.maintenance.monthsLeft', 'months')}
               </span>
               <span className="text-xs text-[var(--text-secondary)] truncate max-w-full px-2 text-center">
@@ -163,7 +163,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           {nextItem && nextUrgency && (
             <div className="rounded-lg bg-white/[0.03] p-3 border border-white/[0.06]">
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+                <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                   {t('widget.maintenance.nextService', 'Next Service')}
                 </span>
                 <Badge variant={urgencyBadgeVariant(nextUrgency)} size="sm" dot>
@@ -194,7 +194,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           {/* Bottom: Recent service records */}
           {recentRecords.length > 0 ? (
             <div className="flex-1 min-h-0">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-2">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider block mb-2">
                 {t('widget.maintenance.recentService', 'Recent Service')}
               </span>
               <Timeline items={timelineItems} />

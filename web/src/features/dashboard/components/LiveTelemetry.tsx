@@ -117,7 +117,7 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.fan', 'Fan')}</span>
-              <span className="text-[10px] text-[var(--text-muted)]">{data.hvac_fan_speed ?? 0}/6</span>
+              <span className="text-2xs text-[var(--text-muted)]">{data.hvac_fan_speed ?? 0}/6</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
               <div
@@ -131,17 +131,17 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {data.defrost_mode && data.defrost_mode !== 'Off' && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
                 <Snowflake className="h-2.5 w-2.5" /> {t('telemetry.defrost', 'Defrost')}
               </span>
             )}
             {data.battery_heater_on && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
+              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
                 <Zap className="h-2.5 w-2.5" /> {t('telemetry.batHeater', 'Bat Heater')}
               </span>
             )}
             {(!data.defrost_mode || data.defrost_mode === 'Off') && !data.battery_heater_on && (
-              <span className="text-[10px] text-[var(--text-muted)]">{t('telemetry.noModes', 'No active modes')}</span>
+              <span className="text-2xs text-[var(--text-muted)]">{t('telemetry.noModes', 'No active modes')}</span>
             )}
           </div>
         </div>
@@ -255,11 +255,11 @@ function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
         <div className="grid grid-cols-2 gap-2">
           {tires.map((tire) => (
             <div key={tire.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase">{tire.label}</p>
+              <p className="text-2xs text-[var(--text-muted)] uppercase">{tire.label}</p>
               <p className={`text-sm font-bold ${getPressureColor(tire.value)}`}>
                 {tire.value != null ? fmtNumber(toPressureDisplay(tire.value), 1) : '—'}
               </p>
-              <p className="text-[9px] text-[var(--text-muted)]">{pressureUnit}</p>
+              <p className="text-2xs text-[var(--text-muted)]">{pressureUnit}</p>
             </div>
           ))}
         </div>
@@ -301,7 +301,7 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.volume', 'Volume')}</span>
-              <span className="text-[10px] text-[var(--text-muted)]">
+              <span className="text-2xs text-[var(--text-muted)]">
                 {data.audio_volume != null ? `${data.audio_volume}` : '—'}
                 {data.audio_volume_max != null ? `/${data.audio_volume_max}` : ''}
               </span>
@@ -347,22 +347,22 @@ function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
           />
           <div className="flex items-center gap-2 flex-wrap">
             {data.located_at_home && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400">
+              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400">
                 🏠 {t('telemetry.home', 'Home')}
               </span>
             )}
             {data.located_at_work && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
                 🏢 {t('telemetry.work', 'Work')}
               </span>
             )}
             {data.located_at_favorite && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400">
+              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400">
                 ⭐ {t('telemetry.favorite', 'Favorite')}
               </span>
             )}
             {!data.located_at_home && !data.located_at_work && !data.located_at_favorite && (
-              <span className="text-[10px] text-[var(--text-muted)]">{t('telemetry.noSavedLocation', 'No saved location')}</span>
+              <span className="text-2xs text-[var(--text-muted)]">{t('telemetry.noSavedLocation', 'No saved location')}</span>
             )}
           </div>
         </div>

@@ -67,7 +67,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
       actions={
         <Link
           to="/digital-twin"
-          className="text-[10px] text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
+          className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.open', 'Open')} <ArrowUpRight className="h-3 w-3" />
         </Link>

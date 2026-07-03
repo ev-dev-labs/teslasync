@@ -238,7 +238,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: palette.series[0] }}
           />
-          <span className="text-[10px] text-[var(--text-secondary)]">
+          <span className="text-2xs text-[var(--text-secondary)]">
             {t('widget.driveEfficiencyChart.daily', 'Daily')}
           </span>
         </div>
@@ -247,7 +247,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: '#f59e0b' }}
           />
-          <span className="text-[10px] text-[var(--text-secondary)]">
+          <span className="text-2xs text-[var(--text-secondary)]">
             {t('widget.driveEfficiencyChart.rolling', '7-day avg')}
           </span>
         </div>

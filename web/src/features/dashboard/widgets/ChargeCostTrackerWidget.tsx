@@ -117,7 +117,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
             <span className="text-2xl font-bold text-[var(--text-primary)]">
               {formatCurrency(metrics.totalCost, 0)}
             </span>
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.chargeCost.monthly', '30-day cost')}
             </span>
           </div>
@@ -198,7 +198,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
           )}
 
           {!isTall && (
-            <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] px-1">
+            <div className="flex items-center justify-between text-2xs text-[var(--text-muted)] px-1">
               <span>
                 {metrics.costPerDistance != null
                   ? `${formatCurrency(metrics.costPerDistance, 3)}/${distanceUnit}`

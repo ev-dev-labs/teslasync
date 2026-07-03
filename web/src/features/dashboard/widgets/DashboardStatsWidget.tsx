@@ -110,7 +110,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
           {/* Wide: recent state transitions */}
           {isWide && recentTransitions.length > 0 && (
             <div className="space-y-1.5 overflow-y-auto">
-              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+              <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
                 {t('widget.dashboardStats.recentTransitions', 'Recent Transitions')}
               </span>
               <div className="flex flex-col gap-1">
@@ -120,7 +120,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
                     className="flex items-center justify-between min-h-[44px]"
                   >
                     <div className="flex items-center gap-2">
-                      <Badge variant="neutral" className="text-[10px] capitalize truncate">
+                      <Badge variant="neutral" className="text-2xs capitalize truncate">
                         {tr.state ?? '—'}
                       </Badge>
                     </div>

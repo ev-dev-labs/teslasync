@@ -264,7 +264,7 @@ export function WidgetCatalogueDialog({
                 `dashboard.catalogue.category.${category}`,
                 CATEGORY_FALLBACK_LABELS[category],
               )}
-              <span className="text-[10px] font-normal normal-case tracking-normal text-[var(--text-muted)]">
+              <span className="text-2xs font-normal normal-case tracking-normal text-[var(--text-muted)]">
                 ({widgets.length})
               </span>
             </h3>
