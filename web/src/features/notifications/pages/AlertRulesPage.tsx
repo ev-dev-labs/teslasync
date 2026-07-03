@@ -9,6 +9,7 @@ import {
   Button,
   DataTable,
   PanelTitle,
+  Text,
   EditableText,
   ConfirmDialog,
   useSortToggle,
@@ -330,7 +331,11 @@ export default function AlertRulesPage() {
         key: 'signal_name',
         header: t('alertRules.col.signal', 'Signal'),
         sortable: true,
-        render: (r) => <span className="text-[var(--text-secondary)]">{subjectOf(r)}</span>,
+        render: (r) => (
+          <Text as="span" color="secondary">
+            {subjectOf(r)}
+          </Text>
+        ),
       },
       {
         key: 'severity',
@@ -348,7 +353,11 @@ export default function AlertRulesPage() {
             : count > 0
               ? t('alertRules.scope.count', '{{count}} vehicles', { count })
               : t('alertRules.scope.none', '—');
-          return <span className="text-[var(--text-secondary)]">{label}</span>;
+          return (
+            <Text as="span" color="secondary">
+              {label}
+            </Text>
+          );
         },
       },
       {
@@ -508,9 +517,9 @@ export default function AlertRulesPage() {
                         className="inline-block h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: seg.color }}
                       />
-                      <span className="text-xs text-[var(--text-secondary)]">
+                      <Text variant="bodySm">
                         {seg.label} · {fmtInt(seg.value)}
-                      </span>
+                      </Text>
                     </div>
                   ))}
                 </div>
