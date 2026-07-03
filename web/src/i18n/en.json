@@ -7904,13 +7904,41 @@
     "title": "Feature Flags",
     "subtitle": "Tesla account feature configuration",
     "lastSynced": "Synced",
+    "neverSynced": "Not synced yet",
     "refresh": "Refresh",
     "feature": "Feature",
+    "typeColumn": "Type",
     "status": "Status",
     "details": "Details",
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "noData": "No feature config data yet. Click Refresh to fetch from Tesla."
+    "noData": "No feature config data yet. Click Refresh to fetch from Tesla.",
+    "noMatch": "No features match your filters.",
+    "tableTitle": "Feature Flags",
+    "showing": "Showing {{shown}} of {{total}}",
+    "searchPlaceholder": "Search features…",
+    "searchLabel": "Search features",
+    "statusFilterLabel": "Filter by status",
+    "distribution": "Distribution",
+    "noDistribution": "No feature data to summarise yet.",
+    "composition": "Enabled vs Disabled by Type",
+    "noComposition": "No feature composition to chart yet.",
+    "compositionChartLabel": "Enabled versus disabled feature counts grouped by feature type",
+    "overviewLabel": "Feature overview",
+    "kpi": {
+      "bandLabel": "Feature summary metrics",
+      "total": "Total Features",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enabledRate": "Enabled Rate"
+    },
+    "type": {
+      "flag": "Boolean flags",
+      "configured": "Configured"
+    },
+    "filter": {
+      "all": "All statuses"
+    }
   },
   "gas": {
     "title": "Gas Price Auto-Poll",
