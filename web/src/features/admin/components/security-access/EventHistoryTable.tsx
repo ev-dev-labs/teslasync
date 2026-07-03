@@ -1,11 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Badge } from '@/components/ui/Badge';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { Badge, GlassPanel, PanelTitle, DataTable, type Column } from '@/components/ui';
+import { Skeleton, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import type { SecurityEvent } from '@/types/admin';
 import { asNonEmptyString } from '@/lib/typeGuards';
@@ -14,9 +11,12 @@ import { doorClosed, allWindowsClosed, windowSummary } from './helpers';
 interface EventHistoryTableProps {
   history: SecurityEvent[];
   isLoading: boolean;
+  error: unknown;
+  onRetry?: () => void;
+  className?: string;
 }
 
-export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps) {
+export function EventHistoryTable({ history, isLoading, error, onRetry, className }: EventHistoryTableProps) {
   const { t } = useTranslation();
 
   const eventColumns: Column<SecurityEvent>[] = useMemo(
@@ -26,7 +26,7 @@ export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps
         header: t('admin.security.col.time', 'Time'),
         sortable: true,
         render: (row) => (
-          <TimeStamp value={row.createdAt} className="text-xs text-[var(--text-muted)] whitespace-nowrap" />
+          <TimeStamp value={row.createdAt} className="whitespace-nowrap text-xs text-[var(--text-muted)]" />
         ),
       },
       {
@@ -51,12 +51,7 @@ export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps
         key: 'doorState',
         header: t('admin.security.col.doors', 'Doors'),
         render: (row) => (
-          <span
-            className={cn(
-              'text-sm',
-              doorClosed(row.doorState) ? 'text-green-400' : 'text-amber-400',
-            )}
-          >
+          <span className={cn('text-sm', doorClosed(row.doorState) ? 'text-emerald-300' : 'text-amber-300')}>
             {asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : '—')}
           </span>
         ),
@@ -64,42 +59,34 @@ export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps
       {
         key: 'windows',
         header: t('admin.security.col.windows', 'Windows'),
-        render: (row) => {
-          const closed = allWindowsClosed(row);
-          return (
-            <span className={cn('text-sm', closed ? 'text-green-400' : 'text-amber-400')}>
-              {windowSummary(row)}
-            </span>
-          );
-        },
+        render: (row) => (
+          <span className={cn('text-sm', allWindowsClosed(row) ? 'text-emerald-300' : 'text-amber-300')}>
+            {windowSummary(row, t)}
+          </span>
+        ),
       },
     ],
     [t],
   );
 
   return (
-    <FadeIn delay={0.3}>
-      <GlassPanel className="p-4">
-        <h2 className="text-lg font-semibold text-gray-200 mb-4">
-          {t('admin.security.eventHistory', 'Security Event History')}
-        </h2>
-        {isLoading ? (
-          <Skeleton lines={8} />
-        ) : (
-          <DataTable<SecurityEvent>
-            tableId="admin:security-events"
-            columns={eventColumns}
-            data={history}
-            keyExtractor={(row) => row.id}
-            emptyMessage={t(
-              'admin.security.noEvents',
-              'No security events recorded yet.',
-            )}
-            compact
-            pagination={{ defaultPageSize: 50 }}
-          />
-        )}
-      </GlassPanel>
-    </FadeIn>
+    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+      <PanelTitle className="mb-3">{t('admin.security.eventHistory', 'Security Event History')}</PanelTitle>
+      {error ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
+        <Skeleton lines={8} />
+      ) : (
+        <DataTable<SecurityEvent>
+          tableId="admin:security-events"
+          columns={eventColumns}
+          data={history}
+          keyExtractor={(row) => row.id}
+          emptyMessage={t('admin.security.noEvents', 'No security events recorded yet.')}
+          compact
+          pagination={{ defaultPageSize: 50 }}
+        />
+      )}
+    </GlassPanel>
   );
 }

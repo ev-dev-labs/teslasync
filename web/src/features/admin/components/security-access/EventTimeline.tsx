@@ -8,15 +8,20 @@ import {
   DoorClosed,
   DoorOpen,
 } from 'lucide-react';
-import { GlassPanel } from '@/components/ui/GlassPanel';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import type { TimelineEvent } from './helpers';
 
 /* ------------------------------------------------------------------ */
-/*  Icon + text resolution based on semantic timeline data              */
+/*  Icon + tone resolution based on semantic timeline data              */
 /* ------------------------------------------------------------------ */
+
+const variantChip: Record<TimelineEvent['variant'], string> = {
+  positive: 'bg-neon-green/10 text-emerald-300',
+  negative: 'bg-neon-red/10 text-rose-300',
+  neutral: 'bg-white/[0.04] text-[var(--text-muted)]',
+};
 
 function timelineIcon(ev: TimelineEvent) {
   switch (ev.kind) {
@@ -62,7 +67,9 @@ function useTimelineLabels() {
           title: ev.variant === 'positive'
             ? t('admin.security.timeline.door.positive', 'Doors Closed')
             : t('admin.security.timeline.door.negative', 'Door Opened'),
-          subtitle: ev.detail,
+          subtitle: ev.detail || (ev.variant === 'positive'
+            ? t('admin.security.closed', 'Closed')
+            : t('admin.security.open', 'Open')),
         };
     }
   };
@@ -74,55 +81,57 @@ function useTimelineLabels() {
 
 interface EventTimelineProps {
   timelineEvents: TimelineEvent[];
+  isLoading: boolean;
+  error: unknown;
+  onRetry?: () => void;
+  className?: string;
 }
 
-export function EventTimeline({ timelineEvents }: EventTimelineProps) {
+export function EventTimeline({ timelineEvents, isLoading, error, onRetry, className }: EventTimelineProps) {
   const { t } = useTranslation();
   const getLabels = useTimelineLabels();
 
   return (
-    <FadeIn delay={0.35}>
-      <GlassPanel className="p-4">
-        <h2 className="text-lg font-semibold text-gray-200 mb-4">
-          {t('admin.security.timeline.title', 'Security Event Timeline')}
-        </h2>
-        {timelineEvents.length > 0 ? (
-          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-            {timelineEvents.map((ev) => {
-              const { title, subtitle } = getLabels(ev);
-              return (
-                <div
-                  key={ev.id}
-                  className="flex items-start gap-3 rounded-lg bg-white/[0.02] p-3"
+    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+      <PanelTitle className="mb-3">{t('admin.security.timeline.title', 'Security Event Timeline')}</PanelTitle>
+      {error ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
+        <Skeleton lines={8} />
+      ) : timelineEvents.length > 0 ? (
+        <ul className="max-h-96 space-y-3 overflow-y-auto pr-1">
+          {timelineEvents.map((ev) => {
+            const { title, subtitle } = getLabels(ev);
+            return (
+              <li key={ev.id} className="flex items-start gap-3 rounded-lg bg-white/[0.02] p-3">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                    variantChip[ev.variant],
+                  )}
                 >
-                  <div
-                    className={cn(
-                      'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                      ev.variant === 'positive'
-                        ? 'bg-green-500/20 text-green-400'
-                        : ev.variant === 'negative'
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'bg-gray-500/20 text-[var(--text-muted)]',
-                    )}
-                  >
-                    {timelineIcon(ev)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-200">{title}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>
-                  </div>
-                  <TimeStamp
-                    value={ev.timestamp}
-                    className="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0"
-                  />
+                  {timelineIcon(ev)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <Text as="p" size="sm" weight="medium" color="primary" className="truncate">
+                    {title}
+                  </Text>
+                  <Text as="p" variant="caption" className="truncate">
+                    {subtitle}
+                  </Text>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
-        )}
-      </GlassPanel>
-    </FadeIn>
+                <TimeStamp
+                  value={ev.timestamp}
+                  className="shrink-0 whitespace-nowrap text-2xs text-[var(--text-muted)]"
+                />
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <EmptyState message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
+      )}
+    </GlassPanel>
   );
 }
