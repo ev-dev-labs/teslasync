@@ -68,6 +68,7 @@ import {
   Cell,
   ResponsiveContainer,
   ChartTooltip,
+  axisTick,
 } from '@/components/charts'
 import { useFleetTelemetryCoverage } from '@/api/hooks/useFleetTelemetry'
 import type {
@@ -466,13 +467,13 @@ export default function FleetTelemetryCoveragePage({
                       <XAxis
                         type="number"
                         allowDecimals={false}
-                        tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
+                        tick={axisTick}
                       />
                       <YAxis
                         type="category"
                         dataKey="dest"
                         width={148}
-                        tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
+                        tick={axisTick}
                       />
                       <Tooltip
                         cursor={{ fill: 'rgba(255,255,255,0.04)' }}
