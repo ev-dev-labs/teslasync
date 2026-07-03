@@ -25,8 +25,8 @@ export function YearComparisons({ comparisons }: Props) {
     <div className="grid gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]">
       {items.map((item) => (
         <GlassPanel key={item.label} className="flex flex-col items-center gap-1 p-4 text-center">
-          <span className="text-3xl leading-none" aria-hidden="true">{item.emoji}</span>
-          <Text variant="body" className="font-semibold">{item.label}</Text>
+          <Text as="span" size="3xl" aria-hidden="true" className="leading-none">{item.emoji}</Text>
+          <Text size="sm" weight="semibold" color="primary">{item.label}</Text>
           <Caption>{item.value}</Caption>
         </GlassPanel>
       ))}

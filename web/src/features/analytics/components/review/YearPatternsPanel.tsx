@@ -49,7 +49,7 @@ export function YearPatternsPanel({ data }: Props) {
             <Icon className="h-5 w-5 shrink-0 text-indigo-300" aria-hidden="true" />
             <div className="min-w-0">
               <Caption>{label}</Caption>
-              <Text variant="body" className="block truncate font-semibold">{value}</Text>
+              <Text size="sm" weight="semibold" color="primary" className="block truncate">{value}</Text>
             </div>
           </div>
         ))}
