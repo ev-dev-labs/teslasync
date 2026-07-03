@@ -1,3 +1,4 @@
+export { DevToolsOverview } from './DevToolsOverview'
 export { FleetApiSection } from './FleetApiSection'
 export { FleetTelemetryHealth } from './FleetTelemetryHealth'
 export { InfrastructureSection } from './InfrastructureSection'
