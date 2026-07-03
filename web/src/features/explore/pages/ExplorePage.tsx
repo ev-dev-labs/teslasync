@@ -1,36 +1,49 @@
 /**
- * ExplorePage — the Feature Hub. v2 iteration.
+ * ExplorePage — the Feature Hub. Modern-UI full-width redesign.
  *
- * A "front door" to every feature in the app. Built additively on top of
- * the existing sidebar IA — we re-use `navSections` verbatim, decorate
- * each entry with a 1-line description (see featureCatalog.ts), and
- * render the whole catalog as a categorized, filterable card grid.
+ * A full-bleed "front door" to every feature in the app. Built additively on
+ * top of the existing sidebar IA — we re-use `navSections` verbatim, decorate
+ * each entry with a 1-line description (see featureCatalog.ts), and render the
+ * whole catalog as a categorized, filterable, full-width bento of cards that
+ * reflows into more columns on wide monitors (1 → 6 across the breakpoint
+ * ladder) so ultra-wide screens never leave dead margins.
  *
- * v2 additions (this iteration):
- *   1. Recently-visited strip at the top — reuses the existing
- *      `recentPages` localStorage registry that the command palette
- *      already maintains. Zero new state, immediate value.
- *   2. Sticky search panel — stays visible as you scroll through the
- *      ~95 cards so you can refine without scrolling back to the top.
- *   3. Match counts on the section anchor chips ("Driving · 12").
- *   4. Highlighted search terms inside card titles + descriptions —
- *      <mark> tags wrapped via a safe non-HTML splitter.
- *   5. "Did you mean" suggestions in the empty state — uses the
- *      existing `closestRoutes` Levenshtein engine.
+ * Page anatomy (top → bottom):
+ *   1. KPI overview band — derived, at-a-glance counts (features / categories /
+ *      showing / vehicles). No new API; computed from the same catalog.
+ *   2. Recently-visited strip — reuses the `recentPages` localStorage registry
+ *      the command palette maintains. Hidden while filtering (would be noise).
+ *   3. Sticky search panel — stays pinned as you scroll the ~95 cards, with
+ *      section-anchor chips (with match counts) for quick jumping.
+ *   4. Results — per-section card bands, or a helpful empty state with
+ *      "did you mean" suggestions from the Levenshtein route engine.
  *
  * Design rules preserved:
  *   - URL-driven state (`?q=`) so a link reproduces the user's view.
- *   - No raw HTML elements where a shared component exists; the few
- *     <button>/<a> tags here all have focus rings + ARIA.
- *   - Visibility gates (`minVehicles`, `requiresAuth`) honored so the
- *     hub never surfaces something the sidebar would hide.
+ *   - Shared components + design tokens only (Button / Input / GlassPanel /
+ *     MetricCard / typography). The few `<a>` tags are internal navigation and
+ *     keep focus rings + ARIA.
+ *   - Visibility gates (`minVehicles`, `requiresAuth`) honored so the hub never
+ *     surfaces something the sidebar would hide.
+ *   - Every result region owns its own empty state; nothing is gated behind a
+ *     single `{data && …}`.
  */
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Input } from '@/components/ui';
+import {
+  GlassPanel,
+  Input,
+  Badge,
+  Button,
+  SectionTitle,
+  Text,
+  Caption,
+} from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { FadeIn } from '@/components/motion';
 import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -53,6 +66,10 @@ import {
 } from '../featureCatalog';
 
 const RECENT_LIMIT = 6;
+
+/** Full-width card-grid reflow: 1 col on phone → 6 on 3xl (no dead margins). */
+const CARD_GRID =
+  'grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6';
 
 export default function ExplorePage() {
   const { t } = useTranslation();
@@ -85,6 +102,13 @@ export default function ExplorePage() {
     [visibleCatalog, query],
   );
   const grouped = useMemo(() => groupFeatureCatalog(filtered), [filtered]);
+
+  // Stable count of distinct categories across the whole visible catalog —
+  // drives the KPI band and stays constant while the user filters.
+  const categoriesCount = useMemo(
+    () => new Set(visibleCatalog.map((e) => e.section)).size,
+    [visibleCatalog],
+  );
 
   const updateQuery = (next: string) => {
     const params = new URLSearchParams(searchParams);
@@ -156,20 +180,62 @@ export default function ExplorePage() {
       subtitle={subtitle}
     >
       <div className="space-y-6">
-        {/* Recently visited — only when not filtering. Filtering implies
+        {/* 1 — KPI overview band: full-width metric grid, derived from the
+            catalog (no extra API). "Showing" tracks the live filter. */}
+        <FadeIn>
+          <section
+            aria-label={t('explore.overview', 'Feature overview')}
+            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          >
+            <MetricCard
+              label={t('explore.kpi.features', 'Features')}
+              value={totalFeatures}
+              icon={<Icons.layoutGrid className="h-5 w-5" aria-hidden="true" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('explore.kpi.categories', 'Categories')}
+              value={categoriesCount}
+              icon={<Icons.folderOpen className="h-5 w-5" aria-hidden="true" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('explore.kpi.showing', 'Showing')}
+              value={matchCount}
+              icon={<Icons.filter className="h-5 w-5" aria-hidden="true" />}
+              color="green"
+              subtitle={
+                query
+                  ? t('explore.kpi.filtered', 'matching filter')
+                  : t('explore.kpi.all', 'all features')
+              }
+            />
+            <MetricCard
+              label={t('explore.kpi.vehicles', 'Vehicles')}
+              value={vehicleCount}
+              icon={<Icons.vehicle className="h-5 w-5" aria-hidden="true" />}
+              color="blue"
+            />
+          </section>
+        </FadeIn>
+
+        {/* 2 — Recently visited — only when not filtering. Filtering implies
             the user wants to narrow the full catalog; recents would be
             noise in that mode. */}
         {!query && recentResolved.length > 0 && (
-          <RecentStrip
-            entries={recentResolved}
-            onNavigate={(to) => navigate(to)}
-          />
+          <FadeIn delay={0.05}>
+            <RecentStrip
+              entries={recentResolved}
+              onNavigate={(to) => navigate(to)}
+            />
+          </FadeIn>
         )}
 
-        {/* Sticky search panel. `top-0` works because Layout's main scroll
-            container is the page itself. `z-30` keeps us under modals
-            (z-90+) and the command palette (z-100) but over normal page
-            content. */}
+        {/* 3 — Sticky search panel. Left un-wrapped by FadeIn on purpose: a
+            motion transform on an ancestor breaks `position: sticky`. `top-0`
+            works because Layout's main scroll container is the page itself.
+            `z-30` keeps us under modals (z-90+) and the command palette
+            (z-100) but over normal page content. */}
         <div
           className={cn(
             'sticky top-0 z-30 -mx-4 px-4 pt-2 pb-3 md:-mx-6 md:px-6',
@@ -177,31 +243,25 @@ export default function ExplorePage() {
           )}
           data-testid="explore-search-panel"
         >
-          <GlassPanel className="p-4 md:p-5">
+          <GlassPanel className="p-4 sm:p-5">
             <VisuallyHidden as="label" htmlFor="explore-search">
               {t('explore.searchLabel', 'Filter features')}
             </VisuallyHidden>
-            <div className="relative">
-              <Icons.search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
-                aria-hidden="true"
-              />
-              <Input
-                id="explore-search"
-                ref={inputRef}
-                type="search"
-                autoComplete="off"
-                value={query}
-                onChange={(e) => updateQuery(e.target.value)}
-                placeholder={t(
-                  'explore.searchPlaceholder',
-                  'Filter features by name, section, or description (press / to focus)',
-                )}
-                aria-label={t('explore.searchLabel', 'Filter features')}
-                className="pl-9"
-                data-testid="explore-search"
-              />
-            </div>
+            <Input
+              id="explore-search"
+              ref={inputRef}
+              type="search"
+              autoComplete="off"
+              value={query}
+              onChange={(e) => updateQuery(e.target.value)}
+              placeholder={t(
+                'explore.searchPlaceholder',
+                'Filter features by name, section, or description (press / to focus)',
+              )}
+              aria-label={t('explore.searchLabel', 'Filter features')}
+              icon={<Icons.search className="h-4 w-4" aria-hidden="true" />}
+              data-testid="explore-search"
+            />
             {grouped.length > 0 && (
               <SectionAnchorStrip
                 groups={grouped.map((g) => ({
@@ -213,29 +273,33 @@ export default function ExplorePage() {
           </GlassPanel>
         </div>
 
-        {grouped.length === 0 ? (
-          <EmptyResult
-            query={query}
-            catalog={visibleCatalog}
-            onPickSuggestion={(to) => {
-              updateQuery('');
-              navigate(to);
-            }}
-            onClear={() => updateQuery('')}
-          />
-        ) : (
-          <div className="space-y-10">
-            {grouped.map(({ section, entries }) => (
-              <SectionBand
-                key={section}
-                section={section}
-                entries={entries}
-                query={query}
-                onNavigate={(to) => navigate(to)}
-              />
-            ))}
-          </div>
-        )}
+        {/* 4 — Results: full-width bento of section bands, or a self-contained
+            empty state. The results region owns its own empty handling. */}
+        <FadeIn delay={0.1}>
+          {grouped.length === 0 ? (
+            <EmptyResult
+              query={query}
+              catalog={visibleCatalog}
+              onPickSuggestion={(to) => {
+                updateQuery('');
+                navigate(to);
+              }}
+              onClear={() => updateQuery('')}
+            />
+          ) : (
+            <div className="space-y-8">
+              {grouped.map(({ section, entries }) => (
+                <SectionBand
+                  key={section}
+                  section={section}
+                  entries={entries}
+                  query={query}
+                  onNavigate={(to) => navigate(to)}
+                />
+              ))}
+            </div>
+          )}
+        </FadeIn>
       </div>
     </PageContainer>
   );
@@ -256,14 +320,11 @@ function RecentStrip({
       aria-labelledby="explore-recent-heading"
       data-testid="explore-recent-strip"
     >
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2
-          id="explore-recent-heading"
-          className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]"
-        >
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <SectionTitle id="explore-recent-heading">
           {t('explore.recent.heading', 'Recently visited')}
-        </h2>
-        <span className="text-xs text-[var(--text-muted)]">{entries.length}</span>
+        </SectionTitle>
+        <Caption className="tabular-nums">{entries.length}</Caption>
       </div>
       <ul className="flex flex-wrap gap-2">
         {entries.map((entry) => {
@@ -279,15 +340,15 @@ function RecentStrip({
                   onNavigate(entry.to);
                 }}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-full px-3 py-1.5',
+                  'inline-flex min-h-11 items-center gap-2 rounded-full px-3.5 py-2',
                   'border border-[var(--glass-border)] bg-[var(--surface-1)]',
-                  'text-xs text-[var(--text-primary)]',
+                  'text-sm text-[var(--text-primary)]',
                   'hover:bg-[var(--surface-2)]',
                   'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
                   'transition-colors',
                 )}
               >
-                <Icon className={cn('h-3.5 w-3.5', entry.color)} aria-hidden="true" />
+                <Icon className={cn('h-4 w-4 shrink-0', entry.color)} aria-hidden="true" />
                 <span>{entry.label}</span>
               </a>
             </li>
@@ -307,9 +368,8 @@ function SectionAnchorStrip({
 }) {
   const { t } = useTranslation();
   return (
-    <div
+    <nav
       className="mt-3 flex flex-wrap gap-2"
-      role="navigation"
       aria-label={t('explore.sectionsAriaLabel', 'Jump to section')}
       data-testid="explore-anchor-strip"
     >
@@ -318,7 +378,7 @@ function SectionAnchorStrip({
           key={section}
           href={`#explore-section-${slugify(section)}`}
           className={cn(
-            'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs',
+            'inline-flex min-h-11 items-center gap-2 rounded-full px-3 py-1.5 text-sm',
             'bg-white/[0.04] text-[var(--text-secondary)]',
             'hover:bg-white/[0.08] hover:text-[var(--text-primary)]',
             'border border-[var(--glass-border)]',
@@ -327,15 +387,15 @@ function SectionAnchorStrip({
           )}
         >
           <span>{section}</span>
-          <span
-            className="text-[10px] text-[var(--text-muted)] tabular-nums"
+          <Caption
+            className="tabular-nums"
             aria-label={t('explore.anchorCountAria', '{{count}} features', { count })}
           >
             {count}
-          </span>
+          </Caption>
         </a>
       ))}
-    </div>
+    </nav>
   );
 }
 
@@ -358,21 +418,15 @@ function SectionBand({
       aria-labelledby={`explore-section-heading-${slugify(section)}`}
       className="scroll-mt-24"
     >
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2
-          id={`explore-section-heading-${slugify(section)}`}
-          className="text-sm font-semibold uppercase tracking-wider text-[var(--text-secondary)]"
-        >
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <SectionTitle id={`explore-section-heading-${slugify(section)}`} className="truncate">
           {section}
-        </h2>
-        <span className="text-xs text-[var(--text-muted)] tabular-nums">
+        </SectionTitle>
+        <Badge variant="neutral" size="sm" className="shrink-0 tabular-nums">
           {entries.length}
-        </span>
+        </Badge>
       </div>
-      <ul
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        data-testid={`explore-section-${slugify(section)}`}
-      >
+      <ul className={CARD_GRID} data-testid={`explore-section-${slugify(section)}`}>
         {entries.map((entry) => (
           <FeatureCard
             key={entry.to}
@@ -419,7 +473,7 @@ function FeatureCard({
           <div
             className={cn(
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-              'bg-white/[0.04] border border-[var(--glass-border)]',
+              'border border-[var(--glass-border)] bg-white/[0.04]',
               entry.color,
             )}
             aria-hidden="true"
@@ -427,12 +481,16 @@ function FeatureCard({
             <Icon className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-[var(--text-primary)]">
+            <Text as="div" size="sm" weight="medium" color="primary">
               <Highlight text={entry.label} query={query} />
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-2">
+            </Text>
+            <Text
+              as="p"
+              variant="bodySm"
+              className="mt-1 line-clamp-2 leading-relaxed"
+            >
               <Highlight text={entry.description} query={query} />
-            </p>
+            </Text>
           </div>
         </div>
       </a>
@@ -458,7 +516,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
         .trim()
         .toLowerCase()
         .split(/\s+/)
-        .filter((t) => t.length > 0),
+        .filter((tok) => tok.length > 0),
     [query],
   );
 
@@ -541,59 +599,48 @@ function EmptyResult({
   }, [query, catalog, visiblePaths]);
 
   return (
-    <GlassPanel className="p-8 text-center" data-testid="explore-empty">
-      <Icons.search className="mx-auto h-6 w-6 text-[var(--text-muted)]" />
-      <h3 className="mt-3 text-base font-medium text-[var(--text-primary)]">
+    <GlassPanel className="p-6 text-center sm:p-8" data-testid="explore-empty">
+      <Icons.search className="mx-auto h-6 w-6 text-[var(--text-muted)]" aria-hidden="true" />
+      <SectionTitle className="mt-3">
         {t('explore.empty.title', 'No features match "{{query}}"', { query })}
-      </h3>
-      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+      </SectionTitle>
+      <Text as="p" variant="bodySm" className="mx-auto mt-1 max-w-md">
         {t(
           'explore.empty.body',
           'Try a different word, or open the command palette (⌘K) to search across pages, settings, and actions.',
         )}
-      </p>
+      </Text>
 
       {suggestions.length > 0 && (
         <div className="mt-5 text-left" data-testid="explore-empty-suggestions">
-          <p className="mb-2 text-center text-xs uppercase tracking-wider text-[var(--text-muted)]">
+          <Text as="p" variant="label" className="mb-2 text-center">
             {t('explore.empty.didYouMean', 'Did you mean')}
-          </p>
+          </Text>
           <ul className="mx-auto flex max-w-md flex-col gap-1">
             {suggestions.map((s) => (
               <li key={s.path}>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={() => onPickSuggestion(s.path)}
-                  className={cn(
-                    'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm',
-                    'bg-white/[0.04] text-[var(--text-primary)]',
-                    'hover:bg-white/[0.08]',
-                    'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-                    'transition-colors',
-                  )}
+                  className="w-full justify-between border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
                 >
                   <span>{s.label}</span>
-                  <span className="text-xs text-[var(--text-muted)]">{s.path}</span>
-                </button>
+                  <Caption>{s.path}</Caption>
+                </Button>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={onClear}
-        className={cn(
-          'mt-5 inline-flex items-center gap-2 rounded-md px-3 py-1.5',
-          'bg-white/[0.06] text-sm text-[var(--text-primary)]',
-          'hover:bg-white/[0.10]',
-          'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-          'transition-colors',
-        )}
+        className="mt-5"
       >
         {t('explore.empty.clear', 'Clear filter')}
-      </button>
+      </Button>
     </GlassPanel>
   );
 }

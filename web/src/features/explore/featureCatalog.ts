@@ -158,6 +158,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/dev-tools': 'In-app developer surface — flags, debuggers, and inspectors.',
 
   // ── Integrations ───────────────────────────────────────────────────
+  '/integrations/helix': 'Configure the Helix AI assistant — provider, model, API key, and cost cap.',
   '/api-keys': 'Issue and revoke API keys for external integrations.',
   '/gas-price': 'Compare your $/mile against gasoline at current prices.',
 
