@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ShieldCheck,
@@ -14,22 +14,42 @@ import {
   Car,
   Eye,
   Info,
+  Gauge,
+  Bell,
+  History,
+  SlidersHorizontal,
+  Activity,
+  type LucideIcon,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { Toggle } from '@/components/ui/Toggle';
-import { Badge } from '@/components/ui/Badge';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { AlertBanner } from '@/components/feedback/AlertBanner';
-import { FadeIn } from '@/components/motion/FadeIn';
+
+import { PageContainer } from '@/components/layout';
+import {
+  GlassPanel,
+  Button,
+  Select,
+  Toggle,
+  Badge,
+  ConfirmDialog,
+  PanelTitle,
+  Text,
+  HelperText,
+} from '@/components/ui';
+import { MetricCard, TimeStamp } from '@/components/data-display';
+import { EmptyState, AlertBanner, Skeleton, QueryError } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import { VehicleSelect } from '@/components/forms';
-import { MapContainer, Marker, Circle, Popup, Polyline, vehicleIcon } from '@/components/maps';
-import { MapTileLayer, MapInvalidator } from '@/components/maps';
-import { TimeStamp } from '@/components/data-display';
+import {
+  MapContainer,
+  Marker,
+  Circle,
+  Popup,
+  Polyline,
+  vehicleIcon,
+  MapTileLayer,
+  MapInvalidator,
+  type MapStyle,
+} from '@/components/maps';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleState } from '@/api/hooks/useVehicles';
@@ -45,31 +65,20 @@ import {
 } from '@/api/hooks/useGuard';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
-import type { MapStyle } from '@/components/maps';
+import { typography, type NeonColor } from '@/lib/tokens';
 
-// ── Event type display helpers ──────────────────────────────────────────
-
-// `/vehicles/{id}/guard/events` returns state-change records
-// derived from `security_events` (`locked`, `sentry_mode`,
-// `valet_mode_enabled` — see `securityEventTypeByField` in
-// `internal/tesla/router/writers/security_event_writer.go`). Legacy
+// ── Event type display metadata ─────────────────────────────────────────
+//
+// `/vehicles/{id}/guard/events` returns state-change records derived from
+// `security_events` (`locked`, `sentry_mode`, `valet_mode_enabled` — see
+// `securityEventTypeByField` in the security_event_writer). Legacy
 // alert-shaped entries (`vehicle_moved`, `unauthorized_*`) are kept so
-// historic rows still render, and the lookup-with-fallback pattern
-// makes any newly-added backend type render as the raw token without
-// crashing the page.
-const EVENT_LABELS: Record<string, string> = {
-  vehicle_moved: '📍 Vehicle Moved',
-  unauthorized_unlock: '🔓 Unauthorized Unlock',
-  unauthorized_drive: '🚗 Unauthorized Drive',
-  sentry_triggered: '👁️ Sentry Triggered',
-  manual_panic: '🚨 Manual Panic',
-  test_alert: '🔔 Test Alert',
-  locked: '🔒 Lock State Changed',
-  sentry_mode: '👁️ Sentry Mode',
-  valet_mode_enabled: '🅿️ Valet Mode',
-};
+// historic rows still render, and the lookup-with-fallback pattern makes
+// any newly-added backend type render as its raw token without crashing.
 
-const EVENT_BADGE_VARIANT: Record<string, 'danger' | 'warning' | 'info'> = {
+type BadgeVariant = 'danger' | 'warning' | 'info';
+
+const EVENT_BADGE_VARIANT: Record<string, BadgeVariant> = {
   vehicle_moved: 'danger',
   unauthorized_unlock: 'danger',
   unauthorized_drive: 'danger',
@@ -81,11 +90,23 @@ const EVENT_BADGE_VARIANT: Record<string, 'danger' | 'warning' | 'info'> = {
   valet_mode_enabled: 'info',
 };
 
-const SENSITIVITY_OPTIONS = [
-  { value: 'low', label: 'Low — Movement > 1km' },
-  { value: 'medium', label: 'Medium — Movement > 200m' },
-  { value: 'high', label: 'High — Any movement' },
-];
+// [i18nKey, English fallback] — the English lives only as the sanctioned
+// `t(key, fallback)` default, never as raw rendered text.
+const EVENT_LABEL_KEYS: Record<string, [string, string]> = {
+  vehicle_moved: ['guard.eventVehicleMoved', 'Vehicle Moved'],
+  unauthorized_unlock: ['guard.eventUnauthorizedUnlock', 'Unauthorized Unlock'],
+  unauthorized_drive: ['guard.eventUnauthorizedDrive', 'Unauthorized Drive'],
+  sentry_triggered: ['guard.eventSentryTriggered', 'Sentry Triggered'],
+  manual_panic: ['guard.eventManualPanic', 'Manual Panic'],
+  test_alert: ['guard.eventTestAlert', 'Test Alert'],
+  locked: ['guard.eventLocked', 'Lock State Changed'],
+  sentry_mode: ['guard.eventSentryMode', 'Sentry Mode'],
+  valet_mode_enabled: ['guard.eventValetMode', 'Valet Mode'],
+};
+
+function eventLabelKey(type: string): [string, string] {
+  return EVENT_LABEL_KEYS[type] ?? [`guard.event.${type}`, type];
+}
 
 // ── Guard Mode Page ─────────────────────────────────────────────────────
 
@@ -97,10 +118,13 @@ export default function GuardModePage() {
   const { vehicleId, vehicle: activeVehicle } = useSelectedVehicle();
   const activeVehicleId = vehicleId ?? 0;
 
-  // Guard data
-  const { data: guardConfig, isLoading: configLoading } = useGuardConfig(activeVehicleId);
-  const { data: guardEvents, isLoading: eventsLoading } = useGuardEvents(activeVehicleId);
-  const { data: vehicleState } = useVehicleState(activeVehicleId, { refetchInterval: guardConfig?.enabled ? 5_000 : 30_000 });
+  // Guard data (keep the full query objects so each panel owns its state).
+  const configQuery = useGuardConfig(activeVehicleId);
+  const eventsQuery = useGuardEvents(activeVehicleId);
+  const guardConfig = configQuery.data;
+  const vehicleStateQuery = useVehicleState(activeVehicleId, {
+    refetchInterval: guardConfig?.enabled ? 5_000 : 30_000,
+  });
   const { data: geofences } = useGeofences();
 
   // Mutations
@@ -108,29 +132,32 @@ export default function GuardModePage() {
   const panic = useGuardPanic();
   const ackEvent = useAcknowledgeGuardEvent();
 
-  // Local state
+  // Local (draft) state — falls back to the persisted config.
   const [panicDialogOpen, setPanicDialogOpen] = useState(false);
   const [sensitivity, setSensitivity] = useState<string>('');
   const [homeGeofenceId, setHomeGeofenceId] = useState<string>('');
   const [autoPanic, setAutoPanic] = useState(false);
 
-  // Sync local state from config
   const effectiveSensitivity = sensitivity || guardConfig?.sensitivity || 'medium';
-  const effectiveHomeGeofenceId = homeGeofenceId || (guardConfig?.home_geofence_id != null ? String(guardConfig.home_geofence_id) : '');
+  const effectiveHomeGeofenceId =
+    homeGeofenceId || (guardConfig?.home_geofence_id != null ? String(guardConfig.home_geofence_id) : '');
 
   // Derived data
   const isArmed = guardConfig?.enabled ?? false;
-  const events = guardEvents ?? [];
+  const events = eventsQuery.data ?? [];
   const unacknowledgedCount = events.filter((e) => !isGuardEventAcknowledged(e)).length;
   const latestEvent = events[0] ?? null;
-  const isTriggered = latestEvent != null && !isGuardEventAcknowledged(latestEvent) && latestEvent.event_type !== 'test_alert';
+  const isTriggered =
+    latestEvent != null && !isGuardEventAcknowledged(latestEvent) && latestEvent.event_type !== 'test_alert';
 
-  const state = vehicleState?.state ?? vehicleState;
+  const state = vehicleStateQuery.data?.state ?? vehicleStateQuery.data;
   const vehicleLat = (state as Record<string, unknown>)?.latitude as number | undefined;
   const vehicleLng = (state as Record<string, unknown>)?.longitude as number | undefined;
   const hasLocation = vehicleLat != null && vehicleLng != null && vehicleLat !== 0 && vehicleLng !== 0;
+  const isLocked = Boolean((state as Record<string, unknown>)?.is_locked);
+  const sentryOn = Boolean((state as Record<string, unknown>)?.sentry_mode);
 
-  const homeGeofence = geofences?.find((g) => String(g.id) === effectiveHomeGeofenceId);
+  const homeGeofence = geofences?.find((g) => String(g.id) === effectiveHomeGeofenceId) ?? null;
 
   const geofenceOptions = useMemo(
     () => [
@@ -140,8 +167,32 @@ export default function GuardModePage() {
     [geofences, t],
   );
 
-  // ── Handlers ────────────────────────────────────────────────────────
+  const sensitivityOptions = useMemo(
+    () => [
+      { value: 'low', label: t('guard.sensitivityLowFull', 'Low — Movement > 1 km') },
+      { value: 'medium', label: t('guard.sensitivityMediumFull', 'Medium — Movement > 200 m') },
+      { value: 'high', label: t('guard.sensitivityHighFull', 'High — Any movement') },
+    ],
+    [t],
+  );
 
+  // ── Labels ──────────────────────────────────────────────────────────
+  const stateLabel = isTriggered
+    ? t('guard.triggered', 'Triggered')
+    : isArmed
+    ? t('guard.armed', 'Armed')
+    : t('guard.disarmed', 'Disarmed');
+  const stateColor: NeonColor = isTriggered ? 'red' : isArmed ? 'green' : 'amber';
+  const StateIcon: LucideIcon = isTriggered ? ShieldAlert : isArmed ? ShieldCheck : ShieldOff;
+  const LockIcon: LucideIcon = isLocked ? Lock : Unlock;
+  const sensitivityLabel =
+    effectiveSensitivity === 'low'
+      ? t('guard.sensitivityLow', 'Low')
+      : effectiveSensitivity === 'high'
+      ? t('guard.sensitivityHigh', 'High')
+      : t('guard.sensitivityMedium', 'Medium');
+
+  // ── Handlers ────────────────────────────────────────────────────────
   const handleToggleGuard = () => {
     if (activeVehicleId <= 0) return;
     setConfig.mutate({
@@ -166,246 +217,327 @@ export default function GuardModePage() {
 
   const handlePanic = () => {
     setPanicDialogOpen(false);
-    if (activeVehicleId > 0) {
-      panic.mutate(activeVehicleId);
-    }
+    if (activeVehicleId > 0) panic.mutate(activeVehicleId);
   };
 
   const handleAcknowledge = (eventId: number) => {
-    if (activeVehicleId > 0) {
-      ackEvent.mutate({ vehicleId: activeVehicleId, eventId });
-    }
+    if (activeVehicleId > 0) ackEvent.mutate({ vehicleId: activeVehicleId, eventId });
   };
 
-  const isLoading = configLoading || eventsLoading;
+  const noVehicle = activeVehicleId <= 0;
+  const kpiLoading = configQuery.isLoading && !guardConfig;
+
+  const labelForEvent = (type: string) => {
+    const [key, fallback] = eventLabelKey(type);
+    return t(key, fallback);
+  };
 
   // ── Render ──────────────────────────────────────────────────────────
-
   return (
     <PageContainer
       title={t('guard.title', 'Guard Mode')}
       subtitle={t('guard.subtitle', 'Anti-theft monitoring and emergency response')}
-      loading={isLoading}
       actions={<VehicleSelect />}
+      query={configQuery}
     >
       {/* Triggered alert banner */}
       {isTriggered && latestEvent && (
-        <AlertBanner variant="danger" title={t('guard.alertTriggered', 'Guard Alert Triggered!')} icon={<ShieldAlert className="h-5 w-5" />}>
-          <p className="text-sm">
-            {EVENT_LABELS[latestEvent.event_type] ?? latestEvent.event_type}
-            {' — '}
+        <AlertBanner
+          variant="danger"
+          title={t('guard.alertTriggered', 'Guard Alert Triggered!')}
+          icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
+        >
+          <Text as="p" variant="bodySm">
+            {labelForEvent(latestEvent.event_type)} {'— '}
             <TimeStamp value={latestEvent.ts} />
-          </p>
+          </Text>
         </AlertBanner>
       )}
 
-      {/* Row 1: Guard toggle + Status + Panic */}
+      {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <Grid cols={{ default: 1, md: 3 }} gap={4}>
-          {/* Guard Mode Toggle */}
-          <GlassPanel
-            className={cn(
-              'p-6 flex flex-col items-center justify-center gap-4 text-center transition-all duration-slow',
-              isArmed && !isTriggered && 'ring-2 ring-emerald-500/30',
-              isTriggered && 'ring-2 ring-red-500/50 animate-pulse',
-            )}
+        {kpiLoading ? (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} height={84} className="rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <section
+            aria-label={t('guard.overview', 'Guard status overview')}
+            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
           >
-            <div className={cn(
-              'w-20 h-20 rounded-full flex items-center justify-center transition-all duration-normal',
-              isArmed && !isTriggered && 'bg-emerald-500/20 text-emerald-400',
-              isTriggered && 'bg-red-500/20 text-red-400',
-              !isArmed && 'bg-[var(--surface-2)] text-[var(--text-muted)]',
-            )}>
-              {isTriggered ? (
-                <ShieldAlert className="h-10 w-10" />
-              ) : isArmed ? (
-                <ShieldCheck className="h-10 w-10" />
-              ) : (
-                <ShieldOff className="h-10 w-10" />
-              )}
-            </div>
-            <h3 className="text-lg font-bold text-[var(--text-primary)]">
-              {isTriggered
-                ? t('guard.triggered', 'TRIGGERED')
-                : isArmed
-                ? t('guard.armed', 'Armed')
-                : t('guard.disarmed', 'Disarmed')}
-            </h3>
-            <Toggle
-              label={t('guard.enableGuard', 'Guard Mode')}
-              checked={isArmed}
-              onChange={handleToggleGuard}
+            <MetricCard
+              label={t('guard.kpiState', 'Guard State')}
+              value={stateLabel}
+              icon={<StateIcon className="h-5 w-5" aria-hidden="true" />}
+              color={stateColor}
             />
-            {setConfig.isPending && (
-              <span className="text-xs text-[var(--text-muted)]">{t('guard.updating', 'Updating...')}</span>
-            )}
-          </GlassPanel>
-
-          {/* Status Card */}
-          <GlassPanel className="p-6 space-y-3">
-            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-              {t('guard.status', 'Status')}
-            </h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-secondary)]">
-                  {isArmed && guardConfig?.updated_at
-                    ? t('guard.armedSince', 'Armed since {{time}}', { time: formatDateTime(guardConfig.updated_at) })
-                    : t('guard.notArmed', 'Not armed')}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Lock className="h-4 w-4 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-secondary)]">
-                  {(state as Record<string, unknown>)?.is_locked
-                    ? t('guard.locked', 'Vehicle locked')
-                    : t('guard.unlocked', 'Vehicle unlocked')}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Eye className="h-4 w-4 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-secondary)]">
-                  {(state as Record<string, unknown>)?.sentry_mode
-                    ? t('guard.sentryOn', 'Sentry mode active')
-                    : t('guard.sentryOff', 'Sentry mode off')}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <AlertTriangle className="h-4 w-4 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-secondary)]">
-                  {unacknowledgedCount > 0
-                    ? t('guard.unackEvents', '{{count}} unacknowledged event(s)', { count: unacknowledgedCount })
-                    : t('guard.noEvents', 'No active alerts')}
-                </span>
-              </div>
-            </div>
-          </GlassPanel>
-
-          {/* PANIC Button */}
-          <GlassPanel className="p-6 flex flex-col items-center justify-center gap-4">
-            <Siren className="h-10 w-10 text-red-400" />
-            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-              {t('guard.emergency', 'Emergency')}
-            </h3>
-            <Button
-              onClick={() => setPanicDialogOpen(true)}
-              disabled={panic.isPending || activeVehicleId <= 0}
-              className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition-all hover:shadow-lg hover:shadow-red-500/25"
-            >
-              {panic.isPending
-                ? t('guard.panicking', 'Sending...')
-                : t('guard.panicButton', '🚨 PANIC')}
-            </Button>
-            <p className="text-xs text-[var(--text-muted)] text-center">
-              {t('guard.panicDesc', 'Flash lights, honk horn, lock doors, enable sentry, and notify all channels')}
-            </p>
-          </GlassPanel>
-        </Grid>
+            <MetricCard
+              label={t('guard.kpiSentry', 'Sentry Mode')}
+              value={sentryOn ? t('guard.on', 'On') : t('guard.off', 'Off')}
+              icon={<Eye className="h-5 w-5" aria-hidden="true" />}
+              color={sentryOn ? 'green' : 'cyan'}
+            />
+            <MetricCard
+              label={t('guard.kpiLock', 'Lock State')}
+              value={isLocked ? t('guard.locked', 'Locked') : t('guard.unlocked', 'Unlocked')}
+              icon={<LockIcon className="h-5 w-5" aria-hidden="true" />}
+              color={isLocked ? 'green' : 'amber'}
+            />
+            <MetricCard
+              label={t('guard.kpiSensitivity', 'Sensitivity')}
+              value={sensitivityLabel}
+              icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+              color="blue"
+            />
+            <MetricCard
+              label={t('guard.kpiUnack', 'Unacknowledged')}
+              value={unacknowledgedCount}
+              icon={<Bell className="h-5 w-5" aria-hidden="true" />}
+              color={unacknowledgedCount > 0 ? 'red' : 'green'}
+            />
+            <MetricCard
+              label={t('guard.kpiTotal', 'Total Events')}
+              value={events.length}
+              icon={<History className="h-5 w-5" aria-hidden="true" />}
+              color="cyan"
+            />
+          </section>
+        )}
       </FadeIn>
 
-      {/* Row 2: Settings */}
+      {/* 2 — Hero row: live map (spans) + control rail */}
       <FadeIn delay={0.05}>
-        <GlassPanel className="p-6 space-y-4">
-          <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-            {t('guard.settings', 'Guard Settings')}
-          </h3>
-          <Grid cols={{ default: 1, md: 3 }} gap={4}>
-            <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1">{t('guard.homeGeofence', 'Home Geofence')}</label>
-              <Select
-                options={geofenceOptions}
-                value={effectiveHomeGeofenceId}
-                onChange={(e) => setHomeGeofenceId(e.target.value)}
-              />
-              <p className="text-xs text-[var(--text-muted)] mt-1">
-                {t('guard.homeGeofenceHelp', 'Vehicle will trigger alert if it leaves this area')}
-              </p>
+        <section
+          aria-label={t('guard.controlSection', 'Guard control and live location')}
+          className="grid grid-cols-1 gap-4 xl:gap-5 xl:grid-cols-3"
+        >
+          {/* Live map — hero, spans two columns on wide screens */}
+          <GlassPanel className="flex flex-col overflow-hidden p-0 xl:col-span-2">
+            <div className="p-4 pb-0 sm:p-5 sm:pb-0">
+              <PanelTitle className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('guard.liveMap', 'Live Vehicle Location')}
+              </PanelTitle>
             </div>
-            <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1">{t('guard.sensitivity', 'Sensitivity')}</label>
-              <Select
-                options={SENSITIVITY_OPTIONS}
-                value={effectiveSensitivity}
-                onChange={(e) => setSensitivity(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col justify-between">
-              <div>
-                <Toggle
-                  label={t('guard.autoPanic', 'Auto-Panic on Trigger')}
-                  checked={autoPanic || guardConfig?.auto_panic || false}
-                  onChange={setAutoPanic}
+            <div className="mt-3 h-80 flex-1 sm:h-96 xl:h-[32rem]">
+              {vehicleStateQuery.isError ? (
+                <div className="flex h-full items-center justify-center p-4">
+                  <QueryError error={vehicleStateQuery.error} onRetry={() => vehicleStateQuery.refetch()} />
+                </div>
+              ) : vehicleStateQuery.isLoading && !state ? (
+                <div className="h-full p-4">
+                  <Skeleton height="100%" className="rounded-xl" />
+                </div>
+              ) : hasLocation ? (
+                <LiveMap
+                  vehicleLat={vehicleLat!}
+                  vehicleLng={vehicleLng!}
+                  vehicleName={activeVehicle?.display_name ?? ''}
+                  homeGeofence={homeGeofence}
+                  events={events}
                 />
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  {t('guard.autoPanicHelp', 'Automatically execute panic actions when guard is triggered')}
-                </p>
-              </div>
-              <Button
-                onClick={handleSaveSettings}
-                disabled={setConfig.isPending}
-                className="mt-3"
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <EmptyState
+                    /* no-action: transient empty state — surfaces when the vehicle has no live position */
+                    icon={<MapPin className="h-8 w-8" aria-hidden="true" />}
+                    message={t('guard.noLocation', 'No vehicle location available')}
+                  />
+                </div>
+              )}
+            </div>
+          </GlassPanel>
+
+          {/* Control rail — arm/disarm + emergency panic */}
+          <div className="flex flex-col gap-4 xl:gap-5">
+            {/* Arm / Disarm */}
+            <GlassPanel
+              className={cn(
+                'flex flex-col items-center justify-center gap-4 p-5 text-center transition-all duration-slow sm:p-6',
+                isArmed && !isTriggered && 'ring-1 ring-emerald-500/30',
+                isTriggered && 'ring-2 ring-red-500/50 animate-pulse',
+              )}
+            >
+              <div
+                className={cn(
+                  'flex h-16 w-16 items-center justify-center rounded-full transition-all duration-normal',
+                  isTriggered
+                    ? 'bg-red-500/20 text-red-300'
+                    : isArmed
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : 'bg-white/5 text-[var(--text-muted)]',
+                )}
               >
+                <StateIcon className="h-8 w-8" aria-hidden="true" />
+              </div>
+              <div className="space-y-1">
+                <Text as="p" variant="sectionTitle">
+                  {stateLabel}
+                </Text>
+                <HelperText>
+                  {isArmed
+                    ? t('guard.armedHelp', 'Monitoring is active')
+                    : t('guard.disarmedHelp', 'Guard monitoring is off')}
+                </HelperText>
+              </div>
+              <Toggle
+                label={t('guard.enableGuard', 'Guard Mode')}
+                checked={isArmed}
+                onChange={() => handleToggleGuard()}
+              />
+              {setConfig.isPending && (
+                <Text as="span" variant="caption">
+                  {t('guard.updating', 'Updating…')}
+                </Text>
+              )}
+            </GlassPanel>
+
+            {/* Emergency panic */}
+            <GlassPanel className="flex flex-col items-center justify-center gap-3 p-5 text-center sm:p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 text-red-300">
+                <Siren className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <PanelTitle>{t('guard.emergency', 'Emergency')}</PanelTitle>
+              <Button
+                variant="danger"
+                size="lg"
+                onClick={() => setPanicDialogOpen(true)}
+                loading={panic.isPending}
+                disabled={panic.isPending || noVehicle}
+                className="w-full"
+              >
+                <Siren className="h-4 w-4" aria-hidden="true" />
+                {panic.isPending ? t('guard.panicking', 'Sending…') : t('guard.panicButton', 'Activate Panic')}
+              </Button>
+              <HelperText>
+                {t(
+                  'guard.panicDesc',
+                  'Flash lights, honk horn, lock doors, enable sentry, and notify all channels',
+                )}
+              </HelperText>
+            </GlassPanel>
+          </div>
+        </section>
+      </FadeIn>
+
+      {/* 3 — Settings (spans) + status bento */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('guard.configSection', 'Guard configuration and status')}
+          className="grid grid-cols-1 gap-4 xl:gap-5 xl:grid-cols-3"
+        >
+          {/* Settings — two columns on wide screens */}
+          <GlassPanel className="space-y-4 p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('guard.settings', 'Guard Settings')}
+            </PanelTitle>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              <div className="space-y-1">
+                <Select
+                  label={t('guard.homeGeofence', 'Home Geofence')}
+                  options={geofenceOptions}
+                  value={effectiveHomeGeofenceId}
+                  onChange={(e) => setHomeGeofenceId(e.target.value)}
+                />
+                <HelperText>
+                  {t('guard.homeGeofenceHelp', 'Vehicle triggers an alert if it leaves this area')}
+                </HelperText>
+              </div>
+              <div className="space-y-1">
+                <Select
+                  label={t('guard.sensitivity', 'Sensitivity')}
+                  options={sensitivityOptions}
+                  value={effectiveSensitivity}
+                  onChange={(e) => setSensitivity(e.target.value)}
+                />
+                <HelperText>{t('guard.sensitivityHelp', 'How much movement counts as a trigger')}</HelperText>
+              </div>
+              <div className="flex flex-col justify-between gap-3">
+                <div className="space-y-1">
+                  <Toggle
+                    label={t('guard.autoPanic', 'Auto-Panic on Trigger')}
+                    checked={autoPanic || guardConfig?.auto_panic || false}
+                    onChange={setAutoPanic}
+                  />
+                  <HelperText>
+                    {t('guard.autoPanicHelp', 'Automatically run panic actions when guard is triggered')}
+                  </HelperText>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleSaveSettings} loading={setConfig.isPending} disabled={setConfig.isPending || noVehicle}>
                 {t('guard.saveSettings', 'Save Settings')}
               </Button>
             </div>
-          </Grid>
-        </GlassPanel>
+          </GlassPanel>
+
+          {/* Status list */}
+          <GlassPanel className="space-y-3 p-4 sm:p-5">
+            <PanelTitle className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('guard.status', 'Status')}
+            </PanelTitle>
+            <ul className="space-y-2.5">
+              <StatusRow icon={Clock}>
+                {isArmed && guardConfig?.updated_at
+                  ? t('guard.armedSince', 'Armed since {{time}}', { time: formatDateTime(guardConfig.updated_at) })
+                  : t('guard.notArmed', 'Not armed')}
+              </StatusRow>
+              <StatusRow icon={LockIcon} tone={isLocked ? 'ok' : 'warn'}>
+                {isLocked ? t('guard.vehicleLocked', 'Vehicle locked') : t('guard.vehicleUnlocked', 'Vehicle unlocked')}
+              </StatusRow>
+              <StatusRow icon={Eye} tone={sentryOn ? 'ok' : 'muted'}>
+                {sentryOn ? t('guard.sentryActive', 'Sentry mode active') : t('guard.sentryInactive', 'Sentry mode off')}
+              </StatusRow>
+              <StatusRow icon={AlertTriangle} tone={unacknowledgedCount > 0 ? 'warn' : 'muted'}>
+                {unacknowledgedCount > 0
+                  ? t('guard.unackEvents', '{{count}} unacknowledged event(s)', { count: unacknowledgedCount })
+                  : t('guard.noActiveAlerts', 'No active alerts')}
+              </StatusRow>
+            </ul>
+          </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* Row 3: Live Map */}
-      <FadeIn delay={0.1}>
-        <GlassPanel className="p-0 overflow-hidden">
-          <div className="p-4 pb-0">
-            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-              {t('guard.liveMap', 'Live Vehicle Location')}
-            </h3>
-          </div>
-          <div className="h-[400px] mt-3">
-            {hasLocation ? (
-              <LiveMap
-                vehicleLat={vehicleLat!}
-                vehicleLng={vehicleLng!}
-                vehicleName={activeVehicle?.display_name ?? ''}
-                homeGeofence={homeGeofence ?? null}
-                events={events}
-              />
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<MapPin className="h-8 w-8" />} message={t('guard.noLocation', 'No vehicle location available')} />
-              </div>
-            )}
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* Row 4: Event Timeline */}
+      {/* 4 — Detail band: event timeline */}
       <FadeIn delay={0.15}>
-        <GlassPanel className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
+        <GlassPanel className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <PanelTitle className="flex items-center gap-2">
+              <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('guard.eventTimeline', 'Event Timeline')}
-            </h3>
+            </PanelTitle>
             {unacknowledgedCount > 0 && (
               <Badge variant="danger" size="sm">
-                {unacknowledgedCount} {t('guard.unack', 'unacknowledged')}
+                {t('guard.unackCount', '{{count}} unacknowledged', { count: unacknowledgedCount })}
               </Badge>
             )}
           </div>
 
-          {events.length > 0 ? (
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
-              {events.map((ev) => (
-                <EventRow
-                  key={ev.id}
-                  event={ev}
-                  onAcknowledge={handleAcknowledge}
-                  isAcking={ackEvent.isPending}
-                />
+          {eventsQuery.isError ? (
+            <QueryError error={eventsQuery.error} onRetry={() => eventsQuery.refetch()} />
+          ) : eventsQuery.isLoading && events.length === 0 ? (
+            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2 3xl:grid-cols-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} height={96} className="rounded-lg" />
               ))}
             </div>
+          ) : events.length === 0 ? (
+            <EmptyState
+              /* no-action: transient empty state — surfaces when the vehicle has no guard events yet */
+              icon={<Info className="h-8 w-8" aria-hidden="true" />}
+              message={t('guard.noEvents', 'No guard events yet')}
+            />
           ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-8 w-8" />} message={t('guard.noEvents', 'No guard events yet')} />
+            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2 3xl:grid-cols-3">
+              {events.map((ev) => (
+                <EventCard key={ev.id} event={ev} onAcknowledge={handleAcknowledge} isAcking={ackEvent.isPending} />
+              ))}
+            </div>
           )}
         </GlassPanel>
       </FadeIn>
@@ -418,8 +550,10 @@ export default function GuardModePage() {
           'guard.panicConfirmMessage',
           'This will immediately flash lights, honk horn, lock doors, enable sentry mode, and send alerts to all notification channels.',
         )}
-        confirmLabel={t('guard.panicConfirmLabel', '🚨 ACTIVATE PANIC')}
+        confirmLabel={t('guard.panicConfirmLabel', 'Activate Panic')}
+        cancelLabel={t('common.cancel', 'Cancel')}
         variant="danger"
+        loading={panic.isPending}
         onConfirm={handlePanic}
         onCancel={() => setPanicDialogOpen(false)}
       />
@@ -428,6 +562,31 @@ export default function GuardModePage() {
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────
+
+const STATUS_TONE = {
+  ok: 'text-emerald-300',
+  warn: 'text-amber-300',
+  muted: 'text-[var(--text-muted)]',
+} as const;
+
+function StatusRow({
+  icon: Icon,
+  tone = 'muted',
+  children,
+}: {
+  icon: LucideIcon;
+  tone?: keyof typeof STATUS_TONE;
+  children: ReactNode;
+}) {
+  return (
+    <li className="flex items-center gap-2.5">
+      <Icon className={cn('h-4 w-4 shrink-0', STATUS_TONE[tone])} aria-hidden="true" />
+      <Text as="span" variant="bodySm">
+        {children}
+      </Text>
+    </li>
+  );
+}
 
 function LiveMap({
   vehicleLat,
@@ -444,23 +603,20 @@ function LiveMap({
 }) {
   const [mapStyle] = useState<MapStyle>('dark');
 
-  // GuardEvent records are state-change rows (locked,
-  // valet_mode_enabled, …) sourced from security_events; they no longer
-  // carry latitude/longitude. The map therefore omits the trail and
-  // shows only the live vehicle position + home geofence circle.
+  // GuardEvent records are state-change rows sourced from security_events;
+  // they no longer carry latitude/longitude, so the trail is empty and the
+  // map shows only the live position + the home geofence circle.
   const eventPositions: [number, number][] = useMemo(() => [], [events]);
 
   return (
-    <MapContainer center={[vehicleLat, vehicleLng]} zoom={15} scrollWheelZoom className="h-full w-full z-0">
+    <MapContainer center={[vehicleLat, vehicleLng]} zoom={15} scrollWheelZoom className="z-0 h-full w-full">
       <MapTileLayer style={mapStyle} />
       <MapInvalidator />
 
-      {/* Vehicle marker */}
       <Marker position={[vehicleLat, vehicleLng]} icon={vehicleIcon()}>
         <MapPopup vehicleName={vehicleName} lat={vehicleLat} lng={vehicleLng} />
       </Marker>
 
-      {/* Home geofence circle */}
       {homeGeofence && (
         <Circle
           center={[homeGeofence.latitude, homeGeofence.longitude]}
@@ -474,38 +630,30 @@ function LiveMap({
         />
       )}
 
-      {/* Event trail */}
-      {eventPositions.length > 1 && (
-        <EventTrail positions={eventPositions} />
-      )}
+      {eventPositions.length > 1 && <EventTrail positions={eventPositions} />}
     </MapContainer>
   );
 }
 
 function MapPopup({ vehicleName, lat, lng }: { vehicleName: string; lat: number; lng: number }) {
+  const { t } = useTranslation();
   return (
     <Popup>
-      <div className="text-sm">
-        <strong>{vehicleName || 'Vehicle'}</strong>
-        <br />
-        <span className="text-xs text-[var(--text-muted)]">
-          {lat.toFixed(6)}, {lng.toFixed(6)}
-        </span>
-      </div>
+      <Text as="p" variant="body">
+        {vehicleName || t('guard.vehicle', 'Vehicle')}
+      </Text>
+      <Text as="span" variant="caption">
+        {lat.toFixed(6)}, {lng.toFixed(6)}
+      </Text>
     </Popup>
   );
 }
 
 function EventTrail({ positions }: { positions: [number, number][] }) {
-  return (
-    <Polyline
-      positions={positions}
-      pathOptions={{ color: '#ef4444', weight: 3, dashArray: '8 4' }}
-    />
-  );
+  return <Polyline positions={positions} pathOptions={{ color: '#ef4444', weight: 3, dashArray: '8 4' }} />;
 }
 
-function EventRow({
+function EventCard({
   event,
   onAcknowledge,
   isAcking,
@@ -516,65 +664,69 @@ function EventRow({
 }) {
   const { t } = useTranslation();
   const acknowledged = isGuardEventAcknowledged(event);
+  const type = event.event_type ?? '';
+  const [labelKey, labelFallback] = eventLabelKey(type);
+
+  const Icon: LucideIcon = acknowledged
+    ? CheckCircle2
+    : type === 'manual_panic'
+    ? Siren
+    : type.includes('unlock')
+    ? Unlock
+    : type.includes('drive')
+    ? Car
+    : AlertTriangle;
+
+  const iconTone = acknowledged
+    ? 'text-[var(--text-muted)]'
+    : type === 'manual_panic' || type.includes('drive')
+    ? 'text-rose-300'
+    : 'text-amber-300';
 
   return (
     <div
       className={cn(
-        'flex items-start gap-3 p-3 rounded-lg border transition-colors',
+        'flex items-start gap-3 rounded-lg border p-3 transition-colors',
         acknowledged
           ? 'border-[var(--border-subtle)] bg-white/[0.01]'
           : 'border-red-500/20 bg-red-500/[0.03]',
       )}
     >
-      <div className="shrink-0 mt-0.5">
-        {acknowledged ? (
-          <CheckCircle2 className="h-5 w-5 text-[var(--text-muted)]" />
-        ) : event.event_type === 'manual_panic' ? (
-          <Siren className="h-5 w-5 text-red-400" />
-        ) : (event.event_type ?? '').includes('unlock') ? (
-          <Unlock className="h-5 w-5 text-amber-400" />
-        ) : (event.event_type ?? '').includes('drive') ? (
-          <Car className="h-5 w-5 text-red-400" />
-        ) : (
-          <AlertTriangle className="h-5 w-5 text-amber-400" />
-        )}
-      </div>
+      <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', iconTone)} aria-hidden="true" />
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge
-            variant={EVENT_BADGE_VARIANT[event.event_type] ?? 'info'}
-            size="sm"
-          >
-            {EVENT_LABELS[event.event_type] ?? event.event_type}
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={EVENT_BADGE_VARIANT[type] ?? 'info'} size="sm">
+            {t(labelKey, labelFallback)}
           </Badge>
-          <TimeStamp value={event.ts} className="text-xs text-[var(--text-muted)]" />
+          <TimeStamp value={event.ts} className={typography.role.caption} />
         </div>
 
         {(event.from_state != null || event.to_state != null) && (
-          <p className="text-xs text-[var(--text-muted)] mt-1">
+          <Text as="p" variant="caption">
             {event.from_state ?? '—'} → {event.to_state ?? '—'}
-          </p>
+          </Text>
         )}
 
         {event.acknowledged_by && (
-          <p className="text-xs text-[var(--text-muted)] mt-1">
+          <Text as="p" variant="caption">
             {t('guard.acknowledgedBy', 'Acknowledged by')}: {event.acknowledged_by}
-          </p>
+          </Text>
         )}
       </div>
 
-      <div className="shrink-0">
-        {!acknowledged && (
-          <Button
-            onClick={() => onAcknowledge(event.id)}
-            disabled={isAcking}
-            className="text-xs px-2 py-1"
-          >
-            {t('guard.acknowledge', 'Ack')}
-          </Button>
-        )}
-      </div>
+      {!acknowledged && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onAcknowledge(event.id)}
+          disabled={isAcking}
+          aria-label={t('guard.acknowledgeEvent', 'Acknowledge event')}
+          className="shrink-0"
+        >
+          {t('guard.acknowledge', 'Ack')}
+        </Button>
+      )}
     </div>
   );
 }
