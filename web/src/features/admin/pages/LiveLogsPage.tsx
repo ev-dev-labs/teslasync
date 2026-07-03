@@ -434,9 +434,9 @@ export default function LiveLogsPage({
         header: t('liveLogs.table.time', 'Time'),
         defaultWidth: 110,
         render: (row) => (
-          <span className="font-mono text-xs text-[var(--text-secondary)]">
+          <Text mono size="xs" color="secondary">
             {formatTime(row.receivedAt)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -455,12 +455,12 @@ export default function LiveLogsPage({
         key: 'message',
         header: t('liveLogs.table.message', 'Message'),
         render: (row) => (
-          <span className="block break-words font-mono text-xs text-[var(--text-primary)]">
+          <Text variant="code" className="block break-words">
             <HighlightedText
               text={extractMessage(row.parsed, row.payload)}
               pattern={grepPattern}
             />
-          </span>
+          </Text>
         ),
       },
       {
@@ -473,21 +473,25 @@ export default function LiveLogsPage({
           return (
             <span className="flex flex-wrap gap-1">
               {fields.slice(0, 6).map(([k, v]) => (
-                <span
+                <Text
+                  as="span"
                   key={k}
-                  className="rounded border border-[var(--border-subtle)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-secondary)]"
+                  mono
+                  size="2xs"
+                  color="secondary"
+                  className="rounded border border-[var(--border-subtle)] bg-[var(--surface-2)] px-1.5 py-0.5"
                   title={`${k}=${v}`}
                 >
                   <span className="text-[var(--text-muted)]">{k}=</span>
                   <span className="text-[var(--text-primary)]">
                     {v.length > 32 ? `${v.slice(0, 32)}…` : v}
                   </span>
-                </span>
+                </Text>
               ))}
               {fields.length > 6 ? (
-                <span className="px-1 font-mono text-[10px] text-[var(--text-muted)]">
+                <Text mono size="2xs" color="muted" className="px-1">
                   +{fields.length - 6}
-                </span>
+                </Text>
               ) : null}
             </span>
           );
