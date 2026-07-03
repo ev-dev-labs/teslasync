@@ -5114,7 +5114,15 @@
     "cost": "Cost",
     "savedAmount": "Saved",
     "status": "Status",
-    "noHistory": "No charge plans yet. Optimize a schedule above to get started."
+    "noHistory": "No charge plans yet. Optimize a schedule above to get started.",
+    "costComparison": "Cost comparison",
+    "energyNeeded": "Energy Needed",
+    "estDuration": "~{{hours}}h",
+    "selectVehiclePrompt": "Select a vehicle to optimize a charge schedule.",
+    "runToSeeTimeline": "Run an optimization to see the 24-hour rate timeline and the cheapest charge window.",
+    "runToSeeSchedule": "Optimize a schedule to see the recommended charge window and apply it to your vehicle.",
+    "runToSeeAlternatives": "Optimize a schedule to compare alternative charge windows.",
+    "noAlternatives": "No alternative windows for this plan."
   },
   "powershare": {
     "title": "Powershare",

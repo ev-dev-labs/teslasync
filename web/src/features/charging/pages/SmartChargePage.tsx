@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Zap,
@@ -11,19 +11,32 @@ import {
   History,
 } from 'lucide-react';
 
-import { PageContainer, Grid } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, Button as ControlButton, Select as ControlSelect, Input as ControlInput, Slider,
+  GlassPanel,
+  Button,
+  Select,
+  Input,
+  Slider,
+  Badge,
+  DataTable,
+  PanelTitle,
+  Text,
+  Caption,
+  ErrorText,
+  type Column,
 } from '@/components/ui';
 import { UnitInput, VehicleSelect } from '@/components/forms';
-import { StatCard } from '@/components/data-display';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError, Spinner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, Spinner } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
 import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import {
   useOptimizeCharge,
   useApplySchedule,
@@ -32,7 +45,7 @@ import {
 } from '@/api/hooks/useCharging';
 import { RateTimeline } from '../components/RateTimeline';
 import { AISmartChargeScheduleSuggestion } from '@/components/ai/AISmartChargeScheduleSuggestion';
-import type { OptimizeChargeResponse } from '@/types/charging';
+import type { ChargePlan, OptimizeChargeResponse } from '@/types/charging';
 
 const defaultDepartBy = () => {
   const d = new Date();
@@ -40,6 +53,39 @@ const defaultDepartBy = () => {
   d.setHours(7, 30, 0, 0);
   return d.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm for datetime-local input
 };
+
+/** Maps a plan lifecycle status onto a shared Badge variant so the History
+ *  table conveys state with colour + label (never colour alone). */
+function planStatusVariant(
+  status: string,
+): 'success' | 'info' | 'warning' | 'danger' | 'neutral' {
+  switch (status) {
+    case 'completed':
+      return 'success';
+    case 'scheduled':
+    case 'applied':
+      return 'info';
+    case 'cancelled':
+    case 'failed':
+      return 'danger';
+    case 'pending':
+      return 'warning';
+    default:
+      return 'neutral';
+  }
+}
+
+/** Compact label/value pair for the recommended-schedule facts grid. */
+function ScheduleFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <Caption>{label}</Caption>
+      <Text as="p" variant="body" className="mt-0.5 truncate font-medium">
+        {value}
+      </Text>
+    </div>
+  );
+}
 
 export default function SmartChargePage() {
   const { t } = useTranslation();
@@ -65,15 +111,33 @@ export default function SmartChargePage() {
   const [result, setResult] = useState<OptimizeChargeResponse | null>(null);
   const [applied, setApplied] = useState(false);
 
-  const { data: plans } = useChargePlans(vehicleIdNum);
+  // Plan-history query — also drives the page-level freshness chip.
+  const plansQuery = useChargePlans(vehicleIdNum);
+  const {
+    data: plans,
+    isLoading: plansLoading,
+    isError: plansError,
+    error: plansErrorObj,
+    refetch: refetchPlans,
+  } = plansQuery;
 
-  const ratePlanOptions = useMemo(() =>
-    (ratePlans ?? []).map(p => ({
-      value: p.id,
-      label: `${p.name} (${p.utility})`,
-    })),
+  const ratePlanOptions = useMemo(
+    () =>
+      (ratePlans ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.name} (${p.utility})`,
+      })),
     [ratePlans],
   );
+
+  const ratePlanSelectOptions =
+    ratePlanOptions.length > 0
+      ? ratePlanOptions
+      : [
+          { value: 'pge-ev2a', label: 'PG&E EV2-A' },
+          { value: 'sce-tou-d', label: 'SCE TOU-D' },
+          { value: 'sdge-tou-dr1', label: 'SDG&E TOU-DR1' },
+        ];
 
   const chargeWindow = useMemo(() => {
     if (!result) return undefined;
@@ -112,285 +176,403 @@ export default function SmartChargePage() {
   };
 
   const historyItems = plans ?? [];
+  const comparison = result?.comparison;
+  const savingsPositive = (comparison?.savings ?? 0) > 0;
+
+  const optimizeErrorMsg = optimizeMutation.isError
+    ? (optimizeMutation.error as Error)?.message ||
+      t('chargePlanner.optimizeError', 'Optimization failed')
+    : '';
+
+  const historyColumns = useMemo<Column<ChargePlan>[]>(
+    () => [
+      {
+        key: 'created_at',
+        header: t('chargePlanner.date', 'Date'),
+        sortable: true,
+        render: (p) => <Text variant="bodySm">{formatDate(p.created_at)}</Text>,
+      },
+      {
+        key: 'window',
+        header: t('chargePlanner.window', 'Window'),
+        render: (p) => (
+          <Text variant="bodySm" className="tabular-nums">
+            {formatTime(p.scheduled_start)} — {formatTime(p.scheduled_end)}
+          </Text>
+        ),
+      },
+      {
+        key: 'rate_plan',
+        header: t('chargePlanner.plan', 'Plan'),
+        sortable: true,
+        render: (p) => <Text variant="bodySm">{p.rate_plan ?? '—'}</Text>,
+      },
+      {
+        key: 'estimated_cost',
+        header: t('chargePlanner.cost', 'Cost'),
+        align: 'right',
+        sortable: true,
+        render: (p) => (
+          <Text variant="bodySm" className="tabular-nums">
+            {p.estimated_cost != null ? formatCurrency(p.estimated_cost) : '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'savings',
+        header: t('chargePlanner.savedAmount', 'Saved'),
+        align: 'right',
+        sortable: true,
+        render: (p) => {
+          const positive = p.savings != null && p.savings > 0;
+          return (
+            <span
+              className={cn(
+                typography.size.xs,
+                'tabular-nums',
+                positive ? 'text-emerald-300' : 'text-[var(--text-muted)]',
+              )}
+            >
+              {positive ? formatCurrency(p.savings ?? 0) : '—'}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'status',
+        header: t('chargePlanner.status', 'Status'),
+        sortable: true,
+        render: (p) => (
+          <Badge variant={planStatusVariant(p.status)} size="sm">
+            {p.status}
+          </Badge>
+        ),
+      },
+    ],
+    [t, formatDate, formatTime, formatCurrency],
+  );
 
   return (
     <PageContainer
       title={t('chargePlanner.title', 'Smart Charge')}
       subtitle={t('chargePlanner.subtitle', 'Optimize charging schedule for the cheapest TOU rates')}
       actions={<VehicleSelect />}
+      query={plansQuery}
     >
-      {/* ── AI Smart-Charge Schedule Suggestion (opt-in, hidden when ai_mode='off') ── */}
-      <FadeIn>
-        <AISmartChargeScheduleSuggestion
-          vehicleId={vehicleIdNum}
-          targetSoc={targetSoc}
-          departBy={departBy}
-          ratePlanId={ratePlanId}
-          maxAmps={maxAmps}
-          batteryCapacityKwh={batteryCapacity}
-        />
-      </FadeIn>
+      <div className="space-y-4 sm:space-y-6">
+        {/* ── AI Smart-Charge Schedule Suggestion (opt-in, hidden when ai_mode='off') ── */}
+        <FadeIn>
+          <AISmartChargeScheduleSuggestion
+            vehicleId={vehicleIdNum}
+            targetSoc={targetSoc}
+            departBy={departBy}
+            ratePlanId={ratePlanId}
+            maxAmps={maxAmps}
+            batteryCapacityKwh={batteryCapacity}
+          />
+        </FadeIn>
 
-      {/* ── Settings Section ── */}
-      <FadeIn>
-        <GlassPanel className="p-6">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-cyan-400" />
-            {t('chargePlanner.settings', 'Charge Settings')}
-          </h2>
-
-          <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
-            <ControlSelect
-              label={t('chargePlanner.ratePlan', 'Rate Plan')}
-              options={ratePlanOptions.length > 0 ? ratePlanOptions : [
-                { value: 'pge-ev2a', label: 'PG&E EV2-A' },
-                { value: 'sce-tou-d', label: 'SCE TOU-D' },
-                { value: 'sdge-tou-dr1', label: 'SDG&E TOU-DR1' },
-              ]}
-              value={ratePlanId}
-              onChange={e => setRatePlanId(e.target.value)}
-            />
-
-            <Slider
-              id="smart-charge-target-soc"
-              label={t('chargePlanner.targetSoc', 'Target SOC')}
-              formatValue={(n) => `${n}%`}
-              min={20}
-              max={100}
-              step={5}
-              value={targetSoc}
-              onChange={setTargetSoc}
-            />
-
-            <ControlInput
-              label={t('chargePlanner.departBy', 'Depart By')}
-              type="datetime-local"
-              value={departBy}
-              onChange={e => setDepartBy(e.target.value)}
-            />
-
-            <ControlInput
-              label={t('chargePlanner.maxAmps', 'Max Amps')}
-              type="number"
-              min={8}
-              max={80}
-              value={String(maxAmps)}
-              onChange={e => setMaxAmps(Number(e.target.value))}
-            />
-
-            <UnitInput
-              label={t('chargePlanner.batteryCapacity', 'Battery Capacity')}
-              unit="energy"
-              value={batteryCapacity}
-              onChange={v => setBatteryCapacity(v ?? 0)}
-            />
-          </Grid>
-
-          <div className="mt-4 flex justify-end">
-            <ControlButton
-              onClick={handleOptimize}
-              disabled={!vehicleIdNum || optimizeMutation.isPending}
-              className="gap-2"
-            >
-              {optimizeMutation.isPending ? (
-                <Spinner className="h-4 w-4" />
-              ) : (
-                <CalendarClock className="h-4 w-4" />
-              )}
-              {t('chargePlanner.optimize', 'Find Cheapest Window')}
-            </ControlButton>
-          </div>
-
-          {optimizeMutation.isError && (
-            <p className="mt-3 text-sm text-red-400">
-              {(optimizeMutation.error as Error)?.message || t('chargePlanner.optimizeError', 'Optimization failed')}
-            </p>
-          )}
-        </GlassPanel>
-      </FadeIn>
-
-      {/* ── Rate Timeline ── */}
-      {result && (
+        {/* ── 1 · KPI band — cost comparison (always visible; placeholder until optimized) ── */}
         <FadeIn delay={0.05}>
-          <GlassPanel className="p-6">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-              <Clock className="h-5 w-5 text-cyan-400" />
-              {t('chargePlanner.rateTimeline', '24-Hour Rate Timeline')}
-            </h2>
-            <RateTimeline rates={result.hourly_rates} chargeWindow={chargeWindow} />
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
-              {t('chargePlanner.windowInfo', 'Optimal window: {{start}} — {{end}}', {
-                start: formatTime(result.schedule.start_time),
-                end: formatTime(result.schedule.end_time),
-              })}
-            </p>
-          </GlassPanel>
-        </FadeIn>
-      )}
-
-      {/* ── Cost Comparison ── */}
-      {result && (
-        <FadeIn delay={0.1}>
-          <Grid cols={{ default: 1, md: 3 }} gap={4}>
-            <StatCard
+          <section
+            aria-label={t('chargePlanner.costComparison', 'Cost comparison')}
+            className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+          >
+            <MetricCard
               label={t('chargePlanner.chargeNowCost', 'Charge Now')}
-              value={formatCurrency(result.comparison.charge_now_cost)}
-              icon={<DollarSign className="h-5 w-5 text-red-400" />}
-              sublabel={t('chargePlanner.currentRate', 'At current rates')}
+              value={comparison ? formatCurrency(comparison.charge_now_cost ?? 0) : '—'}
+              icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
+              color="red"
+              subtitle={t('chargePlanner.currentRate', 'At current rates')}
             />
-            <StatCard
+            <MetricCard
               label={t('chargePlanner.optimizedCost', 'Optimized Cost')}
-              value={formatCurrency(result.comparison.optimized_cost)}
-              icon={<TrendingDown className="h-5 w-5 text-emerald-400" />}
-              sublabel={`${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh, 1)}¢/kWh`}
+              value={comparison ? formatCurrency(comparison.optimized_cost ?? 0) : '—'}
+              icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
+              color="green"
+              subtitle={
+                result
+                  ? `${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh ?? 0, 1)}¢/kWh`
+                  : undefined
+              }
             />
-            <StatCard
+            <MetricCard
               label={t('chargePlanner.savings', 'Savings')}
-              value={formatCurrency(result.comparison.savings)}
-              icon={<BatteryCharging className="h-5 w-5 text-cyan-400" />}
-              trend={{
-                direction: result.comparison.savings > 0 ? 'down' : 'flat',
-                value: fmtPercent(result.comparison.savings_percent, 0),
-                positive: result.comparison.savings > 0,
-              }}
-              sublabel={`${fmtNumber(result.kwh_needed, 1)} kWh · ~${fmtNumber(result.estimated_duration_hours, 1)}h`}
+              value={comparison ? formatCurrency(comparison.savings ?? 0) : '—'}
+              icon={<BatteryCharging className="h-5 w-5" aria-hidden="true" />}
+              color="cyan"
+              change={
+                comparison && savingsPositive
+                  ? { value: fmtPercent(comparison.savings_percent ?? 0, 0), positive: true }
+                  : undefined
+              }
             />
-          </Grid>
+            <MetricCard
+              label={t('chargePlanner.energyNeeded', 'Energy Needed')}
+              value={result ? `${fmtNumber(result.kwh_needed ?? 0, 1)} kWh` : '—'}
+              icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+              color="amber"
+              subtitle={
+                result
+                  ? t('chargePlanner.estDuration', '~{{hours}}h', {
+                      hours: fmtNumber(result.estimated_duration_hours ?? 0, 1),
+                    })
+                  : undefined
+              }
+            />
+          </section>
         </FadeIn>
-      )}
 
-      {/* ── Schedule Details & Apply ── */}
-      {result && (
-        <FadeIn delay={0.15}>
-          <GlassPanel className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                <CalendarClock className="h-5 w-5 text-cyan-400" />
-                {t('chargePlanner.schedule', 'Recommended Schedule')}
-              </h2>
-              {!applied ? (
-                <ControlButton
-                  onClick={handleApply}
-                  disabled={applyMutation.isPending}
-                  className="gap-2"
+        {/* ── 2 · Primary bento — settings control rail + rate-timeline hero ── */}
+        <FadeIn delay={0.1}>
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            {/* Charge settings (control rail) */}
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+              <PanelTitle className="mb-4 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('chargePlanner.settings', 'Charge Settings')}
+              </PanelTitle>
+
+              <div className="space-y-4">
+                <Select
+                  label={t('chargePlanner.ratePlan', 'Rate Plan')}
+                  options={ratePlanSelectOptions}
+                  value={ratePlanId}
+                  onChange={(e) => setRatePlanId(e.target.value)}
+                />
+
+                <Slider
+                  id="smart-charge-target-soc"
+                  label={t('chargePlanner.targetSoc', 'Target SOC')}
+                  formatValue={(n) => `${n}%`}
+                  min={20}
+                  max={100}
+                  step={5}
+                  value={targetSoc}
+                  onChange={setTargetSoc}
+                />
+
+                <Input
+                  label={t('chargePlanner.departBy', 'Depart By')}
+                  type="datetime-local"
+                  value={departBy}
+                  onChange={(e) => setDepartBy(e.target.value)}
+                />
+
+                <Input
+                  label={t('chargePlanner.maxAmps', 'Max Amps')}
+                  type="number"
+                  min={8}
+                  max={80}
+                  value={String(maxAmps)}
+                  onChange={(e) => setMaxAmps(Number(e.target.value))}
+                />
+
+                <UnitInput
+                  label={t('chargePlanner.batteryCapacity', 'Battery Capacity')}
+                  unit="energy"
+                  value={batteryCapacity}
+                  onChange={(v) => setBatteryCapacity(v ?? 0)}
+                />
+
+                <Button
+                  onClick={handleOptimize}
+                  disabled={!vehicleIdNum || optimizeMutation.isPending}
+                  className="w-full gap-2"
                 >
-                  {applyMutation.isPending ? (
+                  {optimizeMutation.isPending ? (
                     <Spinner className="h-4 w-4" />
                   ) : (
-                    <Zap className="h-4 w-4" />
+                    <CalendarClock className="h-4 w-4" aria-hidden="true" />
                   )}
-                  {t('chargePlanner.applySchedule', 'Apply Schedule')}
-                </ControlButton>
+                  {t('chargePlanner.optimize', 'Find Cheapest Window')}
+                </Button>
+
+                {optimizeMutation.isError && <ErrorText>{optimizeErrorMsg}</ErrorText>}
+                {!vehicleIdNum && (
+                  <Caption>
+                    {t('chargePlanner.selectVehiclePrompt', 'Select a vehicle to optimize a charge schedule.')}
+                  </Caption>
+                )}
+              </div>
+            </GlassPanel>
+
+            {/* Rate timeline (hero) */}
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('chargePlanner.rateTimeline', '24-Hour Rate Timeline')}
+              </PanelTitle>
+
+              {optimizeMutation.isPending ? (
+                <Skeleton height={160} />
+              ) : optimizeMutation.isError ? (
+                <div className="py-8 text-center">
+                  <ErrorText>{optimizeErrorMsg}</ErrorText>
+                </div>
+              ) : !result ? (
+                <EmptyState /* no-action: awaiting a user-triggered optimization run */
+                  icon={<Clock className="h-8 w-8" />}
+                  message={t(
+                    'chargePlanner.runToSeeTimeline',
+                    'Run an optimization to see the 24-hour rate timeline and the cheapest charge window.',
+                  )}
+                />
               ) : (
-                <span className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {t('chargePlanner.applied', 'Schedule Applied!')}
-                </span>
+                <>
+                  <RateTimeline rates={result.hourly_rates ?? []} chargeWindow={chargeWindow} />
+                  <Text as="p" variant="caption" className="mt-3">
+                    {t('chargePlanner.windowInfo', 'Optimal window: {{start}} — {{end}}', {
+                      start: formatTime(result.schedule.start_time),
+                      end: formatTime(result.schedule.end_time),
+                    })}
+                  </Text>
+                </>
               )}
-            </div>
+            </GlassPanel>
+          </section>
+        </FadeIn>
 
-            {applyMutation.isError && (
-              <p className="mb-3 text-sm text-red-400">
-                {(applyMutation.error as Error)?.message || t('chargePlanner.applyError', 'Failed to apply schedule')}
-              </p>
-            )}
+        {/* ── 3 · Schedule bento — recommended schedule + alternatives ── */}
+        <FadeIn delay={0.15}>
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            {/* Recommended schedule + apply */}
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <PanelTitle className="flex items-center gap-2">
+                  <CalendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  {t('chargePlanner.schedule', 'Recommended Schedule')}
+                </PanelTitle>
+                {result &&
+                  (applied ? (
+                    <Badge variant="success" size="md" className="gap-1">
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                      {t('chargePlanner.applied', 'Schedule Applied!')}
+                    </Badge>
+                  ) : (
+                    <Button onClick={handleApply} disabled={applyMutation.isPending} className="gap-2">
+                      {applyMutation.isPending ? (
+                        <Spinner className="h-4 w-4" />
+                      ) : (
+                        <Zap className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {t('chargePlanner.applySchedule', 'Apply Schedule')}
+                    </Button>
+                  ))}
+              </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-[var(--text-muted)]">{t('chargePlanner.currentSoc', 'Current SOC')}</span>
-                <p className="text-[var(--text-primary)] font-medium">{result.current_soc}%</p>
-              </div>
-              <div>
-                <span className="text-[var(--text-muted)]">{t('chargePlanner.targetSocLabel', 'Target SOC')}</span>
-                <p className="text-[var(--text-primary)] font-medium">{result.target_soc}%</p>
-              </div>
-              <div>
-                <span className="text-[var(--text-muted)]">{t('chargePlanner.startTime', 'Start Time')}</span>
-                <p className="text-[var(--text-primary)] font-medium">{formatTime(result.schedule.start_time)}</p>
-              </div>
-              <div>
-                <span className="text-[var(--text-muted)]">{t('chargePlanner.endTime', 'End Time')}</span>
-                <p className="text-[var(--text-primary)] font-medium">{formatTime(result.schedule.end_time)}</p>
-              </div>
-            </div>
+              {optimizeMutation.isPending ? (
+                <Skeleton height={120} />
+              ) : !result ? (
+                <EmptyState /* no-action: awaiting a user-triggered optimization run */
+                  icon={<CalendarClock className="h-8 w-8" />}
+                  message={t(
+                    'chargePlanner.runToSeeSchedule',
+                    'Optimize a schedule to see the recommended charge window and apply it to your vehicle.',
+                  )}
+                />
+              ) : (
+                <>
+                  {applyMutation.isError && (
+                    <ErrorText className="mb-3">
+                      {(applyMutation.error as Error)?.message ||
+                        t('chargePlanner.applyError', 'Failed to apply schedule')}
+                    </ErrorText>
+                  )}
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    <ScheduleFact
+                      label={t('chargePlanner.currentSoc', 'Current SOC')}
+                      value={`${result.current_soc ?? 0}%`}
+                    />
+                    <ScheduleFact
+                      label={t('chargePlanner.targetSocLabel', 'Target SOC')}
+                      value={`${result.target_soc ?? 0}%`}
+                    />
+                    <ScheduleFact
+                      label={t('chargePlanner.startTime', 'Start Time')}
+                      value={formatTime(result.schedule.start_time)}
+                    />
+                    <ScheduleFact
+                      label={t('chargePlanner.endTime', 'End Time')}
+                      value={formatTime(result.schedule.end_time)}
+                    />
+                  </div>
+                </>
+              )}
+            </GlassPanel>
 
             {/* Alternative windows */}
-            {(result.alternative_windows ?? []).length > 0 && (
-              <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
-                <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  {t('chargePlanner.alternatives', 'Alternative Windows')}
-                </h3>
-                <div className="space-y-2">
-                  {result.alternative_windows.map((alt, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm bg-white/[0.03] rounded-lg px-3 py-2">
-                      <span className="text-[var(--text-secondary)]">
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('chargePlanner.alternatives', 'Alternative Windows')}
+              </PanelTitle>
+
+              {optimizeMutation.isPending ? (
+                <Skeleton height={120} />
+              ) : !result ? (
+                <EmptyState /* no-action: awaiting a user-triggered optimization run */
+                  icon={<Clock className="h-8 w-8" />}
+                  message={t(
+                    'chargePlanner.runToSeeAlternatives',
+                    'Optimize a schedule to compare alternative charge windows.',
+                  )}
+                />
+              ) : (result.alternative_windows ?? []).length === 0 ? (
+                <EmptyState /* no-action: transient — the optimizer returned a single best window */
+                  icon={<Clock className="h-8 w-8" />}
+                  message={t('chargePlanner.noAlternatives', 'No alternative windows for this plan.')}
+                />
+              ) : (
+                <ul className="space-y-2">
+                  {(result.alternative_windows ?? []).map((alt, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-3 py-2"
+                    >
+                      <Text variant="bodySm" className="tabular-nums">
                         {formatTime(alt.start_time)} — {formatTime(alt.end_time)}
-                      </span>
-                      <span className="text-[var(--text-muted)]">{alt.rate_tier}</span>
-                      <span className="text-[var(--text-primary)] font-medium">{formatCurrency(alt.estimated_cost)}</span>
-                    </div>
+                      </Text>
+                      <Caption className="truncate">{alt.rate_tier}</Caption>
+                      <Text variant="body" className="font-medium tabular-nums">
+                        {formatCurrency(alt.estimated_cost ?? 0)}
+                      </Text>
+                    </li>
                   ))}
-                </div>
-              </div>
+                </ul>
+              )}
+            </GlassPanel>
+          </section>
+        </FadeIn>
+
+        {/* ── 4 · Detail band — plan history ── */}
+        <FadeIn delay={0.2}>
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('chargePlanner.history', 'Plan History')}
+            </PanelTitle>
+
+            {plansLoading && historyItems.length === 0 ? (
+              <Skeleton height={200} />
+            ) : plansError ? (
+              <QueryError error={plansErrorObj} onRetry={() => refetchPlans()} />
+            ) : (
+              <DataTable
+                tableId="charging:smart-charge-history"
+                columns={historyColumns}
+                data={historyItems}
+                keyExtractor={(p) => p.id}
+                emptyMessage={t(
+                  'chargePlanner.noHistory',
+                  'No charge plans yet. Optimize a schedule above to get started.',
+                )}
+                pagination
+              />
             )}
           </GlassPanel>
         </FadeIn>
-      )}
-
-      {/* ── History ── */}
-      <FadeIn delay={result ? 0.2 : 0.05}>
-        <GlassPanel className="p-6">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-            <History className="h-5 w-5 text-cyan-400" />
-            {t('chargePlanner.history', 'Plan History')}
-          </h2>
-
-          {historyItems.length > 0 ? (
-            <div className="overflow-x-auto">
-              <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto_auto] gap-x-4 text-sm">
-                <div className="contents text-[var(--text-muted)] border-b border-[var(--border-subtle)]">
-                  <div className="py-2">{t('chargePlanner.date', 'Date')}</div>
-                  <div className="py-2">{t('chargePlanner.window', 'Window')}</div>
-                  <div className="py-2">{t('chargePlanner.plan', 'Plan')}</div>
-                  <div className="py-2 text-right">{t('chargePlanner.cost_decimal', 'Cost')}</div>
-                  <div className="py-2 text-right">{t('chargePlanner.savedAmount', 'Saved')}</div>
-                  <div className="py-2">{t('chargePlanner.status', 'Status')}</div>
-                </div>
-                {historyItems.map(p => (
-                  <div key={p.id} className="contents text-[var(--text-secondary)]">
-                    <div className="py-2 border-b border-[var(--border-subtle)]">{formatDate(p.created_at)}</div>
-                    <div className="py-2 border-b border-[var(--border-subtle)]">
-                      {formatTime(p.scheduled_start)} — {formatTime(p.scheduled_end)}
-                    </div>
-                    <div className="py-2 border-b border-[var(--border-subtle)]">{p.rate_plan}</div>
-                    <div className="py-2 border-b border-[var(--border-subtle)] text-right">
-                      {p.estimated_cost != null ? formatCurrency(p.estimated_cost) : '—'}
-                    </div>
-                    <div className="py-2 border-b border-[var(--border-subtle)] text-right text-emerald-400">
-                      {p.savings != null && p.savings > 0 ? formatCurrency(p.savings) : '—'}
-                    </div>
-                    <div className="py-2 border-b border-[var(--border-subtle)]">
-                      <span className={
-                        p.status === 'scheduled' ? 'text-cyan-400' :
-                        p.status === 'completed' ? 'text-emerald-400' :
-                        p.status === 'cancelled' ? 'text-red-400' :
-                        'text-[var(--text-muted)]'
-                      }>
-                        {p.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<History className="h-10 w-10" />}
-              message={t('chargePlanner.noHistory', 'No charge plans yet. Optimize a schedule above to get started.')}
-            />
-          )}
-        </GlassPanel>
-      </FadeIn>
+      </div>
     </PageContainer>
   );
 }
