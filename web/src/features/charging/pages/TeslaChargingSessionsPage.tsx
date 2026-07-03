@@ -167,7 +167,7 @@ export default function TeslaChargingSessionsPage() {
       key: 'date',
       header: t('tesla_sessions.col.date', 'Date'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-primary)]">{formatDateTime(row.charge_start_datetime)}</span>
+        <Text variant="body">{formatDateTime(row.charge_start_datetime)}</Text>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -178,9 +178,9 @@ export default function TeslaChargingSessionsPage() {
       render: (row) => (
         <div className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
-          <span className="text-sm text-[var(--text-primary)] truncate max-w-[200px]">
+          <Text variant="body" className="truncate max-w-[200px]">
             {row.site_location_name || '—'}
-          </span>
+          </Text>
         </div>
       ),
       visibleOnMobile: true,
@@ -189,9 +189,9 @@ export default function TeslaChargingSessionsPage() {
       key: 'vin',
       header: t('tesla_sessions.col.vin', 'VIN'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)] font-mono">
+        <Text size="sm" color="secondary" mono>
           {row.vin ? `…${row.vin.slice(-6)}` : '—'}
-        </span>
+        </Text>
       ),
       defaultVisible: false,
     },
@@ -199,9 +199,9 @@ export default function TeslaChargingSessionsPage() {
       key: 'energy',
       header: t('tesla_sessions.col.energy', 'Energy (kWh)'),
       render: (row) => (
-        <span className="text-sm font-medium text-cyan-300">
+        <Text size="sm" weight="medium" className="text-cyan-300">
           {row.total_energy_added_wh != null ? fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'), 1) : '—'}
-        </span>
+        </Text>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -210,9 +210,9 @@ export default function TeslaChargingSessionsPage() {
       key: 'peakPower',
       header: t('tesla_sessions.col.peakPower', 'Peak (kW)'),
       render: (row) => (
-        <span className="text-sm text-amber-300">
+        <Text size="sm" className="text-amber-300">
           {row.peak_power_kw != null ? fmtNumber(row.peak_power_kw, 0) : '—'}
-        </span>
+        </Text>
       ),
       sortable: true,
     },
@@ -220,20 +220,20 @@ export default function TeslaChargingSessionsPage() {
       key: 'duration',
       header: t('tesla_sessions.col.duration', 'Duration'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-primary)]">
+        <Text variant="body">
           {formatDurationSeconds(row.charge_duration_s)}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'cost',
       header: t('tesla_sessions.col.cost_decimal', 'Cost'),
       render: (row) => (
-        <span className="text-sm font-medium text-emerald-300">
+        <Text size="sm" weight="medium" className="text-emerald-300">
           {row.total_cost != null
             ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true })
             : '—'}
-        </span>
+        </Text>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -242,11 +242,11 @@ export default function TeslaChargingSessionsPage() {
       key: 'rate',
       header: t('tesla_sessions.col.rate', 'Rate/kWh'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)]">
+        <Text size="sm" color="secondary">
           {row.per_kwh_rate != null
             ? formatCurrencyValue(row.per_kwh_rate, row.currency_code ?? userCurrency, locale, 3, { useGrouping: true })
             : '—'}
-        </span>
+        </Text>
       ),
       defaultVisible: false,
     },
@@ -254,9 +254,9 @@ export default function TeslaChargingSessionsPage() {
       key: 'type',
       header: t('tesla_sessions.col.type', 'Type'),
       render: (row) => (
-        <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wide">
+        <Text size="xs" color="secondary" className="uppercase tracking-wide">
           {row.charger_type ?? '—'}
-        </span>
+        </Text>
       ),
     },
   ], [t, userCurrency, locale]);
@@ -390,10 +390,10 @@ export default function TeslaChargingSessionsPage() {
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:shrink-0 sm:justify-end">
                 {is403 && (
-                  <span className="inline-flex items-center gap-1.5 text-sm text-amber-300">
+                  <Text as="span" size="sm" className="inline-flex items-center gap-1.5 text-amber-300">
                     <AlertCircle className="h-4 w-4" aria-hidden="true" />
                     {t('tesla_sessions.businessOnly', 'Business account required')}
-                  </span>
+                  </Text>
                 )}
                 {lastSync && (
                   <Text as="span" size="xs" color="muted">
