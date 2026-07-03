@@ -196,7 +196,7 @@ export default function ChargingHeatmapPage() {
                 <div className="space-y-4">
                   <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
                     <Caption>{t('charging.heatmap.favorite', 'Favorite Charging Time')}</Caption>
-                    <Text variant="body" as="p" className="mt-1 font-semibold">
+                    <Text as="p" size="sm" weight="semibold" color="primary" className="mt-1">
                       {model.maxCount > 0
                         ? t('charging.heatmap.favoriteValue', '{{day}}s at {{hour}}', {
                             day: DAYS[model.favDay],
