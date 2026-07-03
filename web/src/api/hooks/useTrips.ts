@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import type { Trip } from '@/api/types';
+import type { Trip, TripDetail } from '@/api/types';
 
 export const tripKeys = {
   all: ['trips'] as const,
@@ -33,20 +33,17 @@ export function useTrips(params?: UseTripParams) {
 }
 
 /**
- * @deprecated Backend has no `GET /trips/{id}` route — only `GET /trips`
- * (list) is registered in `internal/api/router.go`. Calls made by this
- * hook will resolve to a 404 from the backend and surface through
- * tanstack-query's `error` channel; consumers (TripDetailPage) display
- * the error gracefully via the standard PageContainer error path.
- *
- * Retained because removing it would break the consumer at compile time;
- * the UI shape should remain in place until the backend adds a replacement
- * endpoint.
+ * Fetch a single trip with its per-drive breakdown from
+ * `GET /trips/{trip_id}` (registered in `internal/api/router.go`, served by
+ * `internal/api/tripsdetail`). Returns a {@link TripDetail} — a superset of
+ * the list-shape {@link Trip} that additionally carries `drives[]` and the
+ * `energy_used_wh` alias. A missing/deleted trip surfaces as a 404 through
+ * tanstack-query's `error` channel; the consumer renders it via `QueryError`.
  */
 export function useTrip(id: string) {
   return useQuery({
     queryKey: tripKeys.detail(id),
-    queryFn: ({ signal }) => request<Trip>(`/trips/${id}`, { signal }),
+    queryFn: ({ signal }) => request<TripDetail>(`/trips/${id}`, { signal }),
     enabled: !!id,
   });
 }
