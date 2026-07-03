@@ -1,14 +1,17 @@
 /**
  * SignalLogViewerPage — query signal history from Postgres.
  *
- * Refactored to compose the shared `SignalSelector` + `SignalHistoryTable`
- * components so the page stays in lockstep with the unified `/signals`
- * workspace. Now drives `vehicleId` from `useSelectedVehicle` instead of
- * the previous hard-coded `1`.
+ * Modern-UI full-width redesign. Composes the shared signal primitives
+ * (`SignalSelector`, `SignalChartPanel`, `SignalHistoryTable`) with a
+ * derived KPI band (`SignalLogKpiBand`) and value-type breakdown
+ * (`SignalLogBreakdownPanel`) into a responsive bento:
  *
- * deferred-filter:no server-driven — the page only fetches when the user
- * clicks Query; pagination is local slicing of the already-fetched batch
- * (≤500 rows per page), which is cheap.
+ *   query cockpit → KPI band → (chart 2fr | breakdown 1fr) → history table
+ *
+ * The page only fetches when the user clicks Query; pagination is local
+ * slicing of the already-fetched batch (≤ per-page × 10 rows per signal),
+ * which is cheap. Every results section owns its loading/empty state.
+ * `vehicleId` is driven by `useSelectedVehicle`.
  */
 
 import { useState, useMemo, useCallback } from 'react';
@@ -17,13 +20,12 @@ import { useTranslation } from 'react-i18next';
 import { Database, AlertCircle, Activity } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { AlertBanner } from '@/components/feedback';
+import { GlassPanel, Button, Select, Label } from '@/components/ui';
+import { EmptyState, AlertBanner } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { getErrorMessage } from '@/lib/errorMessage';
+import { fmtInt } from '@/lib/numberFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlArray } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -34,7 +36,15 @@ import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/Signal
 import type { SignalHistoryResp } from '@/api/types';
 
 import { SignalSelector } from '../components/SignalSelector';
+import { SignalChartPanel } from '../components/SignalChartPanel';
 import { SignalHistoryTable } from '../components/SignalHistoryTable';
+import { SignalLogKpiBand } from '../components/SignalLogKpiBand';
+import { SignalLogBreakdownPanel } from '../components/SignalLogBreakdownPanel';
+import {
+  summarizeSignalLog,
+  buildSignalChartData,
+  buildSignalStats,
+} from '../components/signalLogSummary';
 
 const PER_PAGE_OPTIONS = [
   { value: '25', label: '25' },
@@ -45,12 +55,12 @@ const PER_PAGE_OPTIONS = [
 
 export default function SignalLogViewerPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Signal Log'));
+  usePageTitle(t('signalLog.title', 'Signal Log Viewer'));
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
 
-  const { data: availableSignals } = useSignals(vehicleId);
+  const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
   const { start, end, setRange } = useRangeState({
@@ -79,7 +89,7 @@ export default function SignalLogViewerPage() {
     [end],
   );
 
-  const { data: allRows, isLoading, isFetching, error: dataError } = useQuery<SignalLogEntry[]>({
+  const signalLogQuery = useQuery<SignalLogEntry[]>({
     queryKey: ['signal-log', vehicleId, queryKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -96,23 +106,35 @@ export default function SignalLogViewerPage() {
     enabled: queryKey !== null,
   });
 
-  const anyError = dataError as Error | undefined;
-  const totalRecords = (allRows ?? []).length;
-  const rows = useMemo(() => {
-    const startIdx = (page - 1) * perPage;
-    return (allRows ?? []).slice(startIdx, startIdx + perPage);
-  }, [allRows, page, perPage]);
+  const { data: allRows, isLoading, isFetching, error: dataError } = signalLogQuery;
+
+  const rowsAll = useMemo(() => allRows ?? [], [allRows]);
   const hasQueried = queryKey !== null;
+  const anyError = (signalsError ?? dataError) as Error | undefined;
+
+  const summary = useMemo(
+    () => summarizeSignalLog(rowsAll, selectedSignals),
+    [rowsAll, selectedSignals],
+  );
+  const chartData = useMemo(() => buildSignalChartData(rowsAll), [rowsAll]);
+  const chartStats = useMemo(() => buildSignalStats(rowsAll), [rowsAll]);
+
+  const totalRecords = rowsAll.length;
+  const pageRows = useMemo(() => {
+    const startIdx = (page - 1) * perPage;
+    return rowsAll.slice(startIdx, startIdx + perPage);
+  }, [rowsAll, page, perPage]);
 
   return (
     <PageContainer
-      title={t('Signal Log Viewer')}
-      subtitle={t('Query signal history from Postgres')}
+      title={t('signalLog.title', 'Signal Log Viewer')}
+      subtitle={t('signalLog.subtitle', 'Query signal history from Postgres')}
       actions={<VehicleSelect />}
+      query={hasQueried ? signalLogQuery : undefined}
       copyLink
     >
       {anyError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
@@ -120,77 +142,92 @@ export default function SignalLogViewerPage() {
       {vehicleId === 0 ? (
         // no-action: vehicle picker is in the page header; no inline CTA needed.
         <EmptyState
-          icon={<Activity className="h-8 w-8" />}
+          icon={<Activity className="h-8 w-8" aria-hidden="true" />}
           title={t('signalLog.noVehicle', 'Select a vehicle to begin')}
           message={t('signalLog.noVehicleDesc', 'Pick a vehicle from the picker above to query its signal history.')}
         />
       ) : (
         <>
-          <GlassPanel className="p-4 sm:p-5 space-y-4">
-            <SignalSelector
-              options={availableSignals ?? []}
-              value={selectedSignals}
-              onChange={setSelectedSignals}
-              max={null}
-            />
+          {/* 1 — Query cockpit: signal selector + range + rows + Query */}
+          <FadeIn>
+            <GlassPanel className="space-y-4 p-4 sm:p-5">
+              <SignalSelector
+                options={availableSignals ?? []}
+                value={selectedSignals}
+                onChange={setSelectedSignals}
+                max={null}
+              />
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <label className="space-y-1">
-                <span className="block text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('Time Range')}
-                </span>
-                <RangePicker
-                  value={{ start, end }}
-                  onChange={setRange}
-                  presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
-                  align="start"
-                  triggerTestId="signal-log-range"
-                />
-              </label>
-              <div className="flex items-end gap-3">
-                <Select
-                  label={t('Per Page')}
-                  value={String(perPage)}
-                  onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
-                  options={PER_PAGE_OPTIONS}
-                  className="w-24"
-                />
-                <Button
-                  variant="primary"
-                  icon={<Database className="h-4 w-4" />}
-                  onClick={handleQuery}
-                  disabled={!canQuery}
-                  loading={isFetching}
-                >
-                  {t('Query')}
-                </Button>
-                {hasQueried ? (
-                  <span className="text-xs text-[var(--text-muted)] pb-2">
-                    {totalRecords} {t('records')}
-                  </span>
-                ) : null}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <label className="space-y-1">
+                  <Label className="block">{t('signalLog.timeRange', 'Time Range')}</Label>
+                  <RangePicker
+                    value={{ start, end }}
+                    onChange={setRange}
+                    presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
+                    align="start"
+                    triggerTestId="signal-log-range"
+                  />
+                </label>
+                <div className="flex flex-wrap items-end gap-3">
+                  <Select
+                    label={t('signalLog.perPage', 'Per Page')}
+                    value={String(perPage)}
+                    onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
+                    options={PER_PAGE_OPTIONS}
+                    className="w-24"
+                  />
+                  <Button
+                    variant="primary"
+                    icon={<Database className="h-4 w-4" aria-hidden="true" />}
+                    onClick={handleQuery}
+                    disabled={!canQuery}
+                    loading={isFetching}
+                  >
+                    {t('signalLog.query', 'Query')}
+                  </Button>
+                  {hasQueried ? (
+                    <span className="pb-2 text-xs text-[var(--text-muted)]">
+                      {fmtInt(totalRecords)} {t('signalLog.records', 'records')}
+                    </span>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </GlassPanel>
+            </GlassPanel>
+          </FadeIn>
 
-          {!hasQueried ? (
-            // no-action: signal picker, range, and Query button are directly above this state.
-            <EmptyState
-              icon={<Database className="h-10 w-10" />}
-              title={t('Select signals and click Query')}
-              message={t('Choose one or more signals, set a date range, then hit Query to browse signal history.')}
-            />
-          ) : (
-            <SignalHistoryTable
-              rows={rows}
-              selectedSignals={selectedSignals}
-              page={page}
-              pageSize={perPage}
-              totalRows={totalRecords}
-              onPageChange={setPage}
+          {/* 2 — KPI band: derived counters, full-width responsive grid */}
+          <SignalLogKpiBand summary={summary} loading={isLoading} />
+
+          {/* 3 — Bento: signal chart (hero, 2fr) + value composition (1fr) */}
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+            <div className="xl:col-span-2">
+              <SignalChartPanel
+                selectedSignals={selectedSignals}
+                data={chartData}
+                stats={chartStats}
+                loading={isLoading}
+                pointsLoaded={totalRecords}
+                title={t('signalLog.chart', 'Signal Chart')}
+              />
+            </div>
+            <SignalLogBreakdownPanel
+              summary={summary}
+              hasQueried={hasQueried}
               loading={isLoading}
             />
-          )}
+          </section>
+
+          {/* 4 — Detail band: full-width paginated history table */}
+          <SignalHistoryTable
+            rows={pageRows}
+            selectedSignals={selectedSignals}
+            page={page}
+            pageSize={perPage}
+            totalRows={totalRecords}
+            onPageChange={setPage}
+            loading={isLoading}
+          />
         </>
       )}
     </PageContainer>
