@@ -73,7 +73,7 @@ function ExpandableToolCard({ tool, expanded, onToggle }: { tool: ToolEntry; exp
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-white">{tool.name}</h3>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tool.name}</h3>
           <p className="text-xs text-[var(--text-secondary)]">{tool.desc}</p>
         </div>
         <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal', expanded && 'rotate-180')} />

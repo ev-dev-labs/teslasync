@@ -15,7 +15,7 @@ import { ResultPanel } from './ResultPanel'
 import { TelemetryErrorsPanel } from './TelemetryErrorsPanel'
 import { apiFetch, extractTelemetryErrors, useVehicleOptions } from './helpers'
 import type { TelemetryError } from './types'
-import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
+import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
 import { Icons } from '@/lib/icons';
 
 /* ─── Fleet API Config Tool ───────────────────────────────────────────── */
@@ -42,14 +42,14 @@ function FleetApiConfigTool() {
         <GlassPanel className="p-3">
           <span className="text-xs text-[var(--text-secondary)]">{t('Base Url')}</span>
           <div className="mt-1 flex items-center gap-2">
-            <span className="truncate text-sm font-mono text-white">{baseUrl || '—'}</span>
+            <span className="truncate text-sm font-mono text-[var(--text-primary)]">{baseUrl || '—'}</span>
             {baseUrl && <CopyButton text={baseUrl} />}
           </div>
         </GlassPanel>
         <GlassPanel className="p-3">
           <span className="text-xs text-[var(--text-secondary)]">{t('Client Id')}</span>
           <div className="mt-1 flex items-center gap-2">
-            <span className="truncate text-sm font-mono text-white">{clientId || '—'}</span>
+            <span className="truncate text-sm font-mono text-[var(--text-primary)]">{clientId || '—'}</span>
             {clientId && <CopyButton text={clientId} />}
           </div>
         </GlassPanel>
@@ -754,7 +754,7 @@ function OnboardingWorkflow() {
             {completed[step.id] ? <Icons.success className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               {t('devtools.onboarding.stepLabel', 'Step {{step}}', { step: currentStep + 1 })}: {step.label}
             </h3>
             <p className="text-xs text-[var(--text-secondary)]">{step.desc}</p>

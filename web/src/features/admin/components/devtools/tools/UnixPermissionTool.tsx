@@ -49,7 +49,7 @@ export function UnixPermissionTool() {
         )}
         {symbolic && (
           <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
-            <code className="text-sm font-mono text-white">{symbolic}</code>
+            <code className="text-sm font-mono text-[var(--text-primary)]">{symbolic}</code>
             <CopyButton text={symbolic} />
           </div>
         )}

@@ -36,7 +36,7 @@ export function TimestampTool() {
         <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
           <Clock className="h-4 w-4 text-neon-green" />
           <div className="text-sm">
-            <span className="font-mono text-white">{Math.floor(now.getTime() / 1000)}</span>
+            <span className="font-mono text-[var(--text-primary)]">{Math.floor(now.getTime() / 1000)}</span>
             <span className="mx-2 text-[var(--text-muted)]">|</span>
             <span className="font-mono text-[var(--text-secondary)]">{now.toISOString()}</span>
           </div>
