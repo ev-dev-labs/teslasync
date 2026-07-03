@@ -1,104 +1,28 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, ArrowRight, TrendingUp, Activity } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { IconBox } from '@/components/ui/IconBox';
+import { Route, Repeat, Gauge, Activity, TrendingUp, Award, Navigation } from 'lucide-react';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui';
 import { VehicleSelect, RangePicker } from '@/components/forms';
-import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
+import { MetricCard, MetricBar } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   ChartContainer, ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
-import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
-import { MetricBar } from '@/components/data-display/MetricBar';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
+
+import { AIRouteEfficiencySuggestions } from '@/components/ai/AIRouteEfficiencySuggestions';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { AIRouteEfficiencySuggestions } from '@/components/ai/AIRouteEfficiencySuggestions';
+import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import type { RouteSummary } from '@/types/driving';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                           */
-/* ------------------------------------------------------------------ */
-
-function efficiencyVariant(eff: number): 'success' | 'info' | 'warning' | 'danger' {
-  if (eff < 140) return 'success';
-  if (eff < 180) return 'info';
-  if (eff < 220) return 'warning';
-  return 'danger';
-}
-
-/* ------------------------------------------------------------------ */
-/*  RouteCard                                                         */
-/* ------------------------------------------------------------------ */
-
-function RouteCard({ route, efficiencyUnit, distanceUnit, toDistanceDisplay, toEfficiencyDisplay }: {
-  route: RouteSummary;
-  efficiencyUnit: string;
-  distanceUnit: string;
-  toDistanceDisplay: (v: number) => number;
-  toEfficiencyDisplay: (v: number) => number;
-}) {
-  const { t } = useTranslation();
-  const avgEff = toEfficiencyDisplay(route.avgEfficiency);
-  const bestEff = toEfficiencyDisplay(route.bestEfficiency);
-  const worstEff = toEfficiencyDisplay(route.worstEfficiency);
-
-  return (
-    <GlassPanel hover glow="cyan" className="p-5 cursor-pointer transition-all">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <IconBox color="cyan"><MapPin className="h-4 w-4" /></IconBox>
-          <div>
-            <p className="text-sm font-semibold text-[var(--text-primary)]">
-              {route.startLocation} <ArrowRight className="h-3 w-3 inline mx-1 text-[var(--text-muted)]" /> {route.endLocation}
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">
-               {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {fmtNumber(toDistanceDisplay(route.avgDistanceKm * 1000))} {distanceUnit} {t('routeEfficiency.avg', 'avg')}
-            </p>
-          </div>
-        </div>
-        <Badge variant={efficiencyVariant(route.avgEfficiency)}>
-          {fmtInt(avgEff)} {efficiencyUnit}
-        </Badge>
-      </div>
-
-      {/* Efficiency bar */}
-      <div className="flex items-center gap-2 mt-3">
-        <div className="flex-1 h-3 rounded-full overflow-hidden bg-[var(--surface-2)]">
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: '100%', background: `linear-gradient(to right, #10b981 ${(bestEff / Math.max(worstEff, 1)) * 100}%, #00f0ff ${(bestEff / Math.max(worstEff, 1)) * 100}% ${(avgEff / Math.max(worstEff, 1)) * 100}%, #ef4444 ${(avgEff / Math.max(worstEff, 1)) * 100}%)`, }}
-          />
-        </div>
-        <div className="flex gap-3 text-[10px] shrink-0">
-          <span className="text-green-400 font-bold">{fmtInt(bestEff)}</span>
-          <span className="text-cyan-400 font-bold">{fmtInt(avgEff)}</span>
-          <span className="text-red-400 font-bold">{fmtInt(worstEff)}</span>
-        </div>
-      </div>
-      <div className="flex gap-3 text-[9px] text-[var(--text-muted)] mt-1 justify-end">
-        <span>{t('routeEfficiency.best', 'Best')}</span>
-        <span>{t('routeEfficiency.avgLabel', 'Avg')}</span>
-        <span>{t('routeEfficiency.worst', 'Worst')}</span>
-      </div>
-    </GlassPanel>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  RouteEfficiencyPage                                               */
-/* ------------------------------------------------------------------ */
+import { fmtInt } from '@/lib/numberFormat';
+import {
+  RouteCard, makeUnitDisplay, ROUTE_EFF_COLORS, MAX_COMPARISON_ROUTES,
+} from '../components/route-efficiency';
 
 export default function RouteEfficiencyPage() {
   const { t } = useTranslation();
@@ -117,41 +41,53 @@ export default function RouteEfficiencyPage() {
   const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
-  const { data, isLoading, error } = useRouteEfficiency(vehicleIdStr, startDate, endDate);
+  const routeQuery = useRouteEfficiency(vehicleIdStr, startDate, endDate);
+  const { data, isLoading, error, refetch } = routeQuery;
+  const isError = Boolean(error);
+
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const unit = useMemo(() => makeUnitDisplay(unitPrefs.distance), [unitPrefs.distance]);
 
-  const distanceUnit = unitPrefs.distance;
-  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
-
+  /* ---- Aggregates (SI Wh/km in, converted at the display boundary) ---- */
   const routes = data?.routes ?? [];
-  const totalTrips = routes.reduce((sum, r) => sum + r.tripCount, 0);
-  const bestEff = routes.length > 0 ? Math.min(...routes.map((r) => r.bestEfficiency)) : 0;
-  const worstEff = routes.length > 0 ? Math.max(...routes.map((r) => r.worstEfficiency)) : 0;
-  const avgEff = routes.length > 0 ? routes.reduce((s, r) => s + r.avgEfficiency, 0) / routes.length : 0;
+  const hasRoutes = routes.length > 0;
+  const totalTrips = routes.reduce((sum, r) => sum + (r.tripCount ?? 0), 0);
+  const bestEff = hasRoutes ? Math.min(...routes.map((r) => r.bestEfficiency ?? 0)) : 0;
+  const worstEff = hasRoutes ? Math.max(...routes.map((r) => r.worstEfficiency ?? 0)) : 0;
+  const avgEff = hasRoutes
+    ? routes.reduce((s, r) => s + (r.avgEfficiency ?? 0), 0) / routes.length
+    : 0;
+  const mostDrivenTrips = routes[0]?.tripCount ?? 0;
 
-  /* ---- Chart data for route comparison ---- */
-  const chartData = useMemo(() => {
-    return routes
-      .sort((a, b) => a.avgEfficiency - b.avgEfficiency)
-      .slice(0, 10)
-      .map((r) => ({
-        name: `${(r.startLocation ?? '').substring(0, 10)}→${(r.endLocation ?? '').substring(0, 10)}`,
-        avg: Math.round(toEfficiencyDisplay(r.avgEfficiency)),
-        best: Math.round(toEfficiencyDisplay(r.bestEfficiency)),
-        worst: Math.round(toEfficiencyDisplay(r.worstEfficiency)),
-        trips: r.tripCount,
-      }));
-  }, [routes, toEfficiencyDisplay]);
+  const effVal = (whPerKm: number) => (hasRoutes ? fmtInt(unit.toEfficiency(whPerKm)) : '—');
+
+  /* ---- Comparison chart rows (lowest consumption first) ---- */
+  const chartData = useMemo(
+    () =>
+      [...routes]
+        .sort((a, b) => (a.avgEfficiency ?? 0) - (b.avgEfficiency ?? 0))
+        .slice(0, MAX_COMPARISON_ROUTES)
+        .map((r) => ({
+          name: `${(r.startLocation ?? '').substring(0, 10)}→${(r.endLocation ?? '').substring(0, 10)}`,
+          best: Math.round(unit.toEfficiency(r.bestEfficiency)),
+          avg: Math.round(unit.toEfficiency(r.avgEfficiency)),
+          worst: Math.round(unit.toEfficiency(r.worstEfficiency)),
+        })),
+    [routes, unit],
+  );
+
+  const emptyMessage = vehicleIdStr
+    ? t('routeEfficiency.noData', 'No route data')
+    : t('routeEfficiency.selectVehicle', 'Select a vehicle to see route efficiency');
+  const effUnit = unit.efficiencyUnit;
 
   return (
     <PageContainer
       title={t('routeEfficiency.title', 'Route Efficiency')}
       subtitle={t('routeEfficiency.subtitle', 'Compare efficiency across your most-driven routes')}
-      error={error as Error | null}
+      query={routeQuery}
       actions={
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
@@ -161,118 +97,201 @@ export default function RouteEfficiencyPage() {
           />
         </div>
       }
-      loading={isLoading}
     >
-      {/* Summary stats */}
+      {/* 1 — KPI band */}
       <FadeIn>
-        <GlassPanel className="p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-cyan-400"><AnimatedNumber value={routes.length} /></p>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.routes', 'Routes')}</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={totalTrips} /></p>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.totalTrips', 'Total Trips')}</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-400"><AnimatedNumber value={Math.round(toEfficiencyDisplay(bestEff))} /></p>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.bestEfficiency', 'Best')} {efficiencyUnit}</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-amber-400"><AnimatedNumber value={Math.round(toEfficiencyDisplay(avgEff))} /></p>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.avgEfficiency', 'Avg')} {efficiencyUnit}</p>
-            </div>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/*
-        AI route-efficiency suggestions are hidden by withAiFeature when
-        ai_mode='off' or the per-feature toggle is off. Rendered above the
-        comparison chart so the narrative sits next to the figures it's
-        narrating, not below the fold.
-      */}
-      <AIRouteEfficiencySuggestions vehicleId={vehicleIdStr} />
-
-      {/* Route efficiency comparison chart */}
-      {chartData.length > 1 && (
-        <FadeIn>
-          <ChartContainer
-            title={t('routeEfficiency.comparison', 'Route Efficiency Comparison')}
-            ariaLabel={t('routeEfficiency.comparison.aria', 'Per-route best, average, and worst efficiency comparison bar chart')}
-            data={chartData.map((r) => ({ name: r.name, best: r.best, avg: r.avg, worst: r.worst }))}
-            dataColumns={[
-              { key: 'name', label: t('routeEfficiency.col.route', 'Route') },
-              { key: 'best', label: `${t('routeEfficiency.best', 'Best')} ${efficiencyUnit}` },
-              { key: 'avg', label: `${t('routeEfficiency.avgLabel', 'Avg')} ${efficiencyUnit}` },
-              { key: 'worst', label: `${t('routeEfficiency.worst', 'Worst')} ${efficiencyUnit}` },
-            ]}
-            height={260}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} width={120} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="best" name={`${t('routeEfficiency.best', 'Best')} ${efficiencyUnit}`} fill="#10b981" fillOpacity={0.8} radius={[0, 3, 3, 0]} />
-                <Bar dataKey="avg" name={`${t('routeEfficiency.avgLabel', 'Avg')} ${efficiencyUnit}`} fill="#00f0ff" fillOpacity={0.6} radius={[0, 3, 3, 0]} />
-                <Bar dataKey="worst" name={`${t('routeEfficiency.worst', 'Worst')} ${efficiencyUnit}`} fill="#ef4444" fillOpacity={0.5} radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </FadeIn>
-      )}
-
-      {/* Route cards */}
-      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {routes.map((route) => (
-          <StaggerItem key={`${route.startLocation}-${route.endLocation}`}>
-            <RouteCard
-              route={route}
-              efficiencyUnit={efficiencyUnit}
-              distanceUnit={distanceUnit}
-              toDistanceDisplay={toDistanceDisplay}
-              toEfficiencyDisplay={toEfficiencyDisplay}
-            />
-          </StaggerItem>
-        ))}
-      </StaggerContainer>
-
-      {/* Metric bars */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-            <TrendingUp className="h-4 w-4 text-cyan-400" /> {t('routeEfficiency.metrics', 'Route Metrics')}
-          </h3>
-          {routes.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <div>
-                <MetricBar label={t('routeEfficiency.bestLabel', 'Best Efficiency')} value={toEfficiencyDisplay(bestEff)} max={300} color="#10b981" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(toEfficiencyDisplay(bestEff))} {efficiencyUnit}</p>
-              </div>
-              <div>
-                <MetricBar label={t('routeEfficiency.avgLabel', 'Avg Efficiency')} value={toEfficiencyDisplay(avgEff)} max={300} color="#00f0ff" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(toEfficiencyDisplay(avgEff))} {efficiencyUnit}</p>
-              </div>
-              <div>
-                <MetricBar label={t('routeEfficiency.worstLabel', 'Worst Efficiency')} value={toEfficiencyDisplay(worstEff)} max={400} color="#ef4444" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(toEfficiencyDisplay(worstEff))} {efficiencyUnit}</p>
-              </div>
-              <div>
-                <MetricBar label={t('routeEfficiency.mostDrivenLabel', 'Most Driven Route')} value={routes[0]?.tripCount ?? 0} max={Math.max(routes[0]?.tripCount ?? 1, 20)} color="#a855f7" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{routes[0]?.tripCount ?? 0} {t('routeEfficiency.trips', 'trips')}</p>
-              </div>
+        <section
+          aria-label={t('routeEfficiency.kpisAria', 'Route efficiency summary metrics')}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+        >
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={88} />)
+          ) : isError ? (
+            <div className="col-span-full">
+              <QueryError error={error} onRetry={() => refetch()} />
             </div>
           ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Activity className="h-8 w-8 opacity-20" />}
-              message={t('common.noData', 'No data available')}
-              className="py-8"
-            />
+            <>
+              <MetricCard
+                label={t('routeEfficiency.routes', 'Routes')}
+                value={fmtInt(routes.length)}
+                icon={<Route className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('routeEfficiency.totalTrips', 'Total Trips')}
+                value={fmtInt(totalTrips)}
+                icon={<Repeat className="h-5 w-5" />}
+                color="blue"
+              />
+              <MetricCard
+                label={t('routeEfficiency.bestEfficiency', 'Best')}
+                value={effVal(bestEff)}
+                subtitle={effUnit}
+                icon={<Gauge className="h-5 w-5" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('routeEfficiency.avgEfficiency', 'Avg')}
+                value={effVal(avgEff)}
+                subtitle={effUnit}
+                icon={<Activity className="h-5 w-5" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('routeEfficiency.worstEfficiency', 'Worst')}
+                value={effVal(worstEff)}
+                subtitle={effUnit}
+                icon={<TrendingUp className="h-5 w-5" />}
+                color="red"
+              />
+              <MetricCard
+                label={t('routeEfficiency.mostDrivenTrips', 'Most-driven')}
+                value={hasRoutes ? fmtInt(mostDrivenTrips) : '—'}
+                subtitle={t('routeEfficiency.trips', 'trips')}
+                icon={<Award className="h-5 w-5" />}
+                color="purple"
+              />
+            </>
           )}
-        </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 2 — AI suggestions (hidden by withAiFeature when ai_mode='off') */}
+      <AIRouteEfficiencySuggestions vehicleId={vehicleIdStr} />
+
+      {/* 3 — Primary bento: comparison chart (hero) + route metrics */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('routeEfficiency.analysisAria', 'Route efficiency analysis')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+        >
+          {isError ? (
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-3">
+                {t('routeEfficiency.comparison', 'Route Efficiency Comparison')}
+              </PanelTitle>
+              <QueryError error={error} onRetry={() => refetch()} />
+            </GlassPanel>
+          ) : (
+            <ChartContainer
+              className="xl:col-span-2"
+              title={t('routeEfficiency.comparison', 'Route Efficiency Comparison')}
+              ariaLabel={t(
+                'routeEfficiency.comparisonAria',
+                'Per-route best, average, and worst efficiency comparison bar chart',
+              )}
+              data={chartData}
+              dataColumns={[
+                { key: 'name', label: t('routeEfficiency.col.route', 'Route') },
+                { key: 'best', label: `${t('routeEfficiency.best', 'Best')} ${effUnit}` },
+                { key: 'avg', label: `${t('routeEfficiency.avgLabel', 'Avg')} ${effUnit}` },
+                { key: 'worst', label: `${t('routeEfficiency.worst', 'Worst')} ${effUnit}` },
+              ]}
+              height={340}
+              loading={isLoading}
+              empty={!isLoading && chartData.length < 2}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 12 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} width={110} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface-2)', fillOpacity: 0.3 }} />
+                  <Bar dataKey="best" name={`${t('routeEfficiency.best', 'Best')} ${effUnit}`} fill={ROUTE_EFF_COLORS.best} fillOpacity={0.85} radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="avg" name={`${t('routeEfficiency.avgLabel', 'Avg')} ${effUnit}`} fill={ROUTE_EFF_COLORS.avg} fillOpacity={0.65} radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="worst" name={`${t('routeEfficiency.worst', 'Worst')} ${effUnit}`} fill={ROUTE_EFF_COLORS.worst} fillOpacity={0.5} radius={[0, 3, 3, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          )}
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('routeEfficiency.metrics', 'Route Metrics')}
+            </PanelTitle>
+            {isLoading ? (
+              <Skeleton height={220} />
+            ) : isError ? (
+              <QueryError error={error} onRetry={() => refetch()} />
+            ) : !hasRoutes ? (
+              <EmptyState /* no-action: transient — no route metrics for the selected vehicle/range */
+                icon={<Activity className="h-8 w-8 opacity-20" />}
+                message={emptyMessage}
+                className="py-8"
+              />
+            ) : (
+              <div className="space-y-4">
+                <MetricBar
+                  label={t('routeEfficiency.bestLabel', 'Best Efficiency')}
+                  value={unit.toEfficiency(bestEff)}
+                  max={unit.toEfficiency(300)}
+                  color={ROUTE_EFF_COLORS.best}
+                  sublabel={`${fmtInt(unit.toEfficiency(bestEff))} ${effUnit}`}
+                />
+                <MetricBar
+                  label={t('routeEfficiency.avgLabel', 'Avg Efficiency')}
+                  value={unit.toEfficiency(avgEff)}
+                  max={unit.toEfficiency(300)}
+                  color={ROUTE_EFF_COLORS.avg}
+                  sublabel={`${fmtInt(unit.toEfficiency(avgEff))} ${effUnit}`}
+                />
+                <MetricBar
+                  label={t('routeEfficiency.worstLabel', 'Worst Efficiency')}
+                  value={unit.toEfficiency(worstEff)}
+                  max={unit.toEfficiency(400)}
+                  color={ROUTE_EFF_COLORS.worst}
+                  sublabel={`${fmtInt(unit.toEfficiency(worstEff))} ${effUnit}`}
+                />
+                <MetricBar
+                  label={t('routeEfficiency.mostDrivenLabel', 'Most Driven Route')}
+                  value={mostDrivenTrips}
+                  max={Math.max(mostDrivenTrips, 20)}
+                  color={ROUTE_EFF_COLORS.mostDriven}
+                  sublabel={`${fmtInt(mostDrivenTrips)} ${t('routeEfficiency.trips', 'trips')}`}
+                />
+              </div>
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 4 — Detail band: most-driven route cards */}
+      <FadeIn delay={0.2}>
+        <section aria-label={t('routeEfficiency.mostDriven', 'Most-driven routes')}>
+          <SectionTitle className="mb-3 flex items-center gap-2">
+            <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('routeEfficiency.mostDriven', 'Most-driven routes')}
+          </SectionTitle>
+          {isLoading ? (
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} height={168} />
+              ))}
+            </div>
+          ) : isError ? (
+            <GlassPanel className="p-4 sm:p-5">
+              <QueryError error={error} onRetry={() => refetch()} />
+            </GlassPanel>
+          ) : !hasRoutes ? (
+            <GlassPanel className="p-4 sm:p-5">
+              <EmptyState /* no-action: transient — no routes recorded for the selected vehicle/range */
+                icon={<Route className="h-8 w-8 opacity-20" />}
+                message={emptyMessage}
+                className="py-10"
+              />
+            </GlassPanel>
+          ) : (
+            <StaggerContainer className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]">
+              {routes.map((route) => (
+                <StaggerItem key={`${route.startLocation}-${route.endLocation}`}>
+                  <RouteCard route={route} unit={unit} />
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          )}
+        </section>
       </FadeIn>
     </PageContainer>
   );

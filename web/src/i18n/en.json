@@ -7198,6 +7198,14 @@
     "bestLabel": "Best Efficiency",
     "worstLabel": "Worst Efficiency",
     "mostDrivenLabel": "Most Driven Route",
+    "worstEfficiency": "Worst",
+    "mostDrivenTrips": "Most-driven",
+    "mostDriven": "Most-driven routes",
+    "noData": "No route data",
+    "selectVehicle": "Select a vehicle to see route efficiency",
+    "kpisAria": "Route efficiency summary metrics",
+    "analysisAria": "Route efficiency analysis",
+    "comparisonAria": "Per-route best, average, and worst efficiency comparison bar chart",
     "col": {
       "route": "Route"
     },
