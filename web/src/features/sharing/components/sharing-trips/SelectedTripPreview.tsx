@@ -80,7 +80,7 @@ export function SelectedTripPreview({
             <Text as="p" size="sm" weight="semibold" color="primary" className="truncate">
               {trip.name ?? `${t('sharing.trips.row.trip', 'Trip')} #${trip.id}`}
             </Text>
-            <Text as="p" size="xs" color="muted">
+            <Text as="p" variant="caption">
               {formatDate(trip.start_date)}
               {trip.end_date ? ` – ${formatDate(trip.end_date)}` : ''}
             </Text>
@@ -88,7 +88,7 @@ export function SelectedTripPreview({
 
           <KVList items={items} />
 
-          <Text as="p" size="xs" color="muted" className="flex items-start gap-1.5">
+          <Text as="p" variant="helper" className="flex items-start gap-1.5">
             <ShieldCheck
               className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300"
               aria-hidden="true"
