@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { PanelTitle } from '@/components/ui/Typography';
+import { PanelTitle, Text, Caption } from '@/components/ui/Typography';
 import { Pagination } from '@/components/ui/Pagination';
 import { TabNav } from '@/components/ui/TabNav';
 import { PinButton } from '@/components/ui/PinButton';
@@ -387,17 +387,17 @@ export default function AlertsListPage() {
               </>
             }
             secondary={
-              <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+              <Text as="span" variant="caption" className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <a href="/notifications/studio" className="hover:text-cyan-300 transition-colors">
-                  {t('Active Rules')} <span className="font-mono text-[var(--text-secondary)]">{enabledRules}/{rules?.length ?? 0}</span> →
+                  {t('Active Rules')} <Text as="span" mono color="secondary">{enabledRules}/{rules?.length ?? 0}</Text> →
                 </a>
                 <span aria-hidden>·</span>
                 <span>
-                  {t('Most Common')}: <span className="text-[var(--text-secondary)]">{alertsByType[0]?.name ?? '—'}</span>
+                  {t('Most Common')}: <Text as="span" color="secondary">{alertsByType[0]?.name ?? '—'}</Text>
                 </span>
                 <span aria-hidden>·</span>
                 <span>
-                  {t('Last 7 Days')}: <span className="font-mono text-[var(--text-secondary)]">{fmtInt(weekAlertCount)}</span>
+                  {t('Last 7 Days')}: <Text as="span" mono color="secondary">{fmtInt(weekAlertCount)}</Text>
                 </span>
                 {quietActive && (
                   <>
@@ -405,7 +405,7 @@ export default function AlertsListPage() {
                     <span className="text-amber-300">{t('Quiet hours active')}</span>
                   </>
                 )}
-              </span>
+              </Text>
             }
             footer={criticalCount > 0 ? (
               <InlineCallout
@@ -498,8 +498,8 @@ export default function AlertsListPage() {
                   {alertsByType.map((d, i) => (
                     <li key={i} className="flex items-center gap-2 text-xs">
                       <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: d.fill }} aria-hidden="true" />
-                      <span className="truncate text-[var(--text-secondary)]">{d.name}</span>
-                      <span className="ml-auto font-mono text-[var(--text-primary)]">{d.value}</span>
+                      <Text as="span" color="secondary" className="truncate">{d.name}</Text>
+                      <Text as="span" mono color="primary" className="ml-auto">{d.value}</Text>
                     </li>
                   ))}
                 </ul>
@@ -512,7 +512,7 @@ export default function AlertsListPage() {
               <Icons.notifications className="h-4 w-4 text-amber-300" aria-hidden="true" />
               {t('pinned.section.watching', 'Watching')}
               {pinnedRules.length > 0 && (
-                <span className="text-xs font-normal text-[var(--text-muted)]">({pinnedRules.length})</span>
+                <Text as="span" size="xs" weight="regular" color="muted">({pinnedRules.length})</Text>
               )}
             </PanelTitle>
             {pinnedRules.length === 0 ? (
@@ -527,7 +527,7 @@ export default function AlertsListPage() {
                   <li key={rule.id} className="flex items-center justify-between gap-3 py-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium text-[var(--text-primary)]">{rule.name || `${t('alerts.rule', 'Rule')} #${rule.id}`}</span>
+                        <Text as="span" size="sm" weight="medium" color="primary" className="truncate">{rule.name || `${t('alerts.rule', 'Rule')} #${rule.id}`}</Text>
                         {rule.enabled ? (
                           <Badge variant="success" size="sm">{t('common.enabled', 'Enabled')}</Badge>
                         ) : (
@@ -668,12 +668,12 @@ export default function AlertsListPage() {
           ) : detailQuery.data ? (
             <>
               <div className="space-y-1">
-                <span className="block text-sm font-medium text-[var(--text-primary)]">
+                <Text as="span" size="sm" weight="medium" color="primary" className="block">
                   {detailQuery.data.title}
-                </span>
-                <span className="block text-xs text-[var(--text-muted)]">
+                </Text>
+                <Caption className="block">
                   {detailQuery.data.message}
-                </span>
+                </Caption>
               </div>
               <AlertDetailTimeline events={detailQuery.data.events} />
             </>

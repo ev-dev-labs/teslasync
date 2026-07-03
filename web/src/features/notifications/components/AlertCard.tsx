@@ -15,6 +15,7 @@ import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Text, Caption } from '@/components/ui/Typography';
 import { SeverityBadge } from '@/components/data-display/SeverityBadge';
 import { StatusDot } from '@/components/data-display/StatusDot';
 import { Icons } from '@/lib/icons';
@@ -76,10 +77,10 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
             className="block min-w-0 flex-1 -m-1 p-1 rounded-md hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400/60"
             aria-label={t('alerts.viewContext', 'View context')}
           >
-            <span className={cn('text-sm font-medium block', alert.is_read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
+            <Text as="span" size="sm" weight="medium" color={alert.is_read ? 'secondary' : 'primary'} className="block">
               {alert.title}
-            </span>
-            <span className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2 block">{alert.message}</span>
+            </Text>
+            <Caption className="mt-0.5 line-clamp-2 block">{alert.message}</Caption>
           </Link>
           {!alert.is_read && (
             <StatusDot
@@ -90,13 +91,13 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
           )}
         </div>
         <div className="flex items-center gap-3 mt-2 flex-wrap">
-          <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
+          <Text as="span" size="2xs" color="muted" className="flex items-center gap-1">
             <Icons.clock className="h-2.5 w-2.5" />{timeAgo}
-          </span>
+          </Text>
           <SeverityBadge severity={alert.severity} size="sm" showIcon={false}>
             {alert.severity}
           </SeverityBadge>
-          <span className="text-[10px] text-[var(--text-muted)]">{(alert.type ?? 'notification').replace(/_/g, ' ')}</span>
+          <Text as="span" size="2xs" color="muted">{(alert.type ?? 'notification').replace(/_/g, ' ')}</Text>
           {isAcked && (
             <Badge variant="success" size="sm">
               {alert.acknowledged_by
@@ -106,7 +107,7 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
           )}
           <Link
             to={drillHref}
-            className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
           >
             {t('alerts.viewContext', 'View context')}
             <Icons.next className="h-3 w-3" />
