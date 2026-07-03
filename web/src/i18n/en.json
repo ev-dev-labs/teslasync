@@ -7415,7 +7415,10 @@
     "locations": "Locations",
     "recentHistory": "Recent Location History",
     "recentPlayback": "Recent Route Playback",
-    "playbackLabel": "Recent route playback map"
+    "playbackLabel": "Recent route playback map",
+    "subtitle": "Live vehicle location and recent history",
+    "kpis": "Vehicle status",
+    "noPlayback": "Not enough GPS points to replay a route yet."
   },
   "maps": {
     "routePlayback": {
