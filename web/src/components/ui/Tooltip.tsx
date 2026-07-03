@@ -18,11 +18,12 @@ export interface TooltipProps {
    * IMPORTANT — text colour contract:
    * The tooltip uses an INVERTED surface for high contrast (light card in
    * dark mode / dark card in light mode) and cascades its own intrinsic
-   * `text-gray-100 dark:text-gray-900` pair through this content. Do NOT
-   * pass `text-white`, `text-white/N`, or `text-gray-{100..400}` classes
-   * inside `content` — they collide with the inverted surface and render
-   * invisibly in one of the two themes (light-mode global overrides flip
-   * `text-white/N` to dark slate, which then collides with the dark card).
+   * `--text-inverse` colour through this content. Do NOT pass hardcoded
+   * white, translucent-white, or light-gray (100-400) body-text colour
+   * classes inside `content` — they collide with the inverted surface and
+   * render invisibly in one of the two themes (light-mode global overrides
+   * flip translucent white to dark slate, which then collides with the dark
+   * card). The exact set is the `FORBIDDEN_TEXT_CLASS` regex below.
    *
    * Decorative shades that convey meaning (`text-amber-300` for severity,
    * `text-emerald-300` for success, etc.) are fine — they have light-mode
@@ -101,14 +102,15 @@ const sideClasses = {
  * Hover/focus tooltip.
  *
  * Visual contract — inverted surface:
- *   - dark mode  → light card (`bg-gray-100`) with dark text (`text-gray-900`)
- *   - light mode → dark  card (`bg-gray-900`) with light text (`text-gray-100`)
+ *   - dark mode  → light card (`bg-gray-100`) with dark `--text-inverse` text
+ *   - light mode → dark  card (`bg-gray-900`) with light `--text-inverse` text
  *
  * The inversion gives high contrast against the page background in both
  * themes (matches Linear / GitHub / modern tooltip UX).
  *
- * Text-colour contract: do NOT pass `text-white`, `text-white/N`, or
- * `text-gray-{100..400}` classes inside `content`. Decorative shades that
+ * Text-colour contract: do NOT pass hardcoded white, translucent-white, or
+ * light-gray (100-400) body-text colour classes inside `content` (the exact
+ * set is the `FORBIDDEN_TEXT_CLASS` regex above). Decorative shades that
  * convey meaning (`text-amber-300` severity, `text-emerald-300` success)
  * are fine — they have light-mode overrides for readability and convey
  * meaning rather than body text. See `TooltipProps.content` for the full
@@ -173,7 +175,7 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
         className={cn(
           'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
           multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
-          'bg-gray-900 text-gray-100 shadow-lg dark:bg-gray-100 dark:text-gray-900',
+          'bg-gray-900 text-[var(--text-inverse)] shadow-lg dark:bg-gray-100',
           // Forced-colors mode suppresses
           // box-shadow and remaps the bg-gray to Canvas, so the tooltip
           // body would otherwise blend into surrounding panels. Pin a

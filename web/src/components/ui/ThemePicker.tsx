@@ -215,7 +215,7 @@ export function ThemePicker({
                 }}
                 className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
               />
-              <span className="text-[10px] font-mono text-[var(--text-muted)]">{customPrimary}</span>
+              <span className="text-2xs font-mono text-[var(--text-muted)]">{customPrimary}</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs font-medium text-[var(--text-secondary)]">{t('theme.accent', 'Accent')}</span>
@@ -228,7 +228,7 @@ export function ThemePicker({
                 }}
                 className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
               />
-              <span className="text-[10px] font-mono text-[var(--text-muted)]">{customAccent}</span>
+              <span className="text-2xs font-mono text-[var(--text-muted)]">{customAccent}</span>
             </div>
           </div>
         )}

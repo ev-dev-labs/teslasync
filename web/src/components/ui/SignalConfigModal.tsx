@@ -13,7 +13,7 @@ const INTERVAL_OPTIONS = [
   { value: 300, label: '5m', color: 'text-[var(--text-muted)]', desc: 'Rare' },
   { value: 900, label: '15m', color: 'text-[var(--text-muted)]', desc: '15 min' },
   { value: 3600, label: '1h', color: 'text-[var(--text-muted)]', desc: '1 hour' },
-  { value: 86400, label: '24h', color: 'text-gray-700', desc: 'Daily' },
+  { value: 86400, label: '24h', color: 'text-[var(--text-muted)]', desc: 'Daily' },
 ]
 
 const PRESETS = [
@@ -205,13 +205,13 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
               allSelected ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-secondary)]'
             )}>
             <div className={clsx('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]')}>
-              {allSelected && <CheckCircle className="h-2 w-2 text-black" />}
+              {allSelected && <CheckCircle className="h-2 w-2 text-[var(--text-on-accent)]" />}
             </div>
             {allSelected ? 'Deselect All' : 'Select All'}
           </button>
 
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Master Interval:</span>
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">Master Interval:</span>
             <Select value={String(masterInterval)} onChange={e => setMasterIntervalAll(Number(e.target.value))}
               className="px-2 py-1 text-xs"
               options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))}
@@ -254,14 +254,14 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                   className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
                     allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-[var(--border-strong)]'
                   )}>
-                  {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
+                  {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-[var(--text-on-accent)]" />}
                 </button>
                 <CatIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">{category}</span>
-                <span className="text-[10px] text-[var(--text-muted)]">({catSignals.filter(s => s.selected).length}/{catSignals.length})</span>
+                <span className="text-2xs text-[var(--text-muted)]">({catSignals.filter(s => s.selected).length}/{catSignals.length})</span>
                 <div className="ml-auto flex items-center gap-2" onClick={e => e.stopPropagation()}>
                   <Select value="" onChange={e => { if (e.target.value) setCategoryInterval(category, Number(e.target.value)); e.target.value = '' }}
-                    className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]"
+                    className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-2xs text-[var(--text-muted)]"
                     options={[
                       { value: '', label: 'Set all...' },
                       ...INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label })),
@@ -284,7 +284,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                           className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
                             sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]'
                           )}>
-                          {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
+                          {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-[var(--text-on-accent)]" />}
                         </button>
                         <span className="text-xs font-mono flex-1 truncate">{sig.name}</span>
                         <Select value={String(sig.interval)}
@@ -317,7 +317,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={selectedCount === 0}
-            className="px-4 py-2 rounded-lg text-xs font-medium bg-neon-cyan text-black hover:bg-neon-cyan/80 disabled:opacity-40 transition-colors flex items-center gap-1.5">
+            className="px-4 py-2 rounded-lg text-xs font-medium bg-neon-cyan text-[var(--text-on-accent)] hover:bg-neon-cyan/80 disabled:opacity-40 transition-colors flex items-center gap-1.5">
             <Zap className="h-3.5 w-3.5" />
             Subscribe {selectedCount} Signals
           </button>

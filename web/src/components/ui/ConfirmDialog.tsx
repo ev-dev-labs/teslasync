@@ -60,7 +60,7 @@ const confirmButtonClasses: Record<NonNullable<ConfirmDialogProps['variant']>, s
   // Button's built-in 'danger' variant covers the critical case.
   danger: undefined,
   // Button has no 'warning' variant — override with solid amber via className.
-  warning: 'bg-amber-500 text-white hover:bg-amber-600 focus-visible:ring-amber-500',
+  warning: 'bg-amber-500 text-[var(--text-primary)] hover:bg-amber-600 focus-visible:ring-amber-500',
 };
 
 export function ConfirmDialog({

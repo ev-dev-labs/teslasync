@@ -102,13 +102,13 @@ export function DataTableColumnsMenu({
           )}
         >
           <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <span className="text-2xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('table.columns.heading', 'Visible columns')}
             </span>
             <button
               type="button"
               onClick={showAll}
-              className="text-[10px] font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
+              className="text-2xs font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
             >
               {t('table.columns.showAll', 'Show all')}
             </button>

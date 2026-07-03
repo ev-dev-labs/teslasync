@@ -464,7 +464,7 @@ function ContextMenuView({ state }: ContextMenuViewProps) {
               )}
               <span className="flex-1 truncate">{item.label}</span>
               {item.shortcut && (
-                <span aria-hidden="true" className="ml-2 shrink-0 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                <span aria-hidden="true" className="ml-2 shrink-0 text-2xs uppercase tracking-wider text-[var(--text-muted)]">
                   {item.shortcut}
                 </span>
               )}

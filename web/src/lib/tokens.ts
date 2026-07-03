@@ -197,6 +197,10 @@ export const typography = {
     // fill). --text-inverse is dark in dark themes and light in light themes
     // (see index.css :root + :root.light-mode).
     inverse: 'text-[var(--text-inverse)]',
+    // Text / icons on a solid, saturated accent fill (bright neon button,
+    // checkbox tick). Stays dark in every theme because the fill stays bright
+    // (see index.css --text-on-accent — no light-mode override).
+    onAccent: 'text-[var(--text-on-accent)]',
   },
 
   family: {

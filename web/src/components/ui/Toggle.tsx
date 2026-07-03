@@ -88,7 +88,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           />
         </button>
         {label && (
-          <span id={labelId} className="text-sm font-medium text-gray-700 dark:text-[var(--text-secondary)]">
+          <span id={labelId} className="text-sm font-medium text-[var(--text-secondary)]">
             {label}
           </span>
         )}

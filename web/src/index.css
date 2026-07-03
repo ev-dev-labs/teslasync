@@ -45,9 +45,14 @@
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --text-muted: #8a95a6;
-  /* Text on an inverted surface (flipped tooltip / accent fill). Dark in
-   * dark themes, overridden light under :root.light-mode below. */
+  /* Text on an inverted surface (flipped tooltip). Dark in dark themes,
+   * overridden light under :root.light-mode below. */
   --text-inverse: #0f172a;
+  /* Foreground for text / icons that sit on a solid, saturated accent fill
+   * (bg-neon-cyan buttons, checkbox tick marks). The accent stays bright in
+   * every theme, so its foreground stays dark in every theme — intentionally
+   * no :root.light-mode override. */
+  --text-on-accent: #0a0a0f;
   /*
    * Chart / surface tokens consumed by chartTokens in lib/tokens.ts.
    * Defaults below are dark-mode values; :root.light-mode (further down in
