@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Thermometer } from 'lucide-react';
 
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
@@ -49,10 +49,10 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
                   unit={tempUnit}
                   color={tempSeverityColor(sensor.value, sensor.maxTemp)}
                 />
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <Text as="p" variant="caption" className="mt-2">
                   {t('drivetrain.maxLabel', 'Max')}: {fmtNumber(toTemperatureDisplay(sensor.maxTemp), 0)}
                   {tempUnit}
-                </p>
+                </Text>
               </div>
             ))}
           </Grid>
