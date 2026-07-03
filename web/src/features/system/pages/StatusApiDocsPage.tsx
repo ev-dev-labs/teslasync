@@ -276,7 +276,7 @@ export default function StatusApiDocsPage() {
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <Text as="span" variant="body" className="block truncate font-medium">
+                    <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">
                       {name}
                     </Text>
                     <Caption className="block truncate">{how}</Caption>
