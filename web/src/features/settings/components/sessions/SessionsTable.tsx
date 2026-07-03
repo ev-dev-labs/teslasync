@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   DataTable,
+  Text,
   type Column,
 } from '@/components/ui'
 import { Skeleton, QueryError } from '@/components/feedback'
@@ -54,7 +55,7 @@ export function SessionsTable({
         header: t('account.sessions.columns.device', 'Device'),
         render: (row) => (
           <div className="flex items-center gap-2">
-            <span className="text-[var(--text-primary)]">{describeDevice(row.user_agent)}</span>
+            <Text color="primary">{describeDevice(row.user_agent)}</Text>
             {row.current ? (
               <Badge
                 variant="success"
@@ -71,21 +72,21 @@ export function SessionsTable({
         key: 'ip',
         header: t('account.sessions.columns.ip', 'IP address'),
         render: (row) => (
-          <span className="tabular-nums text-[var(--text-secondary)]">{row.ip || '—'}</span>
+          <Text color="secondary" className="tabular-nums">{row.ip || '—'}</Text>
         ),
       },
       {
         key: 'created_at',
         header: t('account.sessions.columns.createdAt', 'Signed in'),
         render: (row) => (
-          <span className="text-[var(--text-secondary)]">{formatDateTime(row.created_at)}</span>
+          <Text color="secondary">{formatDateTime(row.created_at)}</Text>
         ),
       },
       {
         key: 'last_seen_at',
         header: t('account.sessions.columns.lastSeenAt', 'Last seen'),
         render: (row) => (
-          <span className="text-[var(--text-secondary)]">{formatDateTime(row.last_seen_at)}</span>
+          <Text color="secondary">{formatDateTime(row.last_seen_at)}</Text>
         ),
       },
       {
