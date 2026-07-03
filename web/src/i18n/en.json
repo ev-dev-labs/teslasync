@@ -3999,10 +3999,12 @@
   "tco": {
     "title": "Total Cost of Ownership",
     "subtitle": "Compare your EV running costs against an equivalent gas vehicle",
+    "kpis": "Cost summary",
     "totalEvCost": "Total EV Cost",
     "sessions": "sessions",
     "equivGasCost": "Equiv. Gas Cost",
     "gal": "gal",
+    "mpg": "MPG",
     "totalSavings": "Total Savings",
     "overMonths": "Over {{months}} months",
     "monthlySavings": "Monthly Savings",
