@@ -7205,6 +7205,13 @@
       "search": "Search"
     },
     "selectGeofence": "Select geofence {{name}}",
+    "toggleGeofence": "Toggle geofence {{name}}",
+    "editGeofence": "Edit geofence {{name}}",
+    "deleteGeofence": "Delete geofence {{name}}",
+    "summaryAria": "Geofence summary",
+    "zonesAria": "Geofence zones",
+    "zonesTitle": "Zones",
+    "zonesCount": "{{count}} defined",
     "error": {
       "nameTooLong": "Max 120 characters"
     },
@@ -7218,7 +7225,8 @@
       "proposalLabel": "Proposed geofence",
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
-      "pickLocation": "Pick a visited location to draft a geofence around"
+      "pickLocation": "Pick a visited location to draft a geofence around",
+      "pickHint": "Paste a visited-location ID from the Locations page to draft a zone around it."
     }
   },
   "mapOverview": {
