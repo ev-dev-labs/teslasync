@@ -349,7 +349,7 @@ export default function VampireDrainPage() {
               {tips.map((tip, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-0.5 shrink-0 text-emerald-300">{tip.icon}</span>
-                  <Text variant="bodySm">{tip.text}</Text>
+                  <Text variant="body">{tip.text}</Text>
                 </li>
               ))}
             </ul>
