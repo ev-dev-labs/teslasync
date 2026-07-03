@@ -1,5 +1,7 @@
 import { cn } from '@/lib/cn';
 import { ProgressRing } from '@/components/data-display';
+import { Text } from '@/components/ui';
+import { type TypographySize } from '@/lib/tokens';
 import { useTranslation } from 'react-i18next';
 
 export interface AchievementData {
@@ -19,11 +21,14 @@ interface AchievementBadgeProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const sizeConfig = {
-  sm: { ring: 56, stroke: 3, iconSize: 'text-xl', gap: 'gap-1', textSize: 'text-xs' },
-  md: { ring: 72, stroke: 4, iconSize: 'text-3xl', gap: 'gap-2', textSize: 'text-sm' },
-  lg: { ring: 96, stroke: 5, iconSize: 'text-4xl', gap: 'gap-3', textSize: 'text-base' },
-} as const;
+const sizeConfig: Record<
+  'sm' | 'md' | 'lg',
+  { ring: number; stroke: number; iconSize: string; gap: string; textSize: TypographySize }
+> = {
+  sm: { ring: 56, stroke: 3, iconSize: 'text-xl', gap: 'gap-1', textSize: 'xs' },
+  md: { ring: 72, stroke: 4, iconSize: 'text-3xl', gap: 'gap-2', textSize: 'sm' },
+  lg: { ring: 96, stroke: 5, iconSize: 'text-4xl', gap: 'gap-3', textSize: 'base' },
+};
 
 export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeProps) {
   const { t } = useTranslation();
@@ -67,30 +72,32 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
       </div>
 
       {/* Name */}
-      <span
+      <Text
+        as="span"
+        size={cfg.textSize}
+        weight="semibold"
         className={cn(
-          'font-semibold text-center leading-tight',
-          cfg.textSize,
+          'text-center leading-tight',
           achievement.unlocked ? 'text-yellow-400' : 'text-[var(--text-secondary)]',
         )}
       >
         {achievement.name}
-      </span>
+      </Text>
 
       {/* Description */}
-      <span className="text-xs text-[var(--text-muted)] text-center leading-tight">
+      <Text as="span" size="xs" color="muted" className="text-center leading-tight">
         {achievement.description}
-      </span>
+      </Text>
 
       {/* Progress or unlocked status */}
       {achievement.unlocked ? (
-        <span className="text-xs text-yellow-500/70 font-medium">
+        <Text as="span" size="xs" weight="medium" className="text-yellow-500/70">
           {t('lifetime.unlocked', '✓ Unlocked')}
-        </span>
+        </Text>
       ) : (
-        <span className="text-xs text-[var(--text-muted)] tabular-nums">
+        <Text as="span" size="xs" color="muted" className="tabular-nums">
           {pct}%
-        </span>
+        </Text>
       )}
     </div>
   );
