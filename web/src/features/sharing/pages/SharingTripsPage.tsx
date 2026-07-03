@@ -1,76 +1,100 @@
 // Trip postcard and share-card image generation page.
 //
-// SharingTripsPage surfaces recent trips eligible for sharing, keeps the
-// existing share-card management hints, and conditionally renders the opt-in
-// AI image prompt drafter when AI mode and its feature toggle are enabled.
+// SharingTripsPage surfaces recent trips eligible for sharing in a full-width
+// bento: a KPI band, a selectable recent-trips list (the hero), a live
+// "share preview" of the picked trip, the static share-card hint, and — when
+// AI mode and its feature toggle are enabled — the opt-in Helix image-prompt
+// drafter.
 //
-// The /sharing/trips route must keep working in AI-off mode (ADR-015 §I3).
-// withAiFeature removes the AI card from the DOM when the feature is off.
+// The /sharing/trips route must keep working in AI-off mode (ADR-015 §I3):
+// withAiFeature removes the AI card from the DOM when the feature is off,
+// while every deterministic section keeps rendering.
 //
 // Selection model:
-//   - The user picks one trip from the recent-trips list. The
-//     picked trip's id is the input the AI card consumes. While
-//     no trip is selected, the AI card still renders (so the
-//     positive-control on-mode test can see it) but its button
-//     is disabled with an emptyHint guiding the user to pick a
-//     trip first — same UX as AISoftwareUpdateChangelogSummarizer
-//     when no vehicle is in scope.
+//   - The user picks one trip from the recent-trips list. The picked trip's
+//     id feeds BOTH the SelectedTripPreview panel and the AI card's tripId
+//     prop. While no trip is selected the AI card still renders (so the
+//     positive-control on-mode test can see it) but its button is disabled
+//     with an emptyHint guiding the user to pick a trip first.
 //
 // Deliberate non-goals on this page:
 //   - It does NOT replace the per-drive Share button workflow on
-//     DriveDetailPage; the existing share-token flow that lands
-//     at /s/:token is untouched.
-//   - It does NOT render an editable share-card form. The
-//     propose-only AI surface drafts an image prompt; the user
-//     still uses the existing per-drive Share workflow to publish
-//     a static share card.
+//     DriveDetailPage; the existing share-token flow at /s/:token is untouched.
+//   - It does NOT render an editable share-card form. The propose-only AI
+//     surface drafts an image prompt; the user still uses the existing
+//     per-drive Share workflow to publish a static share card.
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Route as RouteIcon, Calendar, MapPin, Zap, Clock } from 'lucide-react'
+import { Route as RouteIcon, Share2, Zap, Car, RefreshCw } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel } from '@/components/ui'
-import { EmptyState, Skeleton } from '@/components/feedback'
+import { GlassPanel, Button, Select, PanelTitle, Text } from '@/components/ui'
+import { MetricCard } from '@/components/data-display'
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
-import { InlineMetric } from '@/components/data-display'
 import { useTrips } from '@/api/hooks/useTrips'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { useUnits } from '@/hooks/useUnits'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { formatDate } from '@/lib/dateFormat'
-import { fmtInt, fmtNumber } from '@/lib/numberFormat'
-import { convertDistanceFromSI } from '@/lib/unitConversion'
+import { fmtInt } from '@/lib/numberFormat'
 import { AITripPostcardShareCardImageGeneration } from '@/components/ai/AITripPostcardShareCardImageGeneration'
-
-function formatDuration(startDate: string, endDate: string | null): string {
-  if (!endDate) return '—'
-  const ms = new Date(endDate).getTime() - new Date(startDate).getTime()
-  const hours = Math.floor(ms / 3600000)
-  const minsRaw = (ms % 3600000) / 60000
-  if (hours === 0) return `${fmtInt(minsRaw)}m`
-  return minsRaw >= 0.5 ? `${hours}h ${fmtInt(minsRaw)}m` : `${hours}h`
-}
+import {
+  TripShareRow,
+  SelectedTripPreview,
+  aggregateTripKpis,
+} from '../components/sharing-trips'
 
 export default function SharingTripsPage() {
   const { t } = useTranslation()
   usePageTitle(t('sharing.trips.title', 'Share a trip'))
 
-  const { vehicleId } = useSelectedVehicle()
-  const { unitPrefs } = useUnits()
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle()
+  const { formatDistance, formatEnergy } = useUnits()
 
-  const tripsQuery = useTrips({
-    vehicle_id: vehicleId ?? undefined,
-    limit: 20,
-  })
-  const { data: trips, isLoading } = tripsQuery
+  const tripsQuery = useTrips({ vehicle_id: vehicleId ?? undefined, limit: 20 })
+  const { data: trips, isLoading, error, refetch } = tripsQuery
   const allTrips = useMemo(() => trips ?? [], [trips])
 
-  // Selected-trip id. The recent-trips list is the only selector
-  // on this page; clicking a row swaps the selection, which the
-  // AI card consumes via the tripId prop.
-  const [selectedTripId, setSelectedTripId] = useState<number | undefined>(
-    undefined,
+  // Selected-trip id. The recent-trips list is the only selector on this page;
+  // clicking a row swaps the selection, which the preview panel + AI card
+  // consume via the tripId prop.
+  const [selectedTripId, setSelectedTripId] = useState<number | undefined>(undefined)
+  const selectedTrip = useMemo(
+    () => allTrips.find((trip) => trip.id === selectedTripId) ?? null,
+    [allTrips, selectedTripId],
+  )
+
+  const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips])
+  const coldLoading = isLoading && allTrips.length === 0
+
+  const vehicleOptions = vehicles.map((v) => ({
+    value: String(v.id),
+    label: v.display_name || v.vin,
+  }))
+
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      {vehicles.length > 0 && (
+        <Select
+          options={vehicleOptions}
+          value={vehicleId != null ? String(vehicleId) : ''}
+          onChange={(e) => {
+            const n = Number(e.target.value)
+            if (Number.isFinite(n) && n > 0) setVehicleId(n)
+          }}
+          placeholder={t('sharing.trips.selectVehicle', 'Select vehicle')}
+          aria-label={t('sharing.trips.selectVehicle', 'Select vehicle')}
+        />
+      )}
+      <Button
+        variant="ghost"
+        onClick={() => refetch()}
+        aria-label={t('common.refresh', 'Refresh')}
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
   )
 
   return (
@@ -80,142 +104,128 @@ export default function SharingTripsPage() {
         'sharing.trips.subtitle',
         'Pick a recent trip to share as a static link, postcard, or image.',
       )}
-      loading={isLoading}
+      actions={actions}
+      query={tripsQuery}
     >
-      {/* Recent trips list — the deterministic baseline list of
-          shareable trips. Always rendered, regardless of AI
-          mode. */}
-      <FadeIn delay={0.05}>
-        <GlassPanel className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-            {t('sharing.trips.recent.heading', 'Recent trips')}
-          </h3>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 rounded-xl" />
-              ))}
-            </div>
-          ) : allTrips.length === 0 ? (
-            // no-action: trips are created automatically by the vehicle driving — no manual action available.
-            <EmptyState
-              icon={<RouteIcon className="h-12 w-12" />}
-              message={t(
-                'sharing.trips.recent.empty',
-                'No recent trips. Drive your vehicle to populate this list.',
-              )}
-            />
+      {/* 1 — KPI band: full-width responsive metric grid */}
+      <FadeIn>
+        <section
+          aria-label={t('sharing.trips.kpis', 'Trip totals')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          {coldLoading ? (
+            [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[74px] rounded-xl" />)
           ) : (
-            <ul
-              className="space-y-2"
-              role="listbox"
-              aria-label={t('sharing.trips.recent.heading', 'Recent trips')}
-              data-testid="sharing-trips-recent-list"
-            >
-              {allTrips.map((trip) => {
-                const isSelected = selectedTripId === trip.id
-                const distanceDisplay = convertDistanceFromSI(
-                  trip.total_distance_m,
-                  unitPrefs.distance,
-                )
-                return (
-                  <li key={trip.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected ? 'true' : 'false'}
-                      onClick={() => setSelectedTripId(trip.id)}
-                      className={
-                        'w-full text-left rounded-xl border p-3 sm:p-4 transition-colors ' +
-                        (isSelected
-                          ? 'border-cyan-400/60 bg-cyan-500/5'
-                          : 'border-[var(--border-subtle)] bg-white/[0.02] hover:border-[var(--border-strong)] hover:bg-white/[0.04]')
-                      }
-                    >
-                      <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-cyan-500/10 flex items-center justify-center">
-                            <RouteIcon className="h-4 w-4 text-cyan-300" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-[var(--text-primary)]">
-                              {trip.name ??
-                                `${t('sharing.trips.row.trip', 'Trip')} #${trip.id}`}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-3 mt-0.5">
-                              <InlineMetric
-                                icon={<Calendar />}
-                                value={formatDate(trip.start_date)}
-                              />
-                              <InlineMetric
-                                icon={<Clock />}
-                                value={formatDuration(
-                                  trip.start_date,
-                                  trip.end_date ?? null,
-                                )}
-                              />
-                              <span className="text-[11px] text-[var(--text-muted)]">
-                                {t(
-                                  'sharing.trips.row.drives',
-                                  '{{count}} drives',
-                                  { count: trip.drive_count },
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 sm:gap-6 text-right w-full sm:w-auto justify-end">
-                          <div>
-                            <p className="text-sm font-bold text-[var(--text-primary)]">
-                              <MapPin className="inline h-3 w-3 mr-1 text-cyan-300" />
-                              {fmtInt(distanceDisplay)} {unitPrefs.distance}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-amber-300">
-                              <Zap className="inline h-3 w-3 mr-1" />
-                              {fmtNumber(trip.total_energy_wh)} Wh
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+            <>
+              <MetricCard
+                label={t('sharing.trips.kpi.shareable', 'Shareable trips')}
+                value={fmtInt(kpis.count)}
+                icon={<Share2 className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('sharing.trips.kpi.distance', 'Total distance')}
+                value={formatDistance(kpis.totalDistanceM)}
+                icon={<RouteIcon className="h-5 w-5" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('sharing.trips.kpi.energy', 'Total energy')}
+                value={formatEnergy(kpis.totalEnergyWh)}
+                icon={<Zap className="h-5 w-5" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('sharing.trips.kpi.drives', 'Total drives')}
+                value={fmtInt(kpis.totalDrives)}
+                icon={<Car className="h-5 w-5" />}
+                color="purple"
+              />
+            </>
           )}
-        </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* Static share-card hint — surfaces the canonical baseline
-          publishing workflow (per-drive Share button) so a user
-          who lands here without AI on still sees how to share. */}
+      {/* 2 — Main bento: recent-trips list (hero) + share preview / static hint */}
       <FadeIn delay={0.1}>
-        <GlassPanel className="p-4 sm:p-6 mt-4">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
-            {t(
-              'sharing.trips.staticHint.heading',
-              'Static share cards',
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <RouteIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('sharing.trips.recent.heading', 'Recent trips')}
+            </PanelTitle>
+            {coldLoading ? (
+              <div className="space-y-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 rounded-xl" />
+                ))}
+              </div>
+            ) : error ? (
+              <QueryError
+                error={error}
+                onRetry={() => refetch()}
+                resourceName={t('sharing.trips.resource', 'Trips')}
+              />
+            ) : allTrips.length === 0 ? (
+              // no-action: trips are created automatically by driving — no manual action available.
+              <EmptyState
+                icon={<RouteIcon className="h-12 w-12" />}
+                message={t(
+                  'sharing.trips.recent.empty',
+                  'No recent trips. Drive your vehicle to populate this list.',
+                )}
+              />
+            ) : (
+              <ul
+                className="space-y-2"
+                role="listbox"
+                aria-label={t('sharing.trips.recent.heading', 'Recent trips')}
+                data-testid="sharing-trips-recent-list"
+              >
+                {allTrips.map((trip) => (
+                  <TripShareRow
+                    key={trip.id}
+                    trip={trip}
+                    selected={selectedTripId === trip.id}
+                    onSelect={setSelectedTripId}
+                    formatDistance={formatDistance}
+                    formatEnergy={formatEnergy}
+                  />
+                ))}
+              </ul>
             )}
-          </h3>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t(
-              'sharing.trips.staticHint.body',
-              'Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click "Share", and copy the public link \u2014 anyone with the link can view the static card, no AI required.',
-            )}
-          </p>
-        </GlassPanel>
+          </GlassPanel>
+
+          <div className="space-y-4 xl:col-span-1">
+            <SelectedTripPreview
+              trip={selectedTrip}
+              formatDistance={formatDistance}
+              formatEnergy={formatEnergy}
+            />
+
+            {/* Static share-card hint — the canonical baseline publishing
+                workflow (per-drive Share button) so a user who lands here
+                without AI on still sees how to share. */}
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-2">
+                {t('sharing.trips.staticHint.heading', 'Static share cards')}
+              </PanelTitle>
+              <Text as="p" size="sm" color="secondary" className="max-w-prose">
+                {t(
+                  'sharing.trips.staticHint.body',
+                  'Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click "Share", and copy the public link \u2014 anyone with the link can view the static card, no AI required.',
+                )}
+              </Text>
+            </GlassPanel>
+          </div>
+        </section>
       </FadeIn>
 
-      {/* AI section — withAiFeature gates visibility. In off mode
-          this renders null and is invisible to the DOM (ADR-015 §I5).
-          In on mode it surfaces the propose-only Helix share-card
-          image-prompt drafting card. */}
-      <FadeIn delay={0.15}>
-        <div className="mt-4">
-          <AITripPostcardShareCardImageGeneration tripId={selectedTripId} />
-        </div>
+      {/* 3 — AI section — withAiFeature gates visibility. In off mode this
+          renders null and is invisible to the DOM (ADR-015 §I5). In on mode it
+          surfaces the propose-only Helix share-card image-prompt drafting card. */}
+      <FadeIn delay={0.2}>
+        <AITripPostcardShareCardImageGeneration tripId={selectedTripId} />
       </FadeIn>
     </PageContainer>
   )

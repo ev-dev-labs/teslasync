@@ -6954,6 +6954,26 @@
         "trip": "Trip",
         "drives": "{{count}} drives"
       },
+      "selectVehicle": "Select vehicle",
+      "resource": "Trips",
+      "kpis": "Trip totals",
+      "kpi": {
+        "shareable": "Shareable trips",
+        "distance": "Total distance",
+        "energy": "Total energy",
+        "drives": "Total drives"
+      },
+      "preview": {
+        "heading": "Share preview",
+        "distance": "Distance",
+        "duration": "Duration",
+        "energy": "Energy",
+        "drives": "Drives",
+        "charges": "Charges",
+        "cost": "Cost",
+        "privacy": "Only this redacted summary is shared — never raw coordinates or addresses.",
+        "empty": "Select a trip above to preview what you’ll share."
+      },
       "staticHint": {
         "heading": "Static share cards",
         "body": "Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click \"Share\", and copy the public link — anyone with the link can view the static card, no AI required."

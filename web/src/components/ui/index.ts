@@ -8,6 +8,7 @@ export { Popover, type PopoverProps, type PopoverAlign, type PopoverSide } from 
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { Tabs, type TabsProps, type TabItem } from './Tabs';
 export { GlassPanel, type GlassPanelProps } from './GlassPanel';
+export { SelectableCard, type SelectableCardProps } from './SelectableCard';
 export { StatusPill, type StatusPillProps } from './StatusPill';
 export { Toggle, type ToggleProps } from './Toggle';
 export { Slider, type SliderProps } from './Slider';
