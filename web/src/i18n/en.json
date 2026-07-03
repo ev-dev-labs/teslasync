@@ -8656,6 +8656,27 @@
     "tableLoading": "Loading…",
     "error": "Failed to load diff",
     "pinnedLabel": "Pinned:",
+    "kpisLabel": "Diff summary",
+    "numericChanges": "Numeric changes",
+    "categoriesAffected": "Categories affected",
+    "tableTitle": "Signal differences",
+    "breakdown": {
+      "title": "Change analysis",
+      "categoryTitle": "Change by category",
+      "sourceTitle": "Source layers",
+      "pinnedTitle": "Pinned signals",
+      "categoryEmpty": "No categorized changes to summarize",
+      "sourceEmpty": "No source-layer data yet",
+      "pinnedEmpty": "No pinned signals — pin a row to track it here",
+      "pinnedCount": "{{count}} pinned"
+    },
+    "source": {
+      "l1": "L1 · In-process",
+      "l2": "L2 · Redis",
+      "log": "LOG · History",
+      "stale": "STALE",
+      "unknown": "Unknown"
+    },
     "preset": {
       "nowVs1h": "Now vs 1h ago",
       "nowVs1d": "Now vs 1 day ago",
