@@ -8217,6 +8217,39 @@
         "severityInfo": "Info",
         "severityInfoDesc": "Routine status updates."
       }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Custom HTTPS endpoints that receive HMAC-signed event payloads.",
+      "summary": {
+        "label": "Webhook endpoints summary",
+        "resource": "webhook endpoints",
+        "endpoints": "Endpoints",
+        "endpointsSub": "Configured receivers",
+        "enabled": "Enabled",
+        "enabledSub": "Active receivers",
+        "secure": "Secure transport",
+        "secureSub": "Delivered over HTTPS",
+        "methods": "HTTP methods",
+        "methodsSub": "Verbs in use",
+        "methodsNone": "—"
+      },
+      "guide": {
+        "title": "How webhooks work",
+        "subtitle": "Forward events to any HTTP receiver, signed and verifiable.",
+        "stepSign": "Every payload is HMAC-SHA256 signed and sent in the X-TeslaSync-Signature header so receivers can verify authenticity.",
+        "stepDeliver": "TeslaSync POSTs a compact JSON envelope on each event; failed deliveries are retried with backoff.",
+        "stepVerify": "Use Test on any endpoint to fire a sample event and preview the signature before you rely on it.",
+        "referenceTitle": "Delivery reference",
+        "refHeader": "Signature header",
+        "refAlgo": "Algorithm",
+        "refMethods": "Methods",
+        "payloadTitleLabel": "Payload fields",
+        "payloadTitle": "Short event headline.",
+        "payloadMessage": "Long-form event body.",
+        "payloadSource": "Always \"teslasync\".",
+        "payloadTimestamp": "RFC3339 server time."
+      }
     }
   },
   "orders": {
