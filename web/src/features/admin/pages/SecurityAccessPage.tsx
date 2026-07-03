@@ -1,14 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, AlertCircle } from 'lucide-react';
+import { AlertCircle, ShieldAlert } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { PageContainer } from '@/components/layout';
+import { AlertBanner } from '@/components/feedback';
 import { RangePicker, VehicleSelect } from '@/components/forms';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { VehicleTwin } from '@/components/vehicles';
+import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -32,6 +30,7 @@ import {
 } from '../components/security-access/helpers';
 
 import {
+  DigitalTwinPanel,
   SummaryStatsRow,
   SecurityStatusCards,
   WindowStatusDetail,
@@ -54,21 +53,27 @@ export default function SecurityAccessPage() {
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  /* Surface useVehicles errors via the same vehiclesError binding the
-     legacy code used so the AlertBanner below keeps reporting list-load
-     failures. React Query dedupes by queryKey so this is a free piggy-back. */
+  /* Surface useVehicles errors so the top banner keeps reporting fleet
+     list-load failures. React Query dedupes by queryKey (free piggy-back). */
   const { error: vehiclesError } = useVehicles();
 
   /* ---- Latest security state (polled) ---- */
-  const { data: latest, isLoading: loadingLatest, error: latestError } = useQuery({
+  const latestQuery = useQuery({
     queryKey: ['security-latest', activeId],
     queryFn: () => request<SecurityEvent>(`/security/latest?vehicle_id=${activeId}`),
     enabled: !!activeId,
     refetchInterval: 5000,
   });
+  const { data: latest, isLoading: loadingLatest, error: latestError, refetch: refetchLatest } = latestQuery;
 
   /* ---- Security event history ---- */
-  const { data: rawHistory = [], isLoading: loadingHistory, error: historyError } = useSecurityEvents(activeId);
+  const historyQuery = useSecurityEvents(activeId);
+  const {
+    data: rawHistory = [],
+    isLoading: loadingHistory,
+    error: historyError,
+    refetch: refetchHistory,
+  } = historyQuery;
 
   /* ---- Range filter (client-side on history) ---- */
   const { start, end, setRange } = useRangeState({
@@ -81,13 +86,10 @@ export default function SecurityAccessPage() {
     const endMs = new Date(`${end}T23:59:59.999`).getTime();
     return rawHistory.filter((e) => {
       if (!e.createdAt) return false;
-      const t = new Date(e.createdAt).getTime();
-      return t >= startMs && t <= endMs;
+      const ts = new Date(e.createdAt).getTime();
+      return ts >= startMs && ts <= endMs;
     });
   }, [rawHistory, start, end]);
-
-  const anyError = [vehiclesError, latestError, historyError].find(Boolean);
-  const isLoading = loadingLatest || loadingHistory;
 
   /* ---- Computed stats ---- */
   const isSecure = useMemo(() => {
@@ -99,86 +101,154 @@ export default function SecurityAccessPage() {
   const lastLockChange = useMemo(() => findLastLockChange(history), [history]);
   const sentryBuckets = useMemo(() => buildSentryBuckets(history), [history]);
   const securityStats = useMemo(() => computeSecurityStats(history), [history]);
-  const twinState = useMemo(() => buildTwinStateFromAdmin(latest ? {
-    ...latest,
-    sentryMode: isSentryActive(latest.sentryMode),
-  } : null), [latest]);
+  const twinState = useMemo(
+    () => buildTwinStateFromAdmin(latest ? { ...latest, sentryMode: isSentryActive(latest.sentryMode) } : null),
+    [latest],
+  );
   const timelineEvents = useMemo(() => deriveTimeline(history), [history]);
 
+  const twinVehicleId = activeId ? Number(activeId) : undefined;
+
   /* ---------------------------------------------------------------- */
-  /*  Render                                                           */
+  /*  Render                                                          */
   /* ---------------------------------------------------------------- */
 
   return (
     <PageContainer
       title={t('admin.security.title', 'Security & Access')}
       subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and windows')}
-      loading={isLoading}
-      error={null}
+      query={[latestQuery, historyQuery]}
       actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="security-access-range"
-          />
+          <RangePicker value={{ start, end }} onChange={setRange} align="end" triggerTestId="security-access-range" />
         </div>
       }
     >
-      {anyError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+      {vehiclesError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(vehiclesError)}
         </AlertBanner>
       )}
 
-      {/* Alert banner */}
+      {/* Contextual insecure-vehicle warning */}
       {!isSecure && latest && (
         <FadeIn>
-          <GlassPanel className="border-red-500/30 bg-red-500/5 mb-4">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <AlertTriangle className="h-5 w-5 text-red-400 shrink-0" />
-              <p className="text-red-400 text-sm font-semibold">
-                {t(
-                  'admin.security.alert',
-                  '⚠ Vehicle may not be secure — check lock, door, and window status.',
-                )}
-              </p>
-            </div>
-          </GlassPanel>
+          <AlertBanner
+            variant="warning"
+            icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
+            title={t('admin.security.alertTitle', 'Vehicle may not be secure')}
+          >
+            {t('admin.security.alert', 'Check lock, door, and window status.')}
+          </AlertBanner>
         </FadeIn>
       )}
 
-      {/* Digital Twin */}
-      {latest && (
-        <FadeIn>
-          <GlassPanel className="p-4 mb-6 flex items-center justify-center">
-            <VehicleTwin
-              {...twinState}
-              size="sm"
-              interactive
-              vehicleId={activeId ? Number(activeId) : undefined}
-            />
-          </GlassPanel>
-        </FadeIn>
-      )}
+      {/* 1 — KPI band */}
+      <FadeIn>
+        <section aria-label={t('admin.security.section.summary', 'Summary metrics')}>
+          <SummaryStatsRow
+            isSecure={isSecure}
+            lastLockChange={lastLockChange}
+            sentryUptime={sentryUptime}
+            totalEvents={history.length}
+            isLoading={loadingLatest || loadingHistory}
+          />
+        </section>
+      </FadeIn>
 
-      <SummaryStatsRow
-        isSecure={isSecure}
-        lastLockChange={lastLockChange}
-        sentryUptime={sentryUptime}
-        totalEvents={history.length}
-        isLoading={loadingLatest}
-      />
+      {/* 2 — Posture bento: digital twin (hero) + security status tiles */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('admin.security.section.posture', 'Security posture')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <DigitalTwinPanel
+            twinState={twinState}
+            vehicleId={twinVehicleId}
+            hasData={!!latest}
+            isLoading={loadingLatest}
+            error={latestError}
+            onRetry={refetchLatest}
+            className="xl:col-span-1"
+          />
+          <SecurityStatusCards
+            latest={latest}
+            isLoading={loadingLatest}
+            error={latestError}
+            onRetry={refetchLatest}
+            className="xl:col-span-2"
+          />
+        </section>
+      </FadeIn>
 
-      <SecurityStatusCards latest={latest} isLoading={loadingLatest} />
-      <WindowStatusDetail latest={latest} />
-      <LiveVehicleState latest={latest} />
-      <SentryModeChart sentryBuckets={sentryBuckets} />
-      <SecurityStatistics securityStats={securityStats} sentryUptime={sentryUptime} isLoading={loadingHistory} />
-      <EventHistoryTable history={history} isLoading={loadingHistory} />
-      <EventTimeline timelineEvents={timelineEvents} />
+      {/* 3 — Live state + window detail bento */}
+      <FadeIn delay={0.15}>
+        <section
+          aria-label={t('admin.security.section.live', 'Live vehicle state')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <LiveVehicleState
+            latest={latest}
+            isLoading={loadingLatest}
+            error={latestError}
+            onRetry={refetchLatest}
+            className="xl:col-span-2"
+          />
+          <WindowStatusDetail
+            latest={latest}
+            isLoading={loadingLatest}
+            error={latestError}
+            onRetry={refetchLatest}
+            className="xl:col-span-1"
+          />
+        </section>
+      </FadeIn>
+
+      {/* 4 — Analytics bento: sentry chart (hero) + statistics */}
+      <FadeIn delay={0.2}>
+        <section
+          aria-label={t('admin.security.section.analytics', 'Security analytics')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <SentryModeChart
+            sentryBuckets={sentryBuckets}
+            isLoading={loadingHistory}
+            error={historyError}
+            onRetry={refetchHistory}
+            className="xl:col-span-2"
+          />
+          <SecurityStatistics
+            securityStats={securityStats}
+            sentryUptime={sentryUptime}
+            isLoading={loadingHistory}
+            error={historyError}
+            onRetry={refetchHistory}
+            className="xl:col-span-1"
+          />
+        </section>
+      </FadeIn>
+
+      {/* 5 — Detail band bento: event history + timeline */}
+      <FadeIn delay={0.25}>
+        <section
+          aria-label={t('admin.security.section.history', 'Security event history')}
+          className="grid grid-cols-1 gap-4 2xl:grid-cols-2"
+        >
+          <EventHistoryTable
+            history={history}
+            isLoading={loadingHistory}
+            error={historyError}
+            onRetry={refetchHistory}
+          />
+          <EventTimeline
+            timelineEvents={timelineEvents}
+            isLoading={loadingHistory}
+            error={historyError}
+            onRetry={refetchHistory}
+          />
+        </section>
+      </FadeIn>
     </PageContainer>
   );
 }

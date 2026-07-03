@@ -3054,7 +3054,43 @@
       "subtitle": "Lock status, sentry mode, doors, and windows",
       "noEvents": "No security events recorded yet.",
       "open": "Open",
-      "alert": "⚠ Vehicle may not be secure — check lock, door, and window status."
+      "alert": "Check lock, door, and window status.",
+      "alertTitle": "Vehicle may not be secure",
+      "statusTitle": "Security Status",
+      "status": {
+        "noData": "No security state available for this vehicle yet"
+      },
+      "twin": {
+        "title": "Digital Twin",
+        "noData": "No live vehicle state available yet"
+      },
+      "section": {
+        "summary": "Summary metrics",
+        "posture": "Security posture",
+        "live": "Live vehicle state",
+        "analytics": "Security analytics",
+        "history": "Security event history"
+      },
+      "windowState": {
+        "closed": "Closed",
+        "venting": "Venting",
+        "open": "Open",
+        "unknown": "Unknown"
+      },
+      "window": {
+        "fd": "Front Driver",
+        "fp": "Front Passenger",
+        "rd": "Rear Driver",
+        "rp": "Rear Passenger",
+        "allClosed": "All Closed",
+        "openVenting": "{{count}} Open/Venting"
+      },
+      "time": {
+        "justNow": "just now",
+        "minutesAgo": "{{count}}m ago",
+        "hoursAgo": "{{count}}h ago",
+        "daysAgo": "{{count}}d ago"
+      }
     },
     "audit": {
       "searchPlaceholder": "Search by action, resource, or details…",

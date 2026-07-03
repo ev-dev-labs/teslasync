@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { AppWindow } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { GlassPanel, PanelTitle } from '@/components/ui';
+import { Skeleton, QueryError } from '@/components/feedback';
 import type { SecurityEvent } from '@/types/admin';
-import { parseWindowState, windowColor, windowTextClass } from './helpers';
+import { parseWindowState, windowTone } from './helpers';
+import { StatusTile } from './StatusTile';
 
 const WINDOW_KEYS = [
   { key: 'fdWindow' as const, i18nKey: 'admin.security.window.fd', fallback: 'Front Driver' },
@@ -14,32 +16,43 @@ const WINDOW_KEYS = [
 
 interface WindowStatusDetailProps {
   latest: SecurityEvent | undefined;
+  isLoading: boolean;
+  error: unknown;
+  onRetry?: () => void;
+  className?: string;
 }
 
-export function WindowStatusDetail({ latest }: WindowStatusDetailProps) {
+/** Per-window position detail (front/rear × driver/passenger). */
+export function WindowStatusDetail({ latest, isLoading, error, onRetry, className }: WindowStatusDetailProps) {
   const { t } = useTranslation();
 
   return (
-    <FadeIn delay={0.15}>
-      <h2 className="text-lg font-semibold text-gray-200 mb-3">
-        {t('admin.security.windowDetail', 'Window Status Detail')}
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {WINDOW_KEYS.map((win) => {
-          const state = parseWindowState(latest?.[win.key]);
-          return (
-            <GlassPanel
-              key={win.key}
-              className={cn('p-4 border', windowColor(state))}
-            >
-              <p className="text-xs text-[var(--text-muted)] mb-1">{t(win.i18nKey, win.fallback)}</p>
-              <p className={cn('text-xl font-bold', windowTextClass(state))}>
-                {t(`admin.security.windowState.${(state ?? '').toLowerCase()}`, state)}
-              </p>
-            </GlassPanel>
-          );
-        })}
-      </div>
-    </FadeIn>
+    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+      <PanelTitle className="mb-3">{t('admin.security.windowDetail', 'Window Status Detail')}</PanelTitle>
+      {error ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} height={104} />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {WINDOW_KEYS.map((win) => {
+            const state = parseWindowState(latest?.[win.key]);
+            return (
+              <StatusTile
+                key={win.key}
+                icon={<AppWindow className="h-5 w-5" />}
+                tone={windowTone(state)}
+                label={t(win.i18nKey, win.fallback)}
+                value={t(`admin.security.windowState.${state.toLowerCase()}`, state)}
+              />
+            );
+          })}
+        </div>
+      )}
+    </GlassPanel>
   );
 }

@@ -1,11 +1,21 @@
 import type { SecurityEvent } from '@/types/admin';
 import { asNonEmptyString } from '@/lib/typeGuards';
 
+/** Minimal translator shape — matches react-i18next's `t` for the
+ *  `(key, defaultValue, options?)` call form these formatters use so the
+ *  UI-facing strings they return stay i18n-driven. */
+export type Translate = (key: string, defaultValue: string, options?: Record<string, unknown>) => string;
+
 /* ------------------------------------------------------------------ */
 /*  Helper types                                                       */
 /* ------------------------------------------------------------------ */
 
 export type WindowState = 'Closed' | 'Venting' | 'Open' | 'Unknown';
+
+/** Token-driven tile accent tones. Maps a semantic state to a toned
+ *  300-level color used by <StatusTile> for the icon chip + value text.
+ *  `muted` renders a neutral chip for unknown/inactive states. */
+export type TileTone = 'green' | 'red' | 'amber' | 'blue' | 'purple' | 'cyan' | 'muted';
 
 export interface SentryDayBucket {
   date: string;
@@ -44,29 +54,17 @@ export function parseWindowState(val: unknown): WindowState {
   return 'Unknown';
 }
 
-export function windowColor(state: WindowState): string {
+/** Maps a parsed window state to a <StatusTile> accent tone. */
+export function windowTone(state: WindowState): TileTone {
   switch (state) {
     case 'Closed':
-      return 'bg-green-500/20 border-green-500/40';
+      return 'green';
     case 'Venting':
-      return 'bg-amber-500/20 border-amber-500/40';
+      return 'amber';
     case 'Open':
-      return 'bg-red-500/20 border-red-500/40';
+      return 'red';
     default:
-      return 'bg-gray-500/20 border-gray-500/40';
-  }
-}
-
-export function windowTextClass(state: WindowState): string {
-  switch (state) {
-    case 'Closed':
-      return 'text-green-400';
-    case 'Venting':
-      return 'text-amber-400';
-    case 'Open':
-      return 'text-red-400';
-    default:
-      return 'text-[var(--text-muted)]';
+      return 'muted';
   }
 }
 
@@ -102,31 +100,31 @@ export function allWindowsClosed(ev: SecurityEvent | undefined): boolean {
     .every((s) => s === 'Closed');
 }
 
-export function windowSummary(ev: SecurityEvent | undefined): string {
+export function windowSummary(ev: SecurityEvent | undefined, t: Translate): string {
   if (!ev) return '—';
   const states = [ev.fdWindow, ev.fpWindow, ev.rdWindow, ev.rpWindow].map(parseWindowState);
   const allClosed = states.every((s) => s === 'Closed');
-  if (allClosed) return 'All Closed';
+  if (allClosed) return t('admin.security.window.allClosed', 'All Closed');
   const openCount = states.filter((s) => s !== 'Closed').length;
-  return `${openCount} Open/Venting`;
+  return t('admin.security.window.openVenting', '{{count}} Open/Venting', { count: openCount });
 }
 
 /* ------------------------------------------------------------------ */
 /*  Time helpers                                                       */
 /* ------------------------------------------------------------------ */
 
-export function timeSince(iso: string | null | undefined): string {
+export function timeSince(iso: string | null | undefined, t: Translate): string {
   if (!iso) return '—';
   const diff = Date.now() - new Date(iso).getTime();
   if (diff < 0) return '—';
   const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return 'just now';
+  if (seconds < 60) return t('admin.security.time.justNow', 'just now');
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t('admin.security.time.minutesAgo', '{{count}}m ago', { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('admin.security.time.hoursAgo', '{{count}}h ago', { count: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t('admin.security.time.daysAgo', '{{count}}d ago', { count: days });
 }
 
 /* ------------------------------------------------------------------ */
@@ -243,7 +241,7 @@ export function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
       timeline.push({
         id: `door-${curr.id}`,
         kind: 'door',
-        detail: asNonEmptyString(curr.doorState) ?? (closed ? 'Closed' : 'Open'),
+        detail: asNonEmptyString(curr.doorState) ?? '',
         timestamp: curr.createdAt,
         variant: closed ? 'positive' : 'negative',
       });
