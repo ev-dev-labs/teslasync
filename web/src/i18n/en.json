@@ -3550,7 +3550,9 @@
     "electricCost": "Electric Cost",
     "gasCost": "Gasoline Equivalent",
     "youSaved": "You saved",
-    "avoided": "avoided"
+    "avoided": "avoided",
+    "keyStats": "Key stats",
+    "moreInfoAbout": "More info about {{label}}"
   },
   "incidentTimeline": {
     "aiSummary": {
