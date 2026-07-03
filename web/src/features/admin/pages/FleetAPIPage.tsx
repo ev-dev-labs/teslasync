@@ -13,7 +13,7 @@ import {
   Activity, AlertTriangle, Database, Globe, Link as LinkIcon, Pause, Play, Shield,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, IconBox, Toggle, Select, Badge, PanelTitle, Text, Code } from '@/components/ui';
+import { GlassPanel, IconBox, Toggle, Select, Badge, PanelTitle, Text, Caption, HelperText, Label, Code } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -33,7 +33,7 @@ function EndpointToggle({ label, desc, enabled, onToggle }: {
     <GlassPanel className="flex min-h-11 items-center justify-between gap-3 p-3">
       <div className="min-w-0">
         <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">{label}</Text>
-        <Text as="span" size="xs" color="muted" className="block truncate">{desc}</Text>
+        <Caption className="block truncate">{desc}</Caption>
       </div>
       <Toggle checked={enabled} onChange={() => onToggle()} size="sm" className="shrink-0" />
     </GlassPanel>
@@ -225,11 +225,11 @@ export default function FleetAPIPage() {
                 </IconBox>
                 <div className="min-w-0">
                   <PanelTitle>{t('fleetApi.polling.title', 'Tesla API Polling')}</PanelTitle>
-                  <Text as="p" size="xs" color="muted" className="mt-0.5">
+                  <HelperText className="mt-0.5">
                     {apiSuspended
                       ? t('fleetApi.polling.suspendedDesc', 'All Tesla Fleet API calls are suspended')
                       : t('fleetApi.polling.activeDesc', 'Vehicle data is being polled from Tesla')}
-                  </Text>
+                  </HelperText>
                 </div>
               </div>
               {!settingsQuery.isLoading && !settingsQuery.isError && (
@@ -266,9 +266,9 @@ export default function FleetAPIPage() {
                 </IconBox>
                 <div className="min-w-0">
                   <PanelTitle>{t('fleetApi.telemetry.title', 'Telemetry Capture')}</PanelTitle>
-                  <Text as="p" size="xs" color="muted" className="mt-0.5">
+                  <HelperText className="mt-0.5">
                     {t('fleetApi.telemetry.subtitle', 'Record raw fleet signals to MongoDB')}
-                  </Text>
+                  </HelperText>
                 </div>
               </div>
               {mongoStatusKnown && (
@@ -301,9 +301,9 @@ export default function FleetAPIPage() {
                         <Text as="span" size="sm" weight="medium" color="primary" className="block">
                           {t('fleetApi.telemetry.retention', 'Retention Period')}
                         </Text>
-                        <Text as="span" size="xs" color="muted" className="block">
+                        <Caption className="block">
                           {t('fleetApi.telemetry.retentionHint', 'Auto-delete captured signals after this many days')}
-                        </Text>
+                        </Caption>
                       </div>
                       <Select
                         aria-label={t('fleetApi.telemetry.retention', 'Retention Period')}
@@ -340,9 +340,9 @@ export default function FleetAPIPage() {
             </IconBox>
             <div className="min-w-0 flex-1">
               <PanelTitle>{t('fleetApi.controls.title', 'API Endpoint Controls')}</PanelTitle>
-              <Text as="p" size="xs" color="muted" className="mt-0.5">
+              <HelperText className="mt-0.5">
                 {t('fleetApi.controls.subtitle', 'Toggle individual Tesla Fleet API endpoints on or off')}
-              </Text>
+              </HelperText>
             </div>
             {pollingConfig && (
               <Badge variant="info" size="sm" className="shrink-0">
@@ -419,7 +419,7 @@ export default function FleetAPIPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <LinkIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-                <Text as="span" variant="label">{t('fleetApi.configured.heading', 'Configured Endpoints')}</Text>
+                <Label>{t('fleetApi.configured.heading', 'Configured Endpoints')}</Label>
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
                 {configuredEndpoints.filter((ep) => configuredEndpointMap[ep.key]).map((ep) => (
