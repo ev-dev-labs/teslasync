@@ -4353,7 +4353,9 @@
       "button": "Explain ownership cost",
       "badge": "Helix",
       "noVehicleHint": "Pick a vehicle above to enable Helix."
-    }
+    },
+    "kpis": "Cost summary",
+    "mpg": "MPG"
   },
   "automations": {
     "builder": {
