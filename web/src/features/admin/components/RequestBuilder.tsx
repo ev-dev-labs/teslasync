@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, AlertTriangle } from 'lucide-react';
-import { GlassPanel, Button as UiButton, Input as UiInput, Textarea as UiTextarea } from '@/components/ui';
+import { GlassPanel, Button as UiButton, Input as UiInput, Textarea as UiTextarea, Text, HelperText } from '@/components/ui';
 import { MethodBadge, type ParsedEndpoint } from './EndpointSidebar';
 
 interface RequestBuilderProps {
@@ -94,9 +94,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {confirmOpen && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
           <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
-          <span className="text-xs text-amber-300 flex-1">
+          <Text size="xs" className="flex-1 text-amber-300">
             {t('playground.confirmDestructive', 'This is a {{method}} request. Are you sure you want to send it?', { method: endpoint.method })}
-          </span>
+          </Text>
           <UiButton type="button" onClick={handleSend} className="!text-xs !px-3 !py-1">
             {t('playground.confirmYes', 'Yes, send')}
           </UiButton>
@@ -113,18 +113,18 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
       {/* Summary & description */}
       {endpoint.summary && (
-        <p className="text-sm text-[var(--text-secondary)]">{endpoint.summary}</p>
+        <Text as="p" size="sm" color="secondary">{endpoint.summary}</Text>
       )}
       {endpoint.description && endpoint.description !== endpoint.summary && (
-        <p className="text-xs text-[var(--text-muted)]">{endpoint.description}</p>
+        <Text as="p" variant="caption">{endpoint.description}</Text>
       )}
 
       {/* Path parameters */}
       {pathParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="uppercase tracking-wider">
             {t('playground.pathParams', 'Path Parameters')}
-          </h4>
+          </Text>
           {pathParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
               <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
@@ -144,9 +144,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Query parameters */}
       {queryParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="uppercase tracking-wider">
             {t('playground.queryParams', 'Query Parameters')}
-          </h4>
+          </Text>
           {queryParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
               <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
@@ -167,12 +167,12 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Request body */}
       {endpoint.requestBody && (
         <GlassPanel className="p-4">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 uppercase tracking-wider">
             {t('playground.requestBody', 'Request Body')}
-            <span className="ml-2 font-normal text-[var(--text-muted)]">
+            <Text weight="regular" color="muted" className="ml-2">
               {endpoint.requestBody.contentType}
-            </span>
-          </h4>
+            </Text>
+          </Text>
           <UiTextarea
             value={body}
             onChange={e => setBody(e.target.value)}
@@ -185,9 +185,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
       {/* API Key header (optional) */}
       <GlassPanel className="p-4">
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 uppercase tracking-wider">
           {t('playground.authHeader', 'Authentication (Optional)')}
-        </h4>
+        </Text>
         <div className="flex items-center gap-3">
           <label htmlFor="api-key-input" className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>
           <UiInput
@@ -199,9 +199,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
             type="password"
           />
         </div>
-        <p className="mt-2 text-[10px] text-[var(--text-muted)]">
+        <HelperText className="mt-2">
           {t('playground.authHint', 'Requests use your browser session by default. Enter an API key to test key-based auth.')}
-        </p>
+        </HelperText>
       </GlassPanel>
     </div>
   );
