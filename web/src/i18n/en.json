@@ -22,6 +22,31 @@
   "help": {
     "title": "Help",
     "intro": "Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.",
+    "subtitle": "Guides, the in-app assistant, and quick links to everything in TeslaSync.",
+    "welcomeTitle": "Welcome to TeslaSync",
+    "channelsTitle": "Ways to get help",
+    "exploreTitle": "Explore the app",
+    "exploreSubtitle": "Every card jumps to a canonical destination already built into the app.",
+    "hero": {
+      "aria": "Getting started"
+    },
+    "explore": {
+      "aria": "Explore the app"
+    },
+    "channels": {
+      "browse": {
+        "title": "Browse the app",
+        "description": "Jump straight to the canonical pages using the quick links below."
+      },
+      "docs": {
+        "title": "Read the documentation",
+        "description": "The public API reference covers every endpoint, schema, and example request."
+      },
+      "assistant": {
+        "title": "Ask the assistant",
+        "description": "When Helix is enabled, ask a natural-language question and get answers with citations."
+      }
+    },
     "baseline": {
       "links": {
         "docsStatusApi": {
