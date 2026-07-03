@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Grid } from '@/components/layout';
+import { SectionTitle } from '@/components/ui';
 import {
   ChartContainer,
   ChartTooltip,
@@ -115,9 +116,9 @@ export default function DriveAnalyticsSection({
       {/* Header + date filter */}
       <FadeIn delay={0.45}>
         <div className="mt-2 mb-2">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+          <SectionTitle>
             {t('dynamics.driveAnalytics', 'Drive Analytics')}
-          </h2>
+          </SectionTitle>
         </div>
         <RangePicker
           value={{ start: startDate, end: endDate }}

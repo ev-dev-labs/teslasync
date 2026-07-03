@@ -78,7 +78,7 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
   );
 
   return (
-    <>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5 3xl:grid-cols-3">
       {/* Motor Power Over Time */}
       <FadeIn delay={0.2}>
         {/* chart-a11y:no-table dense per-sample telemetry trace; CSV export available */}
@@ -170,6 +170,6 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
           )}
         </ChartContainer>
       </FadeIn>
-    </>
+    </div>
   );
 }

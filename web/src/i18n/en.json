@@ -6741,6 +6741,13 @@
     "title": "Driving Dynamics",
     "subtitle": "Live motor telemetry, G-forces & driving analysis",
     "selectVehicle": "Select vehicle",
+    "section": {
+      "summary": "Motor summary metrics",
+      "live": "Live cockpit",
+      "inputs": "Driving inputs",
+      "efficiency": "Motor efficiency",
+      "history": "Motor history"
+    },
     "col": {
       "range": "Speed range",
       "drives": "Drives",

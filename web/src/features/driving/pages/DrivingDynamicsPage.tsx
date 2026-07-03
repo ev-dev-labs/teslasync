@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
 import { VehicleSelect } from '@/components/forms';
+import { FadeIn } from '@/components/motion';
 
 import { useDrives, useDrivingCoach } from '@/api/hooks/useDriving';
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
@@ -35,7 +36,10 @@ export default function DrivingDynamicsPage() {
 
   /* ---- data hooks ---- */
   const vehicleIdNum = vehicleId ?? 0;
-  const { data: motorLatest, isLoading: motorLoading } = useMotorLatest(vehicleIdNum, 5000);
+  // Keep the whole query object so PageContainer can render the freshness
+  // chip for the live motor stream (5s poll) in the header.
+  const motorLatestQuery = useMotorLatest(vehicleIdNum, 5000);
+  const motorLatest = motorLatestQuery.data;
   const { data: motorHistory } = useMotorHistory(vehicleIdNum, 200);
   const { data: drives } = useDrives(vehicleIdStr);
   const { data: coachData } = useDrivingCoach(vehicleIdStr);
@@ -73,49 +77,106 @@ export default function DrivingDynamicsPage() {
   const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPower) : null;
 
   /* ================================================================ */
-  /*  RENDER                                                           */
+  /*  RENDER — full-width responsive bento                             */
   /* ================================================================ */
 
   return (
     <PageContainer
       title={t('dynamics.title', 'Driving Dynamics')}
       subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces & driving analysis')}
-      loading={motorLoading}
-      error={null}
       actions={<VehicleSelect />}
+      query={motorLatestQuery}
     >
       <div className="space-y-6">
-        <LiveMotorStatus motorLatest={motorLatest} toTemperatureDisplay={toTemperatureDisplay} tempUnit={tempUnit} />
-        <GForcePanel vehicleId={vehicleId} />
-        <PedalUsage vehicleId={vehicleId} />
-        <SpeedGearPanel
-          motorLatest={motorLatest}
-          filteredDrives={filteredDrives}
-          toSpeedDisplay={toSpeedDisplay}
-          speedUnit={speedUnit}
-        />
-        <AutopilotSection vehicleId={vehicleId} />
-        <MotorHistoryCharts motorHistory={motorHistory} toSpeedDisplay={toSpeedDisplay} speedUnit={speedUnit} />
-        <MotorEfficiencyInsights
-          motorStats={motorStats}
-          throttleStyle={throttleStyle}
-          toTemperatureDisplay={toTemperatureDisplay}
-          tempUnit={tempUnit}
-        />
-        <SummaryStats motorStats={motorStats} toTemperatureDisplay={toTemperatureDisplay} tempUnit={tempUnit} />
-        <DrivingCoachSection coachData={coachData} />
-        <DriveAnalyticsSection
-          filteredDrives={filteredDrives}
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          toDistanceDisplay={toDistanceDisplay}
-          toSpeedDisplay={toSpeedDisplay}
-          distanceUnit={distanceUnit}
-          speedUnit={speedUnit}
-        />
-        <DrivingTips motorStats={motorStats} throttleStyle={throttleStyle} />
+        {/* 1 — KPI band: full-width motor summary metrics */}
+        <section aria-label={t('dynamics.section.summary', 'Motor summary metrics')}>
+          <SummaryStats
+            motorStats={motorStats}
+            toTemperatureDisplay={toTemperatureDisplay}
+            tempUnit={tempUnit}
+          />
+        </section>
+
+        {/* 2 — Live cockpit: hero motor gauges beside pedal usage */}
+        <FadeIn delay={0.05}>
+          <section
+            aria-label={t('dynamics.section.live', 'Live cockpit')}
+            className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5"
+          >
+            <LiveMotorStatus
+              motorLatest={motorLatest}
+              toTemperatureDisplay={toTemperatureDisplay}
+              tempUnit={tempUnit}
+            />
+            <PedalUsage vehicleId={vehicleId} />
+          </section>
+        </FadeIn>
+
+        {/* 3 — Driving inputs: speed/gear, g-force, autopilot */}
+        <FadeIn delay={0.1}>
+          <section
+            aria-label={t('dynamics.section.inputs', 'Driving inputs')}
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5"
+          >
+            <SpeedGearPanel
+              motorLatest={motorLatest}
+              filteredDrives={filteredDrives}
+              toSpeedDisplay={toSpeedDisplay}
+              speedUnit={speedUnit}
+            />
+            <GForcePanel vehicleId={vehicleId} />
+            <AutopilotSection vehicleId={vehicleId} />
+          </section>
+        </FadeIn>
+
+        {/* 4 — Motor efficiency insights (3-up band) */}
+        <section aria-label={t('dynamics.section.efficiency', 'Motor efficiency')}>
+          <MotorEfficiencyInsights
+            motorStats={motorStats}
+            throttleStyle={throttleStyle}
+            toTemperatureDisplay={toTemperatureDisplay}
+            tempUnit={tempUnit}
+          />
+        </section>
+
+        {/* 5 — Motor telemetry history charts (reflow to more columns) */}
+        <section aria-label={t('dynamics.section.history', 'Motor history')}>
+          <MotorHistoryCharts
+            motorHistory={motorHistory}
+            toSpeedDisplay={toSpeedDisplay}
+            speedUnit={speedUnit}
+          />
+        </section>
+
+        {/* 6 — Driving coach (score, style, trend, patterns, per-drive) */}
+        <section aria-label={t('dynamics.coach.title', 'Driving Coach')}>
+          <DrivingCoachSection coachData={coachData} />
+        </section>
+
+        {/* 7 — Drive analytics (range filter + distribution + profile) */}
+        <section
+          aria-label={t('dynamics.driveAnalytics', 'Drive Analytics')}
+          className="space-y-6"
+        >
+          <DriveAnalyticsSection
+            filteredDrives={filteredDrives}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            toDistanceDisplay={toDistanceDisplay}
+            toSpeedDisplay={toSpeedDisplay}
+            distanceUnit={distanceUnit}
+            speedUnit={speedUnit}
+          />
+        </section>
+
+        {/* 8 — Driving style recommendations */}
+        <FadeIn delay={0.15}>
+          <section aria-label={t('dynamics.recommendations', 'Driving Style Recommendations')}>
+            <DrivingTips motorStats={motorStats} throttleStyle={throttleStyle} />
+          </section>
+        </FadeIn>
       </div>
     </PageContainer>
   );

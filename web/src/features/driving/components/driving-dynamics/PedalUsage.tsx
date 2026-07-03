@@ -1,11 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Footprints } from 'lucide-react';
 
-import { Grid } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
 import { RadialGauge } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { FadeIn } from '@/components/motion';
 import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 
@@ -37,60 +35,53 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
   const hasAny = throttle != null || brakePos != null || brakeActive != null;
 
   return (
-    <FadeIn delay={0.1}>
-      <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
-          {t('dynamics.pedalUsage', 'Pedal Usage')}
-        </h2>
-        {hasAny ? (
-          <Grid cols={{ default: 1, sm: 3 }} gap={6}>
-            <div className="flex flex-col items-center gap-2">
-              <RadialGauge
-                value={throttle ?? 0}
-                max={100}
-                label={t('dynamics.throttle', 'Throttle')}
-                unit={throttle != null ? '%' : '—'}
-                color="#06b6d4"
-                size={140}
-              />
-              <span className="text-xs text-[var(--text-secondary)]">
-                {t('dynamics.throttlePosition', 'Throttle Position')}
-              </span>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <RadialGauge
-                value={brakePos ?? 0}
-                max={100}
-                label={t('dynamics.brake', 'Brake')}
-                unit={brakePos != null ? '%' : '—'}
-                color="#ef4444"
-                size={140}
-              />
-              <span className="text-xs text-[var(--text-secondary)]">
-                {t('dynamics.brakePedalPosition', 'Brake Pedal Position')}
-              </span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-3">
-              <Footprints className="h-8 w-8 text-[var(--text-muted)]" />
-              <Badge
-                variant={brakeActive ? 'danger' : 'success'}
-                size="lg"
-              >
-                {brakeActive
-                  ? t('dynamics.brakeActive', 'Brake Active')
-                  : t('dynamics.brakeInactive', 'Brake Inactive')}
-              </Badge>
-              <span className="text-xs text-[var(--text-secondary)]">
-                {t('dynamics.brakePedal', 'Brake Pedal Status')}
-              </span>
-            </div>
-          </Grid>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            message={t('dynamics.pedalNoData', 'No pedal telemetry received yet')}
-          />
-        )}
-      </GlassPanel>
-    </FadeIn>
+    <GlassPanel className="h-full p-4 sm:p-5 @container">
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Footprints className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('dynamics.pedalUsage', 'Pedal Usage')}
+      </PanelTitle>
+      {hasAny ? (
+        <div className="grid grid-cols-1 gap-4 @md:grid-cols-3">
+          <div className="flex flex-col items-center gap-2">
+            <RadialGauge
+              value={throttle ?? 0}
+              max={100}
+              label={t('dynamics.throttle', 'Throttle')}
+              unit={throttle != null ? '%' : '—'}
+              color="#06b6d4"
+              size={120}
+            />
+            <Caption>{t('dynamics.throttlePosition', 'Throttle Position')}</Caption>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <RadialGauge
+              value={brakePos ?? 0}
+              max={100}
+              label={t('dynamics.brake', 'Brake')}
+              unit={brakePos != null ? '%' : '—'}
+              color="#ef4444"
+              size={120}
+            />
+            <Caption>{t('dynamics.brakePedalPosition', 'Brake Pedal Position')}</Caption>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-3">
+            <Footprints className="h-8 w-8 text-[var(--text-muted)]" aria-hidden="true" />
+            <Badge
+              variant={brakeActive ? 'danger' : 'success'}
+              size="lg"
+            >
+              {brakeActive
+                ? t('dynamics.brakeActive', 'Brake Active')
+                : t('dynamics.brakeInactive', 'Brake Inactive')}
+            </Badge>
+            <Caption>{t('dynamics.brakePedal', 'Brake Pedal Status')}</Caption>
+          </div>
+        </div>
+      ) : (
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          message={t('dynamics.pedalNoData', 'No pedal telemetry received yet')}
+        />
+      )}
+    </GlassPanel>
   );
 }
