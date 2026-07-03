@@ -9,6 +9,7 @@
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
+import { Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import type { HeroStatus } from './StatusHero'
 
@@ -57,12 +58,12 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
           {icon}
         </span>
       )}
-      <span className="min-w-0 flex-1 truncate text-left text-sm font-medium text-[var(--text-primary)]">
+      <Text as="span" size="sm" weight="medium" color="primary" className="min-w-0 flex-1 truncate text-left">
         {label}
-      </span>
-      <span className={cn('shrink-0 text-xs', summaryClass)}>
+      </Text>
+      <Text as="span" size="xs" className={cn('shrink-0', summaryClass)}>
         {summary}
-      </span>
+      </Text>
       {(to || onClick) && (
         <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
       )}

@@ -10,7 +10,7 @@
  */
 
 import { useMemo } from 'react'
-import { GlassPanel, Tooltip } from '@/components/ui'
+import { GlassPanel, Tooltip, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { fmtPercent } from '@/lib/numberFormat'
 import type { HeroStatus } from './StatusHero'
@@ -67,16 +67,16 @@ export function UptimeHeatmap({
   return (
     <GlassPanel id={id} className={cn('p-4', className)}>
       <div className="flex items-baseline justify-between gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{heading}</h3>
+        <Text as="h3" size="sm" weight="semibold" color="primary">{heading}</Text>
         {uptimePct != null && (
-          <span className={cn(
-            'text-xs font-medium tabular-nums',
+          <Text as="span" size="xs" weight="medium" className={cn(
+            'tabular-nums',
             uptimePct >= 99 ? 'text-green-400'
             : uptimePct >= 95 ? 'text-amber-400'
             : 'text-red-400',
           )}>
             {fmtPercent(uptimePct, 2)} uptime
-          </span>
+          </Text>
         )}
       </div>
 
@@ -91,12 +91,12 @@ export function UptimeHeatmap({
               multiline
               content={
                 <div className="space-y-1">
-                  <div className="text-xs font-semibold">{day.date}</div>
-                  <div className="text-xs">{STATUS_LABEL[day.status]}</div>
+                  <Text as="div" size="xs" weight="semibold">{day.date}</Text>
+                  <Text as="div" size="xs">{STATUS_LABEL[day.status]}</Text>
                   {day.summary && (
-                    <div className="text-xs pt-1 border-t border-white/[0.06]">
+                    <Text as="div" size="xs" className="pt-1 border-t border-white/[0.06]">
                       {day.summary}
-                    </div>
+                    </Text>
                   )}
                 </div>
               }
@@ -116,7 +116,7 @@ export function UptimeHeatmap({
       </div>
 
       {footnote && (
-        <div className="mt-3 text-xs text-[var(--text-muted)]">{footnote}</div>
+        <Text as="div" variant="caption" className="mt-3">{footnote}</Text>
       )}
     </GlassPanel>
   )

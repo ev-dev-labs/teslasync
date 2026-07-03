@@ -8,6 +8,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle, Wrench, ArrowUp, RefreshCw } from 'lucide-react'
+import { Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import type { HeroStatus } from './StatusHero'
 
@@ -94,9 +95,9 @@ export function StickyCompactHero({
           aria-label="Scroll to top of page"
         >
           <Icon className={cn('h-4 w-4 shrink-0', text)} />
-          <span className={cn('text-sm font-semibold', text)}>{headline}</span>
+          <Text as="span" size="sm" weight="semibold" className={text}>{headline}</Text>
           {lastCheckedLabel && (
-            <span className="text-xs text-[var(--text-muted)]">· {lastCheckedLabel}</span>
+            <Text as="span" variant="caption">· {lastCheckedLabel}</Text>
           )}
           <ArrowUp className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />
         </button>

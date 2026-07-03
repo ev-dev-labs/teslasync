@@ -7,7 +7,7 @@
 
 import { type ReactNode, Children } from 'react'
 import { CheckCircle } from 'lucide-react'
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 
 export interface ActionItemsPanelProps {
@@ -37,7 +37,7 @@ export function ActionItemsPanel({
   return (
     <GlassPanel id={id} className={cn('p-4', className)}>
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
+        <Text as="h3" size="sm" weight="semibold" color="primary">{title}</Text>
       </div>
 
       {hasChildren ? (
@@ -45,9 +45,9 @@ export function ActionItemsPanel({
       ) : (
         <div className="flex items-center gap-3 rounded-lg p-3 ring-1 ring-green-400/20 bg-green-500/10">
           <CheckCircle className="h-5 w-5 shrink-0 text-green-400" aria-hidden />
-          <div className="text-sm font-medium text-[var(--text-primary)]">
+          <Text as="div" size="sm" weight="medium" color="primary">
             {emptyText}
-          </div>
+          </Text>
         </div>
       )}
     </GlassPanel>
