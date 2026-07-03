@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon } from '@/components/ui'
+import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon, Heading, Text, HelperText, Label } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
@@ -150,8 +150,8 @@ export function AppearanceSettings() {
             <Palette className="h-5 w-5" />
           </IconBox>
           <div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('theme.title', 'Appearance')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">{t('theme.subtitle', 'Customize colors and display mode')}</p>
+            <Heading level="panel">{t('theme.title', 'Appearance')}</Heading>
+            <HelperText>{t('theme.subtitle', 'Customize colors and display mode')}</HelperText>
           </div>
         </div>
 
@@ -163,9 +163,9 @@ export function AppearanceSettings() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Rows3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <Label>
               {t('theme.density.label', 'Information density')}
-            </p>
+            </Label>
             <HelpIcon
               i18nKey="help.fields.settings.appearanceDensity"
               for="appearance-density"
@@ -214,8 +214,8 @@ export function AppearanceSettings() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
-                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                    <Text as="p" variant="body" className="font-medium">{choice.label}</Text>
+                    <HelperText>{choice.help}</HelperText>
                   </div>
                   {active && (
                     <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
@@ -224,9 +224,9 @@ export function AppearanceSettings() {
               )
             })}
           </div>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
+          <HelperText className="mt-2">
             {t('theme.density.help', 'Affects table rows, cards, and dashboard widgets across the app.')}
-          </p>
+          </HelperText>
 
           {/* Live preview — uses density Tailwind utilities so it reflows
             instantly when the body[data-density] attribute changes. */}
@@ -257,9 +257,9 @@ export function AppearanceSettings() {
         <div data-tour="settings-sidebar-style" data-testid="settings-sidebar-style">
           <div className="flex items-center gap-2 mb-3">
             <Sidebar className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <Label>
               {t('theme.sidebarStyle.label', 'Sidebar style')}
-            </p>
+            </Label>
           </div>
           <div
             role="radiogroup"
@@ -285,8 +285,8 @@ export function AppearanceSettings() {
                 >
                   <SidebarStyleSwatch style={choice.id} />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
-                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                    <Text as="p" variant="body" className="font-medium">{choice.label}</Text>
+                    <HelperText>{choice.help}</HelperText>
                   </div>
                   {active && (
                     <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
@@ -295,21 +295,21 @@ export function AppearanceSettings() {
               )
             })}
           </div>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
+          <HelperText className="mt-2">
             {t(
               'theme.sidebarStyle.help',
               'Applies instantly. Saved per device — your other devices keep their own choice.',
             )}
-          </p>
+          </HelperText>
         </div>
 
         {/* Time format default */}
         <div data-tour="settings-time-format">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <Label>
               {t('theme.timeFormat.label', 'Default time format')}
-            </p>
+            </Label>
             <HelpIcon
               i18nKey="help.fields.settings.timeFormat"
               for="time-format"
@@ -332,8 +332,8 @@ export function AppearanceSettings() {
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
-                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                    <Text as="p" variant="body" className="font-medium">{choice.label}</Text>
+                    <HelperText>{choice.help}</HelperText>
                   </div>
                   {active && (
                     <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
@@ -342,18 +342,18 @@ export function AppearanceSettings() {
               )
             })}
           </div>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
+          <HelperText className="mt-2">
             {t('theme.timeFormat.help', 'Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed.')}
-          </p>
+          </HelperText>
         </div>
 
         {/* Chart palette */}
         <div data-tour="settings-chart-palette">
           <div className="flex items-center gap-2 mb-3">
             <Eye className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <Label>
               {t('theme.chartPalette.label', 'Chart palette')}
-            </p>
+            </Label>
             <HelpIcon
               i18nKey="help.fields.settings.chartPalette"
               for="chart-palette"
@@ -382,8 +382,8 @@ export function AppearanceSettings() {
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
-                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                    <Text as="p" variant="body" className="font-medium">{choice.label}</Text>
+                    <HelperText>{choice.help}</HelperText>
                     <div
                       className="mt-2 flex items-center gap-1"
                       aria-hidden="true"
@@ -404,28 +404,28 @@ export function AppearanceSettings() {
               )
             })}
           </div>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
+          <HelperText className="mt-2">
             {t('theme.chartPalette.help', 'Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.')}
-          </p>
+          </HelperText>
         </div>
 
         {/* Footer status bar */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <PanelBottom className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <Label>
               {t('theme.statusBar.label', 'Status bar')}
-            </p>
+            </Label>
           </div>
           <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <Text as="p" variant="body" className="font-medium">
                   {t('theme.statusBar.show', 'Show status bar')}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
+                </Text>
+                <HelperText>
                   {t('theme.statusBar.showHelp', 'Always-on footer with API health, live telemetry, vehicle, and version.')}
-                </p>
+                </HelperText>
               </div>
               <Toggle
                 checked={statusBarPrefs.enabled}
@@ -441,12 +441,12 @@ export function AppearanceSettings() {
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <p className={cn('text-sm font-medium text-[var(--text-primary)]', !statusBarPrefs.enabled && 'opacity-50')}>
+                <Text as="p" variant="body" className={cn('font-medium', !statusBarPrefs.enabled && 'opacity-50')}>
                   {t('theme.statusBar.iconOnly', 'Always icon-only')}
-                </p>
-                <p className={cn('text-xs text-[var(--text-muted)]', !statusBarPrefs.enabled && 'opacity-50')}>
+                </Text>
+                <HelperText className={cn(!statusBarPrefs.enabled && 'opacity-50')}>
                   {t('theme.statusBar.iconOnlyHelp', 'Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.')}
-                </p>
+                </HelperText>
               </div>
               <Toggle
                 checked={statusBarPrefs.iconOnly}
@@ -461,19 +461,19 @@ export function AppearanceSettings() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Trophy className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <Label>
               {t('achievements.celebrationSettings', 'Celebration')}
-            </p>
+            </Label>
           </div>
           <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <Text as="p" variant="body" className="font-medium">
                   {t('achievements.showToasts', 'Show celebration toasts')}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
+                </Text>
+                <HelperText>
                   {t('achievements.showToastsHelp', 'Pop a celebratory toast with confetti when you unlock an achievement.')}
-                </p>
+                </HelperText>
               </div>
               <Toggle
                 checked={celebrationPrefs.showToasts}
@@ -482,12 +482,12 @@ export function AppearanceSettings() {
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <Text as="p" variant="body" className="font-medium">
                   {t('achievements.playSound', 'Play sound on unlock')}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
+                </Text>
+                <HelperText>
                   {t('achievements.playSoundHelp', 'Play a short chime alongside the celebration toast. Off by default.')}
-                </p>
+                </HelperText>
               </div>
               <Toggle
                 checked={celebrationPrefs.playSound}
@@ -496,12 +496,12 @@ export function AppearanceSettings() {
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <Text as="p" variant="body" className="font-medium">
                   {t('achievements.showOnDashboard', 'Show recently unlocked on dashboard')}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
+                </Text>
+                <HelperText>
                   {t('achievements.showOnDashboardHelp', "Surface your latest unlocks in the dashboard's recently-unlocked widget.")}
-                </p>
+                </HelperText>
               </div>
               <Toggle
                 checked={celebrationPrefs.showOnDashboard}
@@ -510,12 +510,12 @@ export function AppearanceSettings() {
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <Text as="p" variant="body" className="font-medium">
                   {t('achievements.pushOnUnlock', 'Send push notifications for achievements')}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
+                </Text>
+                <HelperText>
                   {t('achievements.pushOnUnlockHelp', 'Deliver a web push notification when an achievement unlocks while the tab is closed.')}
-                </p>
+                </HelperText>
               </div>
               <Toggle
                 checked={celebrationPrefs.pushOnUnlock}
@@ -529,18 +529,18 @@ export function AppearanceSettings() {
         <div data-tour="settings-product-tours" data-testid="product-tours-section">
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <Label>
               {t('settings.tours.label', 'Product tours')}
-            </p>
+            </Label>
           </div>
           <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
             <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">
+              <Text as="p" variant="body" className="font-medium">
                 {t('settings.tours.title', 'Product tours')}
-              </p>
-              <p className="text-xs text-[var(--text-muted)]">
+              </Text>
+              <HelperText>
                 {t('settings.tours.body', 'Re-run the guided walkthroughs that introduce major sections.')}
-              </p>
+              </HelperText>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
