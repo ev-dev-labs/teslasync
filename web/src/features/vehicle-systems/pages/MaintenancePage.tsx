@@ -39,6 +39,7 @@ import { request } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
+import { typography } from '@/lib/tokens';
 
 // ─── Types (snake_case, matching the Go maintenance handler JSON tags) ───────
 
@@ -213,7 +214,9 @@ function CategoryChip({ category }: { category: string }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium capitalize',
+        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 capitalize',
+        typography.size.xs,
+        typography.weight.medium,
         TONE_CHIP[toneFor(category)],
       )}
     >
@@ -261,7 +264,7 @@ function MaintenanceItemCard({
 
       {derivedStatus !== 'completed' && (
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+          <div className={cn('flex items-center justify-between', typography.size['2xs'], typography.color.muted)}>
             <span className="tabular-nums">{fmtInt(pct)}%</span>
             <span>
               {item.due_date
@@ -275,7 +278,7 @@ function MaintenanceItemCard({
         </div>
       )}
 
-      <div className="mt-auto flex flex-wrap items-center gap-4 text-xs text-[var(--text-secondary)]">
+      <div className={cn('mt-auto flex flex-wrap items-center gap-4', typography.size.xs, typography.color.secondary)}>
         {item.current_mileage > 0 && (
           <span className="flex items-center gap-1">
             <Gauge className="h-3 w-3" aria-hidden="true" />
@@ -324,33 +327,33 @@ function buildServiceColumns(
       key: 'date',
       header: t('maintenance.col.date', 'Date'),
       sortable: true,
-      render: (r) => <span className="text-sm text-[var(--text-primary)]">{formatDateTime(r.date)}</span>,
+      render: (r) => <Text variant="body">{formatDateTime(r.date)}</Text>,
     },
     {
       key: 'description',
       header: t('maintenance.col.description', 'Description'),
       render: (r) => (
-        <span className="block max-w-[220px] truncate text-sm text-[var(--text-primary)]">
+        <Text as="span" variant="body" className="block max-w-[220px] truncate">
           {r.description || '—'}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'mileage',
       header: t('maintenance.col.mileage', 'Mileage'),
       sortable: true,
-      render: (r) => <span className="text-sm tabular-nums">{formatDistance(r.mileage, { precision: 0 })}</span>,
+      render: (r) => <Text as="span" size="sm" className="tabular-nums">{formatDistance(r.mileage, { precision: 0 })}</Text>,
     },
     {
       key: 'cost',
       header: t('maintenance.col.cost', 'Cost'),
       sortable: true,
-      render: (r) => <Currency value={r.cost} className="text-sm tabular-nums" />,
+      render: (r) => <Currency value={r.cost} className={cn(typography.size.sm, 'tabular-nums')} />,
     },
     {
       key: 'provider',
       header: t('maintenance.col.provider', 'Provider'),
-      render: (r) => <span className="text-sm text-[var(--text-secondary)]">{r.provider || '—'}</span>,
+      render: (r) => <Text as="span" size="sm" color="secondary">{r.provider || '—'}</Text>,
     },
   ];
 }
