@@ -5189,6 +5189,39 @@
       "title": "My Activity",
       "subtitle": "Recent actions you have taken in TeslaSync.",
       "empty": "No recent activity in this window.",
+      "kpi": {
+        "aria": "Activity summary",
+        "total": "Total actions",
+        "activeDays": "Active days",
+        "actionTypes": "Action types",
+        "entities": "Entities touched",
+        "lastActive": "Last active"
+      },
+      "trend": {
+        "title": "Activity over time",
+        "series": "Actions",
+        "empty": "No activity recorded in this window."
+      },
+      "topActions": {
+        "title": "Top actions",
+        "empty": "No actions in this window."
+      },
+      "byCategory": {
+        "title": "By category",
+        "other": "System / other",
+        "empty": "No categories to break down yet."
+      },
+      "byHour": {
+        "title": "By hour of day",
+        "series": "Actions",
+        "empty": "No activity to chart by hour yet."
+      },
+      "breakdowns": {
+        "aria": "Activity breakdowns"
+      },
+      "feed": {
+        "title": "Activity feed"
+      },
       "disabled": {
         "title": "Activity feed disabled",
         "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER."
