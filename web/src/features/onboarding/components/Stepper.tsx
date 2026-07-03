@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { Check, Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { Button, Heading, Text } from '@/components/ui';
 
 /**
  * Compact vertical step list used by the onboarding page. Each step
@@ -60,7 +60,7 @@ const indicatorClasses = {
 
 const titleClasses = {
   done: 'text-[var(--text-primary)]',
-  current: 'text-white',
+  current: 'text-[var(--text-primary)]',
   pending: 'text-[var(--text-secondary)]',
 } as const;
 
@@ -110,12 +110,12 @@ export function Stepper({ steps, renderCta }: StepperProps) {
             </div>
 
             <div className="flex-1 pb-1">
-              <h3 className={cn('text-base font-semibold', titleClasses[state])}>
+              <Heading level="panel" className={titleClasses[state]}>
                 {step.title}
-              </h3>
-              <p className={cn('mt-1 text-sm leading-relaxed', descriptionClasses[state])}>
+              </Heading>
+              <Text as="p" size="sm" className={cn('mt-1 leading-relaxed', descriptionClasses[state])}>
                 {step.description}
-              </p>
+              </Text>
               {showCta && (
                 <div className="mt-3">
                   {renderCta ? (
