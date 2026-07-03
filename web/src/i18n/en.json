@@ -8370,7 +8370,9 @@
     "error": "Error loading data",
     "totalSize": "Total DB Size",
     "tables": "Tables",
+    "totalRows": "Total Rows",
     "largeTables": "Large Tables (>100MB)",
+    "largeTablesHint": "> 100 MB",
     "migration": "Migration Version",
     "chartTitle": "Table Sizes (Top 15)",
     "rows": "Rows",
@@ -8384,8 +8386,10 @@
     "migrationTitle": "Migration Status",
     "currentVersion": "Current Version",
     "status": "Status",
-    "dirty": "⚠ Dirty",
-    "clean": "✓ Clean",
+    "dirty": "Dirty",
+    "dirtyShort": "Dirty",
+    "clean": "Clean",
+    "cleanShort": "Clean",
     "pending": "Pending",
     "recentMigrations": "Recent Migrations",
     "noMigrations": "No migration history available",
@@ -8402,6 +8406,15 @@
     "col": {
       "table": "Table",
       "rows": "Rows"
+    },
+    "noMigrationData": "Migration data unavailable",
+    "noPoolData": "Connection pool data unavailable",
+    "refresh": "Refresh now",
+    "kpis": "Summary metrics",
+    "sortBy": "Sort tables by",
+    "section": {
+      "storage": "Storage and migrations",
+      "runtime": "Tables and runtime"
     }
   },
   "roadmap": {

@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Database, ArrowUpDown, RefreshCw, CheckCircle, AlertTriangle,
+  Database, Table2, Layers, AlertTriangle, GitCommitHorizontal, Gauge,
+  RefreshCw, ArrowUpDown, CheckCircle2, XCircle, ListChecks, Server,
 } from 'lucide-react';
-import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, DataTable } from '@/components/ui';
-import type { Column } from '@/components/ui';
-import { StatCard, TimeStamp } from '@/components/data-display';
+import { PageContainer } from '@/components/layout';
+import {
+  GlassPanel, Button, DataTable, PanelTitle, SectionTitle, Caption, type Column,
+} from '@/components/ui';
+import { MetricCard, TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   ChartContainer, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
   ChartTooltip, axisTick, CHART_COLORS,
@@ -17,6 +19,7 @@ import { useDBStats, useMigrations, useConnectionPool } from '@/api/hooks/useAdm
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import type { NeonColor } from '@/lib/tokens';
 import type { TableInfo } from '@/types/admin';
 
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024; // 100MB
@@ -35,15 +38,29 @@ export default function DBHealthPage() {
   usePageTitle(t('dbHealth.title', 'DB Health'));
   const [sortKey, setSortKey] = useState<SortKey>('size');
 
-  const {
-    data: dbStats, isLoading: statsLoading, isFetching: statsFetching, error: statsError,
-  } = useDBStats();
-  const {
-    data: migrationData, isLoading: migrationLoading, error: migrationError,
-  } = useMigrations();
-  const { data: poolData, isLoading: poolLoading } = useConnectionPool();
+  const statsQuery = useDBStats();
+  const migrationQuery = useMigrations();
+  const poolQuery = useConnectionPool();
 
-  const queryError = statsError || migrationError;
+  const {
+    data: dbStats, isLoading: statsLoading, isFetching: statsFetching,
+    error: statsError, refetch: refetchStats,
+  } = statsQuery;
+  const {
+    data: migrationData, isLoading: migrationLoading,
+    error: migrationError, refetch: refetchMigration,
+  } = migrationQuery;
+  const {
+    data: poolData, isLoading: poolLoading,
+    error: poolError, refetch: refetchPool,
+  } = poolQuery;
+
+  const refreshAll = () => {
+    refetchStats();
+    refetchMigration();
+    refetchPool();
+  };
+
   const tables: TableInfo[] = dbStats?.tables ?? [];
 
   const sortedTables = useMemo(() => {
@@ -64,7 +81,7 @@ export default function DBHealthPage() {
         .slice(0, 15)
         .map((tbl) => ({
           name: tbl.name.length > 20 ? tbl.name.slice(0, 18) + '…' : tbl.name,
-          rows: tbl.rowCount,
+          rows: tbl.rowCount ?? 0,
         })),
     [tables],
   );
@@ -84,14 +101,71 @@ export default function DBHealthPage() {
       ? Math.min((pool.inUse / pool.maxOpen) * 100, 100)
       : 0;
 
+  const totalRows = useMemo(
+    () => tables.reduce((sum, tbl) => sum + (tbl.rowCount ?? 0), 0),
+    [tables],
+  );
   const largeTables = tables.filter(
     (tbl) => (tbl.sizeBytes ?? 0) > LARGE_TABLE_THRESHOLD,
   ).length;
 
   // databaseSize is numeric bytes from the backend
-  const dbSizeDisplay = dbStats
-    ? formatBytes(Number(dbStats.databaseSize) || 0)
-    : '—';
+  const dbSizeDisplay = dbStats ? formatBytes(Number(dbStats.databaseSize) || 0) : '—';
+
+  // ── KPI band config — 6 metrics fill the width on wide screens ──
+  const kpis: Array<{
+    key: string; label: string; value: string; icon: React.ReactNode;
+    color: NeonColor; subtitle?: string;
+  }> = [
+    {
+      key: 'size',
+      label: t('dbHealth.totalSize', 'Total DB Size'),
+      value: dbSizeDisplay,
+      icon: <Database className="h-5 w-5" aria-hidden="true" />,
+      color: 'cyan',
+    },
+    {
+      key: 'tables',
+      label: t('dbHealth.tables', 'Tables'),
+      value: dbStats ? fmtInt(tables.length) : '—',
+      icon: <Table2 className="h-5 w-5" aria-hidden="true" />,
+      color: 'blue',
+    },
+    {
+      key: 'rows',
+      label: t('dbHealth.totalRows', 'Total Rows'),
+      value: dbStats ? fmtInt(totalRows) : '—',
+      icon: <Layers className="h-5 w-5" aria-hidden="true" />,
+      color: 'purple',
+    },
+    {
+      key: 'large',
+      label: t('dbHealth.largeTables', 'Large Tables'),
+      value: dbStats ? fmtInt(largeTables) : '—',
+      icon: <AlertTriangle className="h-5 w-5" aria-hidden="true" />,
+      color: 'amber',
+      subtitle: t('dbHealth.largeTablesHint', '> 100 MB'),
+    },
+    {
+      key: 'migration',
+      label: t('dbHealth.migration', 'Migration'),
+      value: migrationLoading ? '—' : String(migrationVersion),
+      icon: <GitCommitHorizontal className="h-5 w-5" aria-hidden="true" />,
+      color: migrationDirty ? 'red' : 'green',
+      subtitle: migrationLoading
+        ? undefined
+        : migrationDirty
+          ? t('dbHealth.dirtyShort', 'Dirty')
+          : t('dbHealth.cleanShort', 'Clean'),
+    },
+    {
+      key: 'pool',
+      label: t('dbHealth.poolUsage', 'Pool Usage'),
+      value: pool ? `${fmtInt(poolUsage)}%` : '—',
+      icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
+      color: poolUsage >= 80 ? 'red' : 'cyan',
+    },
+  ];
 
   const tableColumns: Column<TableInfo>[] = useMemo(
     () => [
@@ -103,12 +177,12 @@ export default function DBHealthPage() {
           return (
             <div className="flex items-center gap-2">
               {isLarge && (
-                <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0" />
+                <AlertTriangle className="h-3 w-3 text-amber-300 shrink-0" aria-hidden="true" />
               )}
               <span
                 className={cn(
                   'font-mono',
-                  isLarge ? 'text-amber-400' : 'text-[var(--text-primary)]',
+                  isLarge ? 'text-amber-300' : 'text-[var(--text-primary)]',
                 )}
               >
                 {tbl.name}
@@ -121,7 +195,7 @@ export default function DBHealthPage() {
         key: 'rows',
         header: t('dbHealth.table.rows', 'Rows'),
         render: (tbl: TableInfo) => (
-          <span className="font-mono text-[var(--text-secondary)]">{fmtInt(tbl.rowCount)}</span>
+          <span className="font-mono text-[var(--text-secondary)]">{fmtInt(tbl.rowCount ?? 0)}</span>
         ),
         className: 'text-right',
       },
@@ -155,123 +229,248 @@ export default function DBHealthPage() {
     [t],
   );
 
+  const sortOptions: SortKey[] = ['size', 'rows', 'name'];
+  const sortLabel: Record<SortKey, string> = {
+    size: t('dbHealth.sort.size', 'Size'),
+    rows: t('dbHealth.sort.rows', 'Rows'),
+    name: t('dbHealth.sort.name', 'Name'),
+  };
+
+  const actions = (
+    <div className="flex items-center gap-2">
+      <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+        <RefreshCw
+          className={cn('h-3.5 w-3.5', statsFetching && 'animate-spin')}
+          aria-hidden="true"
+        />
+        {t('dbHealth.autoRefresh', 'Auto-refresh 30s')}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={refreshAll}
+        aria-label={t('dbHealth.refresh', 'Refresh now')}
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+
   return (
     <PageContainer
       title={t('dbHealth.title', 'DB Health Dashboard')}
       subtitle={t('dbHealth.subtitle', 'Database health metrics and table statistics')}
-      loading={statsLoading && migrationLoading}
-      actions={
-        <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
-          <RefreshCw className={cn('h-3 w-3', statsFetching && 'animate-spin')} />
-          {t('dbHealth.autoRefresh', 'Auto-refresh 30s')}
-        </span>
-      }
+      actions={actions}
+      query={[statsQuery, migrationQuery, poolQuery]}
     >
-      {queryError && (
-        <AlertBanner
-          variant="danger"
-          title={t('dbHealth.error', 'Error loading data')}
+      {/* 1 — KPI band: full-width responsive metric grid */}
+      <FadeIn>
+        <section
+          aria-label={t('dbHealth.kpis', 'Summary metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6"
         >
-          {(queryError as Error).message}
-        </AlertBanner>
-      )}
+          {statsLoading && !dbStats
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} height={84} className="rounded-xl" />
+              ))
+            : kpis.map((kpi) => (
+                <MetricCard
+                  key={kpi.key}
+                  label={kpi.label}
+                  value={kpi.value}
+                  icon={kpi.icon}
+                  color={kpi.color}
+                  subtitle={kpi.subtitle}
+                />
+              ))}
+        </section>
+      </FadeIn>
 
-      {/* Summary Cards */}
+      {/* 2 — Primary bento: hero table-size chart + migration status */}
       <FadeIn delay={0.1}>
-        <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-          <StatCard
-            label={t('dbHealth.totalSize', 'Total DB Size')}
-            value={dbSizeDisplay}
-            icon={<Database className="h-4 w-4" />}
-            loading={statsLoading}
-          />
-          <StatCard
-            label={t('dbHealth.tables', 'Tables')}
-            value={statsLoading ? '—' : tables.length}
-            icon={<Database className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('dbHealth.largeTables', 'Large Tables (>100MB)')}
-            value={largeTables}
-            icon={<AlertTriangle className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('dbHealth.migration', 'Migration Version')}
-            value={String(migrationVersion)}
-            icon={<CheckCircle className="h-4 w-4" />}
-            loading={migrationLoading}
-          />
-        </Grid>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <SectionTitle className="sr-only">
+            {t('dbHealth.section.storage', 'Storage and migrations')}
+          </SectionTitle>
+
+          {/* Hero — table sizes (spans 2 of 3 columns on wide screens) */}
+          <div className="xl:col-span-2">
+            {statsError ? (
+              <GlassPanel className="p-4 sm:p-5">
+                <PanelTitle className="mb-3">
+                  {t('dbHealth.chartTitle', 'Table Sizes (Top 15)')}
+                </PanelTitle>
+                <QueryError error={statsError} onRetry={() => refetchStats()} />
+              </GlassPanel>
+            ) : (
+              <ChartContainer
+                title={t('dbHealth.chartTitle', 'Table Sizes (Top 15)')}
+                ariaLabel={t('dbHealth.chartTitle.aria', 'Top fifteen database table sizes horizontal bar chart')}
+                data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
+                dataColumns={[
+                  { key: 'name', label: t('dbHealth.col.table', 'Table') },
+                  { key: 'rows', label: t('dbHealth.col.rows', 'Rows') },
+                ]}
+                loading={statsLoading}
+                empty={!statsLoading && chartData.length === 0}
+                height={340}
+              >
+                <ResponsiveContainer width="100%" height={340}>
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
+                    <XAxis
+                      type="number"
+                      tick={axisTick}
+                      tickFormatter={(v: number) => fmtNumber(v)}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tick={axisTick}
+                      width={140}
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Bar
+                      dataKey="rows"
+                      name={t('dbHealth.rows', 'Rows')}
+                      fill={CHART_COLORS[0]}
+                      radius={[0, 4, 4, 0]}
+                      barSize={16}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </div>
+
+          {/* Migration status */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('dbHealth.migrationTitle', 'Migration Status')}
+            </PanelTitle>
+            {migrationLoading ? (
+              <Skeleton height={180} />
+            ) : migrationError ? (
+              <QueryError error={migrationError} onRetry={() => refetchMigration()} />
+            ) : migrationData ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {t('dbHealth.currentVersion', 'Current Version')}
+                  </span>
+                  <span className="text-sm font-mono font-bold text-[var(--text-primary)]">
+                    {String(migrationVersion)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {t('dbHealth.status', 'Status')}
+                  </span>
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1.5 text-xs font-medium',
+                      migrationDirty ? 'text-rose-300' : 'text-emerald-300',
+                    )}
+                  >
+                    {migrationDirty ? (
+                      <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    {migrationDirty
+                      ? t('dbHealth.dirty', 'Dirty')
+                      : t('dbHealth.clean', 'Clean')}
+                  </span>
+                </div>
+                {migrationPending > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {t('dbHealth.pending', 'Pending')}
+                    </span>
+                    <span className="text-xs font-medium text-amber-300">
+                      {fmtInt(migrationPending)}
+                    </span>
+                  </div>
+                )}
+                <div className="mt-3 border-t border-white/[0.06] pt-3">
+                  <Caption className="mb-2 block uppercase tracking-wider">
+                    {t('dbHealth.recentMigrations', 'Recent Migrations')}
+                  </Caption>
+                  {migrations.length > 0 ? (
+                    <ul className="max-h-44 space-y-1.5 overflow-auto">
+                      {migrations
+                        .slice(-5)
+                        .reverse()
+                        .map((m) => (
+                          <li
+                            key={m.version}
+                            className="flex items-center justify-between text-[11px]"
+                          >
+                            <span className="mr-2 truncate font-mono text-[var(--text-secondary)]">
+                              v{m.version} {m.name}
+                            </span>
+                            {m.appliedAt && (
+                              <TimeStamp
+                                value={m.appliedAt}
+                                className="shrink-0 text-[10px] text-[var(--text-muted)]"
+                              />
+                            )}
+                          </li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <EmptyState /* no-action: transient — no migration history recorded yet */
+                      message={t('dbHealth.noMigrations', 'No migration history available')}
+                    />
+                  )}
+                </div>
+              </div>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                message={t('dbHealth.noMigrationData', 'Migration data unavailable')}
+              />
+            )}
+          </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* Table Size Bar Chart */}
+      {/* 3 — Detail bento: tables list + connection pool */}
       <FadeIn delay={0.2}>
-        <ChartContainer
-          title={t('dbHealth.chartTitle', 'Table Sizes (Top 15)')}
-          ariaLabel={t('dbHealth.chartTitle.aria', 'Top fifteen database table sizes horizontal bar chart')}
-          data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
-          dataColumns={[
-            { key: 'name', label: t('dbHealth.col.table', 'Table') },
-            { key: 'rows', label: t('dbHealth.col.rows', 'Rows') },
-          ]}
-          loading={statsLoading}
-          height={300}
-        >
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
-              <XAxis
-                type="number"
-                tick={axisTick}
-                tickFormatter={(v: number) => fmtNumber(v)}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={axisTick}
-                width={140}
-              />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar
-                dataKey="rows"
-                name={t('dbHealth.rows', 'Rows')}
-                fill={CHART_COLORS[0]}
-                radius={[0, 4, 4, 0]}
-                barSize={16}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </FadeIn>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <SectionTitle className="sr-only">
+            {t('dbHealth.section.runtime', 'Tables and runtime')}
+          </SectionTitle>
 
-      {/* Table List + Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Table List — 2/3 width */}
-        <FadeIn delay={0.3} className="lg:col-span-2">
-          <GlassPanel className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+          {/* Tables list (spans 2 of 3 columns on wide screens) */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <PanelTitle className="flex items-center gap-2">
+                <Table2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('dbHealth.tablesTitle', 'Tables')}
-              </h2>
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                {(['size', 'rows', 'name'] as SortKey[]).map((key) => (
+              </PanelTitle>
+              <div
+                className="flex items-center gap-2"
+                role="group"
+                aria-label={t('dbHealth.sortBy', 'Sort tables by')}
+              >
+                <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                {sortOptions.map((key) => (
                   <Button
                     key={key}
                     onClick={() => setSortKey(key)}
                     variant={sortKey === key ? 'primary' : 'secondary'}
                     size="sm"
+                    aria-pressed={sortKey === key}
                   >
-                    {key === 'size'
-                      ? t('dbHealth.sort.size', 'Size')
-                      : key === 'rows'
-                        ? t('dbHealth.sort.rows', 'Rows')
-                        : t('dbHealth.sort.name', 'Name')}
+                    {sortLabel[key]}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {statsLoading ? (
+            {statsError ? (
+              <QueryError error={statsError} onRetry={() => refetchStats()} />
+            ) : statsLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Skeleton key={i} height={40} />
@@ -286,157 +485,73 @@ export default function DBHealthPage() {
                 compact
                 pagination
                 emptyMessage={t('dbHealth.noTables', 'No tables found')}
-                className="max-h-[50vh] overflow-auto"
+                className="max-h-[55vh] overflow-auto"
               />
             )}
           </GlassPanel>
-        </FadeIn>
 
-        {/* Sidebar: Migration Status + Connection Pool */}
-        <FadeIn delay={0.4}>
-          <div className="space-y-4">
-            {/* Migration Status */}
-            <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                {t('dbHealth.migrationTitle', 'Migration Status')}
-              </h2>
-              {migrationLoading ? (
-                <Skeleton height={128} />
-              ) : migrationData ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {t('dbHealth.currentVersion', 'Current Version')}
-                    </span>
-                    <span className="text-sm font-mono font-bold text-[var(--text-primary)]">
-                      {String(migrationVersion)}
+          {/* Connection pool */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('dbHealth.poolTitle', 'Connection Pool')}
+            </PanelTitle>
+            {poolLoading ? (
+              <Skeleton height={200} />
+            ) : poolError ? (
+              <QueryError error={poolError} onRetry={() => refetchPool()} />
+            ) : pool?.maxOpen != null ? (
+              <div className="space-y-3">
+                {[
+                  { label: t('dbHealth.pool.maxOpen', 'Max Open'), value: fmtInt(pool.maxOpen ?? 0) },
+                  { label: t('dbHealth.pool.open', 'Open'), value: fmtInt(pool.open ?? 0) },
+                  { label: t('dbHealth.pool.inUse', 'In Use'), value: fmtInt(pool.inUse ?? 0) },
+                  { label: t('dbHealth.pool.idle', 'Idle'), value: fmtInt(pool.idle ?? 0) },
+                  { label: t('dbHealth.pool.waitCount', 'Wait Count'), value: fmtInt(pool.waitCount ?? 0) },
+                  {
+                    label: t('dbHealth.pool.waitDuration', 'Wait Duration'),
+                    value: `${fmtInt(pool.waitDurationMs ?? 0)}ms`,
+                  },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)]">{item.label}</span>
+                    <span className="text-sm font-mono text-[var(--text-primary)]">
+                      {item.value}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {t('dbHealth.status', 'Status')}
-                    </span>
-                    <span
-                      className={cn(
-                        'text-xs font-medium',
-                        migrationDirty ? 'text-red-400' : 'text-green-400',
-                      )}
-                    >
-                      {migrationDirty
-                        ? t('dbHealth.dirty', '⚠ Dirty')
-                        : t('dbHealth.clean', '✓ Clean')}
-                    </span>
+                ))}
+                {/* Usage bar */}
+                <div className="mt-2">
+                  <div className="mb-1 flex justify-between text-[10px] text-[var(--text-muted)]">
+                    <span>{t('dbHealth.poolUsage', 'Pool Usage')}</span>
+                    <span>{fmtInt(poolUsage)}%</span>
                   </div>
-                  {migrationPending > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-[var(--text-muted)]">
-                        {t('dbHealth.pending', 'Pending')}
-                      </span>
-                      <span className="text-xs font-medium text-amber-400">
-                        {migrationPending}
-                      </span>
-                    </div>
-                  )}
-                  {migrations.length > 0 ? (
-                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
-                      <p className="text-[10px] text-[var(--text-muted)] mb-2 uppercase tracking-wider">
-                        {t('dbHealth.recentMigrations', 'Recent Migrations')}
-                      </p>
-                      <div className="space-y-1.5 max-h-40 overflow-auto">
-                        {migrations
-                          .slice(-5)
-                          .reverse()
-                          .map((m) => (
-                            <div
-                              key={m.version}
-                              className="flex items-center justify-between text-[11px]"
-                            >
-                              <span className="font-mono text-[var(--text-secondary)] truncate mr-2">
-                                v{m.version} {m.name}
-                              </span>
-                              {m.appliedAt && (
-                                <TimeStamp
-                                  value={m.appliedAt}
-                                  className="text-[var(--text-muted)] shrink-0 text-[10px]"
-                                />
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <EmptyState message={t('dbHealth.noMigrations', 'No migration history available')} />
-                  )}
-                </div>
-              ) : (
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                  message={t(
-                    'dbHealth.noMigrationData',
-                    'Migration data unavailable',
-                  )}
-                />
-              )}
-            </GlassPanel>
-
-            {/* Connection Pool */}
-            <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                {t('dbHealth.poolTitle', 'Connection Pool')}
-              </h2>
-              {poolLoading ? (
-                <Skeleton height={160} />
-              ) : pool?.maxOpen != null ? (
-                <div className="space-y-3">
-                  {[
-                    { label: t('dbHealth.pool.maxOpen', 'Max Open'), value: pool.maxOpen },
-                    { label: t('dbHealth.pool.open', 'Open'), value: pool.open },
-                    { label: t('dbHealth.pool.inUse', 'In Use'), value: pool.inUse },
-                    { label: t('dbHealth.pool.idle', 'Idle'), value: pool.idle },
-                    { label: t('dbHealth.pool.waitCount', 'Wait Count'), value: pool.waitCount },
-                    {
-                      label: t('dbHealth.pool.waitDuration', 'Wait Duration'),
-                      value: `${fmtInt(pool.waitDurationMs ?? 0)}ms`,
-                    },
-                  ].map((item) => (
+                  <div
+                    className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]"
+                    role="progressbar"
+                    aria-label={t('dbHealth.poolUsage', 'Pool Usage')}
+                    aria-valuenow={Math.round(poolUsage)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
                     <div
-                      key={item.label}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-xs text-[var(--text-muted)]">{item.label}</span>
-                      <span className="text-sm font-mono text-[var(--text-primary)]">
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
-                  {/* Usage bar */}
-                  <div className="mt-2">
-                    <div className="flex justify-between text-[10px] text-[var(--text-muted)] mb-1">
-                      <span>{t('dbHealth.poolUsage', 'Pool Usage')}</span>
-                      <span>{fmtInt(poolUsage)}%</span>
-                    </div>
-                    <div className="h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          'h-full rounded-full transition-all',
-                          poolUsage >= 80 ? 'bg-red-400' : 'bg-cyan-400',
-                        )}
-                        style={{ width: `${poolUsage}%` }}
-                      />
-                    </div>
+                      className={cn(
+                        'h-full rounded-full transition-all',
+                        poolUsage >= 80 ? 'bg-rose-400' : 'bg-cyan-400',
+                      )}
+                      style={{ width: `${poolUsage}%` }}
+                    />
                   </div>
                 </div>
-              ) : (
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                  message={t(
-                    'dbHealth.noPoolData',
-                    'Connection pool data unavailable',
-                  )}
-                />
-              )}
-            </GlassPanel>
-          </div>
-        </FadeIn>
-      </div>
+              </div>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                message={t('dbHealth.noPoolData', 'Connection pool data unavailable')}
+              />
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
     </PageContainer>
   );
 }
