@@ -76,7 +76,7 @@ export function SignalHistoryTable({
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
 
   const renderExpanded = useCallback((r: SignalLogEntry) => (
-    <pre className="whitespace-pre-wrap break-all text-[11px] font-mono text-[var(--text-secondary)]">
+    <pre className="whitespace-pre-wrap break-all text-xs font-mono text-[var(--text-secondary)]">
 {JSON.stringify(r, null, 2)}
     </pre>
   ), []);
@@ -139,7 +139,7 @@ export function SignalHistoryTable({
           <Activity className="h-4 w-4 text-neon-cyan" />
           <span className="section-title">{title ?? t('Signal Data')}</span>
           {showHeaderMeta ? (
-            <span className="ml-auto text-[10px] text-[var(--text-muted)]">
+            <span className="ml-auto text-2xs text-[var(--text-muted)]">
               {t('Page')} {page} · {fmtInt(totalRows)} {t('total')}
             </span>
           ) : null}

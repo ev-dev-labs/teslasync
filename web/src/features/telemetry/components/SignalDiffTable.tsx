@@ -210,7 +210,7 @@ export function SignalDiffTable({
       {/* Legend explaining the technical columns. `Column.header` in the
           shared `<DataTable>` is `string`-only (cannot embed React nodes),
           so the per-column tooltips live here above the header row. */}
-      <div className="mb-2 flex flex-wrap items-center gap-3 px-1 text-[11px] text-[var(--text-muted)]">
+      <div className="mb-2 flex flex-wrap items-center gap-3 px-1 text-xs text-[var(--text-muted)]">
         <span className="inline-flex items-center gap-1">
           <span className="font-mono uppercase tracking-wide">{t('signalDiff.legend.delta', 'Δ')}</span>
           <HelpTooltip
