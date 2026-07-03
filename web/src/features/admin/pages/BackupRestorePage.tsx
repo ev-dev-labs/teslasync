@@ -416,7 +416,7 @@ export default function BackupRestorePage() {
       header: t('backup.name', 'Name'),
       render: (row) => (
         <div className="flex items-center gap-2">
-          <span className="font-medium text-[var(--text-primary)]">{row.name}</span>
+          <Text weight="medium" color="primary">{row.name}</Text>
           {!row.enabled && (
             <Badge variant="neutral" size="sm">{t('backup.disabled', 'Disabled')}</Badge>
           )}
@@ -449,18 +449,18 @@ export default function BackupRestorePage() {
       key: 'frequency',
       header: t('backup.frequency', 'Frequency'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)]">
+        <Text size="sm" color="secondary">
           {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', { days: row.frequency_days, defaultValue: 'Every {{days}}d' })}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'schedule',
       header: t('backup.schedule', 'Schedule'),
       render: (row) => (
-        <div className="space-y-0.5 text-xs text-[var(--text-muted)]">
-          <p>{t('backup.lastRun', 'Last')}: <span className="text-[var(--text-secondary)]">{row.last_run_at ? formatRelative(row.last_run_at) : '—'}</span></p>
-          <p>{t('backup.nextRun', 'Next')}: <span className="text-[var(--text-secondary)]">{row.next_run_at ? formatRelative(row.next_run_at) : '—'}</span></p>
+        <div className="space-y-0.5">
+          <Text as="p" variant="caption">{t('backup.lastRun', 'Last')}: <Text color="secondary">{row.last_run_at ? formatRelative(row.last_run_at) : '—'}</Text></Text>
+          <Text as="p" variant="caption">{t('backup.nextRun', 'Next')}: <Text color="secondary">{row.next_run_at ? formatRelative(row.next_run_at) : '—'}</Text></Text>
         </div>
       ),
     },
@@ -557,9 +557,9 @@ export default function BackupRestorePage() {
       key: 'file_name',
       header: t('backup.file', 'File'),
       render: (row) => (
-        <span className="block max-w-[200px] truncate font-mono text-xs text-[var(--text-secondary)]">
+        <Text mono size="xs" color="secondary" className="block max-w-[200px] truncate">
           {row.file_name ?? '—'}
-        </span>
+        </Text>
       ),
     },
     {
@@ -567,25 +567,25 @@ export default function BackupRestorePage() {
       header: t('backup.size', 'Size'),
       sortable: true,
       render: (row) => (
-        <span className="text-sm tabular-nums text-[var(--text-primary)]">{row.file_size ? formatBytes(row.file_size) : '—'}</span>
+        <Text size="sm" color="primary" className="tabular-nums">{row.file_size ? formatBytes(row.file_size) : '—'}</Text>
       ),
     },
     {
       key: 'record_count',
       header: t('backup.records', 'Records'),
       render: (row) => (
-        <span className="font-mono text-sm tabular-nums text-[var(--text-secondary)]">
+        <Text mono size="sm" color="secondary" className="tabular-nums">
           {row.record_count > 0 ? fmtInt(row.record_count) : '—'}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'duration',
       header: t('backup.duration', 'Duration'),
       render: (row) => (
-        <span className="text-sm tabular-nums text-[var(--text-muted)]">
+        <Text size="sm" color="muted" className="tabular-nums">
           {row.duration_ms > 0 ? formatDurationMsCompact(row.duration_ms) : '—'}
-        </span>
+        </Text>
       ),
     },
     {
@@ -624,11 +624,11 @@ export default function BackupRestorePage() {
 
   /* ---- preview table columns ---- */
   const previewColumns: Column<{ name: string; rows: number }>[] = [
-    { key: 'name', header: t('backup.table', 'Table'), render: (row) => <span className="font-mono font-medium text-[var(--text-primary)]">{row.name}</span> },
+    { key: 'name', header: t('backup.table', 'Table'), render: (row) => <Text mono weight="medium" color="primary">{row.name}</Text> },
     {
       key: 'rows',
       header: t('backup.rows', 'Rows'),
-      render: (row) => <span className="tabular-nums text-[var(--text-secondary)]">{fmtInt(row.rows)}</span>,
+      render: (row) => <Text color="secondary" className="tabular-nums">{fmtInt(row.rows)}</Text>,
     },
   ];
 
@@ -822,9 +822,9 @@ export default function BackupRestorePage() {
                     <div className="space-y-2">
                       {failedRuns.map((run) => (
                         <InlineCallout key={`err-${run.id}`} variant="danger" icon={<Icons.alertCircle />}>
-                          <span className="font-medium">
+                          <Text weight="medium">
                             {run.file_name ?? t('backup.runN', 'Run #{{id}}', { id: run.id })}
-                          </span>
+                          </Text>
                           {run.error_message ? ` — ${run.error_message}` : ''}
                         </InlineCallout>
                       ))}
@@ -1030,7 +1030,7 @@ export default function BackupRestorePage() {
       >
         {previewData ? (
           <div className="flex flex-col gap-4 p-1">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <Icons.securityCheck
                 className={cn(
                   'h-4 w-4',
@@ -1038,11 +1038,11 @@ export default function BackupRestorePage() {
                 )}
                 aria-hidden="true"
               />
-              <span className={previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300'}>
+              <Text as="span" size="sm" className={previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300'}>
                 {previewData.checksum_verified
                   ? t('backup.checksumVerified', 'Checksum verified')
                   : t('backup.checksumFailed', 'Checksum verification failed')}
-              </span>
+              </Text>
             </div>
 
             {previewTables.length > 0 ? (
