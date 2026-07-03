@@ -248,7 +248,7 @@ export function AutomationCard({
                   />
                   <Text as="span" variant="bodySm" className={isWarning ? 'text-amber-300' : 'text-blue-300'}>
                     {t('automations.conflictWith', 'Conflict with')}{' '}
-                    <span className="font-medium">"{c.automation_name}"</span>
+                    <Text as="span" weight="medium">"{c.automation_name}"</Text>
                     {' — '}{c.reason}
                   </Text>
                 </div>
