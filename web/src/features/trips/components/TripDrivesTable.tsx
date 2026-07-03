@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListOrdered } from 'lucide-react';
-import { GlassPanel, PanelTitle, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, PanelTitle, DataTable, Text, type Column } from '@/components/ui';
 import { RouteDisplay, DateTime } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
@@ -47,9 +47,9 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
         header: t('trips.detail.table.distance', 'Distance'),
         sortable: true,
         render: (d) => (
-          <span className="text-sm tabular-nums text-[var(--text-primary)]">
+          <Text variant="body" className="tabular-nums">
             {formatDistance(d.distance_m)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -57,9 +57,9 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
         header: t('trips.detail.table.energy', 'Energy'),
         sortable: true,
         render: (d) => (
-          <span className="text-sm tabular-nums text-[var(--text-primary)]">
+          <Text variant="body" className="tabular-nums">
             {formatEnergy(d.energy_used_wh)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -67,9 +67,9 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
         header: t('trips.detail.table.duration', 'Duration'),
         sortable: true,
         render: (d) => (
-          <span className="text-sm tabular-nums text-[var(--text-secondary)]">
+          <Text size="sm" color="secondary" className="tabular-nums">
             {(d.duration_s ?? 0) > 0 ? formatDurationSecondsAsMinutes(d.duration_s) : '—'}
-          </span>
+          </Text>
         ),
       },
     ],
