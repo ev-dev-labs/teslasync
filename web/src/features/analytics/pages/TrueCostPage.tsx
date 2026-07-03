@@ -20,17 +20,11 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useSettings } from '@/hooks/useSettings';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { typography } from '@/lib/tokens';
-import { cn } from '@/lib/cn';
 
 /* Chart series colors — dynamic hex handed to Recharts (EV cyan / ICE red / savings green). */
 const COLOR_EV = '#00f0ff';
 const COLOR_ICE = '#ef4444';
 const COLOR_SAVINGS = '#10b981';
-
-/* Emphasised money values composed from typography tokens (no ad-hoc sizing). */
-const savingsValueClass = cn(typography.size.xl, typography.weight.bold, 'text-emerald-300', 'tabular-nums');
-const chipValueClass = (tone: string) => cn(typography.size.lg, typography.weight.bold, tone, 'tabular-nums');
 
 /* ── Component ── */
 
@@ -191,7 +185,7 @@ export default function TrueCostPage() {
                     <Leaf className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
                     {t('tco.fuelSavings', 'Fuel Savings')}
                   </Text>
-                  <p className={savingsValueClass}>{fmtCurrency(tco.total_savings ?? 0)}</p>
+                  <Text as="p" size="xl" weight="bold" className="tabular-nums text-emerald-300">{fmtCurrency(tco.total_savings ?? 0)}</Text>
                   <Text as="p" variant="caption" className="mt-1">{t('tco.electricityVsGas', 'Electricity vs gasoline')}</Text>
                 </div>
                 <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
@@ -199,7 +193,7 @@ export default function TrueCostPage() {
                     <Wrench className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
                     {t('tco.maintenanceSavings', 'Maintenance Savings (Est.)')}
                   </Text>
-                  <p className={savingsValueClass}>{fmtCurrency(tco.maintenance_savings_estimate ?? 0)}</p>
+                  <Text as="p" size="xl" weight="bold" className="tabular-nums text-emerald-300">{fmtCurrency(tco.maintenance_savings_estimate ?? 0)}</Text>
                   <Text as="p" variant="caption" className="mt-1">{t('tco.noOilChanges', 'No oil changes, less brake wear')}</Text>
                 </div>
                 <div className="rounded-xl border border-neon-green/20 bg-neon-green/10 p-4">
@@ -207,7 +201,7 @@ export default function TrueCostPage() {
                     <PiggyBank className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
                     {t('tco.totalEstSavings', 'Total Estimated Savings')}
                   </Text>
-                  <p className={savingsValueClass}>{fmtCurrency((tco.total_savings ?? 0) + (tco.maintenance_savings_estimate ?? 0))}</p>
+                  <Text as="p" size="xl" weight="bold" className="tabular-nums text-emerald-300">{fmtCurrency((tco.total_savings ?? 0) + (tco.maintenance_savings_estimate ?? 0))}</Text>
                   <Text as="p" variant="caption" className="mt-1">
                     {fmtInt(convertDistanceFromSI((tco.total_km ?? 0) * 1000, distanceUnit))} {distanceUnit} · {tco.first_date ?? '—'} → {tco.last_date ?? '—'}
                   </Text>
@@ -261,15 +255,15 @@ export default function TrueCostPage() {
             {/* Cost-per-km values restated as at-a-glance chips below the chart. */}
             <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-xl border border-neon-cyan/20 bg-neon-cyan/10 p-3">
-                <p className={chipValueClass('text-cyan-300')}>
+                <Text as="p" size="lg" weight="bold" className="tabular-nums text-cyan-300">
                   <Currency value={tco?.cost_per_km_ev} precision={3} />
-                </p>
+                </Text>
                 <Text as="p" variant="caption">{t('tco.perKmEv', 'per km (EV)')}</Text>
               </div>
               <div className="rounded-xl border border-neon-red/20 bg-neon-red/10 p-3">
-                <p className={chipValueClass('text-rose-300')}>
+                <Text as="p" size="lg" weight="bold" className="tabular-nums text-rose-300">
                   <Currency value={tco?.cost_per_km_ice} precision={3} />
-                </p>
+                </Text>
                 <Text as="p" variant="caption">{t('tco.perKmGas', 'per km (Gas)')}</Text>
               </div>
             </div>
