@@ -15,7 +15,7 @@ import {
   ChartTooltip,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
-  AREA_DEFAULTS, areaGradient,
+  AREA_DEFAULTS, areaGradient, axisTickSm,
 } from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -251,8 +251,8 @@ export default function MileagePage() {
                   <AreaChart data={odometerData}>
                     {areaGradient('odoGrad', palette[2])}
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} minTickGap={24} />
-                    <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} domain={['auto', 'auto']} width={48} />
+                    <XAxis dataKey="date" tick={axisTickSm} minTickGap={24} />
+                    <YAxis tick={axisTickSm} domain={['auto', 'auto']} width={48} />
                     <Tooltip content={<ChartTooltip />} />
                     <Area
                       {...AREA_DEFAULTS}
@@ -322,8 +322,8 @@ export default function MileagePage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} minTickGap={24} />
-                    <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} width={48} />
+                    <XAxis dataKey="date" tick={axisTickSm} minTickGap={24} />
+                    <YAxis tick={axisTickSm} width={48} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar
                       dataKey="distance"
@@ -356,8 +356,8 @@ export default function MileagePage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} minTickGap={16} />
-                    <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} width={48} />
+                    <XAxis dataKey="month" tick={axisTickSm} minTickGap={16} />
+                    <YAxis tick={axisTickSm} width={48} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar
                       dataKey="distance"
