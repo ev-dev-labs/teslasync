@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, ShieldCheck, Lightbulb } from 'lucide-react';
 
-import { GlassPanel, Badge, DataTable, PanelTitle, SectionTitle, Caption, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, PanelTitle, SectionTitle, Caption, Text, type Column } from '@/components/ui';
 import {
   ChartTooltip,
   RadialGauge,
@@ -129,11 +129,11 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                     <div key={key} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className={cn('inline-block h-2 w-2 rounded-full', color)} />
-                        <span className="capitalize text-[var(--text-secondary)]">{t(`dynamics.coach.style.${key}`, key)}</span>
+                        <Text as="span" color="secondary" className="capitalize">{t(`dynamics.coach.style.${key}`, key)}</Text>
                       </div>
-                      <span className={cn('font-bold tabular-nums', text)}>
+                      <Text as="span" weight="bold" className={cn('tabular-nums', text)}>
                         {coachData.style_breakdown[key] ?? 0}
-                      </span>
+                      </Text>
                     </div>
                   ))}
                 </div>
@@ -193,13 +193,13 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
               {patterns.map((p) => (
                 <div key={p.label} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-secondary)]">{p.label}</span>
-                    <span className={cn('font-bold tabular-nums',
+                    <Text as="span" color="secondary">{p.label}</Text>
+                    <Text as="span" weight="bold" className={cn('tabular-nums',
                       p.value <= p.lo ? 'text-emerald-300' :
                       p.value <= p.hi ? 'text-amber-300' : 'text-red-400',
                     )}>
                       {fmtNumber(p.value)}%
-                    </span>
+                    </Text>
                   </div>
                   <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                     <div
@@ -239,7 +239,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                     >
                       {rec.impact}
                     </Badge>
-                    <p className="text-sm text-[var(--text-secondary)]">{rec.tip}</p>
+                    <Text as="p" size="sm" color="secondary">{rec.tip}</Text>
                   </div>
                 ))}
               </div>
