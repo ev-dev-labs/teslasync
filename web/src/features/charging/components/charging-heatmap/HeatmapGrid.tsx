@@ -60,7 +60,7 @@ export function HeatmapGrid({ model, formatEnergy }: HeatmapGridProps) {
                   >
                     {isHovered && cell.count > 0 && (
                       <div className="absolute -top-14 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-2 py-1 shadow-lg">
-                        <Text variant="caption" as="div" className="text-[var(--text-primary)]">
+                        <Text as="div" size="xs" color="primary">
                           {dayLabel} {formatHourLabel(hour)}
                         </Text>
                         <Text variant="caption" as="div">
