@@ -1,51 +1,66 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Car, RefreshCw, Activity, Battery, Gauge, Zap,
-  ExternalLink, Trash2, Lock, Shield, ArrowLeftRight,
+  Car, RefreshCw, Battery, Gauge, Zap, Activity, ListChecks,
+  ExternalLink, Trash2, Lock, Shield, ArrowLeftRight, AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, ConfirmDialog, PinButton } from '@/components/ui';
-import { MetricCard, AnimatedNumber, DataFreshnessAuto } from '@/components/data-display';
-import { Skeleton, EmptyState, StatGridSkeleton } from '@/components/feedback';
+import {
+  GlassPanel, Badge, Button, ConfirmDialog, PinButton,
+  SectionTitle, PanelTitle, Text,
+} from '@/components/ui';
+import { MetricCard, MetricBar, AnimatedNumber } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError, AlertBanner, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
-import { useToast } from '@/components/feedback/Toast';
-import { cn } from '@/lib/cn';
+import {
+  useVehicles, useSyncVehicles, useDeleteVehicle, useFleetStates,
+} from '@/api/hooks/useVehicles';
+import { usePinned } from '@/api/hooks/usePinned';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
-import { batteryColor } from '@/lib/colors';
-import { request } from '@/api/client';
-import { fetchVehicleState } from '@/api/hooks/useVehicles';
-import { usePinned } from '@/api/hooks/usePinned';
+import { batteryColor, statusHexColor } from '@/lib/colors';
+import { typography } from '@/lib/tokens';
+import { cn } from '@/lib/cn';
 import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 
-/* ── Loading skeleton ─────────────── */
+/* ── Types ─────────────────────────────────────────────────── */
+
+/** A fleet entry whose live state has resolved (non-null). */
+type LoadedEntry = { vehicle: Vehicle; state: VehicleState };
+
+/* ── Loading skeleton ──────────────────────────────────────── */
 
 /**
- * Mirrors the VehicleListPage layout while the fleet list loads:
- * 4 fleet-summary stat cards → fleet hero panel → 3 vehicle row cards.
- * Renders inside a real `<PageContainer>` so the title bar shows up
- * immediately and CLS stays at zero when the real list arrives.
+ * Mirrors the redesigned bento layout while the fleet list loads: KPI band →
+ * overview bento (hero battery + status) → responsive vehicle-card grid.
+ * Rendered inside a real `<PageContainer>` so the title bar appears instantly
+ * and layout shift stays at zero when the real content arrives.
  */
 function VehicleListSkeleton() {
   const { t } = useTranslation();
   return (
-    <PageContainer title={t('nav.vehicles', 'Fleet')}>
+    <PageContainer
+      title={t('nav.vehicles', 'Fleet')}
+      subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
+    >
       <div className="space-y-6" data-testid="vehicle-list-skeleton">
         <StatGridSkeleton cards={4} />
-        <Skeleton className="h-36 rounded-xl" />
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
+          <Skeleton className="h-64 rounded-xl xl:col-span-2" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-52 rounded-xl" />
           ))}
         </div>
       </div>
@@ -53,26 +68,348 @@ function VehicleListSkeleton() {
   );
 }
 
-/* ── Page ────────────────────────────────────────────────── */
+/* ── Small building blocks ─────────────────────────────────── */
+
+/** Compact icon + value chip used inside the vehicle card stat row. */
+function StatChip({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.03] px-2 py-1 text-xs text-[var(--text-secondary)]">
+      {icon}
+      <span className="sr-only">{label}: </span>
+      <span className="tabular-nums text-[var(--text-primary)]">{value}</span>
+    </span>
+  );
+}
+
+/* ── KPI band ──────────────────────────────────────────────── */
+
+interface FleetKpisProps {
+  totalVehicles: number;
+  avgBattery: number;
+  totalRange: number;
+  chargingCount: number;
+  onlineCount: number;
+}
+
+/** Full-width responsive metric grid summarising the whole fleet. */
+function FleetKpis({ totalVehicles, avgBattery, totalRange, chargingCount, onlineCount }: FleetKpisProps) {
+  const { t } = useTranslation();
+  const { unitPrefs } = useUnits();
+  return (
+    <section
+      aria-label={t('vehicles.summary', 'Fleet summary')}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+    >
+      <MetricCard
+        label={t('vehicles.totalVehicles', 'Total Vehicles')}
+        value={totalVehicles}
+        icon={<Car className="h-5 w-5" />}
+        color="cyan"
+      />
+      <MetricCard
+        label={t('vehicles.avgBattery', 'Avg Battery')}
+        value={`${fmtNumber(avgBattery)}%`}
+        icon={<Battery className="h-5 w-5" />}
+        color="green"
+      />
+      <MetricCard
+        label={`${t('vehicles.totalRange', 'Total Range')} (${unitPrefs.distance})`}
+        value={fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance))}
+        icon={<Gauge className="h-5 w-5" />}
+        color="purple"
+      />
+      <MetricCard
+        label={t('vehicles.chargingOnline', 'Charging / Online')}
+        value={`${chargingCount} / ${onlineCount}`}
+        icon={<Zap className="h-5 w-5" />}
+        color="green"
+      />
+    </section>
+  );
+}
+
+/* ── Fleet battery panel (hero) ────────────────────────────── */
+
+interface FleetBatteryPanelProps {
+  entries: LoadedEntry[];
+  avgBattery: number;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  onRetry: () => void;
+}
+
+/** Per-vehicle battery bars — the hero panel of the overview bento. */
+function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onRetry }: FleetBatteryPanelProps) {
+  const { t } = useTranslation();
+  const { formatDistance } = useUnits();
+  return (
+    <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <PanelTitle className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t('vehicles.batteryStatus', 'Fleet Battery Status')}
+        </PanelTitle>
+        <span className="text-xs text-[var(--text-secondary)]">
+          <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />{' '}
+          {t('vehicles.avgLabel', 'avg')}
+        </span>
+      </div>
+
+      {isError ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 rounded-lg" />
+          ))}
+        </div>
+      ) : entries.length === 0 ? (
+        <EmptyState
+          icon={<Activity className="h-8 w-8" />}
+          message={t('common.noData', 'No data available')}
+          className="py-8"
+        />
+      ) : (
+        <div className="space-y-3">
+          {entries.map(({ vehicle, state }) => {
+            const level = state.battery_level ?? 0;
+            return (
+              <MetricBar
+                key={vehicle.id}
+                label={vehicle.display_name || vehicle.vin}
+                value={level}
+                max={100}
+                color={batteryColor(level)}
+                sublabel={`${level}% · ${formatDistance(state.rated_range ?? 0)}`}
+              />
+            );
+          })}
+        </div>
+      )}
+    </GlassPanel>
+  );
+}
+
+/* ── Fleet status breakdown panel ──────────────────────────── */
+
+interface StatusCount { status: string; count: number }
+
+interface FleetStatusPanelProps {
+  counts: StatusCount[];
+  total: number;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  onRetry: () => void;
+}
+
+/** Count-by-status breakdown, derived from the same fleet-state batch. */
+function FleetStatusPanel({ counts, total, isLoading, isError, error, onRetry }: FleetStatusPanelProps) {
+  const { t } = useTranslation();
+  return (
+    <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('vehicles.statusBreakdown', 'Fleet Status')}
+      </PanelTitle>
+
+      {isError ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 rounded-lg" />
+          ))}
+        </div>
+      ) : counts.length === 0 ? (
+        <EmptyState
+          icon={<ListChecks className="h-8 w-8" />}
+          message={t('vehicles.noStatusData', 'No fleet status data yet')}
+          className="py-8"
+        />
+      ) : (
+        <div className="space-y-3">
+          {counts.map(({ status, count }) => (
+            <MetricBar
+              key={status}
+              label={status.charAt(0).toUpperCase() + status.slice(1)}
+              value={count}
+              max={total || count}
+              color={statusHexColor(status)}
+              sublabel={String(count)}
+            />
+          ))}
+        </div>
+      )}
+    </GlassPanel>
+  );
+}
+
+/* ── Vehicle card ──────────────────────────────────────────── */
+
+interface VehicleCardProps {
+  vehicle: Vehicle;
+  state: VehicleState | null;
+  onDelete: (vehicle: Vehicle) => void;
+}
+
+/** One vehicle in the responsive fleet grid — all data + row actions. */
+function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
+  const { t } = useTranslation();
+  const { formatDistance } = useUnits();
+
+  const status = deriveVehicleStatus(state);
+  const level = state?.battery_level ?? 0;
+  const color = batteryColor(level);
+  const name = vehicle.display_name || vehicle.vin;
+  const modelLine = [vehicle.model, vehicle.trim_badging].filter(Boolean).join(' ');
+
+  return (
+    <GlassPanel
+      hover
+      glow="cyan"
+      padding="none"
+      data-tour="vehicles-card"
+      className="group flex h-full flex-col overflow-hidden"
+    >
+      <div
+        className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400 opacity-40 transition-opacity group-hover:opacity-80"
+        aria-hidden="true"
+      />
+
+      <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+        {/* Header — name, status, pin */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/vehicles/${vehicle.id}`}
+                className={cn(
+                  typography.role.panelTitle,
+                  'truncate rounded outline-none transition-colors hover:text-cyan-300 focus-visible:text-cyan-300 focus-visible:ring-1 focus-visible:ring-cyan-400/40',
+                )}
+              >
+                {name}
+              </Link>
+              <Badge variant={statusVariant(status)} dot size="sm">
+                {status}
+              </Badge>
+            </div>
+            <Text variant="caption" as="p" className="mt-1 truncate">
+              {modelLine || t('vehicles.unknownModel', 'Unknown model')}
+              {' · '}
+              <span className="font-mono">{vehicle.vin}</span>
+            </Text>
+          </div>
+          <PinButton itemType="vehicle" itemId={vehicle.id} size="md" />
+        </div>
+
+        {/* Battery */}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-xs text-[var(--text-secondary)]">
+              {t('vehicles.battery', 'Battery')}
+            </span>
+            <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+              <AnimatedNumber value={level} suffix="%" />
+            </span>
+          </div>
+          <div
+            role="progressbar"
+            aria-valuenow={level}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t('vehicles.batteryLevel', 'Battery level')}
+            className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]"
+          >
+            <div
+              className="h-full rounded-full transition-all duration-slow"
+              style={{ width: `${level}%`, background: `linear-gradient(90deg, ${color}99, ${color})` }}
+            />
+          </div>
+        </div>
+
+        {/* Stat chips */}
+        <div className="flex flex-wrap items-center gap-2">
+          {state ? (
+            <>
+              <StatChip
+                icon={<Gauge className="h-3.5 w-3.5" aria-hidden="true" />}
+                label={t('vehicles.range', 'Range')}
+                value={formatDistance(state.rated_range ?? 0)}
+              />
+              <StatChip
+                icon={<Activity className="h-3.5 w-3.5" aria-hidden="true" />}
+                label={t('vehicles.odometer', 'Odometer')}
+                value={formatDistance(state.odometer ?? 0)}
+              />
+              {state.is_charging && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-neon-green/10 px-2 py-1 text-xs font-medium text-emerald-300">
+                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                  {fmtNumber(state.charger_power ?? 0)} kW
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-xs text-[var(--text-muted)]">
+              {t('vehicles.noLiveData', 'No live data')}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            {state?.is_locked && (
+              <Lock className="h-4 w-4 text-emerald-400" aria-label={t('vehicles.locked', 'Locked')} />
+            )}
+            {state?.sentry_mode && (
+              <Shield className="h-4 w-4 text-cyan-400" aria-label={t('vehicles.sentryOn', 'Sentry mode on')} />
+            )}
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
+          <Link
+            to={`/vehicles/${vehicle.id}`}
+            aria-label={t('vehicles.openDetail', 'Open {{name}} details', { name })}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-cyan-300 outline-none transition-colors hover:text-cyan-200 focus-visible:ring-1 focus-visible:ring-cyan-400/40"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            {t('vehicles.viewDetails', 'View details')}
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(vehicle)}
+            aria-label={t('vehicles.removeAria', 'Remove {{name}}', { name })}
+            className="min-h-11 text-[var(--text-muted)] hover:bg-rose-500/10 hover:text-rose-300"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
+    </GlassPanel>
+  );
+}
+
+/* ── Page ──────────────────────────────────────────────────── */
 
 export default function VehicleListPage() {
   const { t } = useTranslation();
   usePageTitle(t('nav.vehicles', 'Fleet'));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { unitPrefs, formatDistance } = useUnits();
 
   /* ── Data ── */
-  const vehiclesQuery = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-    staleTime: 30_000,
-  });
+  const vehiclesQuery = useVehicles();
   const { data: vehicles, isLoading, error } = vehiclesQuery;
-
   const vehicleList = vehicles ?? [];
+
+  // Keep the first vehicle's SSE live-state warm for snappy detail navigation.
   const primaryId = vehicleList[0]?.id;
   useVehicleLive(primaryId);
+
+  const statesQuery = useFleetStates(vehicleList);
+  const fleetStates = statesQuery.data;
 
   /* Pinned vehicles float to the top of the list. */
   const { data: vehiclePins = [] } = usePinned('vehicle');
@@ -90,139 +427,143 @@ export default function VehicleListPage() {
     });
   }, [vehicleList, vehiclePins]);
 
-  /* Batch-fetch vehicle states for summary + battery chart */
-  const { data: fleetStates } = useQuery({
-    queryKey: ['fleet-vehicle-states', vehicleList.map(v => v.id).sort()],
-    queryFn: () =>
-      Promise.all(
-        vehicleList.map(async (v) => {
-          try {
-            const { state } = await fetchVehicleState(v.id);
-            return { vehicle: v, state: state ?? null };
-          } catch {
-            return { vehicle: v, state: null };
-          }
-        }),
-      ),
-    enabled: vehicleList.length > 0,
-    refetchInterval: 30_000,
-  });
-
   /* ── Computed fleet metrics ── */
   const fleet = useMemo(() => {
     const withState = (fleetStates ?? []).filter(
-      (e): e is { vehicle: Vehicle; state: VehicleState } => e.state !== null,
+      (e): e is LoadedEntry => e.state !== null,
     );
     const avg =
       withState.length > 0
         ? withState.reduce((s, e) => s + (e.state.battery_level ?? 0), 0) / withState.length
         : 0;
     const totalRange = withState.reduce((s, e) => s + (e.state.rated_range ?? 0), 0);
-    const charging = withState.filter(e => e.state.is_charging).length;
-    return { entries: withState, avgBattery: avg, totalRange, chargingCount: charging, onlineCount: withState.length };
+    const charging = withState.filter((e) => e.state.is_charging).length;
+    return {
+      entries: withState,
+      avgBattery: avg,
+      totalRange,
+      chargingCount: charging,
+      onlineCount: withState.length,
+    };
   }, [fleetStates]);
 
+  /* Count vehicles by derived status for the breakdown panel. */
+  const statusCounts = useMemo<StatusCount[]>(() => {
+    const byId = new Map<number, VehicleState | null>();
+    (fleetStates ?? []).forEach((e) => byId.set(e.vehicle.id, e.state));
+    const counts = new Map<string, number>();
+    for (const v of vehicleList) {
+      const status = deriveVehicleStatus(byId.get(v.id) ?? null);
+      counts.set(status, (counts.get(status) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [fleetStates, vehicleList]);
+
   /* ── Mutations ── */
-  const toast = useToast();
-  const syncMut = useMutation({
-    mutationFn: () =>
-      request<{ synced: number }>('/vehicles/sync', { method: 'POST' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      toast.success(t('vehicles.syncToast', 'Vehicles synced successfully'));
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || t('vehicles.syncFailed', 'Failed to sync vehicles'));
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: number) =>
-      request<void>(`/vehicles/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] });
-      setDeleteTarget(null);
-      toast.success(t('vehicles.deleteSuccess', 'Vehicle removed'));
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || t('vehicles.deleteFailed', 'Failed to remove vehicle'));
-    },
-  });
-
+  const syncMut = useSyncVehicles();
+  const deleteMut = useDeleteVehicle();
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
 
-  /* ── Loading skeleton ── */
+  const handleSync = () => {
+    syncMut.mutate(undefined, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] }),
+    });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    deleteMut.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        setDeleteTarget(null);
+        queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] });
+      },
+    });
+  };
+
+  const handleCompare = () => {
+    // leftId / rightId are FRONTEND route params read by FleetComparePage via
+    // useSearchParams — built through URLSearchParams for correct encoding.
+    const params = new URLSearchParams({
+      leftId: String(vehicleList[0]?.id ?? ''),
+      rightId: String(vehicleList[1]?.id ?? ''),
+    });
+    navigate(`/vehicle-comparison?${params.toString()}`);
+  };
+
+  /* ── Loading / error short-circuits ── */
   if (isLoading) {
     return <VehicleListSkeleton />;
   }
 
-  /* ── Error state ── */
   if (error) {
     return (
       <PageContainer
         title={t('nav.vehicles', 'Fleet')}
-        error={error instanceof Error ? error : new Error(String(error))}
+        subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       >
-        <GlassPanel className="p-6 text-center">
-          <p className="text-sm text-red-500">
-            {t('vehicles.loadError', 'Failed to load vehicles.')}
-          </p>
+        <GlassPanel className="p-4 sm:p-5">
+          <QueryError
+            error={error}
+            onRetry={() => vehiclesQuery.refetch()}
+            resourceName={t('nav.vehicles', 'Fleet')}
+          />
         </GlassPanel>
       </PageContainer>
     );
   }
 
   /* ── Render ── */
+  const actions = (
+    <>
+      {vehicleList.length >= 2 && (
+        <Button
+          variant="outline"
+          icon={<ArrowLeftRight className="h-4 w-4" />}
+          onClick={handleCompare}
+        >
+          {t('vehicles.compareButton', 'Compare vehicles')}
+        </Button>
+      )}
+      <Button
+        onClick={handleSync}
+        loading={syncMut.isPending}
+        icon={<RefreshCw className="h-4 w-4" />}
+      >
+        {t('vehicles.syncButton', 'Sync from Tesla')}
+      </Button>
+    </>
+  );
+
   return (
     <PageContainer
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <DataFreshnessAuto query={vehiclesQuery} />
-          {vehicleList.length >= 2 && (
-            <Button
-              variant="outline"
-              icon={<ArrowLeftRight className="h-4 w-4" />}
-              onClick={() => {
-                // Pre-fill the first two vehicles via query params so users
-                // land on a populated comparison instead of empty selectors.
-                const leftId = vehicleList[0]?.id ?? '';
-                const rightId = vehicleList[1]?.id ?? '';
-                navigate(`/vehicle-comparison?leftId=${leftId}&rightId=${rightId}`);
-              }}
-            >
-              {t('vehicles.compareButton', 'Compare vehicles')}
-            </Button>
-          )}
-          <Button
-            onClick={() => syncMut.mutate()}
-            loading={syncMut.isPending}
-            icon={<RefreshCw className="h-4 w-4" />}
-          >
-            {t('vehicles.syncButton', 'Sync from Tesla')}
-          </Button>
-        </div>
-      }
+      query={vehiclesQuery}
+      actions={actions}
     >
-      {/* Sync feedback banners */}
+      {/* Sync feedback — transient, dismissible */}
       {syncMut.isSuccess && (
         <FadeIn>
-          <GlassPanel className="border-green-500/30 bg-green-900/10 p-4">
-            <p className="text-sm text-green-400">
-              {t('vehicles.syncSuccess', 'Vehicles synced successfully.')}
-            </p>
-          </GlassPanel>
+          <AlertBanner
+            variant="success"
+            icon={<RefreshCw className="h-5 w-5" />}
+            onClose={() => syncMut.reset()}
+          >
+            {t('vehicles.syncSuccess', 'Vehicles synced successfully.')}
+          </AlertBanner>
         </FadeIn>
       )}
       {syncMut.isError && (
         <FadeIn>
-          <GlassPanel className="border-red-500/30 bg-red-900/10 p-4">
-            <p className="text-sm text-red-400">
-              {t('vehicles.syncError', 'Sync failed. Please try again.')}
-            </p>
-          </GlassPanel>
+          <AlertBanner
+            variant="danger"
+            icon={<AlertCircle className="h-5 w-5" />}
+            onClose={() => syncMut.reset()}
+          >
+            {t('vehicles.syncError', 'Sync failed. Please try again.')}
+          </AlertBanner>
         </FadeIn>
       )}
 
@@ -234,213 +575,78 @@ export default function VehicleListPage() {
             'vehicles.emptyMessage',
             'Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.',
           )}
-          action={{ label: t('vehicles.syncButton', 'Sync from Tesla'), onClick: () => syncMut.mutate() }}
+          action={{ label: t('vehicles.syncButton', 'Sync from Tesla'), onClick: handleSync }}
         />
       ) : (
-        <div className="space-y-8">
-          {/* ── Fleet Summary ──────────────────────────── */}
+        <>
+          {/* 1 — KPI band */}
           <FadeIn delay={0.05}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MetricCard
-                label={t('vehicles.totalVehicles', 'Total Vehicles')}
-                value={vehicleList.length}
-                icon={<Car className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('vehicles.avgBattery', 'Avg Battery')}
-                value={`${fmtNumber(fleet.avgBattery)}%`}
-                icon={<Battery className="h-5 w-5" />}
-                color="green"
-              />
-              <MetricCard
-                label={`${t('vehicles.totalRange', 'Total Range')} (${unitPrefs.distance})`}
-                value={fmtNumber(convertDistanceFromSI(fleet.totalRange, unitPrefs.distance))}
-                icon={<Gauge className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('vehicles.chargingOnline', 'Charging / Online')}
-                value={`${fleet.chargingCount} / ${fleet.onlineCount}`}
-                icon={<Zap className="h-5 w-5" />}
-                color="green"
-              />
-            </div>
+            <FleetKpis
+              totalVehicles={vehicleList.length}
+              avgBattery={fleet.avgBattery}
+              totalRange={fleet.totalRange}
+              chargingCount={fleet.chargingCount}
+              onlineCount={fleet.onlineCount}
+            />
           </FadeIn>
 
-          {/* ── Battery Comparison Chart ───────────────── */}
-          <FadeIn delay={0.1}>
-            <GlassPanel className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-cyan-400" />
-                  <span className="text-sm font-semibold text-[var(--text-primary)]">
-                    {t('vehicles.batteryStatus', 'Fleet Battery Status')}
-                  </span>
-                </div>
-                <span className="text-xs text-[var(--text-secondary)]">
-                  <AnimatedNumber value={Math.round(fleet.avgBattery)} suffix="%" />
-                  {' '}{t('vehicles.avgLabel', 'avg')}
-                </span>
-              </div>
-
-              {fleet.entries.length > 0 ? (
-                <div className="space-y-3">
-                  {fleet.entries.map(({ vehicle, state }) => {
-                    const level = state.battery_level ?? 0;
-                    const color = batteryColor(level);
-                    return (
-                      <div key={vehicle.id} className="flex items-center gap-3">
-                        <span className="text-xs text-[var(--text-secondary)] w-24 truncate">
-                          {vehicle.display_name || vehicle.vin}
-                        </span>
-                        <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-slow"
-                            style={{
-                              width: `${level}%`,
-                              background: `linear-gradient(90deg, ${color}80, ${color})`,
-                              boxShadow: `0 0 10px ${color}40`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">
-                          {level}%
-                        </span>
-                        <span className="text-[10px] text-[var(--text-secondary)] w-16 text-right">
-                          {formatDistance(state.rated_range ?? 0)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                  icon={<Activity className="h-8 w-8 opacity-20" />}
-                  message={t('common.noData', 'No data available')}
-                  className="py-8"
+          {/* 2 — Overview bento: hero battery (2/3) + status breakdown (1/3) */}
+          <section aria-labelledby="fleet-overview-heading">
+            <SectionTitle id="fleet-overview-heading" className="mb-3">
+              {t('vehicles.overview', 'Fleet overview')}
+            </SectionTitle>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
+              <FadeIn delay={0.1} className="h-full xl:col-span-2">
+                <FleetBatteryPanel
+                  entries={fleet.entries}
+                  avgBattery={fleet.avgBattery}
+                  isLoading={statesQuery.isLoading}
+                  isError={statesQuery.isError}
+                  error={statesQuery.error}
+                  onRetry={() => statesQuery.refetch()}
                 />
-              )}
-            </GlassPanel>
-          </FadeIn>
-
-          {/* ── Vehicle Cards ─────────────────────────── */}
-          <FadeIn delay={0.15}>
-            <div className="flex items-center gap-2 mb-4">
-              <Car className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                {t('vehicles.allVehicles', 'All Vehicles')}
-              </span>
+              </FadeIn>
+              <FadeIn delay={0.15} className="h-full">
+                <FleetStatusPanel
+                  counts={statusCounts}
+                  total={vehicleList.length}
+                  isLoading={statesQuery.isLoading}
+                  isError={statesQuery.isError}
+                  error={statesQuery.error}
+                  onRetry={() => statesQuery.refetch()}
+                />
+              </FadeIn>
             </div>
-          </FadeIn>
+          </section>
 
-          <div data-tour="vehicles-list">
-          <StaggerContainer className="space-y-4">
-            {sortedVehicleList.map((vehicle) => {
-              const entry = fleet.entries.find(e => e.vehicle.id === vehicle.id);
-              const state = entry?.state ?? null;
-              const status = deriveVehicleStatus(state);
-              const level = state?.battery_level ?? 0;
-              const color = batteryColor(level);
-
-              return (
-                <StaggerItem key={vehicle.id}>
-                  <GlassPanel hover glow="cyan" className="p-0 overflow-hidden group" data-tour="vehicles-card">
-                    <div className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 opacity-40 group-hover:opacity-80 transition-opacity" />
-
-                    <div className="p-5">
-                      <div className="flex items-start gap-5">
-                        {/* Vehicle info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-1.5">
-                            <Link
-                              to={`/vehicles/${vehicle.id}`}
-                              className="text-base font-semibold text-[var(--text-primary)] hover:text-cyan-400 transition-colors truncate"
-                            >
-                              {vehicle.display_name || vehicle.vin}
-                            </Link>
-                            <Badge variant={statusVariant(status)} dot size="sm">
-                              {status}
-                            </Badge>
-                          </div>
-
-                          <p className="text-xs text-[var(--text-secondary)] mb-3">
-                            {vehicle.model} {vehicle.trim_badging} ·{' '}
-                            <span className="font-mono">{vehicle.vin}</span>
-                          </p>
-
-                          {/* Battery + stats row */}
-                          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-slow"
-                                  style={{
-                                    width: `${level}%`,
-                                    background: `linear-gradient(90deg, ${color}80, ${color})`,
-                                  }}
-                                />
-                              </div>
-                              <span className="text-sm font-bold text-[var(--text-primary)]">
-                                <AnimatedNumber value={level} suffix="%" />
-                              </span>
-                            </div>
-
-                            {state && (
-                              <>
-                                <span className="text-xs text-[var(--text-secondary)]">
-                                  {formatDistance(state.rated_range ?? 0)}
-                                </span>
-                                <span className="text-xs text-[var(--text-secondary)]">
-                                  {formatDistance(state.odometer ?? 0)}
-                                </span>
-                                {state.is_charging && (
-                                  <span className="text-xs font-medium text-green-400">
-                                    {state.charger_power} kW
-                                  </span>
-                                )}
-                              </>
-                            )}
-
-                            <div className={cn('flex items-center gap-2 ml-auto')}>
-                              {state?.is_locked && <Lock className="h-3.5 w-3.5 text-green-500" />}
-                              {state?.sentry_mode && <Shield className="h-3.5 w-3.5 text-cyan-400" />}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-col items-center gap-1 shrink-0">
-                          <PinButton itemType="vehicle" itemId={vehicle.id} size="sm" />
-                          <Link
-                            to={`/vehicles/${vehicle.id}`}
-                            className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteTarget(vehicle)}
-                            className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-red-500/10 hover:text-red-500"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </GlassPanel>
-                </StaggerItem>
-              );
-            })}
-          </StaggerContainer>
-          </div>
-        </div>
+          {/* 3 — All vehicles: responsive full-width card grid */}
+          <section aria-labelledby="all-vehicles-heading" data-tour="vehicles-list">
+            <SectionTitle id="all-vehicles-heading" className="mb-3 flex items-center gap-2">
+              <Car className="h-4 w-4 text-purple-300" aria-hidden="true" />
+              {t('vehicles.allVehicles', 'All Vehicles')}
+            </SectionTitle>
+            <StaggerContainer className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
+              {sortedVehicleList.map((vehicle) => {
+                const entry = fleet.entries.find((e) => e.vehicle.id === vehicle.id);
+                return (
+                  <StaggerItem key={vehicle.id} className="h-full">
+                    <VehicleCard
+                      vehicle={vehicle}
+                      state={entry?.state ?? null}
+                      onDelete={setDeleteTarget}
+                    />
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+          </section>
+        </>
       )}
 
       {/* Delete confirmation */}
       <ConfirmDialog
         open={deleteTarget !== null}
+        loading={deleteMut.isPending}
         title={t('vehicles.removeTitle', 'Remove Vehicle')}
         message={
           deleteTarget
@@ -452,9 +658,7 @@ export default function VehicleListPage() {
         }
         confirmLabel={t('common.delete', 'Remove')}
         variant="danger"
-        onConfirm={() => {
-          if (deleteTarget) deleteMut.mutate(deleteTarget.id);
-        }}
+        onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
       />
     </PageContainer>
