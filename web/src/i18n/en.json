@@ -8957,6 +8957,43 @@
   },
   "softwareUpdates": {
     "title": "Software Updates",
+    "subtitle": "Track firmware versions and update history",
+    "kpi": {
+      "label": "Software update summary",
+      "currentVersion": "Current Version",
+      "totalUpdates": "Total Updates",
+      "installed": "Installed",
+      "pending": "Pending",
+      "lastInstalled": "Last Installed",
+      "avgCadence": "Avg Cadence",
+      "cadenceDays": "{{days}}d"
+    },
+    "cadence": {
+      "title": "Update Cadence",
+      "series": "Updates",
+      "empty": "No update activity in this range"
+    },
+    "breakdown": {
+      "title": "By Status",
+      "empty": "No updates to summarize"
+    },
+    "status": {
+      "installed": "Installed",
+      "installing": "Installing",
+      "downloading": "Downloading",
+      "available": "Available",
+      "scheduled": "Scheduled"
+    },
+    "timeline": {
+      "title": "Update Timeline",
+      "emptyTitle": "No update history",
+      "empty": "No software update history available for this vehicle yet.",
+      "vehicleFallback": "Vehicle {{id}}",
+      "releaseNotes": "Release notes for {{version}}",
+      "installedOn": "Installed {{date}}",
+      "scheduledFor": "Scheduled {{date}}",
+      "detected": "Detected {{date}}"
+    },
     "aiNarration": {
       "title": "Summarize my software update history",
       "description": "Ask Helix to walk through your firmware update history — the current version, the install cadence, and the headline release-note themes. The narrator quotes only the deterministic update events your vehicle reported plus public Tesla release notes for the versions you have installed; it never invents firmware versions or claims features your installed build does not have.",
