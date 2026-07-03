@@ -73,10 +73,16 @@ function VehicleListSkeleton() {
 /** Compact icon + value chip used inside the vehicle card stat row. */
 function StatChip({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.03] px-2 py-1 text-xs text-[var(--text-secondary)]">
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md bg-white/[0.03] px-2 py-1',
+        typography.size.xs,
+        typography.color.secondary,
+      )}
+    >
       {icon}
       <span className="sr-only">{label}: </span>
-      <span className="tabular-nums text-[var(--text-primary)]">{value}</span>
+      <Text color="primary" className="tabular-nums">{value}</Text>
     </span>
   );
 }
@@ -150,10 +156,10 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
           <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('vehicles.batteryStatus', 'Fleet Battery Status')}
         </PanelTitle>
-        <span className="text-xs text-[var(--text-secondary)]">
+        <Text variant="bodySm">
           <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />{' '}
           {t('vehicles.avgLabel', 'avg')}
-        </span>
+        </Text>
       </div>
 
       {isError ? (
@@ -299,7 +305,7 @@ function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
             <Text variant="caption" as="p" className="mt-1 truncate">
               {modelLine || t('vehicles.unknownModel', 'Unknown model')}
               {' · '}
-              <span className="font-mono">{vehicle.vin}</span>
+              <span className={typography.family.mono}>{vehicle.vin}</span>
             </Text>
           </div>
           <PinButton itemType="vehicle" itemId={vehicle.id} size="md" />
@@ -308,12 +314,12 @@ function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
         {/* Battery */}
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-xs text-[var(--text-secondary)]">
+            <Text variant="bodySm">
               {t('vehicles.battery', 'Battery')}
-            </span>
-            <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+            </Text>
+            <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
               <AnimatedNumber value={level} suffix="%" />
-            </span>
+            </Text>
           </div>
           <div
             role="progressbar"
@@ -345,16 +351,22 @@ function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
                 value={formatDistance(state.odometer ?? 0)}
               />
               {state.is_charging && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-neon-green/10 px-2 py-1 text-xs font-medium text-emerald-300">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-md bg-neon-green/10 px-2 py-1 text-emerald-300',
+                    typography.size.xs,
+                    typography.weight.medium,
+                  )}
+                >
                   <Zap className="h-3.5 w-3.5" aria-hidden="true" />
                   {fmtNumber(state.charger_power ?? 0)} kW
                 </span>
               )}
             </>
           ) : (
-            <span className="text-xs text-[var(--text-muted)]">
+            <Text variant="caption">
               {t('vehicles.noLiveData', 'No live data')}
-            </span>
+            </Text>
           )}
           <div className="ml-auto flex items-center gap-1.5">
             {state?.is_locked && (
@@ -371,7 +383,11 @@ function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
           <Link
             to={`/vehicles/${vehicle.id}`}
             aria-label={t('vehicles.openDetail', 'Open {{name}} details', { name })}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-cyan-300 outline-none transition-colors hover:text-cyan-200 focus-visible:ring-1 focus-visible:ring-cyan-400/40"
+            className={cn(
+              'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-cyan-300 outline-none transition-colors hover:text-cyan-200 focus-visible:ring-1 focus-visible:ring-cyan-400/40',
+              typography.size.sm,
+              typography.weight.medium,
+            )}
           >
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
             {t('vehicles.viewDetails', 'View details')}
