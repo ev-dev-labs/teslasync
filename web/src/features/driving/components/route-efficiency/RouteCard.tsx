@@ -21,7 +21,7 @@ function RangeStat({ label, value, unit, colorClass }: RangeStatProps) {
       <Caption className="block truncate">{label}</Caption>
       <Text as="p" size="sm" weight="semibold" className={cn('block', colorClass)}>
         <span className="tabular-nums">{fmtInt(value)}</span>{' '}
-        <span className="text-[var(--text-muted)]">{unit}</span>
+        <Text as="span" color="muted">{unit}</Text>
       </Text>
     </div>
   );
