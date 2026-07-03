@@ -3019,7 +3019,14 @@
         "replayMode": "Replay mode",
         "enabled": "Enabled",
         "disabled": "Disabled",
-        "replayModeSub": "DLQ_REPLAY_ENABLED env"
+        "replayModeSub": "DLQ_REPLAY_ENABLED env",
+        "aria": "Dead-letter queue summary",
+        "blocked": "Blocked",
+        "blockedSub": "no replay target",
+        "reasons": "Distinct reasons",
+        "reasonsSub": "unique failure causes",
+        "payload": "Total payload",
+        "payloadSub": "raw bytes queued"
       },
       "banners": {
         "disabledTitle": "DLQ replay is disabled",
@@ -3031,7 +3038,12 @@
       "subtitle": "Dead-letter queue — inspect failed ingests and replay them back to their source topic.",
       "panels": {
         "entries": "Dead-letter entries",
-        "audit": "Recent replay activity"
+        "audit": "Recent replay activity",
+        "reasons": "Failure reasons"
+      },
+      "reasons": {
+        "unknown": "unknown",
+        "empty": "No failed ingests — nothing to break down."
       },
       "confirm": {
         "title": "Replay DLQ entry?",

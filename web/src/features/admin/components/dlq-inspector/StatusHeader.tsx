@@ -1,61 +1,103 @@
 /**
- * DLQ Inspector — status header.
+ * DLQ Inspector — status / KPI band.
  *
- * Renders three StatCards summarising the current DLQ state and an
+ * Renders a full-width, responsive metric band summarising the current
+ * DLQ state (reflows 2 → 3 → 6 columns as the viewport widens) plus an
  * AlertBanner when `replay_enabled` is false so an operator immediately
  * sees that the replay button below will return HTTP 403 instead of
  * publishing.
+ *
+ * Every metric is derived from the single `useDLQList()` payload — the
+ * band stays visible even on error (values degrade to "—") so it never
+ * gates the rest of the page behind one `{data && …}`.
  */
 import { useTranslation } from 'react-i18next';
-import { AlertOctagon, Inbox, ShieldCheck } from 'lucide-react';
+import { Ban, Database, Inbox, Power, ShieldCheck, Tags } from 'lucide-react';
 
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { Grid } from '@/components/layout';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, formatBytes } from '@/lib/numberFormat';
 import type { DLQListResponse } from '@/types/admin-diagnostics';
 
 interface StatusHeaderProps {
   data: DLQListResponse | undefined;
   loading: boolean;
+  error?: unknown;
 }
 
-export function StatusHeader({ data, loading }: StatusHeaderProps) {
+export function StatusHeader({ data, loading, error }: StatusHeaderProps) {
   const { t } = useTranslation();
-  const count = data?.count ?? 0;
-  const replayable = (data?.entries ?? []).filter((e) => e.replayable).length;
+
+  const entries = data?.entries ?? [];
+  const count = data?.count ?? entries.length;
+  const replayable = entries.filter((e) => e.replayable).length;
+  const blocked = Math.max(0, count - replayable);
+  const distinctReasons = new Set(
+    entries.map((e) => e.parsed_reason?.trim() || t('admin.dlq.reasons.unknown', 'unknown')),
+  ).size;
+  const totalBytes = entries.reduce((sum, e) => sum + (e.raw_payload_size ?? 0), 0);
   const enabled = data?.replay_enabled ?? false;
 
+  // On a fetch error the band stays visible but shows honest placeholders
+  // rather than a misleading "0" — the recoverable error UI lives in the
+  // entries / reasons panels below.
+  const dash = '—';
+  const num = (v: number) => (error ? dash : fmtInt(v));
+
   return (
-    <div className="space-y-4">
-      <Grid cols={{ default: 1, sm: 3 }} gap={4}>
+    <section aria-label={t('admin.dlq.stats.aria', 'Dead-letter queue summary')} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
         <StatCard
           label={t('admin.dlq.stats.total', 'Total entries')}
-          value={loading ? '—' : fmtInt(count)}
-          icon={<Inbox className="h-5 w-5" />}
+          value={num(count)}
+          icon={<Inbox className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.totalSub', 'in dead-letter queue')}
+          loading={loading}
         />
         <StatCard
           label={t('admin.dlq.stats.replayable', 'Replayable')}
-          value={loading ? '—' : fmtInt(replayable)}
-          icon={<ShieldCheck className="h-5 w-5" />}
+          value={num(replayable)}
+          icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.replayableSub', 'parsed with source topic')}
+          loading={loading}
+        />
+        <StatCard
+          label={t('admin.dlq.stats.blocked', 'Blocked')}
+          value={num(blocked)}
+          icon={<Ban className="h-5 w-5" aria-hidden="true" />}
+          sublabel={t('admin.dlq.stats.blockedSub', 'no replay target')}
+          loading={loading}
+        />
+        <StatCard
+          label={t('admin.dlq.stats.reasons', 'Distinct reasons')}
+          value={num(distinctReasons)}
+          icon={<Tags className="h-5 w-5" aria-hidden="true" />}
+          sublabel={t('admin.dlq.stats.reasonsSub', 'unique failure causes')}
+          loading={loading}
+        />
+        <StatCard
+          label={t('admin.dlq.stats.payload', 'Total payload')}
+          value={error ? dash : formatBytes(totalBytes)}
+          icon={<Database className="h-5 w-5" aria-hidden="true" />}
+          sublabel={t('admin.dlq.stats.payloadSub', 'raw bytes queued')}
+          loading={loading}
         />
         <StatCard
           label={t('admin.dlq.stats.replayMode', 'Replay mode')}
           value={
-            loading
-              ? '—'
+            error
+              ? dash
               : enabled
                 ? t('admin.dlq.stats.enabled', 'Enabled')
                 : t('admin.dlq.stats.disabled', 'Disabled')
           }
-          icon={<AlertOctagon className="h-5 w-5" />}
+          icon={<Power className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.replayModeSub', 'DLQ_REPLAY_ENABLED env')}
+          loading={loading}
         />
-      </Grid>
+      </div>
 
-      {!loading && !enabled && (
+      {!loading && !error && !enabled && (
         <AlertBanner
           variant="warning"
           title={t('admin.dlq.banners.disabledTitle', 'DLQ replay is disabled')}
@@ -66,6 +108,6 @@ export function StatusHeader({ data, loading }: StatusHeaderProps) {
           )}
         </AlertBanner>
       )}
-    </div>
+    </section>
   );
 }
