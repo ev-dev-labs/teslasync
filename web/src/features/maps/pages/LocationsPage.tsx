@@ -1,7 +1,14 @@
 /**
  * LocationsPage — visited locations ranked by frequency.
  *
- * Shows stats, bar charts (visits + time), and paginated location list.
+ * Modern-UI full-width bento redesign:
+ *   1. KPI band     — six metric cards that reflow to a 6-across strip on wide screens.
+ *   2. Charts bento — the two leaderboards (visits / time) sit side-by-side from `xl` up.
+ *   3. Detail band  — searchable, paginated leaderboard whose cards flow into two
+ *                     columns on `2xl`, each retaining its inline AI auto-name affordance.
+ *
+ * Every data-bound section owns its loading / error / empty state; the page is never
+ * gated behind a single flag, and all values are null-safe.
  */
 
 import { useMemo, useState } from 'react';
@@ -10,19 +17,15 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Pagination } from '@/components/ui';
-import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { GlassPanel, Select, Pagination, PanelTitle, Text } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import {
-  ChartTooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
@@ -31,6 +34,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import { AIAutoNameUnnamedLocations } from '@/components/ai/AIAutoNameUnnamedLocations';
+import { LocationLeaderboardPanel, type LeaderboardDatum } from '../components/LocationLeaderboardPanel';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -41,6 +45,8 @@ interface VisitedLocation {
   total_duration_s: number;
   last_visited: string | null;
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // isUnnamedLocation reports whether a visited-location row should
 // surface the AI auto-name affordance. Three buckets count as
@@ -60,11 +66,27 @@ function isUnnamedLocation(addressName: string): boolean {
   return false;
 }
 
+// truncateLabel keeps chart Y-axis labels legible by clipping long
+// addresses to a fixed width with an ellipsis.
+function truncateLabel(name: string, max = 22): string {
+  const value = name ?? '';
+  return value.length > max + 3 ? `${value.slice(0, max)}…` : value;
+}
+
+// rankChipClass tones the leaderboard rank badge by position: gold for
+// #1, cyan for the podium, muted for the rest. Toned 300-level accents
+// paired with a matching tint + border — never neon body text.
+function rankChipClass(index: number): string {
+  if (index === 0) return 'border-amber-400/30 bg-amber-500/15 text-amber-300';
+  if (index < 3) return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300';
+  return 'border-[var(--glass-border)] bg-[var(--surface-2)] text-[var(--text-muted)]';
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Locations'));
+  usePageTitle(t('locations.title', 'Visited Locations'));
   const { formatDuration } = useUnits();
 
   const [, setUrlVehicleId] = useUrlNumber('vehicle_id', 0);
@@ -92,7 +114,7 @@ export default function LocationsPage() {
     queryFn: () => request<VisitedLocation[]>(`/locations?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
     enabled: vehicleId !== null,
   });
-  const { data: rawLocations, isLoading, error } = locationsQuery;
+  const { data: rawLocations, isLoading, isError, error, refetch } = locationsQuery;
 
   // Client-side filter by `last_visited` within the picked range. Backend
   // /locations does not yet accept from/to so visit_count and
@@ -104,8 +126,8 @@ export default function LocationsPage() {
     const endMs = new Date(`${end}T23:59:59.999`).getTime();
     return rawLocations.filter((l) => {
       if (!l.last_visited) return false;
-      const t = new Date(l.last_visited).getTime();
-      return t >= startMs && t <= endMs;
+      const ts = new Date(l.last_visited).getTime();
+      return ts >= startMs && ts <= endMs;
     });
   }, [rawLocations, start, end]);
 
@@ -115,8 +137,8 @@ export default function LocationsPage() {
   );
   const filteredLocations = useFilteredList(locations, search, locationSearchFields);
 
-  const totalVisits = locations?.reduce((s, l) => s + l.visit_count, 0) ?? 0;
-  const totalTime = locations?.reduce((s, l) => s + l.total_duration_s, 0) ?? 0;
+  const totalVisits = locations?.reduce((s, l) => s + (l.visit_count ?? 0), 0) ?? 0;
+  const totalTime = locations?.reduce((s, l) => s + (l.total_duration_s ?? 0), 0) ?? 0;
   const uniquePlaces = locations?.length ?? 0;
   const topLocation = locations?.[0];
   const avgDurationS = totalVisits > 0 ? totalTime / totalVisits : 0;
@@ -125,7 +147,7 @@ export default function LocationsPage() {
     if (!locations?.length) return 0;
     const cities = new Set<string>();
     for (const loc of locations) {
-      const parts = (loc.address_name ?? '').split(',').map(s => s.trim());
+      const parts = (loc.address_name ?? '').split(',').map((s) => s.trim());
       const city = parts.length > 1 ? parts[parts.length - 1] : parts[0];
       if (city && city !== 'Unknown') {
         cities.add(city);
@@ -134,109 +156,128 @@ export default function LocationsPage() {
     return cities.size;
   }, [locations]);
 
-  const visitsChartData= useMemo(() =>
-    (locations ?? []).slice(0, 15).map(l => ({
-      name: (l.address_name ?? '').length > 25 ? (l.address_name ?? '').slice(0, 22) + '…' : (l.address_name ?? ''),
-      visits: l.visit_count,
-    })),
-  [locations]);
+  const visitsChartData = useMemo<LeaderboardDatum[]>(
+    () =>
+      (locations ?? []).slice(0, 15).map((l) => ({
+        name: truncateLabel(l.address_name ?? ''),
+        value: l.visit_count ?? 0,
+      })),
+    [locations],
+  );
 
-  const timeChartData = useMemo(() =>
-    (locations ?? []).slice(0, 10).map(l => ({
-      name: (l.address_name ?? '').length > 25 ? (l.address_name ?? '').slice(0, 22) + '…' : (l.address_name ?? ''),
-      hours: +(fmtNumber(l.total_duration_s / 3600, 1)),
-    })),
-  [locations]);
+  const timeChartData = useMemo<LeaderboardDatum[]>(
+    () =>
+      (locations ?? []).slice(0, 10).map((l) => ({
+        name: truncateLabel(l.address_name ?? ''),
+        value: +fmtNumber((l.total_duration_s ?? 0) / 3600, 1),
+      })),
+    [locations],
+  );
+
+  const shownCount = locations?.length ?? 0;
+  const hasLocations = shownCount > 0;
+
+  const actions = (
+    <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+      {vehicles.length > 0 && (
+        <Select
+          value={String(vehicleId ?? '')}
+          onChange={(e) => onPickVehicle(Number(e.target.value))}
+          options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+        />
+      )}
+      <RangePicker
+        value={{ start, end }}
+        onChange={(r) => {
+          setRange(r);
+          setPage(1);
+        }}
+        align="end"
+        triggerTestId="locations-range"
+      />
+    </div>
+  );
 
   return (
     <PageContainer
-      title={t('Visited Locations')}
-      subtitle={t('Places you\'ve been — ranked by frequency')}
-      loading={isLoading}
-      error={error as Error | null}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {vehicles.length > 0 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={e => onPickVehicle(Number(e.target.value))}
-              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            />
-          )}
-          <RangePicker
-            value={{ start, end }}
-            onChange={(r) => {
-              setRange(r);
-              setPage(1);
-            }}
-            align="end"
-            triggerTestId="locations-range"
-          />
-          <DataFreshnessAuto query={locationsQuery} />
-        </div>
-      }
+      title={t('locations.title', 'Visited Locations')}
+      subtitle={t('locations.subtitle', "Places you've been — ranked by frequency")}
+      actions={actions}
+      query={locationsQuery}
     >
-      {/* ── Summary stats ────────────────────────────────────────── */}
+      {/* ── 1. KPI band ───────────────────────────────────────────── */}
       <FadeIn>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
-          <MetricCard label={t('Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
-          <MetricCard label={t('Unique Cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
-          <MetricCard label={t('Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
-          <MetricCard label={t('Total Time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
-          <MetricCard label={t('Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
-          <MetricCard label={t('Avg Visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
-        </div>
-      </FadeIn>
-
-      {/* ── Top Locations by Visits ───────────────────────────────── */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-6">
-          <span className="text-sm font-semibold mb-4 block text-[var(--text-primary)]">{t('Top Locations by Visits')}</span>
-          {isLoading ? <Skeleton className="h-[300px]" /> : visitsChartData.length === 0 ? (
-            <div className="flex items-center justify-center h-[300px] text-[var(--text-muted)] text-sm">{t('No visited location data')}</div>
+        <section
+          aria-label={t('locations.kpis', 'Location summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6"
+        >
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))
+          ) : isError ? (
+            <div className="col-span-full">
+              <QueryError error={error} onRetry={() => refetch()} />
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={Math.max(300, visitsChartData.length * 36)}>
-              <BarChart data={visitsChartData} layout="vertical" margin={{ left: 120 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#9ca3af' }} width={110} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="visits" name={t('Visits')} fill="#10b981" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <>
+              <MetricCard label={t('locations.uniquePlaces', 'Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
+              <MetricCard label={t('locations.uniqueCities', 'Unique Cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
+              <MetricCard label={t('locations.totalVisits', 'Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('locations.totalTime', 'Total Time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
+              <MetricCard label={t('locations.mostVisited', 'Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
+              <MetricCard label={t('locations.avgVisit', 'Avg Visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
+            </>
           )}
-        </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* ── Top Locations by Time ────────────────────────────────── */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-6">
-          <span className="text-sm font-semibold mb-4 block text-[var(--text-primary)]">{t('Top Locations by Time Spent (hours)')}</span>
-          {isLoading ? <Skeleton className="h-[280px]" /> : timeChartData.length === 0 ? (
-            <div className="flex items-center justify-center h-[280px] text-[var(--text-muted)] text-sm">{t('No time-spent data available')}</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={Math.max(280, timeChartData.length * 36)}>
-              <BarChart data={timeChartData} layout="vertical" margin={{ left: 120 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#9ca3af' }} width={110} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="hours" name={t('Hours')} fill="#a855f7" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </GlassPanel>
+      {/* ── 2. Charts bento — leaderboards side-by-side on wide screens ─ */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('locations.leaderboards', 'Top locations')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+        >
+          <LocationLeaderboardPanel
+            title={t('locations.byVisits', 'Top Locations by Visits')}
+            icon={<Hash className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            seriesLabel={t('locations.visits', 'Visits')}
+            color="#10b981"
+            data={visitsChartData}
+            loading={isLoading}
+            error={error}
+            onRetry={() => refetch()}
+            emptyMessage={t('locations.noVisitData', 'No visited location data')}
+            ariaLabel={t('locations.byVisits.aria', 'Bar chart of the most-visited locations')}
+          />
+          <LocationLeaderboardPanel
+            title={t('locations.byTime', 'Top Locations by Time Spent (hours)')}
+            icon={<Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            seriesLabel={t('locations.hours', 'Hours')}
+            color="#a855f7"
+            data={timeChartData}
+            loading={isLoading}
+            error={error}
+            onRetry={() => refetch()}
+            emptyMessage={t('locations.noTimeData', 'No time-spent data available')}
+            ariaLabel={t('locations.byTime.aria', 'Bar chart of locations by hours spent')}
+          />
+        </section>
       </FadeIn>
 
-      {/* ── All Locations list ───────────────────────────────────── */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-6">
-          <span className="text-sm font-semibold mb-4 block text-[var(--text-primary)]">{t('All Locations')}</span>
+      {/* ── 3. Detail band — searchable, paginated leaderboard ──────── */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('locations.all', 'All Locations')}
+          </PanelTitle>
+
           <FilterBar className="mb-3">
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder={t('Search by address…')}
+              placeholder={t('locations.searchPlaceholder', 'Search by address…')}
               className="w-full sm:w-72"
               historyScope="locations"
             />
@@ -257,68 +298,85 @@ export default function LocationsPage() {
             }
             onClearAll={() => setSearch('')}
           />
+
           {isLoading ? (
-            <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
-          ) : !locations?.length ? (
+            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
+              ))}
+            </div>
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => refetch()} />
+          ) : !hasLocations ? (
             <EmptyState
               icon={<MapPin className="h-12 w-12" />}
-              title={t('No locations')}
-              message={t('No visited locations recorded yet')}
+              title={t('locations.empty.title', 'No locations')}
+              message={t('locations.empty.message', 'No visited locations recorded yet')}
               actionTo={{ label: t('locations.empty.cta', 'View drives'), to: '/drives' }}
             />
           ) : !filteredLocations.length ? (
             <EmptyState
               icon={<MapPin className="h-12 w-12" />}
-              title={t('No locations')}
-              message={t('No locations match your search')}
-              action={{ label: t('Clear search'), onClick: () => setSearch('') }}
+              title={t('locations.empty.title', 'No locations')}
+              message={t('locations.noMatch', 'No locations match your search')}
+              action={{ label: t('locations.clearSearch', 'Clear search'), onClick: () => setSearch('') }}
             />
           ) : (
-            <>
-              <div className="space-y-2">
-                {filteredLocations.map((loc, i) => (
-                  <div key={loc.id} className="space-y-2">
-                    <GlassPanel className="p-4 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors">
-                      <div className={cn(
-                        'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
-                        i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
-                      )}>
-                        #{i + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium truncate block text-[var(--text-primary)]">{loc.address_name}</span>
-                        <span className="text-[11px] text-[var(--text-muted)]">
-                          {loc.visit_count} {t('visits')} · {formatDuration(loc.total_duration_s)} {t('total')} · ~{formatDuration(loc.visit_count > 0 ? loc.total_duration_s / loc.visit_count : 0)} {t('avg')}
-                          {loc.last_visited && ` · ${t('Last')}: ${formatDate(loc.last_visited)}`}
-                        </span>
-                        {appliedName?.id === loc.id && (
-                          <span className="mt-1 inline-block text-[11px] text-emerald-300">
-                            {t('locations.aiAutoName.applied', 'Suggested name ready to save:')}{' '}
-                            <span className="text-[var(--text-primary)]">{appliedName.name}</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-emerald-300 text-xs font-medium shrink-0">
-                        <Hash className="h-3 w-3" />{loc.visit_count}
-                      </div>
-                    </GlassPanel>
-                    {isUnnamedLocation(loc.address_name) && (
-                      <AIAutoNameUnnamedLocations
-                        locationId={loc.id}
-                        currentName={loc.address_name}
-                        onApplyName={(name) => setAppliedName({ id: loc.id, name })}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
+            <div className="space-y-4">
+              <ul className="grid list-none grid-cols-1 gap-3 2xl:grid-cols-2">
+                {filteredLocations.map((loc, i) => {
+                  const visits = loc.visit_count ?? 0;
+                  const totalDuration = loc.total_duration_s ?? 0;
+                  const avg = visits > 0 ? totalDuration / visits : 0;
+                  return (
+                    <li key={loc.id} className="space-y-2">
+                      <GlassPanel className="flex items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
+                        <div
+                          className={cn(
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-xs font-bold',
+                            rankChipClass(i),
+                          )}
+                        >
+                          #{i + 1}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <Text as="p" variant="body" className="truncate font-medium">
+                            {loc.address_name ?? '—'}
+                          </Text>
+                          <Text as="p" variant="caption" className="mt-0.5">
+                            {visits} {t('locations.visits', 'visits')} · {formatDuration(totalDuration)} {t('locations.total', 'total')} · ~{formatDuration(avg)} {t('locations.avg', 'avg')}
+                            {loc.last_visited ? ` · ${t('locations.last', 'Last')}: ${formatDate(loc.last_visited)}` : ''}
+                          </Text>
+                          {appliedName?.id === loc.id && (
+                            <Text as="span" size="xs" className="mt-1 inline-block text-emerald-300">
+                              {t('locations.aiAutoName.applied', 'Suggested name ready to save:')}{' '}
+                              <span className="text-[var(--text-primary)]">{appliedName.name}</span>
+                            </Text>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs font-medium text-cyan-300">
+                          <Hash className="h-3 w-3" aria-hidden="true" />
+                          {visits}
+                        </div>
+                      </GlassPanel>
+                      {isUnnamedLocation(loc.address_name) && (
+                        <AIAutoNameUnnamedLocations
+                          locationId={loc.id}
+                          currentName={loc.address_name}
+                          onApplyName={(name) => setAppliedName({ id: loc.id, name })}
+                        />
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
               <Pagination
                 page={page}
                 pageSize={pageSize}
-                total={locations.length < pageSize ? (page - 1) * pageSize + locations.length : page * pageSize + 1}
+                total={shownCount < pageSize ? (page - 1) * pageSize + shownCount : page * pageSize + 1}
                 onPageChange={setPage}
               />
-            </>
+            </div>
           )}
         </GlassPanel>
       </FadeIn>
