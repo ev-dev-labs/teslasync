@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { SeverityBadge } from '@/components/data-display';
+import { Text } from '@/components/ui';
 import { severityTokens } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 
@@ -27,9 +28,9 @@ export function SystemHealthCard({ category, status }: SystemHealthCardProps) {
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] ring-1 ring-white/10">
         <Icon className={cn('h-4 w-4', tone.fg)} aria-hidden="true" />
       </span>
-      <span className="flex-1 truncate text-sm font-medium capitalize text-[var(--text-primary)]">
+      <Text size="sm" weight="medium" color="primary" className="flex-1 truncate capitalize">
         {t(`anomaly.category.${category}`, category)}
-      </span>
+      </Text>
       <SeverityBadge severity={sev} size="sm">
         {t(`anomaly.status.${status}`, status)}
       </SeverityBadge>

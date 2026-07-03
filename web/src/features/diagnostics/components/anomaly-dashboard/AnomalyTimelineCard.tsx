@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
 import { SeverityBadge, TimeStamp } from '@/components/data-display';
-import { severityTokens, normalizeSeverity } from '@/lib/tokens';
+import { Text } from '@/components/ui';
+import { severityTokens, normalizeSeverity, typography } from '@/lib/tokens';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { AnomalyEntry } from '@/api/hooks/useAnomalies';
@@ -28,37 +29,43 @@ export function AnomalyTimelineCard({ anomaly }: AnomalyTimelineCardProps) {
         <SeverityBadge severity={anomaly.severity} size="sm">
           {t(`anomaly.severity.${anomaly.severity}`, anomaly.severity)}
         </SeverityBadge>
-        <TimeStamp value={anomaly.detected_at} className="text-2xs text-[var(--text-muted)]" />
+        <TimeStamp value={anomaly.detected_at} className={cn(typography.size['2xs'], typography.color.muted)} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+        <Text size="sm" weight="semibold" color="primary" className="truncate">
           {anomaly.signal}
-        </span>
-        <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-2xs font-medium text-[var(--text-muted)]">
+        </Text>
+        <Text
+          as="span"
+          size="2xs"
+          weight="medium"
+          color="muted"
+          className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5"
+        >
           {anomalyTypeLabel(t, anomaly.type)}
-        </span>
+        </Text>
         {anomaly.z_score > 0 && (
-          <span className="text-2xs tabular-nums text-[var(--text-muted)]">
+          <Text size="2xs" color="muted" className="tabular-nums">
             {fmtNumber(anomaly.z_score, 1)}σ
-          </span>
+          </Text>
         )}
       </div>
 
-      <p className="text-xs text-[var(--text-secondary)]">{anomaly.message}</p>
+      <Text as="p" variant="bodySm">{anomaly.message}</Text>
 
-      <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-2xs text-[var(--text-muted)]">
+      <div className={cn('mt-auto flex flex-wrap gap-x-4 gap-y-1', typography.size['2xs'], typography.color.muted)}>
         <span>
           {t('anomaly.value', 'Value')}:{' '}
-          <span className="tabular-nums text-[var(--text-secondary)]">
+          <Text as="span" size="2xs" color="secondary" className="tabular-nums">
             {fmtNumber(anomaly.value, 2)}
-          </span>
+          </Text>
         </span>
         <span>
           {t('anomaly.baseline', 'Baseline')}:{' '}
-          <span className="tabular-nums text-[var(--text-secondary)]">
+          <Text as="span" size="2xs" color="secondary" className="tabular-nums">
             {fmtNumber(anomaly.baseline, 2)}
-          </span>
+          </Text>
         </span>
       </div>
     </li>
