@@ -16,6 +16,7 @@ import {
   ResponsiveContainer,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { Text } from '@/components/ui';
 import { isDcSession, avg } from './helpers';
 import { convertPowerFromSI } from '@/lib/unitConversion';
 import type { MonthlySpeed } from './types';
@@ -105,13 +106,13 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
         </LineChart>
       </ResponsiveContainer>
       <div className="mt-3 flex gap-4 px-2">
-        <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+        <div className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
-          {t('charging.curve.dcFast', 'DC Fast')}
+          <Text variant="bodySm">{t('charging.curve.dcFast', 'DC Fast')}</Text>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+        <div className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-3 rounded-sm bg-emerald-500" />
-          {t('charging.curve.acHome', 'AC / Home')}
+          <Text variant="bodySm">{t('charging.curve.acHome', 'AC / Home')}</Text>
         </div>
       </div>
     </ChartContainer>
