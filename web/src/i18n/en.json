@@ -7941,6 +7941,37 @@
         "previewBypass": "Bypass severities: {{severities}}",
         "previewInsufficientHistory": "Helix had insufficient notification history; this is a conservative default.",
         "previewExistingCount": "You already have {{count}} quiet-hours window(s) configured."
+      },
+      "title": "Quiet hours",
+      "subtitle": "Suppress non-critical notifications during a configurable window.",
+      "summary": {
+        "label": "Quiet hours summary",
+        "resource": "quiet-hours windows",
+        "windows": "Windows",
+        "windowsSub": "Configured schedules",
+        "enabled": "Enabled",
+        "enabledSub": "Active on schedule",
+        "statusNow": "Right now",
+        "statusQuiet": "Quiet",
+        "statusActive": "Delivering",
+        "statusQuietSub": "{{count}} window active now",
+        "statusActiveSub": "No window active now",
+        "alwaysAllow": "Always allowed",
+        "alwaysAllowSub": "Severities that break through"
+      },
+      "guide": {
+        "title": "How quiet hours work",
+        "subtitle": "Defer non-critical alerts on your own schedule.",
+        "stepDefer": "Each window mutes non-critical notifications during a local-time range on the weekdays you pick.",
+        "stepBypass": "Severities on the \"always allow\" list still break through, so you never miss a critical alert.",
+        "stepHelix": "Helix can propose a window from your recent history — review it, then save to apply.",
+        "severityTitle": "Severity levels",
+        "severityCritical": "Critical",
+        "severityCriticalDesc": "Urgent — usually always allowed.",
+        "severityWarn": "Warning",
+        "severityWarnDesc": "Notable, non-urgent events.",
+        "severityInfo": "Info",
+        "severityInfoDesc": "Routine status updates."
       }
     }
   },
