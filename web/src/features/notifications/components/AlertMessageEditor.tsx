@@ -45,6 +45,7 @@ import {
 } from '@/components/ui'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import {
   useAlertMessagePlaceholders,
   useAlertMessagePresets,
@@ -439,11 +440,11 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           <div className="flex items-center gap-1">
             <label
               htmlFor={textareaId}
-              className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-medium"
+              className={typography.role.metricLabel}
             >
               {label ?? t('notifications.alertStudio.editor.messageTemplateLabel', 'Message Template')}
             </label>
-            <span className="text-[10px] text-[var(--text-muted)] normal-case tracking-normal">
+            <span className={cn(typography.size['2xs'], typography.color.muted, 'normal-case tracking-normal')}>
               {t('notifications.alertStudio.editor.messageTemplateHint', 'Type {{ to insert a placeholder')}
             </span>
             <HelpIcon
@@ -577,7 +578,7 @@ function PlaceholderAutocomplete({
       ) : (
         grouped.map(([groupName, entries]) => (
           <div key={groupName} className="mb-1 last:mb-0">
-            <div className="px-2 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+            <div className={cn('px-2 pt-1 pb-0.5', typography.role.metricLabel)}>
               {groupName}
             </div>
             {entries.map(({ item, index }) => (
@@ -616,7 +617,7 @@ function PreviewPanel({ preview, error, loading, includeTitle }: PreviewPanelPro
   const { t } = useTranslation()
   return (
     <GlassPanel className="p-2 text-xs">
-      <div className="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+      <div className={cn('mb-1 flex items-center gap-1', typography.role.metricLabel)}>
         <Icons.show className="h-3 w-3" aria-hidden="true" />
         {t('notifications.alertStudio.editor.previewLabel', 'Preview')}
       </div>
@@ -691,7 +692,8 @@ function PresetGalleryModal({
               variant="ghost"
               size="sm"
               className={cn(
-                'h-auto rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider font-normal',
+                typography.size['2xs'],
+                'h-auto rounded-full border px-2 py-0.5 uppercase tracking-wider font-normal',
                 activeTag == null
                   ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300'
                   : 'border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
@@ -707,7 +709,8 @@ function PresetGalleryModal({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-auto rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider font-normal',
+                  typography.size['2xs'],
+                  'h-auto rounded-full border px-2 py-0.5 uppercase tracking-wider font-normal',
                   activeTag === tag
                     ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300'
                     : 'border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
@@ -742,9 +745,9 @@ function PresetGalleryModal({
                     {preset.name}
                   </div>
                   {preset.description && (
-                    <div className="text-[11px] text-[var(--text-muted)]">{preset.description}</div>
+                    <div className={typography.role.caption}>{preset.description}</div>
                   )}
-                  <code className="mt-1 block w-full overflow-x-auto whitespace-nowrap rounded bg-[var(--surface-2)] px-2 py-1 font-mono text-[11px] text-cyan-300">
+                  <code className="mt-1 block w-full overflow-x-auto whitespace-nowrap rounded bg-[var(--surface-2)] px-2 py-1 font-mono text-xs text-cyan-300">
                     {preset.template}
                   </code>
                   {preset.tags && preset.tags.length > 0 && (
@@ -752,7 +755,7 @@ function PresetGalleryModal({
                       {preset.tags.map(tag => (
                         <span
                           key={tag}
-                          className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)]"
+                          className={cn('rounded bg-[var(--surface-2)] px-1.5 py-0.5', typography.role.metricLabel)}
                         >
                           {tag}
                         </span>
