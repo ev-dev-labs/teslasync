@@ -394,9 +394,14 @@ export default function DashboardPage() {
           aria-label={t('dashboard.unreadAlerts', '{{count}} unread alerts', { count: unreadAlerts })}
         >
           <Icons.notifications className="h-5 w-5" aria-hidden="true" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-neon-red/30 bg-neon-red/90 px-1 text-2xs font-bold tabular-nums text-white">
+          <Text
+            as="span"
+            size="2xs"
+            weight="bold"
+            className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-neon-red/30 bg-neon-red/90 px-1 tabular-nums text-rose-50 forced-colors:text-[CanvasText]"
+          >
             {unreadAlerts > 99 ? '99+' : unreadAlerts}
-          </span>
+          </Text>
         </Link>
       )}
       <LiveIndicator variant="compact" />
