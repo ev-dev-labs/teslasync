@@ -342,10 +342,10 @@ export default function NavigationRoutePage() {
   /* ---- recent-destination table columns ---- */
   const destColumns: Column<typeof recentDestinations[number]>[] = useMemo(
     () => [
-      { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{row.time}</span> },
-      { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-[var(--text-primary)]">{row.destination}</span> },
-      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(row.distance, 1)} {distanceUnit}</span> },
-      { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(row.eta, 0)} {t('nav.minutes', 'min')}</span> },
+      { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <Caption className="whitespace-nowrap">{row.time}</Caption> },
+      { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <Text variant="body">{row.destination}</Text> },
+      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <Caption>{fmtNumber(row.distance, 1)} {distanceUnit}</Caption> },
+      { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <Caption>{fmtNumber(row.eta, 0)} {t('nav.minutes', 'min')}</Caption> },
     ],
     [t, distanceUnit],
   );
@@ -366,9 +366,9 @@ export default function NavigationRoutePage() {
         header: t('nav.col.lat', 'Lat'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className="font-mono text-[var(--text-primary)]">
+          <Text mono color="primary">
             {row.latitude != null && row.latitude !== 0 ? fmtNumber(row.latitude, 6) : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -376,9 +376,9 @@ export default function NavigationRoutePage() {
         header: t('nav.col.lon', 'Lon'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className="font-mono text-[var(--text-primary)]">
+          <Text mono color="primary">
             {row.longitude != null && row.longitude !== 0 ? fmtNumber(row.longitude, 6) : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -386,13 +386,13 @@ export default function NavigationRoutePage() {
         header: t('nav.col.home', 'Home'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className={row.located_at_home ? 'text-emerald-300' : 'text-[var(--text-muted)]'}>
+          <Text className={row.located_at_home ? 'text-emerald-300' : 'text-[var(--text-muted)]'}>
             {row.located_at_home === true
               ? t('common.yes', 'Yes')
               : row.located_at_home === false
                 ? t('common.no', 'No')
                 : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -400,13 +400,13 @@ export default function NavigationRoutePage() {
         header: t('nav.col.work', 'Work'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className={row.located_at_work ? 'text-indigo-300' : 'text-[var(--text-muted)]'}>
+          <Text className={row.located_at_work ? 'text-indigo-300' : 'text-[var(--text-muted)]'}>
             {row.located_at_work === true
               ? t('common.yes', 'Yes')
               : row.located_at_work === false
                 ? t('common.no', 'No')
                 : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -414,9 +414,9 @@ export default function NavigationRoutePage() {
         header: t('nav.col.destination', 'Destination'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className="block max-w-[150px] truncate text-[var(--text-primary)]">
+          <Text color="primary" className="block max-w-[150px] truncate">
             {row.destination_name ?? '—'}
-          </span>
+          </Text>
         ),
       },
     ],
@@ -430,7 +430,7 @@ export default function NavigationRoutePage() {
         key: 'name',
         header: t('nav.wp.name', 'Name'),
         render: (row: Waypoint) => (
-          <span className="flex items-center gap-2 text-[var(--text-primary)]">
+          <Text color="primary" className="flex items-center gap-2">
             {row.type === 'supercharger' ? (
               <Zap className="h-4 w-4 text-rose-300" aria-hidden="true" />
             ) : row.type === 'destination' ? (
@@ -439,7 +439,7 @@ export default function NavigationRoutePage() {
               <Route className="h-4 w-4 text-amber-300" aria-hidden="true" />
             )}
             {row.name}
-          </span>
+          </Text>
         ),
       },
       {
@@ -464,10 +464,10 @@ export default function NavigationRoutePage() {
         key: 'distance',
         header: t('nav.wp.distance', 'Distance'),
         render: (row: Waypoint) => (
-          <span className="font-mono text-[var(--text-muted)]">
+          <Text mono color="muted">
             {/* row.distance is meters SI from buildWaypoints; convert to user pref. */}
             {fmtNumber(convertDistanceFromSI(row.distance, distanceUnit), 1)} {distanceUnit}
-          </span>
+          </Text>
         ),
       },
     ],
