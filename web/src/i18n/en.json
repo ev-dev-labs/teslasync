@@ -4806,10 +4806,29 @@
     "whatIf": "What If Calculator",
     "speed": "Speed",
     "temperature": "Temperature",
-    "whatIfConditions": "at {{speed}} km/h, {{temp}}°C",
+    "whatIfConditions": "at {{speed}}, {{temp}}",
     "noWhatIf": "Adjust sliders to calculate projected range.",
     "factors": "Range Factors",
-    "tips": "Tips to Maximize Range"
+    "tips": "Tips to Maximize Range",
+    "kpis": "Range summary metrics",
+    "selectVehicle": "Select a vehicle to see its projected range.",
+    "noEfficiency": "Efficiency data unavailable yet.",
+    "noCurve": "Range projection curve will appear once this vehicle logs drives.",
+    "projectionCurveAria": "Rated versus projected range across battery level",
+    "whPerKm": "Wh/km",
+    "drivesCount": "{{count}} drives",
+    "noFactors": "Range factors will appear once enough driving data is collected.",
+    "speedBucket": {
+      "city": "City",
+      "suburban": "Suburban",
+      "highway": "Highway"
+    },
+    "tempBucket": {
+      "freezing": "Freezing",
+      "cold": "Cold",
+      "mild": "Mild",
+      "hot": "Hot"
+    }
   },
   "sleep": {
     "title": "Sleep Efficiency",
