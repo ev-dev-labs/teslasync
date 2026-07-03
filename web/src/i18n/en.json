@@ -66,7 +66,9 @@
       "body": "Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.",
       "timeToSleep": "Average minutes from when the car parks to when it enters low-power sleep.",
       "sentryDrain": "Battery loss per hour while Sentry Mode is active. Sentry keeps cameras and computers on, which adds noticeable drain.",
-      "sentryCost": "Estimated monthly electricity cost of Sentry-related drain, using your configured per-kWh rate."
+      "sentryCost": "Estimated monthly electricity cost of Sentry-related drain, using your configured per-kWh rate.",
+      "sentryOffDrain": "Baseline battery loss per hour while parked with Sentry Mode off — the unavoidable idle drain.",
+      "sentryKwh": "Estimated energy consumed each month by Sentry-related drain."
     },
     "driveScore": {
       "body": "0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.",
@@ -4900,7 +4902,21 @@
     "extraCostMo": "Extra cost/mo",
     "recentDrainEvents": "Recent Drain Events",
     "noDrainEvents": "No drain events recorded yet",
-    "noData": "No sleep data available. Data will appear after your vehicle records sleep/wake events."
+    "noData": "No sleep data available. Data will appear after your vehicle records sleep/wake events.",
+    "selectVehicle": "Select vehicle",
+    "sentryOffDrainRate": "Sentry-Off Drain Rate",
+    "sentryMonthlyKwh": "Sentry Monthly kWh",
+    "loadError": "Failed to load sleep efficiency data",
+    "kpis": "Sleep efficiency metrics",
+    "analysis": "Sleep and sentry analysis",
+    "state": {
+      "asleep": "Sleeping",
+      "online": "Online/Idle",
+      "driving": "Driving",
+      "charging": "Charging",
+      "updating": "Updating",
+      "suspended": "Suspended"
+    }
   },
   "vampire": {
     "title": "Vampire Drain"
