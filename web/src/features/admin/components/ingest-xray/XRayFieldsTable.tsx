@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Badge,
   DataTable,
+  Text,
   useSortToggle,
   type Column,
 } from '@/components/ui';
@@ -52,9 +53,9 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
       sortable: true,
       visibleOnMobile: true,
       render: (row) => (
-        <span className="font-mono text-sm text-[var(--text-primary)]">
+        <Text mono size="sm" color="primary">
           {row.field}
-        </span>
+        </Text>
       ),
     },
     {
