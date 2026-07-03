@@ -3359,6 +3359,77 @@
       "panels": {
         "snapshot": "Live snapshot"
       }
+    },
+    "teslaOrders": {
+      "pageTitle": "Tesla Orders",
+      "subtitle": "Vehicle orders and delivery tracking pulled from your Tesla account.",
+      "refresh": "Refresh",
+      "resource": "Orders",
+      "kpis": "Order summary",
+      "insights": "Order insights",
+      "kpi": {
+        "total": "Total Orders",
+        "delivered": "Delivered",
+        "inProgress": "In Progress",
+        "inProgressHint": "Booked or building",
+        "ready": "Ready · Transit",
+        "readyHint": "Awaiting handover",
+        "upgradable": "Upgradable",
+        "nextDelivery": "Next Delivery",
+        "nextDeliveryHint": "Soonest upcoming"
+      },
+      "bucket": {
+        "inProgress": "In Progress",
+        "ready": "Ready · In Transit",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled",
+        "other": "Other"
+      },
+      "panels": {
+        "breakdown": "Order Status",
+        "outlook": "Delivery Outlook",
+        "board": "Orders",
+        "details": "Order Details"
+      },
+      "breakdown": {
+        "empty": "No orders to classify yet.",
+        "barAria": "Order status distribution"
+      },
+      "outlook": {
+        "nextDelivery": "Next delivery",
+        "noUpcoming": "None scheduled",
+        "upgradable": "Upgradable orders",
+        "models": "Distinct models",
+        "vin": "VIN assigned",
+        "lastSynced": "Last synced",
+        "empty": "Sync your Tesla account to see delivery details."
+      },
+      "card": {
+        "orderId": "Order ID",
+        "vin": "VIN",
+        "vinPending": "Not assigned",
+        "delivery": "Delivery",
+        "upgradable": "Upgrade available"
+      },
+      "cols": {
+        "model": "Model",
+        "orderId": "Order ID",
+        "vin": "VIN",
+        "status": "Status",
+        "delivery": "Delivery",
+        "upgradable": "Upgradable",
+        "yes": "Yes"
+      },
+      "filterPlaceholder": "Filter by model, VIN or ID…",
+      "filterAria": "Filter orders",
+      "table": {
+        "filtered": "No orders match this filter."
+      },
+      "empty": {
+        "title": "No orders",
+        "synced": "No active orders found on this Tesla account.",
+        "unsynced": "No order data yet. Refresh to fetch the latest orders from Tesla."
+      }
     }
   },
   "apiLogs": {
