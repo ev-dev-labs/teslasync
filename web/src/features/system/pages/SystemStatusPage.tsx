@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, Badge, PanelTitle, SectionTitle } from '@/components/ui'
+import { GlassPanel, Button, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import {
   StatusHero, type HeroStatus,
@@ -52,6 +52,7 @@ import { formatBytes, fmtInt } from '@/lib/numberFormat'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useFormatting } from '@/hooks/useFormatting'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 import { formatUptime } from '../components/status/helpers'
 import {
@@ -722,19 +723,17 @@ export default function SystemStatusPage() {
             {components.length > 0 ? (
               <ul className="divide-y divide-white/[0.05]">
                 {components.map(([name, comp]) => (
-                  <li key={name} className="flex items-center gap-3 py-2 text-sm">
+                  <li key={name} className="flex items-center gap-3 py-2">
                     <StatusDot status={resolveCompStatus(comp.status)} />
-                    <span className="flex-1 truncate font-medium text-[var(--text-primary)]">
+                    <Text size="sm" weight="medium" color="primary" className="flex-1 truncate">
                       {name}
-                    </span>
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {comp.status}
-                    </span>
+                    </Text>
+                    <Caption>{comp.status}</Caption>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">No component data yet.</p>
+              <Text as="p" size="sm" color="muted">No component data yet.</Text>
             )}
             <DetailLink to="/live-monitor" label={t('Open Live Monitor')} />
           </AccordionSection>
@@ -897,21 +896,21 @@ export default function SystemStatusPage() {
                   .sort((a, b) => b[1].count - a[1].count)
                   .slice(0, 10)
                   .map(([code, info]) => (
-                    <li key={code} className="flex items-start gap-3 py-2 text-sm">
-                      <span className="shrink-0 font-mono text-xs text-amber-300">{code}</span>
-                      <span className="flex-1 min-w-0 text-[var(--text-secondary)] truncate">
+                    <li key={code} className="flex items-start gap-3 py-2">
+                      <Text size="xs" mono className="shrink-0 text-amber-300">{code}</Text>
+                      <Text size="sm" color="secondary" className="flex-1 min-w-0 truncate">
                         {info.last_message || '—'}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-xs text-[var(--text-muted)]">
+                      </Text>
+                      <Caption className="shrink-0 tabular-nums">
                         {info.count}
-                      </span>
+                      </Caption>
                     </li>
                   ))}
               </ul>
             ) : (
-              <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              <div className="flex items-center gap-2 text-[var(--text-muted)]">
                 <Inbox className="h-4 w-4" />
-                <span>{t('No errors recorded recently.')}</span>
+                <Text size="sm" color="muted">{t('No errors recorded recently.')}</Text>
               </div>
             )}
             <DetailLink to="/api-logs?level=error" label={t('Open error logs')} />
@@ -972,7 +971,7 @@ export default function SystemStatusPage() {
 
             {/* Footer ─ Status API docs link ──────────────────────── */}
             <section id="api-docs" aria-label={t('Status API')}>
-              <div className="flex justify-center pt-1 pb-4 text-xs text-[var(--text-muted)]" data-status-print-hide>
+              <div className={cn('flex justify-center pt-1 pb-4', typography.size.xs, typography.color.muted)} data-status-print-hide>
                 <Link
                   to="/docs/status-api"
                   className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
@@ -1018,10 +1017,10 @@ function StatusBadge({ status }: { status: HeroStatus }) {
     : status === 'maintenance' ? 'maintenance'
     : 'unknown'
   return (
-    <span className={cn('inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2 py-0.5 text-xs', TEXT_FOR_STATUS[status])}>
+    <Text as="span" size="xs" className={cn('inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2 py-0.5', TEXT_FOR_STATUS[status])}>
       <StatusDot status={status} />
       {label}
-    </span>
+    </Text>
   )
 }
 
@@ -1037,7 +1036,11 @@ function DetailLink({ to, label }: { to: string; label: string }) {
     <div className="flex justify-end pt-2">
       <Link
         to={to}
-        className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-cyan-200 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+          typography.size.xs,
+          typography.weight.medium,
+        )}
       >
         {label}
       </Link>
@@ -1048,11 +1051,11 @@ function DetailLink({ to, label }: { to: string; label: string }) {
 interface DefListRow { label: string; value: ReactNode }
 function DefList({ rows }: { rows: DefListRow[] }) {
   return (
-    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-sm">
+    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
       {rows.map((r) => (
         <div key={r.label} className="flex items-center justify-between gap-2">
-          <dt className="text-[var(--text-secondary)]">{r.label}</dt>
-          <dd className="font-medium tabular-nums text-[var(--text-primary)]">{r.value}</dd>
+          <Text as="dt" size="sm" color="secondary">{r.label}</Text>
+          <Text as="dd" size="sm" weight="medium" color="primary" className="tabular-nums">{r.value}</Text>
         </div>
       ))}
     </dl>
@@ -1068,7 +1071,7 @@ function SystemInfoRows({
   extHealth?: { system?: { goroutines: number; uptime_seconds: number; go_version: string } }
 }) {
   if (!version) {
-    return <div className="text-sm text-[var(--text-muted)]">Loading system info…</div>
+    return <Text as="div" size="sm" color="muted">Loading system info…</Text>
   }
 
   const rows: DefListRow[] = [
