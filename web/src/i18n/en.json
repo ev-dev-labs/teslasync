@@ -4053,7 +4053,12 @@
         "generating": "Generating…",
         "error": "Could not generate narration. Please try again.",
         "badge": "Helix"
-      }
+      },
+      "noAlerts": "No alerts this week — everything looks great!",
+      "noDailyEnergy": "No charging energy data is available for this week.",
+      "noBatteryData": "No battery data is available for this week.",
+      "activity": "Driving & charging activity",
+      "batteryAndAlerts": "Battery health & alerts"
     },
     "title": "Fleet Analytics",
     "tabs": {

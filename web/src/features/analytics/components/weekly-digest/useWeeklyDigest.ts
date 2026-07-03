@@ -28,7 +28,7 @@ export function useWeeklyDigest() {
   const isCurrentWeek = weekOffset === 0;
 
   /* ── Vehicle query ── */
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
 
   const vehicleOptions = useMemo(
     () =>
@@ -41,39 +41,68 @@ export function useWeeklyDigest() {
 
   const selectedVehicleId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
-  /* ── Data queries ── */
-  const {
-    data: drives,
-    isLoading: drivesLoading,
-    error: drivesError,
-  } = useQuery({
+  /* ── Data queries ──
+   * Each domain query is surfaced independently so every page section can own
+   * its loading / empty / error state (modern-ui §8) instead of gating the
+   * whole page behind one combined flag. */
+  const drivesQuery = useQuery({
     queryKey: ['drives', selectedVehicleId],
     queryFn: () => request<Drive[]>(`/drives?vehicle_id=${selectedVehicleId}`),
     enabled: !!selectedVehicleId,
   });
-
   const {
-    data: chargingSessions,
-    isLoading: chargingLoading,
-    error: chargingError,
-  } = useQuery({
+    data: drives,
+    isLoading: drivesLoading,
+    error: drivesError,
+    refetch: refetchDrives,
+  } = drivesQuery;
+
+  const chargingQuery = useQuery({
     queryKey: ['charging', selectedVehicleId],
     queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${selectedVehicleId}`),
     enabled: !!selectedVehicleId,
   });
-
   const {
-    data: alerts,
-    isLoading: alertsLoading,
-    error: alertsError,
-  } = useQuery({
+    data: chargingSessions,
+    isLoading: chargingLoading,
+    error: chargingError,
+    refetch: refetchCharging,
+  } = chargingQuery;
+
+  const alertsQuery = useQuery({
     queryKey: ['alerts', selectedVehicleId],
     queryFn: () => request<Alert[]>('/alerts'),
     enabled: !!selectedVehicleId,
   });
+  const {
+    data: alerts,
+    isLoading: alertsLoading,
+    error: alertsError,
+    refetch: refetchAlerts,
+  } = alertsQuery;
 
   const isLoading = drivesLoading || chargingLoading || alertsLoading;
   const error = drivesError || chargingError || alertsError;
+
+  // Sections show a skeleton (not a flash of empty states) while the vehicle
+  // list is still resolving, since the domain queries stay disabled until a
+  // vehicle id is available.
+  const drivesBusy = drivesLoading || vehiclesLoading;
+  const chargingBusy = chargingLoading || vehiclesLoading;
+  const alertsBusy = alertsLoading || vehiclesLoading;
+
+  /** Representative queries for the page-tier freshness chip (PageContainer). */
+  const freshnessQueries = useMemo(
+    () => [drivesQuery, chargingQuery, alertsQuery],
+    [drivesQuery, chargingQuery, alertsQuery],
+  );
+
+  /** Refetch every domain query — used by the aggregate KPI bands' retry CTA. */
+  const refetchAll = useCallback(() => {
+    void refetchDrives();
+    void refetchCharging();
+    void refetchAlerts();
+  }, [refetchDrives, refetchCharging, refetchAlerts]);
 
   /* ── Filter data by week ── */
   const weekDrives = useMemo(
@@ -240,5 +269,17 @@ export function useWeeklyDigest() {
     vehicleOptions,
     selectedVehicleId,
     setVehicleId,
+    // Per-domain state so each section owns its loading / empty / error.
+    drivesLoading: drivesBusy,
+    drivesError,
+    refetchDrives,
+    chargingLoading: chargingBusy,
+    chargingError,
+    refetchCharging,
+    alertsLoading: alertsBusy,
+    alertsError,
+    refetchAlerts,
+    refetchAll,
+    freshnessQueries,
   };
 }
