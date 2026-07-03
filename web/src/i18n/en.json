@@ -8855,7 +8855,31 @@
   },
   "roadmap": {
     "title": "Roadmap",
-    "subtitle": "What's been built, what's in progress, and what's coming next"
+    "subtitle": "What's been built, what's in progress, and what's coming next",
+    "overview": "Roadmap overview",
+    "noItems": "No items in this phase yet.",
+    "phase": {
+      "done": "Completed",
+      "current": "In Progress",
+      "next": "Up Next",
+      "future": "Future"
+    },
+    "phaseDesc": {
+      "done": "Shipped and available in your deployment today.",
+      "current": "Actively being built right now.",
+      "next": "Designed and queued for the next development cycle.",
+      "future": "On the long-term vision — not yet scheduled."
+    },
+    "metric": {
+      "total": "Total Initiatives",
+      "featuresShipped": "Features Shipped"
+    },
+    "progress": {
+      "title": "Delivery Progress",
+      "ofTotal": "of {{total}} initiatives shipped",
+      "barLabel": "Roadmap initiatives by phase",
+      "empty": "No roadmap items to display yet."
+    }
   },
   "teslaAccount": {
     "title": "Tesla Account",
