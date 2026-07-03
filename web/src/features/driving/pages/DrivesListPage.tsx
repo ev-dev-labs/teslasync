@@ -1,26 +1,23 @@
-import { useMemo, useState, useCallback, useEffect, useDeferredValue, memo } from 'react';
+import { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Route, Gauge, TrendingUp,
-  Zap, ArrowUpDown, ArrowDown, Download, Activity, DollarSign,
+  Route, Gauge, TrendingUp, Clock, Sparkles,
+  ArrowUpDown, ArrowDown, Download, Activity,
   Trash2, AlertTriangle, Star, Repeat, Tag, List as ListIcon,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
+import { PanelTitle, SectionTitle } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
 import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
   BulkActionsToolbar, type BulkAction, DataFreshnessAuto,
   KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
-  HistoryListRow, ScoreBadge, BatteryDelta, RouteDisplay,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
-import { InlineMetric } from '@/components/data-display/InlineMetric';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
@@ -34,6 +31,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
+import { apiUrl } from '@/api/client';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -42,7 +40,7 @@ import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { AINLDriveSearch } from '@/components/ai/AINLDriveSearch';
-import { formatDateTime, formatRelativeDays, formatTime, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
+import { formatRelativeDays, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -54,160 +52,8 @@ import {
   groupByDate, dailyTrend, localDayKey,
   type TrendMetric, type PeriodStats,
 } from '@/lib/drivesAggregation';
+import { DriveCard } from '../components/DriveCard';
 
-/* ------------------------------------------------------------------ */
-/* DriveCard */
-/* ------------------------------------------------------------------ */
-
-interface DriveCardProps {
-  drive: Drive;
-  toDistanceDisplay: (v: number) => number;
-  toSpeedDisplay: (v: number) => number;
-  toEfficiencyDisplay: (v: number) => number;
-  distanceUnit: string;
-  speedUnit: string;
-  efficiencyUnit: string;
-  formatEnergyCost?: (kwh: number) => string;
-  selected?: boolean;
-  onToggleSelect?: (id: number, on: boolean) => void;
-  /** IANA timezone for time-of-day rendering. Defaults to browser local. */
-  tz?: string;
-  /** When true, render an inline `⚠ Low efficiency` badge to mark this row
- * as the one called out in the page-level anomaly summary. */
-  isAnomaly?: boolean;
-}
-
-function DriveCardImpl({
-  drive, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay,
-  distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
-  selected, onToggleSelect, tz, isAnomaly,
-}: DriveCardProps) {
-  const { t } = useTranslation();
-  const actualDistance = drive.distanceM;
-  const isCompleted = drive.endTs != null;
-  const hasData = actualDistance > 0 || drive.durationS > 0;
-  const avgSpeed =
-    drive.avgSpeedMps != null
-      ? fmtInt(toSpeedDisplay(drive.avgSpeedMps))
-      : drive.durationS > 0 && actualDistance > 0
-        ? fmtInt(toSpeedDisplay(actualDistance / drive.durationS))
-        : '—';
-  const eff = getEfficiency(drive);
-  const effConverted = eff ? toEfficiencyDisplay(eff) : null;
-  const score = gradeFromEfficiency(eff);
-  const hasBattery =
-    drive.startBatteryPct !== null &&
-    drive.endBatteryPct !== null &&
-    !(drive.startBatteryPct === 0 && drive.endBatteryPct === 0 && isCompleted);
-
-  const showCheckbox = typeof onToggleSelect === 'function';
-
-  const checkbox = showCheckbox ? (
-    <Checkbox
-      checked={!!selected}
-      onChange={(next) => onToggleSelect?.(drive.id, next)}
-      aria-label={t('drives.selectDrive', 'Select drive on {{date}}', { date: formatDateTime(drive.startTs, { tz }) })}
-    />
-  ) : undefined;
-
-  const primary = (
-    <>
-      {/* Time-of-day only — the date is shown in the date-group header above */}
-      <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
-        {formatTime(drive.startTs, { tz })}
-      </span>
-      <span className="text-[10px] text-[var(--text-muted)]">·</span>
-      <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
-        {formatDurationMinutes((drive.durationS) / 60)}
-      </span>
-      {hasData ? (
-        <Badge variant="info" size="sm">
-          {fmtNumber(toDistanceDisplay(actualDistance))} {distanceUnit}
-        </Badge>
-      ) : isCompleted ? (
-        <Badge variant="warning" size="sm">{t('drives.noTelemetry', 'No telemetry')}</Badge>
-      ) : (
-        <Badge variant="success" size="sm">{t('drives.inProgress', 'In progress')}</Badge>
-      )}
-      {drive.maxSpeedMps !== null && drive.maxSpeedMps > 58.1152 && (
-        <Badge variant="danger" size="sm">{t('drives.highSpeed', 'High speed')}</Badge>
-      )}
-      {isAnomaly && (
-        <Badge variant="danger" size="sm">
-          <AlertTriangle className="h-3 w-3" aria-hidden />
-          {t('drives.lowEfficiencyBadge', 'Low efficiency')}
-        </Badge>
-      )}
-    </>
-  );
-
-  const route = (
-    <RouteDisplay
-      start={{ address: drive.startAddress, lat: drive.startLat, lon: drive.startLon }}
-      end={{ address: drive.endAddress, lat: drive.endLat, lon: drive.endLon }}
-    />
-  );
-
-  const metrics = (
-    <>
-      <InlineMetric icon={<Gauge />} value={`${t('drives.avg', 'Avg')} ${avgSpeed} ${speedUnit}`} />
-      {drive.maxSpeedMps !== null && (
-        <InlineMetric
-          icon={<TrendingUp />}
-          value={`${t('drives.max', 'Max')} ${fmtInt(toSpeedDisplay(drive.maxSpeedMps))} ${speedUnit}`}
-        />
-      )}
-      {hasBattery && (
-        <BatteryDelta
-          startPct={drive.startBatteryPct}
-          endPct={drive.endBatteryPct}
-        />
-      )}
-      {effConverted && (
-        <span className="flex items-center gap-1" style={{ color: score.color }}>
-          <Zap className="h-3 w-3" /> {fmtInt(effConverted)} {efficiencyUnit}
-        </span>
-      )}
-      {formatEnergyCost && hasBattery && drive.startBatteryPct != null && drive.endBatteryPct != null && drive.startBatteryPct > drive.endBatteryPct && (
-        <span className="flex items-center gap-1 text-emerald-400/70">
-          <DollarSign className="h-3 w-3" />
-          ~{formatEnergyCost((drive.startBatteryPct - drive.endBatteryPct) * 0.75)}
-        </span>
-      )}
-    </>
-  );
-
-  return (
-    <HistoryListRow
-      checkbox={checkbox}
-      leading={<ScoreBadge grade={score.label} ariaLabel={t('drives.scoreAria', 'Score {{grade}}', { grade: score.label })} />}
-      primary={primary}
-      route={route}
-      metrics={metrics}
-      href={`/drives/${drive.id}`}
-      selected={selected}
-    />
-  );
-}
-
-/**
- * memo() with a custom equality so unchanged rows skip re-render when
- * the deferred filter value commits. `useSettings` returns fresh
- * function references on every parent render, so the default shallow
- * comparison would never short-circuit; here we only consider the
- * row-shaping inputs that actually affect the rendered output.
- *
- * .
- */
-const DriveCard = memo(DriveCardImpl, (prev, next) =>
-  prev.drive === next.drive &&
-  prev.selected === next.selected &&
-  prev.distanceUnit === next.distanceUnit &&
-  prev.speedUnit === next.speedUnit &&
-  prev.efficiencyUnit === next.efficiencyUnit &&
-  prev.tz === next.tz &&
-  prev.isAnomaly === next.isAnomaly &&
-  prev.onToggleSelect === next.onToggleSelect, );
 
 /* ------------------------------------------------------------------ */
 /* DrivesListPage */
@@ -556,18 +402,35 @@ export default function DrivesListPage() {
   const totalCost = currentStats.totalEnergyKwh * costPerKwh;
   const priorTotalCost = priorStats ? priorStats.totalEnergyKwh * costPerKwh : null;
 
-  /* ---- Secondary stats line ---- */
-  const secondaryLine = currentStats.count > 0 ? (
-    <span>
-      {t('drives.topSpeed', 'Top speed')} {fmtInt(toSpeedDisplay(currentStats.topSpeedMps))} {speedUnit}
-      {' · '}
-      {t('drives.longest', 'Longest')} {fmtNumber(toDistanceDisplay(currentStats.longest?.distanceM ?? 0))} {distanceUnit}
-      {' · '}
-      {t('drives.avgTrip', 'Avg trip')} {fmtNumber(currentStats.count > 0 ? toDistanceDisplay(currentStats.totalDistanceM / currentStats.count) : 0)} {distanceUnit}
-      {' · '}
-      {formatDurationMinutes(currentStats.count > 0 ? currentStats.totalDurationS / 60 / currentStats.count : 0)} {t('drives.avgDur', 'avg dur')}
-    </span>
-  ) : null;
+  /* ---- Highlights rows — "fold-down" period stats (top speed, longest,
+ * avg trip, avg duration) surfaced beside the trend chart. Real period
+ * data, formatted at the display boundary via the unit converters. ---- */
+  const highlightRows = currentStats.count > 0 ? [
+    {
+      key: 'topSpeed',
+      icon: <TrendingUp className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />,
+      label: t('drives.topSpeed', 'Top speed'),
+      value: `${fmtInt(toSpeedDisplay(currentStats.topSpeedMps))} ${speedUnit}`,
+    },
+    {
+      key: 'longest',
+      icon: <Route className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />,
+      label: t('drives.longest', 'Longest'),
+      value: `${fmtNumber(toDistanceDisplay(currentStats.longest?.distanceM ?? 0))} ${distanceUnit}`,
+    },
+    {
+      key: 'avgTrip',
+      icon: <Gauge className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />,
+      label: t('drives.avgTrip', 'Avg trip'),
+      value: `${fmtNumber(toDistanceDisplay(currentStats.totalDistanceM / currentStats.count))} ${distanceUnit}`,
+    },
+    {
+      key: 'avgDuration',
+      icon: <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />,
+      label: t('drives.avgDuration', 'Avg duration'),
+      value: formatDurationMinutes(currentStats.totalDurationS / 60 / currentStats.count),
+    },
+  ] : [];
 
   /* ---- Anomaly callout ---- */
   const anomalyFooter = anomalyDrives.length > 0 && collection !== 'anomalies' ? (
@@ -655,6 +518,7 @@ export default function DrivesListPage() {
       }
     >
       <PullToRefresh onRefresh={async () => { await refetchDrives(); }}>
+        <div className="space-y-4 sm:space-y-6">
         {/* Sticky bar that appears once the overview scrolls out */}
         <PageHeaderSticky
           targetId="drives-overview"
@@ -809,11 +673,9 @@ export default function DrivesListPage() {
                   />
                 </>
               }
-              secondary={secondaryLine}
-              footer={anomalyFooter}
             />
           ) : (
-            <GlassPanel className="p-6">
+            <GlassPanel id="drives-overview" className="p-6">
               <EmptyState
                 /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 message={t('drives.noStatsRange', 'No drives in this range')}
@@ -822,22 +684,72 @@ export default function DrivesListPage() {
           )}
         </FadeIn>
 
-        {/* Drives over time — metric-switcher chart */}
-        {currentStats.count > 0 && (
-          <FadeIn>
-            <MetricSwitcherChart
-              title={t('drives.overTime', 'Drives over time')}
-              ariaLabel={t('drives.overTime.aria', 'Drives over time chart with metric switcher')}
-              series={trendSeries}
-              metrics={trendMetricsConfig}
-              activeMetric={trendMetric}
-              onMetricChange={(k) => setTrendMetric(k as TrendMetric)}
-              formatXTick={formatChartXTick}
-              emptyMessage={t('drives.overTime.empty', 'No data for this metric in the selected range')}
-              testId="drives-trend-chart"
-            />
-          </FadeIn>
-        )}
+        {/* Trends + highlights — full-width bento: a hero metric-switcher
+            chart beside a period-highlights panel. Both fill wider screens
+            with more columns (xl → 3 cols, 3xl → 4). Each section owns its
+            loading / empty state independently. */}
+        <FadeIn delay={0.1}>
+          <section
+            aria-label={t('drives.analysis', 'Trends and highlights')}
+            className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5 3xl:grid-cols-4"
+          >
+            <div className="xl:col-span-2 3xl:col-span-3">
+              {isDrivesLoading ? (
+                <GlassPanel className="p-4 sm:p-5">
+                  <PanelTitle className="mb-3 flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                    {t('drives.overTime', 'Drives over time')}
+                  </PanelTitle>
+                  <Skeleton className="h-56 sm:h-64" />
+                </GlassPanel>
+              ) : (
+                <MetricSwitcherChart
+                  title={t('drives.overTime', 'Drives over time')}
+                  ariaLabel={t('drives.overTime.aria', 'Drives over time chart with metric switcher')}
+                  series={trendSeries}
+                  metrics={trendMetricsConfig}
+                  activeMetric={trendMetric}
+                  onMetricChange={(k) => setTrendMetric(k as TrendMetric)}
+                  formatXTick={formatChartXTick}
+                  emptyMessage={t('drives.overTime.empty', 'No data for this metric in the selected range')}
+                  testId="drives-trend-chart"
+                />
+              )}
+            </div>
+
+            <GlassPanel className="space-y-4 p-4 sm:p-5 xl:col-span-1">
+              <PanelTitle className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('drives.highlights', 'Highlights')}
+              </PanelTitle>
+              {isDrivesLoading ? (
+                <Skeleton className="h-40" />
+              ) : currentStats.count === 0 ? (
+                <EmptyState
+                  /* no-action: transient empty state — no drives in the selected range to summarise */
+                  message={t('drives.noHighlights', 'No highlights in this range')}
+                />
+              ) : (
+                <div className="space-y-4">
+                  <dl className="space-y-3">
+                    {highlightRows.map((row) => (
+                      <div key={row.key} className="flex items-center justify-between gap-3">
+                        <dt className="flex min-w-0 items-center gap-2 text-sm text-[var(--text-secondary)]">
+                          {row.icon}
+                          <span className="truncate">{row.label}</span>
+                        </dt>
+                        <dd className="shrink-0 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+                          {row.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {anomalyFooter}
+                </div>
+              )}
+            </GlassPanel>
+          </section>
+        </FadeIn>
 
         {/* Collections pill row */}
         <FadeIn>
@@ -850,72 +762,71 @@ export default function DrivesListPage() {
           />
         </FadeIn>
 
-        {/* List controls — sort + export */}
-        {sortedDrives.length > 0 ? (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3" data-tour="drives-list">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
-              <Route className="h-4 w-4 text-cyan-400" />
+        {/* Detail band — full-width drive list */}
+        <section
+          aria-label={t('drives.list', 'Drive list')}
+          className="space-y-3"
+          data-tour="drives-list"
+        >
+          <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+            <SectionTitle className="flex items-center gap-2">
+              <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('drives.allDrives', 'All Drives')}
               <span className="text-xs font-normal text-[var(--text-muted)]">
                 ({fmtCompact(sortedDrives.length)})
               </span>
-            </h3>
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-              {(['date', 'distance', 'efficiency'] as const).map((s) => (
-                <Button
-                  key={s}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSortBy(s)}
-                  className={cn(
-                    sortBy === s
-                      ? 'bg-cyan-500/10 text-cyan-400'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
-                  )}
-                  aria-label={t('drives.sortByAria', 'Sort by {{field}}', {
-                    field: s === 'date'
-                      ? t('drives.sortRecent', 'Recent')
-                      : s === 'distance'
-                        ? t('drives.sortDistance', 'Distance')
-                        : t('drives.sortEfficiency', 'Efficiency'),
-                  })}
-                  aria-pressed={sortBy === s}
-                >
-                  <span className="inline-flex items-center gap-1">
-                    {s === 'date'
-                      ? t('drives.sortRecent', 'Recent')
-                      : s === 'distance'
-                        ? t('drives.sortDistance', 'Distance')
-                        : t('drives.sortEfficiency', 'Efficiency')}
-                    {sortBy === s && (
-                      <ArrowDown className="h-3 w-3 opacity-80" aria-hidden />
+            </SectionTitle>
+            {sortedDrives.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                {(['date', 'distance', 'efficiency'] as const).map((s) => (
+                  <Button
+                    key={s}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortBy(s)}
+                    className={cn(
+                      sortBy === s
+                        ? 'bg-cyan-500/10 text-cyan-300'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
                     )}
-                  </span>
-                </Button>
-              ))}
-              <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" />
-              <a
-                href={`/api/v1/export/drives?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
-                download="teslasync-drives.csv"
-              >
-                <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
-              </a>
-              <a
-                href={`/api/v1/export/drives?format=json${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
-                download="teslasync-drives.json"
-              >
-                <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
-              </a>
-            </div>
+                    aria-label={t('drives.sortByAria', 'Sort by {{field}}', {
+                      field: s === 'date'
+                        ? t('drives.sortRecent', 'Recent')
+                        : s === 'distance'
+                          ? t('drives.sortDistance', 'Distance')
+                          : t('drives.sortEfficiency', 'Efficiency'),
+                    })}
+                    aria-pressed={sortBy === s}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {s === 'date'
+                        ? t('drives.sortRecent', 'Recent')
+                        : s === 'distance'
+                          ? t('drives.sortDistance', 'Distance')
+                          : t('drives.sortEfficiency', 'Efficiency')}
+                      {sortBy === s && (
+                        <ArrowDown className="h-3 w-3 opacity-80" aria-hidden />
+                      )}
+                    </span>
+                  </Button>
+                ))}
+                <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
+                <a
+                  href={apiUrl(`/export/drives?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
+                  download="teslasync-drives.csv"
+                >
+                  <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
+                </a>
+                <a
+                  href={apiUrl(`/export/drives?format=json${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
+                  download="teslasync-drives.json"
+                >
+                  <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
+                </a>
+              </div>
+            )}
           </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Activity className="h-8 w-8 opacity-20" />}
-            message={t('common.noData', 'No data available')}
-            className="py-8"
-          />
-        )}
 
         {/* Drive list */}
         {isDrivesLoading ? (
@@ -987,6 +898,8 @@ export default function DrivesListPage() {
             }}
           />
         )}
+        </section>
+        </div>
       </PullToRefresh>
     </PageContainer>
   );
