@@ -80,9 +80,9 @@ export default function SpeedGearPanel({ motorLatest, filteredDrives, toSpeedDis
       </PanelTitle>
       <Grid cols={{ default: 2, md: 4 }} gap={6}>
         <div className="flex flex-col items-center justify-center gap-2">
-          <span className={cn('text-5xl font-bold tabular-nums', shiftColor(motorLatest?.shift_state))}>
+          <Text as="span" weight="bold" className={cn('text-5xl tabular-nums', shiftColor(motorLatest?.shift_state))}>
             {motorLatest?.shift_state ?? '—'}
-          </span>
+          </Text>
           <Badge variant={shiftBadgeVariant(motorLatest?.shift_state)} size="sm">
             {t('dynamics.shiftState', 'Shift State')}
           </Badge>
