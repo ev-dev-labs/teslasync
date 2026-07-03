@@ -1731,7 +1731,58 @@
     "tracking": "Real-time Tracking",
     "drives": "Drive History",
     "charging": "Charge Analytics",
-    "control": "Vehicle Control"
+    "control": "Vehicle Control",
+    "status": {
+      "sectionLabel": "Setup status",
+      "tesla": {
+        "label": "Tesla account",
+        "connected": "Connected",
+        "pending": "Not connected",
+        "hintDone": "Fleet API access authorized",
+        "hint": "Sign in to authorize access"
+      },
+      "vehicles": {
+        "label": "Vehicles synced",
+        "hintDone": "Synced from the Fleet API",
+        "hint": "Waiting for the first sync"
+      },
+      "telemetry": {
+        "label": "Telemetry",
+        "flowing": "Flowing",
+        "waiting": "Waiting",
+        "hintDone": "Live signals arriving",
+        "hint": "No signals received yet"
+      }
+    },
+    "progress": {
+      "label": "Setup progress",
+      "value": "{{done}}/{{total}}",
+      "hint": "Steps complete",
+      "allDone": "All steps complete"
+    },
+    "resources": {
+      "title": "Resources & help",
+      "privacy": "TeslaSync runs entirely on your hardware. No data ever leaves your install.",
+      "account": {
+        "title": "Tesla account",
+        "desc": "Connect or manage your Fleet API access."
+      },
+      "guide": {
+        "title": "Fleet Telemetry setup guide",
+        "desc": "Configure streaming so live data starts arriving."
+      },
+      "docs": {
+        "title": "Documentation",
+        "desc": "Guides, reference, and troubleshooting."
+      }
+    },
+    "unlock": {
+      "title": "What you'll unlock",
+      "tracking": "Follow location, speed, and state live on the map.",
+      "drives": "Every trip logged with route, efficiency, and stats.",
+      "charging": "Track sessions, costs, and battery health over time.",
+      "control": "Climate, charging, and locks — all from one place."
+    }
   },
   "paint": {
     "label": "Paint",
