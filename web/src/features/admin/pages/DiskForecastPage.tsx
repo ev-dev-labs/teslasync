@@ -162,7 +162,7 @@ export default function DiskForecastPage() {
         header: t('admin.diskForecast.colTable', 'Hypertable'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-[var(--text-primary)]">{r.hypertable_name}</span>
+            <Text weight="medium" color="primary">{r.hypertable_name}</Text>
             <Caption>
               {t('admin.diskForecast.chunkCount', '{{count}} chunks', { count: r.chunk_count ?? 0 })}
             </Caption>
@@ -499,9 +499,9 @@ export default function DiskForecastPage() {
                       <Caption>{formatBytes(r.total_bytes ?? 0)} · {formatBytes(r.growth_bytes_per_day ?? 0)}/d</Caption>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className={cn('tabular-nums text-sm font-semibold', r.severity === 'critical' ? 'text-rose-300' : 'text-[var(--text-primary)]')}>
+                      <Text size="sm" weight="semibold" className={cn('tabular-nums', r.severity === 'critical' ? 'text-rose-300' : 'text-[var(--text-primary)]')}>
                         {t('admin.diskForecast.daysValue', '{{days}} d', { days: fmtNumber(r.est_days_to_quota ?? 0) })}
-                      </span>
+                      </Text>
                       <Badge variant={SEVERITY_VARIANT[r.severity] ?? 'neutral'} size="sm">
                         {severityLabel[r.severity] ?? r.severity}
                       </Badge>
