@@ -26,6 +26,7 @@ import {
   MaskedValue,
   PanelTitle,
   Select,
+  Text,
   Toggle,
   useSortToggle,
   type Column,
@@ -114,7 +115,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       key: 'name',
       header: t('redis.signalName', 'Signal Name'),
       sortable: true,
-      render: (row) => <span className="font-mono text-sm text-[var(--text-primary)]">{row.name}</span>,
+      render: (row) => <Text mono size="sm" color="primary">{row.name}</Text>,
     },
     {
       key: 'value',
@@ -145,9 +146,9 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
               ? 'text-purple-300'
               : 'text-amber-300'
         return (
-          <span className={`font-mono text-sm ${colorClass}`}>
+          <Text mono size="sm" className={colorClass}>
             {String(row.value)}
-          </span>
+          </Text>
         )
       },
     },
