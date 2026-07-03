@@ -299,13 +299,15 @@ function OverallHero({
             {segments.map((s) => (
               <div key={s.key} className="flex items-center gap-1.5">
                 <span className={cn('inline-block h-2.5 w-2.5 rounded-full', toneFill(s.key))} />
-                <Text variant="bodySm" as="span" className="text-[var(--text-secondary)]">
+                <Text variant="bodySm" as="span">
                   {s.label}
                 </Text>
                 <Text
-                  variant="bodySm"
                   as="span"
-                  className="font-semibold tabular-nums text-[var(--text-primary)]"
+                  size="xs"
+                  weight="semibold"
+                  color="primary"
+                  className="tabular-nums"
                 >
                   {s.count}
                 </Text>
