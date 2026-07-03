@@ -38,7 +38,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
 import type { SearchHit, SearchHitType } from '@/api/types'
-import { neonColorMap, type NeonColor } from '@/lib/tokens'
+import { neonColorMap, typography, type NeonColor } from '@/lib/tokens'
 import { cn } from '@/lib/cn'
 
 // All entity types the backend can return — kept in display order so the
@@ -367,7 +367,10 @@ export default function SearchPage() {
                             aria-label={t('search.result.open', 'Open {{title}}', {
                               title: hit.title,
                             })}
-                            className="w-full justify-start gap-3 rounded-lg px-2 py-3 text-left font-normal"
+                            className={cn(
+                              'w-full justify-start gap-3 rounded-lg px-2 py-3 text-left',
+                              typography.weight.regular,
+                            )}
                           >
                             <span className={cn('shrink-0', accent.text)}>
                               {searchHitIconSm(hit.type)}
@@ -385,7 +388,7 @@ export default function SearchPage() {
                             {hit.when && (
                               <TimeStamp
                                 value={hit.when}
-                                className="hidden shrink-0 text-xs text-[var(--text-muted)] sm:inline"
+                                className={cn('hidden shrink-0 sm:inline', typography.role.caption)}
                               />
                             )}
                             <ArrowRight
