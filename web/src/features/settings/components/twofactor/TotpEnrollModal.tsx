@@ -61,7 +61,7 @@ export function TotpEnrollModal({
           <div className="space-y-1">
             <Text variant="label">{t('totp.modal.manualLabel', 'Manual entry secret')}</Text>
             <div className="flex items-center gap-2">
-              <Code className="flex-1 break-all text-xs" data-testid="totp-secret">
+              <Code className="flex-1 break-all" data-testid="totp-secret">
                 {enrollment.secret}
               </Code>
               <CopyButton text={enrollment.secret} />

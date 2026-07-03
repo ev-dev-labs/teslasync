@@ -41,7 +41,7 @@ export function TotpBackupCodesModal({ open, codes, onDownload, onClose }: TotpB
           >
             {(codes ?? []).map((c) => (
               <li key={c}>
-                <Code className="text-xs">{c}</Code>
+                <Code>{c}</Code>
               </li>
             ))}
           </ul>
