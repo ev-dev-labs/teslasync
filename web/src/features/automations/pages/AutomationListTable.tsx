@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { GlassPanel, Badge, DataTable, PanelTitle, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, PanelTitle, Text, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import { formatRelative } from '@/lib/dateFormat';
@@ -107,9 +107,9 @@ export function AutomationListTable({
         key: 'description',
         header: t('automationList.col.desc', 'Description'),
         render: (a) => (
-          <span className="block max-w-[18rem] truncate text-[var(--text-secondary)]">
+          <Text as="span" color="secondary" className="block max-w-[18rem] truncate">
             {a.description ?? '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -117,12 +117,12 @@ export function AutomationListTable({
         header: t('automationList.col.vehicle', 'Vehicle'),
         sortable: true,
         render: (a) => (
-          <span className="text-[var(--text-secondary)]">
+          <Text as="span" color="secondary">
             {a.vehicle_id != null
               ? vehicleLookup.get(a.vehicle_id) ??
                 t('automationList.vehicleUnknown', 'Vehicle #{{id}}', { id: a.vehicle_id })
               : t('automationList.allVehicles', 'All vehicles')}
-          </span>
+          </Text>
         ),
       },
       {
@@ -131,9 +131,9 @@ export function AutomationListTable({
         sortable: true,
         align: 'right',
         render: (a) => (
-          <span className="tabular-nums text-[var(--text-primary)]">
+          <Text as="span" color="primary" className="tabular-nums">
             {fmtInt(a.execution_count ?? 0)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -144,7 +144,8 @@ export function AutomationListTable({
         render: (a) => {
           const failures = a.failure_count ?? 0;
           return (
-            <span
+            <Text
+              as="span"
               className={
                 failures > 0
                   ? 'tabular-nums text-rose-300'
@@ -152,7 +153,7 @@ export function AutomationListTable({
               }
             >
               {fmtInt(failures)}
-            </span>
+            </Text>
           );
         },
       },
@@ -161,9 +162,9 @@ export function AutomationListTable({
         header: t('automationList.col.lastTriggered', 'Last triggered'),
         sortable: true,
         render: (a) => (
-          <span className="text-[var(--text-secondary)]">
+          <Text as="span" color="secondary">
             {a.last_triggered_at ? formatRelative(a.last_triggered_at) : '—'}
-          </span>
+          </Text>
         ),
       },
       {
