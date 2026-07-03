@@ -331,16 +331,19 @@ export default function LocationsPage() {
                   return (
                     <li key={loc.id} className="space-y-2">
                       <GlassPanel className="flex items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
-                        <div
+                        <Text
+                          as="div"
+                          size="xs"
+                          weight="bold"
                           className={cn(
-                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-xs font-bold',
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
                             rankChipClass(i),
                           )}
                         >
                           #{i + 1}
-                        </div>
+                        </Text>
                         <div className="min-w-0 flex-1">
-                          <Text as="p" variant="body" className="truncate font-medium">
+                          <Text as="p" size="sm" weight="medium" color="primary" className="truncate">
                             {loc.address_name ?? '—'}
                           </Text>
                           <Text as="p" variant="caption" className="mt-0.5">
@@ -350,14 +353,19 @@ export default function LocationsPage() {
                           {appliedName?.id === loc.id && (
                             <Text as="span" size="xs" className="mt-1 inline-block text-emerald-300">
                               {t('locations.aiAutoName.applied', 'Suggested name ready to save:')}{' '}
-                              <span className="text-[var(--text-primary)]">{appliedName.name}</span>
+                              <Text as="span" color="primary">{appliedName.name}</Text>
                             </Text>
                           )}
                         </div>
-                        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs font-medium text-cyan-300">
+                        <Text
+                          as="div"
+                          size="xs"
+                          weight="medium"
+                          className="flex shrink-0 items-center gap-1 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-cyan-300"
+                        >
                           <Hash className="h-3 w-3" aria-hidden="true" />
                           {visits}
-                        </div>
+                        </Text>
                       </GlassPanel>
                       {isUnnamedLocation(loc.address_name) && (
                         <AIAutoNameUnnamedLocations
