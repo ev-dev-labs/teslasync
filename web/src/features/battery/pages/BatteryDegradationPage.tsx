@@ -460,11 +460,11 @@ export default function BatteryDegradationPage() {
                 <div className="rounded-xl border border-neon-purple/15 bg-neon-purple/[0.08] p-4">
                   <Text as="p" variant="bodySm">
                     {t('battery.degradation.predictionDesc', 'At current rate, battery reaches')}{' '}
-                    <span className="font-semibold text-amber-300">80%</span>{' '}
+                    <Text weight="semibold" className="text-amber-300">80%</Text>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
-                    <span className="font-semibold text-purple-300">
+                    <Text weight="semibold" className="text-purple-300">
                       ~{fmtNumber(degradation.prediction.years_to_80_pct ?? 0)} {t('battery.degradation.years', 'years')}
-                    </span>
+                    </Text>
                     {degradation.prediction.predicted_date && (
                       <> ({degradation.prediction.predicted_date})</>
                     )}
