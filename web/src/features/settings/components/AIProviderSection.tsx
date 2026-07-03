@@ -12,9 +12,11 @@ import {
   Input,
   Select,
   HelperText,
-  Subhead,
+  SectionTitle,
   Caption,
   Button,
+  GlassPanel,
+  Text,
 } from '@/components/ui'
 import { Stack } from '@/components/layout'
 import { useValidateAiProvider } from '@/api/hooks/useAiSettings'
@@ -136,14 +138,14 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
   }
 
   return (
-    <section
-      className="space-y-3 rounded-md border border-[var(--border-subtle)] p-4"
+    <GlassPanel
+      className="space-y-4 p-4 sm:p-5"
       aria-label={t('ai.settings.provider.label', 'Provider configuration')}
       data-testid="ai-provider-section"
     >
-      <Subhead>
+      <SectionTitle>
         {t('ai.settings.provider.label', 'Provider configuration')}
-      </Subhead>
+      </SectionTitle>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
@@ -208,11 +210,17 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             options={[
               {
                 value: 'openai',
-                label: 'Azure OpenAI Service (gpt-4o, gpt-4-turbo, …)',
+                label: t(
+                  'ai.settings.provider.azureFlavorOpenAI',
+                  'Azure OpenAI Service (gpt-4o, gpt-4-turbo, …)',
+                ),
               },
               {
                 value: 'foundry',
-                label: 'Azure AI Foundry / Inference (multi-vendor)',
+                label: t(
+                  'ai.settings.provider.azureFlavorFoundry',
+                  'Azure AI Foundry / Inference (multi-vendor)',
+                ),
               },
             ]}
           />
@@ -290,20 +298,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
                 ? t('ai.settings.validate.running', 'Validating…')
                 : t('ai.settings.validate.button', 'Validate')}
             </Button>
-            {validateBanner && (
-              <span
-                role="status"
-                className={
-                  validateBanner.kind === 'ok'
-                    ? 'text-xs text-emerald-300'
-                    : 'text-xs text-rose-300'
-                }
-                data-testid="ai-provider-validate-banner"
-                data-validate-kind={validateBanner.kind}
-              >
-                {validateBanner.message}
-              </span>
-            )}
+            {validateBanner && <ValidateBanner banner={validateBanner} />}
           </Stack>
         </div>
       )}
@@ -399,20 +394,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
                     'Validate connection',
                   )}
             </Button>
-            {validateBanner && (
-              <span
-                role="status"
-                className={
-                  validateBanner.kind === 'ok'
-                    ? 'text-xs text-emerald-300'
-                    : 'text-xs text-rose-300'
-                }
-                data-testid="ai-provider-validate-banner"
-                data-validate-kind={validateBanner.kind}
-              >
-                {validateBanner.message}
-              </span>
-            )}
+            {validateBanner && <ValidateBanner banner={validateBanner} />}
           </Stack>
         </>
       )}
@@ -432,6 +414,30 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           'Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable.',
         )}
       </HelperText>
-    </section>
+    </GlassPanel>
+  )
+}
+
+/**
+ * Inline validate result. Colour + message are paired — the text itself
+ * ("OK — …" / an error string) carries the meaning independent of hue.
+ */
+function ValidateBanner({
+  banner,
+}: {
+  banner: { kind: 'ok' | 'fail'; message: string }
+}) {
+  return (
+    <Text
+      as="span"
+      size="xs"
+      weight="medium"
+      role="status"
+      className={banner.kind === 'ok' ? 'text-emerald-300' : 'text-rose-300'}
+      data-testid="ai-provider-validate-banner"
+      data-validate-kind={banner.kind}
+    >
+      {banner.message}
+    </Text>
   )
 }

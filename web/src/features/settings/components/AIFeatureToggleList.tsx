@@ -14,7 +14,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { Toggle, Subhead, Caption } from '@/components/ui'
+import { Toggle, GlassPanel, SectionTitle, Caption, Text } from '@/components/ui'
 import {
   AI_FEATURE_IDS,
   AI_FEATURES,
@@ -30,21 +30,21 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
   const { t } = useTranslation('settings')
 
   return (
-    <section
-      className="space-y-2 rounded-md border border-[var(--border-subtle)] p-4"
+    <GlassPanel
+      className="space-y-3 p-4 sm:p-5"
       aria-label={t(
         'ai.settings.feature.legend',
         'Per-feature opt-in (all default off)',
       )}
       data-testid="ai-feature-toggle-list"
     >
-      <Subhead>
+      <SectionTitle>
         {t(
           'ai.settings.feature.legend',
           'Per-feature opt-in (all default off)',
         )}
-      </Subhead>
-      <div className="space-y-2">
+      </SectionTitle>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-1 md:grid-cols-2 2xl:grid-cols-3">
         {AI_FEATURE_IDS.map((id) => {
           const meta = AI_FEATURES[id]
           const label = t(
@@ -61,13 +61,13 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
           return (
             <div
               key={id}
-              className="flex items-start justify-between gap-3 rounded-sm px-2 py-2 hover:bg-[var(--surface-hover)]"
+              className="flex items-start justify-between gap-3 rounded-md px-2 py-2 hover:bg-[var(--surface-hover)]"
               data-testid={`ai-feature-row-${id}`}
             >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-[var(--text-primary)]">
+              <div className="min-w-0 flex-1">
+                <Text as="div" size="sm" weight="medium" color="primary">
                   {label}
-                </div>
+                </Text>
                 <Caption>{description}</Caption>
               </div>
               <Toggle
@@ -80,6 +80,6 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
           )
         })}
       </div>
-    </section>
+    </GlassPanel>
   )
 }

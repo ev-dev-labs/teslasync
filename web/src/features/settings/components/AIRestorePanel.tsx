@@ -17,7 +17,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
-import { Button, Caption, Subhead } from '@/components/ui'
+import { Button, Caption, PanelTitle, Text } from '@/components/ui'
 import { AI_FEATURES, isKnownAiFeature } from '@/ai/features'
 
 interface Props {
@@ -59,18 +59,18 @@ export function AIRestorePanel({ archived, onConfirm, onDecline }: Props) {
     <section
       role="alert"
       aria-live="polite"
-      className="rounded-md border border-purple-400/40 bg-purple-500/5 p-4 space-y-2"
+      className="space-y-2 rounded-xl border border-purple-400/40 bg-purple-500/5 p-4 sm:p-5"
       data-testid="ai-restore-panel"
     >
       <div className="flex items-start gap-2">
-        <Sparkles className="h-4 w-4 text-purple-300 mt-0.5" aria-hidden />
-        <div className="flex-1 min-w-0">
-          <Subhead>
+        <Sparkles className="mt-0.5 h-4 w-4 text-purple-300" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <PanelTitle>
             {t(
               'ai.settings.archive.title',
               'Restore previous Helix selection?',
             )}
-          </Subhead>
+          </PanelTitle>
           <Caption>
             {t(
               'ai.settings.archive.description',
@@ -78,9 +78,11 @@ export function AIRestorePanel({ archived, onConfirm, onDecline }: Props) {
             )}
           </Caption>
           {labels.length > 0 && (
-            <ul className="mt-2 list-disc list-inside text-xs text-[var(--text-secondary)]">
+            <ul className="mt-2 list-inside list-disc space-y-0.5">
               {labels.map((label) => (
-                <li key={label}>{label}</li>
+                <Text as="li" key={label} variant="bodySm">
+                  {label}
+                </Text>
               ))}
             </ul>
           )}

@@ -27,20 +27,12 @@
  *                                numbers via /ai/usage)
  */
 
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useId, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { HelixMark } from '@/components/branding/HelixMark'
-import {
-  GlassPanel,
-  IconBox,
-  Button,
-  PanelTitle,
-  Subhead,
-  HelperText,
-  Caption,
-} from '@/components/ui'
+import { Power, Server, Cloud } from 'lucide-react'
+import { GlassPanel, Button, SectionTitle, RadioCard } from '@/components/ui'
+import { InlineCallout } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
-import { Stack } from '@/components/layout'
 import { useSettings } from '@/api/hooks/useSettings'
 import { useSaveAiSettings } from '@/api/hooks/useAiSettings'
 import { AI_FEATURE_IDS, type AiFeatureId } from '@/ai/features'
@@ -48,7 +40,8 @@ import { AIProviderSection, type AIProviderDraft } from './AIProviderSection'
 import { AIFeatureToggleList } from './AIFeatureToggleList'
 import { AIRestorePanel } from './AIRestorePanel'
 import { AIUsageCard } from './AIUsageCard'
-import { useAiUsageToday } from '@/api/hooks/useAiUsage'
+import { AICostCapSpendBar } from './AICostCapSpendBar'
+import { HelixStatusStrip } from './HelixStatusStrip'
 
 type AiMode = 'off' | 'local' | 'cloud'
 
@@ -427,282 +420,165 @@ export function AISettings() {
     !restoreDismissed &&
     archiveHasRestorableEntries(settings?.ai_features_archived)
   const isCloud = mode === 'cloud'
+  const enabledCount = useMemo(
+    () => Object.values(features).filter(Boolean).length,
+    [features],
+  )
+  const modeTitleId = useId()
 
   return (
-    <FadeIn delay={0.16}>
-      <GlassPanel
-        className="p-5 space-y-5"
-        data-testid="ai-settings-panel"
-        data-ai-mode={mode}
-      >
-        <div className="flex items-start gap-3">
-          <IconBox color="purple">
-            <HelixMark className="h-5 w-5" aria-hidden="true" />
-          </IconBox>
-          <div className="flex-1 min-w-0">
-            <PanelTitle>{t('ai.settings.title', 'Helix')}</PanelTitle>
-            <Subhead>
-              {t(
-                'ai.settings.subtitle',
-                'Optional. Helix is off by default; nothing is enabled until you opt in here.',
-              )}
-            </Subhead>
-          </div>
-        </div>
+    <section
+      className="space-y-4 sm:space-y-5"
+      data-testid="ai-settings-panel"
+      data-ai-mode={mode}
+      aria-label={t('ai.settings.title', 'Helix')}
+    >
+      {/* Status band — at-a-glance summary, full-width metric grid. */}
+      <FadeIn>
+        <HelixStatusStrip
+          mode={mode}
+          enabledCount={enabledCount}
+          providerName={provider.provider}
+        />
+      </FadeIn>
 
-        <fieldset
-          className="space-y-2"
-          aria-label={t('ai.settings.modeLegend', 'Helix mode')}
-        >
-          <Caption>
+      {/* Mode picker — the primary decision (hero control). */}
+      <FadeIn delay={0.05}>
+        <GlassPanel className="space-y-3 p-4 sm:p-5">
+          <SectionTitle id={modeTitleId}>
             {t('ai.settings.modeLegend', 'Helix mode')}
-          </Caption>
+          </SectionTitle>
           <div
             role="radiogroup"
-            aria-label={t('ai.settings.modeLegend', 'Helix mode')}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+            aria-labelledby={modeTitleId}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-3"
           >
-            <ModeRadio
-              id="ai-mode-off"
+            <RadioCard
+              name="ai-mode"
               value="off"
+              accent="blue"
               checked={mode === 'off'}
-              onChange={handleModeChange}
+              onChange={(v) => {
+                if (isAiMode(v)) handleModeChange(v)
+              }}
+              icon={<Power className="h-4 w-4" aria-hidden="true" />}
               label={t('ai.settings.mode.off', 'Off (default)')}
               description={t(
                 'ai.settings.mode.offHint',
                 'No Helix features. The app works fully without them.',
               )}
+              aria-label={t('ai.settings.mode.off', 'Off (default)')}
+              data-testid="ai-mode-off"
             />
-            <ModeRadio
-              id="ai-mode-local"
+            <RadioCard
+              name="ai-mode"
               value="local"
+              accent="green"
               checked={mode === 'local'}
-              onChange={handleModeChange}
+              onChange={(v) => {
+                if (isAiMode(v)) handleModeChange(v)
+              }}
+              icon={<Server className="h-4 w-4" aria-hidden="true" />}
               label={t('ai.settings.mode.local', 'Local-only')}
               description={t(
                 'ai.settings.mode.localHint',
                 'Use a private model on your network (e.g. Ollama). No data leaves your install.',
               )}
+              aria-label={t('ai.settings.mode.local', 'Local-only')}
+              data-testid="ai-mode-local"
             />
-            <ModeRadio
-              id="ai-mode-cloud"
+            <RadioCard
+              name="ai-mode"
               value="cloud"
+              accent="cyan"
               checked={mode === 'cloud'}
-              onChange={handleModeChange}
+              onChange={(v) => {
+                if (isAiMode(v)) handleModeChange(v)
+              }}
+              icon={<Cloud className="h-4 w-4" aria-hidden="true" />}
               label={t('ai.settings.mode.cloud', 'Cloud')}
               description={t(
                 'ai.settings.mode.cloudHint',
                 'Use a cloud provider (e.g. OpenAI). Requires an API key.',
               )}
+              aria-label={t('ai.settings.mode.cloud', 'Cloud')}
+              data-testid="ai-mode-cloud"
             />
           </div>
           {mode === 'off' && (
-            <HelperText>
+            <InlineCallout
+              variant="info"
+              icon={<Power className="h-4 w-4" aria-hidden="true" />}
+            >
               {t(
                 'ai.settings.bannerOff',
                 'Helix is off. Your app works fully without it. Enable a mode above to opt in.',
               )}
-            </HelperText>
+            </InlineCallout>
           )}
-        </fieldset>
+        </GlassPanel>
+      </FadeIn>
 
-        {showProviderSection && (
-          <AIProviderSection
-            value={provider}
-            isCloud={isCloud}
-            onChange={handleProviderChange}
-          />
-        )}
-
-        {showRestorePanel && (
+      {/* Restore prompt — explicit re-enable of an archived selection. */}
+      {showRestorePanel && (
+        <FadeIn delay={0.1}>
           <AIRestorePanel
             archived={settings?.ai_features_archived ?? {}}
             onConfirm={handleRestoreConfirm}
             onDecline={handleRestoreDecline}
           />
-        )}
-
-        {showProviderSection && (
-          <AIFeatureToggleList
-            values={features}
-            onToggle={handleFeatureToggle}
-          />
-        )}
-
-        {showProviderSection && <AIUsageCard />}
-
-        {/*
-          Cost-cap spend bar. Lives only in cloud mode (local providers
-          don't bill per token) and only when
-          the user has set a non-zero cap. Reads today's spend from
-          the same /ai/usage/today endpoint as AIUsageCard so the
-          numbers match exactly. The bar is a passive read — it does
-          not gate saving the cap.
-        */}
-        {isCloud && provider.cost_cap_cents > 0 && (
-          <AICostCapSpendBar capCents={provider.cost_cap_cents} />
-        )}
-
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">
-          <Button
-            type="button"
-            variant="primary"
-            onClick={handleSave}
-            disabled={isLoading || saveAi.isPending}
-            data-testid="ai-settings-save"
-          >
-            {saveAi.isPending
-              ? t('ai.settings.saving', 'Saving…')
-              : t('ai.settings.save', 'Save Helix settings')}
-          </Button>
-        </div>
-      </GlassPanel>
-    </FadeIn>
-  )
-}
-
-/**
- * Mode radio card — keeps AISettings.tsx readable. Each card is a
- * styled label wrapping a real `<input type="radio">` so keyboard
- * navigation (arrow keys within the radiogroup) works natively.
- */
-function ModeRadio(props: {
-  id: string
-  value: AiMode
-  checked: boolean
-  onChange: (value: AiMode) => void
-  label: string
-  description: string
-}) {
-  const { id, value, checked, onChange, label, description } = props
-  return (
-    <label
-      htmlFor={id}
-      aria-label={label}
-      className={
-        'flex flex-col gap-1 rounded-md border px-3 py-2 cursor-pointer transition-colors ' +
-        (checked
-          ? 'border-purple-400/50 bg-purple-500/10'
-          : 'border-[var(--border-subtle)] hover:border-[var(--border-strong)]')
-      }
-    >
-      <div className="flex items-center gap-2">
-        <input
-          type="radio"
-          id={id}
-          name="ai-mode"
-          value={value}
-          checked={checked}
-          onChange={() => onChange(value)}
-          className="h-4 w-4"
-          data-testid={id}
-        />
-        <span className="text-sm font-medium text-[var(--text-primary)]">
-          {label}
-        </span>
-      </div>
-      <Stack gap={1}>
-        <span className="text-xs text-[var(--text-muted)]">{description}</span>
-      </Stack>
-    </label>
-  )
-}
-
-/**
- * AICostCapSpendBar live "today" spend bar.
- *
- * Shows the user how close they are to their daily $ cap. The
- * cost-cap decorator on the backend rejects new calls once the cap
- * is reached; this bar lets the user see it coming. Visible only in
- * cloud mode AND when capCents > 0 (the parent component gates this).
- *
- * Color rules:
- *   pct < 80   → cyan-300  (informational)
- *   pct ≥ 80   → amber-300 (warn — same threshold as the backend's
- *                            BannerLevel:"warn")
- *   pct ≥ 100  → rose-300  (critical — calls are now being rejected)
- *
- * Reads from /ai/usage/today via the existing hook so the value
- * matches what AIUsageCard shows. When the API returns no rows yet,
- * cost_micro_cents is 0 and the bar renders empty.
- */
-function AICostCapSpendBar({ capCents }: { capCents: number }) {
-  const { t } = useTranslation('settings')
-  const { data, isLoading } = useAiUsageToday()
-
-  // Backend stores spend in micro-cents (1e-4 cent). Cap is supplied
-  // in whole cents. Convert both to dollars for display.
-  const todayMicroCents = data?.cost_micro_cents ?? 0
-  const capMicroCents = capCents * 10_000 // 1 cent = 10_000 micro-cents
-  const pct = capMicroCents > 0 ? Math.min(100, (todayMicroCents / capMicroCents) * 100) : 0
-  const todayDollars = todayMicroCents / 1_000_000
-  const capDollars = capCents / 100
-
-  const level: 'ok' | 'warn' | 'critical' =
-    pct >= 100 ? 'critical' : pct >= 80 ? 'warn' : 'ok'
-
-  const fillClass =
-    level === 'critical'
-      ? 'bg-rose-300'
-      : level === 'warn'
-        ? 'bg-amber-300'
-        : 'bg-cyan-300'
-  const textClass =
-    level === 'critical'
-      ? 'text-rose-300'
-      : level === 'warn'
-        ? 'text-amber-300'
-        : 'text-cyan-300'
-
-  return (
-    <div
-      className="space-y-2 rounded-lg border border-[var(--border-subtle)] p-3"
-      data-testid="ai-cost-cap-spend-bar"
-      data-spend-level={level}
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <Caption>
-          {t('ai.settings.costCap.todayTitle', 'Today’s Helix spend')}
-        </Caption>
-        <span className={`text-xs font-medium ${textClass}`}>
-          {isLoading
-            ? t('ai.settings.costCap.loading', 'Loading…')
-            : t('ai.settings.costCap.amount', '${{spent}} / ${{cap}}', {
-                spent: todayDollars.toFixed(2),
-                cap: capDollars.toFixed(2),
-                defaultValue: `$${todayDollars.toFixed(2)} / $${capDollars.toFixed(2)}`,
-              })}
-        </span>
-      </div>
-      <div
-        className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(pct)}
-        aria-label={t('ai.settings.costCap.barLabel', 'Helix cost cap usage')}
-      >
-        <div
-          className={`h-full transition-all duration-500 ${fillClass}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      {level === 'critical' && (
-        <HelperText>
-          {t(
-            'ai.settings.costCap.criticalHint',
-            'Cap reached — new Helix calls will be rejected until the cap resets at UTC midnight or you raise it.',
-          )}
-        </HelperText>
+        </FadeIn>
       )}
-      {level === 'warn' && (
-        <HelperText>
-          {t(
-            'ai.settings.costCap.warnHint',
-            'You are nearing today’s cap. Calls will pause once you reach it.',
-          )}
-        </HelperText>
+
+      {/* Configuration bento: provider form is the hero (spans two columns
+          on wide screens); usage + cost-cap sit in the context rail. */}
+      {showProviderSection && (
+        <FadeIn delay={0.12}>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <div className="xl:col-span-2">
+              <AIProviderSection
+                value={provider}
+                isCloud={isCloud}
+                onChange={handleProviderChange}
+              />
+            </div>
+            <div className="space-y-4">
+              <AIUsageCard />
+              {/*
+                Cost-cap spend bar. Cloud-only (local providers don't bill
+                per token) and only when a non-zero cap is set. Reads
+                today's spend from the same /ai/usage/today endpoint as
+                AIUsageCard so the numbers match. Passive read — it does
+                not gate saving the cap.
+              */}
+              {isCloud && provider.cost_cap_cents > 0 && (
+                <AICostCapSpendBar capCents={provider.cost_cap_cents} />
+              )}
+            </div>
+          </div>
+        </FadeIn>
       )}
-    </div>
+
+      {/* Feature opt-ins — full-width, flows into columns on wide screens. */}
+      {showProviderSection && (
+        <FadeIn delay={0.16}>
+          <AIFeatureToggleList values={features} onToggle={handleFeatureToggle} />
+        </FadeIn>
+      )}
+
+      <div className="flex items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleSave}
+          disabled={isLoading || saveAi.isPending}
+          data-testid="ai-settings-save"
+        >
+          {saveAi.isPending
+            ? t('ai.settings.saving', 'Saving…')
+            : t('ai.settings.save', 'Save Helix settings')}
+        </Button>
+      </div>
+    </section>
   )
 }

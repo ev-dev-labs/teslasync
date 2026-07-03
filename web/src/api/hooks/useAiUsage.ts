@@ -96,12 +96,17 @@ export const aiUsageKeys = {
  * Aggregate today's AI usage for the calling user. Returns an
  * all-zeros payload when no calls have been audited yet (the
  * decorator + repo both treat absence as zeroes).
+ *
+ * Pass `{ enabled: false }` to skip the fetch entirely — e.g. when
+ * Helix is off, where the endpoint would 403 and there is nothing to
+ * show anyway.
  */
-export function useAiUsageToday() {
+export function useAiUsageToday(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: aiUsageKeys.today(),
     queryFn: ({ signal }) => request<AiUsageToday>('/ai/usage/today', { signal }),
     refetchInterval: INTERVALS.STANDARD,
+    enabled: options?.enabled ?? true,
   })
 }
 
