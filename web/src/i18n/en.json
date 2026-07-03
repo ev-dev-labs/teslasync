@@ -10389,7 +10389,30 @@
   },
   "system": {
     "page": {
-      "title": "System budgets"
+      "title": "System budgets",
+      "subtitle": "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."
+    },
+    "toolbar": {
+      "refreshAll": "Refresh all"
+    },
+    "overview": {
+      "title": "Health at a glance",
+      "throttleBudgets": "Throttle budgets",
+      "peakUsage": "Peak budget usage",
+      "peakUsageHint": "Of the tightest window",
+      "activeWorkers": "Active workers",
+      "activeWorkersHint": "Reporting heartbeats",
+      "backlog": "Queue backlog",
+      "backlogHint": "Pending + in progress",
+      "succeeded": "Succeeded 24h",
+      "succeededHint": "Jobs completed",
+      "failed": "Failed 24h",
+      "failedHint": "Terminal failures",
+      "noBudgets": "No active budgets",
+      "awaiting": "Awaiting data"
+    },
+    "detail": {
+      "title": "Throttles & workers"
     }
   },
   "automationList": {
