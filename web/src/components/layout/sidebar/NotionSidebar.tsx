@@ -92,7 +92,7 @@ function NotionRow({
         aria-current={active ? 'page' : undefined}
         data-tour={dataTour}
         className={cn(
-          'flex min-h-7 min-w-0 flex-1 items-center gap-2 rounded py-0.5 pe-1.5 text-[13px] transition-colors',
+          'flex min-h-7 min-w-0 flex-1 items-center gap-2 rounded py-0.5 pe-1.5 text-sm transition-colors',
           indent,
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
           active
@@ -150,7 +150,7 @@ function NotionSectionRow({
       onClick={onToggle}
       aria-expanded={expanded}
       className={cn(
-        'group flex w-full min-h-7 items-center gap-1 rounded px-1.5 py-0.5 text-left text-[13px] text-[var(--text-secondary)]',
+        'group flex w-full min-h-7 items-center gap-1 rounded px-1.5 py-0.5 text-left text-sm text-[var(--text-secondary)]',
         'transition-colors hover:bg-white/[0.03] hover:text-[var(--text-primary)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
       )}
@@ -167,7 +167,7 @@ function NotionSectionRow({
         aria-hidden
       />
       <span className="min-w-0 flex-1 truncate">{title}</span>
-      <span className="text-[10px] tabular-nums text-[var(--text-muted)]/80">{count}</span>
+      <span className="text-2xs tabular-nums text-[var(--text-muted)]/80">{count}</span>
     </button>
   )
 }
@@ -184,7 +184,7 @@ function GroupLabel({
   return (
     <div
       id={id}
-      className="group flex items-center gap-1 px-2 pb-0.5 pt-2 text-[11px] font-medium text-[var(--text-muted)]"
+      className="group flex items-center gap-1 px-2 pb-0.5 pt-2 text-xs font-medium text-[var(--text-muted)]"
     >
       <span className="flex-1 truncate">{children}</span>
       {action && (
@@ -212,7 +212,7 @@ function CountChip({ value, label }: { value: number; label: string }) {
   return (
     <span
       aria-label={label}
-      className="inline-flex h-4 min-w-[18px] items-center justify-center rounded bg-white/[0.05] px-1 text-[10px] font-medium tabular-nums text-[var(--text-secondary)]"
+      className="inline-flex h-4 min-w-[18px] items-center justify-center rounded bg-white/[0.05] px-1 text-2xs font-medium tabular-nums text-[var(--text-secondary)]"
     >
       {value > 99 ? '99+' : value}
     </span>
@@ -458,7 +458,7 @@ export function NotionSidebar({
 
           {filterTokens.length > 0 && expandedSections.length === 0 && (
             <div
-              className="rounded px-3 py-4 text-center text-[12px] text-[var(--text-muted)]"
+              className="rounded px-3 py-4 text-center text-xs text-[var(--text-muted)]"
               role="status"
               data-testid="notion-sidebar-empty-filter"
             >
@@ -466,7 +466,7 @@ export function NotionSidebar({
               <button
                 type="button"
                 onClick={() => setFilter('')}
-                className="mt-2 rounded px-2 py-1 text-[12px] text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
+                className="mt-2 rounded px-2 py-1 text-xs text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
               >
                 {t('nav.filterClear', 'Clear filter')}
               </button>

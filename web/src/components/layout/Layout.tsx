@@ -994,7 +994,7 @@ export default function Layout() {
         aria-current={isActive ? 'page' : undefined}
         data-tour={dataTour}
         className={cn(
-          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition-all duration-normal',
+          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-all duration-normal',
           isInTabBar && 'opacity-50 lg:opacity-100'
         )}
       >
@@ -1022,17 +1022,17 @@ export default function Layout() {
           {navLabel(label)}
         </span>
         {to === '/notifications/alerts' && unreadAlerts > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-[10px] font-bold text-neon-red ring-1 ring-neon-red/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-2xs font-bold text-neon-red ring-1 ring-neon-red/30">
             {unreadAlerts > 9 ? '9+' : unreadAlerts}
           </span>
         )}
         {to === '/vehicles' && vehicles && vehicles.length > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-[10px] font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-2xs font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
             {vehicles.length}
           </span>
         )}
         {to === '/data-repair' && staleCount > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-[10px] font-bold text-neon-amber ring-1 ring-neon-amber/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-2xs font-bold text-neon-amber ring-1 ring-neon-amber/30">
             {staleCount > 9 ? '9+' : staleCount}
           </span>
         )}
@@ -1201,7 +1201,7 @@ export default function Layout() {
                     aria-label={activeIsPinned ? t('nav.unpinCurrent', 'Remove current page from pinned') : t('nav.pinCurrent', 'Pin current page')}
                     onClick={() => activeIsPinned ? unpinNavPath(activeNavPath) : pinNavPath(activeNavPath)}
                     className={cn(
-                      'h-7 shrink-0 rounded-lg px-2 text-[11px] hover:bg-white/[0.08]',
+                      'h-7 shrink-0 rounded-lg px-2 text-xs hover:bg-white/[0.08]',
                       activeIsPinned ? 'text-amber-300' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
                   >
@@ -1324,7 +1324,7 @@ export default function Layout() {
                       />
                       <span
                         className={cn(
-                          'truncate text-[10px] font-bold uppercase tracking-[0.16em] transition-colors',
+                          'truncate text-2xs font-bold uppercase tracking-[0.16em] transition-colors',
                           sectionStyle?.accent ?? 'text-[var(--text-secondary)]',
                           isActiveSection ? 'opacity-100' : 'opacity-85 group-hover/section:opacity-100'
                         )}
@@ -1343,7 +1343,7 @@ export default function Layout() {
                     <span className="relative z-10 flex shrink-0 items-center gap-1.5">
                       <span
                         className={cn(
-                          'flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-semibold tabular-nums',
+                          'flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums',
                           isActiveSection
                             ? cn(sectionStyle?.surface ?? 'bg-white/[0.08]', sectionStyle?.accent ?? 'text-[var(--text-primary)]')
                             : 'bg-black/[0.05] text-[var(--text-muted)] dark:bg-white/[0.04]'
@@ -1455,7 +1455,7 @@ export default function Layout() {
             {activeNavEntry && (
               <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">
                 <LayoutBreadcrumbs className="min-w-0 text-xs" />
-                <p className="hidden shrink-0 text-[10px] text-[var(--text-muted)] lg:block">
+                <p className="hidden shrink-0 text-2xs text-[var(--text-muted)] lg:block">
                   {t('nav.quickSearchHint', 'Ctrl+K to jump')}
                 </p>
               </div>

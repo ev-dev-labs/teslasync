@@ -28,7 +28,7 @@ export function NavSectionHeader({ label, action, id, className }: NavSectionHea
     <div className={cn('flex items-center justify-between gap-2 px-3 py-1', className)}>
       <p
         id={id}
-        className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
+        className="text-2xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
       >
         {label}
       </p>

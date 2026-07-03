@@ -60,7 +60,7 @@ export function BottomTabBar() {
             )}
           >
             <Icon className={cn('h-5 w-5', isActive && 'drop-shadow-[0_0_6px_currentColor]')} />
-            <span className="text-[10px] font-medium leading-tight">
+            <span className="text-2xs font-medium leading-tight">
               {t(tab.i18nKey, tab.fallback)}
             </span>
             {isActive && (
