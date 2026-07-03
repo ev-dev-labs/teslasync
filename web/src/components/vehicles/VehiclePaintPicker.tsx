@@ -71,15 +71,19 @@ export function VehiclePaintPicker({
                   className="absolute inset-0 flex items-center justify-center"
                   aria-hidden="true"
                 >
+                  {/* Fixed white check glyph: the swatch fill is a dynamic
+                      paint color, so the mark pairs a constant light stroke
+                      with the dark drop-shadow to stay legible on every
+                      swatch (light or dark) — an icon, not themed body copy. */}
                   <svg
-                    className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
+                    className="h-3.5 w-3.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
                     viewBox="0 0 16 16"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
                       d="M4 8.5l2.5 2.5L12 5"
-                      stroke="currentColor"
+                      stroke="#ffffff"
                       strokeWidth="2.2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -99,7 +103,7 @@ export function VehiclePaintPicker({
         <button
           type="button"
           onClick={reset}
-          className="text-[11px] text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors"
+          className="text-xs text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors"
         >
           {t('paint.reset', 'Reset to auto-detected')}
         </button>

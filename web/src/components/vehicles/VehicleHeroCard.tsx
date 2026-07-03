@@ -98,7 +98,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-[var(--text-primary)]">
                 {vehicle.display_name}
               </h2>
               <StatusBadge status={toStatus(vehicleState?.state ?? vehicle.state ?? 'offline')} />
