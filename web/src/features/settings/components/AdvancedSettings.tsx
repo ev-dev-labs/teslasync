@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RotateCcw, ShieldQuestion } from 'lucide-react';
-import { GlassPanel, IconBox, Button } from '@/components/ui';
+import { GlassPanel, IconBox, Button, Heading, Text, HelperText } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { listSilenced, unsilence, clearAllSilenced } from '@/lib/confirmSilence';
@@ -69,15 +69,15 @@ export function AdvancedSettings() {
             <ShieldQuestion className="h-5 w-5" />
           </IconBox>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            <Heading level="panel">
               {t('advanced.restoreConfirms.title', 'Confirmation prompts')}
-            </h2>
-            <p className="text-xs text-[var(--text-muted)]">
+            </Heading>
+            <HelperText>
               {t(
                 'advanced.restoreConfirms.description',
                 'Re-enable “Don’t ask again” prompts you previously silenced.',
               )}
-            </p>
+            </HelperText>
           </div>
           {silenced.length > 0 && (
             <Button
@@ -102,7 +102,7 @@ export function AdvancedSettings() {
           <ul className="divide-y divide-white/[0.06] rounded-lg border border-white/[0.06] bg-white/[0.02]">
             {silenced.map((key) => (
               <li key={key} className="flex items-center justify-between gap-3 px-3 py-2">
-                <span className="text-sm text-[var(--text-primary)] truncate">{labelFor(key)}</span>
+                <Text variant="body" className="truncate">{labelFor(key)}</Text>
                 <Button
                   variant="ghost"
                   size="sm"

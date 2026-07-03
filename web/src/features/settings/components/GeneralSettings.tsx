@@ -4,7 +4,7 @@ import type { AppSettings } from '@/api/types'
 import {
   useSettings, useSaveSettings, useVehicles, useCarPreferences,
 } from '@/api/hooks/useSettings'
-import { GlassPanel, Button, IconBox, Input, Select } from '@/components/ui'
+import { GlassPanel, Button, IconBox, Input, Select, Heading, Text, HelperText } from '@/components/ui'
 import { CurrencyInput } from '@/components/forms'
 import { Skeleton, DraftRecoveryBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
@@ -164,8 +164,8 @@ export function GeneralSettings() {
             <SettingsIcon className="h-5 w-5" />
           </IconBox>
           <div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('app.title', 'Application')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">{t('app.subtitle', 'Units, language, and cost preferences')}</p>
+            <Heading level="panel">{t('app.title', 'Application')}</Heading>
+            <HelperText>{t('app.subtitle', 'Units, language, and cost preferences')}</HelperText>
           </div>
         </div>
 
@@ -190,12 +190,12 @@ export function GeneralSettings() {
                 <div className="flex items-center gap-3">
                   <Car className="h-5 w-5 text-neon-cyan shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                    <Text as="p" variant="body" className="font-medium">
                       {t('app.carUses', 'Car uses')} {parseSettingEnum(carPrefs.setting_distance_unit, 'distance')} / {parseSettingEnum(carPrefs.setting_temperature_unit, 'temperature')} / {parseSettingEnum(carPrefs.setting_tire_pressure_unit, 'pressure')}
-                    </p>
-                    <p className="text-[11px] text-[var(--text-muted)]">
+                    </Text>
+                    <HelperText>
                       {t('app.syncHint', "Sync your app's units to match your vehicle's display settings")}
-                    </p>
+                    </HelperText>
                   </div>
                 </div>
                 <Button variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar} className="shrink-0">
@@ -208,17 +208,17 @@ export function GeneralSettings() {
               <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 mb-5">
                 <Clock className="h-4 w-4 text-neon-amber shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[var(--text-primary)]">
+                  <Text as="p" variant="body">
                     {t('app.carClockFormat', 'Car clock format')}:{' '}
-                    <span className="font-medium">
+                    <Text weight="medium">
                       {carPrefs.setting_24hr_time
                         ? t('app.clock24h', '24-hour')
                         : t('app.clock12h', '12-hour')}
-                    </span>
-                  </p>
-                  <p className="text-[11px] text-[var(--text-muted)]">
+                    </Text>
+                  </Text>
+                  <HelperText>
                     {t('app.clockFormatHint', "Your vehicle's time display preference (read-only)")}
-                  </p>
+                  </HelperText>
                 </div>
               </div>
             )}
@@ -259,9 +259,9 @@ export function GeneralSettings() {
                   onChange={e => setForm({ ...form, decimal_precision: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
                   placeholder="e.g. 2"
                 />
-                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                <HelperText className="mt-1">
                   {t('app.preview', 'Preview')}: {(14.248539).toFixed(form.decimal_precision)}
-                </p>
+                </HelperText>
               </div>
 
               <Select
@@ -329,9 +329,9 @@ export function GeneralSettings() {
                   placeholder={t('app.timezoneUserPlaceholder', 'e.g. America/Los_Angeles (leave blank for browser default)')}
                   className="w-full px-3 py-2.5 text-sm"
                 />
-                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                <HelperText className="mt-1">
                   {t('app.timezoneUserHint', "IANA tz name. Useful when travelling but you'd rather see times in your home zone.")}
-                </p>
+                </HelperText>
               </SettingField>
 
               <SettingField
@@ -399,9 +399,9 @@ export function GeneralSettings() {
             {t('app.save', 'Save Settings')}
           </Button>
           {saved && (
-            <span className="text-sm text-emerald-300 flex items-center gap-1 animate-in fade-in">
+            <Text size="sm" className="flex items-center gap-1 text-emerald-300 animate-in fade-in">
               <CheckCircle className="h-4 w-4" /> {t('app.settingsSaved', 'Settings saved')}
-            </span>
+            </Text>
           )}
         </div>
       </GlassPanel>

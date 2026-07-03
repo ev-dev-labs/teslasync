@@ -10,7 +10,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
-import { Input } from '@/components/ui';
+import { Input, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { getSettingsIndex, searchSettings, type SettingsEntry } from '../searchIndex';
 
@@ -167,9 +167,9 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
                       : 'text-[var(--text-secondary)] hover:bg-white/[0.04]',
                   )}
                 >
-                  <span className="text-sm font-medium text-[var(--text-primary)]">{entry.title}</span>
+                  <Text variant="body" className="font-medium">{entry.title}</Text>
                   {entry.description && (
-                    <span className="text-xs text-[var(--text-muted)]">{entry.description}</span>
+                    <Text variant="caption">{entry.description}</Text>
                   )}
                 </button>
               </li>
