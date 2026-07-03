@@ -15,6 +15,8 @@ import {
   DataTable,
   Input,
   Badge,
+  Text,
+  Caption,
   useSortToggle,
   type Column,
 } from '@/components/ui';
@@ -95,9 +97,9 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
       sortable: true,
       visibleOnMobile: true,
       render: (row) => (
-        <span className="font-mono text-sm text-[var(--text-primary)]">
+        <Text mono size="sm" color="primary">
           {row.name}
-        </span>
+        </Text>
       ),
     },
     {
@@ -107,9 +109,9 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
       render: (row) => {
         const { text, cls } = renderValue(row.value);
         return (
-          <span className={`font-mono text-xs ${cls}`} title={text}>
+          <Text mono size="xs" className={cls} title={text}>
             {text}
-          </span>
+          </Text>
         );
       },
     },
@@ -132,7 +134,7 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
         row.source ? (
           <SourceLayerBadge source={row.source} ageMs={row.ageMs} showLabel />
         ) : (
-          <span className="text-xs text-[var(--text-muted)]">—</span>
+          <Caption>—</Caption>
         ),
     },
     {
@@ -143,9 +145,7 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
         row.timestamp ? (
           <TimeStamp value={row.timestamp} format="relative" />
         ) : (
-          <span className="text-xs tabular-nums text-[var(--text-muted)]">
-            {formatAge(row.ageMs)}
-          </span>
+          <Caption className="tabular-nums">{formatAge(row.ageMs)}</Caption>
         ),
     },
   ];
