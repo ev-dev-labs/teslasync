@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
+import { Text } from '@/components/ui';
+import { typography } from '@/lib/tokens';
 import type { HourlyRate } from '@/types/charging';
 
 interface RateTimelineProps {
@@ -51,32 +53,32 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
 
   if (rates.length === 0) {
     return (
-      <div className="text-center text-[var(--text-muted)] py-8">
+      <Text as="div" size="sm" color="muted" className="text-center py-8">
         {t('chargePlanner.noRateData', 'No rate data available')}
-      </div>
+      </Text>
     );
   }
 
   return (
     <div className="space-y-3">
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs text-[var(--text-secondary)]">
+      <div className="flex flex-wrap gap-4">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-emerald-500/40" />
-          {t('chargePlanner.offPeak', 'Off-Peak')}
+          <Text variant="bodySm">{t('chargePlanner.offPeak', 'Off-Peak')}</Text>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-amber-500/40" />
-          {t('chargePlanner.midPeak', 'Mid-Peak')}
+          <Text variant="bodySm">{t('chargePlanner.midPeak', 'Mid-Peak')}</Text>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-red-500/40" />
-          {t('chargePlanner.onPeak', 'On-Peak')}
+          <Text variant="bodySm">{t('chargePlanner.onPeak', 'On-Peak')}</Text>
         </span>
         {chargeWindow && (
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-            {t('chargePlanner.chargeWindow', 'Charge Window')}
+            <Text variant="bodySm">{t('chargePlanner.chargeWindow', 'Charge Window')}</Text>
           </span>
         )}
       </div>
@@ -95,11 +97,17 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
             >
               {/* Tooltip on hover */}
               <div className="absolute bottom-full mb-1 hidden group-hover:block z-10">
-                <div className="bg-[var(--surface-overlay)] rounded px-2 py-1 text-xs whitespace-nowrap border border-[var(--border-subtle)]">
-                  <div className="text-[var(--text-primary)] font-medium">{formatHour(rate.hour)}</div>
-                  <div className={cn(tierTextColors[rate.tier] ?? 'text-[var(--text-secondary)]')}>
+                <div className="bg-[var(--surface-overlay)] rounded px-2 py-1 whitespace-nowrap border border-[var(--border-subtle)]">
+                  <Text as="div" size="xs" weight="medium" color="primary">
+                    {formatHour(rate.hour)}
+                  </Text>
+                  <Text
+                    as="div"
+                    size="xs"
+                    className={cn(tierTextColors[rate.tier] ?? typography.color.secondary)}
+                  >
                     {fmtNumber(rate.rate_cents, 1)}¢/kWh
-                  </div>
+                  </Text>
                 </div>
               </div>
 
@@ -119,11 +127,17 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
       </div>
 
       {/* Hour labels */}
-      <div className="flex gap-0.5 text-[10px] text-[var(--text-muted)]">
+      <div className="flex gap-0.5">
         {rates.map((rate) => (
-          <div key={rate.hour} className="flex-1 text-center">
+          <Text
+            as="div"
+            key={rate.hour}
+            size="2xs"
+            color="muted"
+            className="flex-1 text-center"
+          >
             {rate.hour % 3 === 0 ? formatHour(rate.hour) : ''}
-          </div>
+          </Text>
         ))}
       </div>
     </div>
