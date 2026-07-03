@@ -8,6 +8,7 @@ import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ChartTooltip,
 } from '@/components/charts';
+import { getChartFontSize } from '@/lib/chartTypography';
 import type { FeatureCompositionRow, FeatureFlagKind } from './parseFeatureFlags';
 
 interface FeatureConfigCompositionProps {
@@ -77,10 +78,10 @@ export function FeatureConfigComposition({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} barGap={6}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+              <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: getChartFontSize(12) }} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: getChartFontSize(10) }} allowDecimals={false} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--glass-border)', fillOpacity: 0.2 }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: getChartFontSize(12) }} />
               <Bar
                 dataKey="enabled"
                 name={t('featureConfig.enabled', 'Enabled')}
