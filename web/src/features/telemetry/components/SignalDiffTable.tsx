@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataTable, PinButton, HelpTooltip, type Column } from '@/components/ui';
+import { DataTable, PinButton, HelpTooltip, Text, type Column } from '@/components/ui';
 import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -115,7 +115,7 @@ export function SignalDiffTable({
         header: t('signalDiff.signal', 'Signal'),
         sortable: true,
         render: (row) => (
-          <span className="font-mono text-xs text-[var(--text-primary)]">{row.name}</span>
+          <Text variant="code">{row.name}</Text>
         ),
       },
       {
@@ -123,9 +123,9 @@ export function SignalDiffTable({
         header: t('signalDiff.valueA', 'Window A'),
         className: 'text-right',
         render: (row) => (
-          <span className="font-mono text-xs text-[var(--text-secondary)]">
+          <Text mono size="xs" color="secondary">
             {formatRaw(row.value_a)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -133,9 +133,9 @@ export function SignalDiffTable({
         header: t('signalDiff.valueB', 'Window B'),
         className: 'text-right',
         render: (row) => (
-          <span className="font-mono text-xs text-[var(--text-primary)]">
+          <Text variant="code">
             {formatRaw(row.value_b)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -146,17 +146,18 @@ export function SignalDiffTable({
         render: (row) => {
           const lbl = deltaLabel(row.value_a, row.value_b);
           if (lbl.kind === 'none') {
-            return <span className="text-xs text-[var(--text-muted)]">—</span>;
+            return <Text variant="caption">—</Text>;
           }
           if (lbl.kind === 'change') {
-            return <span className="text-xs text-amber-300">{t('signalDiff.deltaChanged', 'changed')}</span>;
+            return <Text size="xs" className="text-amber-300">{t('signalDiff.deltaChanged', 'changed')}</Text>;
           }
           const positive = (lbl.delta ?? 0) > 0;
           const negative = (lbl.delta ?? 0) < 0;
           return (
-            <span
+            <Text
+              mono
+              size="xs"
               className={cn(
-                'font-mono text-xs',
                 positive && 'text-emerald-300',
                 negative && 'text-rose-300',
                 !positive && !negative && 'text-[var(--text-muted)]',
@@ -167,7 +168,7 @@ export function SignalDiffTable({
               {lbl.pct != null
                 ? ` (${lbl.pct >= 0 ? '+' : ''}${fmtNumber(lbl.pct, 1)}%)`
                 : ''}
-            </span>
+            </Text>
           );
         },
       },
@@ -198,9 +199,9 @@ export function SignalDiffTable({
   if (loading) {
     return (
       <div className={cn('w-full rounded-md border border-[var(--border-subtle)] bg-white/[0.02] p-6', className)}>
-        <div className="text-center text-sm text-[var(--text-muted)]">
+        <Text as="div" size="sm" color="muted" className="text-center">
           {t('signalDiff.tableLoading', 'Loading…')}
-        </div>
+        </Text>
       </div>
     );
   }
@@ -210,9 +211,9 @@ export function SignalDiffTable({
       {/* Legend explaining the technical columns. `Column.header` in the
           shared `<DataTable>` is `string`-only (cannot embed React nodes),
           so the per-column tooltips live here above the header row. */}
-      <div className="mb-2 flex flex-wrap items-center gap-3 px-1 text-[11px] text-[var(--text-muted)]">
+      <div className="mb-2 flex flex-wrap items-center gap-3 px-1">
         <span className="inline-flex items-center gap-1">
-          <span className="font-mono uppercase tracking-wide">{t('signalDiff.legend.delta', 'Δ')}</span>
+          <Text as="span" mono size="2xs" color="muted" className="uppercase tracking-wide">{t('signalDiff.legend.delta', 'Δ')}</Text>
           <HelpTooltip
             size="xs"
             i18nKey="help.signal.deltaCol"
@@ -221,9 +222,9 @@ export function SignalDiffTable({
           />
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="font-mono uppercase tracking-wide">
+          <Text as="span" mono size="2xs" color="muted" className="uppercase tracking-wide">
             {t('signalDiff.legend.source', 'Src A / Src B')}
-          </span>
+          </Text>
           <HelpTooltip
             size="xs"
             i18nKey="help.signal.sourceLayer"
