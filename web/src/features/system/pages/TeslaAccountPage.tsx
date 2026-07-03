@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption } from '@/components/ui';
+import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText } from '@/components/ui';
 import { MetricCard, KVList, Avatar, Timeline } from '@/components/data-display';
 import { QueryError, EmptyState, Skeleton, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -194,9 +194,9 @@ export default function TeslaAccountPage() {
               >
                 {t('teslaAccount.refresh', 'Refresh from Tesla')}
               </Button>
-              <Text as="p" variant="helper">
+              <HelperText>
                 {t('teslaAccount.sync.helper', 'Fetches your latest account profile from the Tesla Fleet API.')}
-              </Text>
+              </HelperText>
             </div>
           </GlassPanel>
         </section>
