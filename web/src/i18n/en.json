@@ -8847,7 +8847,22 @@
     "category": "Category",
     "noMatch": "No signals match current filters",
     "noData": "No signal data available",
-    "lastRefreshed": "Last refreshed"
+    "lastRefreshed": "Last refreshed",
+    "kpis": "Signal health summary",
+    "aging": "Aging (<5min)",
+    "freshness": "Freshness",
+    "freshnessTitle": "Freshness",
+    "fresh": "fresh",
+    "distributionTitle": "Signal Health Distribution",
+    "healthSection": "Signal health",
+    "selectVehiclePrompt": "Select a vehicle to inspect its signal freshness.",
+    "stripLabel": "Staleness distribution across {{total}} signals",
+    "signals": "Signals",
+    "receivingSummary": "{{receiving}} of {{total}} signals arriving",
+    "topStaleTitle": "Top stale signals",
+    "allFresh": "All signals are arriving on time.",
+    "catalogTitle": "Signal Catalog",
+    "refresh": "Refresh signals"
   },
   "savedViews": {
     "title": "Saved views",
