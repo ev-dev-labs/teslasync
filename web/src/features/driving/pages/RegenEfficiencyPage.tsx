@@ -176,12 +176,13 @@ export default function RegenEfficiencyPage() {
       sortable: true,
       render: (r) =>
         r.ratio != null ? (
-          <span
+          <Text
+            variant="body"
             className="font-mono font-semibold tabular-nums"
             style={{ color: regenColor(r.ratio) }}
           >
             {fmtPercent(r.ratio)}
-          </span>
+          </Text>
         ) : (
           <Text variant="caption">—</Text>
         ),
