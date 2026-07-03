@@ -272,6 +272,7 @@ export default function PowerFlowDashboardPage() {
               <EmptyState
                 icon={<Battery className="h-8 w-8" />}
                 message={t('powerFlow.noBatteryData', 'No battery data — refresh to fetch')}
+                action={{ label: t('powerFlow.refresh', 'Refresh from Tesla'), onClick: () => refreshMutation.mutate(siteId) }}
               />
             ) : (
               <div className="flex flex-col items-center gap-5">
@@ -306,6 +307,7 @@ export default function PowerFlowDashboardPage() {
               <EmptyState
                 icon={<Activity className="h-8 w-8" />}
                 message={t('powerFlow.noFlowData', 'No power flow data yet')}
+                action={{ label: t('powerFlow.refresh', 'Refresh from Tesla'), onClick: () => refreshMutation.mutate(siteId) }}
               />
             ) : (
               <div className="space-y-2">
@@ -330,6 +332,7 @@ export default function PowerFlowDashboardPage() {
               <EmptyState
                 icon={<Zap className="h-8 w-8" />}
                 message={t('powerFlow.noSiteData', 'No site data — refresh to fetch')}
+                action={{ label: t('powerFlow.refresh', 'Refresh from Tesla'), onClick: () => refreshMutation.mutate(siteId) }}
               />
             ) : (
               <KVList
