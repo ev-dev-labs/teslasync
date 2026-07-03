@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption } from '@/components/ui';
+import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
@@ -214,7 +214,7 @@ export default function StateMachineDebuggerPage() {
         header: t('fsm.count', 'Transitions'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
-          <span className="text-[var(--text-primary)] font-mono">{fmtInt(row.count)}</span>
+          <Text mono color="primary">{fmtInt(row.count)}</Text>
         ),
       },
       {
@@ -222,9 +222,9 @@ export default function StateMachineDebuggerPage() {
         header: t('fsm.avgInterval', 'Avg Interval'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
-          <span className="text-[var(--text-secondary)] font-mono">
+          <Text mono color="secondary">
             {row.avg_interval_sec > 0 ? formatDuration(row.avg_interval_sec) : '—'}
-          </span>
+          </Text>
         ),
       },
     ],
@@ -241,7 +241,7 @@ export default function StateMachineDebuggerPage() {
         render: (_row: FSMTransition, _idx?: number) => {
           const rowIdx = transitions.indexOf(_row);
           const globalIdx = (serverPage - 1) * perPage + rowIdx + 1;
-          return <span className="text-[var(--text-muted)] font-mono text-xs">{globalIdx}</span>;
+          return <Text size="xs" color="muted" mono>{globalIdx}</Text>;
         },
       },
       {
@@ -258,7 +258,7 @@ export default function StateMachineDebuggerPage() {
         key: 'fsm_name',
         header: t('fsm.type', 'FSM'),
         render: (row: FSMTransition) => (
-          <span className="text-[var(--text-secondary)] text-xs font-mono capitalize">{row.fsm_name?.replace('_', ' ') ?? 'vehicle'}</span>
+          <Text size="xs" color="secondary" mono className="capitalize">{row.fsm_name?.replace('_', ' ') ?? 'vehicle'}</Text>
         ),
       },
       {
@@ -279,7 +279,7 @@ export default function StateMachineDebuggerPage() {
         key: 'trigger',
         header: t('fsm.trigger', 'Trigger'),
         render: (row: FSMTransition) => (
-          <span className="text-[var(--text-secondary)] text-xs font-mono">{row.trigger}</span>
+          <Text size="xs" color="secondary" mono>{row.trigger}</Text>
         ),
       },
       {
@@ -501,10 +501,10 @@ export default function StateMachineDebuggerPage() {
             align="end"
             triggerTestId="fsm-debugger-range"
           />
-          <span className="hidden items-center gap-1 text-xs text-[var(--text-muted)] sm:flex">
+          <Text as="span" size="xs" color="muted" className="hidden items-center gap-1 sm:flex">
             <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} aria-hidden="true" />
             {t('fsm.autoRefresh', 'Live 10s')}
-          </span>
+          </Text>
           {permalinkUrl ? (
             <CopyButton
               text={permalinkUrl}
@@ -648,14 +648,14 @@ export default function StateMachineDebuggerPage() {
                   />
                   {currentState.state ?? '—'}
                 </div>
-                <div className="space-y-1 text-sm text-[var(--text-secondary)]">
-                  <p>
-                    <span className="text-[var(--text-muted)]">{t('fsm.type', 'FSM Type')}:</span>{' '}
-                    <span className="text-[var(--text-primary)] font-medium">{t('fsm.fsmTypeVehicle', 'Vehicle')}</span>
-                  </p>
-                  <p>
-                    <span className="text-[var(--text-muted)]">{t('fsm.mode', 'Mode')}:</span>{' '}
-                    <span className="text-[var(--text-primary)] font-medium">
+                <div className="space-y-1">
+                  <Text as="p" size="sm" color="secondary">
+                    <Text color="muted">{t('fsm.type', 'FSM Type')}:</Text>{' '}
+                    <Text weight="medium" color="primary">{t('fsm.fsmTypeVehicle', 'Vehicle')}</Text>
+                  </Text>
+                  <Text as="p" size="sm" color="secondary">
+                    <Text color="muted">{t('fsm.mode', 'Mode')}:</Text>{' '}
+                    <Text weight="medium" color="primary">
                       {currentState.is_charging
                         ? t('fsm.modeCharging', 'Charging')
                         : currentState.speed && currentState.speed > 0
@@ -663,19 +663,19 @@ export default function StateMachineDebuggerPage() {
                           : currentState.state === 'asleep'
                             ? t('fsm.modeSleep', 'Sleep')
                             : t('fsm.modeIdle', 'Idle')}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-[var(--text-muted)]">{t('fsm.since', 'Since')}:</span>{' '}
+                    </Text>
+                  </Text>
+                  <Text as="p" size="sm" color="secondary">
+                    <Text color="muted">{t('fsm.since', 'Since')}:</Text>{' '}
                     <TimeStamp
                       value={currentState.since}
                       format="absolute"
                       className="text-[var(--text-primary)] font-medium"
                     />
-                  </p>
-                  <p className="text-[var(--text-muted)]">
+                  </Text>
+                  <Text as="p" size="sm" color="muted">
                     <TimeStamp value={currentState.since} format="relative" />
-                  </p>
+                  </Text>
                 </div>
               </div>
             ) : (
@@ -781,14 +781,14 @@ export default function StateMachineDebuggerPage() {
                 </ResponsiveContainer>
                 <div className="mt-2 flex flex-wrap justify-center gap-3">
                   {pieData.map((entry, i) => (
-                    <div key={entry.name} className="flex items-center gap-1.5 text-xs">
+                    <div key={entry.name} className="flex items-center gap-1.5">
                       <span
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                         aria-hidden="true"
                       />
-                      <span className="text-[var(--text-secondary)]">{entry.name}</span>
-                      <span className="text-[var(--text-muted)]">{fmtInt(entry.value)}</span>
+                      <Text size="xs" color="secondary">{entry.name}</Text>
+                      <Text size="xs" color="muted">{fmtInt(entry.value)}</Text>
                     </div>
                   ))}
                 </div>
@@ -829,9 +829,9 @@ export default function StateMachineDebuggerPage() {
           <PanelTitle className="mb-4 flex flex-wrap items-center gap-2">
             {t('fsm.timelineTitle', 'Transition Log')}
             {totalRows > 0 && (
-              <span className="text-sm font-normal text-[var(--text-muted)]">
+              <Text size="sm" weight="regular" color="muted">
                 {fmtInt(totalRows)} {t('fsm.total', 'total')}
-              </span>
+              </Text>
             )}
           </PanelTitle>
           {transLoading ? (
@@ -892,16 +892,16 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
     <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <Caption className="mb-1 block">{t('fsm.detail.id', 'Transition ID')}</Caption>
-        <span className="text-[var(--text-primary)] font-mono break-all">{transition.id}</span>
+        <Text mono color="primary" className="break-all">{transition.id}</Text>
       </div>
       <div>
         <Caption className="mb-1 block">{t('fsm.detail.vehicleId', 'Vehicle ID')}</Caption>
-        <span className="text-[var(--text-primary)] font-mono">{transition.vehicle_id}</span>
+        <Text mono color="primary">{transition.vehicle_id}</Text>
       </div>
       {transition.fsm_name && (
         <div>
           <Caption className="mb-1 block">{t('fsm.detail.name', 'FSM Name')}</Caption>
-          <span className="text-[var(--text-primary)] font-mono">{transition.fsm_name}</span>
+          <Text mono color="primary">{transition.fsm_name}</Text>
         </div>
       )}
       <div>
@@ -914,18 +914,18 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       </div>
       <div>
         <Caption className="mb-1 block">{t('fsm.detail.trigger', 'Trigger')}</Caption>
-        <span className="text-[var(--text-primary)] font-mono">{transition.trigger}</span>
+        <Text mono color="primary">{transition.trigger}</Text>
       </div>
       {typeof transition.details?.guard === 'string' && transition.details.guard && (
         <div>
           <Caption className="mb-1 block">{t('fsm.detail.guard', 'Guard')}</Caption>
-          <span className="text-[var(--text-primary)] font-mono">{String(transition.details.guard)}</span>
+          <Text mono color="primary">{String(transition.details.guard)}</Text>
         </div>
       )}
       {typeof transition.details?.duration_in_state_ms === 'number' && transition.details.duration_in_state_ms > 0 && (
         <div>
           <Caption className="mb-1 block">{t('fsm.detail.duration', 'Duration in State')}</Caption>
-          <span className="text-[var(--text-primary)] font-mono">{formatDuration((transition.details.duration_in_state_ms as number) / 1000)}</span>
+          <Text mono color="primary">{formatDuration((transition.details.duration_in_state_ms as number) / 1000)}</Text>
         </div>
       )}
       <div className="sm:col-span-2 lg:col-span-4">
@@ -948,9 +948,9 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
           <Caption className="mb-1 block">{t('fsm.detail.context', 'Details')}</Caption>
           <div className="mt-1 flex flex-wrap gap-2">
             {Object.entries(transition.details).map(([key, val]) => (
-              <span key={key} className="rounded bg-white/[0.04] px-2 py-0.5 text-2xs text-[var(--text-secondary)] font-mono">
+              <Text as="span" size="2xs" color="secondary" mono key={key} className="rounded bg-white/[0.04] px-2 py-0.5">
                 {key}: {String(val)}
-              </span>
+              </Text>
             ))}
           </div>
         </div>

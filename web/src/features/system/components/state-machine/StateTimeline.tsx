@@ -152,7 +152,7 @@ export function StateTimeline({
       data-testid="state-timeline"
       className={cn('rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3', className)}
     >
-      <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+      <div className="mb-2 flex items-center justify-between text-2xs uppercase tracking-wider text-[var(--text-muted)]">
         <span>{formatTime(start)}</span>
         <span>
           {t('debugger.timeline.windowLabel', 'Window: {{minutes}} min', { minutes: windowMinutes })}
