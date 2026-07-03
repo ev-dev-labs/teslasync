@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, FileJson, Zap } from 'lucide-react';
 
-import { Modal, Button, Select, Textarea } from '@/components/ui';
+import { Modal, Button, Select, Textarea, Text, HelperText, ErrorText } from '@/components/ui';
 import { Tabs } from '@/components/ui';
 import { useUpdateTOUSettings, useRefreshTeslaEnergySiteInfo } from '@/api/hooks/useEnergy';
 import type { TOUSettingsPayload, TOUPreset } from '@/types/energy';
@@ -220,12 +220,12 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
   return (
     <Modal open={open} onClose={handleClose} title={t('energy.tou.title', 'Update Rate Plan')} size="lg">
       <div className="space-y-4">
-        <p className="text-sm text-[var(--text-secondary)]">
+        <Text as="p" size="sm" color="secondary">
           {t(
             'energy.tou.description',
             'Configure your utility rate plan so the Powerwall can optimize charging and discharging based on electricity pricing.',
           )}
-        </p>
+        </Text>
 
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
@@ -240,12 +240,12 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
             />
             {selectedPreset && (
               <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-                <p className="text-xs text-[var(--text-secondary)] mb-1">
+                <Text as="p" variant="bodySm" className="mb-1">
                   {t('energy.tou.previewLabel', 'Preview')}
-                </p>
-                <pre className="text-xs text-[var(--text-secondary)] overflow-auto max-h-48">
+                </Text>
+                <Text as="pre" size="xs" color="secondary" mono className="overflow-auto max-h-48">
                   {JSON.stringify(PRESETS.find((p) => p.id === selectedPreset)?.settings, null, 2)}
-                </pre>
+                </Text>
               </div>
             )}
           </div>
@@ -259,20 +259,20 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
               rows={12}
               className="font-mono text-xs"
             />
-            <p className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+            <HelperText className="flex items-center gap-1">
               <FileJson className="h-3 w-3" />
               {t(
                 'energy.tou.customHint',
                 'Paste the full tou_settings payload or just the inner object. See Tesla Fleet API docs for the schema.',
               )}
-            </p>
+            </HelperText>
           </div>
         )}
 
         {error && (
-          <p className="text-xs text-red-400 flex items-center gap-1">
+          <ErrorText className="flex items-center gap-1">
             <Zap className="h-3 w-3" /> {error}
-          </p>
+          </ErrorText>
         )}
 
         <div className="flex justify-end gap-2 pt-2">
