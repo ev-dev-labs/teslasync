@@ -296,3 +296,83 @@ export function useBatteryCells(vehicleId: string) {
     enabled: !!vehicleId,
   });
 }
+
+/* ── Projected Range ────────────────────────────────────────────── */
+
+/** A single named driver of the projection delta (e.g. temperature, speed). */
+export interface RangeFactor {
+  name: string;
+  impact_pct: number;
+  description: string;
+}
+
+/** One point on the rated-vs-projected range curve, keyed by battery %. */
+export interface RangeCurvePoint {
+  battery_pct: number;
+  rated_range: number;
+  projected_range: number;
+}
+
+/**
+ * One cell of the learned efficiency matrix. `wh_km` is watt-hours per
+ * kilometre (the analytics-layer canonical efficiency unit); `samples` is
+ * the number of qualifying drives that fed the bucket.
+ */
+export interface EfficiencyBucket {
+  temp_bucket: string;
+  speed_bucket: string;
+  wh_km: number;
+  samples: number;
+}
+
+/**
+ * A "what your range would be" scenario. Distances are kilometres, speed
+ * km/h, temperature °C — format at the render boundary via `useUnits()`.
+ */
+export interface RangeScenario {
+  name: string;
+  speed_kmh: number;
+  temp_c: number;
+  efficiency_wh_km: number;
+  range_km: number;
+  sample_count: number;
+  extras: string[];
+  is_current?: boolean;
+}
+
+/**
+ * GET /analytics/range-projection response. Distances are kilometres,
+ * energy watt-hours, temperature °C, speed km/h — all SI-floor analytics
+ * units. Never assume display units here; convert at the render boundary.
+ */
+export interface RangeProjection {
+  current_range_km: number;
+  projected_range_km: number;
+  battery_level: number;
+  efficiency_factor: number;
+  factors: RangeFactor[];
+  projection_curve: RangeCurvePoint[];
+  current_battery_pct: number;
+  usable_capacity_wh: number;
+  health_factor: number;
+  scenarios: RangeScenario[];
+  efficiency_matrix: EfficiencyBucket[];
+  tesla_estimate_km: number;
+  your_estimate_km: number;
+  accuracy_note: string;
+}
+
+/**
+ * GET /analytics/range-projection?vehicle_id=X — personalized range
+ * projection: your-vs-Tesla estimate, a rated/projected curve, a learned
+ * temperature×speed efficiency matrix, and what-if scenarios. Reads SI
+ * directly from the API; callers format at the display boundary.
+ */
+export function useRangeProjection(vehicleId: string) {
+  return useQuery({
+    queryKey: ['analytics', 'range-projection', vehicleId] as const,
+    queryFn: ({ signal }) =>
+      request<RangeProjection>(`/analytics/range-projection?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
