@@ -55,9 +55,11 @@ export function HighlightCard({
         {value}
       </Text>
       {change && (
-        <span
+        <Text
+          size="xs"
+          weight="medium"
           className={cn(
-            'flex items-center gap-1 text-xs font-medium',
+            'flex items-center gap-1',
             change.positive ? 'text-emerald-300' : 'text-rose-300',
           )}
         >
@@ -67,7 +69,7 @@ export function HighlightCard({
             <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
           )}
           {change.value}
-        </span>
+        </Text>
       )}
       {subtitle && <Caption>{subtitle}</Caption>}
     </GlassPanel>
