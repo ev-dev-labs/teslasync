@@ -2344,13 +2344,13 @@ export default function AlertStudio() {
         size="sm"
       >
         {snoozeTargetRule && (
-          <div className="space-y-3 text-sm text-[var(--text-primary)]">
-            <p className="text-[var(--text-secondary)]">
+          <div className="space-y-3">
+            <Text as="p" size="sm" color="secondary">
               {t(
                 'notifications.alertStudio.snooze.description',
                 'Suppress this rule temporarily. Snooze auto-expires; the rule will fire again afterwards if its condition is true.',
               )}
-            </p>
+            </Text>
             {snoozeTargetActive && snoozeTargetRule.snoozed_until && (
               <div className="flex items-center gap-2 rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
                 <Icons.moonStar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
