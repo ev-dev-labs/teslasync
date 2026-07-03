@@ -18,6 +18,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ChartTooltip,
+  axisTickSm,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 
@@ -46,12 +47,12 @@ export function SoftwareUpdateCadenceChart({ data }: SoftwareUpdateCadenceChartP
           />
           <XAxis
             dataKey="label"
-            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+            tick={axisTickSm}
             interval="preserveStartEnd"
           />
           <YAxis
             allowDecimals={false}
-            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+            tick={axisTickSm}
             width={28}
           />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.4 }} />

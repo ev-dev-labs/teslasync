@@ -314,7 +314,7 @@ export default function SoftwareUpdatesPage() {
                           {u.installed_at && (
                             <div className="flex items-center gap-1.5">
                               <Calendar className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-                              <Text size="xs" color="secondary">
+                              <Text variant="bodySm">
                                 {t('softwareUpdates.timeline.installedOn', 'Installed {{date}}', { date: formatDate(u.installed_at) })}
                               </Text>
                             </div>
