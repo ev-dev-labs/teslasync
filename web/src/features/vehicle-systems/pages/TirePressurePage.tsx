@@ -6,26 +6,25 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, DataTable, useSortToggle, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, PanelTitle, useSortToggle, type Column } from '@/components/ui';
 import { RangePicker, VehicleSelect } from '@/components/forms';
-import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
-import { getErrorMessage } from '@/lib/errorMessage';
+import { Skeleton, EmptyState, AlertBanner, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertPressureFromSI } from '@/lib/unitConversion';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { cn } from '@/lib/cn';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import { AITirePressureTrendReasoning } from '@/components/ai/AITirePressureTrendReasoning';
 
@@ -103,6 +102,9 @@ function normaliseTpmsToPa(raw: number | null | undefined): number {
 const TIRE_POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
 type TirePosition = (typeof TIRE_POSITIONS)[number];
 
+// English fallbacks; the visible labels are resolved through i18n at the
+// render boundary via `tireLabel(pos)` so translators can localise each
+// corner without touching this map.
 const TIRE_LABELS: Record<TirePosition, string> = {
   fl: 'Front Left',
   fr: 'Front Right',
@@ -110,6 +112,9 @@ const TIRE_LABELS: Record<TirePosition, string> = {
   rr: 'Rear Right',
 };
 
+type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
+
+// English fallbacks for the four status buckets; resolved via `statusLabel`.
 const STATUS_LABELS: Record<PressureStatus, string> = {
   normal: 'Normal',
   low: 'Low',
@@ -131,8 +136,6 @@ function getTirePressureValue(
   };
   return normaliseTpmsToPa(map[pos]);
 }
-
-type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
 
 function pressureColor(pa: number): string {
   if (pa >= NORMAL_MIN_PA && pa <= NORMAL_MAX_PA) return '#10b981';
@@ -190,6 +193,18 @@ export default function TirePressurePage() {
   const { unitPrefs } = useUnits();
   const pressureUnit = unitPrefs.pressure;
 
+  // i18n label resolvers — keep the English constant as the fallback so
+  // untranslated locales still render a meaningful corner / status name.
+  const tireLabel = useCallback(
+    (pos: TirePosition) => t(`tirePressure.tire.${pos}`, TIRE_LABELS[pos]),
+    [t],
+  );
+  const statusLabel = useCallback(
+    (status: PressureStatus) =>
+      t(`tirePressure.status.${status}`, STATUS_LABELS[status]),
+    [t],
+  );
+
   // Backend `front_left`/`front_right`/`rear_left`/`rear_right` arrive
   // in Pa (SI). `convertPressureFromSI` expects kPa, so divide by 1000
   // at the boundary.
@@ -207,11 +222,7 @@ export default function TirePressurePage() {
 
   /* ---- API queries ---- */
 
-  const {
-    data: latest,
-    isLoading: loadingLatest,
-    error: latestError,
-  } = useQuery({
+  const latestQuery = useQuery({
     queryKey: ['tire-pressure-latest', activeVehicleId],
     queryFn: () =>
       request<TirePressureReading>(
@@ -219,8 +230,14 @@ export default function TirePressurePage() {
       ),
     enabled: activeVehicleId !== null,
   });
+  const {
+    data: latest,
+    isLoading: loadingLatest,
+    error: latestError,
+    refetch: refetchLatest,
+  } = latestQuery;
 
-  const { data: history, isLoading: loadingHistory, error: historyError } = useQuery({
+  const historyQuery = useQuery({
     queryKey: ['tire-pressure-history', activeVehicleId, start, end],
     queryFn: () =>
       request<TirePressureReading[]>(
@@ -228,12 +245,20 @@ export default function TirePressurePage() {
       ),
     enabled: activeVehicleId !== null,
   });
+  const {
+    data: history,
+    isLoading: loadingHistory,
+    error: historyError,
+    refetch: refetchHistory,
+  } = historyQuery;
 
   const anyError = [latestError, historyError].find(Boolean);
 
   /* ---- Derived data ---- */
 
-  const hasWarning = hasTpmsWarning(latest?.tpms_hard_warnings) || hasTpmsWarning(latest?.tpms_soft_warnings);
+  const hardWarning = hasTpmsWarning(latest?.tpms_hard_warnings);
+  const softWarning = hasTpmsWarning(latest?.tpms_soft_warnings);
+  const hasWarning = hardWarning || softWarning;
 
   const summaryStats = useMemo(() => {
     if (!latest) return null;
@@ -319,14 +344,14 @@ export default function TirePressurePage() {
     () => [
       {
         key: 'created_at',
-        header: t('Time'),
+        header: t('tirePressure.col.time', 'Time'),
         render: (row: TirePressureReading) => formatDateTime(row.created_at),
         sortable: true,
       },
       ...TIRE_POSITIONS.map(
         (pos): Column<TirePressureReading> => ({
           key: pos,
-          header: `${TIRE_LABELS[pos]} (${pressureUnit})`,
+          header: `${tireLabel(pos)} (${pressureUnit})`,
           render: (row: TirePressureReading) => {
             const val = getTirePressureValue(row, pos);
             const status = pressureStatus(val);
@@ -341,46 +366,52 @@ export default function TirePressurePage() {
       ),
       {
         key: 'warnings',
-        header: t('Warnings'),
+        header: t('tirePressure.col.warnings', 'Warnings'),
         render: (row: TirePressureReading) => {
           if (hasTpmsWarning(row.tpms_hard_warnings)) {
             return (
               <Badge variant="danger" size="sm" dot>
-                {t('Hard Warning')}
+                {t('tirePressure.warn.hardShort', 'Hard Warning')}
               </Badge>
             );
           }
           if (hasTpmsWarning(row.tpms_soft_warnings)) {
             return (
               <Badge variant="warning" size="sm" dot>
-                {t('Soft Warning')}
+                {t('tirePressure.warn.softShort', 'Soft Warning')}
               </Badge>
             );
           }
           return (
             <Badge variant="success" size="sm">
-              {t('Ok')}
+              {t('tirePressure.warn.ok', 'OK')}
             </Badge>
           );
         },
       },
     ],
-    [t],
+    // pressureUnit rebuilds the render closures with the correct display unit
+    // when the user flips their pressure preference; between changes the deps
+    // are stable so the columns keep their identity.
+    [t, tireLabel, pressureUnit],
   );
 
   /* ---- Render ---- */
 
-  const isLoading = loadingLatest && !latest;
-
   return (
     <PageContainer
       title={t('tirePressure.title', 'Tire Pressure')}
-      subtitle={t('tirePressure.subtitle', 'Monitor tire pressure readings and history')}
-      loading={isLoading}
-      error={latestError as Error | null}
+      subtitle={t(
+        'tirePressure.subtitle',
+        'Monitor tire pressure readings and history',
+      )}
+      query={[latestQuery, historyQuery]}
       actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <VehicleSelect ariaLabel={t('tirePressure.selectVehicle', 'Select vehicle')} className="w-44" />
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <VehicleSelect
+            ariaLabel={t('tirePressure.selectVehicle', 'Select vehicle')}
+            className="w-40 sm:w-44"
+          />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}
@@ -392,207 +423,237 @@ export default function TirePressurePage() {
       }
     >
       {anyError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        <AlertBanner
+          variant="danger"
+          icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}
+          title={t('error.loadFailed', 'Failed to load data')}
+        >
+          {getErrorMessage(anyError)}
         </AlertBanner>
       )}
 
-      <FadeIn>
-        <div className="mb-6">
-          <AITirePressureTrendReasoning vehicleId={activeVehicleId ?? undefined} />
-        </div>
+      {/* AI opt-in narration — renders nothing when the feature is disabled. */}
+      <AITirePressureTrendReasoning vehicleId={activeVehicleId ?? undefined} />
 
-        {/* Warning banner */}
-        {hasWarning && (
-          <GlassPanel
-            className={cn(
-              'mb-6 flex items-center gap-3 px-4 py-3',
-              hasTpmsWarning(latest?.tpms_hard_warnings)
-                ? 'border-red-500/40'
-                : 'border-amber-500/40',
-            )}
-          >
-            <AlertTriangle
-              className={cn(
-                'h-5 w-5 shrink-0',
-                hasTpmsWarning(latest?.tpms_hard_warnings) ? 'text-red-400' : 'text-amber-400',
+      {/* TPMS warning banner — surfaced when the latest reading flags a corner. */}
+      {hasWarning && (
+        <AlertBanner
+          variant={hardWarning ? 'danger' : 'warning'}
+          icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
+          title={
+            hardWarning
+              ? t('tirePressure.warn.hardTitle', 'Hard TPMS warning active')
+              : t('tirePressure.warn.softTitle', 'Soft TPMS warning active')
+          }
+        >
+          {hardWarning
+            ? t(
+                'tirePressure.warn.hardBody',
+                'One or more tires need immediate attention.',
+              )
+            : t(
+                'tirePressure.warn.softBody',
+                'One or more tires are outside the recommended range.',
               )}
-            />
-            <Badge variant={hasTpmsWarning(latest?.tpms_hard_warnings) ? 'danger' : 'warning'}>
-              {hasTpmsWarning(latest?.tpms_hard_warnings)
-                ? t('Hard Warning Active')
-                : t('Soft Warning Active')}
-            </Badge>
-          </GlassPanel>
-        )}
+        </AlertBanner>
+      )}
 
-        {/* 4 Tire Pressure Gauges */}
-        <GlassPanel className="mb-6 p-5">
-          <FadeIn delay={0.1}>
-            <div className="mb-3 flex items-center gap-2">
-              <Gauge className="h-5 w-5 text-cyan-400" />
-              <Badge variant="info" size="sm">
-                {t('Current Readings')}
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              {TIRE_POSITIONS.map((pos) => {
-                const value = latest
-                  ? getTirePressureValue(latest, pos)
-                  : 0;
-                const color = pressureColor(value);
-                const status = pressureStatus(value);
-
-                return (
-                  <GlassPanel
-                    key={pos}
-                    hover
-                    className="flex flex-col items-center gap-3 p-4"
-                  >
-                    {loadingLatest ? (
-                      <Skeleton height={120} className="w-full" />
-                    ) : (
-                      <>
-                        <RadialGauge
-                          value={pressureDisplayValue(value)}
-                          max={gaugeMax}
-                          label={TIRE_LABELS[pos]}
-                          unit={pressureUnit}
-                          color={color}
-                          size={120}
-                        />
-                        <Badge variant={statusVariant(status)} size="sm">
-                          {STATUS_LABELS[status]}
-                        </Badge>
-                      </>
-                    )}
-                  </GlassPanel>
-                );
-              })}
-            </div>
-          </FadeIn>
-        </GlassPanel>
-
-        {/* Summary Stats */}
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* 1 — KPI band: full-width responsive metric grid */}
+      <FadeIn>
+        <section
+          aria-label={t('tirePressure.kpis', 'Tire pressure summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
           <MetricCard
-            label={t('Avg Pressure')}
+            label={t('tirePressure.avgPressure', 'Avg Pressure')}
             value={
               summaryStats
                 ? `${fmtNumber(pressureDisplayValue(summaryStats.avg ?? 0))} ${pressureUnit}`
                 : '—'
             }
-            icon={<Activity className="h-5 w-5" />}
+            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
-            label={t('Min Pressure')}
+            label={t('tirePressure.minPressure', 'Min Pressure')}
             value={
               summaryStats
                 ? `${fmtNumber(pressureDisplayValue(summaryStats.min ?? 0))} ${pressureUnit}`
                 : '—'
             }
-            icon={<TrendingDown className="h-5 w-5" />}
+            icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
-            label={t('Warning Count')}
+            label={t('tirePressure.warningCount', 'Warning Count')}
             value={summaryStats?.warningCount ?? 0}
-            icon={<AlertTriangle className="h-5 w-5" />}
+            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
             color="amber"
           />
           <MetricCard
-            label={t('Last Updated')}
+            label={t('tirePressure.lastUpdated', 'Last Updated')}
             value={lastUpdatedAt ? formatDateTime(lastUpdatedAt) : '—'}
-            icon={<Clock className="h-5 w-5" />}
+            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
             color="purple"
           />
-        </div>
+        </section>
+      </FadeIn>
 
-        {/* Pressure History Chart */}
-        <GlassPanel className="mb-6 p-5">
-          <FadeIn delay={0.2}>
-            <div className="mb-4 flex items-center gap-2">
-              <Gauge className="h-5 w-5 text-cyan-400" />
-              <Badge variant="info" size="sm">
-                {t('Pressure History')}
-              </Badge>
-            </div>
+      {/* 2 — Hero bento: current-reading gauges beside the history chart */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('tirePressure.readings', 'Current readings and trend')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          {/* Current readings — four corner radial gauges */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('tirePressure.currentReadings', 'Current Readings')}
+            </PanelTitle>
 
-            {loadingHistory ? (
-              <Skeleton height={300} className="w-full" />
-            ) : chartData.length === 0 ? (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            {loadingLatest && !latest ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-2">
+                {TIRE_POSITIONS.map((pos) => (
+                  <Skeleton key={pos} height={148} className="w-full" />
+                ))}
+              </div>
+            ) : latestError ? (
+              <QueryError
+                error={latestError}
+                onRetry={() => refetchLatest()}
+                resourceName={t('tirePressure.resource', 'Tire pressure')}
+              />
+            ) : !latest ? (
+              <EmptyState /* no-action: transient empty state — surfaces when no live reading exists for the vehicle */
                 icon={<Gauge className="h-8 w-8" />}
-                message={t('No History Data')}
+                message={t(
+                  'tirePressure.noReadings',
+                  'No current readings available',
+                )}
               />
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--glass-border)"
-                    strokeOpacity={0.5}
-                  />
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                  />
-                  <YAxis
-                    domain={['auto', 'auto']}
-                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                    tickFormatter={(v: number) => fmtNumber(v, 1)}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {TIRE_POSITIONS.map((pos) => (
-                    <Line
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-2">
+                {TIRE_POSITIONS.map((pos) => {
+                  const value = getTirePressureValue(latest, pos);
+                  const color = pressureColor(value);
+                  const status = pressureStatus(value);
+                  return (
+                    <GlassPanel
                       key={pos}
-                      {...AREA_DEFAULTS}
-                      dataKey={pos}
-                      name={TIRE_LABELS[pos]}
-                      stroke={LINE_COLORS[pos]}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
+                      hover
+                      className="flex min-w-0 flex-col items-center gap-3 p-3"
+                    >
+                      <RadialGauge
+                        value={pressureDisplayValue(value)}
+                        max={gaugeMax}
+                        label={tireLabel(pos)}
+                        unit={pressureUnit}
+                        color={color}
+                        size={120}
+                      />
+                      <Badge variant={statusVariant(status)} size="sm">
+                        {statusLabel(status)}
+                      </Badge>
+                    </GlassPanel>
+                  );
+                })}
+              </div>
             )}
-          </FadeIn>
-        </GlassPanel>
+          </GlassPanel>
 
-        {/* History DataTable */}
-        <GlassPanel className="p-5">
-          <FadeIn delay={0.3}>
-            <div className="mb-4 flex items-center gap-2">
-              <Clock className="h-5 w-5 text-purple-400" />
-              <Badge variant="info" size="sm">
-                {t('History Table')}
-              </Badge>
-            </div>
+          {/* Pressure history — hero time-series spanning the remaining width */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('tirePressure.pressureHistory', 'Pressure History')}
+            </PanelTitle>
 
-            {loadingHistory ? (
-              <Skeleton height={200} className="w-full" />
-            ) : !history?.length ? (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                icon={<Clock className="h-8 w-8" />}
-                message={t('No History Data')}
+            {loadingHistory && !history ? (
+              <Skeleton height={260} className="w-full" />
+            ) : historyError ? (
+              <QueryError
+                error={historyError}
+                onRetry={() => refetchHistory()}
+                resourceName={t('tirePressure.resource', 'Tire pressure')}
+              />
+            ) : chartData.length === 0 ? (
+              <EmptyState /* no-action: transient empty state — surfaces when the selected window has no history */
+                icon={<Gauge className="h-8 w-8" />}
+                message={t('tirePressure.noHistory', 'No history data')}
               />
             ) : (
-              <DataTable
-                tableId="vehicle-systems:tire-pressure-history"
-                columns={historyColumns}
-                data={tableData}
-                keyExtractor={(row) => row.id}
-                sortKey={sortKey}
-                sortDir={sortDir}
-                onSort={onSort}
-                emptyMessage={t('No History Data')}
-                compact
-                pagination
-              />
+              <div className="h-56 sm:h-64 xl:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--glass-border)"
+                      strokeOpacity={0.5}
+                    />
+                    <XAxis
+                      dataKey="time"
+                      tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                    />
+                    <YAxis
+                      domain={['auto', 'auto']}
+                      tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                      tickFormatter={(v: number) => fmtNumber(v, 1)}
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    {TIRE_POSITIONS.map((pos) => (
+                      <Line
+                        key={pos}
+                        {...AREA_DEFAULTS}
+                        dataKey={pos}
+                        name={tireLabel(pos)}
+                        stroke={LINE_COLORS[pos]}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             )}
-          </FadeIn>
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 3 — Detail band: full-width history table */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('tirePressure.historyTable', 'History Table')}
+          </PanelTitle>
+
+          {loadingHistory && !history ? (
+            <Skeleton height={220} className="w-full" />
+          ) : historyError ? (
+            <QueryError
+              error={historyError}
+              onRetry={() => refetchHistory()}
+              resourceName={t('tirePressure.resource', 'Tire pressure')}
+            />
+          ) : !history?.length ? (
+            <EmptyState /* no-action: transient empty state — surfaces when the selected window has no history */
+              icon={<Clock className="h-8 w-8" />}
+              message={t('tirePressure.noHistory', 'No history data')}
+            />
+          ) : (
+            <DataTable
+              tableId="vehicle-systems:tire-pressure-history"
+              columns={historyColumns}
+              data={tableData}
+              keyExtractor={(row) => row.id}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={onSort}
+              emptyMessage={t('tirePressure.noHistory', 'No history data')}
+              compact
+              pagination
+            />
+          )}
         </GlassPanel>
       </FadeIn>
     </PageContainer>
