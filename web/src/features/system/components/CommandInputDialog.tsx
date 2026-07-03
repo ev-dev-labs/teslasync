@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Input, Button } from '@/components/ui';
+import { Modal, Input, Button, Heading, HelperText } from '@/components/ui';
 import type { CommandDef } from '../commands';
 
 interface CommandInputDialogProps {
@@ -161,12 +161,12 @@ export function CommandInputDialog({
             <Icon className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            <Heading level="panel" as="h2">
               {t(def.labelKey, def.labelFallback)}
-            </h2>
-            <p className="text-xs text-[var(--text-muted)]">
+            </Heading>
+            <HelperText>
               {t(ic.promptKey, ic.promptFallback)}
-            </p>
+            </HelperText>
           </div>
         </div>
 
@@ -185,7 +185,7 @@ export function CommandInputDialog({
                 onBlur={() => handleBlur(field.name)}
                 error={touched[field.name] ? (errors[field.name] ?? undefined) : undefined}
                 autoComplete="off"
-                className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)]"
+                className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             ))
           ) : (
@@ -200,7 +200,7 @@ export function CommandInputDialog({
               onBlur={() => handleBlur(ic.paramName)}
               error={touched[ic.paramName] ? (errors[ic.paramName] ?? undefined) : undefined}
               autoComplete="off"
-              className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)]"
+              className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
           )}
 
