@@ -446,15 +446,7 @@ function CategoryGaugeCard({
       <PanelTitle className="mb-3 self-start">{title}</PanelTitle>
       <RadialGauge value={value} max={max} label={title} color={color} size={120} />
       <div className="mt-3 flex items-baseline gap-1">
-        <Text
-          as="span"
-          className={cn(
-            typography.size['2xl'],
-            typography.weight.bold,
-            typography.color.primary,
-            'tabular-nums',
-          )}
-        >
+        <Text as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
           <AnimatedNumber value={value} />
         </Text>
         <Caption>/{max}</Caption>
@@ -879,12 +871,9 @@ export default function DriveScorePage() {
         render: (row) => (
           <Text
             as="span"
-            className={cn(
-              typography.size.sm,
-              typography.weight.semibold,
-              'tabular-nums',
-              gradeTextClass(row.grade),
-            )}
+            size="sm"
+            weight="semibold"
+            className={cn('tabular-nums', gradeTextClass(row.grade))}
           >
             {row.total}/100
           </Text>
@@ -1070,15 +1059,7 @@ export default function DriveScorePage() {
                   size={200}
                 />
                 <div className="mt-4 flex items-baseline justify-center gap-1">
-                  <Text
-                    as="span"
-                    className={cn(
-                      typography.size['3xl'],
-                      typography.weight.bold,
-                      typography.color.primary,
-                      'tabular-nums',
-                    )}
-                  >
+                  <Text as="span" size="3xl" weight="bold" color="primary" className="tabular-nums">
                     <AnimatedNumber value={overallScore} />
                   </Text>
                   <Text variant="body" className={typography.color.secondary}>
@@ -1702,12 +1683,9 @@ export default function DriveScorePage() {
                 <div className="flex items-end gap-2">
                   <Text
                     as="span"
-                    className={cn(
-                      typography.size['2xl'],
-                      typography.weight.bold,
-                      'tabular-nums',
-                      scoreTextClass(periodStats.thisWeekAvg),
-                    )}
+                    size="2xl"
+                    weight="bold"
+                    className={cn('tabular-nums', scoreTextClass(periodStats.thisWeekAvg))}
                   >
                     {periodStats.thisWeekAvg ?? '—'}
                   </Text>
@@ -1742,12 +1720,9 @@ export default function DriveScorePage() {
                 <div className="flex items-end gap-2">
                   <Text
                     as="span"
-                    className={cn(
-                      typography.size['2xl'],
-                      typography.weight.bold,
-                      'tabular-nums',
-                      scoreTextClass(periodStats.thisMonthAvg),
-                    )}
+                    size="2xl"
+                    weight="bold"
+                    className={cn('tabular-nums', scoreTextClass(periodStats.thisMonthAvg))}
                   >
                     {periodStats.thisMonthAvg ?? '—'}
                   </Text>
@@ -1781,12 +1756,9 @@ export default function DriveScorePage() {
                 <Label>{t('driveScore.bestWeek', 'Best Week')}</Label>
                 <Text
                   as="span"
-                  className={cn(
-                    typography.size['2xl'],
-                    typography.weight.bold,
-                    'tabular-nums',
-                    scoreTextClass(periodStats.bestWeek.avg),
-                  )}
+                  size="2xl"
+                  weight="bold"
+                  className={cn('tabular-nums', scoreTextClass(periodStats.bestWeek.avg))}
                 >
                   {periodStats.bestWeek.avg || '—'}
                 </Text>
@@ -1797,12 +1769,9 @@ export default function DriveScorePage() {
                 <Label>{t('driveScore.bestMonth', 'Best Month')}</Label>
                 <Text
                   as="span"
-                  className={cn(
-                    typography.size['2xl'],
-                    typography.weight.bold,
-                    'tabular-nums',
-                    scoreTextClass(periodStats.bestMonth.avg),
-                  )}
+                  size="2xl"
+                  weight="bold"
+                  className={cn('tabular-nums', scoreTextClass(periodStats.bestMonth.avg))}
                 >
                   {periodStats.bestMonth.avg || '—'}
                 </Text>
@@ -1811,15 +1780,7 @@ export default function DriveScorePage() {
 
               <GlassPanel className="flex flex-col gap-2 p-4 sm:p-5">
                 <Label>{t('driveScore.totalDrivesLabel', 'Total Drives')}</Label>
-                <Text
-                  as="span"
-                  className={cn(
-                    typography.size['2xl'],
-                    typography.weight.bold,
-                    typography.color.primary,
-                    'tabular-nums',
-                  )}
-                >
+                <Text as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
                   {periodStats.totalDrives}
                 </Text>
                 <Caption>{t('driveScore.drivesScored', 'drives scored')}</Caption>
@@ -1827,15 +1788,7 @@ export default function DriveScorePage() {
 
               <GlassPanel className="flex flex-col gap-2 p-4 sm:p-5">
                 <Label>{t('driveScore.ratedAPlus', 'Rated A+/A')}</Label>
-                <Text
-                  as="span"
-                  className={cn(
-                    typography.size['2xl'],
-                    typography.weight.bold,
-                    'tabular-nums',
-                    'text-emerald-300',
-                  )}
-                >
+                <Text as="span" size="2xl" weight="bold" className="tabular-nums text-emerald-300">
                   {periodStats.aOrBetter}
                 </Text>
                 <Caption>
