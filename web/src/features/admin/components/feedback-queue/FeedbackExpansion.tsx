@@ -61,23 +61,23 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: Fe
 
       {row.recent_errors !== null && row.recent_errors !== undefined ? (
         <details>
-          <summary className="cursor-pointer text-xs text-[var(--text-secondary)]">
+          <Text as="summary" variant="bodySm" className="cursor-pointer">
             {t('feedback.queue.expand.recentErrors', 'Recent frontend errors')}
-          </summary>
-          <pre className="mt-2 max-h-64 overflow-auto rounded bg-[var(--surface-2)] p-2 text-xs text-[var(--text-primary)]">
+          </Text>
+          <Text as="pre" variant="code" className="mt-2 max-h-64 overflow-auto rounded bg-[var(--surface-2)] p-2">
             {JSON.stringify(row.recent_errors, null, 2)}
-          </pre>
+          </Text>
         </details>
       ) : null}
 
       {row.console_tail ? (
         <details>
-          <summary className="cursor-pointer text-xs text-[var(--text-secondary)]">
+          <Text as="summary" variant="bodySm" className="cursor-pointer">
             {t('feedback.queue.expand.consoleTail', 'Console tail')}
-          </summary>
-          <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-[var(--surface-2)] p-2 text-xs text-[var(--text-primary)]">
+          </Text>
+          <Text as="pre" variant="code" className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-[var(--surface-2)] p-2">
             {row.console_tail}
-          </pre>
+          </Text>
         </details>
       ) : null}
 
