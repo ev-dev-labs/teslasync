@@ -230,7 +230,7 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
         {count > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow ring-1 ring-rose-300/60"
+            className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-2xs font-bold text-[var(--text-primary)] shadow ring-1 ring-rose-300/60"
           >
             {display}
           </span>
@@ -394,7 +394,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
             <h2 id={headingId} className="text-sm font-semibold text-[var(--text-primary)]">
               {t('notifications.bellPopover.title', 'Notifications')}
             </h2>
-            <p className="text-[11px] text-[var(--text-muted)]">
+            <p className="text-xs text-[var(--text-muted)]">
               {unreadBadgeCount > 0
                 ? t('notifications.bellPopover.unreadCount', '{{count}} unread', {
                     count: unreadBadgeCount,
@@ -487,7 +487,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                             {log.message}
                           </span>
                         )}
-                        <span className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+                        <span className="mt-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
                           <span>{formatRelative(log.created_at)}</span>
                           {vehicle && (
                             <>

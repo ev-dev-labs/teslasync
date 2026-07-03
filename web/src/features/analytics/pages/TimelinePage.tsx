@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, DataTable, PanelTitle, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, Select, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard, MetricBar, DataFreshnessAuto } from '@/components/data-display';
@@ -269,7 +269,7 @@ export default function TimelinePage() {
         header: t('timeline.time', 'Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm">{formatDateTime(row.ts)}</span>
+          <Text variant="body">{formatDateTime(row.ts)}</Text>
         ),
       },
       {
@@ -303,12 +303,12 @@ export default function TimelinePage() {
           const start = new Date(row.ts).getTime();
           const end = row.next_ts ? new Date(row.next_ts).getTime() : Date.now();
           if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
-            return <span className="text-xs text-[var(--text-muted)]">—</span>;
+            return <Caption>—</Caption>;
           }
           return (
-            <span className="text-sm tabular-nums text-[var(--text-primary)]">
+            <Text variant="body" className="tabular-nums">
               {formatDurationFromSeconds((end - start) / 1000)}
-            </span>
+            </Text>
           );
         },
       },
@@ -317,9 +317,9 @@ export default function TimelinePage() {
         header: t('timeline.trigger', 'Trigger'),
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-[var(--text-secondary)]">
+          <Text variant="bodySm">
             {row.trigger_field ?? '—'}
-          </span>
+          </Text>
         ),
       },
     ],
@@ -443,9 +443,9 @@ export default function TimelinePage() {
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: color }}
                 />
-                <span className="text-xs capitalize text-[var(--text-secondary)]">
+                <Text variant="bodySm" className="capitalize">
                   {state}
-                </span>
+                </Text>
               </div>
             ))}
           </div>

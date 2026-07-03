@@ -448,9 +448,9 @@ export default function ClimateControlPage() {
         header: t('Time'),
         sortable: true,
         render: (row) => (
-          <span className="whitespace-nowrap">
+          <Text as="span" variant="body" className="whitespace-nowrap">
             {row.timestamp ? formatDateTime(row.timestamp) : '—'}
-          </span>
+          </Text>
         ),
       },
       {

@@ -91,7 +91,7 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
           aria-haspopup="dialog"
           onClick={() => setOpen(true)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
+            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
             'text-[var(--text-muted)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
           )}
         >

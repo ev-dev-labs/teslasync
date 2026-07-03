@@ -73,7 +73,7 @@ export function BackgroundWorkSegment({ iconOnly = false }: BackgroundWorkSegmen
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
+            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
             'text-amber-300 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
           )}
         >
@@ -92,7 +92,7 @@ export function BackgroundWorkSegment({ iconOnly = false }: BackgroundWorkSegmen
             'p-2 space-y-1',
           )}
         >
-          <div className="px-1.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+          <div className="px-1.5 pb-1 text-2xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
             {t('statusBar.background.heading', 'Running')}
           </div>
           {jobs.map((job) => {
@@ -106,7 +106,7 @@ export function BackgroundWorkSegment({ iconOnly = false }: BackgroundWorkSegmen
                 <span className="flex-1 min-w-0">
                   <span className="block font-medium text-[var(--text-primary)] truncate">{job.label}</span>
                   {job.description && (
-                    <span className="block text-[10px] text-[var(--text-muted)] truncate">{job.description}</span>
+                    <span className="block text-2xs text-[var(--text-muted)] truncate">{job.description}</span>
                   )}
                 </span>
                 <Loader2 className="h-3 w-3 shrink-0 animate-spin text-amber-300" aria-hidden />

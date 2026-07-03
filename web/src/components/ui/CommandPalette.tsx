@@ -841,7 +841,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                           inputRef.current?.focus()
                         }}
                         aria-label={t('palette.clearScope', { scope: getScopeMeta(activeScope).label, defaultValue: `Clear ${getScopeMeta(activeScope).label} filter` })}
-                        className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[rgba(var(--theme-primary-rgb),0.25)] bg-[rgba(var(--theme-primary-rgb),0.10)] px-2 py-1 text-[11px] font-medium text-[var(--theme-primary)] hover:bg-[rgba(var(--theme-primary-rgb),0.18)] transition-colors"
+                        className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[rgba(var(--theme-primary-rgb),0.25)] bg-[rgba(var(--theme-primary-rgb),0.10)] px-2 py-1 text-xs font-medium text-[var(--theme-primary)] hover:bg-[rgba(var(--theme-primary-rgb),0.18)] transition-colors"
                         data-palette-scope-chip={activeScope}
                       >
                         <span className="font-mono">{getScopeMeta(activeScope).prefix}</span>
@@ -872,7 +872,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                         className="!rounded-none !border-0 !bg-transparent !p-0 text-sm text-[var(--text-primary)] !shadow-none !ring-0 placeholder:text-[var(--text-muted)]"
                       />
                     </div>
-                    <kbd className="hidden items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)] sm:flex">
+                    <kbd className="hidden items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-2xs text-[var(--text-muted)] sm:flex">
                       ESC
                     </kbd>
                   </>
@@ -896,7 +896,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                 ) : (
                   groupedItems.map((group, groupIndex) => (
                     <div key={`${group.section}-${groupIndex}`}>
-                      <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                      <div className="px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                         {group.section}
                       </div>
                       {group.items.map(({ item, globalIndex }) => {
@@ -932,7 +932,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                                 )}
                               </div>
                               {item.sublabel && (
-                                <span className="block truncate text-[11px] text-[var(--text-muted)]">
+                                <span className="block truncate text-xs text-[var(--text-muted)]">
                                   {item.sublabel}
                                 </span>
                               )}
@@ -940,7 +940,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                             {item.shortcut && (
                               <kbd
                                 aria-label={t('palette.shortcut', { keys: item.shortcut, defaultValue: `Shortcut: ${item.shortcut}` })}
-                                className="hidden flex-shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-muted)] sm:inline-flex"
+                                className="hidden flex-shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:inline-flex"
                               >
                                 {item.shortcut}
                               </kbd>
@@ -971,7 +971,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-[var(--glass-border)] px-5 py-3 text-[10px] text-[var(--text-muted)]">
+              <div className="border-t border-[var(--glass-border)] px-5 py-3 text-2xs text-[var(--text-muted)]">
                 <div className="flex items-center gap-4 flex-wrap">
                   <span className="flex items-center gap-1">
                     <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}
@@ -1001,7 +1001,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                     className="mt-2 flex items-center gap-3 flex-wrap text-[var(--text-muted)]"
                     data-palette-scope-hints
                   >
-                    <span className="text-[10px] uppercase tracking-wider opacity-70">
+                    <span className="text-2xs uppercase tracking-wider opacity-70">
                       {t('palette.filterBy', 'Filter')}
                     </span>
                     {PALETTE_SCOPE_HINTS.map(hint => (
@@ -1013,9 +1013,9 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                           setSelectedIndex(0)
                           inputRef.current?.focus()
                         }}
-                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
                       >
-                        <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px]">{hint.prefix}</kbd>
+                        <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs">{hint.prefix}</kbd>
                         <span>{t(`palette.scope.${hint.scope}`, hint.label)}</span>
                       </button>
                     ))}
@@ -1041,7 +1041,7 @@ export function CommandPaletteTrigger() {
     >
       <Search className="h-4 w-4" />
       <span className="flex-1 text-left">Search...</span>
-      <kbd className="hidden items-center gap-0.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-muted)] sm:flex">
+      <kbd className="hidden items-center gap-0.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:flex">
         <Command className="h-2.5 w-2.5" />K
       </kbd>
     </button>

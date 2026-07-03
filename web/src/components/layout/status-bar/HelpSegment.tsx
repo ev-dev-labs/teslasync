@@ -28,7 +28,7 @@ export interface HelpSegmentProps {
 }
 
 const buttonClass = cn(
-  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] leading-none',
+  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs leading-none',
   'text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-[var(--text-secondary)]',
   'focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
 );
@@ -52,7 +52,7 @@ export function HelpSegment({ iconOnly = false }: HelpSegmentProps) {
           <Keyboard className="h-3 w-3 shrink-0" aria-hidden />
           {!iconOnly && (
             <>
-              <kbd className="rounded bg-[var(--surface-2)] px-1 text-[10px] text-[var(--text-secondary)]">?</kbd>
+              <kbd className="rounded bg-[var(--surface-2)] px-1 text-2xs text-[var(--text-secondary)]">?</kbd>
               <span className="hidden xl:inline">{t('shortcuts.hintSuffix', 'for shortcuts')}</span>
             </>
           )}

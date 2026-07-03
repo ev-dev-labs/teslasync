@@ -46,7 +46,7 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
             <div className="grid grid-cols-4 gap-3 mb-3">
               {tpStats.map((tp) => (
                 <div key={tp.label} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-[9px] text-[var(--text-muted)]">{tp.label}</p>
+                  <p className="text-2xs text-[var(--text-muted)]">{tp.label}</p>
                   <p className="text-sm font-bold" style={{ color: tp.color }}>
                     {tp.min != null ? `${fmtNumber(tp.min)}–${fmtNumber(tp.max!)} ${pressureUnit}` : '—'}
                   </p>

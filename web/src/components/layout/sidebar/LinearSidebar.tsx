@@ -126,7 +126,7 @@ function LinearNavLink({
         aria-current={active ? 'page' : undefined}
         data-tour={dataTour}
         className={cn(
-          'flex min-w-0 flex-1 items-center gap-2.5 rounded-md py-1 pe-2 ps-3 text-[13px] transition-colors',
+          'flex min-w-0 flex-1 items-center gap-2.5 rounded-md py-1 pe-2 ps-3 text-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-0',
           active
             ? 'bg-white/[0.04] font-medium text-[var(--text-primary)]'
@@ -167,7 +167,7 @@ function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeader
       aria-expanded={expanded}
       className={cn(
         'group flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left',
-        'text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]',
+        'text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]',
         'transition-colors hover:text-[var(--text-secondary)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
       )}
@@ -181,7 +181,7 @@ function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeader
       />
       <span className="min-w-0 flex-1 truncate">{title}</span>
       {typeof count === 'number' && count > 0 && (
-        <span className="tabular-nums text-[10px] font-medium text-[var(--text-muted)]/80">
+        <span className="tabular-nums text-2xs font-medium text-[var(--text-muted)]/80">
           {count}
         </span>
       )}
@@ -206,7 +206,7 @@ function CountChip({ value, label }: { value: number; label: string }) {
   return (
     <span
       aria-label={label}
-      className="inline-flex h-4 min-w-[18px] items-center justify-center rounded-md bg-white/[0.05] px-1 text-[10px] font-medium tabular-nums text-[var(--text-secondary)]"
+      className="inline-flex h-4 min-w-[18px] items-center justify-center rounded-md bg-white/[0.05] px-1 text-2xs font-medium tabular-nums text-[var(--text-secondary)]"
     >
       {value > 99 ? '99+' : value}
     </span>
@@ -363,7 +363,7 @@ export function LinearSidebar({
         {pinnedItems.length > 0 && (
           <div className="mb-3">
             <div
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
               id="linear-nav-favorites-label"
             >
               <Icons.star className="h-3 w-3 shrink-0" aria-hidden />
@@ -436,7 +436,7 @@ export function LinearSidebar({
 
           {filterTokens.length > 0 && expandedSections.length === 0 && (
             <div
-              className="rounded-md px-3 py-4 text-center text-[12px] text-[var(--text-muted)]"
+              className="rounded-md px-3 py-4 text-center text-xs text-[var(--text-muted)]"
               role="status"
               data-testid="linear-sidebar-empty-filter"
             >
@@ -444,7 +444,7 @@ export function LinearSidebar({
               <button
                 type="button"
                 onClick={() => setFilter('')}
-                className="mt-2 rounded-md px-2 py-1 text-[12px] text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
+                className="mt-2 rounded-md px-2 py-1 text-xs text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
               >
                 {t('nav.filterClear', 'Clear filter')}
               </button>
