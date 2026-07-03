@@ -9780,6 +9780,26 @@
       "received": "Received: {{count}}",
       "drops": "Server drops: {{count}}"
     },
+    "section": {
+      "filters": "Filters"
+    },
+    "stream": {
+      "title": "Live stream"
+    },
+    "kpi": {
+      "aria": "Live stream metrics",
+      "connection": "Connection",
+      "visible": "Visible",
+      "visibleSub": "After filters",
+      "buffered": "Buffered",
+      "capacity": "{{max}} max",
+      "received": "Received",
+      "receivedSub": "Since mount",
+      "drops": "Server drops",
+      "dropsSub": "Buffer overflow",
+      "minLevel": "Min level",
+      "minLevelSub": "Server filter"
+    },
     "table": {
       "time": "Time",
       "level": "Level",
