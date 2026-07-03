@@ -13,6 +13,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import {
   Button,
   DataTable,
+  Text,
   useSortToggle,
   type Column,
 } from '@/components/ui';
@@ -67,9 +68,9 @@ export function FlagsTable({
       sortable: true,
       visibleOnMobile: true,
       render: (row) => (
-        <span className="font-mono text-sm text-[var(--text-primary)]">
+        <Text as="span" mono size="sm" color="primary">
           {row.key}
-        </span>
+        </Text>
       ),
     },
     {
@@ -77,9 +78,9 @@ export function FlagsTable({
       header: t('admin.flags.cols.value', 'Value'),
       visibleOnMobile: true,
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text as="span" mono size="xs" color="muted">
           {previewValue(row.value)}
-        </span>
+        </Text>
       ),
     },
     {

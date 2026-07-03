@@ -7,7 +7,7 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { Badge, DataTable, type Column } from '@/components/ui';
+import { Badge, DataTable, Text, type Column } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import type {
@@ -52,16 +52,16 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       header: t('admin.flags.audit.cols.actor', 'Actor'),
       visibleOnMobile: true,
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text as="span" mono size="xs" color="muted">
           {row.actor || '—'}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'flag_key',
       header: t('admin.flags.audit.cols.flagKey', 'Key'),
       render: (row) => (
-        <span className="font-mono text-xs">{row.flag_key}</span>
+        <Text as="span" mono size="xs">{row.flag_key}</Text>
       ),
     },
     {
@@ -78,27 +78,27 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       key: 'old_value',
       header: t('admin.flags.audit.cols.oldValue', 'Old'),
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text as="span" mono size="xs" color="muted">
           {compact(row.old_value)}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'new_value',
       header: t('admin.flags.audit.cols.newValue', 'New'),
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text as="span" mono size="xs" color="muted">
           {compact(row.new_value)}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'reason',
       header: t('admin.flags.audit.cols.reason', 'Reason'),
       render: (row) => (
-        <span className="text-xs text-[var(--text-muted)]">
+        <Text as="span" size="xs" color="muted">
           {row.reason || '—'}
-        </span>
+        </Text>
       ),
     },
   ];
