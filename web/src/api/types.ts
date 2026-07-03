@@ -1342,6 +1342,35 @@ export interface Trip {
   notes?: string | null
 }
 
+/** One drive inside a trip, as returned by `GET /trips/{trip_id}`. */
+export interface TripDriveSummary {
+  id: number
+  started_at: string
+  ended_at: string | null
+  /** Distance in meters (SI). Null when the drive has no recorded distance. */
+  distance_m: number | null
+  /** Energy in watt-hours (Wh, SI). Null when unrecorded. */
+  energy_used_wh: number | null
+  /** Duration in seconds (SI). Null when unrecorded. */
+  duration_s: number | null
+  /** Resolved start place name, when geocoded. */
+  start_place: string | null
+  /** Resolved end place name, when geocoded. */
+  end_place: string | null
+}
+
+/**
+ * `GET /trips/{trip_id}` response — a SUPERSET of {@link Trip} (the list
+ * shape) that additionally carries the per-drive breakdown and the
+ * `energy_used_wh` alias emitted by `internal/api/tripsdetail`. Only the
+ * detail endpoint returns `drives`.
+ */
+export interface TripDetail extends Trip {
+  /** Alias of `total_energy_wh` emitted by the detail handler (Wh, SI). */
+  energy_used_wh: number
+  drives: TripDriveSummary[]
+}
+
 export interface VehicleStateRecord {
   id: number
   vehicle_id: number

@@ -1,89 +1,76 @@
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
-import { Grid } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
-import { StatCard, KVList } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import { AIAutoTripNameSuggestion } from '@/components/ai/AIAutoTripNameSuggestion';
 import { useTrip } from '@/api/hooks/useTrips';
-import { useUnits } from '@/hooks/useUnits';
-import { useFormatting } from '@/hooks/useFormatting';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-
-// Wh/km -> Wh/(display unit) conversion uses an inline factor because
-// @/lib/unitConversion does not yet expose a convertEfficiencyFromSI
-// helper. Same precedent as FleetComparePage.whPerKmToDisplay.
-const KM_PER_MILE = 1.609344;
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { TripKpiBand } from '@/features/trips/components/TripKpiBand';
+import { TripDrivesChart } from '@/features/trips/components/TripDrivesChart';
+import { TripOverviewPanel } from '@/features/trips/components/TripOverviewPanel';
+import { TripDrivesTable } from '@/features/trips/components/TripDrivesTable';
 
 export default function TripDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const { data: trip, isLoading, error } = useTrip(id!);
-  const { unitPrefs } = useUnits();
-  const { formatCurrency } = useFormatting();
-  // Numeric efficiency conversion runs through KM_PER_MILE until
-  // @/lib/unitConversion exposes a convertEfficiencyFromSI helper.
 
-  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const tripQuery = useTrip(id!);
+  const { data: trip, isLoading, isError, error, refetch } = tripQuery;
+  const onRetry = () => { void refetch(); };
 
-  const whPerKm = trip && trip.total_distance_m > 0
-    ? (trip.total_energy_wh / (trip.total_distance_m / 1000))
-    : 0;
-  const efficiencyDisplay = unitPrefs.distance === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+  const tripLabel = trip
+    ? (trip.name ?? t('trips.detail.tripNumber', 'Trip #{{id}}', { id: trip.id }))
+    : t('trips.detail.tripNumber', 'Trip #{{id}}', { id: id ?? '' });
+
+  usePageTitle(trip?.name ?? t('trips.detail.title', 'Trip Detail'));
 
   return (
     <PageContainer
       title={t('trips.detail.title', 'Trip Detail')}
-      subtitle={trip ? (trip.name ?? `Trip #${trip.id}`) : undefined}
-      loading={isLoading}
-      error={error instanceof Error ? error : null}
-      breadcrumbLabels={{
-        '/trips/:id': trip ? (trip.name ?? `Trip #${trip.id}`) : `Trip #${id}`,
-      }}
+      subtitle={trip ? tripLabel : undefined}
+      query={tripQuery}
+      breadcrumbLabels={{ '/trips/:id': tripLabel }}
     >
-      {trip ? (
-        <>
+      <div className="space-y-6">
+        <FadeIn>
           <AIAutoTripNameSuggestion tripId={id} />
+        </FadeIn>
 
-          <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-            <StatCard
-              label={t('trips.detail.distance', 'Distance')}
-              value={fmtInt(convertDistanceFromSI(trip.total_distance_m, unitPrefs.distance))}
-              unit={unitPrefs.distance}
-            />
-            <StatCard
-              label={t('trips.detail.energy', 'Energy Used')}
-              value={fmtNumber(trip.total_energy_wh)}
-              unit="Wh"
-            />
-            <StatCard
-              label={t('trips.detail.efficiency', 'Efficiency')}
-              value={fmtInt(efficiencyDisplay)}
-              unit={efficiencyUnit}
-            />
-            <StatCard
-              label={t('trips.detail.cost', 'Cost')}
-              value={formatCurrency(trip.total_cost)}
-            />
-          </Grid>
+        <FadeIn delay={0.05}>
+          <TripKpiBand trip={trip} isLoading={isLoading} />
+        </FadeIn>
 
-          <GlassPanel className="mt-6 p-4 sm:p-6">
-            <KVList items={[
-              { label: t('trips.detail.tripId', 'Trip ID'), value: String(trip.id) },
-              { label: t('trips.detail.name', 'Name'), value: trip.name ?? '—' },
-              { label: t('trips.detail.started', 'Started'), value: formatDate(trip.start_date) },
-              { label: t('trips.detail.ended', 'Ended'), value: trip.end_date ? formatDate(trip.end_date) : '—' },
-              { label: t('trips.detail.drives', 'Drives'), value: String(trip.drive_count) },
-              { label: t('trips.detail.charges', 'Charges'), value: String(trip.charge_count) },
-            ]} />
-          </GlassPanel>
-        </>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('trips.detail.notFound', 'Trip not found')} />
-      )}
+        <FadeIn delay={0.1}>
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+            <div className="xl:col-span-2">
+              <TripDrivesChart
+                trip={trip}
+                isLoading={isLoading}
+                isError={isError}
+                error={error}
+                onRetry={onRetry}
+              />
+            </div>
+            <TripOverviewPanel
+              trip={trip}
+              isLoading={isLoading}
+              isError={isError}
+              error={error}
+              onRetry={onRetry}
+            />
+          </section>
+        </FadeIn>
+
+        <FadeIn delay={0.15}>
+          <TripDrivesTable
+            trip={trip}
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            onRetry={onRetry}
+          />
+        </FadeIn>
+      </div>
     </PageContainer>
   );
 }
