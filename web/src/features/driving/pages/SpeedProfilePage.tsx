@@ -490,7 +490,7 @@ export default function SpeedProfilePage() {
             ) : (data?.optimalSpeedMps ?? 0) > 0 ? (
               <div className="flex items-start gap-3 rounded-lg border-l-2 border-emerald-400/70 bg-emerald-400/5 p-3">
                 <Zap className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
-                <Text as="p" variant="bodySm">
+                <Text as="p" size="sm" color="secondary">
                   {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
                     speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0), 0),
                     unit: speedUnit,
