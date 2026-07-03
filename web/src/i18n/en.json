@@ -3569,7 +3569,14 @@
     "purgeAllSuccessDetail": "Removed {{count}} vehicle HSET(s) from Redis. L1 in-memory caches on each pod will refill from new telemetry.",
     "purgeAllPartial": "Redis L2 cache partially purged",
     "purgeAllPartialDetail": "Removed {{count}} of up to {{limit}} vehicle HSET(s) from Redis. More keys remain — click Purge All Redis again to drain.",
-    "purgeError": "Purge failed"
+    "purgeError": "Purge failed",
+    "categoryName": {
+      "Battery": "Battery",
+      "Charging": "Charging",
+      "Driving": "Driving",
+      "Climate": "Climate",
+      "Other": "Other"
+    }
   },
   "lifetime": {
     "unlocked": "✓ Unlocked",
