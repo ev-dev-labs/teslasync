@@ -24,10 +24,29 @@ export const telemetryKeys = {
 export interface VehicleLiveSignal {
   value: unknown;
   timestamp?: string;
+  /**
+   * Canonical `protomodel.ValueKind` name for the field, e.g.
+   * `"ValueKindFloat"` / `"ValueKindBool"` (Phase-42 typed live envelope).
+   */
+  kind?: string;
+  /**
+   * Layered live-state source classification emitted by the backend
+   * `signalinspect` handler: `'l1'` (fresh in-process), `'l2'` (legacy Redis),
+   * `'stale'` (older than the freshness window), or `'unknown'`.
+   */
+  source?: string;
+  /** Age of the value in milliseconds at read time. */
+  age_ms?: number;
+  /** Typed timestamp mirror of `timestamp`. */
+  ts?: string;
 }
 
 export interface VehicleLiveSignalsResponse {
   vehicle_id?: number;
+  /** Number of live signals in the snapshot (backend-computed). */
+  count?: number;
+  /** Server timestamp when the snapshot was assembled. */
+  at?: string;
   signals?: Record<string, VehicleLiveSignal | unknown>;
 }
 
