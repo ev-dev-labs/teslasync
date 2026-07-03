@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 import { Badge, Heading, Text, type BadgeProps } from '@/components/ui'
-import { type NeonColor, neonColorMap } from '@/lib/tokens'
+import { type NeonColor, neonColorMap, typography } from '@/lib/tokens'
 
 export interface SafetySettingCardProps {
   /**
@@ -92,7 +92,9 @@ export function SafetySettingCard({
         rel="noreferrer"
         aria-label={docsAriaLabel}
         className={cn(
-          'inline-flex items-center gap-1 self-start rounded text-xs font-medium hover:underline',
+          'inline-flex items-center gap-1 self-start rounded hover:underline',
+          typography.size.xs,
+          typography.weight.medium,
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40',
           c.text,
         )}
