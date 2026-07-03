@@ -9,7 +9,9 @@
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, AlertCircle, Info, ChevronRight } from 'lucide-react'
+import { Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 export type ActionSeverity = 'info' | 'warn' | 'error'
 
@@ -43,9 +45,9 @@ export function ActionItem({ severity, title, description, cta }: ActionItemProp
       <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', cfg.text)} aria-hidden />
 
       <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="text-sm font-medium text-[var(--text-primary)]">{title}</div>
+        <Text as="div" size="sm" weight="medium" color="primary">{title}</Text>
         {description && (
-          <div className="text-xs text-[var(--text-secondary)]">{description}</div>
+          <Text as="div" variant="bodySm">{description}</Text>
         )}
       </div>
 
@@ -58,7 +60,9 @@ export function ActionItem({ severity, title, description, cta }: ActionItemProp
 
 function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['cta']>; severityText: string }) {
   const baseClasses = cn(
-    'inline-flex items-center gap-1 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium',
+    'inline-flex items-center gap-1 shrink-0 rounded-md px-3 py-1.5',
+    typography.size.xs,
+    typography.weight.medium,
     'min-h-[36px] transition-colors hover:bg-[var(--surface-2)]',
     'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
     severityText,

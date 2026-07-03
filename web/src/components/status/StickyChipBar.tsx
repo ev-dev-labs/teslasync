@@ -10,6 +10,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 export interface ChipItem {
   id: string
@@ -98,7 +99,9 @@ export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBar
               type="button"
               onClick={() => handleClick(chip.id)}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                'shrink-0 rounded-full px-3 py-1 transition-colors',
+                typography.size.xs,
+                typography.weight.medium,
                 'min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                 active
                   ? 'bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30'

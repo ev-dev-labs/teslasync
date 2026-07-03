@@ -12,7 +12,7 @@
 
 import { type ReactNode } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle, Wrench, RefreshCw } from 'lucide-react'
-import { GlassPanel, Button } from '@/components/ui'
+import { GlassPanel, Button, Text } from '@/components/ui'
 import { LiveIndicator } from '@/components/data-display'
 import { cn } from '@/lib/cn'
 
@@ -84,19 +84,19 @@ export function StatusHero({
           role="status"
           aria-live="polite"
         >
-          <h2 className={cn('text-xl md:text-2xl font-bold leading-tight', cfg.text)}>
+          <Text as="h2" size="xl" weight="bold" className={cn('md:text-2xl leading-tight', cfg.text)}>
             {heading}
-          </h2>
+          </Text>
           {subline && (
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)] md:justify-start">
+            <Text as="div" size="sm" color="secondary" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 md:justify-start">
               {subline}
               {live && (
                 <span className="inline-flex items-center gap-1.5">
                   <LiveIndicator variant="dot" />
-                  <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Live</span>
+                  <Text as="span" size="xs" color="muted" className="uppercase tracking-wider">Live</Text>
                 </span>
               )}
-            </div>
+            </Text>
           )}
         </div>
 
