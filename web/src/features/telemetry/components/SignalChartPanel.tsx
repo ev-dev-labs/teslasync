@@ -25,7 +25,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, BarChart3, Radio } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, SectionTitle } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
@@ -121,14 +121,14 @@ export function SignalChartPanel({
           ) : (
             <BarChart3 className="h-4 w-4 text-neon-cyan" />
           )}
-          <span className="section-title">{resolvedTitle}</span>
+          <SectionTitle>{resolvedTitle}</SectionTitle>
           {isLive ? (
-            <span className="ml-auto flex items-center gap-1.5 text-[10px] text-red-400">
+            <span className="ml-auto flex items-center gap-1.5 text-2xs text-red-400">
               <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
               {fmtInt(liveEventCount ?? 0)} {t('events')} · {fmtInt(data.length)} {t('points')}
             </span>
           ) : data.length > 0 && pointsLoaded != null ? (
-            <span className="ml-auto text-[10px] text-[var(--text-muted)]">
+            <span className="ml-auto text-2xs text-[var(--text-muted)]">
               {fmtInt(pointsLoaded)} {t('points loaded')}
             </span>
           ) : null}

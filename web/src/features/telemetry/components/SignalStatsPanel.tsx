@@ -17,7 +17,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, DataTable, Toggle, type Column } from '@/components/ui';
+import { GlassPanel, DataTable, Toggle, SectionTitle, Caption, type Column } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { CHART_COLORS } from '@/lib/colors';
@@ -100,7 +100,7 @@ export function SignalStatsPanel({
               {s.signal}
             </span>
             {isEmptyStat(s) && (
-              <span className="text-[10px] text-[var(--text-muted)]">
+              <span className="text-2xs text-[var(--text-muted)]">
                 {t('signalStats.noDataInRange', 'No data in range')}
               </span>
             )}
@@ -133,7 +133,7 @@ export function SignalStatsPanel({
     <FadeIn>
       <GlassPanel className={cn('p-4 sm:p-5', className)}>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <span className="section-title">{title ?? t('Stats Summary')}</span>
+          <SectionTitle>{title ?? t('Stats Summary')}</SectionTitle>
           {emptyCount > 0 && (
             <Toggle
               checked={hideEmpty}
@@ -159,7 +159,7 @@ export function SignalStatsPanel({
             pagination={{ defaultPageSize: 50 }}
           />
         ) : (
-          <span className="text-xs text-[var(--text-muted)]">{t('No stats available')}</span>
+          <Caption>{t('No stats available')}</Caption>
         )}
       </GlassPanel>
     </FadeIn>
