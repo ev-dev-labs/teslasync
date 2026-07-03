@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wallet } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Caption, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { fmtNumber, formatBytes } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
@@ -31,9 +31,9 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
         header: t('admin.vehicleCost.colVehicle', 'Vehicle'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-[var(--text-primary)]">
+            <Text weight="medium" color="primary">
               {vehicleName(r, t('admin.vehicleCost.unnamed', 'Vehicle #{{id}}', { id: r.vehicle_id }))}
-            </span>
+            </Text>
             <Caption>ID {fmtNumber(r.vehicle_id)}</Caption>
           </div>
         ),
@@ -42,20 +42,20 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
         key: 'rows',
         header: t('admin.vehicleCost.colRows', 'Rows'),
         align: 'right',
-        render: (r) => <span className="tabular-nums">{fmtNumber(r.signal_row_count)}</span>,
+        render: (r) => <Text className="tabular-nums">{fmtNumber(r.signal_row_count)}</Text>,
       },
       {
         key: 'bytes',
         header: t('admin.vehicleCost.colBytes', 'Bytes (est.)'),
         align: 'right',
-        render: (r) => <span className="tabular-nums">{formatBytes(r.signal_bytes_est)}</span>,
+        render: (r) => <Text className="tabular-nums">{formatBytes(r.signal_bytes_est)}</Text>,
       },
       {
         key: 'rate',
         header: t('admin.vehicleCost.colRate', 'Rate (rows/min, 24h)'),
         align: 'right',
         render: (r) => (
-          <span className="tabular-nums">{fmtNumber(r.ingest_rate_per_minute_24h, 1)}</span>
+          <Text className="tabular-nums">{fmtNumber(r.ingest_rate_per_minute_24h, 1)}</Text>
         ),
       },
       {
@@ -66,16 +66,16 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
           const failures = r.dlq_failures_24h ?? 0;
           const cls =
             failures > 0
-              ? 'text-amber-300 tabular-nums'
+              ? 'tabular-nums text-amber-300'
               : 'tabular-nums text-[var(--text-secondary)]';
-          return <span className={cls}>{fmtNumber(failures)}</span>;
+          return <Text className={cls}>{fmtNumber(failures)}</Text>;
         },
       },
       {
         key: 'last',
         header: t('admin.vehicleCost.colLastSeen', 'Last seen'),
         render: (r) => (
-          <span className="text-[var(--text-primary)]">{formatRelative(r.last_seen_at)}</span>
+          <Text color="primary">{formatRelative(r.last_seen_at)}</Text>
         ),
       },
     ],
