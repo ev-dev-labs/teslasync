@@ -61,14 +61,18 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
   const winner = getWinner(row.rawA, row.rawB, row.winner);
   const isWinner = winner === side;
   return (
-    <span className={cn(
-      'inline-flex items-center gap-1 font-medium tabular-nums',
-      isWinner ? 'text-emerald-300' : 'text-[var(--text-primary)]',
-    )}>
+    <Text
+      as="span"
+      weight="medium"
+      className={cn(
+        'inline-flex items-center gap-1 tabular-nums',
+        isWinner ? 'text-emerald-300' : 'text-[var(--text-primary)]',
+      )}
+    >
       {value}
       {/* ✓ pairs the winner color with a non-color signal (a11y). */}
       {isWinner && <span aria-hidden="true">✓</span>}
-    </span>
+    </Text>
   );
 }
 
@@ -544,7 +548,7 @@ export default function FleetComparePage() {
       {
         key: 'metric',
         header: t('comparison.metric', 'Metric'),
-        render: (r) => <span className="font-medium text-[var(--text-primary)]">{r.metric}</span>,
+        render: (r) => <Text as="span" weight="medium" color="primary">{r.metric}</Text>,
       },
       {
         key: 'valueA',
