@@ -582,7 +582,7 @@ export default function RbacMatrixPage() {
     >
       {submitError && (
         <AlertBanner variant="danger" data-testid="rbac-save-error">
-          <Text>{submitError}</Text>
+          {submitError}
         </AlertBanner>
       )}
 
