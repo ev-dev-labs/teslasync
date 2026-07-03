@@ -7246,6 +7246,9 @@
   },
   "mapOverview": {
     "pageTitle": "Map Overview",
+    "subtitle": "Live vehicle location and recent history",
+    "kpis": "Vehicle status",
+    "noPlayback": "Not enough GPS points to replay a route yet.",
     "colTime": "Time",
     "colLat": "Lat",
     "colLon": "Lon",
