@@ -10590,7 +10590,8 @@
       "save": "Save ({{count}})",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "retry": "Retry"
+      "retry": "Retry",
+      "refresh": "Refresh"
     },
     "category": {
       "fleet": "Fleet",
@@ -10626,6 +10627,34 @@
     },
     "toasts": {
       "saved": "RBAC matrix updated."
+    },
+    "loading": "Loading matrix…",
+    "kpi": {
+      "aria": "Matrix summary metrics",
+      "roles": "Roles",
+      "permissions": "Permissions",
+      "categories": "Categories",
+      "grants": "Active grants",
+      "myRoles": "My roles",
+      "effective": "Effective for me"
+    },
+    "access": {
+      "title": "Your access"
+    },
+    "legend": {
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "editHint": "Toggle cells then Save to publish changes.",
+      "readHint": "Read-only view — choose Edit to change bindings."
+    },
+    "matrix": {
+      "title": "Permission matrix",
+      "aria": "Role permission matrix",
+      "empty": "No permissions to display for the current roles.",
+      "editing": "Editing"
+    },
+    "pending": {
+      "count": "{{count}} pending"
     }
   },
   "impersonation": {
