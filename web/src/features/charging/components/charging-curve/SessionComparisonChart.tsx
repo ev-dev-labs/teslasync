@@ -17,6 +17,7 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { Text } from '@/components/ui';
 import { generateChargingCurve, getChargerLabel } from './helpers';
 
 interface SessionComparisonChartProps {
@@ -103,12 +104,12 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
         </ResponsiveContainer>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-2">
           {comparisonSessions.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+            <div key={s.id} className="flex items-center gap-1.5">
               <span
                 className="inline-block h-2 w-3 rounded-sm"
                 style={{ backgroundColor: palette[i % palette.length] }}
               />
-              {formatDateShort(s.started_at)}
+              <Text variant="bodySm">{formatDateShort(s.started_at)}</Text>
             </div>
           ))}
         </div>

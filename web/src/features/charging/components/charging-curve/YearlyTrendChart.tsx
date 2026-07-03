@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { Text } from '@/components/ui';
 import {
   ChartContainer,
   ChartTooltip,
@@ -108,17 +109,17 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
             </ComposedChart>
           </ResponsiveContainer>
           <div className="mt-3 flex flex-wrap gap-4 px-2">
-            <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+            <div className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
-              {t('charging.curve.avg10to80Line', '10→80% avg')}
+              <Text variant="bodySm">{t('charging.curve.avg10to80Line', '10→80% avg')}</Text>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+            <div className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-3 rounded-sm bg-purple-500" />
-              {t('charging.curve.avg20to80Line', '20→80% avg')}
+              <Text variant="bodySm">{t('charging.curve.avg20to80Line', '20→80% avg')}</Text>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+            <div className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-3 rounded-sm bg-red-500 opacity-30" />
-              {t('charging.curve.dcSessions', 'DC Sessions')}
+              <Text variant="bodySm">{t('charging.curve.dcSessions', 'DC Sessions')}</Text>
             </div>
           </div>
         </>
