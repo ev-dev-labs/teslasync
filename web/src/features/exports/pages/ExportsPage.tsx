@@ -8,6 +8,7 @@ import {
   Button,
   DataTable,
   PanelTitle,
+  Text,
   ConfirmDialog,
   type Column,
 } from '@/components/ui';
@@ -85,7 +86,9 @@ export default function ExportsPage() {
         sortable: true,
         visibleOnMobile: true,
         render: (j) => (
-          <span className="font-medium text-[var(--text-primary)]">{j.type}</span>
+          <Text weight="medium" color="primary">
+            {j.type}
+          </Text>
         ),
       },
       {
@@ -93,7 +96,9 @@ export default function ExportsPage() {
         header: t('exportsList.col.format', 'Format'),
         sortable: true,
         render: (j) => (
-          <span className="uppercase text-[var(--text-secondary)]">{j.format}</span>
+          <Text color="secondary" className="uppercase">
+            {j.format}
+          </Text>
         ),
       },
       {
@@ -102,9 +107,9 @@ export default function ExportsPage() {
         align: 'right',
         sortable: true,
         render: (j) => (
-          <span className="tabular-nums text-[var(--text-secondary)]">
+          <Text color="secondary" className="tabular-nums">
             {j.file_size != null ? formatBytes(j.file_size) : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -112,9 +117,7 @@ export default function ExportsPage() {
         header: t('exportsList.col.created', 'Created'),
         sortable: true,
         render: (j) => (
-          <span className="text-[var(--text-secondary)]">
-            {formatDateTime(j.created_at)}
-          </span>
+          <Text color="secondary">{formatDateTime(j.created_at)}</Text>
         ),
       },
       {
@@ -147,7 +150,7 @@ export default function ExportsPage() {
               {t('exportsList.download', 'Download')}
             </a>
           ) : (
-            <span className="text-[var(--text-muted)]">—</span>
+            <Text color="muted">—</Text>
           ),
       },
     ],
