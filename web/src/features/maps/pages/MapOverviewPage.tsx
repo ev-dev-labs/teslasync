@@ -32,6 +32,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -203,7 +204,7 @@ export default function MapOverviewPage() {
         key: 'time',
         header: t('mapOverview.colTime', 'Time'),
         render: (r) => (
-          <TimeStamp value={r.created_at} className="whitespace-nowrap text-xs" />
+          <TimeStamp value={r.created_at} className={cn('whitespace-nowrap', typography.size.xs)} />
         ),
       },
       {
@@ -406,7 +407,7 @@ export default function MapOverviewPage() {
                     icon={<Navigation className="h-5 w-5 text-purple-400" />}
                     label={t('mapOverview.odometer', 'Odometer')}
                   >
-                    <Text variant="body" className="font-semibold tabular-nums">
+                    <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
                       {formatDistance(latest?.odometer ?? null)}
                     </Text>
                   </StatusRow>
