@@ -111,7 +111,7 @@ export function FleetTelemetryHealth() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="ml-1 !h-auto !min-h-0 !px-1 !py-0 text-[var(--text-secondary)] hover:!bg-transparent hover:text-white"
+                  className="ml-1 !h-auto !min-h-0 !px-1 !py-0 text-[var(--text-secondary)] hover:!bg-transparent hover:text-[var(--text-primary)]"
                   onClick={() => setSelectedVin('')}
                   aria-label={t('devtools.health.clearVinFilter', 'Clear VIN filter')}
                 >

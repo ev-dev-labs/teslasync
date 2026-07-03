@@ -24,7 +24,7 @@ export function ReferenceLinksSection() {
                 <Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-white">{t(link.title)}</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{t(link.title)}</p>
                 <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{link.url}</p>
               </div>
             </a>

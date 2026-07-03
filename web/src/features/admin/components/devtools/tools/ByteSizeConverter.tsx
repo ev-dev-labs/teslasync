@@ -38,7 +38,7 @@ export function ByteSizeConverterTool() {
             {conversions.map((c) => (
               <div key={c.unit} className={cn('rounded px-2 py-1.5 text-center', c.unit === unit ? 'bg-neon-cyan/10 ring-1 ring-neon-cyan/30' : 'bg-[var(--surface-overlay)]')}>
                 <p className="text-xs text-[var(--text-secondary)]">{c.unit}</p>
-                <p className="text-sm font-mono text-white">{c.value}</p>
+                <p className="text-sm font-mono text-[var(--text-primary)]">{c.value}</p>
               </div>
             ))}
           </div>
