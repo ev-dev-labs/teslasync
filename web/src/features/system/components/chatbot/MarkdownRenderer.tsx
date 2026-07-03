@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
+import { Heading, Text } from '@/components/ui';
 import { CodeBlock } from './CodeBlock';
 
 /**
@@ -45,7 +46,7 @@ const ReactMarkdownLazy = lazy(async () => {
             if (!match) {
               return (
                 <code
-                  className="rounded bg-[var(--surface-2)] px-1 py-0.5 text-[0.85em] font-mono"
+                  className="rounded bg-[var(--surface-2)] px-1 py-0.5 text-xs font-mono"
                   {...props}
                 >
                   {children}
@@ -85,13 +86,21 @@ const ReactMarkdownLazy = lazy(async () => {
             return <ol className="list-decimal pl-5 my-1 space-y-0.5">{children}</ol>;
           },
           h1({ children }) {
-            return <h1 className="text-base font-semibold text-[var(--text-primary)] mt-3 mb-1">{children}</h1>;
+            return <Heading level="panel" as="h1" className="mt-3 mb-1">{children}</Heading>;
           },
           h2({ children }) {
-            return <h2 className="text-sm font-semibold text-[var(--text-primary)] mt-2.5 mb-1">{children}</h2>;
+            return (
+              <Text as="h2" size="sm" weight="semibold" color="primary" className="mt-2.5 mb-1">
+                {children}
+              </Text>
+            );
           },
           h3({ children }) {
-            return <h3 className="text-sm font-semibold text-[var(--text-primary)] mt-2 mb-1">{children}</h3>;
+            return (
+              <Text as="h3" size="sm" weight="semibold" color="primary" className="mt-2 mb-1">
+                {children}
+              </Text>
+            );
           },
           table({ children }) {
             return (

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MessageSquare, Plus, Trash2 } from 'lucide-react';
-import { Button, ConfirmDialog, GlassPanel, Input } from '@/components/ui';
+import { Button, ConfirmDialog, GlassPanel, Input, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { formatRelative } from '@/lib/dateFormat';
@@ -95,15 +95,21 @@ export function SessionList({
           </Button>
         </div>
 
-        <p className="text-xs font-semibold uppercase tracking-wider px-4 pt-3 pb-1 text-[var(--text-secondary)]">
+        <Text
+          as="p"
+          size="xs"
+          weight="semibold"
+          color="secondary"
+          className="uppercase tracking-wider px-4 pt-3 pb-1"
+        >
           {t('chatbot.sessions', 'Sessions')}
-        </p>
+        </Text>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {isLoading && sessions.length === 0 ? (
-            <p className="text-xs px-2 py-4 text-center text-[var(--text-muted)]">
+            <Text as="p" size="xs" color="muted" className="px-2 py-4 text-center">
               {t('common.loading', 'Loading…')}
-            </p>
+            </Text>
           ) : sessions.length === 0 ? (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MessageSquare className="h-6 w-6" />}
@@ -148,15 +154,17 @@ export function SessionList({
                       aria-current={isActive ? 'true' : undefined}
                       title={t('chatbot.aria.doubleClickRename', 'Double-click to rename')}
                     >
-                      <span
+                      <Text
+                        size="xs"
+                        weight="medium"
                         className={cn(
-                          'text-xs font-medium truncate',
+                          'truncate',
                           isActive ? 'text-purple-200' : 'text-[var(--text-primary)]',
                         )}
                       >
                         {displayTitle(session, t)}
-                      </span>
-                      <span className="text-[10px] text-[var(--text-muted)] truncate">
+                      </Text>
+                      <Text size="2xs" color="muted" className="truncate">
                         {session.last_message_at
                           ? formatRelative(session.last_message_at)
                           : t('chatbot.session.empty', 'Empty')}
@@ -164,7 +172,7 @@ export function SessionList({
                         {t('chatbot.session.messageCount', '{{count}} msgs', {
                           count: session.message_count,
                         })}
-                      </span>
+                      </Text>
                     </button>
                   )}
 
