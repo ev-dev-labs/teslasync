@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import { DataTable, type Column } from '@/components/ui';
+import { DataTable, Text, type Column } from '@/components/ui';
 import { Currency } from '@/components/data-display';
 import { fmtInt, fmtWithUnit } from '@/lib/numberFormat';
-import { cn } from '@/lib/cn';
 import { CostSection } from './CostSection';
 import type { MonthlyBucket } from './types';
 
@@ -27,7 +26,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
         header: t('costAnalysis.table.month', 'Month'),
         sortable: true,
         render: (row) => (
-          <span className="font-medium text-[var(--text-primary)]">{row.month}</span>
+          <Text weight="medium" color="primary">{row.month}</Text>
         ),
       },
       {
@@ -69,14 +68,12 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
         header: t('costAnalysis.table.savings', 'Savings'),
         sortable: true,
         render: (row) => (
-          <span
-            className={cn(
-              'font-medium',
-              row.savings >= 0 ? 'text-emerald-300' : 'text-rose-300',
-            )}
+          <Text
+            weight="medium"
+            className={row.savings >= 0 ? 'text-emerald-300' : 'text-rose-300'}
           >
             {row.savings >= 0 ? '+' : ''}<Currency value={row.savings} />
-          </span>
+          </Text>
         ),
       },
     ],

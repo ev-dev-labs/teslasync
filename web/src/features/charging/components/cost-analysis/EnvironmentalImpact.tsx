@@ -31,17 +31,17 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-emerald-500/10 p-4 text-center">
-              <p className="text-2xl font-bold text-emerald-300">
+              <Text as="p" size="2xl" weight="bold" className="text-emerald-300">
                 {fmtNumber(coreStats.co2SavedKg, 1)}
-              </p>
+              </Text>
               <Text as="p" variant="caption" className="mt-1">
                 {t('costAnalysis.environment.kgCo2', 'kg CO₂ saved')}
               </Text>
             </div>
             <div className="rounded-lg bg-emerald-500/10 p-4 text-center">
-              <p className="text-2xl font-bold text-emerald-300">
+              <Text as="p" size="2xl" weight="bold" className="text-emerald-300">
                 {fmtNumber(coreStats.treeEquiv, 1)}
-              </p>
+              </Text>
               <Text as="p" variant="caption" className="mt-1">
                 {t('costAnalysis.environment.treeEquiv', 'tree-years equivalent')}
               </Text>
@@ -55,14 +55,14 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
                   'costAnalysis.environment.desc',
                   'By driving electric instead of a gas car, you have avoided the equivalent of',
                 )}{' '}
-                <span className="font-semibold text-emerald-300">
+                <Text weight="semibold" className="text-emerald-300">
                   {fmtNumber(coreStats.co2SavedKg, 0)} kg
-                </span>{' '}
+                </Text>{' '}
                 {t('costAnalysis.environment.ofCo2', 'of CO₂ emissions.')}{' '}
                 {t('costAnalysis.environment.treeNote', "That's the same as")}{' '}
-                <span className="font-semibold text-emerald-300">
+                <Text weight="semibold" className="text-emerald-300">
                   {fmtNumber(coreStats.treeEquiv, 1)}
-                </span>{' '}
+                </Text>{' '}
                 {t(
                   'costAnalysis.environment.treesAbsorbing',
                   'trees absorbing carbon for a full year.',

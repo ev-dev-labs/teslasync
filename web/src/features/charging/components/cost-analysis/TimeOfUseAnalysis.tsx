@@ -30,7 +30,7 @@ function InsightCard({ label, value, valueClass, sub }: InsightCardProps) {
   return (
     <GlassPanel className="p-3">
       <Text as="p" variant="caption">{label}</Text>
-      <p className={`mt-1 text-lg font-semibold ${valueClass}`}>{value}</p>
+      <Text as="p" size="lg" weight="semibold" className={`mt-1 ${valueClass}`}>{value}</Text>
       <Text as="p" variant="caption">{sub}</Text>
     </GlassPanel>
   );

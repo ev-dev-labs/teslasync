@@ -33,7 +33,7 @@ function ComparisonCard({ label, value, valueClass, sub, glow = 'none' }: Compar
   return (
     <GlassPanel glow={glow} className="p-3">
       <Text as="p" variant="caption">{label}</Text>
-      <p className={`mt-1 text-xl font-bold tabular-nums ${valueClass}`}>{value}</p>
+      <Text as="p" size="xl" weight="bold" className={`mt-1 tabular-nums ${valueClass}`}>{value}</Text>
       <Text as="p" variant="caption" className="mt-0.5">{sub}</Text>
     </GlassPanel>
   );

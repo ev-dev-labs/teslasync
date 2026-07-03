@@ -99,22 +99,22 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
               <Text variant="metricLabel" as="p" className="mb-1">
                 {t('costAnalysis.forecast.monthlySavings', 'Monthly Savings')}
               </Text>
-              <p className="text-3xl font-bold text-emerald-300">
+              <Text as="p" size="3xl" weight="bold" className="text-emerald-300">
                 {currencySymbol}<AnimatedNumber value={forecastData.gas_comparison.monthly_savings} decimals={0} />
-              </p>
+              </Text>
             </div>
             <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-lg bg-white/[0.04] p-3">
                 <Text as="p" variant="caption">{t('costAnalysis.forecast.annual', 'Annual')}</Text>
-                <p className="text-lg font-semibold text-[var(--text-primary)]">
+                <Text as="p" size="lg" weight="semibold" color="primary">
                   <Currency value={forecastData.gas_comparison.annual_savings} precision={0} />
-                </p>
+                </Text>
               </div>
               <div className="rounded-lg bg-white/[0.04] p-3">
                 <Text as="p" variant="caption">{t('costAnalysis.forecast.lifetime', 'Lifetime')}</Text>
-                <p className="text-lg font-semibold text-[var(--text-primary)]">
+                <Text as="p" size="lg" weight="semibold" color="primary">
                   <Currency value={forecastData.gas_comparison.lifetime_savings} precision={0} />
-                </p>
+                </Text>
               </div>
             </div>
             <div className="space-y-1">

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
+import { Text, Caption } from '@/components/ui';
 import { useFormatting } from '@/hooks/useFormatting';
 import {
   ChartTooltip, PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -67,7 +68,7 @@ export function ChargerTypeBreakdown({
                   className="h-3 w-3 rounded-full"
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-xs text-[var(--text-muted)]">{entry.name}</span>
+                <Caption>{entry.name}</Caption>
               </div>
             ))}
           </div>
@@ -75,14 +76,14 @@ export function ChargerTypeBreakdown({
             const pct = totalCost > 0 ? (entry.cost / totalCost) * 100 : 0;
             return (
               <div key={entry.name} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-[var(--text-secondary)]">
+                <div className="flex items-center justify-between">
+                  <Text size="xs" weight="medium" color="secondary">
                     {entry.name}
-                  </span>
-                  <span className="text-[var(--text-muted)]">
+                  </Text>
+                  <Caption>
                     {formatCurrency(entry.cost, 2)} · {fmtInt(entry.sessions)}{' '}
                     {t('costAnalysis.chargerType.sessions', 'sessions')}
-                  </span>
+                  </Caption>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
                   <div
@@ -93,14 +94,14 @@ export function ChargerTypeBreakdown({
                     }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
-                  <span>{fmtWithUnit(entry.energy, 'kWh', 1)}</span>
-                  <span>
+                <div className="flex justify-between">
+                  <Text size="2xs" color="muted">{fmtWithUnit(entry.energy, 'kWh', 1)}</Text>
+                  <Text size="2xs" color="muted">
                     {entry.energy > 0
                       ? `${formatCurrency(entry.cost / entry.energy, 3)}/kWh`
                       : '—'}
-                  </span>
-                  <span>{fmtNumber(pct, 1)}%</span>
+                  </Text>
+                  <Text size="2xs" color="muted">{fmtNumber(pct, 1)}%</Text>
                 </div>
               </div>
             );
