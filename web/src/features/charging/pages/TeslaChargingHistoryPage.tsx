@@ -5,7 +5,7 @@ import {
   Download, Clock, Building2,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Select, DataTable, PanelTitle, Caption, type Column } from '@/components/ui';
+import { GlassPanel, Button, Select, DataTable, PanelTitle, Caption, Text, type Column } from '@/components/ui';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
@@ -152,7 +152,7 @@ export default function TeslaChargingHistoryPage() {
       key: 'date',
       header: t('tesla_charging.col.date', 'Date'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-primary)]">{formatDateTime(row.charge_start_datetime)}</span>
+        <Text variant="body">{formatDateTime(row.charge_start_datetime)}</Text>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -163,9 +163,9 @@ export default function TeslaChargingHistoryPage() {
       render: (row) => (
         <div className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
-          <span className="max-w-[200px] truncate text-sm text-[var(--text-primary)]">
+          <Text variant="body" className="max-w-[200px] truncate">
             {row.site_location_name || '—'}
-          </span>
+          </Text>
         </div>
       ),
       visibleOnMobile: true,
@@ -174,18 +174,18 @@ export default function TeslaChargingHistoryPage() {
       key: 'duration',
       header: t('tesla_charging.col.duration', 'Duration'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-primary)]">
+        <Text variant="body">
           {formatDurationMinutes(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime))}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'energy',
       header: t('tesla_charging.col.energy', 'Energy'),
       render: (row) => (
-        <span className="text-sm font-medium text-cyan-300">
+        <Text size="sm" weight="medium" className="text-cyan-300">
           {row.usage_wh != null ? formatEnergy(row.usage_wh, { precision: 1 }) : '—'}
-        </span>
+        </Text>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -194,11 +194,11 @@ export default function TeslaChargingHistoryPage() {
       key: 'cost',
       header: t('tesla_charging.col.cost_decimal', 'Cost'),
       render: (row) => (
-        <span className="text-sm font-medium text-emerald-300">
+        <Text size="sm" weight="medium" className="text-emerald-300">
           {row.total_due != null
             ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true })
             : '—'}
-        </span>
+        </Text>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -207,11 +207,11 @@ export default function TeslaChargingHistoryPage() {
       key: 'rate',
       header: t('tesla_charging.col.rate', 'Rate'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)]">
+        <Text size="sm" color="secondary">
           {row.rate_base != null
             ? `${fmtNumber(row.rate_base, 3)}/${row.pricing_type ?? 'kWh'}`
             : '—'}
-        </span>
+        </Text>
       ),
       defaultVisible: false,
     },
@@ -219,7 +219,7 @@ export default function TeslaChargingHistoryPage() {
       key: 'invoice',
       header: t('tesla_charging.col.invoice', 'Invoice'),
       render: (row) => (
-        <span className="text-sm">
+        <Text size="sm">
           {row.has_invoice && row.invoice_content_id ? (
             <a
               href={getTeslaChargingInvoiceURL(row.invoice_content_id)}
@@ -229,12 +229,12 @@ export default function TeslaChargingHistoryPage() {
               aria-label={t('tesla_charging.downloadInvoice', 'Download invoice')}
             >
               <Download className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="text-xs">{t('charging.invoice', 'Invoice')}</span>
+              <Text size="xs">{t('charging.invoice', 'Invoice')}</Text>
             </a>
           ) : (
-            <span className="text-[var(--text-muted)]">—</span>
+            <Text color="muted">—</Text>
           )}
-        </span>
+        </Text>
       ),
     },
   ], [formatEnergy, t, userCurrency, locale]);
