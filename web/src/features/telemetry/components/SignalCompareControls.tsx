@@ -13,7 +13,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, Button, Input, HelpTooltip, Text } from '@/components/ui';
+import { GlassPanel, Button, Input, HelpTooltip } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
@@ -107,33 +107,33 @@ export function SignalCompareControls({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <Text as="span" size="xs" className="mb-1.5 flex items-center gap-1 text-cyan-300">
+            <span className="mb-1.5 flex items-center gap-1 text-xs text-cyan-300">
               {t('signalDiff.windowA', 'Window A')}
               <HelpTooltip
                 i18nKey="help.signal.snapshot"
                 defaultValue="A snapshot is a point-in-time view of every signal value at a single timestamp. Falls back to signal_log within the last 30 days when the live layer doesn't have it."
                 ariaLabel={t('help.signal.snapshot.aria', { defaultValue: 'More info about signal snapshots' })}
               />
-            </Text>
+            </span>
             <Input type="datetime-local" value={atA} onChange={(e) => onChangeA(e.target.value)} />
           </div>
           <div>
-            <Text as="span" size="xs" className="mb-1.5 flex items-center gap-1 text-amber-300">
+            <span className="mb-1.5 flex items-center gap-1 text-xs text-amber-300">
               {t('signalDiff.windowB', 'Window B')}
               <HelpTooltip
                 i18nKey="help.signal.diff"
                 defaultValue="Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise."
                 ariaLabel={t('help.signal.diff.aria', { defaultValue: 'More info about signal diffs' })}
               />
-            </Text>
+            </span>
             <Input type="datetime-local" value={atB} onChange={(e) => onChangeB(e.target.value)} />
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Text as="span" variant="caption">
+          <span className="text-xs text-[var(--text-muted)]">
             {t('signalDiff.presetsLabel', 'Quick presets:')}
-          </Text>
+          </span>
           {DIFF_PRESETS.map((p) => (
             <Button key={p.id} variant="secondary" size="sm" onClick={() => applyPreset(p.id)}>
               {t(p.labelKey, p.defaultLabel)}
@@ -156,7 +156,7 @@ export function SignalCompareControls({
                 type="button"
                 onClick={() => onCategoryChange(category === c.id ? null : c.id)}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-2xs uppercase tracking-wide transition-colors',
+                  'rounded-full border px-2.5 py-1 text-xs uppercase tracking-wide transition-colors',
                   category === c.id
                     ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
                     : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',

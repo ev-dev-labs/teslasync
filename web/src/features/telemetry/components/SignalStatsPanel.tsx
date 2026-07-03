@@ -100,7 +100,7 @@ export function SignalStatsPanel({
               {s.signal}
             </span>
             {isEmptyStat(s) && (
-              <span className="text-[10px] text-[var(--text-muted)]">
+              <span className="text-2xs text-[var(--text-muted)]">
                 {t('signalStats.noDataInRange', 'No data in range')}
               </span>
             )}
