@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Flag, Wrench, MapPin, AlertTriangle, ArrowUpCircle, Tag,
 } from 'lucide-react';
-import { Input, Button, Modal } from '@/components/ui';
+import { Input, Button, Modal, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { AnnotationCategory } from '@/types/annotations';
 import { ANNOTATION_COLORS } from '@/types/annotations';
@@ -112,9 +112,9 @@ export function AddAnnotationPopover({
             required
           />
         ) : (
-          <div className="text-xs text-gray-400 dark:text-white/40">
+          <Text as="div" variant="caption">
             {timestamp}
-          </div>
+          </Text>
         )}
 
         <Input
@@ -128,9 +128,9 @@ export function AddAnnotationPopover({
 
         {/* Category pills */}
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Text as="span" variant="subhead" className="mb-1.5 block">
             {t('annotation.category', 'Category')}
-          </span>
+          </Text>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORY_OPTIONS.map((opt) => {
               const Icon = opt.icon;
@@ -143,8 +143,8 @@ export function AddAnnotationPopover({
                   className={cn(
                     'flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors',
                     isSelected
-                      ? 'border-current bg-gray-100 font-medium text-gray-900 dark:bg-white/10 dark:text-white/80'
-                      : 'border-transparent text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/50',
+                      ? 'border-current bg-gray-100 font-medium text-[var(--text-primary)] dark:bg-white/10'
+                      : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
                   )}
                   style={
                     isSelected

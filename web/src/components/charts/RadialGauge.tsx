@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
+import { Text } from '@/components/ui/Typography';
 import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 
 interface RadialGaugeProps {
@@ -34,7 +35,7 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
             fill="none"
             stroke="currentColor"
             strokeWidth={STROKE_WIDTH}
-            className="text-gray-200 dark:text-gray-700"
+            className="text-[var(--border-strong)]"
           />
           <circle
             cx={center}
@@ -54,13 +55,13 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
           className="absolute flex flex-col items-center justify-center"
           style={{ width: size, height: size }}
         >
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          <Text as="span" size="lg" weight="bold" color="primary">
             {fmtNumber(clamped, d)}
-            {unit && <span className="text-xs font-normal text-gray-500">{unit}</span>}
-          </span>
+            {unit && <Text as="span" size="xs" weight="regular" color="muted">{unit}</Text>}
+          </Text>
         </div>
 
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+        <Text as="span" size="xs" weight="medium" color="muted">{label}</Text>
       </div>
     );
   },

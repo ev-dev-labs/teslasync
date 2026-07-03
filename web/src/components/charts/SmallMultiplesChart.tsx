@@ -254,7 +254,7 @@ function SmallMultiplesCell({
           style={{ background: color }}
         />
         <span
-          className="truncate font-mono text-[11px] font-semibold"
+          className="truncate font-mono text-xs font-semibold"
           style={{ color }}
           title={label}
         >
@@ -263,7 +263,7 @@ function SmallMultiplesCell({
       </div>
       {!hasData ? (
         <div
-          className="flex items-center justify-center text-[10px] text-[var(--text-muted)]"
+          className="flex items-center justify-center text-2xs text-[var(--text-muted)]"
           style={{ height: cellHeight }}
         >
           {noData}
