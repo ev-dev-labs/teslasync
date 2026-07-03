@@ -80,9 +80,9 @@ function CostComparisonCard({
         <Text size="sm" weight="bold" className="text-emerald-300">
           {t('energy.cost_decimal.saving', 'Saving')} <Currency value={savings ?? 0} />
         </Text>
-        <span className={cn('rounded-full px-2 py-0.5 text-2xs font-semibold ring-1', green.bg, green.text, green.ring)}>
+        <Text as="span" size="2xs" weight="semibold" className={cn('rounded-full px-2 py-0.5 ring-1', green.bg, green.text, green.ring)}>
           {fmtPercent(savingsPct ?? 0)} {t('energy.cost_decimal.less', 'less')}
-        </span>
+        </Text>
       </div>
     </GlassPanel>
   );
@@ -302,9 +302,9 @@ export default function EnergyPage() {
       key: 'energy',
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
-        <span className="font-medium text-cyan-300">
+        <Text weight="medium" className="text-cyan-300">
           {formatEnergy(s.total_energy_added_wh ?? 0)}
-        </span>
+        </Text>
       ),
     },
     {
@@ -312,9 +312,9 @@ export default function EnergyPage() {
       header: t('energy.table.battery', 'Battery'),
       render: (s) => (
         <>
-          <span className="text-[var(--text-muted)]">{s.start_soc_pct}%</span>
-          <span className="mx-1 text-[var(--text-muted)]">→</span>
-          <span className="text-emerald-300">{s.end_soc_pct ?? '—'}%</span>
+          <Text color="muted">{s.start_soc_pct}%</Text>
+          <Text color="muted" className="mx-1">→</Text>
+          <Text className="text-emerald-300">{s.end_soc_pct ?? '—'}%</Text>
         </>
       ),
     },
@@ -344,11 +344,11 @@ export default function EnergyPage() {
       key: 'perKwh',
       header: t('energy.table.perKwh', '$/kWh'),
       render: (s) => (
-        <span className="text-[var(--text-muted)]">
+        <Text color="muted">
           {typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
             ? formatCurrency(s.cost_decimal / convertEnergyFromSI(s.total_energy_added_wh, 'kWh'))
             : '—'}
-        </span>
+        </Text>
       ),
     },
   ], [t, formatCurrency, formatEnergy]);
