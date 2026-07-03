@@ -9,6 +9,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ChartTooltip,
   ResponsiveContainer,
   ReferenceLine,
   ChartTimeRangeProvider,
@@ -155,7 +156,7 @@ function TimelineChart({
                 value: speedUnit,
                 angle: -90,
                 position: 'insideLeft',
-                style: { fontSize: 10, fill: '#9ca3af' },
+                style: { fontSize: 10, fill: 'var(--text-muted)' },
               }}
             />
             <YAxis
@@ -167,17 +168,11 @@ function TimelineChart({
                 value: 'kW',
                 angle: 90,
                 position: 'insideRight',
-                style: { fontSize: 10, fill: '#9ca3af' },
+                style: { fontSize: 10, fill: 'var(--text-muted)' },
               }}
             />
             <Tooltip
-              contentStyle={{
-                background: 'rgba(0,0,0,0.85)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              labelFormatter={(v: number) => `${fmt(v, 1)} min`}
+              content={<ChartTooltip labelFormatter={(v) => `${fmt(v, 1)} min`} />}
             />
             <Area
               {...AREA_DEFAULTS}
