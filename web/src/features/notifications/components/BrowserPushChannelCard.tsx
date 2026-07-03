@@ -137,9 +137,9 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
 
         {rows.length > 0 && (
           <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
-            <Heading level="sub" as="h4" className="text-xs uppercase tracking-wide">
+            <Text as="h4" variant="label">
               {t('webpush.devices.title', 'Registered devices')}
-            </Heading>
+            </Text>
             <ul className="space-y-2">
               {rows.map((row) => {
                 const isThisDevice = currentEndpoint !== null && currentEndpoint === row.endpoint;
