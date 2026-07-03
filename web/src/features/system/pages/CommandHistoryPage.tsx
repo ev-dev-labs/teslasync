@@ -28,7 +28,7 @@ import { FadeIn } from '@/components/motion';
 import { RangePicker } from '@/components/forms';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ChartTooltip, CHART_COLORS,
+  ResponsiveContainer, ChartTooltip, CHART_COLORS, axisTickSm,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -473,8 +473,8 @@ export default function CommandHistoryPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyActivity}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                    <XAxis dataKey="label" tick={axisTickSm} />
+                    <YAxis tick={axisTickSm} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey="success" name={t('commandHistory.success', 'Success')} stackId="a" fill={SUCCESS_COLOR} fillOpacity={0.85} />
