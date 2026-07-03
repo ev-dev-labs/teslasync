@@ -1,24 +1,31 @@
 /**
  * SignalExplorerPage — multi-signal explorer with chart, stats, history.
  *
- * Refactored to compose `SignalSelector`, `SignalChartPanel`,
- * `SignalStatsPanel`, `SignalHistoryTable`, and `useLiveSignalStream` so
- * the page stays in sync with the unified `/signals` workspace and
- * consolidates all SSE plumbing into one place.
+ * Composes `SignalSelector`, `SignalChartPanel`, `SignalStatsPanel`,
+ * `SignalHistoryTable`, and `useLiveSignalStream` so the page stays in sync
+ * with the unified `/signals` workspace and consolidates all SSE plumbing
+ * into one place.
  *
- * Now drives `vehicleId` from `useSelectedVehicle` instead of the
- * previous hard-coded `1`.
+ * Modern-UI: full-width responsive bento. A KPI summary band leads, then the
+ * controls panel, the opt-in AI filter, then a results bento with the signal
+ * chart as the hero (spanning two columns on wide screens), the stats summary
+ * beside it, and the history table as a full-width detail band. Every data
+ * section owns its loading / empty / error state — nothing is gated behind a
+ * single guard, and the layout reflows to more columns on wide monitors.
+ *
+ * Drives `vehicleId` from `useSelectedVehicle` instead of a hard-coded `1`.
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Activity, AlertCircle, Database, Radio } from 'lucide-react';
+import { Activity, AlertCircle, Clock, Database, Radio } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, Badge, HelpTooltip, Select } from '@/components/ui';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Button, Badge, HelpTooltip, Select, Label } from '@/components/ui';
+import { EmptyState, AlertBanner } from '@/components/feedback';
+import { MetricCard } from '@/components/data-display';
+import { FadeIn } from '@/components/motion';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlArray, useUrlNumber } from '@/hooks/useUrlState';
@@ -27,6 +34,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { getErrorMessage } from '@/lib/errorMessage';
+import { fmtInt } from '@/lib/numberFormat';
 import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
 
@@ -161,6 +169,26 @@ export default function SignalExplorerPage() {
   const hasHistorical = exploreKey !== null;
   const anyError = (signalsError ?? historicalError) as Error | undefined;
 
+  // Inclusive day span for the KPI band — mirrors the historical query window.
+  const rangeDays = useMemo(() => {
+    if (!start || !end) return 0;
+    const s = new Date(`${start}T00:00:00`).getTime();
+    const e = new Date(`${end}T00:00:00`).getTime();
+    if (Number.isNaN(s) || Number.isNaN(e)) return 0;
+    return Math.max(1, Math.round((e - s) / 86_400_000) + 1);
+  }, [start, end]);
+
+  // KPI-band derivations — null-safe scalars valid in both historical & live modes.
+  const pointCount = isLive ? live.chartPointCount : totalRecords;
+  const statSignalCount = activeStats.length;
+  const statusLabel = isLive
+    ? live.connected
+      ? t('signalExplorer.status.streaming', 'Streaming')
+      : t('signalExplorer.status.disconnected', 'Disconnected')
+    : hasHistorical
+      ? t('signalExplorer.status.historical', 'Historical')
+      : t('signalExplorer.status.idle', 'Idle');
+
   // Wires the optional AI natural-language filter into deterministic page state.
   // The AI section is opt-in and absent in off mode. The LLM never writes; this
   // callback runs only when the user clicks "Apply to filters" on a typed proposal.
@@ -195,120 +223,189 @@ export default function SignalExplorerPage() {
       }
     >
       {anyError ? (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       ) : null}
 
       {vehicleId === 0 ? (
         // no-action: vehicle picker is in the page header; no inline CTA needed.
-        <EmptyState
-          icon={<Activity className="h-8 w-8" />}
-          title={t('signalExplorer.noVehicle', 'Select a vehicle to begin')}
-          message={t('signalExplorer.noVehicleDesc', 'Pick a vehicle from the picker above to explore its signals.')}
-        />
+        <GlassPanel className="p-4 sm:p-5">
+          <EmptyState
+            icon={<Activity className="h-8 w-8" aria-hidden="true" />}
+            title={t('signalExplorer.noVehicle', 'Select a vehicle to begin')}
+            message={t('signalExplorer.noVehicleDesc', 'Pick a vehicle from the picker above to explore its signals.')}
+          />
+        </GlassPanel>
       ) : (
         <>
-          <GlassPanel className="p-4 sm:p-5 space-y-4">
-            <SignalSelector
-              options={availableSignals ?? []}
-              value={selectedSignals}
-              onChange={(next) => setSelectedSignals(next.slice(0, MAX_SIGNALS))}
-              max={MAX_SIGNALS}
-            />
+          {/* 1 — KPI band: full-width responsive summary of the current exploration */}
+          <FadeIn>
+            <section
+              aria-label={t('signalExplorer.kpis', 'Exploration summary')}
+              className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+            >
+              <MetricCard
+                label={t('signalExplorer.kpi.signals', 'Signals')}
+                value={selectedSignals.length}
+                subtitle={t('signalExplorer.kpi.ofMax', 'of {{max}} max', { max: MAX_SIGNALS })}
+                icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={isLive ? t('signalExplorer.kpi.liveEvents', 'Live Events') : t('signalExplorer.kpi.records', 'Records')}
+                value={fmtInt(pointCount)}
+                subtitle={isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded')}
+                icon={<Database className="h-5 w-5" aria-hidden="true" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('signalExplorer.kpi.timeSpan', 'Time Span')}
+                value={
+                  isLive
+                    ? t('signalExplorer.kpi.live', 'Live')
+                    : rangeDays > 0
+                      ? t('signalExplorer.kpi.days', '{{count}}d', { count: rangeDays })
+                      : '—'
+                }
+                subtitle={
+                  isLive
+                    ? t('signalExplorer.kpi.rollingWindow', '5-min window')
+                    : start && end
+                      ? `${start} → ${end}`
+                      : t('signalExplorer.kpi.noRange', 'No range set')
+                }
+                icon={<Clock className="h-5 w-5" aria-hidden="true" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('signalExplorer.kpi.status', 'Status')}
+                value={statusLabel}
+                subtitle={t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount })}
+                icon={<Radio className="h-5 w-5" aria-hidden="true" />}
+                color={isLive ? (live.connected ? 'green' : 'red') : hasHistorical ? 'cyan' : 'amber'}
+              />
+            </section>
+          </FadeIn>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <label className="space-y-1">
-                <span className="block text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('Time Range')}
-                </span>
-                <RangePicker
-                  value={{ start, end }}
-                  onChange={setRange}
-                  presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
-                  align="start"
-                  triggerTestId="signal-explorer-range"
-                />
-              </label>
-              <div className="flex flex-wrap items-end gap-3">
-                {!isLive ? (
-                  <Select
-                    label={t('Per Page')}
-                    value={String(perPage)}
-                    onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
-                    options={PER_PAGE_OPTIONS}
-                    className="w-24"
+          {/* 2 — Controls: signal picker, time range, per-page, explore / live */}
+          <FadeIn delay={0.05}>
+            <GlassPanel className="p-4 sm:p-5 space-y-4">
+              <SignalSelector
+                options={availableSignals ?? []}
+                value={selectedSignals}
+                onChange={(next) => setSelectedSignals(next.slice(0, MAX_SIGNALS))}
+                max={MAX_SIGNALS}
+              />
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-1.5">
+                  <Label className="block">{t('Time Range')}</Label>
+                  <RangePicker
+                    value={{ start, end }}
+                    onChange={setRange}
+                    presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
+                    align="start"
+                    triggerTestId="signal-explorer-range"
                   />
-                ) : null}
-                {!isLive ? (
+                </div>
+                <div className="flex flex-wrap items-end gap-2 sm:gap-3">
+                  {!isLive ? (
+                    <Select
+                      label={t('Per Page')}
+                      value={String(perPage)}
+                      onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
+                      options={PER_PAGE_OPTIONS}
+                      className="w-24"
+                    />
+                  ) : null}
+                  {!isLive ? (
+                    <Button
+                      variant="primary"
+                      icon={<Database className="h-4 w-4" aria-hidden="true" />}
+                      onClick={handleExplore}
+                      disabled={!canExplore}
+                      loading={isFetching}
+                    >
+                      {t('Explore')}
+                    </Button>
+                  ) : null}
                   <Button
-                    variant="primary"
-                    icon={<Database className="h-4 w-4" />}
-                    onClick={handleExplore}
-                    disabled={!canExplore}
-                    loading={isFetching}
+                    variant={isLive ? 'danger' : 'outline'}
+                    icon={<Radio className="h-4 w-4" aria-hidden="true" />}
+                    onClick={toggleLive}
+                    disabled={selectedSignals.length === 0 && !isLive}
                   >
-                    {t('Explore')}
+                    {isLive ? t('signalExplorer.stopLive', 'Stop live') : t('signalExplorer.live', 'Live')}
                   </Button>
-                ) : null}
-                <Button
-                  variant={isLive ? 'danger' : 'outline'}
-                  icon={<Radio className="h-4 w-4" />}
-                  onClick={toggleLive}
-                  disabled={selectedSignals.length === 0 && !isLive}
-                >
-                  {isLive ? t('signalExplorer.stopLive', 'Stop live') : t('signalExplorer.live', 'Live')}
-                </Button>
-                <HelpTooltip
-                  i18nKey="help.signal.live"
-                  defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates."
-                  ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live signal streaming' })}
-                  placement="left"
-                />
+                  <HelpTooltip
+                    i18nKey="help.signal.live"
+                    defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates."
+                    ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live signal streaming' })}
+                    placement="left"
+                  />
+                </div>
               </div>
-            </div>
-          </GlassPanel>
+            </GlassPanel>
+          </FadeIn>
 
+          {/* 3 — Optional AI natural-language filter (self-hides when ai_mode='off') */}
           <AISignalExplorerNlFilter
             vehicleId={vehicleId}
             onApply={handleApplyAiDraft}
           />
 
+          {/* 4 — Results: guidance until a query runs, then the chart / stats / history bento */}
           {!hasHistorical && !isLive ? (
             // no-action: signal picker, range, and Explore/Live controls are directly above this state.
-            <EmptyState
-              icon={<Database className="h-10 w-10" />}
-              title={t('Pick signals and click Explore')}
-              message={t('Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.')}
-            />
-          ) : (
-            <>
-              {activeStats.length > 0 ? (
-                <SignalStatsPanel stats={activeStats} loading={historicalLoading && !isLive} />
-              ) : null}
-
-              <SignalChartPanel
-                selectedSignals={selectedSignals}
-                data={activeChart}
-                stats={activeStats}
-                isLive={isLive}
-                loading={historicalLoading && !isLive}
-                pointsLoaded={historicalRows?.length}
-                liveEventCount={live.chartPointCount}
-              />
-
-              {!isLive && hasHistorical ? (
-                <SignalHistoryTable
-                  rows={paginatedRows}
-                  selectedSignals={selectedSignals}
-                  page={page}
-                  pageSize={perPage}
-                  totalRows={totalRecords}
-                  onPageChange={setPage}
-                  loading={historicalLoading}
+            <FadeIn delay={0.1}>
+              <GlassPanel className="p-4 sm:p-5">
+                <EmptyState
+                  icon={<Database className="h-10 w-10" aria-hidden="true" />}
+                  title={t('Pick signals and click Explore')}
+                  message={t('Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.')}
                 />
+              </GlassPanel>
+            </FadeIn>
+          ) : (
+            <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+              {/* Hero — the multi-signal chart spans two of three columns on wide screens. */}
+              <div className="xl:col-span-2">
+                <SignalChartPanel
+                  selectedSignals={selectedSignals}
+                  data={activeChart}
+                  stats={activeStats}
+                  isLive={isLive}
+                  loading={historicalLoading && !isLive}
+                  pointsLoaded={historicalRows?.length}
+                  liveEventCount={live.chartPointCount}
+                />
+              </div>
+
+              {/* Context — per-signal min/max/avg/count summary beside the chart. */}
+              <div className="xl:col-span-1">
+                <SignalStatsPanel
+                  stats={activeStats}
+                  selectedSignals={selectedSignals}
+                  loading={historicalLoading && !isLive}
+                />
+              </div>
+
+              {/* Detail — full-width history band (historical mode only; live is a rolling window). */}
+              {!isLive && hasHistorical ? (
+                <div className="xl:col-span-3">
+                  <SignalHistoryTable
+                    rows={paginatedRows}
+                    selectedSignals={selectedSignals}
+                    page={page}
+                    pageSize={perPage}
+                    totalRows={totalRecords}
+                    onPageChange={setPage}
+                    loading={historicalLoading}
+                  />
+                </div>
               ) : null}
-            </>
+            </section>
           )}
         </>
       )}
