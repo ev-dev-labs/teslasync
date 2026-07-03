@@ -53,38 +53,38 @@ function buildVehicleColumns(
     {
       key: 'vin',
       header: t('mqtt.vin', 'VIN'),
-      render: (v) => <span className="font-mono text-[var(--text-primary)]">{v.vin}</span>,
+      render: (v) => <Text as="span" mono color="primary">{v.vin}</Text>,
     },
     {
       key: 'state',
       header: t('mqtt.state', 'State'),
       render: (v) => v.state
         ? <Badge variant={v.state === 'online' ? 'success' : 'neutral'} size="sm">{v.state}</Badge>
-        : <span className="text-[var(--text-muted)]">—</span>,
+        : <Text as="span" color="muted">—</Text>,
     },
     {
       key: 'signals',
       header: t('mqtt.signals', 'Signals'),
       className: 'text-right',
-      render: (v) => <span className="font-mono text-[var(--text-secondary)]">{fmtInt(v.signalCount ?? 0)}</span>,
+      render: (v) => <Text as="span" mono color="secondary">{fmtInt(v.signalCount ?? 0)}</Text>,
     },
     {
       key: 'batches',
       header: t('mqtt.batches', 'Batches'),
       className: 'text-right',
-      render: (v) => <span className="font-mono text-[var(--text-secondary)]">{fmtInt(v.batchCount ?? 0)}</span>,
+      render: (v) => <Text as="span" mono color="secondary">{fmtInt(v.batchCount ?? 0)}</Text>,
     },
     {
       key: 'sigPerSec',
       header: t('mqtt.sigPerSec', 'Sig/sec'),
       className: 'text-right',
-      render: (v) => <span className="font-mono text-[var(--text-secondary)]">{v.signalsPerSecond != null ? fmtNumber(v.signalsPerSecond) : '—'}</span>,
+      render: (v) => <Text as="span" mono color="secondary">{v.signalsPerSecond != null ? fmtNumber(v.signalsPerSecond) : '—'}</Text>,
     },
     {
       key: 'lastReceived',
       header: t('mqtt.lastReceived', 'Last Received'),
       className: 'text-right',
-      render: (v) => <span className="whitespace-nowrap text-[var(--text-muted)]">{v.lastReceived ? formatRelative(v.lastReceived) : '—'}</span>,
+      render: (v) => <Text as="span" color="muted" className="whitespace-nowrap">{v.lastReceived ? formatRelative(v.lastReceived) : '—'}</Text>,
     },
     {
       key: 'status',
