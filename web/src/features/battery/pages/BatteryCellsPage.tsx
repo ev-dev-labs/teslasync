@@ -130,14 +130,16 @@ function CellHeatmap({ cells, avg, label }: { cells: CellReading[]; avg: number;
             <div
               key={cell.cell_number}
               className={cn(
-                'flex flex-col items-center justify-center rounded-md p-1 text-2xs font-mono',
+                'flex flex-col items-center justify-center rounded-md p-1',
+                typography.size['2xs'],
+                typography.family.mono,
                 'transition-transform duration-normal hover:z-10 hover:scale-110',
                 isDeviation && 'ring-1 ring-inset ring-current',
               )}
               style={{ backgroundColor: `${color}20`, color }}
               title={`${t('battery.cells.cell', 'Cell')} ${cell.cell_number}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${delta >= 0 ? '+' : ''}${fmtNumber(delta, 1)} mV)`}
             >
-              <span className="font-semibold">{cell.cell_number}</span>
+              <span className={typography.weight.semibold}>{cell.cell_number}</span>
               <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
             </div>
           );
@@ -162,9 +164,9 @@ function SummaryStat({ label, value, valueClassName }: {
   return (
     <GlassPanel className="p-4 text-center">
       <Label className="block">{label}</Label>
-      <p className={cn(typography.size['2xl'], typography.weight.bold, 'mt-1 tabular-nums', valueClassName ?? typography.color.primary)}>
+      <Text as="p" size="2xl" weight="bold" className={cn('mt-1 tabular-nums', valueClassName ?? typography.color.primary)}>
         {value}
-      </p>
+      </Text>
     </GlassPanel>
   );
 }
@@ -312,14 +314,14 @@ export default function BatteryCellsPage() {
       key: 'cell_number',
       header: t('battery.cells.table.cell', 'Cell #'),
       sortable: true,
-      render: (r) => <span className="font-mono font-semibold">{r.cell_number}</span>,
+      render: (r) => <span className={cn(typography.family.mono, typography.weight.semibold)}>{r.cell_number}</span>,
     },
     {
       key: 'voltage',
       header: t('battery.cells.table.voltage', 'Voltage (V)'),
       sortable: true,
       render: (r) => (
-        <span className="font-mono" style={{ color: cellColor(r.voltage ?? 0, avgVoltage) }}>
+        <span className={typography.family.mono} style={{ color: cellColor(r.voltage ?? 0, avgVoltage) }}>
           {fmtNumber(r.voltage ?? 0, 4)}
         </span>
       ),
@@ -331,7 +333,7 @@ export default function BatteryCellsPage() {
       render: (r) => {
         const mv = r.delta_from_avg ?? 0;
         return (
-          <span className={cn('font-mono', mv > 0 ? 'text-emerald-300' : mv < 0 ? 'text-rose-300' : 'text-[var(--text-muted)]')}>
+          <span className={cn(typography.family.mono, mv > 0 ? 'text-emerald-300' : mv < 0 ? 'text-rose-300' : 'text-[var(--text-muted)]')}>
             {mv >= 0 ? '+' : ''}{fmtNumber(mv, 1)}
           </span>
         );
@@ -773,7 +775,7 @@ export default function BatteryCellsPage() {
                     <div className="flex items-start gap-3">
                       <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
                       <div className="min-w-0">
-                        <Text as="p" variant="body" className="font-medium">{ins.title}</Text>
+                        <Text as="p" variant="body" className={typography.weight.medium}>{ins.title}</Text>
                         <Text as="p" variant="bodySm" className="mt-0.5">{ins.description}</Text>
                       </div>
                     </div>
@@ -801,26 +803,26 @@ export default function BatteryCellsPage() {
           />
           <SummaryStat
             label={t('battery.cells.stat.packVoltage', 'Pack Voltage')}
-            value={<>{fmtNumber(data?.pack_voltage ?? 0, 1)}<span className="text-sm">V</span></>}
+            value={<>{fmtNumber(data?.pack_voltage ?? 0, 1)}<span className={typography.size.sm}>V</span></>}
             valueClassName="text-emerald-300"
           />
           <SummaryStat
             label={t('battery.cells.stat.avgVoltage', 'Avg Cell V')}
-            value={<>{fmtNumber(avgVoltage, 4)}<span className="text-sm">V</span></>}
+            value={<>{fmtNumber(avgVoltage, 4)}<span className={typography.size.sm}>V</span></>}
           />
           <SummaryStat
             label={t('battery.cells.stat.voltageSpread', 'V Spread')}
-            value={<>{fmtNumber(data?.imbalance_mv ?? 0, 1)}<span className="text-sm">mV</span></>}
+            value={<>{fmtNumber(data?.imbalance_mv ?? 0, 1)}<span className={typography.size.sm}>mV</span></>}
             valueClassName={(data?.imbalance_mv ?? 0) > 15 ? 'text-rose-300' : (data?.imbalance_mv ?? 0) > 5 ? 'text-amber-300' : 'text-emerald-300'}
           />
           <SummaryStat
             label={t('battery.cells.stat.tempSpread', 'Temp Spread')}
-            value={<>{fmtNumber(tempUnit === '°F' ? (data?.temp_spread ?? 0) * 1.8 : (data?.temp_spread ?? 0), 1)}<span className="text-sm">{tempUnit}</span></>}
+            value={<>{fmtNumber(tempUnit === '°F' ? (data?.temp_spread ?? 0) * 1.8 : (data?.temp_spread ?? 0), 1)}<span className={typography.size.sm}>{tempUnit}</span></>}
             valueClassName={(data?.temp_spread ?? 0) > 5 ? 'text-rose-300' : (data?.temp_spread ?? 0) > 3 ? 'text-amber-300' : 'text-emerald-300'}
           />
           <SummaryStat
             label={t('battery.cells.stat.normalCells', 'Normal Cells')}
-            value={<>{cells.filter((c) => c.status === 'normal').length}<span className="text-sm">/{data?.total_cells ?? 0}</span></>}
+            value={<>{cells.filter((c) => c.status === 'normal').length}<span className={typography.size.sm}>/{data?.total_cells ?? 0}</span></>}
             valueClassName="text-emerald-300"
           />
         </section>
