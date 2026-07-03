@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, type ReactNode, type CSSProperties } from 'react';
 import { cn } from '@/lib/cn';
 
 interface ProgressRingProps {
@@ -55,7 +55,7 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
               fill="none"
               stroke="currentColor"
               strokeWidth={strokeWidth}
-              className="text-gray-200 dark:text-gray-700"
+              className="text-[var(--border-strong)]"
             />
             <circle
               cx={center}
@@ -77,16 +77,16 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
             >
               {centerLabel != null && (
                 <span
-                  className="font-semibold tabular-nums text-[var(--text-primary)]"
-                  style={{ fontSize: `${mainSize}px` }}
+                  className="font-semibold tabular-nums text-[var(--text-primary)] text-[length:var(--ring-main-size)]"
+                  style={{ '--ring-main-size': `${mainSize}px` } as CSSProperties}
                 >
                   {centerLabel}
                 </span>
               )}
               {centerSubLabel != null && (
                 <span
-                  className="mt-0.5 uppercase tracking-wide text-[var(--text-muted)]"
-                  style={{ fontSize: `${subSize}px` }}
+                  className="mt-0.5 uppercase tracking-wide text-[var(--text-muted)] text-[length:var(--ring-sub-size)]"
+                  style={{ '--ring-sub-size': `${subSize}px` } as CSSProperties}
                 >
                   {centerSubLabel}
                 </span>

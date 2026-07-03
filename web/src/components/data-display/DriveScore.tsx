@@ -111,7 +111,7 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
             >
               {score.total}
             </motion.span>
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{t('driveScore.score', 'Score')}</span>
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">{t('driveScore.score', 'Score')}</span>
           </div>
         </div>
 
@@ -125,7 +125,7 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
             { label: t('driveScore.tripLength', 'Trip Length'), value: score.trip, max: 20, color: '#f59e0b' },
           ].map(item => (
             <div key={item.label}>
-              <div className="flex justify-between text-[11px] mb-0.5">
+              <div className="flex justify-between text-xs mb-0.5">
                 <span className="text-[var(--text-secondary)]">{item.label}</span>
                 <span style={{ color: item.color }} className="font-medium">{item.value}/{item.max}</span>
               </div>

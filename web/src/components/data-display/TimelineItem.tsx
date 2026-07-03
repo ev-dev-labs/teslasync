@@ -20,7 +20,7 @@ export function TimelineItem({ icon, title, subtitle, time, color, isLast, href 
       <div className="pb-4 min-w-0 flex-1">
         <p className="text-sm font-medium text-[var(--text-primary)] truncate">{title}</p>
         {subtitle && <p className="text-xs text-[var(--text-muted)] mt-0.5">{subtitle}</p>}
-        <p className="text-[10px] text-gray-600 mt-1">{time}</p>
+        <p className="text-2xs text-[var(--text-muted)] mt-1">{time}</p>
       </div>
     </>
   )
