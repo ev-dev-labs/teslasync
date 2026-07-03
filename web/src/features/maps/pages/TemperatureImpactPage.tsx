@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, PanelTitle, Caption, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, PanelTitle, Caption, Text, HelperText, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -202,9 +202,9 @@ export default function TemperatureImpactPage() {
         header: t('tempImpact.driveDate', 'Date'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm text-[var(--text-primary)]">
+          <Text variant="body">
             {row.drive_date ? formatDate(row.drive_date) : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -212,9 +212,9 @@ export default function TemperatureImpactPage() {
         header: t('tempImpact.temperature', 'Temperature'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm tabular-nums text-[var(--text-secondary)]">
+          <Text size="sm" color="secondary" className="tabular-nums">
             {formatTemperature(row.outside_temp)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -222,9 +222,9 @@ export default function TemperatureImpactPage() {
         header: t('tempImpact.efficiency', 'Efficiency'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm tabular-nums text-cyan-300">
+          <Text as="span" size="sm" className="tabular-nums text-cyan-300">
             {fmtNumber(toDispEff(row.efficiency_wh_km ?? 0))} {effLabel}
-          </span>
+          </Text>
         ),
       },
       {
@@ -232,9 +232,9 @@ export default function TemperatureImpactPage() {
         header: t('tempImpact.distance', 'Distance'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm tabular-nums text-[var(--text-secondary)]">
+          <Text size="sm" color="secondary" className="tabular-nums">
             {formatDistance((row.distance_km ?? 0) * 1000)}
-          </span>
+          </Text>
         ),
       },
     ],
@@ -428,7 +428,7 @@ export default function TemperatureImpactPage() {
               icon: <Thermometer className="h-8 w-8" aria-hidden="true" />,
             }) ?? (stats?.best ? (
               <div className="space-y-3">
-                <p className="text-sm text-[var(--text-secondary)]">
+                <Text as="p" size="sm" color="secondary">
                   {t('tempImpact.optimalDesc', {
                     range: stats.best.label,
                     efficiency: fmtNumber(stats.best.avg),
@@ -437,9 +437,9 @@ export default function TemperatureImpactPage() {
                     defaultValue:
                       'Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.',
                   })}
-                </p>
+                </Text>
                 {stats.worst && stats.best.label !== stats.worst.label && (
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <HelperText>
                     {t('tempImpact.optimalDelta', {
                       worst: stats.worst.label,
                       delta: fmtNumber(stats.worst.avg - stats.best.avg),
@@ -447,7 +447,7 @@ export default function TemperatureImpactPage() {
                       defaultValue:
                         'Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.',
                     })}
-                  </p>
+                  </HelperText>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {stats.bucketAvgs
