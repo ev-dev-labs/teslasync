@@ -96,7 +96,7 @@ function QueueJobRow({ job }: QueueJobRowProps) {
           data-testid={`queue-job-error-${job.id}`}
         >
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden />
-          <Caption className="text-rose-200 break-words">{job.error}</Caption>
+          <Text variant="error" className="break-words">{job.error}</Text>
         </div>
       ) : null}
     </li>
@@ -158,7 +158,7 @@ export function QueueJobDrawer({
             data-testid="queue-job-drawer-error"
           >
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
-            <Text variant="bodySm" className="text-rose-200">
+            <Text variant="error">
               {t(
                 'queueStatus.drawer.error',
                 'Could not load recent jobs. Check API logs and try again.',
