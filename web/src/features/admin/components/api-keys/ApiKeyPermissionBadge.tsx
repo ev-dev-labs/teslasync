@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { neonColorMap } from '@/lib/tokens';
+import { Text } from '@/components/ui';
 import { permissionMeta } from './constants';
 
 interface ApiKeyPermissionBadgeProps {
@@ -21,9 +22,15 @@ export function ApiKeyPermissionBadge({ perm, className }: ApiKeyPermissionBadge
   const Icon = meta.icon;
 
   return (
-    <span
+    <Text
+      as="span"
+      size="2xs"
+      weight="semibold"
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold ring-1',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 ring-1',
+        // Keep the chip outline legible when the neon tint + ring collapse in
+        // Windows High-Contrast / forced-colors mode (mirrors the shared Badge).
+        'forced-colors:border forced-colors:border-[CanvasText]',
         c.bg,
         c.ring,
         c.text,
@@ -32,6 +39,6 @@ export function ApiKeyPermissionBadge({ perm, className }: ApiKeyPermissionBadge
     >
       <Icon className="h-3 w-3" aria-hidden="true" />
       {t(meta.labelKey, meta.labelFallback)}
-    </span>
+    </Text>
   );
 }
