@@ -228,22 +228,22 @@ export default function PeriodComparePage() {
         key: 'periodA',
         header: t('compare.periodA', 'Period A'),
         sortable: true,
-        render: (r) => fmtNumber(r.periodA),
+        render: (r) => <Text variant="body" className="tabular-nums">{fmtNumber(r.periodA)}</Text>,
       },
       {
         key: 'periodB',
         header: t('compare.periodB', 'Period B'),
         sortable: true,
-        render: (r) => fmtNumber(r.periodB),
+        render: (r) => <Text variant="body" className="tabular-nums">{fmtNumber(r.periodB)}</Text>,
       },
       {
         key: 'change',
         header: t('compare.change', 'Change'),
         sortable: true,
         render: (r) => (
-          <span className={cn('tabular-nums', r.positive ? 'text-emerald-300' : 'text-rose-300')}>
+          <Text variant="body" className={cn('tabular-nums', r.positive ? 'text-emerald-300' : 'text-rose-300')}>
             {r.positive ? '↑' : '↓'} {fmtNumber(Math.abs(r.change))}
-          </span>
+          </Text>
         ),
       },
       {
