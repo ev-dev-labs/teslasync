@@ -31,7 +31,7 @@ export function GDPRDownloadPanel({ artifact, downloadUrl, loading, className }:
         </div>
       ) : downloadUrl ? (
         <div className="flex flex-col items-start gap-3">
-          <Text variant="bodySm" className="text-[var(--text-secondary)]">
+          <Text variant="bodySm">
             {t(
               'admin.gdprExport.downloadHint',
               'The bundle streams from the backend through this browser. The download counter is logged to the audit ledger.',

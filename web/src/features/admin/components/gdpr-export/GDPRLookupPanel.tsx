@@ -56,7 +56,7 @@ export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPan
 
         <div className="flex items-start gap-2 rounded-xl border border-[var(--glass-border)] bg-white/[0.02] p-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
-          <Text variant="bodySm" className="text-[var(--text-secondary)]">
+          <Text variant="bodySm">
             {t(
               'admin.gdprExport.lookupBlurb',
               'Bundles are streamed straight from the backend and expire after the configured retention window. Look one up to track its status live.',
