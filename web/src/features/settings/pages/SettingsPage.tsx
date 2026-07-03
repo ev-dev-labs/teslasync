@@ -11,9 +11,11 @@ import {
   Languages,
   CircleDollarSign,
   Zap,
+  Type,
 } from 'lucide-react'
 
 import { useSettings } from '@/api/hooks/useSettings'
+import { useFont } from '@/components/ui/FontProvider'
 import { PageContainer } from '@/components/layout'
 import { Button, SectionTitle } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
@@ -28,6 +30,7 @@ import { restartChecklist } from '@/features/onboarding/checklist'
 import {
   GeneralSettings,
   AppearanceSettings,
+  TypographySettings,
   AdvancedSettings,
   SettingsSearch,
   SettingsActionCard,
@@ -53,6 +56,17 @@ const LANGUAGE_LABELS: Record<string, string> = {
   zh: '中文',
 }
 
+/** Display names for the stored font-family preset shown in the KPI band. */
+const FONT_FAMILY_LABELS: Record<string, string> = {
+  inter: 'Inter',
+  system: 'System UI',
+  roboto: 'Roboto',
+  source: 'Source Sans 3',
+  plex: 'IBM Plex Sans',
+  atkinson: 'Atkinson Hyperlegible',
+  custom: 'Custom',
+}
+
 interface OverviewCard {
   icon: ReactNode
   label: string
@@ -65,6 +79,7 @@ export default function SettingsPage() {
   usePageTitle(t('title', 'Settings'))
   const settingsQuery = useSettings()
   const { data: settings, isLoading } = settingsQuery
+  const { prefs: fontPrefs } = useFont()
   const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
@@ -143,6 +158,12 @@ export default function SettingsPage() {
       value: settings ? `${currencySymbol}${(settings.base_cost_per_kwh ?? 0).toFixed(2)}` : '—',
       sublabel: t('overview.perKwh', 'per kWh'),
     },
+    {
+      icon: <Type className="h-5 w-5" aria-hidden="true" />,
+      label: t('overview.typography', 'Typography'),
+      value: FONT_FAMILY_LABELS[fontPrefs.sans] ?? fontPrefs.sans,
+      sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
+    },
   ]
 
   return (
@@ -189,6 +210,9 @@ export default function SettingsPage() {
         </section>
         <section id="appearance">
           <AppearanceSettings />
+        </section>
+        <section id="typography">
+          <TypographySettings />
         </section>
         <section id="advanced">
           <AdvancedSettings />

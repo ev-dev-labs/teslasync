@@ -69,6 +69,15 @@ func settingsDefaults() *systemmodel.Settings {
 		UIDensity:            "comfortable",
 		TimeFormatDefault:    "relative",
 		ChartPalette:         "cb_safe",
+		// Typography defaults — mirror DEFAULT_FONT_PREFS in FontProvider.tsx.
+		FontFamily:        "inter",
+		FontMono:          "jetbrains",
+		FontCustomSans:    "",
+		FontCustomMono:    "",
+		FontScale:         1,
+		FontLeading:       1.5,
+		FontTracking:      "0em",
+		FontHeadingWeight: 700,
 		// ADR-015: AI is strictly additive and default-off. A struct
 		// freshly built from defaults must satisfy `AIMode=='off'`
 		// AND `AIFeatures` must be a non-nil empty map so callers can
@@ -231,6 +240,38 @@ func applySettingsRow(s *systemmodel.Settings, key, _ string, vText *string, vNu
 		if vText != nil {
 			s.ChartPalette = *vText
 		}
+	case "font_family":
+		if vText != nil {
+			s.FontFamily = *vText
+		}
+	case "font_mono":
+		if vText != nil {
+			s.FontMono = *vText
+		}
+	case "font_custom_sans":
+		if vText != nil {
+			s.FontCustomSans = *vText
+		}
+	case "font_custom_mono":
+		if vText != nil {
+			s.FontCustomMono = *vText
+		}
+	case "font_scale":
+		if vNum != nil {
+			s.FontScale = *vNum
+		}
+	case "font_leading":
+		if vNum != nil {
+			s.FontLeading = *vNum
+		}
+	case "font_tracking":
+		if vText != nil {
+			s.FontTracking = *vText
+		}
+	case "font_heading_weight":
+		if vNum != nil {
+			s.FontHeadingWeight = int(*vNum)
+		}
 	case "ai_mode":
 		if vText != nil {
 			s.AIMode = *vText
@@ -351,6 +392,11 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) erro
 		{"ui_density", s.UIDensity},
 		{"time_format_default", s.TimeFormatDefault},
 		{"chart_palette", s.ChartPalette},
+		{"font_family", s.FontFamily},
+		{"font_mono", s.FontMono},
+		{"font_custom_sans", s.FontCustomSans},
+		{"font_custom_mono", s.FontCustomMono},
+		{"font_tracking", s.FontTracking},
 		// ADR-015: ai_mode is the top-level AI gate. Validation
 		// (one of 'off' / 'local' / 'cloud') happens in the
 		// settings handler before reaching this layer.
@@ -362,6 +408,9 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) erro
 		{"gas_efficiency_mpg", s.GasEfficiencyMPG},
 		{"decimal_precision", float64(s.DecimalPrecision)},
 		{"ai_cost_cap_cents", float64(s.AICostCapCents)},
+		{"font_scale", s.FontScale},
+		{"font_leading", s.FontLeading},
+		{"font_heading_weight", float64(s.FontHeadingWeight)},
 	}
 	boolRows := []rowBool{
 		{"api_suspended", s.APISuspended},

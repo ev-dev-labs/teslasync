@@ -432,6 +432,19 @@ type Settings struct {
 	// (Phase 45 / 23.)
 	ChartPalette string `json:"chart_palette"`
 
+	// ── Typography preferences (Typography Unit 0) ──
+	// Written by the frontend FontProvider; drive the --font-* CSS variables
+	// at the display boundary only. Defaults mirror DEFAULT_FONT_PREFS in
+	// web/src/components/ui/FontProvider.tsx.
+	FontFamily        string  `json:"font_family"`         // sans preset id (inter/system/roboto/…) or "custom"
+	FontMono          string  `json:"font_mono"`           // mono preset id (jetbrains/fira/…) or "custom"
+	FontCustomSans    string  `json:"font_custom_sans"`    // custom sans CSS font stack
+	FontCustomMono    string  `json:"font_custom_mono"`    // custom mono CSS font stack
+	FontScale         float64 `json:"font_scale"`          // text size multiplier written to --font-scale
+	FontLeading       float64 `json:"font_leading"`        // base line-height written to --leading
+	FontTracking      string  `json:"font_tracking"`       // base letter-spacing (em) written to --tracking
+	FontHeadingWeight int     `json:"font_heading_weight"` // heading weight written to --font-weight-bold
+
 	// AIMode is the top-level AI feature gate (ADR-015). One of:
 	//   - "off"   (default) — every AI surface is hidden, every
 	//                         /api/v1/ai/* route returns 404, no

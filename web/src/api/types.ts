@@ -312,6 +312,20 @@ export interface AppSettings {
    */
   chart_palette?: 'cb_safe' | 'neon'
   /**
+   * Typography preferences (Typography Unit 0). Round-tripped by the
+   * FontProvider, which applies them to the `--font-*` CSS variables at the
+   * display boundary. All optional — an absent field falls back to the
+   * server-side default (mirrors DEFAULT_FONT_PREFS in FontProvider.tsx).
+   */
+  font_family?: string
+  font_mono?: string
+  font_custom_sans?: string
+  font_custom_mono?: string
+  font_scale?: number
+  font_leading?: number
+  font_tracking?: string
+  font_heading_weight?: number
+  /**
    * AI-Off Contract (ADR-015).
    *
    * Top-level gate. `'off'` (default) blocks every AI surface

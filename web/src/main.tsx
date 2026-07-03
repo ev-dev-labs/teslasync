@@ -10,6 +10,7 @@ import { AchievementUnlockListener } from './components/feedback/AchievementUnlo
 import { QueryBroadcastBridge } from './components/QueryBroadcastBridge'
 import { FormatterPrefsBridge } from './components/FormatterPrefsBridge'
 import { ThemeProvider } from './components/ui/ThemeProvider'
+import { FontProvider, applyFontCSS, readStoredFontPrefs } from './components/ui/FontProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
@@ -51,6 +52,18 @@ try {
   document.body.dataset.density = initial
 } catch {
   document.body.dataset.density = 'comfortable'
+}
+
+// ── Font bootstrap (Typography Unit 0) ────────────────────────────────────────
+// Belt to the inline <script> in index.html: re-apply the cached typography CSS
+// variables from the `teslasync-font-*` localStorage keys BEFORE React mounts so
+// the pre-module paint and the React mount agree on font / scale / line-height /
+// tracking / heading weight. FontProvider keeps this in sync with the server-side
+// `font_*` settings once its hydration fetch resolves.
+try {
+  applyFontCSS(readStoredFontPrefs())
+} catch {
+  // Best-effort — FontProvider re-applies on mount if this fails.
 }
 
 if (import.meta.env.DEV && import.meta.env.VITE_PWA_DEV !== 'true' && 'serviceWorker' in navigator) {
@@ -108,16 +121,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <BrowserRouter> so useNavigate / useLocation resolve. */}
           <NavigationGuardProvider>
             <ThemeProvider>
-              <SelectedVehicleProvider>
-                <ToastProvider>
-                  <App />
-                  <ReloadPrompt />
-                  {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
-                      with a transient toast + confetti. Mounted alongside the
-                      standard toast stack so the SSE subscription is global. */}
-                  <AchievementUnlockListener />
-                </ToastProvider>
-              </SelectedVehicleProvider>
+              <FontProvider>
+                <SelectedVehicleProvider>
+                  <ToastProvider>
+                    <App />
+                    <ReloadPrompt />
+                    {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                        with a transient toast + confetti. Mounted alongside the
+                        standard toast stack so the SSE subscription is global. */}
+                    <AchievementUnlockListener />
+                  </ToastProvider>
+                </SelectedVehicleProvider>
+              </FontProvider>
             </ThemeProvider>
           </NavigationGuardProvider>
         </BrowserRouter>
