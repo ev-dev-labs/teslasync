@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListTree } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Caption, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { DateTime } from '@/components/data-display';
+import { typography } from '@/lib/tokens';
 
 import type { SnapshotRow } from './constants';
 
@@ -27,7 +28,7 @@ export function SignalSnapshotPanel({ rows, isLoading, error, onRetry }: SignalS
         header: t('powershare.snapshot.signal', 'Signal'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm text-[var(--text-secondary)]">{row.label}</span>
+          <Text size="sm" color="secondary">{row.label}</Text>
         ),
       },
       {
@@ -35,9 +36,9 @@ export function SignalSnapshotPanel({ rows, isLoading, error, onRetry }: SignalS
         header: t('powershare.snapshot.value', 'Value'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm font-medium tabular-nums text-[var(--text-primary)]">
+          <Text size="sm" weight="medium" color="primary" className="tabular-nums">
             {row.value}
-          </span>
+          </Text>
         ),
       },
       {
@@ -46,9 +47,9 @@ export function SignalSnapshotPanel({ rows, isLoading, error, onRetry }: SignalS
         sortable: true,
         render: (row) =>
           row.ts ? (
-            <DateTime value={row.ts} variant="relative" className="text-xs text-[var(--text-muted)]" />
+            <DateTime value={row.ts} variant="relative" className={typography.role.caption} />
           ) : (
-            <span className="text-xs text-[var(--text-muted)]">—</span>
+            <Caption>—</Caption>
           ),
       },
     ],
