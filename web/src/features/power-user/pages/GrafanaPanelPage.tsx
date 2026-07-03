@@ -14,13 +14,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  Braces, Columns3, Copy, Database, LayoutDashboard, ListChecks, Table2, Trash2,
+} from 'lucide-react';
 
 import {
   AINLGrafanaPanel,
   type GrafanaPanelDraft,
 } from '@/components/ai/AINLGrafanaPanel';
-import { Stack } from '@/components/layout';
-import { Button, GlassPanel, PageTitle, PanelTitle, Textarea } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { Button, Code, GlassPanel, PanelTitle, Text, Textarea } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { EmptyState, InlineCallout, type CalloutVariant } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 // GRAFANA_PANEL_DRAFT_KEY is the canonical localStorage key for the
@@ -180,7 +186,20 @@ export default function GrafanaPanelPage() {
   usePageTitle(t('powerGrafana.title', 'Grafana Panel Builder'));
 
   const [panelJson, setPanelJson] = useState<string>(() => loadPersistedJson());
-  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [status, setStatus] = useState<{ variant: CalloutVariant; message: string } | null>(
+    null,
+  );
+
+  // Static-catalog summary counts for the KPI band. Derived from the
+  // install-wide-static catalogs above, so surfacing them never triggers a
+  // fetch — they are the same for every install.
+  const panelTypeCount = CURATED_PANEL_TYPES.length;
+  const datasourceCount = CURATED_DATASOURCE_TYPES.length;
+  const tableCount = CURATED_TABLES.length;
+  const totalColumns = useMemo(
+    () => CURATED_TABLES.reduce((sum, tbl) => sum + tbl.columns.length, 0),
+    [],
+  );
 
   // Persist the JSON textarea contents so a long edit survives a
   // navigation away + back. Synchronous setItem in the effect is
@@ -195,49 +214,53 @@ export default function GrafanaPanelPage() {
     // wire-format blob. The user can still edit it before clicking
     // Copy to clipboard.
     setPanelJson(JSON.stringify(draft.panel, null, 2));
-    setStatusMessage('');
+    setStatus(null);
   }, []);
 
   const handleClear = useCallback(() => {
     setPanelJson('');
-    setStatusMessage('');
+    setStatus(null);
   }, []);
 
   const handleCopy = useCallback(async () => {
     const trimmed = panelJson.trim();
     if (!trimmed) {
-      setStatusMessage(
-        t(
+      setStatus({
+        variant: 'warning',
+        message: t(
           'powerGrafana.editor.copyEmpty',
           'Type or paste a Grafana panel JSON envelope above before copying.',
         ),
-      );
+      });
       return;
     }
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setStatusMessage(
-        t(
+      setStatus({
+        variant: 'warning',
+        message: t(
           'powerGrafana.editor.copyUnavailable',
           'Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.',
         ),
-      );
+      });
       return;
     }
     try {
       await navigator.clipboard.writeText(trimmed);
-      setStatusMessage(
-        t(
+      setStatus({
+        variant: 'success',
+        message: t(
           'powerGrafana.editor.copySuccess',
           'Copied. Paste the JSON into your Grafana dashboard editor (Add panel → Edit JSON).',
         ),
-      );
+      });
     } catch {
-      setStatusMessage(
-        t(
+      setStatus({
+        variant: 'danger',
+        message: t(
           'powerGrafana.editor.copyFailed',
           'Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C.',
         ),
-      );
+      });
     }
   }, [panelJson, t]);
 
@@ -257,139 +280,278 @@ export default function GrafanaPanelPage() {
   const canCopy = panelJson.trim().length > 0;
 
   return (
-    <div className="space-y-6 p-6" data-testid="power-grafana-panel-builder-root">
-      <PageTitle>{t('powerGrafana.title', 'Grafana Panel Builder')}</PageTitle>
+    <PageContainer
+      title={t('powerGrafana.title', 'Grafana Panel Builder')}
+      subtitle={t(
+        'powerGrafana.subtitle',
+        'Build a Grafana panel JSON envelope against the curated catalog, then copy it into your own dashboard.',
+      )}
+    >
+      <div className="space-y-6" data-testid="power-grafana-panel-builder-root">
+        {/* 1 — Catalog summary KPI band (derived from the static catalogs) */}
+        <FadeIn>
+          <section
+            aria-label={t('powerGrafana.summary.aria', 'Curated catalog summary')}
+            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          >
+            <MetricCard
+              label={t('powerGrafana.summary.panelTypes', 'Panel types')}
+              value={panelTypeCount}
+              icon={<LayoutDashboard className="h-5 w-5" aria-hidden="true" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('powerGrafana.summary.datasources', 'Datasources')}
+              value={datasourceCount}
+              icon={<Database className="h-5 w-5" aria-hidden="true" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('powerGrafana.summary.tables', 'Tables')}
+              value={tableCount}
+              icon={<Table2 className="h-5 w-5" aria-hidden="true" />}
+              color="green"
+            />
+            <MetricCard
+              label={t('powerGrafana.summary.columns', 'Columns')}
+              value={totalColumns}
+              icon={<Columns3 className="h-5 w-5" aria-hidden="true" />}
+              color="amber"
+            />
+          </section>
+        </FadeIn>
 
-      <p className="text-sm text-[var(--text-secondary)]">
-        {t(
-          'powerGrafana.intro',
-          'Build a Grafana panel JSON envelope against the curated panel-builder catalog below. The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.',
-        )}
-      </p>
+        {/* 2 — Optional Helix natural-language drafter (hidden when AI is off) */}
+        <FadeIn delay={0.05}>
+          <AINLGrafanaPanel onApply={handleApplyAiDraft} />
+        </FadeIn>
 
-      <AINLGrafanaPanel onApply={handleApplyAiDraft} />
-
-      <GlassPanel>
-        <Stack className="gap-4">
-          <PanelTitle>{t('powerGrafana.editor.title', 'Manual panel JSON editor')}</PanelTitle>
-          <Textarea
-            value={panelJson}
-            onChange={(e) => setPanelJson(e.target.value)}
-            placeholder={t(
-              'powerGrafana.editor.placeholder',
-              '{\n  "title": "Drives per day",\n  "type": "timeseries",\n  "datasource": { "type": "postgres", "uid": "tesla-postgres" },\n  "targets": [],\n  "grid_pos": { "x": 0, "y": 0, "w": 12, "h": 8 }\n}',
-            )}
-            rows={12}
-            aria-label={t('powerGrafana.editor.label', 'Grafana panel JSON editor')}
-            spellCheck={false}
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="primary"
-              onClick={handleCopy}
-              disabled={!canCopy}
-              aria-disabled={!canCopy ? 'true' : 'false'}
-            >
-              {t('powerGrafana.editor.copy', 'Copy to clipboard')}
-            </Button>
-            <Button variant="secondary" onClick={handleClear} disabled={!canCopy}>
-              {t('powerGrafana.editor.clear', 'Clear')}
-            </Button>
-            {statusMessage && (
-              <span className="text-sm text-amber-300" role="status">
-                {statusMessage}
-              </span>
-            )}
-          </div>
-        </Stack>
-      </GlassPanel>
-
-      <GlassPanel>
-        <Stack className="gap-4">
-          <PanelTitle>
-            {t('powerGrafana.panelTypes.title', 'Curated panel types')}
-          </PanelTitle>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t(
-              'powerGrafana.panelTypes.intro',
-              'These are the panel types the curated catalog exposes. The Helix natural-language drafter refuses any panel type outside this list.',
-            )}
-          </p>
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {sortedPanelTypes.map((entry) => (
-              <li key={entry.name} className="rounded-md border border-[var(--border-subtle)] p-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-mono text-sm text-cyan-300">{entry.name}</span>
-                  <span className="text-xs text-[var(--text-secondary)]">{entry.description}</span>
+        {/* 3 — Editor (hero) + workflow guidance bento */}
+        <FadeIn delay={0.1}>
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <Braces className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('powerGrafana.editor.title', 'Manual panel JSON editor')}
+              </PanelTitle>
+              <div className="space-y-4">
+                <Textarea
+                  value={panelJson}
+                  onChange={(e) => setPanelJson(e.target.value)}
+                  placeholder={t(
+                    'powerGrafana.editor.placeholder',
+                    '{\n  "title": "Drives per day",\n  "type": "timeseries",\n  "datasource": { "type": "postgres", "uid": "tesla-postgres" },\n  "targets": [],\n  "grid_pos": { "x": 0, "y": 0, "w": 12, "h": 8 }\n}',
+                  )}
+                  rows={14}
+                  aria-label={t('powerGrafana.editor.label', 'Grafana panel JSON editor')}
+                  spellCheck={false}
+                  className="font-mono"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    onClick={handleCopy}
+                    disabled={!canCopy}
+                    aria-disabled={!canCopy ? 'true' : 'false'}
+                    icon={<Copy className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    {t('powerGrafana.editor.copy', 'Copy to clipboard')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleClear}
+                    disabled={!canCopy}
+                    icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    {t('powerGrafana.editor.clear', 'Clear')}
+                  </Button>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </Stack>
-      </GlassPanel>
+                {status && (
+                  <InlineCallout variant={status.variant}>{status.message}</InlineCallout>
+                )}
+              </div>
+            </GlassPanel>
 
-      <GlassPanel>
-        <Stack className="gap-4">
-          <PanelTitle>
-            {t('powerGrafana.datasourceTypes.title', 'Curated datasource types')}
-          </PanelTitle>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t(
-              'powerGrafana.datasourceTypes.intro',
-              'These are the datasource types the curated catalog exposes, with their canonical UIDs. The Helix natural-language drafter refuses any datasource type outside this list.',
-            )}
-          </p>
-          <ul className="space-y-2">
-            {sortedDatasourceTypes.map((entry) => (
-              <li key={entry.name} className="rounded-md border border-[var(--border-subtle)] p-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-mono text-sm text-cyan-300">
-                    {entry.name}
-                    <span className="text-[var(--text-muted)]"> · </span>
-                    <span className="text-emerald-300">uid={entry.uid}</span>
-                  </span>
-                  <span className="text-xs text-[var(--text-secondary)]">{entry.description}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Stack>
-      </GlassPanel>
+            {/* Workflow guidance — reading column beside the editor */}
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('powerGrafana.workflow.title', 'How it works')}
+              </PanelTitle>
+              <Text as="p" variant="bodySm" className="mb-3 max-w-prose">
+                {t(
+                  'powerGrafana.intro',
+                  'Build a Grafana panel JSON envelope against the curated panel-builder catalog below. The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.',
+                )}
+              </Text>
+              <ol className="list-decimal space-y-2 pl-5 marker:font-semibold marker:text-cyan-300">
+                <li>
+                  <Text as="span" variant="bodySm">
+                    {t(
+                      'powerGrafana.workflow.step1',
+                      'Draft with Helix or write / paste a Grafana panel JSON envelope in the editor.',
+                    )}
+                  </Text>
+                </li>
+                <li>
+                  <Text as="span" variant="bodySm">
+                    {t('powerGrafana.workflow.step2', 'Click Copy to clipboard to grab the JSON.')}
+                  </Text>
+                </li>
+                <li>
+                  <Text as="span" variant="bodySm">
+                    {t(
+                      'powerGrafana.workflow.step3',
+                      'In Grafana, choose Add panel → Edit JSON and paste it in.',
+                    )}
+                  </Text>
+                </li>
+              </ol>
+              <InlineCallout variant="info" className="mt-4">
+                {t(
+                  'powerGrafana.workflow.note',
+                  'The browser never pushes panels to Grafana directly — you stay in control of what lands on your dashboards.',
+                )}
+              </InlineCallout>
+            </GlassPanel>
+          </section>
+        </FadeIn>
 
-      <GlassPanel>
-        <Stack className="gap-4">
-          <PanelTitle>
-            {t('powerGrafana.tables.title', 'Curated table catalog (postgres targets)')}
-          </PanelTitle>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t(
-              'powerGrafana.tables.intro',
-              'These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.',
-            )}
-          </p>
-          <ul className="space-y-4">
-            {sortedTables.map((table) => (
-              <li key={table.name} className="rounded-md border border-[var(--border-subtle)] p-4">
-                <div className="flex flex-col gap-1">
-                  <span className="font-mono text-base text-cyan-300">{table.name}</span>
-                  <span className="text-sm text-[var(--text-secondary)]">{table.description}</span>
-                </div>
-                <ul className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {table.columns.map((col) => (
-                    <li key={col.name} className="text-xs text-[var(--text-secondary)]">
-                      <span className="font-mono text-emerald-300">{col.name}</span>
-                      <span className="text-[var(--text-muted)]"> · </span>
-                      <span className="text-[var(--text-secondary)]">{col.type}</span>
-                      <span className="text-[var(--text-muted)]"> — </span>
-                      <span>{col.description}</span>
+        {/* 4 — Curated panel types + datasource types bento */}
+        <FadeIn delay={0.15}>
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-2 flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('powerGrafana.panelTypes.title', 'Curated panel types')}
+              </PanelTitle>
+              <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
+                {t(
+                  'powerGrafana.panelTypes.intro',
+                  'These are the panel types the curated catalog exposes. The Helix natural-language drafter refuses any panel type outside this list.',
+                )}
+              </Text>
+              {sortedPanelTypes.length === 0 ? (
+                <EmptyState
+                  icon={<LayoutDashboard className="h-8 w-8" aria-hidden="true" />}
+                  message={t('powerGrafana.panelTypes.empty', 'No panel types available.')}
+                />
+              ) : (
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 3xl:grid-cols-3">
+                  {sortedPanelTypes.map((entry) => (
+                    <li
+                      key={entry.name}
+                      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <Code className="text-cyan-300">{entry.name}</Code>
+                        <Text as="span" variant="caption">
+                          {entry.description}
+                        </Text>
+                      </div>
                     </li>
                   ))}
                 </ul>
-              </li>
-            ))}
-          </ul>
-        </Stack>
-      </GlassPanel>
-    </div>
+              )}
+            </GlassPanel>
+
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-2 flex items-center gap-2">
+                <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('powerGrafana.datasourceTypes.title', 'Curated datasource types')}
+              </PanelTitle>
+              <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
+                {t(
+                  'powerGrafana.datasourceTypes.intro',
+                  'These are the datasource types the curated catalog exposes, with their canonical UIDs. The Helix natural-language drafter refuses any datasource type outside this list.',
+                )}
+              </Text>
+              {sortedDatasourceTypes.length === 0 ? (
+                <EmptyState
+                  icon={<Database className="h-8 w-8" aria-hidden="true" />}
+                  message={t('powerGrafana.datasourceTypes.empty', 'No datasource types available.')}
+                />
+              ) : (
+                <ul className="space-y-2">
+                  {sortedDatasourceTypes.map((entry) => (
+                    <li
+                      key={entry.name}
+                      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                          <Code className="text-cyan-300">{entry.name}</Code>
+                          <Text as="span" variant="caption" aria-hidden="true">
+                            ·
+                          </Text>
+                          <Code className="text-emerald-300">uid={entry.uid}</Code>
+                        </span>
+                        <Text as="span" variant="caption">
+                          {entry.description}
+                        </Text>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </GlassPanel>
+          </section>
+        </FadeIn>
+
+        {/* 5 — Curated table catalog band — auto-fit bento fills the full width */}
+        <FadeIn delay={0.2}>
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-2 flex items-center gap-2">
+              <Table2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('powerGrafana.tables.title', 'Curated table catalog (postgres targets)')}
+            </PanelTitle>
+            <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
+              {t(
+                'powerGrafana.tables.intro',
+                'These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.',
+              )}
+            </Text>
+            {sortedTables.length === 0 ? (
+              <EmptyState
+                icon={<Table2 className="h-8 w-8" aria-hidden="true" />}
+                message={t('powerGrafana.tables.empty', 'No tables available.')}
+              />
+            ) : (
+              <ul className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]">
+                {sortedTables.map((table) => (
+                  <li
+                    key={table.name}
+                    className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <Code className="text-base text-cyan-300">{table.name}</Code>
+                      <Text as="span" variant="bodySm">
+                        {table.description}
+                      </Text>
+                    </div>
+                    <ul className="mt-3 space-y-1.5">
+                      {(table.columns ?? []).map((col) => (
+                        <li key={col.name} className="flex flex-wrap items-baseline gap-x-1.5">
+                          <Code className="text-emerald-300">{col.name}</Code>
+                          <Text as="span" variant="caption">
+                            {col.type}
+                          </Text>
+                          <Text as="span" variant="caption" aria-hidden="true">
+                            —
+                          </Text>
+                          <Text as="span" variant="caption">
+                            {col.description}
+                          </Text>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GlassPanel>
+        </FadeIn>
+      </div>
+    </PageContainer>
   );
 }
