@@ -378,7 +378,7 @@ export default function GrafanaPanelPage() {
                 <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('powerGrafana.workflow.title', 'How it works')}
               </PanelTitle>
-              <Text as="p" variant="bodySm" className="mb-3 max-w-prose">
+              <Text as="p" size="sm" color="secondary" className="mb-3 max-w-prose">
                 {t(
                   'powerGrafana.intro',
                   'Build a Grafana panel JSON envelope against the curated panel-builder catalog below. The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.',
@@ -386,7 +386,7 @@ export default function GrafanaPanelPage() {
               </Text>
               <ol className="list-decimal space-y-2 pl-5 marker:font-semibold marker:text-cyan-300">
                 <li>
-                  <Text as="span" variant="bodySm">
+                  <Text as="span" size="sm" color="secondary">
                     {t(
                       'powerGrafana.workflow.step1',
                       'Draft with Helix or write / paste a Grafana panel JSON envelope in the editor.',
@@ -394,12 +394,12 @@ export default function GrafanaPanelPage() {
                   </Text>
                 </li>
                 <li>
-                  <Text as="span" variant="bodySm">
+                  <Text as="span" size="sm" color="secondary">
                     {t('powerGrafana.workflow.step2', 'Click Copy to clipboard to grab the JSON.')}
                   </Text>
                 </li>
                 <li>
-                  <Text as="span" variant="bodySm">
+                  <Text as="span" size="sm" color="secondary">
                     {t(
                       'powerGrafana.workflow.step3',
                       'In Grafana, choose Add panel → Edit JSON and paste it in.',
@@ -425,7 +425,7 @@ export default function GrafanaPanelPage() {
                 <LayoutDashboard className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('powerGrafana.panelTypes.title', 'Curated panel types')}
               </PanelTitle>
-              <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
+              <Text as="p" size="sm" color="secondary" className="mb-4 max-w-prose">
                 {t(
                   'powerGrafana.panelTypes.intro',
                   'These are the panel types the curated catalog exposes. The Helix natural-language drafter refuses any panel type outside this list.',
@@ -460,7 +460,7 @@ export default function GrafanaPanelPage() {
                 <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('powerGrafana.datasourceTypes.title', 'Curated datasource types')}
               </PanelTitle>
-              <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
+              <Text as="p" size="sm" color="secondary" className="mb-4 max-w-prose">
                 {t(
                   'powerGrafana.datasourceTypes.intro',
                   'These are the datasource types the curated catalog exposes, with their canonical UIDs. The Helix natural-language drafter refuses any datasource type outside this list.',
@@ -505,7 +505,7 @@ export default function GrafanaPanelPage() {
               <Table2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('powerGrafana.tables.title', 'Curated table catalog (postgres targets)')}
             </PanelTitle>
-            <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
+            <Text as="p" size="sm" color="secondary" className="mb-4 max-w-prose">
               {t(
                 'powerGrafana.tables.intro',
                 'These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.',
@@ -525,7 +525,7 @@ export default function GrafanaPanelPage() {
                   >
                     <div className="flex flex-col gap-1">
                       <Code className="text-base text-cyan-300">{table.name}</Code>
-                      <Text as="span" variant="bodySm">
+                      <Text as="span" size="sm" color="secondary">
                         {table.description}
                       </Text>
                     </div>
