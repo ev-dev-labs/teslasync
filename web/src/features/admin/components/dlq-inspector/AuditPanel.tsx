@@ -7,7 +7,7 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { Badge, DataTable, type Column } from '@/components/ui';
+import { Badge, Caption, DataTable, Text, type Column } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import type {
@@ -45,17 +45,15 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       header: t('admin.dlq.audit.cols.actor', 'Actor'),
       visibleOnMobile: true,
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text mono size="xs" color="muted">
           {row.actor || '—'}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'dlq_id',
       header: t('admin.dlq.audit.cols.dlqId', 'DLQ ID'),
-      render: (row) => (
-        <span className="font-mono text-xs">{row.dlq_id}</span>
-      ),
+      render: (row) => <Text mono size="xs">{row.dlq_id}</Text>,
     },
     {
       key: 'result',
@@ -71,27 +69,23 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       key: 'dst_topic',
       header: t('admin.dlq.audit.cols.dstTopic', 'Destination'),
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text mono size="xs" color="muted">
           {row.dst_topic || '—'}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'error',
       header: t('admin.dlq.audit.cols.error', 'Error'),
-      render: (row) => (
-        <span className="text-xs text-[var(--text-muted)]">
-          {row.error || '—'}
-        </span>
-      ),
+      render: (row) => <Caption>{row.error || '—'}</Caption>,
     },
     {
       key: 'trace_id',
       header: t('admin.dlq.audit.cols.traceId', 'Trace ID'),
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text mono size="xs" color="muted">
           {row.trace_id || '—'}
-        </span>
+        </Text>
       ),
     },
   ];
