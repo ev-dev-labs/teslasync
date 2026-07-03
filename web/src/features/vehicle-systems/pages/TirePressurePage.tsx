@@ -10,7 +10,7 @@ import { GlassPanel, Badge, DataTable, PanelTitle, useSortToggle, type Column } 
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
+  RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS, axisTickSm,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
@@ -593,11 +593,11 @@ export default function TirePressurePage() {
                     />
                     <XAxis
                       dataKey="time"
-                      tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                      tick={axisTickSm}
                     />
                     <YAxis
                       domain={['auto', 'auto']}
-                      tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                      tick={axisTickSm}
                       tickFormatter={(v: number) => fmtNumber(v, 1)}
                     />
                     <Tooltip content={<ChartTooltip />} />
