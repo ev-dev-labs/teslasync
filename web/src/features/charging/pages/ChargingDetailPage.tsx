@@ -600,11 +600,11 @@ export default function ChargingDetailPage() {
                       <XAxis
                         dataKey="soc"
                         tick={axisTickSm}
-                        label={{ value: 'SoC %', position: 'insideBottom', offset: -2, fill: 'var(--text-muted)', fontSize: 10 }}
+                        label={{ value: 'SoC %', position: 'insideBottom', offset: -2, ...axisTickSm }}
                       />
                       <YAxis
                         tick={axisTickSm}
-                        label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }}
+                        label={{ value: 'kW', angle: -90, position: 'insideLeft', ...axisTickSm }}
                       />
                       <Tooltip content={<ChartTooltip />} />
                       <Area
