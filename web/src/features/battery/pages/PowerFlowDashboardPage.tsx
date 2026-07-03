@@ -17,6 +17,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 
 import {
   useTeslaEnergyLiveStatus,
@@ -50,7 +51,9 @@ function FlowArrow({ from, to, power, active }: FlowArrowProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
+        'flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors',
+        typography.size.xs,
+        typography.weight.medium,
         active
           ? 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300'
           : 'border-white/[0.04] bg-white/[0.02] text-[var(--text-muted)]',
