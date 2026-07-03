@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Gauge, Battery, Zap, Mountain, Thermometer,
   Navigation, MapPin, Clock, Route, TrendingUp,
-  ArrowUpRight, ArrowDownRight,
+  ArrowUpRight, ArrowDownRight, RefreshCw,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button } from '@/components/ui';
+import { GlassPanel, Button, PanelTitle } from '@/components/ui';
 import {
   PlaybackControls,
   type TimelineMarker,
@@ -102,7 +102,8 @@ export default function TripReplayPage() {
   const { t } = useTranslation();
   usePageTitle(t('replay.title', 'Trip Replay'));
 
-  const { data: drive, isLoading, error } = useDrive(id ?? '');
+  const driveQuery = useDrive(id ?? '');
+  const { data: drive, isLoading, error } = driveQuery;
   const { reduce } = useMotionPreference();
 
   // Display preferences for position-derived SI fields.
@@ -382,6 +383,25 @@ export default function TripReplayPage() {
     ? ((drive.startBatteryPct - drive.endBatteryPct) / distanceUserUnit) * 1000
     : null;
 
+  /* ---- Elevation gain / loss for the summary band ---- */
+  // Elevation is SI metres on every position; sum positive/negative deltas so
+  // the summary shows real climb/descent instead of the legacy '—' placeholder.
+  const elevStats = useMemo(() => {
+    let gain = 0;
+    let loss = 0;
+    let has = false;
+    for (let i = 1; i < positions.length; i++) {
+      const prev = positions[i - 1].elevation;
+      const curr = positions[i].elevation;
+      if (prev == null || curr == null) continue;
+      has = true;
+      const diff = curr - prev;
+      if (diff > 0) gain += diff;
+      else loss += Math.abs(diff);
+    }
+    return { gain: Math.round(gain), loss: Math.round(loss), has };
+  }, [positions]);
+
   return (
     <PageContainer
       title={t('replay.title', 'Trip Replay')}
@@ -390,47 +410,213 @@ export default function TripReplayPage() {
         : undefined}
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+      query={driveQuery}
       breadcrumbLabels={{
         '/drives/:id': drive
           ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
-          : `Drive #${id}`,
+          : `${t('replay.drive', 'Drive')} #${id}`,
       }}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2" data-tour="drive-replay-share">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => driveQuery.refetch()}
+            aria-label={t('replay.refresh', 'Refresh replay data')}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          </Button>
           <Link to={`/drives/${id}`}>
             <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-1 h-4 w-4" />
+              <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />
               {t('replay.backToDrive', 'Back to Drive')}
             </Button>
           </Link>
         </div>
       }
     >
-      {positions.length === 0 && !isLoading ? (
-        <FadeIn>
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<MapPin className="h-10 w-10" />}
-            message={t('replay.noGps', 'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.')}
-          />
+      {/* ================================================================ */}
+      {/*  Section 1 — Drive Summary KPI band (full-width metric grid)      */}
+      {/*  Summary fields come from the drive record, not the GPS trail, so */}
+      {/*  they render even when a drive has no position coordinates.        */}
+      {/* ================================================================ */}
+      <FadeIn>
+        <section aria-label={t('replay.summary.title', 'Drive Summary')}>
+          <StaggerContainer className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-8">
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.distance', 'Distance')}
+                value={fmtNumber(distanceUserUnit)}
+                unit={distanceUnit}
+                icon={<Route className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.duration', 'Duration')}
+                value={fmtDriveTime(durationS / 60)}
+                icon={<Clock className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.avgSpeed', 'Avg Speed')}
+                value={drive?.avgSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.avgSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
+                unit={drive?.avgSpeedMps != null ? speedUnit : undefined}
+                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.maxSpeed', 'Max Speed')}
+                value={drive?.maxSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.maxSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
+                unit={drive?.maxSpeedMps != null ? speedUnit : undefined}
+                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.efficiency', 'Efficiency')}
+                value={efficiency != null ? fmtNumber(efficiency) : '—'}
+                unit={efficiency != null ? 'Wh/km' : undefined}
+                icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.battery', 'Battery')}
+                value={drive?.startBatteryPct != null && drive?.endBatteryPct != null
+                  ? `${fmtInt(drive.startBatteryPct)}% → ${fmtInt(drive.endBatteryPct)}%`
+                  : '—'}
+                icon={<Battery className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.elevGain', 'Elevation Gain')}
+                value={elevStats.has ? fmtInt(elevStats.gain) : '—'}
+                unit={elevStats.has ? 'm' : undefined}
+                icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('replay.summary.elevLoss', 'Elevation Loss')}
+                value={elevStats.has ? fmtInt(elevStats.loss) : '—'}
+                unit={elevStats.has ? 'm' : undefined}
+                icon={<ArrowDownRight className="h-4 w-4" aria-hidden="true" />}
+              />
+            </StaggerItem>
+          </StaggerContainer>
+        </section>
+      </FadeIn>
+
+      {positions.length === 0 ? (
+        /* No GPS trail — keep the section as a visible panel (never hide it).
+           The KPI band above still shows the drive's summary stats. */
+        <FadeIn delay={0.05}>
+          <GlassPanel className="p-6 sm:p-8">
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+              icon={<MapPin className="h-10 w-10" />}
+              message={t('replay.noGps', 'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.')}
+            />
+          </GlassPanel>
         </FadeIn>
       ) : (
         <>
-          {/* ================================================================ */}
-          {/*  Section 1 — Map (factored sub-component)                         */}
-          {/* ================================================================ */}
-          <FadeIn>
-            <TripReplayMap
-              positions={positions}
-              currentIndex={replay.currentIndex}
-              onSeekToIndex={handleSeekToIndex}
-              reduceMotion={reduce}
-            />
+          {/* ============================================================ */}
+          {/*  Section 2 — Replay hero: route map + live position stats     */}
+          {/*  Map is the hero (spans 2 cols on xl+); the live-stats rail    */}
+          {/*  sits beside it so values update as the playhead scrubs.       */}
+          {/* ============================================================ */}
+          <FadeIn delay={0.05}>
+            <section
+              aria-label={t('replay.map.section', 'Route map and live position')}
+              className="grid grid-cols-1 gap-4 xl:gap-5 xl:grid-cols-3"
+            >
+              <div className="xl:col-span-2">
+                <TripReplayMap
+                  positions={positions}
+                  currentIndex={replay.currentIndex}
+                  onSeekToIndex={handleSeekToIndex}
+                  reduceMotion={reduce}
+                  height={440}
+                />
+              </div>
+              <GlassPanel className="p-4 sm:p-5">
+                <PanelTitle className="mb-3">
+                  {t('replay.currentStats', 'Current Position Stats')}
+                </PanelTitle>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                  <MetricCard
+                    label={t('replay.stat.speed', 'Speed')}
+                    value={cp?.speed != null
+                      ? `${fmtNumber(convertSpeedFromSI(cp.speed, unitPrefs.speed))} ${unitPrefs.speed}`
+                      : '—'}
+                    icon={<Gauge className="h-4 w-4" />}
+                    color="cyan"
+                    className={cn(cardHighlight(['fast-segment']))}
+                  />
+                  <MetricCard
+                    label={t('replay.stat.power', 'Power')}
+                    value={cp?.power != null ? `${fmtNumber(cp.power, 1)} kW` : '—'}
+                    icon={<Zap className="h-4 w-4" />}
+                    color="cyan"
+                    className={cn(cardHighlight(['regen-peak', 'charge-start', 'charge-stop']))}
+                    help={{
+                      i18nKey: 'help.replay.power',
+                      defaultValue:
+                        'Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.',
+                    }}
+                  />
+                  <MetricCard
+                    label={t('replay.stat.battery', 'Battery')}
+                    value={cp ? `${fmtInt(cp.batteryLevel)}%` : '—'}
+                    icon={<Battery className="h-4 w-4" />}
+                    color="cyan"
+                    className={cn(cardHighlight(['low-soc', 'charge-start', 'charge-stop']))}
+                    help={{
+                      i18nKey: 'help.replay.battery',
+                      defaultValue:
+                        "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
+                    }}
+                  />
+                  <MetricCard
+                    label={t('replay.stat.elevation', 'Elevation')}
+                    value={cp?.elevation != null ? `${fmtInt(cp.elevation)} m` : '—'}
+                    icon={<Mountain className="h-4 w-4" />}
+                    color="cyan"
+                  />
+                  <MetricCard
+                    label={t('replay.stat.range', 'Range')}
+                    value={cp?.ratedRange != null
+                      ? `${fmtNumber(convertDistanceFromSI(cp.ratedRange, unitPrefs.distance))} ${unitPrefs.distance}`
+                      : '—'}
+                    icon={<Navigation className="h-4 w-4" />}
+                    color="cyan"
+                    help={{
+                      i18nKey: 'help.replay.range',
+                      defaultValue:
+                        'Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load.',
+                    }}
+                  />
+                  <MetricCard
+                    label={t('replay.stat.temp', 'Temperature')}
+                    value={cp?.outsideTemp != null
+                      ? `${fmtNumber(convertTempFromSI(cp.outsideTemp, unitPrefs.temperature))} ${unitPrefs.temperature}`
+                      : '—'}
+                    icon={<Thermometer className="h-4 w-4" />}
+                    color="cyan"
+                  />
+                </div>
+              </GlassPanel>
+            </section>
           </FadeIn>
 
-          {/* ================================================================ */}
-          {/*  Section 2 — Playback Controls                                   */}
-          {/* ================================================================ */}
-          <FadeIn delay={0.05}>
+          {/* ============================================================ */}
+          {/*  Section 3 — Playback scrubber (full-width transport bar)      */}
+          {/* ============================================================ */}
+          <FadeIn delay={0.1}>
             <div data-tour="drive-replay-scrubber">
               <PlaybackControls
                 isPlaying={replay.isPlaying}
@@ -459,177 +645,31 @@ export default function TripReplayPage() {
             </div>
           </FadeIn>
 
-          {/* ================================================================ */}
-          {/*  Section 3 — Current Stats Bar                                   */}
-          {/* ================================================================ */}
-          <FadeIn delay={0.1}>
-            <GlassPanel className="p-4">
-              <h3 className="mb-3 text-sm font-semibold text-[var(--text-secondary)]">
-                {t('replay.currentStats', 'Current Position Stats')}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <MetricCard
-                  label={t('replay.stat.speed', 'Speed')}
-                  value={cp?.speed != null
-                    ? `${fmtNumber(convertSpeedFromSI(cp.speed, unitPrefs.speed))} ${unitPrefs.speed}`
-                    : '—'}
-                  icon={<Gauge className="h-4 w-4" />}
-                  color="cyan"
-                  className={cn(cardHighlight(['fast-segment']))}
-                />
-                <MetricCard
-                  label={t('replay.stat.power', 'Power')}
-                  value={cp?.power != null ? `${fmtNumber(cp.power, 1)} kW` : '—'}
-                  icon={<Zap className="h-4 w-4" />}
-                  color="cyan"
-                  className={cn(cardHighlight(['regen-peak', 'charge-start', 'charge-stop']))}
-                  help={{
-                    i18nKey: 'help.replay.power',
-                    defaultValue:
-                      'Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.',
-                  }}
-                />
-                <MetricCard
-                  label={t('replay.stat.battery', 'Battery')}
-                  value={cp ? `${fmtInt(cp.batteryLevel)}%` : '—'}
-                  icon={<Battery className="h-4 w-4" />}
-                  color="cyan"
-                  className={cn(cardHighlight(['low-soc', 'charge-start', 'charge-stop']))}
-                  help={{
-                    i18nKey: 'help.replay.battery',
-                    defaultValue:
-                      "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
-                  }}
-                />
-                <MetricCard
-                  label={t('replay.stat.elevation', 'Elevation')}
-                  value={cp?.elevation != null ? `${fmtInt(cp.elevation)} m` : '—'}
-                  icon={<Mountain className="h-4 w-4" />}
-                  color="cyan"
-                />
-                <MetricCard
-                  label={t('replay.stat.range', 'Range')}
-                  value={cp?.ratedRange != null
-                    ? `${fmtNumber(convertDistanceFromSI(cp.ratedRange, unitPrefs.distance))} ${unitPrefs.distance}`
-                    : '—'}
-                  icon={<Navigation className="h-4 w-4" />}
-                  color="cyan"
-                  help={{
-                    i18nKey: 'help.replay.range',
-                    defaultValue:
-                      'Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load.',
-                  }}
-                />
-                <MetricCard
-                  label={t('replay.stat.temp', 'Temperature')}
-                  value={cp?.outsideTemp != null
-                    ? `${fmtNumber(convertTempFromSI(cp.outsideTemp, unitPrefs.temperature))} ${unitPrefs.temperature}`
-                    : '—'}
-                  icon={<Thermometer className="h-4 w-4" />}
-                  color="cyan"
-                />
-              </div>
-            </GlassPanel>
-          </FadeIn>
-
-          {/* ================================================================ */}
-          {/*  Section 4 — Elevation Profile                                   */}
-          {/* ================================================================ */}
+          {/* ============================================================ */}
+          {/*  Section 4 — Timeline charts bento (elevation + speed/power)   */}
+          {/*  Side-by-side on 2xl to use horizontal space; both share the   */}
+          {/*  playhead cursor via replay.currentIndex.                      */}
+          {/* ============================================================ */}
           <FadeIn delay={0.15}>
-            <ElevationProfile
-              data={elevationData}
-              currentIndex={replay.currentIndex}
-              onClickIndex={handleSeekToIndex}
-              height={200}
-              distanceUnit={unitPrefs.distance}
-            />
-          </FadeIn>
-
-          {/* ================================================================ */}
-          {/*  Section 5 — Speed + Power Timeline (cursor-synced)              */}
-          {/* ================================================================ */}
-          <FadeIn delay={0.2}>
-            <TripReplayCharts
-              data={timelineData}
-              currentIndex={replay.currentIndex}
-              speedUnit={unitPrefs.speed}
-              onSeekToIndex={handleSeekToIndex}
-            />
-          </FadeIn>
-
-          {/* ================================================================ */}
-          {/*  Section 6 — Drive Summary                                       */}
-          {/* ================================================================ */}
-          <FadeIn delay={0.25}>
-            <GlassPanel className="p-6">
-              <h3 className="mb-4 text-sm font-semibold text-[var(--text-secondary)]">
-                {t('replay.summary.title', 'Drive Summary')}
-              </h3>
-              <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.distance', 'Distance')}
-                    value={fmtNumber(distanceUserUnit)}
-                    unit={distanceUnit}
-                    icon={<Route className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.duration', 'Duration')}
-                    value={fmtDriveTime(durationS / 60)}
-                    icon={<Clock className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.efficiency', 'Efficiency')}
-                    value={efficiency != null ? fmtNumber(efficiency) : '—'}
-                    unit={efficiency != null ? 'Wh/km' : undefined}
-                    icon={<TrendingUp className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.elevGain', 'Elevation Gain')}
-                    value={'—'}
-                    icon={<ArrowUpRight className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.elevLoss', 'Elevation Loss')}
-                    value={'—'}
-                    icon={<ArrowDownRight className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.maxSpeed', 'Max Speed')}
-                    value={drive?.maxSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.maxSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
-                    unit={drive?.maxSpeedMps != null ? speedUnit : undefined}
-                    icon={<Gauge className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.avgSpeed', 'Avg Speed')}
-                    value={drive?.avgSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.avgSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
-                    unit={drive?.avgSpeedMps != null ? speedUnit : undefined}
-                    icon={<Gauge className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-                <StaggerItem>
-                  <StatCard
-                    label={t('replay.summary.battery', 'Battery')}
-                    value={drive?.startBatteryPct != null && drive?.endBatteryPct != null
-                      ? `${fmtInt(drive.startBatteryPct)}% → ${fmtInt(drive.endBatteryPct)}%`
-                      : '—'}
-                    icon={<Battery className="h-4 w-4" />}
-                  />
-                </StaggerItem>
-              </StaggerContainer>
-            </GlassPanel>
+            <section
+              aria-label={t('replay.timeline.section', 'Trip elevation and speed timelines')}
+              className="grid grid-cols-1 gap-4 xl:gap-5 2xl:grid-cols-2"
+            >
+              <ElevationProfile
+                data={elevationData}
+                currentIndex={replay.currentIndex}
+                onClickIndex={handleSeekToIndex}
+                height={220}
+                distanceUnit={unitPrefs.distance}
+              />
+              <TripReplayCharts
+                data={timelineData}
+                currentIndex={replay.currentIndex}
+                speedUnit={unitPrefs.speed}
+                onSeekToIndex={handleSeekToIndex}
+                height={220}
+              />
+            </section>
           </FadeIn>
         </>
       )}

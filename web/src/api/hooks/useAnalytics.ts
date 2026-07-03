@@ -18,6 +18,7 @@ export const analyticsKeys = {
   weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
   lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
   batteryCells: (vehicleId: string) => ['analytics', 'battery-cells', vehicleId] as const,
+  temperatureImpact: (vehicleId: string) => ['analytics', 'temperature-impact', vehicleId] as const,
 };
 
 export function useAnalyticsSummary(days = 30) {
@@ -373,6 +374,69 @@ export function useRangeProjection(vehicleId: string) {
     queryKey: ['analytics', 'range-projection', vehicleId] as const,
     queryFn: ({ signal }) =>
       request<RangeProjection>(`/analytics/range-projection?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/**
+ * A single drive plotted on the temperature-vs-efficiency scatter. All
+ * physical quantities are SI as emitted by the backend: `outside_temp` is
+ * °C, `distance_km` is kilometres (already derived from SI metres in SQL),
+ * and `efficiency_wh_km` is watt-hours per kilometre. Format at the display
+ * boundary with `useUnits()` — never mutate these on the wire.
+ */
+export interface TemperatureImpactPoint {
+  outside_temp: number;
+  efficiency_wh_km: number;
+  distance_km: number;
+  drive_date: string;
+}
+
+/** Server-computed efficiency bucket (kept for API completeness). */
+export interface TemperatureImpactEfficiencyBucket {
+  temp_bucket: string;
+  drive_count: number;
+  avg_distance_km: number;
+  avg_duration_s: number;
+  avg_battery_pct_per_100km: number;
+  avg_temp: number;
+}
+
+/** One month of the seasonal trend. `avg_temp` is °C (SI). */
+export interface TemperatureImpactMonthlyTrend {
+  month: string;
+  avg_temp: number;
+  avg_efficiency: number;
+  drive_count: number;
+  total_distance: number;
+}
+
+/**
+ * Full GET /analytics/temperature-impact response. `vampire_drain` is always
+ * empty until signal_log reconstruction lands; callers should treat every
+ * array as possibly-absent and default with `?? []`.
+ */
+export interface TemperatureImpactResponse {
+  points: TemperatureImpactPoint[];
+  efficiency: TemperatureImpactEfficiencyBucket[];
+  vampire_drain: unknown[];
+  monthly_trend: TemperatureImpactMonthlyTrend[];
+}
+
+/**
+ * GET /analytics/temperature-impact?vehicle_id=X — how outside ambient
+ * temperature affects driving efficiency. Reads SI directly from the API;
+ * the page converts temperature/distance at the render boundary via
+ * `useUnits()`. Disabled until a vehicle is selected.
+ */
+export function useTemperatureImpact(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.temperatureImpact(vehicleId),
+    queryFn: ({ signal }) =>
+      request<TemperatureImpactResponse>(
+        `/analytics/temperature-impact?vehicle_id=${vehicleId}`,
+        { signal },
+      ),
     enabled: !!vehicleId,
   });
 }
