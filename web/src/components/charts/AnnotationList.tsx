@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { ANNOTATION_COLORS } from '@/types/annotations';
 import type { DataAnnotation } from '@/types/annotations';
 
@@ -16,9 +16,9 @@ export function AnnotationList({ annotations, onRemove }: AnnotationListProps) {
 
   return (
     <div className="mt-2 space-y-1">
-      <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-white/30">
+      <Text as="span" variant="metricLabel">
         {t('annotation.listTitle', 'Annotations')}
-      </span>
+      </Text>
       {annotations.map((ann) => (
         <div
           key={ann.id}
@@ -28,22 +28,22 @@ export function AnnotationList({ annotations, onRemove }: AnnotationListProps) {
             className="h-2 w-2 shrink-0 rounded-full"
             style={{ backgroundColor: ANNOTATION_COLORS[ann.category] }}
           />
-          <span className="font-medium text-gray-700 dark:text-white/60">
+          <Text as="span" weight="medium" color="secondary">
             {ann.label}
-          </span>
+          </Text>
           {ann.description && (
-            <span className="hidden truncate text-gray-400 dark:text-white/30 sm:inline">
+            <Text as="span" color="muted" className="hidden truncate sm:inline">
               — {ann.description}
-            </span>
+            </Text>
           )}
-          <span className="ml-auto shrink-0 text-gray-400 dark:text-white/30">
+          <Text as="span" color="muted" className="ml-auto shrink-0">
             {ann.timestamp}
-          </span>
+          </Text>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onRemove(ann.id)}
-            className="touch-target-overlay shrink-0 !h-5 !w-5 !p-0 text-gray-300 opacity-0 transition-all hover:!text-red-400 group-hover:opacity-100 dark:text-white/20"
+            className="touch-target-overlay shrink-0 !h-5 !w-5 !p-0 text-[var(--text-muted)] opacity-0 transition-all hover:!text-red-400 group-hover:opacity-100"
             icon={<X className="h-3 w-3" />}
             aria-label={t('annotation.remove', 'Remove annotation')}
           />

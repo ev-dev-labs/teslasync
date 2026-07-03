@@ -50,12 +50,12 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
               dataKey={xKey}
               tick={{ fontSize: 11 }}
               tickFormatter={xFormatter}
-              className="text-gray-500 dark:text-gray-400"
+              className="text-[var(--text-muted)]"
             />
             <YAxis
               tick={{ fontSize: 11 }}
               tickFormatter={yFormatter}
-              className="text-gray-500 dark:text-gray-400"
+              className="text-[var(--text-muted)]"
             />
 
             <Tooltip
