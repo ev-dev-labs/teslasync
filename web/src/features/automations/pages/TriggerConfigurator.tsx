@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Input as UiInput,
   Select as UiSelect,
+  Text,
   Toggle,
   Button as UiButton,
 } from '@/components/ui';
@@ -236,9 +237,9 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                 className="w-36"
               />
               <div>
-                <span className="text-sm font-medium text-gray-700 dark:text-[var(--text-secondary)]">
+                <Text as="span" variant="subhead">
                   {t('automations.builder.days', 'Days')}
-                </span>
+                </Text>
                 <div className="mt-1 flex gap-2">
                   {DAYS.map((label, index) => {
                     const active = selectedDays.length === 0 || selectedDays.includes(index);
