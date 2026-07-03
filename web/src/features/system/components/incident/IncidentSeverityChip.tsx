@@ -4,6 +4,7 @@
  * pages never hand-roll the pill utilities.
  */
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import { type IncidentSeverity } from '@/api/hooks/useIncidents'
 import { SEVERITY_TONE } from './incidentPresentation'
 
@@ -18,7 +19,9 @@ export function IncidentSeverityChip({ severity, className }: IncidentSeverityCh
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide',
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 uppercase tracking-wide',
+        typography.size.xs,
+        typography.weight.semibold,
         tone.chip,
         className,
       )}
