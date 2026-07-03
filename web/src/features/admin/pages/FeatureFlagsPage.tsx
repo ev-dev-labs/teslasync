@@ -1,16 +1,24 @@
 /**
  * Feature Flags Page — operator surface for the typed feature-flag
- * registry mounted under `/api/v1/system/flags*`.
+ * registry mounted under the `system/flags*` API.
  *
- * The page surfaces two concerns side-by-side:
+ * Full-width modern-ui bento: a summary KPI band up top, then the live
+ * registry (hero) beside a value-type composition breakdown, and finally
+ * the recent change-audit log as a full-width detail band:
  *
- *   1. The CURRENT set of flags (FlagsTable) with inline Edit + Delete
- *      actions per row. The "Add flag" CTA in the page header opens the
- *      same drawer with `initial=null`.
+ *   1. FlagStatsBand — total / boolean / structured / change / delete /
+ *      contributor counts derived from both feeds.
+ *   2. FlagsTable — the CURRENT set of flags with inline Edit + Delete
+ *      per row. The "Add flag" CTA in the page header opens the same
+ *      drawer with `initial=null`.
+ *   3. FlagCompositionPanel — proportional breakdown of stored value
+ *      types, sitting beside the registry on wide screens.
+ *   4. ChangesPanel — the recent change-audit log. When an operator
+ *      saves or deletes a flag, every feed re-renders via shared query
+ *      invalidation in the mutation hooks.
  *
- *   2. The recent change-audit log (ChangesPanel). When an operator
- *      saves or deletes a flag, both feeds re-render via shared
- *      query invalidation in the mutation hooks.
+ * Each section owns its loading / empty / error state; nothing is gated
+ * behind a single page-level guard.
  *
  * Both Edit/Create and Delete are sudo-gated by the server's RequireSudo
  * middleware — the shared `request()` client transparently re-opens the
@@ -19,13 +27,12 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { History, Flag, Plus } from 'lucide-react';
+import { Flag, History, Layers, Plus } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, Input, Modal } from '@/components/ui';
-import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Button, GlassPanel, Heading, Input, Modal, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { SectionErrorBoundary } from '@/components/feedback';
+import { QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   useDeleteFlag,
@@ -40,7 +47,9 @@ import type {
 
 import {
   ChangesPanel,
+  FlagCompositionPanel,
   FlagEditDrawer,
+  FlagStatsBand,
   FlagsTable,
 } from '../components/feature-flags';
 
@@ -57,6 +66,9 @@ export default function FeatureFlagsPage() {
   const changes = useFlagChanges(null, 50);
   const setFlag = useSetFlag();
   const deleteFlag = useDeleteFlag();
+
+  const flagRows = flags.data?.flags ?? [];
+  const changeRows = changes.data?.rows ?? [];
 
   const handleEdit = (row: FeatureFlagEntry) => {
     setEditing(row);
@@ -118,42 +130,93 @@ export default function FeatureFlagsPage() {
           {t('admin.flags.actions.add', 'Add flag')}
         </Button>
       }
-      query={flags}
+      query={[flags, changes]}
     >
+      {/* 1 — Summary KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <div className="space-y-6">
+        <FlagStatsBand
+          flags={flagRows}
+          changes={changeRows}
+          loading={flags.isLoading}
+          error={flags.error}
+          onRetry={() => flags.refetch()}
+        />
+      </FadeIn>
+
+      {/* 2 — Registry (hero) beside the value-type composition breakdown */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <SectionErrorBoundary name="flags-table">
-            <GlassPanel className="p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <Flag className="h-5 w-5 text-[var(--text-muted)]" />
-                <PanelTitle>
-                  {t('admin.flags.panels.registry', 'Registry')}
-                </PanelTitle>
-              </div>
-              <FlagsTable
-                rows={flags.data?.flags ?? []}
-                loading={flags.isLoading}
-                onEdit={handleEdit}
-                onAskDelete={handleAskDelete}
-              />
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <Heading
+                level="panel"
+                as="h2"
+                className="mb-4 flex items-center gap-2"
+              >
+                <Flag className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('admin.flags.panels.registry', 'Registry')}
+              </Heading>
+              {flags.isError ? (
+                <QueryError
+                  error={flags.error}
+                  onRetry={() => flags.refetch()}
+                  resourceName={t('admin.flags.stats.resource', 'Feature flags')}
+                />
+              ) : (
+                <FlagsTable
+                  rows={flagRows}
+                  loading={flags.isLoading}
+                  onEdit={handleEdit}
+                  onAskDelete={handleAskDelete}
+                />
+              )}
             </GlassPanel>
           </SectionErrorBoundary>
 
-          <SectionErrorBoundary name="flags-changes">
-            <GlassPanel className="p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <History className="h-5 w-5 text-[var(--text-muted)]" />
-                <PanelTitle>
-                  {t('admin.flags.panels.changes', 'Recent changes')}
-                </PanelTitle>
-              </div>
-              <ChangesPanel
-                rows={changes.data?.rows ?? []}
-                loading={changes.isLoading}
+          <SectionErrorBoundary name="flags-composition">
+            <GlassPanel className="p-4 sm:p-5">
+              <Heading
+                level="panel"
+                as="h2"
+                className="mb-4 flex items-center gap-2"
+              >
+                <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('admin.flags.panels.composition', 'Value composition')}
+              </Heading>
+              <FlagCompositionPanel
+                flags={flagRows}
+                loading={flags.isLoading}
+                error={flags.error}
+                onRetry={() => flags.refetch()}
               />
             </GlassPanel>
           </SectionErrorBoundary>
-        </div>
+        </section>
+      </FadeIn>
+
+      {/* 3 — Recent change-audit log: full-width detail band */}
+      <FadeIn delay={0.2}>
+        <SectionErrorBoundary name="flags-changes">
+          <GlassPanel className="p-4 sm:p-5">
+            <Heading
+              level="panel"
+              as="h2"
+              className="mb-4 flex items-center gap-2"
+            >
+              <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('admin.flags.panels.changes', 'Recent changes')}
+            </Heading>
+            {changes.isError ? (
+              <QueryError
+                error={changes.error}
+                onRetry={() => changes.refetch()}
+                resourceName={t('admin.flags.stats.resource', 'Feature flags')}
+              />
+            ) : (
+              <ChangesPanel rows={changeRows} loading={changes.isLoading} />
+            )}
+          </GlassPanel>
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FlagEditDrawer

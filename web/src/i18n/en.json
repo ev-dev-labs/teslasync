@@ -1268,14 +1268,32 @@
     },
     "dataRepair": {
       "charging": {
-        "update": { "success": "Charging session updated", "error": "Failed to update charging session" },
-        "close": { "success": "Charging session closed", "error": "Failed to close charging session" },
-        "discard": { "success": "Charging session discarded", "error": "Failed to discard charging session" }
+        "update": {
+          "success": "Charging session updated",
+          "error": "Failed to update charging session"
+        },
+        "close": {
+          "success": "Charging session closed",
+          "error": "Failed to close charging session"
+        },
+        "discard": {
+          "success": "Charging session discarded",
+          "error": "Failed to discard charging session"
+        }
       },
       "drive": {
-        "update": { "success": "Drive updated", "error": "Failed to update drive" },
-        "close": { "success": "Drive closed", "error": "Failed to close drive" },
-        "discard": { "success": "Drive discarded", "error": "Failed to discard drive" }
+        "update": {
+          "success": "Drive updated",
+          "error": "Failed to update drive"
+        },
+        "close": {
+          "success": "Drive closed",
+          "error": "Failed to close drive"
+        },
+        "discard": {
+          "success": "Drive discarded",
+          "error": "Failed to discard drive"
+        }
       }
     },
     "quietHours": {
@@ -3102,7 +3120,8 @@
       "subtitle": "Typed feature-flag registry — all changes are sudo-gated and logged.",
       "panels": {
         "registry": "Registry",
-        "changes": "Recent changes"
+        "changes": "Recent changes",
+        "composition": "Value composition"
       },
       "delete": {
         "title": "Delete flag?",
@@ -3110,6 +3129,26 @@
         "reasonLabel": "Reason",
         "reasonPlaceholder": "Why this delete? (logged in audit)",
         "confirm": "Delete flag"
+      },
+      "stats": {
+        "aria": "Feature flag summary metrics",
+        "resource": "Feature flags",
+        "total": "Total Flags",
+        "boolean": "Boolean Toggles",
+        "structured": "Structured",
+        "changes": "Recent Changes",
+        "deletes": "Deletes",
+        "actors": "Contributors"
+      },
+      "composition": {
+        "boolean": "Boolean",
+        "number": "Number",
+        "string": "String",
+        "object": "Object",
+        "array": "Array",
+        "null": "Null",
+        "sublabel": "{{count}} · {{pct}}%",
+        "empty": "No flags to summarize yet. Add a flag to see its value-type breakdown here."
       }
     },
     "xray": {
