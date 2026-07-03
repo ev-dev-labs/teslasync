@@ -52,6 +52,7 @@ import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import {
   cleanSafetyEnum,
   isSafetyEnumActive,
@@ -343,7 +344,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('Time'),
       sortable: true,
       render: (row) => (
-        <TimeStamp value={row.created_at} className="whitespace-nowrap text-xs text-[var(--text-muted)]" />
+        <TimeStamp value={row.created_at} className={cn(typography.role.caption, 'whitespace-nowrap')} />
       ),
     },
     {
