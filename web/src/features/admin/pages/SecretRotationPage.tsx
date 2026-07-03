@@ -195,7 +195,7 @@ export default function SecretRotationPage() {
         header: t('admin.secretRotation.colKind', 'Kind'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-[var(--text-primary)]">{kindLabel(r.kind)}</span>
+            <Text weight="medium" color="primary">{kindLabel(r.kind)}</Text>
             {r.target_id && <Caption>{r.target_id}</Caption>}
           </div>
         ),
@@ -205,7 +205,7 @@ export default function SecretRotationPage() {
         header: t('admin.secretRotation.colRotated', 'Last rotated'),
         render: (r) => (
           <div>
-            <div className="text-[var(--text-primary)]">{formatDateTime(r.last_rotated)}</div>
+            <Text as="div" color="primary">{formatDateTime(r.last_rotated)}</Text>
             <Caption>{formatRelative(r.last_rotated)}</Caption>
           </div>
         ),
@@ -220,10 +220,10 @@ export default function SecretRotationPage() {
         key: 'expiry',
         header: t('admin.secretRotation.colExpiry', 'Expires'),
         render: (r) => {
-          if (!r.expires_at) return <span className="text-[var(--text-secondary)]">—</span>;
+          if (!r.expires_at) return <Text color="secondary">—</Text>;
           return (
             <div>
-              <div className="text-[var(--text-primary)]">{formatDateTime(r.expires_at)}</div>
+              <Text as="div" color="primary">{formatDateTime(r.expires_at)}</Text>
               <Caption>
                 {r.days_to_expiry !== null && r.days_to_expiry !== undefined
                   ? t('admin.secretRotation.daysToExpiry', '{{days}}d remaining', { days: r.days_to_expiry })
@@ -537,9 +537,13 @@ export default function SecretRotationPage() {
                       <Caption>{formatDateTime(r.expires_at)}</Caption>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className={cn('tabular-nums text-sm font-semibold', r.severity === 'critical' ? 'text-rose-300' : 'text-[var(--text-primary)]')}>
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        className={cn('tabular-nums', r.severity === 'critical' ? 'text-rose-300' : 'text-[var(--text-primary)]')}
+                      >
                         {t('admin.secretRotation.daysValue', '{{days}} d', { days: fmtNumber(r.days_to_expiry ?? 0) })}
-                      </span>
+                      </Text>
                       <Badge variant={SEVERITY_VARIANT[r.severity] ?? 'neutral'} size="sm">
                         {severityLabel[r.severity] ?? r.severity}
                       </Badge>
