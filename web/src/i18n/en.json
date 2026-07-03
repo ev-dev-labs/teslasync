@@ -1266,6 +1266,18 @@
     "common": {
       "error": "Something went wrong"
     },
+    "dataRepair": {
+      "charging": {
+        "update": { "success": "Charging session updated", "error": "Failed to update charging session" },
+        "close": { "success": "Charging session closed", "error": "Failed to close charging session" },
+        "discard": { "success": "Charging session discarded", "error": "Failed to discard charging session" }
+      },
+      "drive": {
+        "update": { "success": "Drive updated", "error": "Failed to update drive" },
+        "close": { "success": "Drive closed", "error": "Failed to close drive" },
+        "discard": { "success": "Drive discarded", "error": "Failed to discard drive" }
+      }
+    },
     "quietHours": {
       "save": {
         "created": "Quiet hours window created",
@@ -3473,7 +3485,67 @@
     }
   },
   "dataRepair": {
+    "title": "Data Repair",
+    "kpis": "Repair summary",
+    "worklist": "Repair worklist",
+    "callout": "Sessions open for more than 24 hours are shown here. Editing, closing, or discarding a record is a privileged action and may prompt re-authentication.",
+    "subtitle": {
+      "count": "{{count}} incomplete session(s) found",
+      "clean": "Fix incomplete or stale sessions"
+    },
+    "kpi": {
+      "total": "Total Stale",
+      "charging": "Stale Charging",
+      "drives": "Stale Drives",
+      "status": "Status"
+    },
+    "status": {
+      "clean": "Clean",
+      "needsRepair": "Needs Repair"
+    },
+    "metric": {
+      "energy": "Energy",
+      "peak": "Peak",
+      "distance": "Distance",
+      "maxSpeed": "Max"
+    },
+    "row": {
+      "toggle": "Open repair form for record #{{id}}",
+      "vehicle": "Vehicle {{id}}",
+      "open": "Open"
+    },
+    "field": {
+      "endedAt": "End Date/Time (ISO)",
+      "energyWh": "Energy Added (Wh)",
+      "endSoc": "End Battery (%)",
+      "peakPowerW": "Peak Power (W)",
+      "avgPowerW": "Avg Power (W)",
+      "cost": "Cost",
+      "distanceM": "Distance (m)",
+      "durationS": "Duration (s)",
+      "maxSpeedMps": "Max Speed (m/s)",
+      "avgSpeedMps": "Avg Speed (m/s)"
+    },
+    "action": {
+      "closeSession": "Close Session",
+      "closeDrive": "Close Drive",
+      "discard": "Discard"
+    },
+    "charging": {
+      "title": "Charging Sessions",
+      "resource": "Charging sessions",
+      "emptyTitle": "All charging sessions are complete",
+      "empty": "No stale charging sessions found.",
+      "formLabel": "Repair charging session #{{id}}"
+    },
+    "drives": {
+      "title": "Drives",
+      "resource": "Drives",
+      "emptyTitle": "All drives are complete",
+      "empty": "No stale drives found."
+    },
     "drive": {
+      "formLabel": "Repair drive #{{id}}",
       "distanceMi": "Distance (mi)",
       "maxSpeedMph": "Max Speed (mph)"
     }
