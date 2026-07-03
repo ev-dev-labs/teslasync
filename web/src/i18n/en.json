@@ -3471,6 +3471,8 @@
       "inputLabel": "Your question"
     },
     "heroSubtitle": "driven across {{drives}} drives",
+    "keyStats": "Key stats",
+    "moreInfoAbout": "More info about {{label}}",
     "earthCompare": "That's {{x}}x around the Earth!",
     "since": "Tracking since {{date}} ({{days}} days)",
     "totalDrives": "Total Drives",
