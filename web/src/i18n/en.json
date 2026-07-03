@@ -7487,7 +7487,15 @@
       "description": "Get a short plain-language suggestion for lower-consumption habits and route choices grounded in your own historical route data — the dominant route, its kWh/100mi figure, a comparison across your other routes, and one or two concrete, non-mutating ideas you can try yourself.",
       "badge": "Helix",
       "generateButton": "Generate suggestions"
-    }
+    },
+    "worstEfficiency": "Worst",
+    "mostDrivenTrips": "Most-driven",
+    "mostDriven": "Most-driven routes",
+    "noData": "No route data",
+    "selectVehicle": "Select a vehicle to see route efficiency",
+    "kpisAria": "Route efficiency summary metrics",
+    "analysisAria": "Route efficiency analysis",
+    "comparisonAria": "Per-route best, average, and worst efficiency comparison bar chart"
   },
   "speedProfile": {
     "title": "Speed Profile",
