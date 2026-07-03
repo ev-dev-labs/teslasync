@@ -8979,7 +8979,44 @@
     "name": "Name",
     "email": "Email",
     "fetchedAt": "Fetched At",
-    "noProfile": "No profile data yet. Click \"Refresh from Tesla\" to sync your account."
+    "noProfile": "No profile data yet. Click \"Refresh from Tesla\" to sync your account.",
+    "resource": "Tesla profile",
+    "neverSyncedShort": "Not synced yet",
+    "unnamed": "Tesla Driver",
+    "synced": "Synced",
+    "never": "Never synced",
+    "accountId": "Account ID",
+    "image": "Profile Image",
+    "imageAvailable": "Available",
+    "imageNone": "Not set",
+    "noProfileTitle": "No profile synced yet",
+    "detailsEmpty": "No account details yet. Sync to populate your profile.",
+    "kpis": "Account summary",
+    "kpi": {
+      "sync": "Sync Status",
+      "accountId": "Account ID",
+      "accountIdSub": "Fleet API identity",
+      "memberSince": "Member Since",
+      "updated": "Last Updated"
+    },
+    "sync": {
+      "title": "Sync",
+      "lastSynced": "Last synced",
+      "helper": "Fetches your latest account profile from the Tesla Fleet API."
+    },
+    "details": {
+      "title": "Account Details"
+    },
+    "activity": {
+      "title": "Activity",
+      "linked": "Account linked",
+      "linkedSub": "Tesla account connected to TeslaSync",
+      "updated": "Profile updated",
+      "updatedSub": "Most recent change to your profile record",
+      "synced": "Last synced from Tesla",
+      "syncedSub": "Latest fetch from the Fleet API",
+      "empty": "No account activity to show yet."
+    }
   },
   "liveMonitor": {
     "time": "Time",
