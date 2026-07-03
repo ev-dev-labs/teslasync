@@ -3102,7 +3102,28 @@
       "subtitle": "Typed feature-flag registry — all changes are sudo-gated and logged.",
       "panels": {
         "registry": "Registry",
-        "changes": "Recent changes"
+        "changes": "Recent changes",
+        "composition": "Value composition"
+      },
+      "stats": {
+        "aria": "Feature flag summary metrics",
+        "resource": "Feature flags",
+        "total": "Total Flags",
+        "boolean": "Boolean Toggles",
+        "structured": "Structured",
+        "changes": "Recent Changes",
+        "deletes": "Deletes",
+        "actors": "Contributors"
+      },
+      "composition": {
+        "boolean": "Boolean",
+        "number": "Number",
+        "string": "String",
+        "object": "Object",
+        "array": "Array",
+        "null": "Null",
+        "sublabel": "{{count}} · {{pct}}%",
+        "empty": "No flags to summarize yet. Add a flag to see its value-type breakdown here."
       },
       "delete": {
         "title": "Delete flag?",
