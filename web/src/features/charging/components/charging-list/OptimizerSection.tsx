@@ -37,7 +37,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
         {/* Current Habits */}
         <FadeIn delay={0.24}>
           <GlassPanel className="p-6">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <Calendar className="h-4 w-4 text-neon-cyan" />
               {t('charging.optimizer.habits', 'Charging Habits')}
             </h3>
@@ -51,7 +51,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between text-xs">
                   <span className="text-[var(--text-secondary)]">{item.label}</span>
-                  <span className="font-semibold text-white">{item.value}</span>
+                  <span className="font-semibold text-[var(--text-primary)]">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -84,7 +84,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
         {/* Cost Analysis */}
         <FadeIn delay={0.26}>
           <GlassPanel className="p-6">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <DollarSign className="h-4 w-4 text-neon-green" />
               {t('charging.optimizer.costAnalysis', 'Cost Analysis')}
             </h3>
@@ -133,7 +133,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
       {/* Recommendations */}
       <FadeIn delay={0.28}>
         <GlassPanel className="p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <Lightbulb className="h-4 w-4 text-neon-amber" />
             {t('charging.optimizer.recommendations', 'Optimization Recommendations')}
           </h3>
@@ -155,8 +155,8 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                   )} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-white">{rec.title}</span>
-                      <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wider font-medium',
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{rec.title}</span>
+                      <span className={cn('text-2xs px-1.5 py-0.5 rounded-full uppercase tracking-wider font-medium',
                         rec.priority === 'high' ? 'bg-red-500/20 text-red-400' :
                         rec.priority === 'medium' ? 'bg-neon-amber/20 text-neon-amber' :
                         'bg-neon-green/20 text-neon-green',
@@ -164,7 +164,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                         {rec.priority}
                       </span>
                       {rec.estimated_savings != null && rec.estimated_savings > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green font-medium">
+                        <span className="text-2xs px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green font-medium">
                           ~${fmtNumber(rec.estimated_savings, 0)}/mo
                         </span>
                       )}

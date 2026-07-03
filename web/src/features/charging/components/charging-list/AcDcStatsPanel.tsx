@@ -34,7 +34,7 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
 
       {/* Energy Split Bar */}
       <div className="mb-4">
-        <p className="text-[10px] text-[var(--text-muted)] mb-1.5">
+        <p className="text-2xs text-[var(--text-muted)] mb-1.5">
           {t('charging.stats.energySplitLabel', 'Energy Split (AC vs DC)')}
         </p>
         <div
@@ -42,17 +42,17 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
           style={{ gridTemplateColumns: `${(breakdown.ac.energy / breakdown.total.energy) * 100}% ${(breakdown.dc.energy / breakdown.total.energy) * 100}%` }}
         >
           {breakdown.ac.energy > 0 && (
-            <div className="flex items-center justify-center text-[9px] font-bold text-[var(--text-primary)] bg-blue-500">
+            <div className="flex items-center justify-center text-2xs font-bold text-[var(--text-primary)] bg-blue-500">
               AC {fmtPercent((breakdown.ac.energy / breakdown.total.energy) * 100)}
             </div>
           )}
           {breakdown.dc.energy > 0 && (
-            <div className="flex items-center justify-center text-[9px] font-bold text-[var(--text-primary)] bg-amber-500">
+            <div className="flex items-center justify-center text-2xs font-bold text-[var(--text-primary)] bg-amber-500">
               DC {fmtPercent((breakdown.dc.energy / breakdown.total.energy) * 100)}
             </div>
           )}
         </div>
-        <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
+        <div className="flex justify-between text-2xs text-[var(--text-muted)] mt-1">
           <span>AC: {breakdown.ac.energy >= 1000 ? fmtWithUnit(breakdown.ac.energy / 1000, 'MWh') : fmtWithUnit(breakdown.ac.energy, 'kWh')}</span>
           <span>Total: {breakdown.total.energy >= 1000 ? fmtWithUnit(breakdown.total.energy / 1000, 'MWh') : fmtWithUnit(breakdown.total.energy, 'kWh')}</span>
           <span>DC: {breakdown.dc.energy >= 1000 ? fmtWithUnit(breakdown.dc.energy / 1000, 'MWh') : fmtWithUnit(breakdown.dc.energy, 'kWh')}</span>

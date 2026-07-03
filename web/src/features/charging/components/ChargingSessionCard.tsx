@@ -112,8 +112,8 @@ export function ChargingSessionCard({
   const primary = (
     <>
       <TimeStamp value={session.started_at} className="text-sm font-semibold text-[var(--text-primary)]" />
-      <span className="text-[10px] text-[var(--text-muted)]">·</span>
-      <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
+      <span className="text-2xs text-[var(--text-muted)]">·</span>
+      <span className="text-2xs text-[var(--text-muted)] tabular-nums">
         {formatDurationMinutes(durationMin)}
       </span>
       <Badge variant={cat === 'supercharger' ? 'danger' : cat === 'dc' ? 'warning' : 'success'} size="sm">
