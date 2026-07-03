@@ -40,7 +40,7 @@ import {
   type DashboardLayoutDraft,
 } from '@/components/ai/AINLDashboardComposer';
 import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, Heading, Text, Textarea } from '@/components/ui';
+import { Button, GlassPanel, Heading, HelperText, Text, Textarea } from '@/components/ui';
 import { InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -265,12 +265,12 @@ export default function DashboardsPage() {
                   </span>
                   <div className="min-w-0">
                     <Text as="div" size="sm" weight="semibold" color="primary">
-                      <span className="text-[var(--text-muted)]">{index + 1}. </span>
+                      <Text as="span" color="muted">{index + 1}. </Text>
                       {step.title}
                     </Text>
-                    <Text as="p" size="xs" color="muted" className="mt-0.5">
+                    <HelperText className="mt-0.5">
                       {step.body}
-                    </Text>
+                    </HelperText>
                   </div>
                 </li>
               ))}
@@ -291,12 +291,12 @@ export default function DashboardsPage() {
                 <Braces className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('powerDashboards.editor.title', 'Manual dashboard JSON editor')}
               </Heading>
-              <Text as="p" size="xs" color="muted" className="mb-3">
+              <HelperText className="mb-3">
                 {t(
                   'powerDashboards.editor.helper',
                   'Edit the Grafana JSON model directly. Nothing is sent to Grafana — you copy it in yourself.',
                 )}
-              </Text>
+              </HelperText>
               <Textarea
                 value={dashboardJson}
                 onChange={(e) => setDashboardJson(e.target.value)}
@@ -348,12 +348,12 @@ export default function DashboardsPage() {
                 <LayoutDashboard className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('powerDashboards.panels.title', 'Curated panel catalog')}
               </Heading>
-              <Text as="p" size="xs" color="muted" className="mb-3">
+              <HelperText className="mb-3">
                 {t(
                   'powerDashboards.panels.intro',
                   'These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once.',
                 )}
-              </Text>
+              </HelperText>
               <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 3xl:grid-cols-2">
                 {sortedPanels.map((panel) => (
                   <li
@@ -368,9 +368,9 @@ export default function DashboardsPage() {
                         {panel.name}
                       </Text>
                     </div>
-                    <Text as="p" size="xs" color="muted" className="mt-1.5">
+                    <HelperText className="mt-1.5">
                       {panel.description}
-                    </Text>
+                    </HelperText>
                   </li>
                 ))}
               </ul>
