@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Heading, Text, Code } from '@/components/ui/Typography';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { TimeStamp } from '@/components/data-display';
@@ -155,15 +156,15 @@ export function ScheduledExportsPanel() {
     <GlassPanel className="p-6" data-testid="scheduled-exports-panel">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+          <Heading level="section">
             {t('dataExport.scheduled.title', 'Scheduled exports')}
-          </h2>
-          <p className="text-sm text-[var(--text-secondary)]">
+          </Heading>
+          <Text as="p" size="sm" color="secondary">
             {t(
               'dataExport.scheduled.subtitle',
               'Cron-driven recurring exports.',
             )}
-          </p>
+          </Text>
         </div>
         <Button
           variant="primary"
@@ -184,9 +185,9 @@ export function ScheduledExportsPanel() {
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.name', 'Name')}
-              </span>
+              </Text>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -198,26 +199,26 @@ export function ScheduledExportsPanel() {
               />
             </label>
             <label className="block">
-              <span className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.scheduleCron', 'Cron expression')}
-              </span>
+              </Text>
               <Input
                 value={form.schedule_cron}
                 onChange={(e) => setForm({ ...form, schedule_cron: e.target.value })}
                 placeholder="0 9 * * 0"
                 required
               />
-              <span className="mt-1 block text-xs text-[var(--text-muted)]">
+              <Text as="span" variant="helper" className="mt-1 block">
                 {t(
                   'dataExport.scheduled.form.scheduleCronHelp',
                   "Standard 5-field cron, e.g. '0 9 * * 0'.",
                 )}
-              </span>
+              </Text>
             </label>
             <label className="block">
-              <span className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.exportType', 'Export type')}
-              </span>
+              </Text>
               <Select
                 value={form.export_type}
                 onChange={(e) =>
@@ -230,9 +231,9 @@ export function ScheduledExportsPanel() {
               />
             </label>
             <label className="block">
-              <span className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.format', 'Format')}
-              </span>
+              </Text>
               <Select
                 value={form.format}
                 onChange={(e) =>
@@ -245,25 +246,25 @@ export function ScheduledExportsPanel() {
               />
             </label>
             <label className="block">
-              <span className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.rangeWindow', 'Range window')}
-              </span>
+              </Text>
               <Input
                 value={form.range_window ?? ''}
                 onChange={(e) => setForm({ ...form, range_window: e.target.value })}
                 placeholder="7d"
               />
-              <span className="mt-1 block text-xs text-[var(--text-muted)]">
+              <Text as="span" variant="helper" className="mt-1 block">
                 {t(
                   'dataExport.scheduled.form.rangeWindowHelp',
                   'Format: number + m/h/d.',
                 )}
-              </span>
+              </Text>
             </label>
             <label className="block">
-              <span className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.deliveryKind', 'Delivery kind')}
-              </span>
+              </Text>
               <Select
                 value={form.delivery.kind}
                 onChange={(e) =>
@@ -280,9 +281,9 @@ export function ScheduledExportsPanel() {
             </label>
             {form.delivery.kind !== 'download' ? (
               <label className="block md:col-span-2">
-                <span className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+                <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                   {t('dataExport.scheduled.form.deliveryTarget', 'Delivery target')}
-                </span>
+                </Text>
                 <Input
                   value={form.delivery.target ?? ''}
                   onChange={(e) =>
@@ -298,12 +299,12 @@ export function ScheduledExportsPanel() {
                   }
                   required
                 />
-                <span className="mt-1 block text-xs text-[var(--text-muted)]">
+                <Text as="span" variant="helper" className="mt-1 block">
                   {t(
                     'dataExport.scheduled.form.deliveryTargetHelp',
                     'Email address or HTTPS URL.',
                   )}
-                </span>
+                </Text>
               </label>
             ) : null}
           </div>
@@ -369,7 +370,7 @@ export function ScheduledExportsPanel() {
                   >
                     <td className="py-2 pe-4 font-medium">{row.name}</td>
                     <td className="py-2 pe-4">{row.export_type} ({row.format})</td>
-                    <td className="py-2 pe-4 font-mono text-xs">{row.schedule_cron}</td>
+                    <td className="py-2 pe-4"><Code>{row.schedule_cron}</Code></td>
                     <td className="py-2 pe-4">
                       {row.delivery.kind}
                       {row.delivery.target ? ` → ${row.delivery.target}` : ''}
@@ -378,16 +379,16 @@ export function ScheduledExportsPanel() {
                       {row.next_run_at ? (
                         <TimeStamp value={row.next_run_at} />
                       ) : (
-                        <span className="text-[var(--text-muted)]">—</span>
+                        <Text as="span" color="muted">—</Text>
                       )}
                     </td>
                     <td className="py-2 pe-4">
                       {row.last_run_at ? (
                         <TimeStamp value={row.last_run_at} />
                       ) : (
-                        <span className="text-[var(--text-muted)]">
+                        <Text as="span" color="muted">
                           {t('dataExport.scheduled.status.never', 'Never')}
-                        </span>
+                        </Text>
                       )}
                     </td>
                     <td className="py-2 pe-4">
@@ -396,7 +397,7 @@ export function ScheduledExportsPanel() {
                       ) : row.last_status === 'failed' ? (
                         <Badge variant="danger">{t('dataExport.scheduled.status.failed', 'Failed')}</Badge>
                       ) : (
-                        <span className="text-[var(--text-muted)]">—</span>
+                        <Text as="span" color="muted">—</Text>
                       )}
                     </td>
                     <td className="py-2 pe-4">
