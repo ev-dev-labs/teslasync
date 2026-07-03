@@ -1,53 +1,69 @@
 import { useTranslation } from 'react-i18next';
-import { BarChart3 } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
 import {
+  ChartContainer,
   ChartTooltip, chartGrid, axisTickSm,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useFormatting } from '@/hooks/useFormatting';
+import { CostSection } from './CostSection';
 
 interface CostPerKwhChartProps {
   data: { date: string; costPerKwh: number }[];
+  isLoading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
-export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
+export function CostPerKwhChart({ data, isLoading, error, onRetry }: CostPerKwhChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
   const { formatCurrency } = useFormatting();
 
+  if (error) {
+    return (
+      <CostSection
+        title={t('costAnalysis.charts.costPerKwh', 'Cost per kWh Trend')}
+        error={error}
+        onRetry={onRetry}
+      >
+        {null}
+      </CostSection>
+    );
+  }
+
   return (
-    <GlassPanel className="p-4">
-      <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-        <BarChart3 className="h-4 w-4 text-purple-400" />
-        {t('costAnalysis.charts.costPerKwh', 'Cost per kWh Trend')}
-      </h3>
-      {data.length > 0 ? (
-        <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={data}>
-            <CartesianGrid {...chartGrid} />
-            <XAxis dataKey="date" {...axisTickSm} />
-            <YAxis
-              {...axisTickSm}
-              tickFormatter={(v: number) => formatCurrency(v, 2)}
-            />
-            <Tooltip content={<ChartTooltip />} />
-            <Line
-              {...AREA_DEFAULTS}
-              dataKey="costPerKwh"
-              name={t('costAnalysis.charts.rateLabel', '$/kWh')}
-              stroke={palette[2]}
-              activeDot={{ r: 4, strokeWidth: 0 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      ) : (
-        <div className="flex h-[260px] items-center justify-center text-sm text-[var(--text-muted)]">
-          {t('costAnalysis.charts.noData', 'Not enough data')}
-        </div>
-      )}
-    </GlassPanel>
+    <ChartContainer
+      title={t('costAnalysis.charts.costPerKwh', 'Cost per kWh Trend')}
+      ariaLabel={t('costAnalysis.charts.costPerKwh.aria', 'Cost per kilowatt-hour trend line chart')}
+      data={data.map((d) => ({ date: d.date, costPerKwh: d.costPerKwh }))}
+      dataColumns={[
+        { key: 'date', label: t('costAnalysis.charts.col.date', 'Date') },
+        { key: 'costPerKwh', label: t('costAnalysis.charts.rateLabel', '$/kWh') },
+      ]}
+      height={260}
+      loading={isLoading}
+      empty={data.length === 0}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid {...chartGrid} />
+          <XAxis dataKey="date" {...axisTickSm} />
+          <YAxis
+            {...axisTickSm}
+            tickFormatter={(v: number) => formatCurrency(v, 2)}
+          />
+          <Tooltip content={<ChartTooltip />} />
+          <Line
+            {...AREA_DEFAULTS}
+            dataKey="costPerKwh"
+            name={t('costAnalysis.charts.rateLabel', '$/kWh')}
+            stroke={palette[2]}
+            activeDot={{ r: 4, strokeWidth: 0 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartContainer>
   );
 }

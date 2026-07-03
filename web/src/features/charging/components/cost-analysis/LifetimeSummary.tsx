@@ -1,36 +1,50 @@
 import { useTranslation } from 'react-i18next';
-import { useFormatting } from '@/hooks/useFormatting';
 import { TrendingUp } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { Text } from '@/components/ui';
+import { useFormatting } from '@/hooks/useFormatting';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
+import { CostSection } from './CostSection';
 import type { CoreStats, LifetimeMetrics } from './types';
 
 interface LifetimeSummaryProps {
   lifetimeMetrics: LifetimeMetrics | null;
   coreStats: CoreStats | null;
+  isLoading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
 function LifetimeMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-[var(--surface-2)] p-3">
-      <p className="truncate text-[10px] text-[var(--text-muted)]">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-white">{value}</p>
+      <Text as="p" variant="caption" className="truncate">{label}</Text>
+      <Text as="p" size="sm" weight="semibold" color="primary" className="mt-0.5">
+        {value}
+      </Text>
     </div>
   );
 }
 
-export function LifetimeSummary({ lifetimeMetrics, coreStats }: LifetimeSummaryProps) {
+export function LifetimeSummary({
+  lifetimeMetrics, coreStats, isLoading, error, onRetry,
+}: LifetimeSummaryProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
   return (
-    <GlassPanel glow="cyan" className="p-4">
-      <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-        <TrendingUp className="h-4 w-4 text-cyan-400" />
-        {t('costAnalysis.lifetime.title', 'Lifetime Summary')}
-      </h3>
-      {lifetimeMetrics && coreStats ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+    <CostSection
+      title={t('costAnalysis.lifetime.title', 'Lifetime Summary')}
+      icon={<TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      glow="cyan"
+      isLoading={isLoading}
+      error={error}
+      onRetry={onRetry}
+      isEmpty={!lifetimeMetrics || !coreStats}
+      emptyMessage={t('costAnalysis.lifetime.noData', 'No data')}
+      skeletonHeight={200}
+    >
+      {lifetimeMetrics && coreStats && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 3xl:grid-cols-4">
           <LifetimeMetric
             label={t('costAnalysis.lifetime.totalSpent', 'Total Spent')}
             value={formatCurrency(coreStats.totalCost, 2)}
@@ -60,11 +74,7 @@ export function LifetimeSummary({ lifetimeMetrics, coreStats }: LifetimeSummaryP
             value={`${fmtInt(lifetimeMetrics.freeCount)} (${fmtWithUnit(lifetimeMetrics.freeEnergy, 'kWh', 1)})`}
           />
         </div>
-      ) : (
-        <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
-          {t('costAnalysis.lifetime.noData', 'No data')}
-        </div>
       )}
-    </GlassPanel>
+    </CostSection>
   );
 }

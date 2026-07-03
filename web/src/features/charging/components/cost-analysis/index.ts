@@ -1,3 +1,4 @@
+export { CostSection } from './CostSection';
 export { CostSummaryCards } from './CostSummaryCards';
 export { MonthlyCostChart } from './MonthlyCostChart';
 export { CostPerKwhChart } from './CostPerKwhChart';
@@ -9,4 +10,3 @@ export { CostForecastSection } from './CostForecastSection';
 export { ForecastDetails } from './ForecastDetails';
 export { LifetimeSummary } from './LifetimeSummary';
 export { EnvironmentalImpact } from './EnvironmentalImpact';
-export { LoadingSkeleton } from './LoadingSkeleton';
