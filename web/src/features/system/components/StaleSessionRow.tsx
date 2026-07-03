@@ -88,7 +88,7 @@ export function StaleSessionRow({
         </Badge>
         {metrics.map((m) => (
           <Caption key={m.key} className="text-[var(--text-secondary)] tabular-nums">
-            <span className="text-[var(--text-muted)]">{m.label} </span>
+            <Text as="span" color="muted">{m.label} </Text>
             {m.value}
           </Caption>
         ))}
