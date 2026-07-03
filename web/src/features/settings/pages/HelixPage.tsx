@@ -25,18 +25,23 @@
  * permanent HelixMark icon, and `/settings` itself retains a one-line
  * breadcrumb card that links here.
  *
- * Layout
- * ──────
- *   <PageContainer title="Helix">       page-level chrome / breadcrumbs
- *     <AISettings />                    unchanged — owns its own panels:
- *       ├── AIProviderSection            provider, key, model, validate
- *       ├── AIFeatureToggleList          per-feature opt-ins
- *       ├── AIRestorePanel               restore from archive
- *       └── AIUsageCard                  today's spend / cap
+ * Layout (modern-ui full-width bento)
+ * ───────────────────────────────────
+ *   <PageContainer title="Helix">       page-level h1 + subtitle + breadcrumbs
+ *     <AISettings />                     full-width responsive bento controller:
+ *       ├── HelixStatusStrip             KPI band (mode / features / provider / spend)
+ *       ├── mode picker (RadioCard ×3)   hero control — off / local / cloud
+ *       ├── AIRestorePanel               explicit archive restore (conditional)
+ *       ├── config bento                 AIProviderSection (2-col hero) + rail:
+ *       │     ├── AIUsageCard             today's tokens / cost
+ *       │     └── AICostCapSpendBar       cloud cap progress (conditional)
+ *       └── AIFeatureToggleList          per-feature opt-ins (multi-column)
  *
- * The `AISettings` component is unchanged — its internal panels remain
- * the canonical configuration surface and continue to be unit-tested in
- * isolation under `components/__tests__/AISettings.test.tsx`.
+ * `AISettings` owns the whole bento and stays a single self-contained
+ * controller so its ADR-015 contract tests keep exercising the full
+ * surface in isolation (`components/__tests__/AISettings.test.tsx`). The
+ * page frame is full-bleed — no `max-w mx-auto` cap — so the grid reflows
+ * into more columns on wide monitors instead of a centered strip.
  */
 
 import { useTranslation } from 'react-i18next'
