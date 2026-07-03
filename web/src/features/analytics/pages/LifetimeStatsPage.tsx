@@ -148,9 +148,10 @@ export default function LifetimeStatsPage() {
                     <span className="flex items-baseline gap-2">
                       <Text
                         as="span"
+                        size="3xl"
                         weight="bold"
                         color="primary"
-                        className="text-3xl tabular-nums sm:text-4xl xl:text-5xl"
+                        className="tabular-nums sm:text-4xl xl:text-5xl"
                       >
                         <AnimatedNumber value={heroDistance} duration={1.5} decimals={0} />
                       </Text>
