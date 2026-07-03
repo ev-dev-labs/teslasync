@@ -325,7 +325,7 @@ export default function ProjectedRangePage() {
                   </div>
                   {TEMP_BUCKETS.map((temp) => (
                     <div key={temp} className="mb-1 grid grid-cols-4 gap-1">
-                      <Caption className="flex items-center p-2 font-medium">{t(`range.tempBucket.${temp}`, TEMP_BUCKET_LABELS[temp] ?? temp)}</Caption>
+                      <Text as="span" size="xs" weight="medium" color="muted" className="flex items-center p-2">{t(`range.tempBucket.${temp}`, TEMP_BUCKET_LABELS[temp] ?? temp)}</Text>
                       {SPEED_BUCKETS.map((speed) => {
                         const bucket = matrixLookup[`${temp}|${speed}`];
                         return (
