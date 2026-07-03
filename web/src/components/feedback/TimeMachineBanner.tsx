@@ -30,7 +30,7 @@ import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat'
  *
  * Styling note: button + input chrome routes through the shared UI
  * primitives so the banner stays compliant with the light-mode parity
- * audit (no raw `text-white/N` or `border-white/N` literals).
+ * audit (no raw white-literal text or border color utilities).
  */
 
 export const TIME_MACHINE_OPEN_PICKER_EVENT = 'time-machine.open-picker'

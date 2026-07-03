@@ -63,7 +63,7 @@ export function ErrorState({
           <p className={cn('font-medium text-rose-300', compact ? 'text-xs' : 'text-sm')}>
             {title}
           </p>
-          <p className={cn('text-rose-300/70 mt-0.5', compact ? 'text-[11px]' : 'text-xs')}>
+          <p className={cn('text-rose-300/70 mt-0.5', compact ? 'text-2xs' : 'text-xs')}>
             {message}
           </p>
         </div>
