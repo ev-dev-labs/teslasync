@@ -9,6 +9,7 @@ export { AppearanceSettings } from './AppearanceSettings'
 export { SettingsSearch } from './SettingsSearch'
 export { AdvancedSettings } from './AdvancedSettings'
 export { SettingsActionCard, type SettingsActionCardProps } from './SettingsActionCard'
+export { SafetySettingCard, type SafetySettingCardProps } from './SafetySettingCard'
 // AISettings is the only place AI can be enabled (ADR-015 §I7 / §I9).
 // Sub-components (AIProviderSection, AIFeatureToggleList,
 // AIRestorePanel, AIUsageCard) stay un-exported because they are
