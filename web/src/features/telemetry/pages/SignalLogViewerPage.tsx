@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { Database, AlertCircle, Activity } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, Select, Label } from '@/components/ui';
+import { GlassPanel, Button, Select, Label, Caption } from '@/components/ui';
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { RangePicker, VehicleSelect } from '@/components/forms';
@@ -187,9 +187,9 @@ export default function SignalLogViewerPage() {
                     {t('signalLog.query', 'Query')}
                   </Button>
                   {hasQueried ? (
-                    <span className="pb-2 text-xs text-[var(--text-muted)]">
+                    <Caption className="pb-2">
                       {fmtInt(totalRecords)} {t('signalLog.records', 'records')}
-                    </span>
+                    </Caption>
                   ) : null}
                 </div>
               </div>
