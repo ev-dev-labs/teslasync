@@ -59,7 +59,7 @@ function FlowConnector({
       <Label>{label}</Label>
       <div
         className={cn(
-          'flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-opacity',
+          'flex items-center gap-1 rounded-full px-3 py-1 transition-opacity',
           !active && 'opacity-30',
         )}
         style={{
@@ -70,7 +70,7 @@ function FlowConnector({
       >
         <ArrowDown className="h-3.5 w-3.5 sm:hidden" aria-hidden="true" />
         <ArrowRight className="hidden h-3.5 w-3.5 sm:block" aria-hidden="true" />
-        <span>{value}</span>
+        <Text size="xs" weight="semibold">{value}</Text>
       </div>
     </div>
   );
