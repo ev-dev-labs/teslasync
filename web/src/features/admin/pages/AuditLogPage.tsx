@@ -44,6 +44,7 @@ import {
   CopyButton,
   SectionTitle,
   Caption,
+  Text,
   type Column,
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
@@ -161,7 +162,7 @@ export default function AuditLogPage() {
         header: t('admin.auditLog.colTs', 'Timestamp'),
         render: (r) => (
           <div>
-            <div className="text-[var(--text-primary)]">{formatDateTime(r.ts)}</div>
+            <Text as="div" variant="body">{formatDateTime(r.ts)}</Text>
             <Caption>{formatRelative(r.ts)}</Caption>
           </div>
         ),
@@ -169,7 +170,7 @@ export default function AuditLogPage() {
       {
         key: 'actor',
         header: t('admin.auditLog.colActor', 'Actor'),
-        render: (r) => <span className="text-[var(--text-primary)]">{r.actor || '—'}</span>,
+        render: (r) => <Text variant="body">{r.actor || '—'}</Text>,
       },
       {
         key: 'category',
@@ -178,20 +179,20 @@ export default function AuditLogPage() {
           r.category ? (
             <Badge variant="neutral">{r.category}</Badge>
           ) : (
-            <span className="text-[var(--text-muted)]">—</span>
+            <Text color="muted">—</Text>
           ),
       },
       {
         key: 'action',
         header: t('admin.auditLog.colAction', 'Action'),
-        render: (r) => <span className="font-medium text-[var(--text-primary)]">{r.action}</span>,
+        render: (r) => <Text weight="medium" color="primary">{r.action}</Text>,
       },
       {
         key: 'entity',
         header: t('admin.auditLog.colEntity', 'Entity'),
         render: (r) => (
           <div>
-            <span className="text-[var(--text-primary)]">{r.entity_type}</span>
+            <Text variant="body">{r.entity_type}</Text>
             {r.entity_id !== null && r.entity_id !== undefined && (
               <Caption>{`#${r.entity_id}`}</Caption>
             )}
@@ -202,7 +203,7 @@ export default function AuditLogPage() {
         key: 'detail',
         header: t('admin.auditLog.colDetail', 'Detail'),
         render: (r) => (
-          <span className="line-clamp-2 text-[var(--text-secondary)]">{r.detail ?? '—'}</span>
+          <Text color="secondary" className="line-clamp-2">{r.detail ?? '—'}</Text>
         ),
       },
       {
@@ -211,13 +212,13 @@ export default function AuditLogPage() {
         render: (r) =>
           r.trace_id ? (
             <div className="flex items-center gap-1">
-              <span className="font-mono text-xs text-[var(--text-secondary)]">
+              <Text mono size="xs" color="secondary">
                 {r.trace_id.slice(0, 8)}…
-              </span>
+              </Text>
               <CopyButton text={r.trace_id} iconOnly variant="ghost" size="sm" />
             </div>
           ) : (
-            <span className="text-[var(--text-muted)]">—</span>
+            <Text color="muted">—</Text>
           ),
       },
       {
@@ -574,19 +575,19 @@ function ExpandedDetail({ row }: { row: AuditLogRow }) {
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 2xl:grid-cols-3">
       <div>
         <Caption>{t('admin.auditLog.detailIp', 'IP')}</Caption>
-        <div className="font-mono text-sm text-[var(--text-primary)]">{row.ip ?? '—'}</div>
+        <Text as="div" mono size="sm" color="primary">{row.ip ?? '—'}</Text>
       </div>
       <div>
         <Caption>{t('admin.auditLog.detailUa', 'User-agent')}</Caption>
-        <div className="break-all text-sm text-[var(--text-primary)]">{row.user_agent ?? '—'}</div>
+        <Text as="div" size="sm" color="primary" className="break-all">{row.user_agent ?? '—'}</Text>
       </div>
       {row.trace_id && (
         <div className="md:col-span-2 2xl:col-span-1">
           <Caption>{t('admin.auditLog.detailTrace', 'Trace ID')}</Caption>
           <div className="flex items-center gap-2">
-            <span className="break-all font-mono text-sm text-[var(--text-primary)]">
+            <Text mono size="sm" color="primary" className="break-all">
               {row.trace_id}
-            </span>
+            </Text>
             <CopyButton text={row.trace_id} iconOnly variant="ghost" size="sm" />
           </div>
         </div>
@@ -594,26 +595,26 @@ function ExpandedDetail({ row }: { row: AuditLogRow }) {
       {row.before && (
         <div>
           <Caption>{t('admin.auditLog.detailBefore', 'Before')}</Caption>
-          <pre className="max-h-64 overflow-auto rounded bg-[var(--surface-overlay)] p-3 font-mono text-xs text-[var(--text-primary)]">
+          <Text as="pre" variant="code" className="max-h-64 overflow-auto rounded bg-[var(--surface-overlay)] p-3">
             {formatJSON(row.before)}
-          </pre>
+          </Text>
         </div>
       )}
       {row.after && (
         <div>
           <Caption>{t('admin.auditLog.detailAfter', 'After')}</Caption>
-          <pre className="max-h-64 overflow-auto rounded bg-[var(--surface-overlay)] p-3 font-mono text-xs text-[var(--text-primary)]">
+          <Text as="pre" variant="code" className="max-h-64 overflow-auto rounded bg-[var(--surface-overlay)] p-3">
             {formatJSON(row.after)}
-          </pre>
+          </Text>
         </div>
       )}
       {row.row_hash && (
         <div className="md:col-span-2 2xl:col-span-3">
           <Caption>{t('admin.auditLog.detailHash', 'Row hash')}</Caption>
           <div className="flex items-center gap-2">
-            <span className="break-all font-mono text-xs text-[var(--text-secondary)]">
+            <Text mono size="xs" color="secondary" className="break-all">
               {row.row_hash}
-            </span>
+            </Text>
             <CopyButton text={row.row_hash} iconOnly variant="ghost" size="sm" />
           </div>
         </div>
