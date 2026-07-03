@@ -20,6 +20,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
 import type { APICallLog, APICallLogStats } from '@/api/types';
 import { deriveServiceOptions } from '../lib/serviceOptions';
@@ -98,7 +99,7 @@ function JsonViewer({ data, label }: { data: string | null; label: string }) {
           ariaLabel={t('apiLogs.copyBody', 'Copy {{label}}', { label })}
         />
       </div>
-      <GlassPanel className="max-h-60 overflow-x-auto whitespace-pre-wrap break-all !p-3 font-mono text-xs text-[var(--text-primary)]">
+      <GlassPanel className={cn('max-h-60 overflow-x-auto whitespace-pre-wrap break-all !p-3', typography.role.code)}>
         {formatted}
       </GlassPanel>
     </div>
@@ -340,7 +341,7 @@ export default function ApiLogsPage() {
                           )}
                         >
                           <Badge variant={cfg.variant} size="sm">{cfg.label}</Badge>
-                          <Text as="span" size="xs" mono className="tabular-nums text-[var(--text-secondary)]">
+                          <Text as="span" size="xs" mono color="secondary" className="tabular-nums">
                             {fmtInt(count)}
                           </Text>
                         </Button>
@@ -475,28 +476,32 @@ export default function ApiLogsPage() {
                         aria-controls={detailId}
                         className="w-full !h-auto !justify-start rounded-none !px-4 !py-3 text-left !font-normal hover:bg-white/[0.02]"
                       >
-                        <span className="hidden w-36 shrink-0 font-mono text-xs text-[var(--text-muted)] sm:block">
+                        <Text as="span" size="xs" mono color="muted" className="hidden w-36 shrink-0 sm:block">
                           <DateTime value={log.ts} in="utc" />
-                        </span>
+                        </Text>
                         <Badge variant={svc.variant} size="sm">{svc.label}</Badge>
                         <Badge variant={METHOD_VARIANTS[log.http_method] ?? 'neutral'} size="sm">
                           {log.http_method}
                         </Badge>
-                        <span
-                          className="min-w-0 flex-1 truncate font-mono text-xs text-[var(--text-secondary)]"
+                        <Text
+                          as="span"
+                          size="xs"
+                          mono
+                          color="secondary"
+                          className="min-w-0 flex-1 truncate"
                           title={log.endpoint ?? ''}
                         >
                           {log.endpoint ?? '—'}
-                        </span>
+                        </Text>
                         <Badge variant={statusBadgeVariant(log.status_code)} size="sm">
                           {log.status_code ?? t('apiLogs.na', 'N/A')}
                         </Badge>
-                        <span className="w-16 shrink-0 text-right font-mono text-xs tabular-nums text-[var(--text-secondary)]">
+                        <Text as="span" size="xs" mono color="secondary" className="w-16 shrink-0 text-right tabular-nums">
                           {fmtInt(log.duration_ms ?? 0)}ms
-                        </span>
-                        <span className="hidden max-w-[240px] truncate text-xs text-rose-300 lg:block">
+                        </Text>
+                        <Text as="span" variant="error" className="hidden max-w-[240px] truncate lg:block">
                           {log.error_message || '—'}
-                        </span>
+                        </Text>
                         {open
                           ? <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                           : <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />}
@@ -507,7 +512,7 @@ export default function ApiLogsPage() {
                         <div className="px-4 pb-2 sm:hidden">
                           <DateTime value={log.ts} in="utc" className="text-2xs text-[var(--text-muted)]" />
                           {log.error_message && (
-                            <p className="mt-0.5 truncate text-2xs text-rose-300">{log.error_message}</p>
+                            <Text as="p" size="2xs" className="mt-0.5 truncate text-rose-300">{log.error_message}</Text>
                           )}
                         </div>
                       )}
@@ -518,12 +523,12 @@ export default function ApiLogsPage() {
                           <div className="sm:hidden">
                             <DateTime value={log.ts} in="utc" className="text-2xs text-[var(--text-muted)]" />
                             {log.error_message && (
-                              <p className="mt-1 text-xs text-rose-300">{log.error_message}</p>
+                              <Text as="p" variant="error" className="mt-1">{log.error_message}</Text>
                             )}
                           </div>
                           <div className="space-y-1">
                             <Label>{t('apiLogs.requestUrl', 'Request URL')}</Label>
-                            <GlassPanel className="overflow-x-auto whitespace-pre-wrap break-all !p-3 font-mono text-xs text-[var(--text-primary)]">
+                            <GlassPanel className={cn('overflow-x-auto whitespace-pre-wrap break-all !p-3', typography.role.code)}>
                               {log.http_method} {log.endpoint}
                             </GlassPanel>
                           </div>
@@ -532,7 +537,7 @@ export default function ApiLogsPage() {
                               <Text as="span" size="xs" weight="medium" className="uppercase tracking-wider text-rose-300">
                                 {t('apiLogs.error', 'Error')}
                               </Text>
-                              <GlassPanel className="overflow-x-auto whitespace-pre-wrap break-all !p-3 font-mono text-xs text-rose-300">
+                              <GlassPanel className={cn('overflow-x-auto whitespace-pre-wrap break-all !p-3', typography.role.error, typography.family.mono)}>
                                 {log.error_message}
                               </GlassPanel>
                             </div>
