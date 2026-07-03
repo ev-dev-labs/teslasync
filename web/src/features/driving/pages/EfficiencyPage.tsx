@@ -6,7 +6,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, DataTable, PanelTitle, SectionTitle,
+  GlassPanel, DataTable, PanelTitle, SectionTitle, Text,
 } from '@/components/ui';
 import { MetricCard, MetricBar, SavedViewMenu } from '@/components/data-display';
 import {
@@ -457,22 +457,22 @@ export default function EfficiencyPage() {
                     {
                       key: 'range',
                       header: t('efficiency.tempRange', 'Temp Range'),
-                      render: (b) => <span className="font-medium text-[var(--text-primary)]">{b.range}</span>,
+                      render: (b) => <Text weight="medium" color="primary">{b.range}</Text>,
                     },
                     {
                       key: 'count',
                       header: t('efficiency.drives', 'Drives'),
                       className: 'text-right',
-                      render: (b) => <span className="text-[var(--text-secondary)]">{b.count}</span>,
+                      render: (b) => <Text color="secondary">{b.count}</Text>,
                     },
                     {
                       key: 'avgEff',
                       header: `${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`,
                       className: 'text-right',
                       render: (b) => (
-                        <span className="tabular-nums" style={{ color: efficiencyColor(b.avgEff) }}>
+                        <Text className="tabular-nums" style={{ color: efficiencyColor(b.avgEff) }}>
                           {fmtInt(toEfficiencyDisplay(b.avgEff))}
-                        </span>
+                        </Text>
                       ),
                     },
                     {
@@ -480,20 +480,20 @@ export default function EfficiencyPage() {
                       header: `${distanceUnit}/kWh`,
                       className: 'text-right',
                       render: (b) => (
-                        <span className="text-cyan-300">{b.avgEff > 0 ? fmtNumber(1000 / toEfficiencyDisplay(b.avgEff)) : '—'}</span>
+                        <Text color="secondary">{b.avgEff > 0 ? fmtNumber(1000 / toEfficiencyDisplay(b.avgEff)) : '—'}</Text>
                       ),
                     },
                     {
                       key: 'totalDist',
                       header: `${t('efficiency.total', 'Total')} ${distanceUnit}`,
                       className: 'text-right',
-                      render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(toDistanceDisplay(b.totalDist))}</span>,
+                      render: (b) => <Text color="secondary">{fmtInt(toDistanceDisplay(b.totalDist))}</Text>,
                     },
                     {
                       key: 'avgSpeed',
                       header: t('efficiency.avgSpeedCol', 'Avg Speed'),
                       className: 'text-right',
-                      render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(toSpeedDisplay(b.avgSpeed))} {speedUnit}</span>,
+                      render: (b) => <Text color="secondary">{fmtInt(toSpeedDisplay(b.avgSpeed))} {speedUnit}</Text>,
                     },
                   ]}
                 />
