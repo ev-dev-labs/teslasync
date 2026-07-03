@@ -1,4 +1,4 @@
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
@@ -26,9 +26,9 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
   if (legItems.length === 0) {
     return (
       <GlassPanel className="p-6">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+        <PanelTitle className="mb-4">
           {t('tripPlanner.legs.title', 'Route Breakdown')}
-        </h3>
+        </PanelTitle>
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tripPlanner.legs.empty', 'Plan a trip to see the route breakdown')} />
       </GlassPanel>
     );
@@ -36,18 +36,18 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
 
   return (
     <GlassPanel className="p-6">
-      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+      <PanelTitle className="mb-4">
         {t('tripPlanner.legs.title', 'Route Breakdown')}
-      </h3>
+      </PanelTitle>
       <div className="space-y-3">
         {legItems.map((leg, idx) => (
           <FadeIn key={idx} delay={idx * 0.03}>
             <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
               {/* Leg header */}
               <div className="flex items-center gap-2 mb-3">
-                <span className="flex items-center justify-center h-6 w-6 rounded-full bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)]">
+                <Text as="span" size="xs" weight="bold" color="primary" className="flex items-center justify-center h-6 w-6 rounded-full bg-[var(--surface-2)]">
                   {idx + 1}
-                </span>
+                </Text>
                 <div className="flex items-center gap-1 text-sm text-[var(--text-secondary)] min-w-0">
                   <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                   <span className="truncate">{leg.from.name || `${leg.from.lat.toFixed(2)}, ${leg.from.lng.toFixed(2)}`}</span>
@@ -59,30 +59,30 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
               {/* Leg metrics */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                 <div>
-                  <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.distance', 'Distance')}</span>
-                  <p className="text-[var(--text-primary)] font-medium">
+                  <Caption>{t('tripPlanner.legs.distance', 'Distance')}</Caption>
+                  <Text as="p" weight="medium" color="primary">
                     {toDistanceDisplay(leg.distance_m).toFixed(1)} {distanceUnit}
-                  </p>
+                  </Text>
                 </div>
                 <div>
-                  <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.duration', 'Duration')}</span>
-                  <p className="text-[var(--text-primary)] font-medium">
+                  <Caption>{t('tripPlanner.legs.duration', 'Duration')}</Caption>
+                  <Text as="p" weight="medium" color="primary">
                     {Math.round(leg.duration_s)} {t('common.min', 'min')}
-                  </p>
+                  </Text>
                 </div>
                 <div>
-                  <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.energy', 'Energy')}</span>
-                  <p className="text-[var(--text-primary)] font-medium">{formatEnergy(leg.energy_wh, { precision: 1 })}</p>
+                  <Caption>{t('tripPlanner.legs.energy', 'Energy')}</Caption>
+                  <Text as="p" weight="medium" color="primary">{formatEnergy(leg.energy_wh, { precision: 1 })}</Text>
                 </div>
                 <div>
-                  <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.soc', 'Battery')}</span>
-                  <p className="text-[var(--text-primary)] font-medium">
+                  <Caption>{t('tripPlanner.legs.soc', 'Battery')}</Caption>
+                  <Text as="p" weight="medium" color="primary">
                     <span className="text-emerald-400">{Math.round(leg.start_soc)}%</span>
                     <span className="text-[var(--text-muted)] mx-1">→</span>
                     <span className={leg.arrival_soc < 20 ? 'text-rose-400' : 'text-amber-400'}>
                       {Math.round(leg.arrival_soc)}%
                     </span>
-                  </p>
+                  </Text>
                 </div>
               </div>
             </div>
@@ -92,7 +92,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
               <div className="ml-3 mt-2 mb-1 flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
                 <Zap className="h-4 w-4 shrink-0 text-blue-400 mt-0.5" />
                 <div className="text-sm">
-                  <p className="text-blue-300 font-medium">{stops[idx].name}</p>
+                  <Text as="p" weight="medium" className="text-blue-300">{stops[idx].name}</Text>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[var(--text-secondary)]">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -105,9 +105,9 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                     <span className="text-emerald-400">{formatCurrency(stops[idx].cost)}</span>
                   </div>
                   {stops[idx].is_recommended && (
-                    <p className="text-xs text-[var(--text-muted)] mt-1 italic">
+                    <Caption className="mt-1 block italic">
                       {t('tripPlanner.legs.recommended', 'Recommended stop point — actual charger locations may vary')}
-                    </p>
+                    </Caption>
                   )}
                 </div>
               </div>
