@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
-import { GlassPanel, Badge, DataTable, Pagination, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, Pagination, SectionTitle, type Column } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { CHART_COLORS } from '@/lib/colors';
@@ -76,7 +76,7 @@ export function SignalHistoryTable({
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
 
   const renderExpanded = useCallback((r: SignalLogEntry) => (
-    <pre className="whitespace-pre-wrap break-all text-xs font-mono text-[var(--text-secondary)]">
+    <pre className="whitespace-pre-wrap break-all text-2xs font-mono text-[var(--text-secondary)]">
 {JSON.stringify(r, null, 2)}
     </pre>
   ), []);
@@ -137,7 +137,7 @@ export function SignalHistoryTable({
       <GlassPanel className={cn('p-4 sm:p-5', className)}>
         <div className="flex items-center gap-2 mb-3">
           <Activity className="h-4 w-4 text-neon-cyan" />
-          <span className="section-title">{title ?? t('Signal Data')}</span>
+          <SectionTitle>{title ?? t('Signal Data')}</SectionTitle>
           {showHeaderMeta ? (
             <span className="ml-auto text-2xs text-[var(--text-muted)]">
               {t('Page')} {page} · {fmtInt(totalRows)} {t('total')}
