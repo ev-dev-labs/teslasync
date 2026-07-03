@@ -415,7 +415,7 @@ export default function SlowQueriesPage() {
               />
             ) : (
               <div className="space-y-3">
-                <Text variant="bodySm" className="text-[var(--text-muted)]">
+                <Text variant="helper">
                   {t(
                     'admin.slowQueries.cacheHint',
                     'Lowest hit ratios first — I/O-bound queries are the strongest indexing candidates.',
