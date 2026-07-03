@@ -43,11 +43,17 @@ export function SchemaCatalogCard({ table }: SchemaCatalogCardProps) {
             {table.description}
           </Text>
         </div>
-        <span className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-2xs font-medium tabular-nums text-[var(--text-muted)]">
+        <Text
+          as="span"
+          size="2xs"
+          weight="medium"
+          color="muted"
+          className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 tabular-nums"
+        >
           {t('powerSql.catalog.columnCount', '{{count}} cols', {
             count: columns.length,
           })}
-        </span>
+        </Text>
       </div>
 
       <ul className="space-y-1.5">
