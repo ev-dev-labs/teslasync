@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { PieChart } from 'lucide-react';
 
-import { GlassPanel, Badge, PanelTitle, Subhead, Caption } from '@/components/ui';
+import { GlassPanel, Badge, PanelTitle, Subhead, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { fmtPercent } from '@/lib/numberFormat';
@@ -108,7 +108,7 @@ export function AccessOverviewPanel({
                   <li key={slice.role}>
                     <Badge variant="neutral">
                       {t(`vehicleAccess.role.${slice.role}`, titleCase(slice.role))}
-                      <span className="ml-1 text-[var(--text-muted)]">{slice.count}</span>
+                      <Text color="muted" className="ml-1">{slice.count}</Text>
                     </Badge>
                   </li>
                 ))}

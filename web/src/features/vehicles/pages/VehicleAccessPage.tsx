@@ -12,6 +12,7 @@ import {
   DataTable,
   ConfirmDialog,
   PanelTitle,
+  Text,
   type BadgeProps,
   type Column,
 } from '@/components/ui';
@@ -163,16 +164,16 @@ export default function VehicleAccessPage() {
       key: 'name',
       header: t('vehicleAccess.drivers.name', 'Name'),
       render: (row) => (
-        <span className="font-medium text-[var(--text-primary)]">
+        <Text weight="medium" color="primary">
           {row.driver_name ?? '—'}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'email',
       header: t('vehicleAccess.drivers.email', 'Email'),
       render: (row) => (
-        <span className="text-[var(--text-secondary)]">{row.driver_email ?? '—'}</span>
+        <Text color="secondary">{row.driver_email ?? '—'}</Text>
       ),
     },
     {
@@ -181,7 +182,7 @@ export default function VehicleAccessPage() {
       render: (row) => row.role ? (
         <Badge variant="info">{row.role}</Badge>
       ) : (
-        <span className="text-[var(--text-muted)]">—</span>
+        <Text color="muted">—</Text>
       ),
     },
     {
@@ -218,7 +219,7 @@ export default function VehicleAccessPage() {
       key: 'createdBy',
       header: t('vehicleAccess.invitations.createdBy', 'Created By'),
       render: (row) => (
-        <span className="text-[var(--text-secondary)]">{row.created_by ?? '—'}</span>
+        <Text color="secondary">{row.created_by ?? '—'}</Text>
       ),
     },
     {
@@ -240,7 +241,7 @@ export default function VehicleAccessPage() {
           className="text-cyan-300 hover:text-cyan-200"
         />
       ) : (
-        <span className="text-[var(--text-muted)]">—</span>
+        <Text color="muted">—</Text>
       ),
       className: 'w-12',
     },
