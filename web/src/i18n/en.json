@@ -9554,7 +9554,13 @@
       "driveCount": "{{count}} drives",
       "cost": "Total Cost",
       "total": "Total Trips",
-      "totalDrives": "{{count}} total drives"
+      "totalDrives": "{{count}} total drives",
+      "avgPerTrip": "Avg / Trip",
+      "avgPerTripSub": "distance per trip",
+      "charges": "Total Charges",
+      "chargeSessions": "{{count}} charge sessions",
+      "costPer": "{{cost}}/100{{unit}}",
+      "aria": "Trip summary metrics"
     },
     "chart": {
       "title": "Top Trips by Distance",
@@ -9562,7 +9568,8 @@
       "empty": "No trip data to chart",
       "col": {
         "trip": "Trip"
-      }
+      },
+      "aria": "Top trips ranked by distance horizontal bar chart"
     },
     "export": {
       "csv": "CSV",
@@ -9570,13 +9577,30 @@
     },
     "list": {
       "heading": "All Trips",
-      "empty": "No trips recorded yet"
+      "empty": "No trips recorded yet",
+      "aria": "All trips",
+      "count": "{{count}} trips"
     },
     "row": {
       "trip": "Trip",
       "drives": "{{count}} drives",
       "charges": "{{count}} charges",
       "cost": "cost"
+    },
+    "energy": {
+      "title": "Top Trips by Energy",
+      "empty": "No energy data to rank yet"
+    },
+    "primary": {
+      "aria": "Trip distance and energy breakdown"
+    },
+    "card": {
+      "inProgress": "In progress",
+      "drives": "{{count}} drives",
+      "charges": "{{count}} charges",
+      "distance": "Distance",
+      "energy": "Energy",
+      "cost": "Cost"
     }
   },
   "guard": {
