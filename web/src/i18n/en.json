@@ -3838,6 +3838,11 @@
       "selectVehicle": "Select vehicle",
       "subtitle": "Your driving and charging summary for the week",
       "noData": "No Data",
+      "noAlerts": "No alerts this week — everything looks great!",
+      "noDailyEnergy": "No charging energy data is available for this week.",
+      "noBatteryData": "No battery data is available for this week.",
+      "activity": "Driving & charging activity",
+      "batteryAndAlerts": "Battery health & alerts",
       "aiNarration": {
         "title": "Helix narration",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",

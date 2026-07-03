@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, Text, Caption } from '@/components/ui';
+import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 
 interface HighlightCardProps {
@@ -29,36 +30,46 @@ export function HighlightCard({
   color = 'cyan',
   className,
 }: HighlightCardProps) {
+  const accent = neonColorMap[color as NeonColor] ?? neonColorMap.cyan;
   return (
     <GlassPanel
       glow={glowMap[color] ?? 'none'}
-      className={cn('flex flex-col gap-2 p-5', className)}
+      hover
+      className={cn('flex h-full flex-col gap-2 p-4 sm:p-5', className)}
     >
-      <span className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-        {icon}
-        {label}
-      </span>
-      <span className="text-2xl font-bold tracking-tight text-white">
+      <div className="flex items-center gap-2">
+        <span className={cn('shrink-0', accent.text)} aria-hidden="true">
+          {icon}
+        </span>
+        <Text size="sm" color="secondary" className="truncate">
+          {label}
+        </Text>
+      </div>
+      <Text
+        as="div"
+        size="2xl"
+        weight="bold"
+        color="primary"
+        className="truncate tracking-tight tabular-nums"
+      >
         {value}
-      </span>
+      </Text>
       {change && (
         <span
           className={cn(
             'flex items-center gap-1 text-xs font-medium',
-            change.positive ? 'text-emerald-400' : 'text-red-400',
+            change.positive ? 'text-emerald-300' : 'text-rose-300',
           )}
         >
           {change.positive ? (
-            <TrendingUp className="h-3.5 w-3.5" />
+            <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
           ) : (
-            <TrendingDown className="h-3.5 w-3.5" />
+            <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
           )}
           {change.value}
         </span>
       )}
-      {subtitle && (
-        <span className="text-xs text-[var(--text-muted)]">{subtitle}</span>
-      )}
+      {subtitle && <Caption>{subtitle}</Caption>}
     </GlassPanel>
   );
 }

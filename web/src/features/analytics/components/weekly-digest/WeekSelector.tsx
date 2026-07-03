@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { GlassPanel, Badge, Button } from '@/components/ui';
+import { GlassPanel, Badge, Button, Text } from '@/components/ui';
 
 interface WeekSelectorProps {
   weekLabel: string;
@@ -18,18 +18,21 @@ export function WeekSelector({
   const { t } = useTranslation();
 
   return (
-    <GlassPanel className="flex items-center justify-between px-5 py-3">
+    <GlassPanel className="flex items-center justify-between gap-2 px-4 py-3 sm:px-5">
       <Button
         variant="ghost"
         size="sm"
         icon={<ChevronLeft className="h-4 w-4" />}
         onClick={onPrevWeek}
+        aria-label={t('analytics.weeklyDigest.prevWeek', 'Previous')}
       >
-        {t('analytics.weeklyDigest.prevWeek', 'Previous')}
+        <span className="hidden sm:inline">{t('analytics.weeklyDigest.prevWeek', 'Previous')}</span>
       </Button>
-      <span className="flex items-center gap-2 text-sm font-semibold text-white">
-        <Calendar className="h-4 w-4 text-[var(--text-secondary)]" />
-        {weekLabel}
+      <span className="flex min-w-0 items-center gap-2">
+        <Calendar className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+        <Text size="sm" weight="semibold" color="primary" className="truncate">
+          {weekLabel}
+        </Text>
         {isCurrentWeek && (
           <Badge variant="info" size="sm">
             {t('analytics.weeklyDigest.current', 'Current')}
@@ -42,8 +45,9 @@ export function WeekSelector({
         icon={<ChevronRight className="h-4 w-4" />}
         onClick={onNextWeek}
         disabled={isCurrentWeek}
+        aria-label={t('analytics.weeklyDigest.nextWeek', 'Next')}
       >
-        {t('analytics.weeklyDigest.nextWeek', 'Next')}
+        <span className="hidden sm:inline">{t('analytics.weeklyDigest.nextWeek', 'Next')}</span>
       </Button>
     </GlassPanel>
   );
