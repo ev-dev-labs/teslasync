@@ -88,7 +88,7 @@ export function DateRangeFilter({
           onChange={e => onStartDateChange(e.target.value)}
           className="bg-transparent text-xs text-[var(--text-primary)] outline-none [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
         />
-        <span className="text-gray-600 text-xs">→</span>
+        <span className="text-xs text-[var(--text-muted)]">→</span>
         <input
           type="date"
           aria-label={t('date.range.end', 'End date')}

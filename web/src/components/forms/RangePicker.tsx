@@ -248,7 +248,7 @@ export function RangePicker({
                       'w-full text-left rounded-md px-3 py-1.5 text-xs whitespace-nowrap',
                       'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
                       active
-                        ? 'bg-blue-600 text-white hover:bg-blue-600'
+                        ? 'bg-blue-600 text-[var(--text-on-accent)] hover:bg-blue-600'
                         : 'text-[var(--text-primary)]',
                     )}
                   >
@@ -288,7 +288,7 @@ export function RangePicker({
                     {t('date.range.compare', 'Compare to previous period')}
                   </label>
                 ) : (
-                  <span className="text-[10px] text-[var(--text-muted)]">
+                  <span className="text-2xs text-[var(--text-muted)]">
                     {stagedDays
                       ? t('date.range.summaryDays', '{{count}} days', { count: stagedDays })
                       : ''}

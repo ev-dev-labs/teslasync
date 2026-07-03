@@ -265,7 +265,7 @@ export function SearchInput({
         <div
           className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] shadow-lg"
         >
-          <div className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
+          <div className="px-3 py-1.5 text-2xs uppercase tracking-wider text-[var(--text-muted)]">
             {t('search.history.title', 'Recent searches')}
           </div>
           <ul

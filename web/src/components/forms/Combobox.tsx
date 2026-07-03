@@ -677,7 +677,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
               role="option"
               aria-selected={false}
               aria-disabled="true"
-              className="border-t border-[var(--glass-border)] px-3 py-1.5 text-[11px] text-[var(--text-muted)]"
+              className="border-t border-[var(--glass-border)] px-3 py-1.5 text-2xs text-[var(--text-muted)]"
             >
               {t('combobox.moreHidden', '{{count}} more — refine search', {
                 count: filteredOptions.length - visibleOptions.length,

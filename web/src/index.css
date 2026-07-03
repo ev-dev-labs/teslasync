@@ -48,6 +48,11 @@
   /* Text on an inverted surface (flipped tooltip / accent fill). Dark in
    * dark themes, overridden light under :root.light-mode below. */
   --text-inverse: #0f172a;
+  /* Foreground for text/icons sitting on a solid accent fill (blue-600 /
+   * --accent). The accent stays a dark blue in every theme, so white always
+   * meets AA on it — constant across modes (no light-mode override needed;
+   * dark text on blue-600 would fail contrast). */
+  --text-on-accent: #ffffff;
   /*
    * Chart / surface tokens consumed by chartTokens in lib/tokens.ts.
    * Defaults below are dark-mode values; :root.light-mode (further down in
