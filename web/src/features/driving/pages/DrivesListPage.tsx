@@ -8,7 +8,7 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { PanelTitle, SectionTitle } from '@/components/ui';
+import { PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
@@ -464,20 +464,20 @@ export default function DrivesListPage() {
   const collectionLabel = collectionPills.find(p => p.key === collection)?.label ?? 'All';
   const stickySummary = (
     <>
-      <span className="text-[var(--text-secondary)] truncate">
+      <Text as="span" color="secondary" className="truncate">
         {t('drives.title', 'Drive History')}
-      </span>
+      </Text>
       <span className="opacity-50">·</span>
       <span className="truncate">{periodLabel}</span>
       <span className="opacity-50">·</span>
-      <span className="text-[var(--text-primary)] font-medium">{collectionLabel}</span>
+      <Text as="span" color="primary" weight="medium">{collectionLabel}</Text>
       <span className="opacity-50">·</span>
       <span>{fmtCompact(filteredDrives.length)} {t('drives.results', 'results')}</span>
       {avgGrade.label !== '—' && (
         <>
           <span className="opacity-50">·</span>
           <span>{t('drives.avgScore', 'avg')}{' '}
-            <span style={{ color: avgGrade.color }} className="font-semibold">{avgGrade.label}</span>
+            <Text as="span" weight="semibold" style={{ color: avgGrade.color }}>{avgGrade.label}</Text>
           </span>
         </>
       )}
@@ -734,13 +734,13 @@ export default function DrivesListPage() {
                   <dl className="space-y-3">
                     {highlightRows.map((row) => (
                       <div key={row.key} className="flex items-center justify-between gap-3">
-                        <dt className="flex min-w-0 items-center gap-2 text-sm text-[var(--text-secondary)]">
+                        <Text as="dt" size="sm" color="secondary" className="flex min-w-0 items-center gap-2">
                           {row.icon}
                           <span className="truncate">{row.label}</span>
-                        </dt>
-                        <dd className="shrink-0 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+                        </Text>
+                        <Text as="dd" size="sm" weight="semibold" color="primary" className="shrink-0 tabular-nums">
                           {row.value}
-                        </dd>
+                        </Text>
                       </div>
                     ))}
                   </dl>
@@ -772,9 +772,9 @@ export default function DrivesListPage() {
             <SectionTitle className="flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('drives.allDrives', 'All Drives')}
-              <span className="text-xs font-normal text-[var(--text-muted)]">
+              <Text as="span" size="xs" weight="regular" color="muted">
                 ({fmtCompact(sortedDrives.length)})
-              </span>
+              </Text>
             </SectionTitle>
             {sortedDrives.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">

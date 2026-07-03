@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Gauge, TrendingUp, Zap, AlertTriangle, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { Text } from '@/components/ui';
 import { InlineMetric } from '@/components/data-display/InlineMetric';
 import {
   HistoryListRow, ScoreBadge, BatteryDelta, RouteDisplay,
@@ -66,13 +67,13 @@ function DriveCardImpl({
   const primary = (
     <>
       {/* Time-of-day only — the date is shown in the date-group header above */}
-      <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
+      <Text as="span" size="sm" weight="semibold" color="primary" className="tabular-nums">
         {formatTime(drive.startTs, { tz })}
-      </span>
-      <span className="text-[10px] text-[var(--text-muted)]">·</span>
-      <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
+      </Text>
+      <Text as="span" size="2xs" color="muted">·</Text>
+      <Text as="span" size="xs" color="muted" className="tabular-nums">
         {formatDurationMinutes((drive.durationS) / 60)}
-      </span>
+      </Text>
       {hasData ? (
         <Badge variant="info" size="sm">
           {fmtNumber(toDistanceDisplay(actualDistance))} {distanceUnit}
