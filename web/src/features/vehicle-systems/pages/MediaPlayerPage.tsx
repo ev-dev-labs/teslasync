@@ -6,6 +6,7 @@ import {
   Headphones, Volume2, ListMusic, BarChart3, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 
 import { PageContainer } from '@/components/layout';
 import {
@@ -175,7 +176,7 @@ export default function MediaPlayerPage() {
         render: (row) => (
           <TimeStamp
             value={row.created_at}
-            className="whitespace-nowrap text-xs text-[var(--text-secondary)]"
+            className={cn('whitespace-nowrap', typography.size.xs, typography.color.secondary)}
           />
         ),
       },
@@ -217,7 +218,7 @@ export default function MediaPlayerPage() {
         header: t('media.col.volume', 'Volume'),
         sortable: true,
         render: (row) => (
-          <Text as="span" size="sm" className="tabular-nums text-cyan-300">
+          <Text as="span" variant="body" className="tabular-nums text-cyan-300">
             {row.audio_volume ?? '—'}/{row.audio_volume_max ?? '—'}
           </Text>
         ),
