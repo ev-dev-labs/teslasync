@@ -34,6 +34,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { useIsCoarsePointer } from '@/hooks/useMediaQuery';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 
@@ -215,7 +216,10 @@ export function PullToRefresh({
           <div
             role={refreshing ? 'status' : undefined}
             aria-live={refreshing ? 'polite' : undefined}
-            className="mb-1 flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/[0.06] px-3 py-1 text-xs text-[var(--text-secondary)] backdrop-blur"
+            className={cn(
+              'mb-1 flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/[0.06] px-3 py-1 backdrop-blur',
+              typography.role.bodySm,
+            )}
             style={{
               opacity: Math.max(0.4, progress),
               transform: `scale(${0.8 + progress * 0.2})`,

@@ -35,6 +35,7 @@ import {
 } from 'react';
 import { Archive, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { useIsCoarsePointer } from '@/hooks/useMediaQuery';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 
@@ -298,7 +299,9 @@ export function SwipeRow({
             tabIndex={offset < 0 ? 0 : -1}
             aria-label={rightAction.ariaLabel ?? rightAction.label}
             className={cn(
-              'flex w-full items-center justify-center gap-1.5 text-xs font-medium',
+              'flex w-full items-center justify-center gap-1.5',
+              typography.size.xs,
+              typography.weight.medium,
               actionPanelClasses(rightAction.tone),
             )}
           >
@@ -322,7 +325,9 @@ export function SwipeRow({
             tabIndex={offset > 0 ? 0 : -1}
             aria-label={leftAction.ariaLabel ?? leftAction.label}
             className={cn(
-              'flex w-full items-center justify-center gap-1.5 text-xs font-medium',
+              'flex w-full items-center justify-center gap-1.5',
+              typography.size.xs,
+              typography.weight.medium,
               actionPanelClasses(leftAction.tone),
             )}
           >
