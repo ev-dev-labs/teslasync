@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Star } from 'lucide-react';
 import { FadeIn } from '@/components/motion';
+import { Text } from '@/components/ui';
 import type { CommandDef } from '../commands';
 
 interface FavoritesBarProps {
@@ -20,10 +21,10 @@ export function FavoritesBar({ favorites, commands, renderTile }: FavoritesBarPr
       <div>
         <div className="flex items-center gap-2 mb-2">
           <Star className="h-4 w-4 text-neon-amber fill-neon-amber" />
-          <span className="text-xs uppercase tracking-wider text-[var(--text-secondary)] font-medium">
+          <Text size="xs" weight="medium" className="uppercase tracking-wider text-[var(--text-secondary)]">
             {t('commands.cat.quickActions', 'Quick Actions')}
-          </span>
-          <span className="text-[10px] text-[var(--text-muted)]">({favCmds.length})</span>
+          </Text>
+          <Text size="2xs" color="muted">({favCmds.length})</Text>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {favCmds.map(cmd => renderTile(cmd))}

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { ChevronDown } from 'lucide-react';
 import { FadeIn } from '@/components/motion';
-import { Button as ControlButton } from '@/components/ui';
+import { Button as ControlButton, Text } from '@/components/ui';
 import { CATEGORY_META, type CommandCategory } from '../commands';
 
 interface CollapsibleCommandGroupProps {
@@ -53,10 +53,10 @@ export function CollapsibleCommandGroup({
         className="group h-auto w-full justify-start py-2 text-left font-normal hover:bg-transparent"
       >
         <Icon className="h-4 w-4 text-[var(--text-muted)]" />
-        <span className="text-xs uppercase tracking-wider text-[var(--text-secondary)] font-medium">
+        <Text size="xs" weight="medium" className="uppercase tracking-wider text-[var(--text-secondary)]">
           {t(meta.labelKey, meta.fallback)}
-        </span>
-        <span className="text-[10px] text-[var(--text-muted)] ml-1">({count})</span>
+        </Text>
+        <Text size="2xs" color="muted" className="ml-1">({count})</Text>
         <ChevronDown className={cn(
           'h-3.5 w-3.5 text-[var(--text-muted)] ml-auto transition-transform duration-normal',
           open && 'rotate-180',

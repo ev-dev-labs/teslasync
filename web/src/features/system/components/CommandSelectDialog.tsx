@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Modal, Button as ControlButton } from '@/components/ui';
+import { Modal, Button as ControlButton, Heading, Text, Caption } from '@/components/ui';
 import type { CommandDef } from '../commands';
 
 interface CommandSelectDialogProps {
@@ -41,9 +41,9 @@ export function CommandSelectDialog({
           <div className="rounded-xl p-2.5 bg-[var(--surface-2)] text-[var(--text-secondary)]">
             <Icon className="h-5 w-5" />
           </div>
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+          <Heading level="panel" as="h2">
             {t(def.labelKey, def.labelFallback)}
-          </h2>
+          </Heading>
         </div>
 
         <div className="space-y-2">
@@ -63,13 +63,13 @@ export function CommandSelectDialog({
                 loading && 'opacity-50 cursor-not-allowed',
               )}
             >
-              <span className="text-sm font-medium text-[var(--text-primary)]">
+              <Text size="sm" weight="medium" color="primary">
                 {t(opt.labelKey, opt.labelFallback)}
-              </span>
+              </Text>
               {opt.description && (
-                <span className="block text-xs text-[var(--text-muted)] mt-0.5">
+                <Caption className="block mt-0.5">
                   {opt.description}
-                </span>
+                </Caption>
               )}
             </ControlButton>
           ))}

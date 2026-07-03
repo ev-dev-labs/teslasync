@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Button as ControlButton, GlassPanel } from '@/components/ui';
+import { Button as ControlButton, GlassPanel, Text } from '@/components/ui';
 import { Loader2, Star } from 'lucide-react';
 import type { CommandDef, VehicleState } from '../commands';
 
@@ -17,9 +17,9 @@ interface ToggleCommandTileProps {
 }
 
 const onStyles = {
-  default: { panel: 'border-neon-cyan/20 bg-neon-cyan/5', icon: 'bg-neon-cyan/20 text-neon-cyan', dot: 'bg-neon-cyan', text: 'text-neon-cyan' },
-  danger:  { panel: 'border-neon-red/20 bg-neon-red/5',   icon: 'bg-neon-red/20 text-neon-red',   dot: 'bg-neon-red',  text: 'text-neon-red' },
-  success: { panel: 'border-neon-green/20 bg-neon-green/5', icon: 'bg-neon-green/20 text-neon-green', dot: 'bg-neon-green', text: 'text-neon-green' },
+  default: { panel: 'border-neon-cyan/20 bg-neon-cyan/5', icon: 'bg-neon-cyan/20 text-neon-cyan', dot: 'bg-neon-cyan', text: 'text-cyan-300' },
+  danger:  { panel: 'border-neon-red/20 bg-neon-red/5',   icon: 'bg-neon-red/20 text-neon-red',   dot: 'bg-neon-red',  text: 'text-rose-300' },
+  success: { panel: 'border-neon-green/20 bg-neon-green/5', icon: 'bg-neon-green/20 text-neon-green', dot: 'bg-neon-green', text: 'text-emerald-300' },
 } as const;
 
 export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, loading, lastStatus, isFavorite, onToggleFavorite }: ToggleCommandTileProps) {
@@ -78,14 +78,12 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
       <div className={cn('rounded-xl p-2.5 transition-colors', isOn ? styles.icon : 'bg-[var(--surface-2)] text-[var(--text-muted)]')}>
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
       </div>
-      <span className="text-xs font-medium text-[var(--text-primary)]">{t(def.labelKey, def.labelFallback)}</span>
-      <span className={cn('text-[10px] font-medium', isOn ? styles.text : 'text-[var(--text-muted)]')}>
+      <Text size="xs" weight="medium" color="primary">{t(def.labelKey, def.labelFallback)}</Text>
+      <Text size="2xs" weight="medium" className={isOn ? styles.text : 'text-[var(--text-muted)]'}>
         {isOn ? t('commands.on', 'ON') : t('commands.off', 'OFF')}
-      </span>
+      </Text>
       {lastStatus && (
-        <span className={cn('text-[9px]',
-          lastStatus.startsWith('✓') ? 'text-neon-green/60' : 'text-neon-red/60',
-        )}>{lastStatus}</span>
+        <Text size="2xs" className={lastStatus.startsWith('✓') ? 'text-emerald-300' : 'text-rose-300'}>{lastStatus}</Text>
       )}
     </GlassPanel>
   );
