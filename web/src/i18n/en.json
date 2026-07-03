@@ -1281,7 +1281,12 @@
     "banner": {
       "toFleetPrefix": "Looking to compare two vehicles instead?",
       "toFleetCta": "Open Fleet comparison →"
-    }
+    },
+    "insightsEmpty": "Insights appear once both periods have data.",
+    "kpis": "Comparison metrics",
+    "selectVehicle": "Select vehicle",
+    "vs": "vs",
+    "refresh": "Refresh"
   },
   "live": {
     "connected": "Live",
