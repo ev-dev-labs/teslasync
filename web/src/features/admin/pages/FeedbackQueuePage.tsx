@@ -9,6 +9,7 @@ import {
   GlassPanel,
   PanelTitle,
   Select,
+  Text,
   type Column,
 } from '@/components/ui'
 import { PageContainer } from '@/components/layout'
@@ -126,7 +127,7 @@ export default function FeedbackQueuePage() {
         key: 'created_at',
         header: t('feedback.queue.col.created', 'Created'),
         render: (row) => (
-          <span className="whitespace-nowrap text-sm text-[var(--text-primary)]">{formatDateTime(row.created_at)}</span>
+          <Text variant="body" className="whitespace-nowrap">{formatDateTime(row.created_at)}</Text>
         ),
         sortable: true,
       },
@@ -139,7 +140,7 @@ export default function FeedbackQueuePage() {
       {
         key: 'title',
         header: t('feedback.queue.col.title', 'Title'),
-        render: (row) => <span className="text-[var(--text-primary)]">{row.title || '—'}</span>,
+        render: (row) => <Text variant="body">{row.title || '—'}</Text>,
         sortable: true,
       },
       {
