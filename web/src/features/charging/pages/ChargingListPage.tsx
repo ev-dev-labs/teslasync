@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
-import { GlassPanel, Pagination, SectionTitle, Caption } from '@/components/ui';
+import { GlassPanel, Pagination, SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -478,9 +478,9 @@ export default function ChargingListPage() {
           <span className="opacity-50">·</span>
           <span>
             {t('charging.batteryScore', 'Battery score')}{' '}
-            <span style={{ color: currentStats.batteryFriendlyGrade.color }} className="font-semibold">
+            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
               {currentStats.batteryFriendlyGrade.label}
-            </span>
+            </Text>
           </span>
         </>
       )}
@@ -514,22 +514,22 @@ export default function ChargingListPage() {
   /* ── Sticky summary ──────────────────────────────────────────── */
   const stickySummary = (
     <>
-      <span className="text-[var(--text-secondary)] truncate">
+      <Text as="span" color="secondary" className="truncate">
         {t('charging.list.title', 'Charging Sessions')}
-      </span>
+      </Text>
       <span className="opacity-50">·</span>
       <span className="truncate">{periodLabel}</span>
       <span className="opacity-50">·</span>
-      <span className="text-[var(--text-primary)] font-medium">{collectionLabel}</span>
+      <Text as="span" color="primary" weight="medium">{collectionLabel}</Text>
       <span className="opacity-50">·</span>
       <span>{fmtCompact(filteredSessions.length)} {t('charging.results', 'results')}</span>
       {currentStats.batteryFriendlyGrade.label !== '—' && (
         <>
           <span className="opacity-50">·</span>
           <span>{t('charging.avgScore', 'avg')}{' '}
-            <span style={{ color: currentStats.batteryFriendlyGrade.color }} className="font-semibold">
+            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
               {currentStats.batteryFriendlyGrade.label}
-            </span>
+            </Text>
           </span>
         </>
       )}
@@ -853,9 +853,9 @@ export default function ChargingListPage() {
                 <SectionTitle className="flex items-center gap-2">
                   <Plug className="h-4 w-4 text-emerald-400" aria-hidden="true" />
                   {t('charging.allSessions', 'All sessions')}
-                  <Caption className="font-normal text-[var(--text-muted)]">
+                  <Text as="span" size="xs" weight="regular" color="muted">
                     ({fmtCompact(sortedSessions.length)})
-                  </Caption>
+                  </Text>
                 </SectionTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <SortControl<SortField>
