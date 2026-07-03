@@ -257,7 +257,7 @@ function ChangelogModalEntry({ entry, defaultOpen }: EntryProps) {
         <div className="space-y-3 border-t border-[var(--glass-border)] px-4 py-3">
           {grouped.map((group) => (
             <div key={group.type}>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              <p className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                 {t(SECTION_KEY[group.type], SECTION_FALLBACK[group.type])}
               </p>
               <ul className="space-y-1.5">

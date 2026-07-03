@@ -175,7 +175,7 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
             {t('export.jobDrawer.title', 'Export jobs')}
           </span>
           {activeJobs.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-cyan-400/10 text-cyan-300">
+            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-medium bg-cyan-400/10 text-cyan-300">
               {t('export.jobDrawer.activePill', '{{count}} active', { count: activeJobs.length })}
             </span>
           )}
@@ -236,7 +236,7 @@ function DrawerSection({
 }) {
   return (
     <div>
-      <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+      <p className="px-2 pb-1 pt-1 text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
         {label}
       </p>
       {jobs.length === 0 ? (
@@ -269,11 +269,11 @@ function JobRow({ job }: { job: ExportJobSummary }) {
           <span className="font-medium text-[var(--text-primary)] truncate">
             {prettyType(job.type, t)}
           </span>
-          <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+          <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
             {job.format}
           </span>
         </div>
-        <div className="text-[11px] text-[var(--text-muted)] truncate">
+        <div className="text-2xs text-[var(--text-muted)] truncate">
           {bucket === 'active'
             ? t('export.jobDrawer.statusLine', '{{status}} · started {{relative}}', {
                 status: prettyStatus(job.status, t),
@@ -285,7 +285,7 @@ function JobRow({ job }: { job: ExportJobSummary }) {
               })}
         </div>
         {job.error_message && (
-          <p className="mt-0.5 text-[11px] text-rose-300 truncate" title={job.error_message}>
+          <p className="mt-0.5 text-2xs text-rose-300 truncate" title={job.error_message}>
             {job.error_message}
           </p>
         )}
@@ -296,7 +296,7 @@ function JobRow({ job }: { job: ExportJobSummary }) {
           target="_blank"
           rel="noreferrer"
           className={cn(
-            'shrink-0 inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium',
+            'shrink-0 inline-flex items-center gap-1 rounded px-2 py-1 text-2xs font-medium',
             'border border-white/[0.08] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
           )}

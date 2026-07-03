@@ -149,7 +149,7 @@ export function CookieConsentBanner({
               <button
                 type="button"
                 onClick={() => setShowDetails((v) => !v)}
-                className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline underline-offset-2"
+                className="text-2xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline underline-offset-2"
                 data-testid="cookie-consent-toggle-details"
                 aria-expanded={showDetails}
                 aria-controls="cookie-consent-details"
@@ -163,13 +163,13 @@ export function CookieConsentBanner({
             {showDetails && (
               <ul
                 id="cookie-consent-details"
-                className="mt-3 space-y-2 text-[11px] text-[var(--text-secondary)]"
+                className="mt-3 space-y-2 text-xs text-[var(--text-secondary)]"
                 data-testid="cookie-consent-details"
               >
                 <li className="rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
                   <p className="font-medium text-[var(--text-primary)]">
                     {t('consent.category.essential.title', 'Strictly necessary')}
-                    <span className="ml-2 inline-flex items-center rounded-full bg-neon-green/10 px-2 py-0.5 text-[10px] font-medium text-neon-green ring-1 ring-neon-green/20">
+                    <span className="ml-2 inline-flex items-center rounded-full bg-neon-green/10 px-2 py-0.5 text-2xs font-medium text-neon-green ring-1 ring-neon-green/20">
                       {t('consent.category.alwaysOn', 'Always on')}
                     </span>
                   </p>

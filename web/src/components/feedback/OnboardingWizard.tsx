@@ -91,9 +91,8 @@ export default function OnboardingWizard() {
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md rounded-2xl border p-6"
+        className="relative w-full max-w-md rounded-2xl border p-6 bg-[var(--surface-1)]/95"
         style={{
-          background: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(20px)',
           borderColor: 'rgba(255, 255, 255, 0.08)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 240, 255, 0.05)',
@@ -134,7 +133,7 @@ export default function OnboardingWizard() {
             <StepIcon className="h-8 w-8" style={{ color: step.color }} />
           </div>
 
-          <h2 className="text-xl font-bold text-white mb-2">{step.title}</h2>
+          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">{step.title}</h2>
           <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-8">{step.description}</p>
         </div>
 
@@ -148,7 +147,7 @@ export default function OnboardingWizard() {
           </button>
           <button
             onClick={handleNext}
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-all"
+            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-all"
             style={{
               background: 'linear-gradient(135deg, #00f0ff20, #8b5cf620)',
               border: '1px solid rgba(0, 240, 255, 0.2)',
