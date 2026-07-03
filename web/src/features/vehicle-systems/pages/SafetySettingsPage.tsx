@@ -1,20 +1,32 @@
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import { UserCheck, Armchair, Lock, Navigation, Cpu, AlertCircle } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { VehicleSelect } from '@/components/forms';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { TimeStamp } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts/RadialGauge';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { AlertBanner } from '@/components/feedback/AlertBanner';
-import { FadeIn } from '@/components/motion/FadeIn';
 import {
+  UserCheck,
+  Armchair,
+  Lock,
+  Navigation,
+  Cpu,
+  ShieldCheck,
+  ShieldAlert,
+  Car,
+  RefreshCw,
+} from 'lucide-react';
+import { PageContainer } from '@/components/layout';
+import {
+  GlassPanel,
+  Badge,
+  Button,
+  DataTable,
+  PanelTitle,
+  Caption,
+  Label,
+  Text,
+  type Column,
+} from '@/components/ui';
+import { VehicleSelect } from '@/components/forms';
+import { MetricCard, TimeStamp, DataFreshnessAuto } from '@/components/data-display';
+import {
+  RadialGauge,
   LineChart,
   Line,
   XAxis,
@@ -22,47 +34,34 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ChartTooltip,
   chartGrid,
   axisTick,
   chartMargin,
   CHART_COLORS,
   AREA_DEFAULTS,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useSafety, useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { getErrorMessage } from '@/lib/errorMessage';
-import { request } from '@/api/client';
-import { cleanSafetyEnum, isSafetyEnumActive, type SafetyEnumField } from '@/lib/safetyEnum';
+import {
+  cleanSafetyEnum,
+  isSafetyEnumActive,
+  type SafetyEnumField,
+} from '@/lib/safetyEnum';
+import type { SafetySnapshot } from '@/types/vehicle-systems';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
-interface SafetySnapshot {
-  id?: number;
-  vehicle_id?: number;
-  automatic_emergency_braking_off?: boolean | null;
-  automatic_blind_spot_camera?: boolean | null;
-  blind_spot_collision_warning?: boolean | null;
-  emergency_lane_departure_avoidance?: boolean | null;
-  // See lib/safetyEnum.ts for the rationale: pass-through values may arrive as
-  // string|boolean|number|null.
-  forward_collision_warning?: string | boolean | number | null;
-  lane_departure_avoidance?: string | boolean | number | null;
-  speed_limit_warning?: string | boolean | number | null;
-  cruise_follow_distance?: string | boolean | number | null;
-  pin_to_drive_enabled?: boolean | null;
-  miles_since_reset?: number | null;
-  self_driving_miles_since_reset?: number | null;
-  created_at?: string;
-}
 
 interface FeatureCardDef {
   key: string;
@@ -106,14 +105,23 @@ function enabledCount(snap: SafetySnapshot): number {
 
 const TOTAL_FEATURES = 9;
 
+/** Semantic gauge color — kept as a computed value so it can drive the
+ *  RadialGauge `color` prop directly (dynamic, not a static var style). */
 function scoreColor(pct: number): string {
   if (pct >= 80) return '#10b981';
   if (pct >= 50) return '#f59e0b';
   return '#ef4444';
 }
 
+/** Score → Badge variant. */
+function scoreBadgeVariant(pct: number): 'success' | 'warning' | 'danger' {
+  if (pct >= 80) return 'success';
+  if (pct >= 50) return 'warning';
+  return 'danger';
+}
+
 /* ------------------------------------------------------------------ */
-/*  SignalCard                                                          */
+/*  SignalCard — a single live security/occupant signal tile          */
 /* ------------------------------------------------------------------ */
 
 function SignalCard({
@@ -122,30 +130,34 @@ function SignalCard({
   label,
   positive,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   value: string;
   label: string;
   positive?: boolean | null;
 }) {
+  // Toned 300-level accents for body text (never neon). Status is also
+  // conveyed by the value text itself, so meaning is not color-dependent.
   const color =
     positive === true
-      ? 'text-green-400'
+      ? 'text-emerald-300'
       : positive === false
-        ? 'text-red-400'
+        ? 'text-rose-300'
         : 'text-[var(--text-secondary)]';
   return (
-    <GlassPanel className="p-4 flex flex-col items-center gap-2 text-center">
-      <span className={color}>{icon}</span>
-      <span className={cn('text-sm font-bold', color)}>{value}</span>
-      <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-        {label}
+    <GlassPanel className="flex flex-col items-center gap-2 p-4 text-center">
+      <span className={color} aria-hidden="true">
+        {icon}
       </span>
+      <Text as="span" size="sm" weight="bold" className={cn('block', color)}>
+        {value}
+      </Text>
+      <Label className="block">{label}</Label>
     </GlassPanel>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  SafetyCard                                                         */
+/*  SafetyCard — a single ADAS feature tile                           */
 /* ------------------------------------------------------------------ */
 
 function SafetyCard({
@@ -160,7 +172,7 @@ function SafetyCard({
   valueText: string;
 }) {
   return (
-    <GlassPanel className="p-4 space-y-2" hover glow={enabled ? 'green' : 'none'}>
+    <GlassPanel className="space-y-2 p-4" hover glow={enabled ? 'green' : 'none'}>
       <div className="flex items-center gap-3">
         <div
           className={cn(
@@ -173,31 +185,31 @@ function SafetyCard({
               'block h-5 w-5 rounded-md',
               enabled ? 'bg-neon-green/40' : 'bg-[var(--surface-2)]',
             )}
+            aria-hidden="true"
           />
         </div>
-        <div className="flex-1 min-w-0">
-          <span className="text-xs font-medium text-[var(--text-primary)] block truncate">
+        <div className="min-w-0 flex-1">
+          <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">
             {label}
-          </span>
-          <span className="text-[10px] text-[var(--text-muted)] block">
-            {description}
-          </span>
+          </Text>
+          <Caption className="block">{description}</Caption>
         </div>
         <span
           className={cn(
-            'h-2 w-2 rounded-full shrink-0',
+            'h-2 w-2 shrink-0 rounded-full',
             enabled ? 'bg-neon-green' : 'bg-[var(--surface-2)]',
           )}
+          aria-hidden="true"
         />
       </div>
-      <span
-        className={cn(
-          'text-sm font-semibold block',
-          enabled ? 'text-emerald-300' : 'text-[var(--text-muted)]',
-        )}
+      <Text
+        as="span"
+        size="sm"
+        weight="semibold"
+        className={cn('block', enabled ? 'text-emerald-300' : 'text-[var(--text-muted)]')}
       >
         {valueText}
-      </span>
+      </Text>
     </GlassPanel>
   );
 }
@@ -315,8 +327,14 @@ function buildFeatureCards(
 function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[] {
   const boolCell = (val: boolean): ReactNode => (
     <Badge variant={val ? 'success' : 'danger'} size="sm">
-      {val ? 'On' : 'Off'}
+      {val ? t('On') : t('Off')}
     </Badge>
+  );
+
+  const enumCell = (value: unknown, field: SafetyEnumField): ReactNode => (
+    <Text as="span" variant="bodySm">
+      {cleanEnum(value, field)}
+    </Text>
   );
 
   return [
@@ -325,7 +343,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('Time'),
       sortable: true,
       render: (row) => (
-        <TimeStamp value={row.created_at} className="text-[var(--text-muted)] whitespace-nowrap text-xs" />
+        <TimeStamp value={row.created_at} className="whitespace-nowrap text-xs text-[var(--text-muted)]" />
       ),
     },
     {
@@ -346,20 +364,12 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
     {
       key: 'fcw',
       header: t('FCW'),
-      render: (row) => (
-        <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.forward_collision_warning, 'forward_collision_warning')}
-        </span>
-      ),
+      render: (row) => enumCell(row.forward_collision_warning, 'forward_collision_warning'),
     },
     {
       key: 'lda',
       header: t('LDA'),
-      render: (row) => (
-        <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.lane_departure_avoidance, 'lane_departure_avoidance')}
-        </span>
-      ),
+      render: (row) => enumCell(row.lane_departure_avoidance, 'lane_departure_avoidance'),
     },
     {
       key: 'elda',
@@ -369,20 +379,12 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
     {
       key: 'cfd',
       header: t('CFD'),
-      render: (row) => (
-        <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.cruise_follow_distance, 'cruise_follow_distance')}
-        </span>
-      ),
+      render: (row) => enumCell(row.cruise_follow_distance, 'cruise_follow_distance'),
     },
     {
       key: 'slw',
       header: t('SLW'),
-      render: (row) => (
-        <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.speed_limit_warning, 'speed_limit_warning')}
-        </span>
-      ),
+      render: (row) => enumCell(row.speed_limit_warning, 'speed_limit_warning'),
     },
     {
       key: 'pin',
@@ -393,25 +395,11 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
 }
 
 /* ------------------------------------------------------------------ */
-/*  Loading skeleton                                                   */
+/*  KPI skeleton tile                                                  */
 /* ------------------------------------------------------------------ */
 
-function SafetyPageSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} height={80} />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <Skeleton key={i} height={96} />
-        ))}
-      </div>
-      <Skeleton height={300} />
-    </div>
-  );
+function KpiSkeleton() {
+  return <Skeleton height={84} />;
 }
 
 /* ------------------------------------------------------------------ */
@@ -427,40 +415,18 @@ export default function SafetySettingsPage() {
   /* --- vehicle selector (global) --- */
   const { vehicleId: selectedId } = useSelectedVehicle();
   const activeId = selectedId != null ? String(selectedId) : '';
+  const noVehicle = activeId === '';
 
-  /* --- security data (live safety signals) --- */
-  const { data: securityData } = useSecurityLatest(
-    Number(activeId) || 0,
-    15_000,
-  );
+  /* --- data hooks (TanStack Query, snake_case params, no /api/v1 prefix) --- */
+  const latestQuery = useSafety(activeId);
+  const historyQuery = useSafetyHistory(activeId);
+  const securityQuery = useSecurityLatest(Number(activeId) || 0, 15_000);
 
-  /* --- safety data --- */
-  const {
-    data: latest,
-    isLoading: latestLoading,
-    error: latestError,
-  } = useQuery<SafetySnapshot>({
-    queryKey: ['safety-latest', activeId],
-    queryFn: () => request<SafetySnapshot>(`/safety/latest?vehicle_id=${activeId}`),
-    enabled: activeId !== '',
-    staleTime: 15_000,
-  });
+  const latest = latestQuery.data ?? null;
+  const history = historyQuery.data ?? [];
+  const securityData = securityQuery.data ?? null;
 
-  const {
-    data: history,
-    isLoading: historyLoading,
-    error: historyError,
-  } = useQuery<SafetySnapshot[]>({
-    queryKey: ['safety-history', activeId],
-    queryFn: () => request<SafetySnapshot[]>(`/safety?vehicle_id=${activeId}&limit=100`),
-    enabled: activeId !== '',
-    staleTime: 30_000,
-  });
-
-  /* --- derived data --- */
-  const anyError = [latestError, historyError].find(Boolean);
-  const isLoading = latestLoading || historyLoading;
-
+  /* --- derived data (null-safe) --- */
   const enabled = useMemo(() => (latest ? enabledCount(latest) : 0), [latest]);
   const disabled = TOTAL_FEATURES - enabled;
   const scorePct = useMemo(
@@ -473,105 +439,140 @@ export default function SafetySettingsPage() {
     [latest, t],
   );
 
-  const chartData = useMemo(
-    () => (history ? toChartData(history) : []),
-    [history],
-  );
+  const chartData = useMemo(() => toChartData(history), [history]);
 
   const historyColumns = useMemo(() => buildHistoryColumns(t), [t]);
 
   const sortedHistory = useMemo(
     () =>
-      history
-        ? [...history].sort(
-            (a, b) =>
-              new Date(b.created_at ?? '').getTime() - new Date(a.created_at ?? '').getTime(),
-          )
-        : [],
+      [...history].sort(
+        (a, b) =>
+          new Date(b.created_at ?? '').getTime() - new Date(a.created_at ?? '').getTime(),
+      ),
     [history],
+  );
+
+  const selectVehicleMsg = t('safety.selectVehicle', 'Select a vehicle to view its safety settings.');
+
+  const refreshAll = () => {
+    latestQuery.refetch();
+    historyQuery.refetch();
+    securityQuery.refetch();
+  };
+
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <VehicleSelect />
+      <DataFreshnessAuto query={latestQuery} />
+      <Button
+        variant="ghost"
+        onClick={refreshAll}
+        aria-label={t('common.refresh', 'Refresh')}
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
   );
 
   /* --- render --- */
   return (
     <PageContainer
       title={t('Safety Settings')}
-      subtitle={t('ADAS features, safety score, and driving stats')}
-      loading={false}
-      error={latestError as Error | null}
-      actions={<VehicleSelect />}
+      subtitle={t('safety.subtitle', 'ADAS features, safety score, and driving stats')}
+      actions={actions}
     >
-      {/* Error banner */}
-      {anyError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
-        </AlertBanner>
-      )}
+      {/* 1 — KPI band: full-width responsive metric grid */}
+      <FadeIn>
+        <section
+          aria-label={t('safety.kpis', 'Safety summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          {noVehicle ? (
+            <div className="col-span-full">
+              <GlassPanel className="p-4 sm:p-5">
+                <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+              </GlassPanel>
+            </div>
+          ) : latestQuery.isLoading && !latest ? (
+            Array.from({ length: 4 }).map((_, i) => <KpiSkeleton key={i} />)
+          ) : latestQuery.isError ? (
+            <div className="col-span-full">
+              <GlassPanel className="p-4 sm:p-5">
+                <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
+              </GlassPanel>
+            </div>
+          ) : (
+            <>
+              <MetricCard
+                label={t('Safety Score')}
+                value={`${fmtInt(scorePct)}%`}
+                icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+                color={scorePct >= 80 ? 'green' : scorePct >= 50 ? 'amber' : 'red'}
+              />
+              <MetricCard label={t('Total Features')} value={TOTAL_FEATURES} color="cyan" />
+              <MetricCard label={t('Enabled')} value={enabled} color="green" />
+              <MetricCard
+                label={t('Disabled')}
+                value={disabled}
+                color={disabled > 0 ? 'red' : 'green'}
+              />
+            </>
+          )}
+        </section>
+      </FadeIn>
 
-      {/* Loading skeleton */}
-      {isLoading && <SafetyPageSkeleton />}
-
-      {/* Empty state */}
-      {!isLoading && !latest && (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No safety data available for this vehicle.')} />
-      )}
-
-      {/* Content */}
-      {!isLoading && latest && (
-        <div className="space-y-6">
-          {/* ---- Safety Score Gauge + Stat Cards ---- */}
-          <FadeIn>
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
-              {/* RadialGauge */}
-              <GlassPanel className="p-6 flex flex-col items-center justify-center lg:col-span-1">
+      {/* 2 — Hero bento: safety score gauge + live signals */}
+      <FadeIn delay={0.05}>
+        <section
+          aria-label={t('safety.overview', 'Safety overview')}
+          className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3"
+        >
+          {/* Safety score gauge */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <PanelTitle className="mb-3">{t('safety.scoreTitle', 'Safety Score')}</PanelTitle>
+            {noVehicle ? (
+              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+            ) : latestQuery.isLoading && !latest ? (
+              <Skeleton height={220} />
+            ) : latestQuery.isError ? (
+              <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
+            ) : !latest ? (
+              <EmptyState
+                icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                message={t('safety.noData', 'No safety data available for this vehicle.')}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-4">
                 <RadialGauge
                   value={enabled}
                   max={TOTAL_FEATURES}
                   label={t('Safety Score')}
                   unit={`${fmtInt(scorePct)}%`}
                   color={scoreColor(scorePct)}
-                  size={120}
+                  size={140}
                 />
-                <Badge
-                  variant={scorePct >= 80 ? 'success' : scorePct >= 50 ? 'warning' : 'danger'}
-                  className="mt-3"
-                >
+                <Badge variant={scoreBadgeVariant(scorePct)}>
                   {enabled}/{TOTAL_FEATURES} {t('enabled')}
                 </Badge>
-              </GlassPanel>
-
-              {/* Stat MetricCards */}
-              <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard
-                  label={t('Safety Score')}
-                  value={`${fmtInt(scorePct)}%`}
-                  color={scorePct >= 80 ? 'green' : scorePct >= 50 ? 'amber' : 'red'}
-                />
-                <MetricCard
-                  label={t('Total Features')}
-                  value={TOTAL_FEATURES}
-                  color="cyan"
-                />
-                <MetricCard
-                  label={t('Enabled')}
-                  value={enabled}
-                  color="green"
-                />
-                <MetricCard
-                  label={t('Disabled')}
-                  value={disabled}
-                  color={disabled > 0 ? 'red' : 'green'}
-                />
               </div>
-            </div>
-          </FadeIn>
+            )}
+          </GlassPanel>
 
-          {/* ---- Live Safety Signals ---- */}
-          <FadeIn delay={0.05}>
-            <GlassPanel className="p-5">
-              <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
-                {t('safety.liveSignals', 'Live Safety Signals')}
-              </p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Live safety signals */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3">{t('safety.liveSignals', 'Live Safety Signals')}</PanelTitle>
+            {noVehicle ? (
+              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+            ) : securityQuery.isLoading && !securityData ? (
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} height={112} />
+                ))}
+              </div>
+            ) : securityQuery.isError ? (
+              <QueryError error={securityQuery.error} onRetry={securityQuery.refetch} />
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <SignalCard
                   icon={<UserCheck className="h-6 w-6" />}
                   value={
@@ -621,57 +622,37 @@ export default function SafetySettingsPage() {
                   positive={securityData?.locked ?? null}
                 />
               </div>
-            </GlassPanel>
-          </FadeIn>
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
 
-          {/* ---- Driving Statistics ---- */}
-          <FadeIn delay={0.1}>
-            <GlassPanel className="p-5">
-              <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
-                {t('safety.drivingStats', 'Driving Statistics')}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <MetricCard
-                  icon={<Navigation className="h-5 w-5" />}
-                  label={t('safety.distanceSinceReset', 'Distance Since Reset')}
-                  value={
-                    latest.miles_since_reset != null
-                      ? fmtNumber(
-                          convertDistanceFromSI(
-                            latest.miles_since_reset,
-                            distanceUnit,
-                          ),
-                        )
-                      : '—'
-                  }
-                  subtitle={distanceUnit}
-                />
-                <MetricCard
-                  icon={<Cpu className="h-5 w-5" />}
-                  label={t('safety.selfDrivingDistance', 'Self-Driving Distance')}
-                  value={
-                    latest.self_driving_miles_since_reset != null
-                      ? fmtNumber(
-                          convertDistanceFromSI(
-                            latest.self_driving_miles_since_reset,
-                            distanceUnit,
-                          ),
-                        )
-                      : '—'
-                  }
-                  subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', { unit: distanceUnit })}
-                />
+      {/* 3 — Secondary bento: ADAS features (hero span) + driving stats */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('safety.features', 'ADAS features and driving statistics')}
+          className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3"
+        >
+          {/* ADAS feature grid — spans the wide column */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3">{t('ADAS Features')}</PanelTitle>
+            {noVehicle ? (
+              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+            ) : latestQuery.isLoading && !latest ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} height={96} />
+                ))}
               </div>
-            </GlassPanel>
-          </FadeIn>
-
-          {/* ---- Safety Feature Cards (3-col grid) ---- */}
-          <FadeIn delay={0.15}>
-            <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                {t('ADAS Features')}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            ) : latestQuery.isError ? (
+              <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
+            ) : featureCards.length === 0 ? (
+              <EmptyState
+                icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                message={t('safety.noFeatures', 'No ADAS feature data available for this vehicle.')}
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {featureCards.map((card) => (
                   <SafetyCard
                     key={card.key}
@@ -682,86 +663,148 @@ export default function SafetySettingsPage() {
                   />
                 ))}
               </div>
-            </GlassPanel>
-          </FadeIn>
+            )}
+          </GlassPanel>
 
-          {/* ---- Safety States Chart ---- */}
-          <FadeIn delay={0.2}>
-            <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                {t('Safety States Over Time')}
-              </h2>
-              {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData} margin={chartMargin}>
-                    {chartGrid}
-                    <XAxis
-                      dataKey="time"
-                      tick={axisTick}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis
-                      tick={axisTick}
-                      domain={[0, 1]}
-                      ticks={[0, 1]}
-                      tickFormatter={(v: number) => (v === 1 ? t('On') : t('Off'))}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      type="stepAfter"
-                      dataKey="aeb"
-                      name={t('AEB')}
-                      stroke={CHART_COLORS[0]}
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      type="stepAfter"
-                      dataKey="bscw"
-                      name={t('BSCW')}
-                      stroke={CHART_COLORS[1]}
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      type="stepAfter"
-                      dataKey="elda"
-                      name={t('ELDA')}
-                      stroke={CHART_COLORS[2]}
-                      isAnimationActive={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No safety state history to chart yet.')} />
-              )}
-            </GlassPanel>
-          </FadeIn>
-
-          {/* ---- History DataTable ---- */}
-          <FadeIn delay={0.3}>
-            <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                {t('Safety Settings History')}
-              </h2>
-              {sortedHistory.length === 0 ? (
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No history records found.')} />
-              ) : (
-                <DataTable<SafetySnapshot>
-                  tableId="vehicle-systems:safety-history"
-                  columns={historyColumns}
-                  data={sortedHistory}
-                  keyExtractor={(row) => row.id ?? 0}
-                  compact
-                  pagination
+          {/* Driving statistics */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <PanelTitle className="mb-3">{t('safety.drivingStats', 'Driving Statistics')}</PanelTitle>
+            {noVehicle ? (
+              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+            ) : latestQuery.isLoading && !latest ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} height={84} />
+                ))}
+              </div>
+            ) : latestQuery.isError ? (
+              <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
+            ) : !latest ? (
+              <EmptyState
+                icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                message={t('safety.noStats', 'No driving statistics available for this vehicle.')}
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <MetricCard
+                  icon={<Navigation className="h-5 w-5" aria-hidden="true" />}
+                  label={t('safety.distanceSinceReset', 'Distance Since Reset')}
+                  value={
+                    latest.miles_since_reset != null
+                      ? fmtNumber(convertDistanceFromSI(latest.miles_since_reset, distanceUnit))
+                      : '—'
+                  }
+                  subtitle={distanceUnit}
                 />
-              )}
-            </GlassPanel>
-          </FadeIn>
-        </div>
-      )}
+                <MetricCard
+                  icon={<Cpu className="h-5 w-5" aria-hidden="true" />}
+                  label={t('safety.selfDrivingDistance', 'Self-Driving Distance')}
+                  value={
+                    latest.self_driving_miles_since_reset != null
+                      ? fmtNumber(
+                          convertDistanceFromSI(latest.self_driving_miles_since_reset, distanceUnit),
+                        )
+                      : '—'
+                  }
+                  subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', { unit: distanceUnit })}
+                />
+              </div>
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 4 — Detail band: safety states over time */}
+      <FadeIn delay={0.15}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3">{t('Safety States Over Time')}</PanelTitle>
+          {noVehicle ? (
+            <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+          ) : historyQuery.isLoading && history.length === 0 ? (
+            <Skeleton height={300} />
+          ) : historyQuery.isError ? (
+            <QueryError error={historyQuery.error} onRetry={historyQuery.refetch} />
+          ) : chartData.length === 0 ? (
+            <EmptyState
+              icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+              message={t('safety.noChart', 'No safety state history to chart yet.')}
+            />
+          ) : (
+            <div
+              className="h-64 sm:h-72 xl:h-80"
+              role="img"
+              aria-label={t('safety.chartAria', 'Safety feature states over time')}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={chartMargin}>
+                  {chartGrid}
+                  <XAxis dataKey="time" tick={axisTick} interval="preserveStartEnd" />
+                  <YAxis
+                    tick={axisTick}
+                    domain={[0, 1]}
+                    ticks={[0, 1]}
+                    tickFormatter={(v: number) => (v === 1 ? t('On') : t('Off'))}
+                  />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend />
+                  <Line
+                    {...AREA_DEFAULTS}
+                    type="stepAfter"
+                    dataKey="aeb"
+                    name={t('AEB')}
+                    stroke={CHART_COLORS[0]}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    {...AREA_DEFAULTS}
+                    type="stepAfter"
+                    dataKey="bscw"
+                    name={t('BSCW')}
+                    stroke={CHART_COLORS[1]}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    {...AREA_DEFAULTS}
+                    type="stepAfter"
+                    dataKey="elda"
+                    name={t('ELDA')}
+                    stroke={CHART_COLORS[2]}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* 5 — Detail band: full history table */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3">{t('Safety Settings History')}</PanelTitle>
+          {noVehicle ? (
+            <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+          ) : historyQuery.isLoading && history.length === 0 ? (
+            <Skeleton height={280} />
+          ) : historyQuery.isError ? (
+            <QueryError error={historyQuery.error} onRetry={historyQuery.refetch} />
+          ) : sortedHistory.length === 0 ? (
+            <EmptyState
+              icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+              message={t('safety.noHistory', 'No history records found.')}
+            />
+          ) : (
+            <DataTable<SafetySnapshot>
+              tableId="vehicle-systems:safety-history"
+              columns={historyColumns}
+              data={sortedHistory}
+              keyExtractor={(row) => row.id ?? 0}
+              compact
+              pagination
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }
