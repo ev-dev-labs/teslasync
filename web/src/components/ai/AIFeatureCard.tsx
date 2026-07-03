@@ -281,7 +281,7 @@ export function AIFeatureCard({
           aria-hidden="true"
         />
       }
-      className="gap-1.5 whitespace-nowrap shrink-0 border-cyan-400/40 bg-cyan-500/5 text-cyan-100 dark:border-cyan-400/40 hover:border-cyan-400/70 hover:bg-cyan-500/15 hover:text-white focus-visible:ring-cyan-400/60 transition-all"
+      className="gap-1.5 whitespace-nowrap shrink-0 border-cyan-400/40 bg-cyan-500/5 text-cyan-100 dark:border-cyan-400/40 hover:border-cyan-400/70 hover:bg-cyan-500/15 hover:text-[var(--text-primary)] focus-visible:ring-cyan-400/60 transition-all"
       disabled={buttonDisabled}
       aria-disabled={buttonDisabled ? 'true' : 'false'}
       aria-label={`${askHelixLabel} · ${buttonLabel}`}
