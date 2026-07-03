@@ -120,33 +120,33 @@ export default function SleepEfficiencyPage() {
       key: 'date',
       header: t('sleep.date', 'Date'),
       render: (event) => (
-        <span className="text-xs text-[var(--text-secondary)]">
+        <Text variant="bodySm">
           {formatDateShort(event.start_date)}
-          <span className="ml-1 text-[var(--text-muted)]">{formatTime(event.start_date)}</span>
-        </span>
+          <Caption className="ml-1">{formatTime(event.start_date)}</Caption>
+        </Text>
       ),
     },
     {
       key: 'duration',
       header: t('sleep.duration', 'Duration'),
       render: (event) => (
-        <span className="tabular-nums text-[var(--text-primary)]">{fmtNumber(event.duration_hours ?? 0)}h</span>
+        <Text variant="body" className="tabular-nums">{fmtNumber(event.duration_hours ?? 0)}h</Text>
       ),
     },
     {
       key: 'batteryLost',
       header: t('sleep.batteryLost', 'Battery Lost'),
       render: (event) => (
-        <span className="tabular-nums text-rose-300">{fmtNumber(event.battery_lost ?? 0)}%</span>
+        <Text size="sm" className="tabular-nums text-rose-300">{fmtNumber(event.battery_lost ?? 0)}%</Text>
       ),
     },
     {
       key: 'drainRate',
       header: t('sleep.drainRateCol', 'Drain Rate'),
       render: (event) => (
-        <span className={`tabular-nums ${(event.drain_rate ?? 0) > 1.5 ? 'text-rose-300' : 'text-emerald-300'}`}>
+        <Text size="sm" className={`tabular-nums ${(event.drain_rate ?? 0) > 1.5 ? 'text-rose-300' : 'text-emerald-300'}`}>
           {fmtNumber(event.drain_rate ?? 0)}%/hr
-        </span>
+        </Text>
       ),
     },
     {
@@ -162,12 +162,12 @@ export default function SleepEfficiencyPage() {
       key: 'temp',
       header: t('sleep.temp', 'Temp'),
       render: (event) => event.outside_temp != null ? (
-        <span className="flex items-center gap-1 text-[var(--text-secondary)]">
+        <Text size="sm" color="secondary" className="flex items-center gap-1">
           <Thermometer className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
           {fmtNumber(convertTempFromSI(event.outside_temp, tempUnit))}{tempUnit}
-        </span>
+        </Text>
       ) : (
-        <span className="text-[var(--text-muted)]">—</span>
+        <Text size="sm" color="muted">—</Text>
       ),
     },
   ], [t, tempUnit]);
@@ -337,10 +337,10 @@ export default function SleepEfficiencyPage() {
                 </ResponsiveContainer>
                 <ul className="mt-2 flex flex-wrap justify-center gap-3">
                   {pieData.map((entry) => (
-                    <li key={entry.name} className="flex items-center gap-1.5 text-xs">
+                    <li key={entry.name} className="flex items-center gap-1.5">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} aria-hidden="true" />
-                      <span className="text-[var(--text-secondary)]">{entry.name}</span>
-                      <span className="text-[var(--text-muted)]">{entry.hours}h</span>
+                      <Text variant="bodySm">{entry.name}</Text>
+                      <Caption>{entry.hours}h</Caption>
                     </li>
                   ))}
                 </ul>
