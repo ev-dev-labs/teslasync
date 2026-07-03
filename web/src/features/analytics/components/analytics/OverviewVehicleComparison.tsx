@@ -152,7 +152,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
               <PolarGrid stroke="var(--glass-border)" />
-              <PolarAngleAxis dataKey="metric" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <PolarAngleAxis dataKey="metric" tick={axisTick} />
               {vehicles.map((v, i) => (
                 <Radar
                   key={v.id}
