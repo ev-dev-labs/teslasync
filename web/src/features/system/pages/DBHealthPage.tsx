@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, Button, DataTable, PanelTitle, SectionTitle, Caption, type Column,
+  GlassPanel, Button, DataTable, PanelTitle, SectionTitle, Caption, Label, Text, type Column,
 } from '@/components/ui';
 import { MetricCard, TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -19,7 +19,7 @@ import { useDBStats, useMigrations, useConnectionPool } from '@/api/hooks/useAdm
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import type { NeonColor } from '@/lib/tokens';
+import { typography, type NeonColor } from '@/lib/tokens';
 import type { TableInfo } from '@/types/admin';
 
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024; // 100MB
@@ -179,14 +179,12 @@ export default function DBHealthPage() {
               {isLarge && (
                 <AlertTriangle className="h-3 w-3 text-amber-300 shrink-0" aria-hidden="true" />
               )}
-              <span
-                className={cn(
-                  'font-mono',
-                  isLarge ? 'text-amber-300' : 'text-[var(--text-primary)]',
-                )}
+              <Text
+                mono
+                className={cn(isLarge ? 'text-amber-300' : typography.color.primary)}
               >
                 {tbl.name}
-              </span>
+              </Text>
             </div>
           );
         },
@@ -195,7 +193,7 @@ export default function DBHealthPage() {
         key: 'rows',
         header: t('dbHealth.table.rows', 'Rows'),
         render: (tbl: TableInfo) => (
-          <span className="font-mono text-[var(--text-secondary)]">{fmtInt(tbl.rowCount ?? 0)}</span>
+          <Text mono color="secondary">{fmtInt(tbl.rowCount ?? 0)}</Text>
         ),
         className: 'text-right',
       },
@@ -203,9 +201,9 @@ export default function DBHealthPage() {
         key: 'size',
         header: t('dbHealth.table.size', 'Size'),
         render: (tbl: TableInfo) => (
-          <span className="font-mono text-[var(--text-secondary)]">
+          <Text mono color="secondary">
             {tbl.sizeBytes ? formatBytes(tbl.sizeBytes) : '—'}
-          </span>
+          </Text>
         ),
         className: 'text-right',
       },
@@ -213,7 +211,7 @@ export default function DBHealthPage() {
         key: 'indexes',
         header: t('dbHealth.table.indexes', 'Indexes'),
         render: (tbl: TableInfo) => (
-          <span className="font-mono text-[var(--text-muted)]">{tbl.indexCount ?? '—'}</span>
+          <Text mono color="muted">{tbl.indexCount ?? '—'}</Text>
         ),
         className: 'text-right',
       },
@@ -238,13 +236,13 @@ export default function DBHealthPage() {
 
   const actions = (
     <div className="flex items-center gap-2">
-      <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+      <Caption className="flex items-center gap-1.5">
         <RefreshCw
           className={cn('h-3.5 w-3.5', statsFetching && 'animate-spin')}
           aria-hidden="true"
         />
         {t('dbHealth.autoRefresh', 'Auto-refresh 30s')}
-      </span>
+      </Caption>
       <Button
         variant="ghost"
         size="sm"
@@ -355,20 +353,22 @@ export default function DBHealthPage() {
             ) : migrationData ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <Caption>
                     {t('dbHealth.currentVersion', 'Current Version')}
-                  </span>
-                  <span className="text-sm font-mono font-bold text-[var(--text-primary)]">
+                  </Caption>
+                  <Text mono size="sm" weight="bold" color="primary">
                     {String(migrationVersion)}
-                  </span>
+                  </Text>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <Caption>
                     {t('dbHealth.status', 'Status')}
-                  </span>
-                  <span
+                  </Caption>
+                  <Text
+                    size="xs"
+                    weight="medium"
                     className={cn(
-                      'inline-flex items-center gap-1.5 text-xs font-medium',
+                      'inline-flex items-center gap-1.5',
                       migrationDirty ? 'text-rose-300' : 'text-emerald-300',
                     )}
                   >
@@ -380,22 +380,22 @@ export default function DBHealthPage() {
                     {migrationDirty
                       ? t('dbHealth.dirty', 'Dirty')
                       : t('dbHealth.clean', 'Clean')}
-                  </span>
+                  </Text>
                 </div>
                 {migrationPending > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--text-muted)]">
+                    <Caption>
                       {t('dbHealth.pending', 'Pending')}
-                    </span>
-                    <span className="text-xs font-medium text-amber-300">
+                    </Caption>
+                    <Text size="xs" weight="medium" className="text-amber-300">
                       {fmtInt(migrationPending)}
-                    </span>
+                    </Text>
                   </div>
                 )}
                 <div className="mt-3 border-t border-white/[0.06] pt-3">
-                  <Caption className="mb-2 block uppercase tracking-wider">
+                  <Label className="mb-2 block">
                     {t('dbHealth.recentMigrations', 'Recent Migrations')}
-                  </Caption>
+                  </Label>
                   {migrations.length > 0 ? (
                     <ul className="max-h-44 space-y-1.5 overflow-auto">
                       {migrations
@@ -404,15 +404,15 @@ export default function DBHealthPage() {
                         .map((m) => (
                           <li
                             key={m.version}
-                            className="flex items-center justify-between text-[11px]"
+                            className="flex items-center justify-between"
                           >
-                            <span className="mr-2 truncate font-mono text-[var(--text-secondary)]">
+                            <Text mono size="xs" color="secondary" className="mr-2 truncate">
                               v{m.version} {m.name}
-                            </span>
+                            </Text>
                             {m.appliedAt && (
                               <TimeStamp
                                 value={m.appliedAt}
-                                className="shrink-0 text-[10px] text-[var(--text-muted)]"
+                                className={cn('shrink-0', typography.size['2xs'], typography.color.muted)}
                               />
                             )}
                           </li>
@@ -514,17 +514,17 @@ export default function DBHealthPage() {
                   },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--text-muted)]">{item.label}</span>
-                    <span className="text-sm font-mono text-[var(--text-primary)]">
+                    <Caption>{item.label}</Caption>
+                    <Text mono size="sm" color="primary">
                       {item.value}
-                    </span>
+                    </Text>
                   </div>
                 ))}
                 {/* Usage bar */}
                 <div className="mt-2">
-                  <div className="mb-1 flex justify-between text-[10px] text-[var(--text-muted)]">
-                    <span>{t('dbHealth.poolUsage', 'Pool Usage')}</span>
-                    <span>{fmtInt(poolUsage)}%</span>
+                  <div className="mb-1 flex justify-between">
+                    <Text size="2xs" color="muted">{t('dbHealth.poolUsage', 'Pool Usage')}</Text>
+                    <Text size="2xs" color="muted">{fmtInt(poolUsage)}%</Text>
                   </div>
                   <div
                     className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]"
