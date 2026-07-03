@@ -10161,6 +10161,34 @@
     "title": "RBAC matrix",
     "subtitle": "Provider-agnostic role-permission bindings",
     "permissionColumn": "Permission",
+    "loading": "Loading matrix…",
+    "kpi": {
+      "aria": "Matrix summary metrics",
+      "roles": "Roles",
+      "permissions": "Permissions",
+      "categories": "Categories",
+      "grants": "Active grants",
+      "myRoles": "My roles",
+      "effective": "Effective for me"
+    },
+    "access": {
+      "title": "Your access"
+    },
+    "legend": {
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "editHint": "Toggle cells then Save to publish changes.",
+      "readHint": "Read-only view — choose Edit to change bindings."
+    },
+    "matrix": {
+      "title": "Permission matrix",
+      "aria": "Role permission matrix",
+      "empty": "No permissions to display for the current roles.",
+      "editing": "Editing"
+    },
+    "pending": {
+      "count": "{{count}} pending"
+    },
     "openMode": {
       "title": "RBAC requires forward-auth mode",
       "message": "The RBAC matrix is meaningful only when an upstream proxy (Authentik, Authelia, oauth2-proxy, Keycloak, etc.) injects an authenticated subject header. Configure FORWARD_AUTH_HEADER and TESLASYNC_RBAC_GROUPS_HEADER on the API service then reload."
@@ -10170,7 +10198,8 @@
       "save": "Save ({{count}})",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "retry": "Retry"
+      "retry": "Retry",
+      "refresh": "Refresh"
     },
     "category": {
       "fleet": "Fleet",

@@ -1,35 +1,61 @@
 /**
  * RbacMatrixPage.
  *
- * Provider-agnostic "who can do what" admin page. Columns = roles
+ * Provider-agnostic "who can do what" admin cockpit. Columns = roles
  * (resolved from the upstream proxy's groups header), rows =
  * permissions (hand-maintained catalog in internal/auth/permissions.go),
- * cells = check (allow) / dash (deny).
+ * cells = allow (✓) / deny (–).
  *
  * Read-only by default. The "Edit" toggle flips cells into checkboxes;
- * "Save" diffs the draft against the snapshot and PUTs only the
- * changed cells. The PUT route is RequireSudo-gated upstream so the
- * SPA's reauth dialog will pop transparently on Save in forward-auth
- * mode — there is no preemptive sudo challenge when entering edit
- * mode, which would be a worse UX (the operator may toggle a few
- * cells and then change their mind without ever submitting).
+ * "Save" diffs the draft against the snapshot and PUTs only the changed
+ * cells. The PUT route is RequireSudo-gated upstream so the SPA's reauth
+ * dialog pops transparently on Save in forward-auth mode — there is no
+ * preemptive sudo challenge when entering edit mode, which would be a
+ * worse UX (the operator may toggle a few cells and then change their
+ * mind without ever submitting).
  *
  * AUTH_MODE_OPEN: when forward-auth is not configured the matrix is
- * meaningless (one implicit subject, one implicit role). The page
- * renders an inline "configure forward-auth then reload" placeholder
- * instead of a 401/501 toast loop.
+ * meaningless (one implicit subject, one implicit role). The page renders
+ * an inline "configure forward-auth then reload" placeholder instead of a
+ * 401/501 toast loop.
+ *
+ * Modern-UI: the matrix is a single CSS grid (display:contents rows) so
+ * columns stay perfectly aligned while the grid — not the page — scrolls
+ * horizontally on narrow viewports. A KPI band + access-summary panel sit
+ * above it and reflow into more columns on wide monitors.
  */
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Lock, ShieldCheck, Unlock } from 'lucide-react'
+import {
+  CheckCheck,
+  KeyRound,
+  Layers,
+  Lock,
+  RefreshCw,
+  ShieldCheck,
+  Unlock,
+  UserCircle,
+  Users,
+} from 'lucide-react'
 
-import { PageContainer, Stack } from '@/components/layout'
-import { Badge, Button, GlassPanel } from '@/components/ui'
-import { Heading, Text, Caption, HelperText } from '@/components/ui/Typography'
-import { Spinner, EmptyState, AlertBanner } from '@/components/feedback'
+import { PageContainer } from '@/components/layout'
+import {
+  Badge,
+  Button,
+  Caption,
+  Checkbox,
+  GlassPanel,
+  Heading,
+  HelperText,
+  PanelTitle,
+  Text,
+} from '@/components/ui'
+import { MetricCard } from '@/components/data-display'
+import { Spinner, EmptyState, AlertBanner, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { cn } from '@/lib/cn'
 import {
   diffMatrices,
   isRbacOpenMode,
@@ -65,6 +91,57 @@ function permsByCategory(permissions: RbacPermission[]): Map<string, RbacPermiss
   return out
 }
 
+/** Count the allowed (`true`) bindings across every role row in the matrix. */
+function countGrants(matrix: Record<string, Record<string, boolean>>): number {
+  let total = 0
+  for (const row of Object.values(matrix ?? {})) {
+    for (const allowed of Object.values(row ?? {})) {
+      if (allowed) total += 1
+    }
+  }
+  return total
+}
+
+interface MatrixCellProps {
+  roleID: string
+  permID: string
+  allowed: boolean
+  editing: boolean
+  onToggle: (roleID: string, permID: string, next: boolean) => void
+}
+
+/** A single matrix cell — read-only allow/deny glyph or an editable checkbox. */
+function MatrixCell({ roleID, permID, allowed, editing, onToggle }: MatrixCellProps) {
+  const { t } = useTranslation()
+  if (editing) {
+    return (
+      <Checkbox
+        checked={allowed}
+        onChange={(next) => onToggle(roleID, permID, next)}
+        aria-label={t('rbac.cell.toggle', 'Toggle {{role}} / {{perm}}', {
+          role: roleID,
+          perm: permID,
+        })}
+        data-testid={`rbac-cell-edit-${roleID}-${permID}`}
+      />
+    )
+  }
+  return (
+    <span
+      className={cn(
+        'inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md px-1 tabular-nums leading-none',
+        allowed
+          ? 'bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/25'
+          : 'text-[var(--text-muted)]',
+      )}
+      aria-label={allowed ? t('rbac.cell.allowed', 'Allowed') : t('rbac.cell.denied', 'Denied')}
+      data-testid={`rbac-cell-${roleID}-${permID}`}
+    >
+      {allowed ? '✓' : '–'}
+    </span>
+  )
+}
+
 interface MatrixGridProps {
   payload: RbacMatrixSessionResponse
   draft: MatrixDraft
@@ -72,129 +149,129 @@ interface MatrixGridProps {
   onToggle: (roleID: string, permID: string, next: boolean) => void
 }
 
+/**
+ * The role × permission matrix. Rendered as one CSS grid — `role="table"`
+ * with `display:contents` rowgroups/rows — so every column stays aligned
+ * across category groups while the whole grid scrolls horizontally within
+ * its own container (never the page) on small screens.
+ */
 function MatrixGrid({ payload, draft, editing, onToggle }: MatrixGridProps) {
   const { t } = useTranslation()
-  const grouped = useMemo(() => permsByCategory(payload.permissions), [payload.permissions])
-  const orderedCategories = payload.categories.length
+  const roles = payload.roles ?? []
+  const grouped = useMemo(() => permsByCategory(payload.permissions ?? []), [payload.permissions])
+  const orderedCategories = (payload.categories?.length
     ? payload.categories
     : Array.from(grouped.keys())
+  ).filter((cat) => (grouped.get(cat)?.length ?? 0) > 0)
 
-  const renderCell = (roleID: string, permID: string) => {
-    const allowed = draft.cells[roleID]?.[permID] ?? false
-    if (editing) {
-      return (
-        <input
-          type="checkbox"
-          checked={allowed}
-          onChange={(e) => onToggle(roleID, permID, e.target.checked)}
-          className="h-4 w-4 cursor-pointer rounded border-[var(--border-subtle)] bg-transparent accent-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-          aria-label={t('rbac.cell.toggle', 'Toggle {{role}} / {{perm}}', {
-            role: roleID,
-            perm: permID,
-          })}
-          data-testid={`rbac-cell-edit-${roleID}-${permID}`}
-        />
-      )
-    }
+  // Dynamic column template: a wide permission column + one flexible,
+  // min-sized column per role. Computed → an allowed inline style.
+  const gridTemplateColumns = `minmax(11rem, 1.75fr) repeat(${roles.length}, minmax(4.75rem, 1fr))`
+
+  if (roles.length === 0 || orderedCategories.length === 0) {
     return (
-      <span
-        className={
-          allowed
-            ? 'inline-flex h-5 w-5 items-center justify-center text-emerald-300'
-            : 'inline-flex h-5 w-5 items-center justify-center text-[var(--text-muted)]'
-        }
-        aria-label={
-          allowed
-            ? t('rbac.cell.allowed', 'Allowed')
-            : t('rbac.cell.denied', 'Denied')
-        }
-        data-testid={`rbac-cell-${roleID}-${permID}`}
-      >
-        {allowed ? '✓' : '–'}
-      </span>
+      <EmptyState
+        icon={<ShieldCheck className="h-8 w-8" aria-hidden="true" />}
+        message={t('rbac.matrix.empty', 'No permissions to display for the current roles.')}
+      />
     )
   }
 
   return (
-    <div className="overflow-x-auto" data-testid="rbac-matrix-grid">
-      <table className="min-w-full border-collapse text-left">
-        <thead className="sticky top-0 z-10 bg-[var(--bg-panel)]">
-          <tr className="border-b border-[var(--border-subtle)]">
-            <th
-              scope="col"
-              className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+    <div className="-mx-4 overflow-x-auto sm:-mx-5" data-testid="rbac-matrix-scroll">
+      <div
+        role="table"
+        aria-label={t('rbac.matrix.aria', 'Role permission matrix')}
+        data-testid="rbac-matrix-grid"
+        className="grid min-w-full px-4 sm:px-5"
+        style={{ gridTemplateColumns }}
+      >
+        <div role="rowgroup" className="contents">
+          <div role="row" className="contents">
+            <div
+              role="columnheader"
+              className="sticky left-0 z-[1] border-b border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2.5"
             >
-              {t('rbac.permissionColumn', 'Permission')}
-            </th>
-            {payload.roles.map((role: RbacRole) => (
-              <th
+              <Text variant="label">{t('rbac.permissionColumn', 'Permission')}</Text>
+            </div>
+            {roles.map((role: RbacRole) => (
+              <div
                 key={role.id}
-                scope="col"
-                className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]"
+                role="columnheader"
                 data-testid={`rbac-col-${role.id}`}
+                className="flex items-center justify-center border-b border-[var(--border-subtle)] px-2 py-2.5 text-center"
               >
-                {role.name}
-              </th>
+                <Text variant="label" className="truncate" title={role.name}>
+                  {role.name}
+                </Text>
+              </div>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </div>
+        </div>
+
+        <div role="rowgroup" className="contents">
           {orderedCategories.map((cat) => {
             const items = grouped.get(cat) ?? []
-            if (items.length === 0) return null
             return (
               <Fragment key={`cat-${cat}`}>
-                <tr
-                  className="bg-[var(--bg-app)]/40"
-                  data-testid={`rbac-category-row-${cat}`}
-                >
-                  <th
-                    colSpan={1 + payload.roles.length}
-                    scope="colgroup"
-                    className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]"
+                <div role="row" className="contents">
+                  <div
+                    role="cell"
+                    data-testid={`rbac-category-row-${cat}`}
+                    className="col-span-full border-b border-[var(--border-subtle)] bg-white/[0.02] px-3 py-1.5"
                   >
-                    {t(`rbac.category.${cat}`, cat)}
-                  </th>
-                </tr>
+                    <Text variant="label" className="tracking-widest">
+                      {t(`rbac.category.${cat}`, cat)}
+                    </Text>
+                  </div>
+                </div>
                 {items.map((perm) => (
-                  <tr
+                  <div
                     key={perm.id}
-                    className="border-b border-[var(--border-subtle)]/50"
+                    role="row"
                     data-testid={`rbac-row-${perm.id}`}
+                    className="group/row contents"
                   >
-                    <th
-                      scope="row"
-                      className="px-3 py-2 text-sm font-normal text-[var(--text-primary)]"
+                    <div
+                      role="rowheader"
+                      className="sticky left-0 z-[1] flex min-h-11 flex-col justify-center border-b border-[var(--border-subtle)]/60 bg-[var(--surface-2)] px-3 py-2.5 group-hover/row:bg-white/[0.03]"
                     >
-                      <div className="flex flex-col">
-                        <span>{perm.name}</span>
-                        <Caption>{perm.id}</Caption>
+                      <Text as="span" variant="body">
+                        {perm.name}
+                      </Text>
+                      <Caption>{perm.id}</Caption>
+                    </div>
+                    {roles.map((role: RbacRole) => (
+                      <div
+                        key={role.id}
+                        role="cell"
+                        className="flex min-h-11 items-center justify-center border-b border-[var(--border-subtle)]/60 px-2 py-2 group-hover/row:bg-white/[0.03]"
+                      >
+                        <MatrixCell
+                          roleID={role.id}
+                          permID={perm.id}
+                          allowed={draft.cells[role.id]?.[perm.id] ?? false}
+                          editing={editing}
+                          onToggle={onToggle}
+                        />
                       </div>
-                    </th>
-                    {payload.roles.map((role: RbacRole) => (
-                      <td key={role.id} className="px-3 py-2 text-center">
-                        {renderCell(role.id, perm.id)}
-                      </td>
                     ))}
-                  </tr>
+                  </div>
                 ))}
               </Fragment>
             )
           })}
-        </tbody>
-      </table>
+        </div>
+      </div>
     </div>
   )
 }
 
-function EffectivePill({
-  payload,
-}: {
-  payload: RbacMatrixSessionResponse
-}) {
+/** "N / M effective" chip summarising the caller's own merged grant map. */
+function EffectivePill({ payload }: { payload: RbacMatrixSessionResponse }) {
   const { t } = useTranslation()
-  const allowedCount = Object.values(payload.effective_for_me).filter(Boolean).length
-  const total = payload.permissions.length
+  const allowedCount = Object.values(payload.effective_for_me ?? {}).filter(Boolean).length
+  const total = payload.permissions?.length ?? 0
   const variant = allowedCount === 0 ? 'neutral' : 'success'
   return (
     <Badge
@@ -213,21 +290,80 @@ function EffectivePill({
   )
 }
 
+/** Chip listing the roles the upstream proxy claimed for the caller. */
 function MyRolesPill({ payload }: { payload: RbacMatrixSessionResponse }) {
   const { t } = useTranslation()
-  if (payload.my_roles.length === 0) {
+  const roles = payload.my_roles ?? []
+  if (roles.length === 0) {
     return (
       <Badge variant="neutral" data-testid="rbac-my-roles-pill">
+        <UserCircle className="h-3 w-3" aria-hidden="true" />
         {t('rbac.myRoles.none', 'No roles claimed')}
       </Badge>
     )
   }
   return (
     <Badge variant="info" data-testid="rbac-my-roles-pill">
-      {t('rbac.myRoles.label', 'My roles: {{roles}}', {
-        roles: payload.my_roles.join(', '),
-      })}
+      <UserCircle className="h-3 w-3" aria-hidden="true" />
+      {t('rbac.myRoles.label', 'My roles: {{roles}}', { roles: roles.join(', ') })}
     </Badge>
+  )
+}
+
+/** Full-width KPI band summarising the matrix at a glance. */
+function KpiBand({ payload }: { payload: RbacMatrixSessionResponse }) {
+  const { t } = useTranslation()
+  const roles = payload.roles ?? []
+  const permissions = payload.permissions ?? []
+  const categories = payload.categories?.length
+    ? payload.categories
+    : Array.from(permsByCategory(permissions).keys())
+  const allowedForMe = Object.values(payload.effective_for_me ?? {}).filter(Boolean).length
+  const myRoles = payload.my_roles ?? []
+  const grants = countGrants(payload.matrix)
+
+  return (
+    <section
+      aria-label={t('rbac.kpi.aria', 'Matrix summary metrics')}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-6"
+    >
+      <MetricCard
+        label={t('rbac.kpi.roles', 'Roles')}
+        value={roles.length}
+        icon={<Users className="h-5 w-5" aria-hidden="true" />}
+        color="cyan"
+      />
+      <MetricCard
+        label={t('rbac.kpi.permissions', 'Permissions')}
+        value={permissions.length}
+        icon={<KeyRound className="h-5 w-5" aria-hidden="true" />}
+        color="blue"
+      />
+      <MetricCard
+        label={t('rbac.kpi.categories', 'Categories')}
+        value={categories.length}
+        icon={<Layers className="h-5 w-5" aria-hidden="true" />}
+        color="purple"
+      />
+      <MetricCard
+        label={t('rbac.kpi.grants', 'Active grants')}
+        value={grants}
+        icon={<CheckCheck className="h-5 w-5" aria-hidden="true" />}
+        color="green"
+      />
+      <MetricCard
+        label={t('rbac.kpi.myRoles', 'My roles')}
+        value={myRoles.length}
+        icon={<UserCircle className="h-5 w-5" aria-hidden="true" />}
+        color="amber"
+      />
+      <MetricCard
+        label={t('rbac.kpi.effective', 'Effective for me')}
+        value={`${allowedForMe} / ${permissions.length}`}
+        icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+        color="cyan"
+      />
+    </section>
   )
 }
 
@@ -242,21 +378,20 @@ export default function RbacMatrixPage() {
   const [draft, setDraft] = useState<MatrixDraft>({ cells: {} })
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Resync the draft whenever a fresh snapshot lands. Keeping this in
-  // an effect (rather than deriving inline) means the operator's
-  // checkbox toggles are not clobbered on every TanStack refetch
-  // unless they explicitly cancel edit mode.
+  // Resync the draft whenever a fresh snapshot lands. Keeping this in an
+  // effect (rather than deriving inline) means the operator's checkbox
+  // toggles are not clobbered on every TanStack refetch unless they
+  // explicitly cancel edit mode.
   useEffect(() => {
     if (!matrixQuery.data || isRbacOpenMode(matrixQuery.data)) return
     if (editing) return
     setDraft(snapshotToDraft(matrixQuery.data.matrix))
   }, [matrixQuery.data, editing])
 
-  // Compute the dirty-cell count BEFORE any early returns so the
-  // useMemo call order stays stable across renders (hooks rule).
-  // Payload may be absent during loading / open-mode / error — fall
-  // back to an empty matrix so the computation is a no-op rather than
-  // a conditional hook.
+  // Compute the dirty-cell count BEFORE any early returns so the useMemo
+  // call order stays stable across renders (hooks rule). Payload may be
+  // absent during loading / open-mode / error — fall back to an empty
+  // matrix so the computation is a no-op rather than a conditional hook.
   const dirtyCount = useMemo(() => {
     const live = matrixQuery.data
     if (!live || isRbacOpenMode(live)) return 0
@@ -265,13 +400,16 @@ export default function RbacMatrixPage() {
 
   if (matrixQuery.isLoading) {
     return (
-      <PageContainer title={t('rbac.title', 'RBAC matrix')}>
-        <div
-          className="flex min-h-[200px] items-center justify-center"
+      <PageContainer
+        title={t('rbac.title', 'RBAC matrix')}
+        subtitle={t('rbac.subtitle', 'Provider-agnostic role-permission bindings')}
+      >
+        <GlassPanel
+          className="flex min-h-[240px] items-center justify-center p-6"
           data-testid="rbac-loading"
         >
-          <Spinner />
-        </div>
+          <Spinner size="lg" label={t('rbac.loading', 'Loading matrix…')} />
+        </GlassPanel>
       </PageContainer>
     )
   }
@@ -287,17 +425,20 @@ export default function RbacMatrixPage() {
       >
         <FadeIn>
           <GlassPanel className="p-6" data-testid="rbac-open-mode">
-            <Stack gap={3}>
-              <Heading level="section">
-                {t('rbac.openMode.title', 'RBAC requires forward-auth mode')}
-              </Heading>
-              <HelperText>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+                <Heading level="section">
+                  {t('rbac.openMode.title', 'RBAC requires forward-auth mode')}
+                </Heading>
+              </div>
+              <HelperText className="max-w-3xl">
                 {t(
                   'rbac.openMode.message',
                   'The RBAC matrix is meaningful only when an upstream proxy (Authentik, Authelia, oauth2-proxy, Keycloak, etc.) injects an authenticated subject header. Configure FORWARD_AUTH_HEADER and TESLASYNC_RBAC_GROUPS_HEADER on the API service then reload.',
                 )}
               </HelperText>
-            </Stack>
+            </div>
           </GlassPanel>
         </FadeIn>
       </PageContainer>
@@ -305,23 +446,18 @@ export default function RbacMatrixPage() {
   }
 
   if (matrixQuery.isError || !matrixQuery.data) {
-    const code = isApiError(matrixQuery.error) ? matrixQuery.error.code : undefined
     return (
-      <PageContainer title={t('rbac.title', 'RBAC matrix')}>
+      <PageContainer
+        title={t('rbac.title', 'RBAC matrix')}
+        subtitle={t('rbac.subtitle', 'Provider-agnostic role-permission bindings')}
+      >
         <FadeIn>
-          <AlertBanner variant="danger" data-testid="rbac-load-error">
-            <Stack gap={2}>
-              <Heading level="panel">
-                {t('rbac.errors.loadTitle', 'Failed to load RBAC matrix')}
-              </Heading>
-              <Text>
-                {code ?? t('rbac.errors.loadGeneric', 'The matrix endpoint returned an error.')}
-              </Text>
-              <Button onClick={() => matrixQuery.refetch()}>
-                {t('rbac.actions.retry', 'Retry')}
-              </Button>
-            </Stack>
-          </AlertBanner>
+          <GlassPanel className="p-4 sm:p-5" data-testid="rbac-load-error">
+            <PanelTitle className="mb-3">
+              {t('rbac.errors.loadTitle', 'Failed to load RBAC matrix')}
+            </PanelTitle>
+            <QueryError error={matrixQuery.error} onRetry={() => matrixQuery.refetch()} />
+          </GlassPanel>
         </FadeIn>
       </PageContainer>
     )
@@ -367,38 +503,100 @@ export default function RbacMatrixPage() {
     }
   }
 
-  if (payload.roles.length === 0) {
+  if ((payload.roles ?? []).length === 0) {
     return (
       <PageContainer
         title={t('rbac.title', 'RBAC matrix')}
         subtitle={t('rbac.subtitle', 'Provider-agnostic role-permission bindings')}
       >
         <FadeIn>
-          <div data-testid="rbac-empty">
+          <GlassPanel className="p-4 sm:p-5" data-testid="rbac-empty">
             {/* no-action: requires API env var change + restart. */}
             <EmptyState
-              icon={<ShieldCheck className="h-8 w-8" />}
+              icon={<ShieldCheck className="h-8 w-8" aria-hidden="true" />}
               title={t('rbac.empty.title', 'No roles configured')}
               message={t(
                 'rbac.empty.message',
                 'No roles have been forwarded by the upstream proxy and no bindings exist in the database. Configure TESLASYNC_RBAC_GROUPS_HEADER on the API service and reload.',
               )}
             />
-          </div>
+          </GlassPanel>
         </FadeIn>
       </PageContainer>
     )
   }
 
+  const actions = editing ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {dirtyCount > 0 && (
+        <Badge variant="warning" data-testid="rbac-dirty-badge">
+          {t('rbac.pending.count', '{{count}} pending', { count: dirtyCount })}
+        </Badge>
+      )}
+      <Button
+        variant="ghost"
+        onClick={handleCancelEdit}
+        disabled={upsert.isPending}
+        data-testid="rbac-cancel-button"
+      >
+        {t('rbac.actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        onClick={handleSave}
+        disabled={upsert.isPending || dirtyCount === 0}
+        data-testid="rbac-save-button"
+      >
+        <Lock className="h-4 w-4" aria-hidden="true" />
+        {upsert.isPending
+          ? t('rbac.actions.saving', 'Saving…')
+          : t('rbac.actions.save', 'Save ({{count}})', { count: dirtyCount })}
+      </Button>
+    </div>
+  ) : (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="ghost"
+        onClick={() => matrixQuery.refetch()}
+        disabled={matrixQuery.isFetching}
+        aria-label={t('rbac.actions.refresh', 'Refresh')}
+        title={t('rbac.actions.refresh', 'Refresh')}
+      >
+        <RefreshCw
+          className={cn('h-4 w-4', matrixQuery.isFetching && 'animate-spin')}
+          aria-hidden="true"
+        />
+      </Button>
+      <Button variant="secondary" onClick={handleEnterEdit} data-testid="rbac-edit-button">
+        <Unlock className="h-4 w-4" aria-hidden="true" />
+        {t('rbac.actions.edit', 'Edit')}
+      </Button>
+    </div>
+  )
+
   return (
     <PageContainer
       title={t('rbac.title', 'RBAC matrix')}
       subtitle={t('rbac.subtitle', 'Provider-agnostic role-permission bindings')}
+      actions={actions}
+      query={matrixQuery}
     >
+      {submitError && (
+        <AlertBanner variant="danger" data-testid="rbac-save-error">
+          <Text>{submitError}</Text>
+        </AlertBanner>
+      )}
+
+      {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <Stack gap={4}>
-          <GlassPanel className="p-4" data-testid="rbac-summary">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+        <KpiBand payload={payload} />
+      </FadeIn>
+
+      {/* 2 — Access summary: caller context + legend + edit hint */}
+      <FadeIn delay={0.1}>
+        <GlassPanel className="p-4 sm:p-5" data-testid="rbac-summary">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 flex-col gap-2">
+              <PanelTitle>{t('rbac.access.title', 'Your access')}</PanelTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <MyRolesPill payload={payload} />
                 <EffectivePill payload={payload} />
@@ -410,57 +608,60 @@ export default function RbacMatrixPage() {
                   </Caption>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                {!editing ? (
-                  <Button
-                    variant="secondary"
-                    onClick={handleEnterEdit}
-                    data-testid="rbac-edit-button"
-                  >
-                    <Unlock className="h-4 w-4" aria-hidden="true" />
-                    {t('rbac.actions.edit', 'Edit')}
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="ghost"
-                      onClick={handleCancelEdit}
-                      disabled={upsert.isPending}
-                      data-testid="rbac-cancel-button"
-                    >
-                      {t('rbac.actions.cancel', 'Cancel')}
-                    </Button>
-                    <Button
-                      onClick={handleSave}
-                      disabled={upsert.isPending || dirtyCount === 0}
-                      data-testid="rbac-save-button"
-                    >
-                      <Lock className="h-4 w-4" aria-hidden="true" />
-                      {upsert.isPending
-                        ? t('rbac.actions.saving', 'Saving…')
-                        : t('rbac.actions.save', 'Save ({{count}})', { count: dirtyCount })}
-                    </Button>
-                  </>
-                )}
-              </div>
             </div>
-          </GlassPanel>
 
-          {submitError && (
-            <AlertBanner variant="danger" data-testid="rbac-save-error">
-              <Text>{submitError}</Text>
-            </AlertBanner>
-          )}
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/25 leading-none"
+                    aria-hidden="true"
+                  >
+                    ✓
+                  </span>
+                  <Caption>{t('rbac.legend.allowed', 'Allowed')}</Caption>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-md leading-none text-[var(--text-muted)]"
+                    aria-hidden="true"
+                  >
+                    –
+                  </span>
+                  <Caption>{t('rbac.legend.denied', 'Denied')}</Caption>
+                </span>
+              </div>
+              <HelperText>
+                {editing
+                  ? t('rbac.legend.editHint', 'Toggle cells then Save to publish changes.')
+                  : t('rbac.legend.readHint', 'Read-only view — choose Edit to change bindings.')}
+              </HelperText>
+            </div>
+          </div>
+        </GlassPanel>
+      </FadeIn>
 
-          <GlassPanel className="p-0">
-            <MatrixGrid
-              payload={payload}
-              draft={draft}
-              editing={editing}
-              onToggle={handleToggle}
-            />
-          </GlassPanel>
-        </Stack>
+      {/* 3 — Matrix grid: full-width hero / detail band */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4 sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <PanelTitle className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('rbac.matrix.title', 'Permission matrix')}
+            </PanelTitle>
+            {editing && (
+              <Badge variant="warning">
+                {t('rbac.matrix.editing', 'Editing')}
+              </Badge>
+            )}
+          </div>
+          <MatrixGrid
+            payload={payload}
+            draft={draft}
+            editing={editing}
+            onToggle={handleToggle}
+          />
+        </GlassPanel>
       </FadeIn>
     </PageContainer>
   )
