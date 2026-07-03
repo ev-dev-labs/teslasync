@@ -22,15 +22,16 @@ import type { ChartDataPoint } from './constants';
 
 interface PowerOutputChartProps {
   data: ChartDataPoint[];
+  loading?: boolean;
 }
 
-export function PowerOutputChart({ data }: PowerOutputChartProps) {
+export function PowerOutputChart({ data, loading = false }: PowerOutputChartProps) {
   const { t } = useTranslation();
 
   // URL-persisted hidden-series state lets users declutter to one trace.
   const hidden = useHiddenSeries('drivetrain-power-output');
 
-  if (data.length <= 1) return null;
+  const empty = data.length <= 1;
 
   return (
     <FadeIn delay={0.3}>
@@ -39,6 +40,8 @@ export function PowerOutputChart({ data }: PowerOutputChartProps) {
         subtitle={t('drivetrain.powerOutputSub', 'Peak and regen power per drive over time')}
         ariaLabel={t('drivetrain.powerOutput.aria', 'Per-drive peak and regen motor power output history area chart')}
         chartKey="drivetrain-power-output"
+        loading={loading}
+        empty={empty}
         data={data.map((d) => ({
           date: d.date,
           power_max_kw: d.powerMax,

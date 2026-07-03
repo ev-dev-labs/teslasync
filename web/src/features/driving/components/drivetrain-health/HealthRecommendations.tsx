@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Shield, AlertTriangle, TrendingUp } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
@@ -102,13 +102,11 @@ export function HealthRecommendations({ overallHealth }: HealthRecommendationsPr
 
   return (
     <FadeIn delay={0.35}>
-      <GlassPanel className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-neon-cyan" />
-          <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]">
-            {t('drivetrain.recommendations', 'Health Recommendations')}
-          </h3>
-        </div>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Shield className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+          {t('drivetrain.recommendations', 'Health Recommendations')}
+        </PanelTitle>
         <StaggerContainer className="space-y-3">
           {recommendations.map((tip) => (
             <StaggerItem key={tip.key}>
@@ -123,13 +121,13 @@ export function HealthRecommendations({ overallHealth }: HealthRecommendationsPr
                 )}
               >
                 {tip.priority === 'high' ? (
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-neon-red" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
                 ) : tip.priority === 'medium' ? (
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
                 ) : (
-                  <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-neon-cyan" />
+                  <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
                 )}
-                <p className="text-sm text-[var(--text-secondary)]">{tip.text}</p>
+                <Text as="p" size="sm" color="secondary">{tip.text}</Text>
               </div>
             </StaggerItem>
           ))}

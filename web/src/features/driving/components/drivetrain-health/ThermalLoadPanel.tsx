@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Activity, Zap, TrendingUp, Shield } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { MetricBar, InlineMetric } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
@@ -16,6 +17,7 @@ interface ThermalLoadPanelProps {
   peakPower: number;
   avgPowerMax: number;
   stats: DrivingStats | undefined;
+  loading?: boolean;
 }
 
 export function ThermalLoadPanel({
@@ -23,6 +25,7 @@ export function ThermalLoadPanel({
   peakPower,
   avgPowerMax,
   stats,
+  loading = false,
 }: ThermalLoadPanelProps) {
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit } = useUnits();
@@ -30,46 +33,56 @@ export function ThermalLoadPanel({
 
   return (
     <FadeIn delay={0.2}>
-      <GlassPanel className="p-6">
-        <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]">
-          <Activity className="mr-2 inline-block h-4 w-4" />
+      <GlassPanel className="h-full p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('drivetrain.thermalMetrics', 'Thermal Load Indicators')}
-        </h3>
-        <div className="space-y-4">
-          {sensors.map((sensor) => (
-            <MetricBar
-              key={sensor.key}
-              label={t(sensor.labelKey, sensor.defaultLabel)}
-              value={sensor.value ?? 0}
-              max={sensor.maxTemp}
-              color={tempSeverityColor(sensor.value, sensor.maxTemp)}
-              sublabel={displayTemp(sensor.value, formatTemperature)}
-            />
-          ))}
-        </div>
+        </PanelTitle>
+        {loading ? (
+          <Skeleton height={200} />
+        ) : sensors.length === 0 ? (
+          <EmptyState /* no-action: transient — awaiting first thermal telemetry */
+            message={t('drivetrain.noSensors', 'No temperature sensor data available yet')}
+          />
+        ) : (
+          <>
+            <div className="space-y-4">
+              {sensors.map((sensor) => (
+                <MetricBar
+                  key={sensor.key}
+                  label={t(sensor.labelKey, sensor.defaultLabel)}
+                  value={sensor.value ?? 0}
+                  max={sensor.maxTemp}
+                  color={tempSeverityColor(sensor.value, sensor.maxTemp)}
+                  sublabel={displayTemp(sensor.value, formatTemperature)}
+                />
+              ))}
+            </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <InlineMetric
-            icon={<Zap className="h-4 w-4 text-purple-400" />}
-            label={t('drivetrain.peakPower', 'Peak Power')}
-            value={peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—'}
-          />
-          <InlineMetric
-            icon={<TrendingUp className="h-4 w-4 text-cyan-400" />}
-            label={t('drivetrain.avgPower', 'Avg Power')}
-            value={avgPowerMax > 0 ? `${fmtNumber(avgPowerMax, 1)} kW` : '—'}
-          />
-          <InlineMetric
-            icon={<Activity className="h-4 w-4 text-green-400" />}
-            label={t('drivetrain.drivesLabel', 'Drives')}
-            value={stats ? fmtInt(stats.totalDrives) : '—'}
-          />
-          <InlineMetric
-            icon={<Shield className="h-4 w-4 text-amber-400" />}
-            label={t('drivetrain.regenRatio', 'Regen Ratio')}
-            value={stats ? `${fmtNumber(stats.regenRatio * 100, 1)}%` : '—'}
-          />
-        </div>
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <InlineMetric
+                icon={<Zap className="h-4 w-4 text-purple-300" aria-hidden="true" />}
+                label={t('drivetrain.peakPower', 'Peak Power')}
+                value={peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—'}
+              />
+              <InlineMetric
+                icon={<TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                label={t('drivetrain.avgPower', 'Avg Power')}
+                value={avgPowerMax > 0 ? `${fmtNumber(avgPowerMax, 1)} kW` : '—'}
+              />
+              <InlineMetric
+                icon={<Activity className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
+                label={t('drivetrain.drivesLabel', 'Drives')}
+                value={stats ? fmtInt(stats.totalDrives) : '—'}
+              />
+              <InlineMetric
+                icon={<Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />}
+                label={t('drivetrain.regenRatio', 'Regen Ratio')}
+                value={stats ? `${fmtNumber(stats.regenRatio * 100, 1)}%` : '—'}
+              />
+            </div>
+          </>
+        )}
       </GlassPanel>
     </FadeIn>
   );

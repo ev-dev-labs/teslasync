@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Cog, Activity, Thermometer, Shield, Zap } from 'lucide-react';
+import { Cog, Activity, Thermometer, Shield, Zap, BatteryCharging } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Grid } from '@/components/layout';
-import { InlineMetric } from '@/components/data-display';
+import { InlineMetric, MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
@@ -15,9 +15,10 @@ import { convertTempFromSI } from '@/lib/unitConversion';
 interface LiveMotorStatusProps {
   motorLatest: MotorSnapshot | null | undefined;
   isolationResistance?: number | null;
+  loading?: boolean;
 }
 
-export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorStatusProps) {
+export function LiveMotorStatus({ motorLatest, isolationResistance, loading = false }: LiveMotorStatusProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
@@ -28,54 +29,44 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
 
   return (
     <FadeIn delay={0.22}>
-      <GlassPanel className="p-6">
-        <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]">
-          <Cog className="mr-2 inline-block h-4 w-4" />
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Cog className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('drivetrain.liveMotor', 'Live Motor Status')}
-        </h3>
-        {hasData ? (
+        </PanelTitle>
+        {loading && !hasData ? (
+          <Skeleton height={220} />
+        ) : hasData ? (
           <>
             <Grid cols={{ default: 2, sm: 4 }} gap={3}>
-              <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('drivetrain.shiftState', 'Shift State')}
-                </p>
-                <p className="text-lg font-bold text-cyan-400">
-                  {motorLatest.shift_state ?? '—'}
-                </p>
-              </div>
-              <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('drivetrain.power', 'Power')}
-                </p>
-                <p className="text-lg font-bold text-purple-400">
-                  {motorLatest.power_kw != null
-                    ? `${fmtNumber(motorLatest.power_kw)} kW`
-                    : '—'}
-                </p>
-              </div>
-              <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('drivetrain.regen', 'Regen')}
-                </p>
-                <p className="text-lg font-bold text-green-400">
-                  {motorLatest.regen_kw != null
-                    ? `${fmtNumber(motorLatest.regen_kw)} kW`
-                    : '—'}
-                </p>
-              </div>
-              <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('drivetrain.source', 'Source')}
-                </p>
-                <p className="text-lg font-bold text-[var(--text-primary)]">
-                  {motorLatest.source ?? '—'}
-                </p>
-              </div>
+              <MetricCard
+                label={t('drivetrain.shiftState', 'Shift State')}
+                value={motorLatest.shift_state ?? '—'}
+                icon={<Cog className="h-4 w-4" aria-hidden="true" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('drivetrain.power', 'Power')}
+                value={motorLatest.power_kw != null ? `${fmtNumber(motorLatest.power_kw)} kW` : '—'}
+                icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('drivetrain.regen', 'Regen')}
+                value={motorLatest.regen_kw != null ? `${fmtNumber(motorLatest.regen_kw)} kW` : '—'}
+                icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('drivetrain.source', 'Source')}
+                value={motorLatest.source ?? '—'}
+                icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+                color="blue"
+              />
             </Grid>
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               <InlineMetric
-                icon={<Activity className="h-4 w-4 text-cyan-400" />}
+                icon={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                 label={t('drivetrain.rpmFront', 'Front Motor RPM')}
                 value={
                   motorLatest.motor_rpm_front != null
@@ -84,7 +75,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 }
               />
               <InlineMetric
-                icon={<Activity className="h-4 w-4 text-purple-400" />}
+                icon={<Activity className="h-4 w-4 text-purple-300" aria-hidden="true" />}
                 label={t('drivetrain.rpmRear', 'Rear Motor RPM')}
                 value={
                   motorLatest.motor_rpm_rear != null
@@ -93,7 +84,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 }
               />
               <InlineMetric
-                icon={<Zap className="h-4 w-4 text-cyan-400" />}
+                icon={<Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                 label={t('drivetrain.torqueFront', 'Front Torque')}
                 value={
                   motorLatest.torque_nm_front != null
@@ -102,7 +93,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 }
               />
               <InlineMetric
-                icon={<Zap className="h-4 w-4 text-purple-400" />}
+                icon={<Zap className="h-4 w-4 text-purple-300" aria-hidden="true" />}
                 label={t('drivetrain.torqueRear', 'Rear Torque')}
                 value={
                   motorLatest.torque_nm_rear != null
@@ -111,7 +102,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 }
               />
               <InlineMetric
-                icon={<Thermometer className="h-4 w-4 text-red-400" />}
+                icon={<Thermometer className="h-4 w-4 text-rose-300" aria-hidden="true" />}
                 label={t('drivetrain.motorTempFront', 'Front Motor Temp')}
                 value={
                   motorLatest.motor_temp_c_front != null
@@ -120,7 +111,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 }
               />
               <InlineMetric
-                icon={<Thermometer className="h-4 w-4 text-red-400" />}
+                icon={<Thermometer className="h-4 w-4 text-rose-300" aria-hidden="true" />}
                 label={t('drivetrain.motorTempRear', 'Rear Motor Temp')}
                 value={
                   motorLatest.motor_temp_c_rear != null
@@ -129,7 +120,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 }
               />
               <InlineMetric
-                icon={<Thermometer className="h-4 w-4 text-amber-400" />}
+                icon={<Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />}
                 label={t('drivetrain.inverterTemp', 'Inverter Temp')}
                 value={
                   motorLatest.inverter_temp_c != null
@@ -138,7 +129,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 }
               />
               <InlineMetric
-                icon={<Thermometer className="h-4 w-4 text-green-400" />}
+                icon={<Thermometer className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
                 label={t('drivetrain.batteryTemp', 'Battery Temp')}
                 value={
                   motorLatest.battery_temp_c != null
@@ -149,14 +140,15 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
               <InlineMetric
                 icon={
                   <Shield
+                    aria-hidden="true"
                     className={
                       isolationResistance == null || isolationResistance <= 0
                         ? 'h-4 w-4 text-[var(--text-muted)]'
                         : isolationResistance >= 500
-                          ? 'h-4 w-4 text-green-400'
+                          ? 'h-4 w-4 text-emerald-300'
                           : isolationResistance >= 100
-                            ? 'h-4 w-4 text-amber-400'
-                            : 'h-4 w-4 text-red-400'
+                            ? 'h-4 w-4 text-amber-300'
+                            : 'h-4 w-4 text-rose-300'
                     }
                   />
                 }

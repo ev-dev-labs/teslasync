@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Zap, Cpu, BatteryCharging } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { EmptyState } from '@/components/feedback';
 import { VehicleSelect, RangePicker } from '@/components/forms';
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
@@ -55,11 +54,18 @@ export default function DrivetrainHealthPage() {
   const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
-  const { data: health, isLoading: healthLoading } = useDrivetrainHealth(vehicleIdStr);
-  const { data: drives } = useDrives(vehicleIdStr);
-  const { data: stats } = useDrivingStats(vehicleIdStr);
-  const { data: motorLatest } = useMotorLatest(vehicleId ?? 0, 5_000);
-  const { data: motorHistory } = useMotorHistory(vehicleId ?? 0, 200);
+  const healthQuery = useDrivetrainHealth(vehicleIdStr);
+  const {
+    data: health,
+    isLoading: healthLoading,
+    isError: healthIsError,
+    error: healthError,
+    refetch: refetchHealth,
+  } = healthQuery;
+  const { data: drives, isLoading: drivesLoading } = useDrives(vehicleIdStr);
+  const { data: stats, isLoading: statsLoading } = useDrivingStats(vehicleIdStr);
+  const { data: motorLatest, isLoading: motorLatestLoading } = useMotorLatest(vehicleId ?? 0, 5_000);
+  const { data: motorHistory, isLoading: motorHistoryLoading } = useMotorHistory(vehicleId ?? 0, 200);
   const { state: liveState } = useVehicleLive(vehicleId ?? undefined);
 
   const { unitPrefs } = useUnits();
@@ -67,6 +73,7 @@ export default function DrivetrainHealthPage() {
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
+  const hasHealth = health != null;
   const overallHealth = health?.overallHealth ?? 'good';
   const healthScore = HEALTH_SCORE[overallHealth];
 
@@ -138,8 +145,7 @@ export default function DrivetrainHealthPage() {
     <PageContainer
       title={t('drivetrain.title', 'Drivetrain Health')}
       subtitle={t('drivetrain.subtitle', 'Motor, inverter, and battery thermal status')}
-      loading={healthLoading}
-      error={null}
+      query={healthQuery}
       actions={
         <div className="flex flex-wrap items-center gap-3">
           <VehicleSelect />
@@ -152,24 +158,81 @@ export default function DrivetrainHealthPage() {
         </div>
       }
     >
-      {health ? (
-        <>
-          <HealthOverview overallHealth={overallHealth} healthScore={healthScore} motorStatus={health.motorStatus} />
-          <HealthGaugeGrid overallHealth={overallHealth} healthScore={healthScore} motorStatus={health.motorStatus} sensors={sensors} stats={stats} />
-          <TemperatureGauges sensors={sensors} />
-          <TemperatureMetricCards sensors={sensors} overallHealth={overallHealth} healthScore={healthScore} peakPower={peakPower} />
-          <ThermalLoadPanel sensors={sensors} peakPower={peakPower} avgPowerMax={avgPowerMax} stats={stats} />
-          {motorLatest && <LiveMotorStatus motorLatest={motorLatest} isolationResistance={liveState.isolationResistance} />}
-          <StatorTempChart data={motorChartData} />
-          <TorqueHistoryChart data={motorChartData} />
-          <TemperatureTrendChart data={tempTrendData} />
-          <PowerOutputChart data={chartData} />
+      {/* 1 — Hero: overall drivetrain health status (alert + panel) */}
+      <HealthOverview
+        overallHealth={overallHealth}
+        healthScore={healthScore}
+        motorStatus={health?.motorStatus ?? ''}
+        hasData={hasHealth}
+        loading={healthLoading}
+        error={healthIsError ? healthError : undefined}
+        onRetry={refetchHealth}
+      />
+
+      {/* 2 — KPI band: temperature + health + peak-power metric cards */}
+      <TemperatureMetricCards
+        sensors={sensors}
+        overallHealth={overallHealth}
+        healthScore={healthScore}
+        peakPower={peakPower}
+        loading={healthLoading}
+      />
+
+      {/* 3 — Health score gauge + motor details + drive statistics */}
+      <HealthGaugeGrid
+        overallHealth={overallHealth}
+        healthScore={healthScore}
+        motorStatus={health?.motorStatus ?? '—'}
+        sensors={sensors}
+        stats={stats}
+        hasHealth={hasHealth}
+        loading={healthLoading}
+        statsLoading={statsLoading}
+      />
+
+      {/* 4 — Thermal bento: gauges + load indicators side-by-side on wide screens */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+        <TemperatureGauges sensors={sensors} loading={healthLoading} />
+        <ThermalLoadPanel
+          sensors={sensors}
+          peakPower={peakPower}
+          avgPowerMax={avgPowerMax}
+          stats={stats}
+          loading={healthLoading}
+        />
+      </section>
+
+      {/* 5 — Live motor telemetry band (full width) */}
+      <LiveMotorStatus
+        motorLatest={motorLatest}
+        isolationResistance={liveState.isolationResistance}
+        loading={motorLatestLoading}
+      />
+
+      {/* 6 — Charts bento: two per row on wide screens, stacked on mobile */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+        <StatorTempChart data={motorChartData} loading={motorHistoryLoading} />
+        <TorqueHistoryChart data={motorChartData} loading={motorHistoryLoading} />
+        <TemperatureTrendChart data={tempTrendData} loading={drivesLoading} />
+        <PowerOutputChart data={chartData} loading={drivesLoading} />
+      </section>
+
+      {/* 7 — Detail band: temperature/power details + health recommendations */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+        <div className="xl:col-span-2">
+          <DetailCards
+            health={health}
+            peakPower={peakPower}
+            avgPowerMax={avgPowerMax}
+            minRegenPower={minRegenPower}
+            stats={stats}
+            loading={healthLoading}
+          />
+        </div>
+        <div className="xl:col-span-1">
           <HealthRecommendations overallHealth={overallHealth} />
-          <DetailCards health={health} peakPower={peakPower} avgPowerMax={avgPowerMax} minRegenPower={minRegenPower} stats={stats} />
-        </>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('drivetrain.noData', 'No drivetrain health data available yet')} />
-      )}
+        </div>
+      </section>
     </PageContainer>
   );
 }
