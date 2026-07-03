@@ -14,6 +14,7 @@ import {
   CircleDot,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import type { SecurityEvent } from '@/types/admin';
@@ -147,7 +148,7 @@ export function LiveVehicleState({ latest, isLoading, error, onRetry, className 
       <div className="mb-3 flex items-center justify-between gap-3">
         <PanelTitle>{t('admin.security.liveState', 'Live Vehicle State')}</PanelTitle>
         {latest && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-green/20 bg-neon-green/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+          <span className={cn('inline-flex items-center gap-1.5 rounded-full border border-neon-green/20 bg-neon-green/10 px-2 py-0.5', typography.size.xs, typography.weight.medium, 'text-emerald-300')}>
             <CircleDot className="h-3 w-3 animate-pulse" aria-hidden="true" />
             {t('admin.security.live.indicator', 'Live')}
           </span>
