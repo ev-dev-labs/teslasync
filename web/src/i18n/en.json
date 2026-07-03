@@ -4011,6 +4011,73 @@
       "adminDesc": "Full administrative access to every resource."
     }
   },
+  "statusApi": {
+    "title": "Status API",
+    "subtitle": "Stable contract for external integrations",
+    "back": "Back to System Status",
+    "copyPath": "Copy endpoint path",
+    "query": "Query",
+    "exampleResponse": "Example response",
+    "kpi": {
+      "label": "API surface summary",
+      "endpoints": "Endpoints",
+      "endpointsSub": "Documented routes",
+      "transport": "Transport",
+      "transportSub": "Poll or stream",
+      "payload": "Payload",
+      "payloadSub": "application/json",
+      "contract": "Contract",
+      "contractValue": "Additive-only",
+      "contractSub": "v1 stable"
+    },
+    "overview": {
+      "title": "Overview",
+      "body": "All endpoints are mounted under the base path and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth — otherwise pass an API key in the standard Authorization header. Every response is JSON over HTTP.",
+      "additive": "The shape is additive-only — new fields may appear, but existing field types and names won't change without a major version bump."
+    },
+    "facts": {
+      "basePath": "Base path",
+      "auth": "Authentication",
+      "authValue": "ForwardAuth or Authorization header",
+      "contentType": "Content-Type",
+      "versioning": "Versioning",
+      "versioningValue": "Additive-only (v1)"
+    },
+    "integrations": {
+      "title": "Designed for",
+      "grafana": "JSON datasource",
+      "kuma": "HTTP(s) JSON Query monitor",
+      "hass": "REST sensor",
+      "healthchecks": "Synthetic monitor"
+    },
+    "endpoints": {
+      "label": "Endpoints",
+      "title": "Endpoints",
+      "count": "{{n}} routes",
+      "status": {
+        "desc": "Overall snapshot — answers 'is it healthy right now?' in a single round-trip. Includes counts, version, resources, maintenance, and a list of active incidents."
+      },
+      "components": {
+        "desc": "Per-component health array — useful for surfacing individual subsystem status (database, mqtt, tesla, telemetry, etc.) in your own dashboard."
+      },
+      "resources": {
+        "desc": "Runtime resources only (goroutines, uptime, Go version). Light enough to poll at high frequency."
+      },
+      "uptime": {
+        "desc": "Uptime percentage over the requested window. Until per-component heartbeat history is wired, the percentage is derived from the current snapshot — the historical_source field signals which is in play."
+      },
+      "incidents": {
+        "desc": "Active incidents list. Pass active=1 to filter to incidents whose resolved_at is NULL."
+      },
+      "live": {
+        "desc": "Server-Sent Events stream. Pushes a `status` event with the full snapshot every 30 seconds. Heartbeat events emitted every 25s so reverse proxies don't garbage-collect the connection mid-flight. Browsers consume this via EventSource(). For curl: -N --no-buffer."
+      }
+    },
+    "footer": {
+      "action": "Open an issue",
+      "note": "Need an additional endpoint or field? Open an issue on the project repo — the API surface is intentionally small, but additive changes are welcome."
+    }
+  },
   "timeline": {
     "title": "Timeline",
     "time": "Time",
