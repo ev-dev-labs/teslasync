@@ -15,6 +15,7 @@ import {
   Input,
   Badge,
   Text,
+  Caption,
   useSortToggle,
   type Column,
 } from '@/components/ui';
@@ -79,9 +80,9 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       key: 'order_id',
       header: t('admin.teslaOrders.cols.orderId', 'Order ID'),
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-secondary)]" title={row.order_id}>
+        <Text as="span" size="xs" color="secondary" mono title={row.order_id}>
           {row.order_id}
-        </span>
+        </Text>
       ),
     },
     {
@@ -89,11 +90,11 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       header: t('admin.teslaOrders.cols.vin', 'VIN'),
       render: (row) =>
         row.vin ? (
-          <span className="font-mono text-xs text-[var(--text-secondary)]" title={row.vin}>
+          <Text as="span" size="xs" color="secondary" mono title={row.vin}>
             {row.vin}
-          </span>
+          </Text>
         ) : (
-          <span className="text-xs text-[var(--text-muted)]">—</span>
+          <Caption>—</Caption>
         ),
     },
     {
@@ -112,9 +113,9 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       header: t('admin.teslaOrders.cols.delivery', 'Delivery'),
       sortable: true,
       render: (row) => (
-        <span className="text-xs tabular-nums text-[var(--text-primary)]">
+        <Text as="span" size="xs" color="primary" className="tabular-nums">
           {row.delivery_date ? formatDate(row.delivery_date) : '—'}
-        </span>
+        </Text>
       ),
     },
     {
@@ -127,7 +128,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             {t('admin.teslaOrders.cols.yes', 'Yes')}
           </Badge>
         ) : (
-          <span className="text-xs text-[var(--text-muted)]">—</span>
+          <Caption>—</Caption>
         ),
     },
   ];
