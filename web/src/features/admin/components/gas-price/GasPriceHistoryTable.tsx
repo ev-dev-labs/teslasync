@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { History } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Badge, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, Badge, DataTable, type Column } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -32,7 +32,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
         header: t('gas.effectiveFrom', 'Effective From'),
         sortable: true,
         render: (r) => (
-          <span className="text-sm text-[var(--text-primary)]">{formatDateTime(r.effective_from)}</span>
+          <Text variant="body">{formatDateTime(r.effective_from)}</Text>
         ),
       },
       {
@@ -40,10 +40,10 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
         header: t('gas.price', 'Price'),
         sortable: true,
         render: (r) => (
-          <span className="text-sm tabular-nums text-[var(--text-primary)]">
+          <Text variant="body" className="tabular-nums">
             {formatCurrency(r.price_per_unit ?? 0)}
-            <span className="text-[var(--text-muted)]">/{r.unit ?? '—'}</span>
-          </span>
+            <Text color="muted">/{r.unit ?? '—'}</Text>
+          </Text>
         ),
       },
       {
@@ -61,9 +61,9 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
         header: t('gas.efficiency', 'Efficiency'),
         sortable: true,
         render: (r) => (
-          <span className="text-sm tabular-nums text-[var(--text-secondary)]">
+          <Text size="sm" color="secondary" className="tabular-nums">
             {r.efficiency_mpg ? `${fmtNumber(r.efficiency_mpg, 0)} ${t('gas.mpg', 'mpg')}` : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -72,7 +72,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
         sortable: false,
         render: (r) =>
           r.effective_to ? (
-            <span className="text-sm text-[var(--text-secondary)]">{formatDateTime(r.effective_to)}</span>
+            <Text size="sm" color="secondary">{formatDateTime(r.effective_to)}</Text>
           ) : (
             <Badge variant="success" size="sm">
               {t('gas.current', 'Current')}
