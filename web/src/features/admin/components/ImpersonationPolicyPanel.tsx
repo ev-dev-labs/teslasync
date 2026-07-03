@@ -98,7 +98,7 @@ export function ImpersonationPolicyPanel() {
                 {item.icon}
               </span>
               <div className="min-w-0">
-                <Text as="p" variant="bodySm" className="font-medium text-[var(--text-primary)]">
+                <Text as="p" size="xs" weight="medium" color="primary">
                   {item.title}
                 </Text>
                 <Text as="p" variant="caption" className="mt-0.5">
