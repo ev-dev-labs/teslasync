@@ -20,6 +20,7 @@ import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog,
   Tabs, PinButton, EditableText, Checkbox, PanelTitle, Caption, Label,
+  Text, HelperText,
 } from '@/components/ui';
 import { MetricCard, BulkActionToolbar } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner, AlertBanner, QueryError } from '@/components/feedback';
@@ -793,15 +794,15 @@ export default function GeofencesPage() {
                         </div>
 
                         {/* Meta: coordinates + radius */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                          <span className="flex items-center gap-1 font-mono">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <Text as="span" size="xs" color="muted" mono className="flex items-center gap-1">
                             <Globe className="h-3 w-3" aria-hidden="true" />
                             {fmtNumber(g.latitude ?? 0, 6)}, {fmtNumber(g.longitude ?? 0, 6)}
-                          </span>
-                          <span className="flex items-center gap-1">
+                          </Text>
+                          <Text as="span" size="xs" color="muted" className="flex items-center gap-1">
                             <Ruler className="h-3 w-3" aria-hidden="true" />
                             {fmtNumber(g.radius ?? 0)} {t('m')}
-                          </span>
+                          </Text>
                         </div>
 
                         {/* Footer: enable toggle + edit / delete actions */}
@@ -813,9 +814,9 @@ export default function GeofencesPage() {
                               size="sm"
                               aria-label={t('geofences.toggleGeofence', 'Toggle geofence {{name}}', { name: g.name })}
                             />
-                            <span className="text-xs text-[var(--text-secondary)]">
+                            <Text as="span" variant="bodySm">
                               {g.enabled ? t('Active') : t('Inactive')}
-                            </span>
+                            </Text>
                           </div>
                           <div className="flex items-center gap-1">
                             <Button
@@ -890,12 +891,12 @@ export default function GeofencesPage() {
 
               {locationSource === 'map' ? (
                 <div className="space-y-2">
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <HelperText>
                     {t(
                       'geofences.drawHint',
                       'Click the circle tool, then click and drag on the map to draw a fence.',
                     )}
-                  </p>
+                  </HelperText>
                   <div
                     className="h-64 w-full overflow-hidden rounded-lg border border-white/[0.08]"
                     role="application"
