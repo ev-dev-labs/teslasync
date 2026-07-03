@@ -5000,6 +5000,59 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain"
+    },
+    "title": "Vampire Drain",
+    "subtitle": "Analyze phantom energy loss while your vehicle is parked",
+    "kpis": "Drain summary",
+    "selectVehicle": "Select a vehicle to view its vampire drain.",
+    "noEvents": "No parked-drain sessions recorded in this window yet.",
+    "refresh": "Refresh",
+    "kpi": {
+      "avg": "Avg Drain / day",
+      "median": "Median Drain / day",
+      "p95": "P95 Drain / day",
+      "observed": "Observed Hours",
+      "sessions": "{{count}} sessions"
+    },
+    "help": {
+      "avg": "Mean battery loss per day while parked and not charging across the sample window.",
+      "median": "Typical (50th percentile) daily battery loss — robust to one-off outliers.",
+      "p95": "Worst-case (95th percentile) daily battery loss observed in the window.",
+      "observed": "Total parked, non-charging hours sampled for the drain statistics."
+    },
+    "trend": {
+      "title": "Drain Rate Trend",
+      "series": "Drain Rate (%/day)"
+    },
+    "gauge": {
+      "title": "Drain Rate",
+      "label": "Avg %/day",
+      "caption": "Reference: ~5 %/day is a high phantom-drain rate. Lower is better."
+    },
+    "daily": {
+      "title": "Daily Drain While Parked",
+      "loss": "Battery Loss %",
+      "parked": "Parked Hours"
+    },
+    "sessions": {
+      "title": "Drain Sessions",
+      "count": "{{count}} sessions"
+    },
+    "columns": {
+      "started": "Started",
+      "duration": "Duration",
+      "startPct": "Start %",
+      "endPct": "End %",
+      "loss": "Loss %",
+      "rate": "Rate %/day",
+      "temp": "Ambient"
+    },
+    "tips": {
+      "title": "Tips to Reduce Vampire Drain",
+      "sentry": "Disable Sentry Mode when parked at home to save 1–2 % per day.",
+      "polling": "Reduce third-party app polling intervals to let the car sleep faster.",
+      "wake": "Avoid opening the app frequently — each wake cycle costs battery.",
+      "energySaver": "Enable energy-saving mode in vehicle settings for better standby."
     }
   },
   "climate": {
