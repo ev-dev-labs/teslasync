@@ -175,7 +175,7 @@ export function DataFreshness({
   return (
     <span
       className={cn(
-        'inline-flex items-center text-[10px] leading-none transition-colors',
+        'inline-flex items-center text-2xs leading-none transition-colors',
         compact ? 'gap-0.5' : 'gap-1',
         cfg.color,
         onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',

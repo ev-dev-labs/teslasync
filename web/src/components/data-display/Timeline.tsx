@@ -43,7 +43,7 @@ export function Timeline({ items, className }: TimelineProps) {
           {/* content */}
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-medium text-[var(--text-primary)]">
                 {item.title}
               </span>
               <span className="shrink-0 text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">

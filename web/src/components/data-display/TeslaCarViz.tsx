@@ -544,7 +544,7 @@ export function TeslaCarViz({
       </svg>
 
       {/* Status indicators below car */}
-      <div className="absolute bottom-0 flex items-center gap-3 text-[10px] font-medium">
+      <div className="absolute bottom-0 flex items-center gap-3 text-2xs font-medium">
         <StatusDot
           active={isCharging}
           color="#10b981"

@@ -138,7 +138,7 @@ export function HistoryListRow({
           <div className="flex flex-wrap items-center gap-2 mb-1">{primary}</div>
           {route && <div className="mb-1">{route}</div>}
           {metrics && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-muted)] tabular-nums">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] tabular-nums">
               {metrics}
             </div>
           )}
@@ -146,7 +146,7 @@ export function HistoryListRow({
         </div>
 
         {!hideChevron && (
-          <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-cyan-400 transition-colors shrink-0" />
+          <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-cyan-400 transition-colors shrink-0" />
         )}
       </div>
     </GlassPanel>

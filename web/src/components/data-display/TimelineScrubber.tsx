@@ -272,7 +272,7 @@ export function TimelineScrubber({
           className="pointer-events-none absolute -top-2 z-20 -translate-x-1/2 -translate-y-full"
           style={{ left: previewLeft }}
         >
-          <div className="flex flex-col items-center gap-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2.5 py-1.5 text-[11px] font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md">
+          <div className="flex flex-col items-center gap-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2.5 py-1.5 text-xs font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md">
             {previewTimeStr && <div className="text-[var(--text-secondary)]">{previewTimeStr}</div>}
             {hoverPreview?.speed && (
               <div className="flex items-center gap-1 text-cyan-300">
@@ -407,7 +407,7 @@ function TimelineMarkerTick({
         aria-label={ariaLabel}
       >
         {marker.count != null && marker.count > 1 && (
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--surface-overlay)] px-1 text-[8px] font-mono text-[var(--text-primary)]">
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--surface-overlay)] px-1 text-2xs font-mono text-[var(--text-primary)]">
             {marker.count}
           </span>
         )}

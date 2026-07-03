@@ -120,7 +120,7 @@ export function RouteDisplay({
     <div
       data-testid={testId}
       className={cn(
-        'text-[11px] text-[var(--text-secondary)] flex items-center gap-1 truncate',
+        'text-xs text-[var(--text-secondary)] flex items-center gap-1 truncate',
         className,
       )}
     >

@@ -28,7 +28,7 @@ const DOT_SIZE: Record<string, string> = {
 };
 
 const LABEL_SIZE: Record<string, string> = {
-  sm: 'text-[10px]',
+  sm: 'text-2xs',
   md: 'text-xs',
 };
 

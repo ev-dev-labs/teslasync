@@ -264,31 +264,31 @@ export function PlaybackControls({
   }, []);
 
   /* ── Help content listing all shortcuts ──────────────────────── */
-  // Note: do NOT hardcode text-white/* here — the parent <Tooltip> body
-  // ships its own `text-gray-100 dark:text-gray-900` colour pair, which
-  // inverts the surface in dark mode (light tooltip on dark page). White
-  // text inside that white-in-dark-mode card was invisible. Inheriting
+  // Note: do NOT hardcode a fixed light foreground here — the parent
+  // <Tooltip> body ships its own inverted gray foreground pair, which
+  // inverts the surface in dark mode (light tooltip on dark page). A pinned
+  // light foreground inside that inverted card was invisible. Inheriting
   // the tooltip's text colour keeps the labels readable in both themes.
   const helpContent = useMemo(
     () => (
-      <div className="space-y-2 text-[11px]">
+      <div className="space-y-2 text-xs">
         <div className="font-semibold">
           {t('replay.shortcuts.title', 'Trip replay shortcuts')}
         </div>
         <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 opacity-90">
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-[10px]">Space / K</kbd>
+          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">Space / K</kbd>
           <span>{t('replay.shortcuts.playPause', 'Play / Pause')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-[10px]">← / →</kbd>
+          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">← / →</kbd>
           <span>{t('replay.shortcuts.skip5', 'Skip ±5s (Shift = ±30s)')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-[10px]">J / L</kbd>
+          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">J / L</kbd>
           <span>{t('replay.shortcuts.skip10', 'Skip ±10s')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-[10px]">, / .</kbd>
+          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">, / .</kbd>
           <span>{t('replay.shortcuts.frame', 'Previous / next frame')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-[10px]">Home / End</kbd>
+          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">Home / End</kbd>
           <span>{t('replay.shortcuts.startEnd', 'Jump to start / end')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-[10px]">0 – 9</kbd>
+          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">0 – 9</kbd>
           <span>{t('replay.shortcuts.percent', 'Jump to N×10%')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-[10px]">+ / −</kbd>
+          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">+ / −</kbd>
           <span>{t('replay.shortcuts.speed', 'Speed up / slow down')}</span>
         </div>
       </div>
@@ -336,7 +336,7 @@ export function PlaybackControls({
       {shortcutToast && (
         <div
           aria-live="polite"
-          className="pointer-events-none absolute -top-7 right-3 z-10 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1 text-[11px] font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md"
+          className="pointer-events-none absolute -top-7 right-3 z-10 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1 text-xs font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md"
         >
           {shortcutToast.label}
         </div>
