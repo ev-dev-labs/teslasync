@@ -1,285 +1,256 @@
 /**
- * IncidentTimelinePage — post-mortem page at
+ * IncidentTimelinePage — modern-ui, full-width post-mortem cockpit at
  * /system-status/incidents/:id.
  *
- * Operator UX:
- *   • Header: title, severity, status badge, lifecycle controls
- *   • Body: full timeline of updates (newest first)
- *   • Footer form: append a new update (auto-bumps "updated_at")
- *   • Resolve button: flips status to "resolved" + appends a
- *     "Incident resolved." line — requires confirm
+ * Layout (mobile-first responsive bento — reflows to more columns as the
+ * viewport widens, never a centered strip on wide monitors):
+ *   1. KPI band — status · duration · updates · affected · source · started.
+ *   2. Main bento — hero overview (severity, description, affected,
+ *      timestamps, resolve control) beside a details key/value panel.
+ *   3. AI summarizer band — opt-in Helix timeline summary (self-gated).
+ *   4. Timeline + append-update bento — chronological updates beside the
+ *      operator "add update" form (or a resolved-state placeholder).
  *
- * The page deliberately does NOT delete; resolving is the canonical
- * close-out. A separate admin-only delete CTA could be added later.
+ * Resolving is the canonical close-out (never delete). Each data surface is
+ * null-safe and owns its own loading / empty state. Heavy sections are
+ * decomposed into ../components/incident.
  */
 
-import { useMemo, useState, type FormEvent } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
-  ArrowLeft, AlertTriangle, AlertCircle, AlertOctagon,
-  CheckCircle2, Clock, MessageSquare,
+  ArrowLeft, AlertCircle, CheckCircle2, Clock, MessageSquare,
+  Activity, Layers, Radio, CalendarClock,
 } from 'lucide-react'
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, Badge, Textarea, ConfirmDialog, Select } from '@/components/ui'
-import { useToast } from '@/components/feedback/Toast'
-import { cn } from '@/lib/cn'
 import {
-  useIncident,
-  useAppendIncidentUpdate,
-  usePatchIncident,
-  type IncidentSeverity,
-  type IncidentStatus,
-} from '@/api/hooks/useIncidents'
+  GlassPanel, Button, Badge, ConfirmDialog, PanelTitle, Text, Label,
+} from '@/components/ui'
+import { MetricCard, KVList } from '@/components/data-display'
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
+import { FadeIn } from '@/components/motion'
+import { useToast } from '@/components/feedback/Toast'
+import { useIncident, usePatchIncident } from '@/api/hooks/useIncidents'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { AIIncidentTimelineSummarizer } from '@/components/ai/AIIncidentTimelineSummarizer'
-
-const SEVERITY_TONE: Record<IncidentSeverity, { Icon: typeof AlertCircle; cls: string }> = {
-  minor:    { Icon: AlertCircle,   cls: 'text-amber-300' },
-  major:    { Icon: AlertTriangle, cls: 'text-orange-300' },
-  critical: { Icon: AlertOctagon,  cls: 'text-red-400' },
-}
-
-const STATUS_BADGE: Record<IncidentStatus, 'warning' | 'danger' | 'info' | 'success'> = {
-  investigating: 'danger',
-  identified:    'warning',
-  monitoring:    'info',
-  resolved:      'success',
-}
-
-const STATUS_LABEL: Record<IncidentStatus, string> = {
-  investigating: 'Investigating',
-  identified:    'Identified',
-  monitoring:    'Monitoring',
-  resolved:      'Resolved',
-}
-
-function fmtDuration(startIso: string, endIso?: string): string {
-  const s = Date.parse(startIso)
-  const e = endIso ? Date.parse(endIso) : Date.now()
-  if (!Number.isFinite(s) || !Number.isFinite(e)) return ''
-  const secs = Math.max(0, Math.floor((e - s) / 1000))
-  if (secs < 60) return `${secs}s`
-  if (secs < 3600) return `${Math.floor(secs / 60)}m`
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`
-  return `${Math.floor(secs / 86400)}d ${Math.floor((secs % 86400) / 3600)}h`
-}
+import {
+  IncidentTimelineList, IncidentUpdateForm, IncidentSeverityChip,
+  STATUS_BADGE, STATUS_COLOR, fmtDuration, useIncidentStatusLabel,
+} from '../components/incident'
 
 export default function IncidentTimelinePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const toast = useToast()
-  const { formatDateTime: fmtAbs } = useDateFormat()
+  const { formatDateTime: fmtAbs, formatRelative: fmtRel } = useDateFormat()
+  const statusLabel = useIncidentStatusLabel()
+
   const numericId = useMemo(() => {
     const n = Number(id)
     return Number.isFinite(n) && n > 0 ? n : null
   }, [id])
 
-  const { data: incident, isLoading, error } = useIncident(numericId)
-  const appendUpdate = useAppendIncidentUpdate()
+  const incidentQuery = useIncident(numericId)
+  const { data: incident, isLoading, error, refetch } = incidentQuery
   const patch = usePatchIncident()
 
-  const [message, setMessage] = useState('')
-  const [nextStatus, setNextStatus] = useState<IncidentStatus | ''>('')
   const [confirmResolve, setConfirmResolve] = useState(false)
 
-  const handleAppend = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!incident) return
-    const m = message.trim()
-    if (!m) {
-      toast.error('Update message is required.')
-      return
-    }
-    try {
-      await appendUpdate.mutateAsync({
-        id: incident.id,
-        payload: { message: m, status: (nextStatus || undefined) as IncidentStatus | undefined },
-      })
-      setMessage('')
-      setNextStatus('')
-      toast.success('Update added.')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to append update')
-    }
-  }
+  usePageTitle(incident?.title ?? t('incidentTimeline.title', 'Incident'))
 
-  const handleResolve = async () => {
-    if (!incident) return
-    try {
-      await patch.mutateAsync({ id: incident.id, payload: { resolved: true } })
-      toast.success('Incident resolved.')
-      setConfirmResolve(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to resolve')
-    }
-  }
+  const updates = useMemo(
+    () => [...(incident?.updates ?? [])].reverse(),
+    [incident?.updates],
+  )
+
+  const backAction = (
+    <Button variant="ghost" size="sm" onClick={() => navigate('/system-status')} className="gap-1.5">
+      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+      {t('incidentTimeline.back', 'Back')}
+    </Button>
+  )
 
   if (isLoading) {
     return (
-      <PageContainer title="Incident" subtitle="Loading…">
-        <div className="text-sm text-[var(--text-muted)]">Loading incident…</div>
+      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.loading', 'Loading incident…')} actions={backAction}>
+        <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} height={84} />
+          ))}
+        </section>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="xl:col-span-2"><Skeleton height={240} /></div>
+          <Skeleton height={240} />
+        </div>
       </PageContainer>
     )
   }
 
   if (error || !incident) {
     return (
-      <PageContainer title="Incident" subtitle="Not found">
-        <GlassPanel className="p-4">
-          <p className="text-sm text-[var(--text-secondary)]">
-            Incident {id} not found or you don't have access.
-          </p>
-          <div className="pt-3">
-            <Link to="/system-status" className="text-sm text-cyan-300 hover:underline inline-flex items-center gap-1.5">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to System Status
-            </Link>
-          </div>
-        </GlassPanel>
+      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.notFound', 'Not found')} actions={backAction}>
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-5">
+            {error ? (
+              <QueryError
+                error={error}
+                resourceName={t('incidentTimeline.resource', 'Incident')}
+                listHref="/system-status"
+                onRetry={() => refetch()}
+              />
+            ) : (
+              <EmptyState
+                icon={<AlertCircle className="h-8 w-8" aria-hidden="true" />}
+                title={t('incidentTimeline.notFoundTitle', 'Incident not found')}
+                message={t('incidentTimeline.notFoundBody', "It may have been deleted or you don't have access.")}
+                actionTo={{ label: t('incidentTimeline.backToStatus', 'Back to System Status'), to: '/system-status' }}
+              />
+            )}
+          </GlassPanel>
+        </FadeIn>
       </PageContainer>
     )
   }
 
-  const tone = SEVERITY_TONE[incident.severity]
-  const { Icon } = tone
   const isResolved = incident.status === 'resolved'
+  const affected = incident.affected_components ?? []
+  const durationLabel = fmtDuration(incident.started_at, incident.resolved_at)
+
+  const handleResolve = async () => {
+    try {
+      await patch.mutateAsync({ id: incident.id, payload: { resolved: true } })
+      toast.success(t('incidentTimeline.resolvedToast', 'Incident resolved.'))
+      setConfirmResolve(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('incidentTimeline.resolveFailed', 'Failed to resolve'))
+    }
+  }
+
+  const detailItems = [
+    { label: t('incidentTimeline.detail.status', 'Status'), value: <Badge variant={STATUS_BADGE[incident.status]}>{statusLabel(incident.status)}</Badge> },
+    { label: t('incidentTimeline.detail.source', 'Source'), value: incident.source ?? '—' },
+    { label: t('incidentTimeline.detail.started', 'Started'), value: fmtAbs(incident.started_at) },
+    { label: t('incidentTimeline.detail.resolved', 'Resolved'), value: incident.resolved_at ? fmtAbs(incident.resolved_at) : '—' },
+    { label: t('incidentTimeline.detail.duration', 'Duration'), value: durationLabel || '—' },
+    { label: t('incidentTimeline.detail.updates', 'Updates'), value: updates.length },
+    { label: t('incidentTimeline.detail.createdBy', 'Created by'), value: incident.created_by ?? '—' },
+    { label: t('incidentTimeline.detail.updated', 'Last updated'), value: fmtAbs(incident.updated_at) },
+  ]
 
   return (
     <PageContainer
       title={incident.title}
-      subtitle={`Incident #${incident.id}`}
-      actions={
-        <Button variant="ghost" size="sm" onClick={() => navigate('/system-status')} className="gap-1.5">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Button>
-      }
+      subtitle={`${t('incidentTimeline.idPrefix', 'Incident')} #${incident.id}`}
+      actions={backAction}
+      query={incidentQuery}
     >
-      <div className="space-y-5 max-w-3xl mx-auto">
-        <GlassPanel className="p-4">
-          <div className="flex items-start gap-3">
-            <Icon className={cn('h-5 w-5 mt-0.5 shrink-0', tone.cls)} aria-hidden />
-            <div className="flex-1 min-w-0 space-y-2">
+      {/* 1 — KPI band */}
+      <FadeIn>
+        <section aria-label={t('incidentTimeline.kpis', 'Incident metrics')} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
+          <MetricCard label={t('incidentTimeline.kpi.status', 'Status')} value={statusLabel(incident.status)} icon={<Activity className="h-5 w-5" aria-hidden="true" />} color={STATUS_COLOR[incident.status] ?? 'cyan'} />
+          <MetricCard label={t('incidentTimeline.kpi.duration', 'Duration')} value={durationLabel || '—'} icon={<Clock className="h-5 w-5" aria-hidden="true" />} color={isResolved ? 'green' : 'amber'} />
+          <MetricCard label={t('incidentTimeline.kpi.updates', 'Updates')} value={updates.length} icon={<MessageSquare className="h-5 w-5" aria-hidden="true" />} />
+          <MetricCard label={t('incidentTimeline.kpi.affected', 'Affected')} value={affected.length} icon={<Layers className="h-5 w-5" aria-hidden="true" />} color="purple" />
+          <MetricCard label={t('incidentTimeline.kpi.source', 'Source')} value={incident.source ?? '—'} icon={<Radio className="h-5 w-5" aria-hidden="true" />} color="blue" />
+          <MetricCard label={t('incidentTimeline.kpi.started', 'Started')} value={fmtRel(incident.started_at)} icon={<CalendarClock className="h-5 w-5" aria-hidden="true" />} />
+        </section>
+      </FadeIn>
+
+      {/* 2 — Hero overview + details bento */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={STATUS_BADGE[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>
-                <span className={cn('text-xs uppercase tracking-wide', tone.cls)}>{incident.severity}</span>
-                <span className="text-xs text-[var(--text-muted)]">{incident.source}</span>
+                <IncidentSeverityChip severity={incident.severity} />
+                <Badge variant={STATUS_BADGE[incident.status]}>{statusLabel(incident.status)}</Badge>
                 {isResolved ? (
-                  <Badge variant="success">Resolved · {fmtDuration(incident.started_at, incident.resolved_at)}</Badge>
+                  <Badge variant="success">{t('incidentTimeline.resolvedFor', 'Resolved')} · {fmtDuration(incident.started_at, incident.resolved_at)}</Badge>
                 ) : (
-                  <Badge variant="neutral">Open · {fmtDuration(incident.started_at)}</Badge>
+                  <Badge variant="neutral">{t('incidentTimeline.openFor', 'Open')} · {fmtDuration(incident.started_at)}</Badge>
                 )}
               </div>
-              {incident.description && (
-                <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap">{incident.description}</p>
-              )}
-              {incident.affected_components.length > 0 && (
-                <p className="text-xs text-[var(--text-muted)]">
-                  Affects: {incident.affected_components.join(', ')}
-                </p>
-              )}
-              <p className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1.5">
-                <Clock className="h-3 w-3" />
-                Started {fmtAbs(incident.started_at)}
-                {incident.resolved_at && ` · Resolved ${fmtAbs(incident.resolved_at)}`}
-              </p>
-            </div>
-            {!isResolved && (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                onClick={() => setConfirmResolve(true)}
-                disabled={patch.isPending}
-                className="gap-1.5"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Resolve
-              </Button>
-            )}
-          </div>
-        </GlassPanel>
-
-        {/*
-          AI incident timeline summarizer.
-          Renders only when ai_mode is local|cloud AND the
-          incident-timeline-summarizer toggle is on (gated by
-          withAiFeature). When off, the wrapper returns null and
-          the deterministic timeline below remains the canonical
-          surface (ADR-015 §I3 + §I5). The component is positioned
-          AFTER the incident header so the AI section has a
-          resolved incident in scope, and BEFORE the deterministic
-          timeline so users can compare the AI summary to the raw
-          updates list directly below it.
-        */}
-        <AIIncidentTimelineSummarizer incidentId={incident.id} />
-
-        {/* Timeline */}
-        <GlassPanel className="p-4">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3 inline-flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Timeline
-            <span className="text-xs font-normal text-[var(--text-muted)]">{incident.updates.length} entries</span>
-          </h3>
-          <ul className="space-y-3">
-            {[...incident.updates].reverse().map((u, idx) => (
-              <li key={`${u.at}-${idx}`} className="flex gap-3 border-l-2 border-[var(--border-subtle)] pl-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <Badge variant={STATUS_BADGE[u.status]}>{STATUS_LABEL[u.status]}</Badge>
-                    <span className="text-[var(--text-muted)]">{fmtAbs(u.at)}</span>
-                    {u.author && <span className="text-[var(--text-muted)]">· {u.author}</span>}
-                  </div>
-                  <p className="text-sm text-[var(--text-primary)] mt-1 whitespace-pre-wrap">{u.message}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </GlassPanel>
-
-        {/* Append-update form */}
-        {!isResolved && (
-          <GlassPanel className="p-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Add update</h3>
-            <form onSubmit={handleAppend} className="space-y-3">
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="What's new? Investigation step, mitigation applied, hypothesis…"
-                rows={3}
-                maxLength={4000}
-                required
-              />
-              <div className="flex items-center justify-between gap-3">
-                <Select
-                  value={nextStatus}
-                  onChange={(e) => setNextStatus(e.target.value as IncidentStatus | '')}
-                  aria-label="Change status with this update"
-                  options={[
-                    { value: '', label: `Keep status as ${STATUS_LABEL[incident.status]}` },
-                    { value: 'investigating', label: '→ Investigating' },
-                    { value: 'identified', label: '→ Identified' },
-                    { value: 'monitoring', label: '→ Monitoring' },
-                    { value: 'resolved', label: '→ Resolved' },
-                  ]}
-                />
-                <Button type="submit" variant="primary" disabled={appendUpdate.isPending}>
-                  {appendUpdate.isPending ? 'Adding…' : 'Add update'}
+              {!isResolved && (
+                <Button type="button" variant="primary" size="sm" onClick={() => setConfirmResolve(true)} disabled={patch.isPending} className="shrink-0 gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t('incidentTimeline.resolve', 'Resolve')}
                 </Button>
+              )}
+            </div>
+
+            <div className="mt-4 space-y-4">
+              {incident.description ? (
+                <Text as="p" variant="body" className="whitespace-pre-wrap">{incident.description}</Text>
+              ) : (
+                <Text as="p" variant="caption">{t('incidentTimeline.noDescription', 'No description provided.')}</Text>
+              )}
+
+              <div className="space-y-1">
+                <Label>{t('incidentTimeline.affected', 'Affected components')}</Label>
+                {affected.length > 0 ? (
+                  <Text as="p" variant="body">{affected.join(', ')}</Text>
+                ) : (
+                  <Text as="p" variant="caption">{t('incidentTimeline.noAffected', 'None recorded')}</Text>
+                )}
               </div>
-            </form>
+
+              <Text as="p" variant="caption" className="inline-flex items-center gap-1.5">
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {t('incidentTimeline.started', 'Started')} {fmtAbs(incident.started_at)}
+                {incident.resolved_at ? ` · ${t('incidentTimeline.resolvedAt', 'Resolved')} ${fmtAbs(incident.resolved_at)}` : ''}
+              </Text>
+            </div>
           </GlassPanel>
-        )}
-      </div>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3">{t('incidentTimeline.details', 'Details')}</PanelTitle>
+            <KVList items={detailItems} />
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 3 — AI summarizer (self-gated: renders nothing unless enabled) */}
+      <AIIncidentTimelineSummarizer incidentId={incident.id} />
+
+      {/* 4 — Timeline + append-update bento */}
+      <FadeIn delay={0.2}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('incidentTimeline.timeline', 'Timeline')}
+              <Badge variant="neutral" size="sm">{updates.length}</Badge>
+            </PanelTitle>
+            <IncidentTimelineList updates={updates} />
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3">{t('incidentTimeline.postUpdate', 'Post an update')}</PanelTitle>
+            {isResolved ? (
+              <EmptyState
+                icon={<CheckCircle2 className="h-8 w-8" aria-hidden="true" />}
+                title={t('incidentTimeline.resolvedTitle', 'Incident resolved')}
+                message={t('incidentTimeline.resolvedBody', 'This incident is closed. The timeline remains available for reference.')}
+              />
+            ) : (
+              <IncidentUpdateForm incident={incident} />
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
 
       <ConfirmDialog
         open={confirmResolve}
         onConfirm={handleResolve}
         onCancel={() => setConfirmResolve(false)}
-        title="Resolve incident?"
-        message="This will close the incident and stamp resolved_at. You can still view the timeline."
-        confirmLabel="Resolve"
-        cancelLabel="Cancel"
+        variant="warning"
+        title={t('incidentTimeline.confirmTitle', 'Resolve incident?')}
+        message={t('incidentTimeline.confirmBody', 'This will close the incident and stamp resolved_at. You can still view the timeline.')}
+        confirmLabel={t('incidentTimeline.resolve', 'Resolve')}
+        cancelLabel={t('incidentTimeline.cancel', 'Cancel')}
         loading={patch.isPending}
       />
     </PageContainer>
