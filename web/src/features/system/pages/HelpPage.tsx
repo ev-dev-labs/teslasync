@@ -1,71 +1,61 @@
-// RAG-backed app help.
+// RAG-backed app help — modern-ui full-width redesign.
 //
 // HelpPage is the SPA route at /help — the deterministic baseline
 // for the N6 RAG-backed app help slice. It MUST render the same
-// curated link grid + tooltip palette regardless of ai_mode; the
-// AI surface (AIRAGHelp) is layered alongside via withAiFeature
-// and only mounts when ai_mode != 'off' AND the rag-help toggle
-// is on (ADR-015 §I3 baseline-intact + §I5 hidden UI in off mode).
+// curated link grid regardless of ai_mode; the AI surface
+// (AIRAGHelp) is layered alongside via withAiFeature and only
+// mounts when ai_mode != 'off' AND the rag-help toggle is on
+// (ADR-015 §I3 baseline-intact + §I5 hidden UI in off mode). Because
+// withAiFeature returns null when disabled, <AIRAGHelp/> is rendered
+// BARE (no FadeIn/section wrapper) so off-mode emits nothing at all.
 //
 // Curated links list is intentionally short + stable: the goal of
-// the static page is to give every user — including off-mode
-// users who never see the AI surface — a single visible jumping-
-// off point to the canonical destinations the app already exposes
-// (the docs API page, the system status page, the chatbot page,
-// the global search page, and the onboarding page). The link set
+// the static page is to give every user — including off-mode users
+// who never see the AI surface — a single visible jumping-off point
+// to the canonical destinations the app already exposes (docs API,
+// system status, chatbot, global search, onboarding). The link set
 // is duplicated in the off-mode test
 // (TestRagHelpAIOffHidesAssistantAndDocsLinksWork) which asserts
-// every entry is present; updating one MUST update the other.
+// every entry is present with its exact href; updating one MUST
+// update the other. The per-link `data-testid` and the container
+// `data-testid="help-baseline-links"` are load-bearing.
 
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import {
-  ArrowRight,
   BookOpen,
+  Compass,
   MessagesSquare,
   Rocket,
   Search as SearchIcon,
   ServerCog,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, IconBox, PanelTitle, SectionTitle, Text } from '@/components/ui'
+import { FadeIn } from '@/components/motion'
 import { AIRAGHelp } from '@/components/ai/AIRAGHelp'
 import { usePageTitle } from '@/hooks/usePageTitle'
-
-interface HelpLink {
-  /** stable id used as React key + test marker */
-  readonly id: string
-  /** target SPA route (existing canonical destinations only) */
-  readonly to: string
-  /** Lucide icon component reference */
-  readonly Icon: LucideIcon
-  /** i18n key for the link's display title */
-  readonly titleKey: string
-  /** fallback English display title (used if translation is missing) */
-  readonly titleFallback: string
-  /** i18n key for the one-line link description */
-  readonly descKey: string
-  /** fallback English description */
-  readonly descFallback: string
-}
+import type { NeonColor } from '@/lib/tokens'
+import { HelpLinkCard, type HelpLink } from '../components/HelpLinkCard'
 
 /**
  * The curated link palette. Order is intentional: documentation
- * first (most common entry point), then onboarding (for new
- * users), then system status (for operators), then search (for
- * everyone), then chatbot (for those who want to ask a question).
+ * first (most common entry point), then onboarding (for new users),
+ * then system status (for operators), then search (for everyone),
+ * then chatbot (for those who want to ask a question).
  *
- * Every `to` value MUST point at an existing canonical route
- * already mounted in App.tsx — this page does NOT introduce any
- * new entity-detail surface (ADR-015 §I3 baseline-intact).
+ * Every `to` value MUST point at an existing canonical route already
+ * mounted in App.tsx — this page does NOT introduce any new
+ * entity-detail surface (ADR-015 §I3 baseline-intact).
  */
 const HELP_LINKS: readonly HelpLink[] = [
   {
     id: 'docs-status-api',
     to: '/docs/status-api',
     Icon: BookOpen,
+    accent: 'cyan',
     titleKey: 'help.baseline.links.docsStatusApi.title',
     titleFallback: 'Documentation',
     descKey: 'help.baseline.links.docsStatusApi.description',
@@ -76,6 +66,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'onboarding',
     to: '/onboarding',
     Icon: Rocket,
+    accent: 'green',
     titleKey: 'help.baseline.links.onboarding.title',
     titleFallback: 'Onboarding',
     descKey: 'help.baseline.links.onboarding.description',
@@ -86,6 +77,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'system-status',
     to: '/system-status',
     Icon: ServerCog,
+    accent: 'amber',
     titleKey: 'help.baseline.links.systemStatus.title',
     titleFallback: 'System status',
     descKey: 'help.baseline.links.systemStatus.description',
@@ -96,6 +88,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'search',
     to: '/search',
     Icon: SearchIcon,
+    accent: 'blue',
     titleKey: 'help.baseline.links.search.title',
     titleFallback: 'Search',
     descKey: 'help.baseline.links.search.description',
@@ -106,6 +99,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'chatbot',
     to: '/chatbot',
     Icon: MessagesSquare,
+    accent: 'purple',
     titleKey: 'help.baseline.links.chatbot.title',
     titleFallback: 'Chatbot',
     descKey: 'help.baseline.links.chatbot.description',
@@ -114,74 +108,131 @@ const HELP_LINKS: readonly HelpLink[] = [
   },
 ]
 
+/** A "way to get help" — honest framing of the surfaces on this page. */
+interface HelpChannel {
+  readonly id: string
+  readonly Icon: LucideIcon
+  readonly accent: NeonColor
+  readonly titleKey: string
+  readonly titleFallback: string
+  readonly descKey: string
+  readonly descFallback: string
+}
+
+const HELP_CHANNELS: readonly HelpChannel[] = [
+  {
+    id: 'browse',
+    Icon: Compass,
+    accent: 'cyan',
+    titleKey: 'help.channels.browse.title',
+    titleFallback: 'Browse the app',
+    descKey: 'help.channels.browse.description',
+    descFallback: 'Jump straight to the canonical pages using the quick links below.',
+  },
+  {
+    id: 'docs',
+    Icon: BookOpen,
+    accent: 'blue',
+    titleKey: 'help.channels.docs.title',
+    titleFallback: 'Read the documentation',
+    descKey: 'help.channels.docs.description',
+    descFallback:
+      'The public API reference covers every endpoint, schema, and example request.',
+  },
+  {
+    id: 'assistant',
+    Icon: Sparkles,
+    accent: 'purple',
+    titleKey: 'help.channels.assistant.title',
+    titleFallback: 'Ask the assistant',
+    descKey: 'help.channels.assistant.description',
+    descFallback:
+      'When Helix is enabled, ask a natural-language question and get answers with citations.',
+  },
+]
+
 /**
- * The deterministic Help page. Renders five curated link cards
- * unconditionally + the conditional AIRAGHelp section.
- *
- * Visual contract:
- *   - PageContainer with page title (mirrors every other system
- *     page: SearchPage, SystemStatusPage, etc.).
- *   - One GlassPanel introduces the page with a brief framing
- *     paragraph + the AIRAGHelp section is rendered below it (off
- *     mode renders nothing for that section).
- *   - One GlassPanel per curated link, arranged in a responsive
- *     grid. Every card is a Link to an existing canonical route.
- *   - HelpCircle icon in the page header for visual continuity
- *     with the rest of the app.
+ * The deterministic Help page. Renders a welcome hero, the
+ * conditional AIRAGHelp assistant, and five curated link cards —
+ * full-bleed and mobile-first per the modern-ui design language.
  */
 export default function HelpPage() {
   const { t } = useTranslation()
   usePageTitle(t('help.title', 'Help'))
 
   return (
-    <PageContainer title={t('help.title', 'Help')}>
+    <PageContainer
+      title={t('help.title', 'Help')}
+      subtitle={t(
+        'help.subtitle',
+        'Guides, the in-app assistant, and quick links to everything in TeslaSync.',
+      )}
+    >
       <div className="space-y-6">
-        <GlassPanel>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t(
-              'help.intro',
-              'Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.',
-            )}
-          </p>
-        </GlassPanel>
+        {/* 1 — Welcome hero: framing prose + ways-to-get-help, side-by-side on wide screens */}
+        <FadeIn>
+          <section
+            aria-label={t('help.hero.aria', 'Getting started')}
+            className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+          >
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <SectionTitle>{t('help.welcomeTitle', 'Welcome to TeslaSync')}</SectionTitle>
+              <Text as="p" variant="body" className="mt-2 max-w-3xl">
+                {t(
+                  'help.intro',
+                  'Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.',
+                )}
+              </Text>
+            </GlassPanel>
 
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle>{t('help.channelsTitle', 'Ways to get help')}</PanelTitle>
+              <ul className="mt-3 space-y-3">
+                {HELP_CHANNELS.map((ch) => (
+                  <li key={ch.id} className="flex items-start gap-3">
+                    <IconBox color={ch.accent} size="sm">
+                      <ch.Icon className="h-4 w-4" aria-hidden="true" />
+                    </IconBox>
+                    <div className="min-w-0 space-y-0.5">
+                      <Text as="p" size="sm" weight="medium" color="primary">
+                        {t(ch.titleKey, ch.titleFallback)}
+                      </Text>
+                      <Text as="p" variant="bodySm">
+                        {t(ch.descKey, ch.descFallback)}
+                      </Text>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </GlassPanel>
+          </section>
+        </FadeIn>
+
+        {/* 2 — AI assistant. Self-gating: renders nothing when ai_mode='off'. */}
         <AIRAGHelp />
 
-        <div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          data-testid="help-baseline-links"
-        >
-          {HELP_LINKS.map((link) => (
-            <Link
-              key={link.id}
-              to={link.to}
-              data-testid={`help-baseline-link-${link.id}`}
-              className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 rounded-2xl"
+        {/* 3 — Explore the app: curated links reflow to fill the full width */}
+        <FadeIn delay={0.1}>
+          <section aria-label={t('help.explore.aria', 'Explore the app')}>
+            <div className="mb-3 sm:mb-4">
+              <SectionTitle>{t('help.exploreTitle', 'Explore the app')}</SectionTitle>
+              <Text as="p" variant="bodySm" className="mt-1">
+                {t(
+                  'help.exploreSubtitle',
+                  'Every card jumps to a canonical destination already built into the app.',
+                )}
+              </Text>
+            </div>
+            <div
+              className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))]"
+              data-testid="help-baseline-links"
             >
-              <GlassPanel>
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-300/10 text-cyan-300 ring-1 ring-cyan-300/20">
-                    <link.Icon className="h-5 w-5" aria-hidden={true} />
-                  </span>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-base font-semibold text-[var(--text-primary)]">
-                        {t(link.titleKey, link.titleFallback)}
-                      </h3>
-                      <ArrowRight
-                        className="h-4 w-4 text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-cyan-300"
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <p className="text-sm text-[var(--text-secondary)]">
-                      {t(link.descKey, link.descFallback)}
-                    </p>
-                  </div>
-                </div>
-              </GlassPanel>
-            </Link>
-          ))}
-        </div>
+              {HELP_LINKS.map((link) => (
+                <HelpLinkCard key={link.id} link={link} />
+              ))}
+            </div>
+          </section>
+        </FadeIn>
       </div>
     </PageContainer>
   )

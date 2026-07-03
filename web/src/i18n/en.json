@@ -170,6 +170,31 @@
         "configSection": "Provider-specific credentials and routing details. Required fields vary by channel type. All secrets are encrypted at rest.",
         "testHint": "Use the \"Send Test\" button after saving to verify your configuration. Tests bypass severity filters but otherwise match real delivery."
       }
+    },
+    "subtitle": "Guides, the in-app assistant, and quick links to everything in TeslaSync.",
+    "welcomeTitle": "Welcome to TeslaSync",
+    "channelsTitle": "Ways to get help",
+    "exploreTitle": "Explore the app",
+    "exploreSubtitle": "Every card jumps to a canonical destination already built into the app.",
+    "hero": {
+      "aria": "Getting started"
+    },
+    "explore": {
+      "aria": "Explore the app"
+    },
+    "channels": {
+      "browse": {
+        "title": "Browse the app",
+        "description": "Jump straight to the canonical pages using the quick links below."
+      },
+      "docs": {
+        "title": "Read the documentation",
+        "description": "The public API reference covers every endpoint, schema, and example request."
+      },
+      "assistant": {
+        "title": "Ask the assistant",
+        "description": "When Helix is enabled, ask a natural-language question and get answers with citations."
+      }
     }
   },
   "date": {
