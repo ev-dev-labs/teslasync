@@ -8154,9 +8154,48 @@
     "subtitle": "Tesla account region and Fleet API endpoint",
     "lastSynced": "Synced",
     "refresh": "Refresh",
-    "regionCode": "Region",
-    "fleetApiUrl": "Fleet API Base URL",
-    "noData": "No region data yet. Click Refresh to fetch from Tesla."
+    "regionName": "Region",
+    "regionCode": "Region code",
+    "protocol": "Protocol",
+    "host": "Host",
+    "lastSyncedFull": "Last synced",
+    "resource": "Region",
+    "copyUrl": "Copy Fleet API base URL",
+    "fleetApiUrl": "Fleet API base URL",
+    "noData": "No region data yet. Click Refresh to fetch from Tesla.",
+    "status": {
+      "configured": "Configured",
+      "pending": "Not configured"
+    },
+    "kpi": {
+      "section": "Region overview",
+      "region": "Region",
+      "regionUnknown": "Not detected",
+      "status": "Endpoint",
+      "source": "Tesla Fleet API",
+      "protocol": "Protocol",
+      "protocolHint": "Secure transport",
+      "synced": "Last synced",
+      "syncedHint": "From Tesla account"
+    },
+    "endpoint": {
+      "title": "Fleet API endpoint",
+      "subtitle": "The regional base URL TeslaSync uses for every Fleet API call."
+    },
+    "empty": {
+      "title": "No region on record",
+      "message": "TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla."
+    },
+    "about": {
+      "title": "About your region",
+      "body": "Tesla homes every account to a regional Fleet API host. TeslaSync sends commands and reads vehicle data through this base URL, so it must match the region where your account was created.",
+      "zonesTitle": "Fleet API zones"
+    },
+    "zones": {
+      "na": "North America & Asia-Pacific (excl. China)",
+      "eu": "Europe, Middle East & Africa",
+      "cn": "China"
+    }
   },
   "tesla": {
     "disconnectTitle": "Disconnect Tesla Account?",
