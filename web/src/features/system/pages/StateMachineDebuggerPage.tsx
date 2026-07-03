@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
-import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
@@ -228,7 +228,7 @@ export default function StateMachineDebuggerPage() {
         ),
       },
     ],
-    [t],
+    [t, fsmType],
   );
 
   /* ─── DataTable columns — transition timeline with color-coded state badges ─── */
@@ -297,9 +297,9 @@ export default function StateMachineDebuggerPage() {
             }}
           >
             {selectedId === row.id ? (
-              <ChevronDown className="h-3.5 w-3.5" />
+              <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             )}
           </Button>
         ),
@@ -471,6 +471,8 @@ export default function StateMachineDebuggerPage() {
     return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
   }, [searchParams]);
 
+  const subFsmType = fsmType === 'all' ? 'vehicle' : fsmType;
+
   return (
     <PageContainer
       title={t('fsm.title', 'FSM Debugger')}
@@ -500,7 +502,7 @@ export default function StateMachineDebuggerPage() {
             triggerTestId="fsm-debugger-range"
           />
           <span className="hidden items-center gap-1 text-xs text-[var(--text-muted)] sm:flex">
-            <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
+            <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} aria-hidden="true" />
             {t('fsm.autoRefresh', 'Live 10s')}
           </span>
           {permalinkUrl ? (
@@ -513,25 +515,50 @@ export default function StateMachineDebuggerPage() {
         </div>
       }
     >
-      {/* ──── Section 1: Page-specific filters (FSM Type + Per Page) ──── */}
+      {/* ──── 1 — KPI band: full-width responsive metric grid ──── */}
       <FadeIn>
+        <section
+          aria-label={t('fsm.kpis', 'FSM summary metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          <StatCard
+            label={t('fsm.totalOnPage', 'Transitions (Page)')}
+            value={`${fmtInt(totalTransitionsOnPage)} / ${fmtInt(totalRows)}`}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+          />
+          <StatCard
+            label={t('fsm.totalTransitions', 'Total Transitions')}
+            value={fmtInt(totalRows)}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+          />
+          <StatCard
+            label={t('fsm.flapCount', 'Flap Warnings')}
+            value={fmtInt(flapIds.size)}
+            icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+          />
+          <StatCard
+            label={t('fsm.currentState', 'Current State')}
+            value={stateName ?? '—'}
+            icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+          />
+        </section>
+      </FadeIn>
+
+      {/* ──── 2 — Page-specific filters (FSM Type + Per Page) ──── */}
+      <FadeIn delay={0.03}>
         <GlassPanel className="p-4 sm:p-5">
           {vehicleOptions.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label
-                  htmlFor="fsm-type-select"
-                  className="flex items-center gap-1 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  {t('fsm.fsmType', 'FSM Type')}
-                  <HelpTooltip
-                    i18nKey="help.fsm.type"
-                    defaultValue="Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles."
-                    ariaLabel={t('help.fsm.type.aria', { defaultValue: 'More info about FSM types' })}
-                  />
-                </label>
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+              <div className="w-full sm:w-64">
                 <Select
                   id="fsm-type-select"
+                  label={t('fsm.fsmType', 'FSM Type')}
+                  help={{
+                    i18nKey: 'help.fsm.type',
+                    content:
+                      'Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.',
+                    ariaLabel: t('help.fsm.type.aria', { defaultValue: 'More info about FSM types' }),
+                  }}
                   options={fsmTypeOptions}
                   value={fsmType}
                   onChange={(e) => {
@@ -540,15 +567,17 @@ export default function StateMachineDebuggerPage() {
                   }}
                 />
               </div>
-              <Select
-                label={t('fsm.perPage', 'Per Page')}
-                options={perPageOptions}
-                value={String(perPage)}
-                onChange={(e) => {
-                  setPerPage(Number(e.target.value));
-                  setServerPage(1);
-                }}
-              />
+              <div className="w-full sm:w-40">
+                <Select
+                  label={t('fsm.perPage', 'Per Page')}
+                  options={perPageOptions}
+                  value={String(perPage)}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setServerPage(1);
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noVehicles', 'No vehicles available')} />
@@ -556,20 +585,18 @@ export default function StateMachineDebuggerPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* ──── Section 2: FSM Health Indicators ──── */}
-      <FadeIn delay={0.05}>
+      {/* ──── 3 — FSM Health Indicators (full-width alert band) ──── */}
+      <FadeIn delay={0.06}>
         <FSMHealthPanel transitions={transitions} />
       </FadeIn>
 
-      {/* ──── Section 2b: AI FSM narrator ──── */}
-      {/* withAiFeature returns null in off mode so this section is
-          entirely absent from the DOM when the
-          state-machine-debugger-narrator toggle is off or
-          ai_mode='off'. The numeric vehicle id + Unix-seconds window
-          are derived from the page's selectors below; the narrator
-          surface is wired end-to-end to the registered backend
-          route POST /api/v1/ai/system/fsm/narrate. */}
-      <FadeIn delay={0.07}>
+      {/* ──── 4 — AI FSM narrator ────
+          withAiFeature returns null in off mode so this section is entirely
+          absent from the DOM when the state-machine-debugger-narrator toggle
+          is off or ai_mode='off'. The numeric vehicle id + Unix-seconds
+          window are derived from the page's selectors; the narrator surface
+          is wired end-to-end to the registered ai/system/fsm/narrate route. */}
+      <FadeIn delay={0.09}>
         <AIStateMachineDebuggerNarrator
           vehicleId={Number(activeId) > 0 ? Number(activeId) : undefined}
           fromUnix={
@@ -585,96 +612,105 @@ export default function StateMachineDebuggerPage() {
         />
       </FadeIn>
 
-      {/* ──── Section 3: Current Vehicle State ──── */}
-      <FadeIn delay={0.1}>
-        <GlassPanel className="p-6">
-          <h2 className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
-            {t('fsm.vehicleLiveState', 'Vehicle Live State')}
-            <HelpTooltip
-              size="xs"
-              i18nKey="help.fsm.liveState"
-              defaultValue="The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
-              ariaLabel={t('help.fsm.liveState.aria', { defaultValue: 'More info about FSM live state' })}
-            />
-          </h2>
-          {stateLoading ? (
-            <Skeleton height={80} />
-          ) : currentState ? (
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
-              <div
-                className={cn(
-                  'px-8 py-4 rounded-2xl text-2xl sm:text-4xl font-bold uppercase tracking-wider',
-                  style.bg,
-                  style.text,
-                )}
-              >
-                <span
+      {/* ──── 5 — State overview bento: live state hero + active sub-FSMs ──── */}
+      <FadeIn delay={0.12}>
+        <section
+          aria-label={t('fsm.overview', 'Vehicle state overview')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <GlassPanel className="p-4 sm:p-6 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-1">
+              {t('fsm.vehicleLiveState', 'Vehicle Live State')}
+              <HelpTooltip
+                size="xs"
+                i18nKey="help.fsm.liveState"
+                defaultValue="The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+                ariaLabel={t('help.fsm.liveState.aria', { defaultValue: 'More info about FSM live state' })}
+              />
+            </PanelTitle>
+            {stateLoading ? (
+              <Skeleton height={80} />
+            ) : currentState ? (
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-8">
+                <div
                   className={cn(
-                    'inline-block h-3 w-3 rounded-full mr-3 animate-pulse',
-                    style.dot,
+                    'rounded-2xl px-6 py-4 text-2xl font-bold uppercase tracking-wider sm:px-8 sm:text-4xl',
+                    style.bg,
+                    style.text,
                   )}
-                />
-                {currentState.state ?? '—'}
-              </div>
-              <div className="text-sm text-[var(--text-secondary)] space-y-1">
-                <p>
-                  <span className="text-[var(--text-muted)]">{t('fsm.type', 'FSM Type')}:</span>{' '}
-                  <span className="text-[var(--text-primary)] font-medium">Vehicle</span>
-                </p>
-                <p>
-                  <span className="text-[var(--text-muted)]">{t('fsm.mode', 'Mode')}:</span>{' '}
-                  <span className="text-[var(--text-primary)] font-medium">
-                    {currentState.is_charging ? 'Charging' : currentState.speed && currentState.speed > 0 ? 'Drive' : currentState.state === 'asleep' ? 'Sleep' : 'Idle'}
-                  </span>
-                </p>
-                <p>
-                  <span className="text-[var(--text-muted)]">{t('fsm.since', 'Since')}:</span>{' '}
-                  <TimeStamp
-                    value={currentState.since}
-                    format="absolute"
-                    className="text-[var(--text-primary)] font-medium"
+                >
+                  <span
+                    className={cn(
+                      'mr-3 inline-block h-3 w-3 animate-pulse rounded-full',
+                      style.dot,
+                    )}
+                    aria-hidden="true"
                   />
-                </p>
-                <p className="text-[var(--text-muted)]">
-                  <TimeStamp value={currentState.since} format="relative" />
-                </p>
+                  {currentState.state ?? '—'}
+                </div>
+                <div className="space-y-1 text-sm text-[var(--text-secondary)]">
+                  <p>
+                    <span className="text-[var(--text-muted)]">{t('fsm.type', 'FSM Type')}:</span>{' '}
+                    <span className="text-[var(--text-primary)] font-medium">{t('fsm.fsmTypeVehicle', 'Vehicle')}</span>
+                  </p>
+                  <p>
+                    <span className="text-[var(--text-muted)]">{t('fsm.mode', 'Mode')}:</span>{' '}
+                    <span className="text-[var(--text-primary)] font-medium">
+                      {currentState.is_charging
+                        ? t('fsm.modeCharging', 'Charging')
+                        : currentState.speed && currentState.speed > 0
+                          ? t('fsm.modeDrive', 'Drive')
+                          : currentState.state === 'asleep'
+                            ? t('fsm.modeSleep', 'Sleep')
+                            : t('fsm.modeIdle', 'Idle')}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-[var(--text-muted)]">{t('fsm.since', 'Since')}:</span>{' '}
+                    <TimeStamp
+                      value={currentState.since}
+                      format="absolute"
+                      className="text-[var(--text-primary)] font-medium"
+                    />
+                  </p>
+                  <p className="text-[var(--text-muted)]">
+                    <TimeStamp value={currentState.since} format="relative" />
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noState', 'No state data available')} />
-          )}
-        </GlassPanel>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noState', 'No state data available')} />
+            )}
+          </GlassPanel>
+
+          <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={subFsmType} />
+        </section>
       </FadeIn>
 
-      {/* ──── Section 4: Sub-FSM Panel (active drive/charge context) ──── */}
+      {/* ──── 6 — Live controls + state timeline + inspector ──── */}
       <FadeIn delay={0.15}>
-        <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={fsmType === 'all' ? 'vehicle' : fsmType} />
-      </FadeIn>
-
-      {/* ──── Live controls + state timeline + inspector ──── */}
-      <FadeIn delay={0.18}>
-        <GlassPanel className="p-4 sm:p-5 space-y-4" data-tour="debugger-timeline">
+        <GlassPanel className="space-y-4 p-4 sm:p-5" data-tour="debugger-timeline">
           <div data-tour="debugger-controls">
-          <LiveControls
-            isLive={isLive}
-            onToggleLive={(live) => {
-              setIsLive(live);
-              if (live) setSelectedId(null);
-            }}
-            onStepPrev={handleStepPrev}
-            onStepNext={handleStepNext}
-            canStepPrev={!isLive && sortedByTime.length > 0 && selectedIndex > 0}
-            canStepNext={!isLive && sortedByTime.length > 0 && selectedIndex < sortedByTime.length - 1}
-            windowMinutes={windowMinutes}
-            onWindowChange={setWindowMinutes}
-            onClearBuffer={handleClearBuffer}
-            windowCount={windowed.inWindow.length}
-            totalCount={visibleTransitions.length}
-          />
+            <LiveControls
+              isLive={isLive}
+              onToggleLive={(live) => {
+                setIsLive(live);
+                if (live) setSelectedId(null);
+              }}
+              onStepPrev={handleStepPrev}
+              onStepNext={handleStepNext}
+              canStepPrev={!isLive && sortedByTime.length > 0 && selectedIndex > 0}
+              canStepNext={!isLive && sortedByTime.length > 0 && selectedIndex < sortedByTime.length - 1}
+              windowMinutes={windowMinutes}
+              onWindowChange={setWindowMinutes}
+              onClearBuffer={handleClearBuffer}
+              windowCount={windowed.inWindow.length}
+              totalCount={visibleTransitions.length}
+            />
           </div>
           <StateTimeline
             transitions={windowed.inWindow}
-            fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
+            fsmType={subFsmType}
             selectedId={selectedId}
             onSelect={(tr) => {
               setSelectedId(tr.id);
@@ -687,31 +723,31 @@ export default function StateMachineDebuggerPage() {
             onJumpToLast={handleJumpToLast}
           />
           <div data-tour="debugger-source-badges">
-          <SnapshotInspector
-            fsmType={selectedTransition?.fsm_name || (fsmType === 'all' ? 'vehicle' : fsmType)}
-            transition={selectedTransition}
-            snapshot={selectedSnapshot ?? null}
-            previousSnapshot={previousSnapshot ?? null}
-            loading={snapshotFetching}
-            lastTransition={windowed.lastTransition}
-            inWindowCount={windowed.inWindow.length}
-            onJumpToLast={handleJumpToLast}
-          />
+            <SnapshotInspector
+              fsmType={selectedTransition?.fsm_name || subFsmType}
+              transition={selectedTransition}
+              snapshot={selectedSnapshot ?? null}
+              previousSnapshot={previousSnapshot ?? null}
+              loading={snapshotFetching}
+              lastTransition={windowed.lastTransition}
+              inWindowCount={windowed.inWindow.length}
+              onJumpToLast={handleJumpToLast}
+            />
           </div>
         </GlassPanel>
       </FadeIn>
 
-      {/* ──── Section 5: State Diagram ──── */}
-      <FadeIn delay={0.2}>
-        <FSMStateDiagram
-          fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
-          transitions={transitions}
-        />
+      {/* ──── 7 — State Diagram (full-width graph) ──── */}
+      <FadeIn delay={0.18}>
+        <FSMStateDiagram fsmType={subFsmType} transitions={transitions} />
       </FadeIn>
 
-      {/* ──── Section 6: Distribution + Counts ──── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <FadeIn delay={0.25}>
+      {/* ──── 8 — Analysis bento: distribution + counts ──── */}
+      <FadeIn delay={0.21}>
+        <section
+          aria-label={t('fsm.analysis', 'Transition analysis')}
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+        >
           <ChartContainer
             title={t('fsm.distributionByState', 'State Distribution')}
             ariaLabel={t('fsm.distributionByState.aria', 'FSM state distribution donut chart with per-state counts')}
@@ -743,12 +779,13 @@ export default function StateMachineDebuggerPage() {
                     <Tooltip content={<ChartTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="flex flex-wrap justify-center gap-3 mt-2">
+                <div className="mt-2 flex flex-wrap justify-center gap-3">
                   {pieData.map((entry, i) => (
                     <div key={entry.name} className="flex items-center gap-1.5 text-xs">
                       <span
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                        aria-hidden="true"
                       />
                       <span className="text-[var(--text-secondary)]">{entry.name}</span>
                       <span className="text-[var(--text-muted)]">{fmtInt(entry.value)}</span>
@@ -760,13 +797,11 @@ export default function StateMachineDebuggerPage() {
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyRangeMessage} />
             )}
           </ChartContainer>
-        </FadeIn>
 
-        <FadeIn delay={0.3}>
-          <GlassPanel className="p-5">
-            <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4">
               {t('fsm.transitionCounts', 'Transition Counts')}
-            </h2>
+            </PanelTitle>
             {transLoading ? (
               <Skeleton height={200} />
             ) : summaryRows.length > 0 ? (
@@ -780,51 +815,25 @@ export default function StateMachineDebuggerPage() {
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyRangeMessage} />
             )}
           </GlassPanel>
-        </FadeIn>
-      </div>
-
-      {/* ──── Section 7: Summary Cards ──── */}
-      <FadeIn delay={0.25}>
-        <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-          <StatCard
-            label={t('fsm.totalOnPage', 'Transitions (Page)')}
-            value={`${fmtInt(totalTransitionsOnPage)} / ${fmtInt(totalRows)}`}
-            icon={<Activity className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('fsm.totalTransitions', 'Total Transitions')}
-            value={fmtInt(totalRows)}
-            icon={<Activity className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('fsm.flapCount', 'Flap Warnings')}
-            value={fmtInt(flapIds.size)}
-            icon={<AlertTriangle className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('fsm.currentState', 'Current State')}
-            value={stateName ?? '—'}
-            icon={<Zap className="h-4 w-4" />}
-          />
-        </Grid>
+        </section>
       </FadeIn>
 
-      {/* ──── Section 8: Transition Timeline Chart ──── */}
-      <FadeIn delay={0.3}>
+      {/* ──── 9 — Transition Timeline Chart (full-width) ──── */}
+      <FadeIn delay={0.24}>
         <FSMTimelineChart transitions={timelineTransitions} hours={Number(hours)} emptyMessage={emptyRangeMessage} />
       </FadeIn>
 
-      {/* ──── Section 9: Transition Table ──── */}
-      <FadeIn delay={0.25}>
-        <GlassPanel className="p-5">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+      {/* ──── 10 — Transition Log (full-width detail band) ──── */}
+      <FadeIn delay={0.27}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-4 flex flex-wrap items-center gap-2">
             {t('fsm.timelineTitle', 'Transition Log')}
             {totalRows > 0 && (
-              <span className="ml-2 text-[var(--text-muted)] font-normal">
+              <span className="text-sm font-normal text-[var(--text-muted)]">
                 {fmtInt(totalRows)} {t('fsm.total', 'total')}
               </span>
             )}
-          </h2>
+          </PanelTitle>
           {transLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -858,15 +867,15 @@ export default function StateMachineDebuggerPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* ──── Section 10: Selected Transition Detail ──── */}
+      {/* ──── 11 — Selected Transition Detail (full-width, conditional) ──── */}
       {selectedId != null && (() => {
         const selected = transitions.find((tr) => tr.id === selectedId);
         return selected ? (
           <FadeIn key={selectedId}>
-            <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-4">
                 {t('fsm.detailTitle', 'Transition Detail')}
-              </h2>
+              </PanelTitle>
               <TransitionDetail transition={selected} />
             </GlassPanel>
           </FadeIn>
@@ -880,47 +889,47 @@ export default function StateMachineDebuggerPage() {
 function TransitionDetail({ transition }: { transition: FSMTransition }) {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+    <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
       <div>
-        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.id', 'Transition ID')}</span>
+        <Caption className="mb-1 block">{t('fsm.detail.id', 'Transition ID')}</Caption>
         <span className="text-[var(--text-primary)] font-mono break-all">{transition.id}</span>
       </div>
       <div>
-        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.vehicleId', 'Vehicle ID')}</span>
+        <Caption className="mb-1 block">{t('fsm.detail.vehicleId', 'Vehicle ID')}</Caption>
         <span className="text-[var(--text-primary)] font-mono">{transition.vehicle_id}</span>
       </div>
       {transition.fsm_name && (
         <div>
-          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.name', 'FSM Name')}</span>
+          <Caption className="mb-1 block">{t('fsm.detail.name', 'FSM Name')}</Caption>
           <span className="text-[var(--text-primary)] font-mono">{transition.fsm_name}</span>
         </div>
       )}
       <div>
-        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.from', 'From State')}</span>
+        <Caption className="mb-1 block">{t('fsm.detail.from', 'From State')}</Caption>
         <StateBadge state={transition.from_state} fsmType={transition.fsm_name || 'vehicle'} />
       </div>
       <div>
-        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.to', 'To State')}</span>
+        <Caption className="mb-1 block">{t('fsm.detail.to', 'To State')}</Caption>
         <StateBadge state={transition.to_state} fsmType={transition.fsm_name || 'vehicle'} />
       </div>
       <div>
-        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
+        <Caption className="mb-1 block">{t('fsm.detail.trigger', 'Trigger')}</Caption>
         <span className="text-[var(--text-primary)] font-mono">{transition.trigger}</span>
       </div>
       {typeof transition.details?.guard === 'string' && transition.details.guard && (
         <div>
-          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.guard', 'Guard')}</span>
+          <Caption className="mb-1 block">{t('fsm.detail.guard', 'Guard')}</Caption>
           <span className="text-[var(--text-primary)] font-mono">{String(transition.details.guard)}</span>
         </div>
       )}
       {typeof transition.details?.duration_in_state_ms === 'number' && transition.details.duration_in_state_ms > 0 && (
         <div>
-          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.duration', 'Duration in State')}</span>
+          <Caption className="mb-1 block">{t('fsm.detail.duration', 'Duration in State')}</Caption>
           <span className="text-[var(--text-primary)] font-mono">{formatDuration((transition.details.duration_in_state_ms as number) / 1000)}</span>
         </div>
       )}
       <div className="sm:col-span-2 lg:col-span-4">
-        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
+        <Caption className="mb-1 block">{t('fsm.detail.timestamp', 'Timestamp')}</Caption>
         <TimeStamp
           value={transition.ts}
           format="absolute"
@@ -936,10 +945,10 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       </div>
       {transition.details && Object.keys(transition.details).length > 0 && (
         <div className="sm:col-span-2 lg:col-span-4">
-          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.context', 'Details')}</span>
-          <div className="flex flex-wrap gap-2 mt-1">
+          <Caption className="mb-1 block">{t('fsm.detail.context', 'Details')}</Caption>
+          <div className="mt-1 flex flex-wrap gap-2">
             {Object.entries(transition.details).map(([key, val]) => (
-              <span key={key} className="px-2 py-0.5 rounded bg-white/[0.04] text-[var(--text-secondary)] font-mono text-[10px]">
+              <span key={key} className="rounded bg-white/[0.04] px-2 py-0.5 text-2xs text-[var(--text-secondary)] font-mono">
                 {key}: {String(val)}
               </span>
             ))}
