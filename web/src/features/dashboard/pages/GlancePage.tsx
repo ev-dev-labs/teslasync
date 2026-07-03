@@ -586,7 +586,7 @@ export default function GlancePage() {
           <div className="flex justify-center pt-1">
             <Link
               to="/"
-              className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)]"
+              className="transition-colors hover:text-[var(--text-secondary)]"
             >
               <Caption>{t('glance.openApp', 'Open full app →')}</Caption>
             </Link>
