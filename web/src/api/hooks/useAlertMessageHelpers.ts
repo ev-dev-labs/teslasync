@@ -11,6 +11,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES } from '@/lib/constants';
 import type {
   AlertMessagePlaceholder,
@@ -44,6 +45,10 @@ export function useAlertMessagePresets(kind?: AlertRuleKind | '') {
     queryFn: ({ signal }) =>
       request<AlertMessagePreset[]>(`/alerts/message-presets${qs}`, { signal }),
     staleTime: STALE_TIMES.EXTENDED,
+    // Coerce a null / non-array payload to [] so preset-gallery consumers
+    // can `.map`/`.filter` without an extra guard (matches every other
+    // list hook in this directory).
+    select: safeArray,
   });
 }
 
@@ -75,6 +80,9 @@ export function useAlertMessagePlaceholders(args: {
       request<AlertMessagePlaceholder[]>(`/alerts/message-placeholders${qs}`, { signal }),
     staleTime: STALE_TIMES.EXTENDED,
     enabled,
+    // Coerce a null / non-array payload to [] so the autocomplete catalog
+    // never crashes on `.filter`/`.length` (matches every other list hook).
+    select: safeArray,
   });
 }
 
