@@ -247,7 +247,7 @@ export default function SystemStatusPage() {
   // canonical snake_case keys; the camelCase aliases are pure duplicates
   // that contain at least one uppercase letter.
   const components = health
-    ? Object.entries(health.components).filter(([k]) => !/[A-Z]/.test(k))
+    ? Object.entries(health.components ?? {}).filter(([k]) => !/[A-Z]/.test(k))
     : []
   const okCount = components.filter(([, c]) => c.status === 'ok' || c.status === 'healthy').length
   const totalCount = components.length
@@ -295,8 +295,8 @@ export default function SystemStatusPage() {
     : 'unknown'
 
   const errorsStatus: HeroStatus = errorStats
-    ? errorStats.total_errors > 100 ? 'degraded'
-      : errorStats.total_errors > 500 ? 'unhealthy'
+    ? errorStats.total_errors > 500 ? 'unhealthy'
+      : errorStats.total_errors > 100 ? 'degraded'
       : 'healthy'
     : 'unknown'
 
@@ -423,7 +423,7 @@ export default function SystemStatusPage() {
   // we haven't received fresh data in over 2 minutes.
   const healthStale = !!error || (dataUpdatedAt > 0 && now - dataUpdatedAt > 2 * 60_000)
   const heroSubline = error
-    ? `Health check failed — ${(error as Error).message}`
+    ? `Health check failed — ${error instanceof Error ? error.message : String(error)}`
     : healthStale
       ? `Last checked ${lastCheckedLabel ?? 'unknown'} (stale)`
       : lastCheckedLabel
@@ -887,7 +887,7 @@ export default function SystemStatusPage() {
               : t('No data')}
             defaultOpen
             badges={errorStats && errorStats.total_errors > 0
-              ? <Badge variant={errorsStatus === 'healthy' ? 'neutral' : 'warning'}>{errorStats.total_errors}</Badge>
+              ? <Badge variant={errorsStatus === 'healthy' ? 'neutral' : errorsStatus === 'unhealthy' ? 'danger' : 'warning'}>{errorStats.total_errors}</Badge>
               : <Badge variant="success">clean</Badge>}
           >
             {errorStats && Object.keys(errorStats.by_code).length > 0 ? (
