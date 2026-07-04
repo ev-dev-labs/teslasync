@@ -14,6 +14,9 @@ const WINDOW_KEYS = [
   { key: 'rpWindow' as const, i18nKey: 'admin.security.window.rp', fallback: 'Rear Passenger' },
 ] as const;
 
+/** 2×2 grid mirroring the physical front/rear × driver/passenger layout. */
+const GRID_CLASS = 'grid grid-cols-2 gap-3';
+
 interface WindowStatusDetailProps {
   latest: SecurityEvent | undefined;
   isLoading: boolean;
@@ -32,13 +35,17 @@ export function WindowStatusDetail({ latest, isLoading, error, onRetry, classNam
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div aria-hidden="true" className={GRID_CLASS}>
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} height={104} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div
+          role="group"
+          aria-label={t('admin.security.window.aria', 'Window status by position')}
+          className={GRID_CLASS}
+        >
           {WINDOW_KEYS.map((win) => {
             const state = parseWindowState(latest?.[win.key]);
             return (

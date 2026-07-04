@@ -3128,7 +3128,8 @@
         "rd": "Rear Driver",
         "rp": "Rear Passenger",
         "allClosed": "All Closed",
-        "openVenting": "{{count}} Open/Venting"
+        "openVenting": "{{count}} Open/Venting",
+        "aria": "Window status by position"
       },
       "time": {
         "justNow": "just now",
