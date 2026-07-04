@@ -43,7 +43,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageContainer, Masonry } from '@/components/layout'
 import {
   GlassPanel,
   Badge,
@@ -663,14 +663,14 @@ export default function FleetTelemetryCoveragePage({
         </div>
       ) : (
         <FadeIn delay={0.3}>
-          <div
-            className="grid grid-cols-1 items-start gap-4 2xl:grid-cols-2 3xl:grid-cols-3"
+          <Masonry
+            className="columns-1 2xl:columns-2 3xl:columns-3"
             data-testid="coverage-categories"
           >
             {filteredCategories.map((cat) => (
               <CategorySection key={cat.category} category={cat} filter={filter} />
             ))}
-          </div>
+          </Masonry>
         </FadeIn>
       )}
     </PageContainer>
