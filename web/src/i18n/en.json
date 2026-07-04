@@ -2835,7 +2835,15 @@
     "utils": {
       "base64": "Base64",
       "base64Desc": "Encode and decode Base64 text",
-      "computeSha256": "Compute Sha256"
+      "computeSha256": "Compute Sha256",
+      "httpStatus": "HTTP Status",
+      "httpStatusDesc": "Reference for HTTP response status codes",
+      "httpStatusCode": "Status Code",
+      "httpStatusText": "Status Text",
+      "httpStatusDescription": "Description",
+      "httpStatusSearch": "Search status codes",
+      "httpStatusSearchPlaceholder": "Search codes",
+      "httpStatusEmpty": "No status codes match your search"
     },
     "searchTools": "Search tools...",
     "noToolsFound": "No tools match your search",
