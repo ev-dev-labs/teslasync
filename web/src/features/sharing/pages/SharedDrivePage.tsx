@@ -74,8 +74,14 @@ function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): n
 
 function normalizeSharedDriveData(data: SharedDriveData | SharedDriveDataV1 | undefined): SharedDriveData | undefined {
   if (!data) return undefined;
-  if ('payload_version' in data && data.payload_version === 'v2') return data;
-  const v1 = data as SharedDriveDataV1;
+  // The SI `SharedDriveData` wire shape always carries `payload_version`
+  // (v2 today, historically v1); the legacy `SharedDriveDataV1` never does.
+  // Presence of the field — not its specific value — is the discriminator:
+  // a v1-tagged SI payload is passed through untouched instead of being
+  // re-run through the km→m converters, which would read its (absent) km
+  // fields as undefined and emit NaN.
+  if ('payload_version' in data) return data;
+  const v1 = data;
   return {
     payload_version: 'v1',
     title: v1.title,
@@ -184,8 +190,8 @@ export default function SharedDrivePage() {
   // values; tickFormatter / Tooltip only render the unit suffix.
   const elevationData = useMemo(
     () => (data?.elevation_profile ?? []).map((p) => ({
-      // Wire ships per-point distance in km via haversineKm; lift to display
-      // unit once and pass downstream to the renderer.
+      // Wire ships per-point cumulative distance in SI metres; lift to the
+      // viewer's display unit once and pass downstream to the renderer.
       distance: convertDistanceFromSI(p.distance_m, distancePref),
       // Wire ships elevation_m as SI metres; convert to feet for imperial
       // viewers.
@@ -198,8 +204,8 @@ export default function SharedDrivePage() {
   const speedData = useMemo(
     () => (data?.speed_profile ?? []).map((p) => ({
       distance: convertDistanceFromSI(p.distance_m, distancePref),
-      // Wire field is named speed_kmh; convert km/h → m/s at boundary then
-      // convert again to the preferred display unit via convertSpeedFromSI.
+      // Wire ships SI m/s (`speed_mps`); convertSpeedFromSI maps it straight
+      // to the viewer's km/h or mph preference — no intermediate hop.
       speed: convertSpeedFromSI(p.speed_mps, speedPref),
     })),
     [data?.speed_profile, distancePref, speedPref],
@@ -426,7 +432,7 @@ export default function SharedDrivePage() {
         )}
 
         {/* No map data fallback */}
-        {mapPoints.length === 0 && elevationData.length === 0 && speedData.length === 0 && (
+        {mapPoints.length <= 1 && elevationData.length === 0 && speedData.length === 0 && (
           <GlassPanel className="p-8">
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MapPin className="h-8 w-8" />}
