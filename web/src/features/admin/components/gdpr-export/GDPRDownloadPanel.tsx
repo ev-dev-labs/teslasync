@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { HardDriveDownload } from 'lucide-react';
 
-import { GlassPanel, Button } from '@/components/ui';
+import { GlassPanel } from '@/components/ui';
 import { PanelTitle, Caption, Text } from '@/components/ui/Typography';
 import { Skeleton } from '@/components/feedback';
 import { cn } from '@/lib/cn';
@@ -37,11 +37,23 @@ export function GDPRDownloadPanel({ artifact, downloadUrl, loading, className }:
               'The bundle streams from the backend through this browser. The download counter is logged to the audit ledger.',
             )}
           </Text>
-          <a href={downloadUrl} download className="w-full sm:w-auto">
-            <Button variant="primary" size="md" className="min-h-11 w-full sm:w-auto">
-              <HardDriveDownload className="mr-2 h-4 w-4" aria-hidden="true" />
-              {t('admin.gdprExport.downloadButton', 'Download bundle')}
-            </Button>
+          <a
+            href={downloadUrl}
+            download
+            className={cn(
+              // A download is navigation, so the anchor itself is the single
+              // interactive control — wrapping a <Button> here would nest
+              // interactive content (axe `nested-interactive`, two tab stops).
+              // Styled to match the shared primary Button via the theme vars.
+              'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4',
+              'text-sm font-medium transition sm:w-auto',
+              'bg-[var(--theme-primary)] text-[var(--theme-on-primary)] hover:brightness-110',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-2',
+              'forced-colors:border forced-colors:border-[ButtonBorder]',
+            )}
+          >
+            <HardDriveDownload className="h-4 w-4" aria-hidden="true" />
+            {t('admin.gdprExport.downloadButton', 'Download bundle')}
           </a>
         </div>
       ) : (
