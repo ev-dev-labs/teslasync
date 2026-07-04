@@ -145,20 +145,30 @@ function toneFor(category: string): string {
   return CATEGORY_TONE[category] ?? 'slate';
 }
 
+/** Clamp any (possibly non-finite) ratio into the renderable 0–100 band. */
+function clampPct(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, value));
+}
+
 /** Progress % is a ratio, so it is unit-agnostic (SI metres or months alike). */
 function computeProgress(item: MaintenanceItem): number {
   if (item.interval_miles && item.last_service_mileage != null) {
     const elapsed = item.current_mileage - item.last_service_mileage;
-    return Math.min(100, Math.max(0, (elapsed / item.interval_miles) * 100));
+    return clampPct((elapsed / item.interval_miles) * 100);
   }
   if (item.interval_months && item.last_service_date) {
     const lastDate = new Date(item.last_service_date).getTime();
+    // A malformed `last_service_date` yields NaN here; guard so the bar
+    // renders 0% rather than a `width: NaN%` (dropped by the browser) and a
+    // NaN `aria-valuenow`.
+    if (!Number.isFinite(lastDate)) return 0;
     const intervalMs = item.interval_months * 30.44 * 24 * 60 * 60 * 1000;
     const elapsed = Date.now() - lastDate;
-    return Math.min(100, Math.max(0, (elapsed / intervalMs) * 100));
+    return clampPct((elapsed / intervalMs) * 100);
   }
   if (item.due_mileage) {
-    return Math.min(100, Math.max(0, (item.current_mileage / item.due_mileage) * 100));
+    return clampPct((item.current_mileage / item.due_mileage) * 100);
   }
   return 0;
 }
@@ -184,8 +194,15 @@ function sortItems(items: MaintenanceItem[], sortBy: string): MaintenanceItem[] 
       case 'name':
         return a.name.localeCompare(b.name);
       case 'due_date': {
-        const da = a.due_date ? new Date(a.due_date).getTime() : Infinity;
-        const db = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+        // Null-due items sort last; a malformed date string also collapses to
+        // Infinity (rather than producing a NaN comparator, which V8 treats as
+        // 0 and leaves the order non-deterministic). Ties break by name so the
+        // sort is stable and reproducible.
+        const rawA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+        const rawB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+        const da = Number.isFinite(rawA) ? rawA : Infinity;
+        const db = Number.isFinite(rawB) ? rawB : Infinity;
+        if (da === db) return a.name.localeCompare(b.name);
         return da - db;
       }
       case 'category':
@@ -199,12 +216,20 @@ function sortItems(items: MaintenanceItem[], sortBy: string): MaintenanceItem[] 
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function ProgressBar({ pct }: { pct: number }) {
+function ProgressBar({ pct, label }: { pct: number; label?: string }) {
+  const clamped = clampPct(pct);
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+    <div
+      role="progressbar"
+      aria-valuenow={Math.round(clamped)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label}
+      className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
+    >
       <div
-        className={cn('h-full rounded-full transition-all duration-slow', progressFillClass(pct))}
-        style={{ width: `${Math.min(pct, 100)}%` }}
+        className={cn('h-full rounded-full transition-all duration-slow', progressFillClass(clamped))}
+        style={{ width: `${clamped}%` }}
       />
     </div>
   );
@@ -274,7 +299,10 @@ function MaintenanceItemCard({
                   : null}
             </span>
           </div>
-          <ProgressBar pct={pct} />
+          <ProgressBar
+            pct={pct}
+            label={t('maintenance.itemProgress', '{{name}} service progress', { name: item.name })}
+          />
         </div>
       )}
 
@@ -450,6 +478,7 @@ export default function MaintenancePage() {
       items
         .filter((i) => i.status !== 'completed' && (i.interval_miles || i.interval_months))
         .map((item) => ({
+          id: item.id,
           name: item.name,
           category: item.category,
           metersRemaining:
@@ -634,7 +663,7 @@ export default function MaintenancePage() {
             ) : (
               <ul className="space-y-2.5">
                 {projections.map((p) => (
-                  <li key={p.name} className="flex items-center justify-between gap-2">
+                  <li key={p.id} className="flex items-center justify-between gap-2">
                     <span className="flex min-w-0 items-center gap-2">
                       <span
                         className="inline-block h-2 w-2 shrink-0 rounded-full"
