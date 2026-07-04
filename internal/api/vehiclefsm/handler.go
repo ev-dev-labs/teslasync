@@ -15,6 +15,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// transitionLogger is the narrow persistence port fsmAction needs to durably
+// record a vehicle state transition into fsm_transitions. The concrete
+// *observability.FSMTransitionRepo satisfies it; unit tests inject a fake to
+// assert the logged transition without standing up a database. Introduced to
+// honour the package's dependency-inversion convention (handlers depend on
+// small interfaces, not concrete repos).
+type transitionLogger interface {
+	Insert(ctx context.Context, vehicleID int64, ts time.Time,
+		fsmName, fromState, toState, trigger string,
+		details map[string]interface{}) error
+}
+
 // Handler owns vehicle, drive, and charge FSM state.
 type Handler struct {
 	mu          sync.Mutex
@@ -22,7 +34,7 @@ type Handler struct {
 	drives      map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
 	charges     map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
 	vehicleRepo *vehicledb.VehicleRepo
-	transRepo   *dbobs.FSMTransitionRepo
+	transRepo   transitionLogger
 
 	localSignals  *signal.Store // set by SetSignalStore()
 	reconcileStop chan struct{}
@@ -38,15 +50,22 @@ type Handler struct {
 // Cold-start initial state defaults to fsm.Online and
 // converges to the correct state within seconds of incoming telemetry.
 func NewHandler(vehicleRepo *vehicledb.VehicleRepo, transRepo *dbobs.FSMTransitionRepo) *Handler {
-	return &Handler{
+	h := &Handler{
 		machines:      make(map[int64]*fsm.VehicleFSM),
 		drives:        make(map[int64]*drive.SessionFSM),
 		charges:       make(map[int64]*charge.SessionFSM),
 		vehicleRepo:   vehicleRepo,
-		transRepo:     transRepo,
-		reconcileStop: make(chan struct{}),
+		reconcileStop: make(chan struct{}, 1),
 		lastProcessed: make(map[int64]time.Time),
 	}
+	// Guard against the typed-nil-interface trap: a nil *FSMTransitionRepo
+	// assigned to the interface field would report non-nil as an interface,
+	// so the `a.transRepo != nil` skip in fsmAction.Execute would fail and
+	// dereference a nil repo. Only store a genuinely non-nil repo.
+	if transRepo != nil {
+		h.transRepo = transRepo
+	}
+	return h
 }
 
 // SetSignalStore wires the signal store dependency for reconciliation.
@@ -65,7 +84,7 @@ func (h *Handler) SetSignalStore(store *signal.Store) {
 type fsmAction struct {
 	handler     *Handler
 	vehicleRepo *vehicledb.VehicleRepo
-	transRepo   *dbobs.FSMTransitionRepo
+	transRepo   transitionLogger
 }
 
 func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) error {
@@ -349,7 +368,12 @@ func (h *Handler) StartReconcileLoop() {
 	log.Info().Dur("interval", reconcileInterval).Msg("fsm: reconciliation loop started")
 }
 
-// StopReconcileLoop stops the periodic reconciliation goroutine.
+// StopReconcileLoop stops the periodic reconciliation goroutine. The stop
+// signal is delivered via a buffered (size 1) channel and a non-blocking send,
+// so the request is retained until the loop next reaches its select even if the
+// goroutine is mid-reconcileAll — an unbuffered send here could be silently
+// dropped, leaking the goroutine on shutdown. Safe to call when no loop is
+// running (the buffered slot simply fills) and idempotent across repeat calls.
 func (h *Handler) StopReconcileLoop() {
 	select {
 	case h.reconcileStop <- struct{}{}:
