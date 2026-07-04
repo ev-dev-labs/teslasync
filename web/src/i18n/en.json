@@ -2811,6 +2811,7 @@
         "commented": "Comment by {{actor}}"
       },
       "kindAnonymous": {
+        "created": "Alert created",
         "acknowledged": "Acknowledged",
         "reopened": "Reopened",
         "commented": "Comment added"
