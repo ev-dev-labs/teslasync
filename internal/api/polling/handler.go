@@ -8,6 +8,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	enginepolling "github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // PollEngineHandlers returns HTTP handlers for the adaptive polling engine
@@ -77,6 +78,11 @@ func pollEngineDecisions(engine *enginepolling.PollEngine) http.HandlerFunc {
 		}
 
 		decisions := engine.GetDecisionHistory(vin, limit)
+		if decisions == nil {
+			// Never emit a null list — the SPA maps over this array. An unknown
+			// VIN yields an empty history, matching the disabled-engine branch.
+			decisions = []enginepolling.PollDecision{}
+		}
 		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"vin":       vin,
 			"decisions": decisions,
@@ -216,6 +222,8 @@ func pollEngineDemo(engine *enginepolling.PollEngine) http.HandlerFunc {
 		for i := 0; i < 4; i++ {
 			ct.RecordSkip("prediction")
 		}
+
+		log.Info().Str("vin", demoVIN).Msg("polling: demo data seeded")
 
 		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"message": "demo data seeded",
