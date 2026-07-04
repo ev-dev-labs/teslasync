@@ -1,6 +1,7 @@
 package teslaenergylivestatus
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,11 +17,41 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// teslaRefreshTimeout bounds the outbound Tesla Fleet API call in
+// RefreshLiveStatus. The shared Tesla HTTP client already carries a coarse
+// transport timeout; this per-request deadline keeps a slow live_status fetch
+// from pinning the handler goroutine and matches the 30s Tesla API budget
+// documented for the platform.
+const teslaRefreshTimeout = 30 * time.Second
+
+// liveStatusRepo is the persistence port for energy live-status snapshots. It
+// abstracts *energydb.TeslaEnergyLiveStatusRepo so the handler can be
+// unit-tested with an in-memory fake instead of a live pgx pool.
+type liveStatusRepo interface {
+	GetLatest(ctx context.Context, energySiteID int64) (*teslamodel.TeslaEnergyLiveStatus, error)
+	GetHistory(ctx context.Context, energySiteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyLiveStatus, error)
+	Create(ctx context.Context, s *teslamodel.TeslaEnergyLiveStatus) error
+}
+
+// liveStatusFetcher is the Tesla Fleet API port for the refresh path. It
+// abstracts (*tesla.Client).GetEnergySiteLiveStatus so RefreshLiveStatus can be
+// exercised without a real HTTP round-trip to Tesla.
+type liveStatusFetcher interface {
+	GetEnergySiteLiveStatus(ctx context.Context, energySiteID int64) ([]byte, int, error)
+}
+
 // Handler serves Tesla energy site live status (power flow) data.
 type Handler struct {
-	teslaClient *tesla.Client
-	repo        *energydb.TeslaEnergyLiveStatusRepo
+	teslaClient liveStatusFetcher
+	repo        liveStatusRepo
 }
+
+// Compile-time assertions that the production concrete types satisfy the
+// handler's ports.
+var (
+	_ liveStatusFetcher = (*tesla.Client)(nil)
+	_ liveStatusRepo    = (*energydb.TeslaEnergyLiveStatusRepo)(nil)
+)
 
 // NewHandler creates a new handler.
 func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
@@ -65,12 +96,6 @@ func (h *Handler) LiveStatusHistory(w http.ResponseWriter, r *http.Request) {
 	since, until := energyDateRange(r)
 	limit := energyLimit(r)
 
-	if v := r.URL.Query().Get("limit"); v != "" {
-		if l, err := fmt.Sscanf(v, "%d", &limit); err == nil && l > 0 {
-			_ = l
-		}
-	}
-
 	entries, err := h.repo.GetHistory(r.Context(), siteID, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to query energy live status history")
@@ -93,9 +118,12 @@ func (h *Handler) RefreshLiveStatus(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Int64("site_id", siteID).Msg("refreshing energy live status from Tesla")
 
-	body, status, err := h.teslaClient.GetEnergySiteLiveStatus(r.Context(), siteID)
+	teslaCtx, cancel := context.WithTimeout(r.Context(), teslaRefreshTimeout)
+	defer cancel()
+
+	body, status, err := h.teslaClient.GetEnergySiteLiveStatus(teslaCtx, siteID)
 	if err != nil {
-		log.Error().Err(err).Msg("tesla energy live status API error")
+		log.Error().Err(err).Int64("site_id", siteID).Msg("tesla energy live status API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch live status from Tesla")
 		return
 	}
@@ -190,10 +218,17 @@ func energyDateRange(r *http.Request) (since, until time.Time) {
 	return
 }
 
+// energyLimit parses the ?limit query param for LiveStatusHistory.
+//
+// Default 500, max 2000 — matching both the LiveStatusHistory doc contract and
+// the repo's own clamp. Non-numeric, zero, negative, or over-cap values fall
+// back to the default rather than erroring, so a malformed limit never 400s a
+// charting request. This is the single source of truth for the limit; callers
+// MUST NOT re-parse ?limit separately.
 func energyLimit(r *http.Request) int {
 	limit := 500
 	if v := r.URL.Query().Get("limit"); v != "" {
-		if l, err := strconv.Atoi(v); err == nil && l > 0 && l <= 1000 {
+		if l, err := strconv.Atoi(v); err == nil && l > 0 && l <= 2000 {
 			limit = l
 		}
 	}
