@@ -49,7 +49,7 @@ export function StatusApiEndpointCard({
           text={path}
           iconOnly
           size="sm"
-          ariaLabel={t('statusApi.copyPath', 'Copy endpoint path')}
+          ariaLabel={t('statusApi.copyPath', 'Copy endpoint path {{path}}', { path })}
           className="ml-auto shrink-0"
         />
       </div>
