@@ -55,16 +55,25 @@ export default function LiveSignalInspectorPage() {
 
   // Each data section renders its own affordance from this single discriminator
   // rather than gating the whole page behind one `{data && …}`.
+  //
+  // `rows.length > 0` is deliberately evaluated BEFORE `isError`: this page
+  // polls once per second, and TanStack Query keeps the last successful `data`
+  // while flipping `isError`/`error` when a *background* refetch of the same
+  // query key fails. Checking `isError` first would blank the whole inspector
+  // to a `QueryError` on a single dropped poll, throwing away a perfectly good
+  // last-known snapshot. Instead we keep the snapshot on screen and let the
+  // header freshness chip (`query={live}`) surface the transient failure in
+  // red — a hard error is only shown when there is nothing to fall back to.
   const status: SectionStatus =
     vehicleId === null
       ? 'no-vehicle'
-      : live.isLoading
-        ? 'loading'
-        : live.isError
-          ? 'error'
-          : rows.length === 0
-            ? 'empty'
-            : 'ready';
+      : rows.length > 0
+        ? 'ready'
+        : live.isLoading
+          ? 'loading'
+          : live.isError
+            ? 'error'
+            : 'empty';
 
   const onRetry = () => {
     void live.refetch();
