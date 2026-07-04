@@ -55,7 +55,7 @@ import type { LocationSnapshot } from '@/api/types';
 type TFn = (key: string, fallback: string) => string;
 
 /** Derive a user-friendly location label from the location snapshot. */
-function getLocationLabel(location: LocationSnapshot | null | undefined, t: TFn): string {
+export function getLocationLabel(location: LocationSnapshot | null | undefined, t: TFn): string {
   if (!location) return '—';
   if (location.located_at_home) return t('glance.location.home', 'Home');
   if (location.located_at_work) return t('glance.location.work', 'Work');
@@ -65,7 +65,7 @@ function getLocationLabel(location: LocationSnapshot | null | undefined, t: TFn)
 }
 
 /** Map a battery percentage onto a shared neon accent for the KPI card. */
-function batteryNeon(level: number | null | undefined): NeonColor {
+export function batteryNeon(level: number | null | undefined): NeonColor {
   if (level == null) return 'cyan';
   if (level > 60) return 'green';
   if (level > 25) return 'amber';
@@ -315,7 +315,10 @@ export default function GlancePage() {
 
           {/* 2 — Live status bento: hero battery + charging/climate + security/location */}
           <FadeIn delay={0.1}>
-            <section className="space-y-3">
+            <section
+              aria-label={t('glance.liveStatusAria', 'Live status')}
+              className="space-y-3"
+            >
               <SectionTitle>{t('glance.liveStatus', 'Live status')}</SectionTitle>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {/* Hero — vehicle identity + battery ring */}
@@ -518,7 +521,10 @@ export default function GlancePage() {
 
           {/* 3 — Controls: full-width quick-action band */}
           <FadeIn delay={0.2}>
-            <section className="space-y-3">
+            <section
+              aria-label={t('glance.controlsAria', 'Controls')}
+              className="space-y-3"
+            >
               <SectionTitle>{t('glance.controls', 'Controls')}</SectionTitle>
               <GlassPanel className="p-4 sm:p-5">
                 {!isOnline && (
