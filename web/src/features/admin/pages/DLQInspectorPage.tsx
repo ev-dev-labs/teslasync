@@ -71,12 +71,7 @@ export default function DLQInspectorPage() {
       const result = await replay.mutateAsync({ id: pendingReplay.id });
       // Server may return 200 OK with result="disabled" via a future
       // soft-flag — keep the banner branch in case that arrives.
-      if (result.result === 'disabled') {
-        setReplayDisabledBanner(true);
-      } else {
-        setReplayDisabledBanner(false);
-      }
-      setPendingReplay(null);
+      setReplayDisabledBanner(result.result === 'disabled');
       // Close the drawer on a successful publish so the audit row that
       // just landed in the global panel is the first thing the operator
       // sees.
@@ -86,13 +81,19 @@ export default function DLQInspectorPage() {
     } catch (err) {
       // Hard-disabled at env level surfaces as a 403 — show the page
       // banner so the operator has more room than a toast affords.
+      // Every other error (404 not_found / 409 unparseable / 502
+      // publish_failed / 5xx) is surfaced by the mutation's built-in
+      // toast (`useMutationToast`).
       const status = (err as { status?: number }).status;
       if (status === 403) {
         setReplayDisabledBanner(true);
-        setPendingReplay(null);
       }
-      // Every other error is already handled by the mutation's
-      // built-in toast (`useMutationToast`).
+    } finally {
+      // Always dismiss the confirm dialog once the replay settles. Without
+      // this, a non-403 failure left the dialog open but out of its loading
+      // state — a dead-end the operator could only escape by cancelling.
+      // The toast (or the 403 banner) now carries the outcome instead.
+      setPendingReplay(null);
     }
   };
 
