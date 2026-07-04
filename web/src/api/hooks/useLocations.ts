@@ -28,7 +28,7 @@ export function useLocations(vehicleId?: string) {
   return useQuery({
     queryKey: locationKeys.all(vehicleId),
     queryFn: ({ signal }) => request<Location[]>(
-      vehicleId ? `/locations?vehicle_id=${vehicleId}` : '/locations', { signal },
+      vehicleId ? `/locations?vehicle_id=${encodeURIComponent(vehicleId)}` : '/locations', { signal },
     ),
     enabled: !!vehicleId,
     select: safeArray,
