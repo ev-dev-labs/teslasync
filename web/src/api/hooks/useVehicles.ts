@@ -49,42 +49,109 @@ export function useVehicle(id: string) {
   });
 }
 
+/**
+ * Wire shape of `GET /vehicles/{id}/state`. The backend answers with one of
+ * two forms: an already-assembled `state` object (identified by a
+ * `vehicle_id` key), OR a `vehicle` + `position` pair the SPA composes into a
+ * {@link VehicleState}. Every field is optional so a vehicle whose snapshot
+ * has not landed yet decodes without throwing. Snake_case only — the mapping
+ * reads the original keys that `camelCaseKeys()` preserves alongside its
+ * camelCase aliases.
+ */
+interface RawStateVehicle {
+  id?: number
+  state?: string
+  is_locked?: boolean
+  software_version?: string
+}
+
+interface RawStatePosition {
+  latitude?: number
+  longitude?: number
+  speed?: number
+  power?: number
+  battery_level?: number
+  rated_range?: number
+  ideal_range?: number
+  odometer?: number
+  inside_temp?: number
+  outside_temp?: number
+  is_climate_on?: boolean
+}
+
+interface RawStateResponse {
+  state?: VehicleState
+  live?: boolean
+  vehicle?: RawStateVehicle | null
+  position?: RawStatePosition | null
+  is_charging?: boolean
+  charger_power?: number
+  charge_rate?: number
+  time_to_full_charge?: number
+  is_locked?: boolean
+  sentry_mode?: boolean
+  software_version?: string
+}
+
+/**
+ * Normalises a `GET /vehicles/{id}/state` response into `{ state, live }`.
+ * Shared by {@link useVehicleState} and {@link fetchVehicleState} so the
+ * two-shape decode and the per-field defaults live in exactly one place.
+ *
+ * Null-safety: a 204 / JSON-null / non-object body resolves to
+ * `{ state: undefined, live: false }` instead of throwing on `res.state`. A
+ * vehicle whose snapshot has not arrived yet must render an empty panel, not
+ * crash the batch that powers the fleet summary.
+ */
+function mapVehicleStateResponse(
+  res: RawStateResponse | null | undefined,
+  vehicleId: number,
+): { state?: VehicleState; live: boolean } {
+  if (res == null || typeof res !== 'object') {
+    return { state: undefined, live: false }
+  }
+  const live = res.live ?? false
+  if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
+    return { state: res.state, live }
+  }
+  const v = res.vehicle
+  const p = res.position
+  if (!v && !p) return { state: res.state, live }
+  const state: VehicleState = {
+    vehicle_id: v?.id ?? vehicleId,
+    state: v?.state ?? 'offline',
+    latitude: p?.latitude ?? 0,
+    longitude: p?.longitude ?? 0,
+    speed: p?.speed ?? 0,
+    power: p?.power ?? 0,
+    battery_level: p?.battery_level ?? 0,
+    rated_range: p?.rated_range ?? p?.ideal_range ?? 0,
+    ideal_range: p?.ideal_range ?? 0,
+    odometer: p?.odometer ?? 0,
+    inside_temp: p?.inside_temp ?? 0,
+    outside_temp: p?.outside_temp ?? 0,
+    is_climate_on: p?.is_climate_on ?? false,
+    is_charging: res.is_charging ?? false,
+    charger_power: res.charger_power ?? 0,
+    charge_rate: res.charge_rate ?? 0,
+    time_to_full_charge: res.time_to_full_charge ?? 0,
+    is_locked: res.is_locked ?? v?.is_locked ?? true,
+    sentry_mode: res.sentry_mode ?? false,
+    software_version: res.software_version ?? v?.software_version ?? '',
+  }
+  return { state, live }
+}
+
 export function useVehicleState(vehicleId: number, options?: { refetchInterval?: number }) {
   const { asOf } = useAsOfDate()
   return useQuery({
     queryKey: vehicleKeys.state(vehicleId, asOf),
     queryFn: async ({ signal }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await request<any>(withAsOf(`/vehicles/${vehicleId}/state`, asOf), { signal })
-      if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
-        return { state: res.state as VehicleState, live: res.live ?? false }
-      }
-      const v = res.vehicle
-      const p = res.position
-      if (!v && !p) return { state: res.state, live: res.live ?? false }
-      const state: VehicleState = {
-        vehicle_id: v?.id ?? vehicleId,
-        state: v?.state ?? 'offline',
-        latitude: p?.latitude ?? 0,
-        longitude: p?.longitude ?? 0,
-        speed: p?.speed ?? 0,
-        power: p?.power ?? 0,
-        battery_level: p?.battery_level ?? 0,
-        rated_range: p?.rated_range ?? p?.ideal_range ?? 0,
-        ideal_range: p?.ideal_range ?? 0,
-        odometer: p?.odometer ?? 0,
-        inside_temp: p?.inside_temp ?? 0,
-        outside_temp: p?.outside_temp ?? 0,
-        is_climate_on: p?.is_climate_on ?? false,
-        is_charging: res.is_charging ?? false,
-        charger_power: res.charger_power ?? 0,
-        charge_rate: res.charge_rate ?? 0,
-        time_to_full_charge: res.time_to_full_charge ?? 0,
-        is_locked: res.is_locked ?? v?.is_locked ?? true,
-        sentry_mode: res.sentry_mode ?? false,
-        software_version: res.software_version ?? v?.software_version ?? '',
-      }
-      return { state, live: res.live ?? false }
+      const res = await request<RawStateResponse | null>(
+        withAsOf(`/vehicles/${vehicleId}/state`, asOf),
+        { signal },
+      )
+      return mapVehicleStateResponse(res, vehicleId)
     },
     enabled: vehicleId > 0,
     // Time-machine reads return historical snapshots that never refetch
@@ -268,37 +335,8 @@ export function useUserPreferenceLatest(vehicleId: number, refetchInterval?: num
 
 /** Raw async function for fetching vehicle state — use in batch queries where hooks can't be used */
 export async function fetchVehicleState(vehicleId: number): Promise<{ state?: VehicleState; live: boolean }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const res = await request<any>(`/vehicles/${vehicleId}/state`)
-  if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
-    return { state: res.state as VehicleState, live: res.live ?? false }
-  }
-  const v = res.vehicle
-  const p = res.position
-  if (!v && !p) return { state: res.state, live: res.live ?? false }
-  const state: VehicleState = {
-    vehicle_id: v?.id ?? vehicleId,
-    state: v?.state ?? 'offline',
-    latitude: p?.latitude ?? 0,
-    longitude: p?.longitude ?? 0,
-    speed: p?.speed ?? 0,
-    power: p?.power ?? 0,
-    battery_level: p?.battery_level ?? 0,
-    rated_range: p?.rated_range ?? p?.ideal_range ?? 0,
-    ideal_range: p?.ideal_range ?? 0,
-    odometer: p?.odometer ?? 0,
-    inside_temp: p?.inside_temp ?? 0,
-    outside_temp: p?.outside_temp ?? 0,
-    is_climate_on: p?.is_climate_on ?? false,
-    is_charging: res.is_charging ?? false,
-    charger_power: res.charger_power ?? 0,
-    charge_rate: res.charge_rate ?? 0,
-    time_to_full_charge: res.time_to_full_charge ?? 0,
-    is_locked: res.is_locked ?? v?.is_locked ?? true,
-    sentry_mode: res.sentry_mode ?? false,
-    software_version: res.software_version ?? v?.software_version ?? '',
-  }
-  return { state, live: res.live ?? false }
+  const res = await request<RawStateResponse | null>(`/vehicles/${vehicleId}/state`)
+  return mapVehicleStateResponse(res, vehicleId)
 }
 
 /** One fleet-wide snapshot entry: a vehicle paired with its latest live state (or null). */
@@ -320,12 +358,13 @@ export interface FleetStateEntry {
  * it stays stable across re-renders and only refetches when the fleet changes.
  */
 export function useFleetStates(vehicles: Vehicle[]) {
-  const ids = vehicles.map((v) => v.id).sort((a, b) => a - b);
+  const list = safeArray(vehicles);
+  const ids = list.map((v) => v.id).sort((a, b) => a - b);
   return useQuery({
     queryKey: ['fleet-vehicle-states', ids],
     queryFn: () =>
       Promise.all(
-        vehicles.map(async (v): Promise<FleetStateEntry> => {
+        list.map(async (v): Promise<FleetStateEntry> => {
           try {
             const { state } = await fetchVehicleState(v.id);
             return { vehicle: v, state: state ?? null };
@@ -334,7 +373,7 @@ export function useFleetStates(vehicles: Vehicle[]) {
           }
         }),
       ),
-    enabled: vehicles.length > 0,
+    enabled: list.length > 0,
     refetchInterval: INTERVALS.STANDARD,
   });
 }
