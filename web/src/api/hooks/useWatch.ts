@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { request } from '@/api/client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
@@ -61,9 +62,21 @@ export interface WatchComplication {
   charging: boolean;
 }
 
+/**
+ * Result of `POST /watch/command`.
+ *
+ * The backend answers HTTP 200 in BOTH the success and the soft-failure
+ * case, discriminated by `success`, with the human-readable reason in
+ * `message`:
+ *   • success → `{ success: true,  message: "Command sent successfully" }`
+ *   • failure → `{ success: false, message: "Command failed: <reason>" }`
+ *
+ * Every field is optional so a 204 / empty / malformed body decodes into an
+ * object we can read without throwing on an undefined access.
+ */
 interface WatchCommandResult {
-  success: boolean;
-  message: string;
+  success?: boolean;
+  message?: string;
 }
 
 // --- Hooks ---
@@ -99,6 +112,7 @@ export function useWatchComplication(vehicleId?: number) {
 /** Send a command from the watch. */
 export function useWatchCommand() {
   const toast = useToast();
+  const { t } = useTranslation();
   return useMutation({
     mutationFn: ({ vehicleId, command }: { vehicleId?: number; command: string }) =>
       watchRequest<WatchCommandResult>('/watch/command', {
@@ -109,15 +123,19 @@ export function useWatchCommand() {
           command,
         }),
       }),
+    // Read `data?.` defensively: a 204 / empty / malformed body must surface
+    // the generic failure toast rather than throw on `data.success`.
     onSuccess: (data) => {
-      if (data.success) {
-        toast.success(data.message || 'Command sent');
+      if (data?.success) {
+        toast.success(data.message || t('watch.command.success', 'Command sent'));
       } else {
-        toast.error(data.message || 'Command failed');
+        toast.error(data?.message || t('watch.command.failed', 'Command failed'));
       }
     },
     onError: (err: Error) => {
-      toast.error(`Watch command failed: ${err.message}`);
+      toast.error(
+        t('watch.command.error', 'Watch command failed: {{message}}', { message: err.message }),
+      );
     },
   });
 }
