@@ -153,7 +153,7 @@ export default function CommandHistoryPage() {
 
   // Filters
   const [statusFilter] = useUrlEnum<StatusFilter>('status', STATUS_FILTERS, 'all');
-  const [searchQuery, setSearchQuery] = useUrlString('q', '');
+  const [searchQuery] = useUrlString('q', '');
   const [page, setPage] = useUrlNumber('page', 1);
 
   // useUrlBatch — atomically write multiple URL params in one navigation.
@@ -173,17 +173,24 @@ export default function CommandHistoryPage() {
     defaultPresetId: 'all',
   });
 
+  // Stable identity for the RangePicker's controlled value so it isn't handed
+  // a fresh object literal on every render.
+  const rangeValue = useMemo(() => ({ start, end }), [start, end]);
+
   // Reset page when filters change — write both keys atomically.
   const handleStatusChange = (key: string) => {
     setUrl({ status: key === 'all' ? null : (key as StatusFilter), page: null });
   };
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    // Search is fed back through the same input on the very next render — the
-    // user can't switch pages between keystrokes, so resetting page here is
-    // safe (no concurrent multi-key write to race with). useDeferredValue
-    // handles the typing-vs-render perf concern.
-    if (page !== 1) setPage(1);
+    // Setting the search text AND resetting pagination are two URL writes.
+    // Firing two single-key setters in the same synchronous handler races
+    // under react-router v6 — both callbacks read the same `prev` snapshot,
+    // so the second navigate(replace) discards the first (see useUrlState.ts).
+    // That previously dropped the typed character whenever the user searched
+    // while on page ≥ 2 (setPage(1) clobbered setSearchQuery). useUrlBatch
+    // lands both keys in one navigation; useDeferredValue keeps typing smooth.
+    const value = e.target.value;
+    setUrl({ q: value || null, page: null });
   };
   const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const n = Number(e.target.value);
@@ -223,9 +230,18 @@ export default function CommandHistoryPage() {
     return result;
   }, [rangeFiltered, statusFilter, deferredSearchQuery, t]);
 
+  // Clamp the URL-driven page into range before slicing. Guards two cases:
+  //   1. A filter/range change shrinks `filtered` while the user is on a later
+  //      page — without clamping, `slice` returns an empty window and the
+  //      timeline renders blank even though data exists on an earlier page.
+  //   2. A hand-edited `?page=` (0, negative, or beyond the last page) —
+  //      `slice((0-1)*25, 0)` would silently surface the wrong rows.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+
   const paginatedCommands = useMemo(
-    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page],
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage],
   );
 
   // KPI stats — computed from the full history, not the filtered view.
@@ -353,11 +369,8 @@ export default function CommandHistoryPage() {
             />
           )}
           <RangePicker
-            value={{ start, end }}
-            onChange={(r) => {
-              setRange(r);
-              if (page !== 1) setPage(1);
-            }}
+            value={rangeValue}
+            onChange={(r) => setRange(r)}
             align="end"
             triggerTestId="command-history-range"
           />
@@ -549,7 +562,7 @@ export default function CommandHistoryPage() {
                 <Timeline items={timelineItems} />
                 {filtered.length > PAGE_SIZE && (
                   <Pagination
-                    page={page}
+                    page={currentPage}
                     pageSize={PAGE_SIZE}
                     total={filtered.length}
                     onPageChange={setPage}
