@@ -53,7 +53,7 @@ export default function QuickStatsPage() {
   // Spotlight vehicle: URL > sticky store > first vehicle. The picker only
   // re-scopes the spotlight — the KPI band stays fleet-wide.
   const { vehicleId, vehicle, vehicles, setVehicleId } = useSelectedVehicle();
-  const { isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const { isLoading: vehiclesLoading, error: vehiclesError, refetch: refetchVehicles } = useVehicles();
   const stateQuery = useVehicleState(vehicleId ?? 0);
   const { data: stateData, refetch: refetchState } = stateQuery;
 
@@ -85,8 +85,9 @@ export default function QuickStatsPage() {
         onClick={() => {
           refetchAnalytics();
           refetchState();
+          refetchVehicles();
         }}
-        aria-label={t('common.refresh', 'Refresh')}
+        aria-label={t('quickStats.refresh', 'Refresh quick stats')}
       >
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>
@@ -182,7 +183,7 @@ export default function QuickStatsPage() {
               </GlassPanel>
             ) : vehiclesError ? (
               <GlassPanel className="p-4 sm:p-5">
-                <QueryError error={vehiclesError} />
+                <QueryError error={vehiclesError} onRetry={refetchVehicles} />
               </GlassPanel>
             ) : !vehicle ? (
               <GlassPanel className="p-4 sm:p-5">

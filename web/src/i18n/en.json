@@ -5850,6 +5850,7 @@
     "subtitle": "Fleet snapshot · last 30 days",
     "defaultName": "Tesla",
     "selectVehicle": "Select vehicle",
+    "refresh": "Refresh quick stats",
     "kpis": "Fleet metrics",
     "spotlight": "Vehicle spotlight",
     "noVehicle": "No vehicle found",
