@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -29,6 +30,16 @@ interface SentryModeChartProps {
 export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, className }: SentryModeChartProps) {
   const { t } = useTranslation();
 
+  // The parent derives `sentryBuckets` from an untyped history response that
+  // can transiently omit the array; guard before reading `.length` or handing
+  // it to the chart so a missing payload renders the empty state instead of
+  // throwing. useMemo keeps the fallback reference stable across re-renders so
+  // the memoised chart's `data` prop doesn't churn.
+  const buckets = useMemo(
+    () => (Array.isArray(sentryBuckets) ? sentryBuckets : []),
+    [sentryBuckets],
+  );
+
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3 flex items-center gap-2">
@@ -39,14 +50,14 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading ? (
         <Skeleton height={256} />
-      ) : sentryBuckets.length > 0 ? (
+      ) : buckets.length > 0 ? (
         <div
           className="h-56 sm:h-64 xl:h-72"
           role="img"
           aria-label={t('admin.security.sentryChart', 'Sentry Mode Activity')}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={sentryBuckets}>
+            <BarChart data={buckets}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
               <XAxis
                 dataKey="date"
