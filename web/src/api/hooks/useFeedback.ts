@@ -31,8 +31,11 @@ function buildQuery(params: FeedbackListParams): string {
   const sp = new URLSearchParams()
   if (params.status) sp.set('status', params.status)
   if (params.category) sp.set('category', params.category)
-  if (typeof params.limit === 'number') sp.set('limit', String(params.limit))
-  if (typeof params.offset === 'number') sp.set('offset', String(params.offset))
+  // Guard with Number.isFinite (not `typeof === 'number'`) so a NaN/Infinity
+  // leaking in from arithmetic (e.g. page * PAGE_SIZE when page is NaN) never
+  // serialises `limit=NaN`, which the backend rejects as a 400.
+  if (Number.isFinite(params.limit)) sp.set('limit', String(params.limit))
+  if (Number.isFinite(params.offset)) sp.set('offset', String(params.offset))
   const qs = sp.toString()
   return qs ? `?${qs}` : ''
 }
