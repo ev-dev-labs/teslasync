@@ -11661,7 +11661,7 @@
     "title": "Status API",
     "subtitle": "Stable contract for external integrations",
     "back": "Back to System Status",
-    "copyPath": "Copy endpoint path",
+    "copyPath": "Copy endpoint path {{path}}",
     "query": "Query",
     "exampleResponse": "Example response",
     "kpi": {
