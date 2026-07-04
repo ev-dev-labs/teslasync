@@ -86,6 +86,7 @@ export default function TeslaOrdersPage() {
         }
         onClick={() => ordersRefresh.mutate()}
         disabled={ordersRefresh.isPending}
+        aria-busy={ordersRefresh.isPending || undefined}
       >
         {t('admin.teslaOrders.refresh', 'Refresh')}
       </Button>
