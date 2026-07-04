@@ -29,7 +29,7 @@ import {
   Car, Inbox,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageContainer, Masonry } from '@/components/layout'
 import { GlassPanel, Button, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import {
@@ -544,7 +544,7 @@ export default function SystemStatusPage() {
                 <SectionTitle id="triage-heading" className="px-1">
                   {t('Health & triage')}
                 </SectionTitle>
-                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                <Masonry className="columns-1 lg:columns-2 xl:columns-3">
 
             {/* 3 ─ Health rows ─────────────────────────────────────── */}
             <section id="health" aria-label={t('Health summary')}>
@@ -699,7 +699,7 @@ export default function SystemStatusPage() {
           />
         </section>
 
-                </div>
+                </Masonry>
               </section>
             </FadeIn>
 
@@ -709,7 +709,7 @@ export default function SystemStatusPage() {
                 <SectionTitle id="systems-heading" className="px-1">
                   {t('Systems & services')}
                 </SectionTitle>
-                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+                <Masonry className="columns-1 xl:columns-2 2xl:columns-3">
 
         {/* 6 ─ Services & components ──────────────────────────── */}
         <section id="services">
@@ -930,7 +930,7 @@ export default function SystemStatusPage() {
           </AccordionSection>
         </section>
 
-                </div>
+                </Masonry>
               </section>
             </FadeIn>
 
@@ -949,7 +949,7 @@ export default function SystemStatusPage() {
                   />
                 </section>
 
-                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+                <Masonry className="columns-1 lg:columns-3">
                   {/* 16 ─ SLO tracking ────────────────────────────── */}
                   <section id="slo" aria-label={t('Personal SLO tracking')}>
                     <SLOTrackingCard />
@@ -964,7 +964,7 @@ export default function SystemStatusPage() {
                   <section id="subscribe" aria-label={t('Notification channels')}>
                     <SubscribeCard />
                   </section>
-                </div>
+                </Masonry>
 
               </section>
             </FadeIn>

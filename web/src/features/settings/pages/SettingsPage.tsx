@@ -16,7 +16,7 @@ import {
 
 import { useSettings } from '@/api/hooks/useSettings'
 import { useFont } from '@/components/ui/FontProvider'
-import { PageContainer } from '@/components/layout'
+import { PageContainer, Masonry } from '@/components/layout'
 import { Button, SectionTitle } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
@@ -201,9 +201,10 @@ export default function SettingsPage() {
       {/* 2 — Preference sections: full-width bento; each self-titled panel
           owns its own loading/empty state and keeps its #anchor for the
           settings search + onboarding deep links. Two columns on 2xl+. */}
-      <section
+      <Masonry
+        as="section"
         aria-label={t('preferences.aria', 'Preference sections')}
-        className="grid grid-cols-1 items-start gap-4 xl:gap-5 2xl:grid-cols-2"
+        className="columns-1 2xl:columns-2"
       >
         <section id="general">
           <GeneralSettings />
@@ -220,7 +221,7 @@ export default function SettingsPage() {
         <section id="reset">
           <ResetSection />
         </section>
-      </section>
+      </Masonry>
 
       {/* 3 — Quick actions: equal-height utility cards that fill the width
           (1 → 2 → 3 columns). */}
