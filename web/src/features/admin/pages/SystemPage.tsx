@@ -18,6 +18,7 @@
  * pattern as the Diagnostic page when adding new system panels.
  */
 
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
@@ -45,10 +46,15 @@ export default function SystemPage() {
 
   const refreshing = rateLimit.isFetching || queue.isFetching
 
-  const refreshAll = () => {
-    void rateLimit.refetch()
-    void queue.refetch()
-  }
+  // `refetch` is referentially stable across renders, so keying the handler
+  // on the two functions keeps `refreshAll` stable through the 30s
+  // auto-refresh re-renders instead of allocating a new closure each time.
+  const { refetch: refetchRateLimit } = rateLimit
+  const { refetch: refetchQueue } = queue
+  const refreshAll = useCallback(() => {
+    void refetchRateLimit()
+    void refetchQueue()
+  }, [refetchRateLimit, refetchQueue])
 
   const actions = (
     <Button
