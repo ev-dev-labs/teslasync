@@ -65,7 +65,20 @@ export default function IngestXRayPage() {
   const noVehicle = vehicleId === null;
   const fields = xray.data?.fields ?? [];
   const buckets = xray.data?.buckets ?? [];
-  const refetch = useCallback(() => void xray.refetch(), [xray]);
+  // Depend on the stable `refetch` identity, not the whole query object (which
+  // TanStack Query returns fresh every render) — otherwise this callback is
+  // re-created each render and needlessly re-renders the memoised toolbar /
+  // retry children it's handed to.
+  const refetch = useCallback(() => void xray.refetch(), [xray.refetch]);
+
+  // Only surface the hard error panel when there is genuinely nothing to show.
+  // After a vehicle has produced one good response, TanStack Query keeps that
+  // `data` across a later failed poll, so a transient refetch error must NOT
+  // blank the chart / table / top-fields. The KPI band already keeps its
+  // last-good numbers on error; gating every section on "error AND no data"
+  // keeps them consistent and lets the page-tier freshness chip own the
+  // stale/failed signalling.
+  const showError = xray.isError && xray.data === undefined;
 
   const actions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -132,7 +145,7 @@ export default function IngestXRayPage() {
         >
           <div className="xl:col-span-2">
             <SectionErrorBoundary name="xray-chart">
-              {xray.isError ? (
+              {showError ? (
                 <GlassPanel className="p-4 sm:p-5">
                   <QueryError error={xray.error} onRetry={refetch} />
                 </GlassPanel>
@@ -147,7 +160,7 @@ export default function IngestXRayPage() {
               <XRayTopFields
                 rows={fields}
                 loading={xray.isLoading}
-                error={xray.isError ? xray.error : undefined}
+                error={showError ? xray.error : undefined}
                 onRetry={refetch}
               />
             </SectionErrorBoundary>
@@ -163,7 +176,7 @@ export default function IngestXRayPage() {
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('admin.xray.panels.fields', 'Field statistics')}
             </PanelTitle>
-            {xray.isError ? (
+            {showError ? (
               <QueryError error={xray.error} onRetry={refetch} />
             ) : (
               <XRayFieldsTable rows={fields} loading={xray.isLoading} />
