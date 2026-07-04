@@ -20,6 +20,10 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: userKeys.me,
     queryFn: ({ signal }) => request<User>('/users/me', { signal }),
+    // Identity is near-static — like the Tesla feature-config it changes
+    // rarely, so don't refetch it on every mount/focus. Brings this hook in
+    // line with the explicit staleTime every other query in this module sets.
+    staleTime: STALE_TIMES.EXTENDED,
   });
 }
 
@@ -63,9 +67,12 @@ function buildActivityQuery(params: MyActivityParams): string {
 /**
  * Fetches the current user's own audit-log activity.
  *
- * Resolves to an empty array on 404 / empty list. Surfaces 503 (ForwardAuth
- * not configured on the server) and 401 (no identity header on the request)
- * as ApiError so the consuming page can render an explanatory state.
+ * `select: safeArray` coerces a missing or non-array payload to `[]`, so the
+ * consuming page can iterate `data` without a null guard even for an empty
+ * activity log. The backend surfaces 503 (ForwardAuth not configured), 401
+ * (no identity header), and 400 (start after end) as errors — these reach the
+ * caller as an ApiError so the page can render an explanatory state rather
+ * than a silently-empty list.
  */
 export function useMyRecentActivity(params: MyActivityParams = {}) {
   return useQuery({
