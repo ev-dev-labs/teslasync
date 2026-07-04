@@ -368,13 +368,31 @@ export default function DashboardPage() {
         </>
       ) : (
         <>
-          <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            loading={isRefreshing}
+            aria-label={t('dashboard.refresh', 'Refresh data')}
+          >
             <Icons.refresh className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowExportModal(true)} className="hidden sm:flex">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowExportModal(true)}
+            className="hidden sm:flex"
+            aria-label={t('dashboard.export', 'Export dashboard')}
+          >
             <Icons.download className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }} className="hidden sm:flex">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setImportJson(null); setShowImportModal(true); }}
+            className="hidden sm:flex"
+            aria-label={t('dashboard.import', 'Import dashboard')}
+          >
             <Icons.upload className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
