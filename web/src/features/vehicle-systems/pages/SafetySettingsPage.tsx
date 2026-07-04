@@ -77,7 +77,7 @@ interface FeatureCardDef {
 /* ------------------------------------------------------------------ */
 
 /** AEB uses inverted logic: `off = false` means the feature IS enabled. */
-function isAebEnabled(off: boolean): boolean {
+export function isAebEnabled(off: boolean): boolean {
   return !off;
 }
 
@@ -86,7 +86,7 @@ function cleanEnum(value: unknown, field: SafetyEnumField): string {
   return cleanSafetyEnum(value, field);
 }
 
-function boolFeatures(snap: SafetySnapshot): boolean[] {
+export function boolFeatures(snap: SafetySnapshot): boolean[] {
   return [
     isAebEnabled(snap.automatic_emergency_braking_off ?? false),
     snap.automatic_blind_spot_camera ?? false,
@@ -100,22 +100,22 @@ function boolFeatures(snap: SafetySnapshot): boolean[] {
   ];
 }
 
-function enabledCount(snap: SafetySnapshot): number {
+export function enabledCount(snap: SafetySnapshot): number {
   return boolFeatures(snap).filter(Boolean).length;
 }
 
-const TOTAL_FEATURES = 9;
+export const TOTAL_FEATURES = 9;
 
 /** Semantic gauge color — kept as a computed value so it can drive the
  *  RadialGauge `color` prop directly (dynamic, not a static var style). */
-function scoreColor(pct: number): string {
+export function scoreColor(pct: number): string {
   if (pct >= 80) return '#10b981';
   if (pct >= 50) return '#f59e0b';
   return '#ef4444';
 }
 
 /** Score → Badge variant. */
-function scoreBadgeVariant(pct: number): 'success' | 'warning' | 'danger' {
+export function scoreBadgeVariant(pct: number): 'success' | 'warning' | 'danger' {
   if (pct >= 80) return 'success';
   if (pct >= 50) return 'warning';
   return 'danger';
@@ -226,7 +226,7 @@ interface ChartPoint {
   elda: number;
 }
 
-function toChartData(history: SafetySnapshot[]): ChartPoint[] {
+export function toChartData(history: SafetySnapshot[]): ChartPoint[] {
   return [...history]
     .sort((a, b) => new Date(a.created_at ?? '').getTime() - new Date(b.created_at ?? '').getTime())
     .map((s) => ({
@@ -241,7 +241,7 @@ function toChartData(history: SafetySnapshot[]): ChartPoint[] {
 /*  Feature card definitions                                           */
 /* ------------------------------------------------------------------ */
 
-function buildFeatureCards(
+export function buildFeatureCards(
   snap: SafetySnapshot,
   t: (key: string) => string,
 ): FeatureCardDef[] {
@@ -500,6 +500,15 @@ export default function SafetySettingsPage() {
             <div className="col-span-full">
               <GlassPanel className="p-4 sm:p-5">
                 <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
+              </GlassPanel>
+            </div>
+          ) : !latest ? (
+            <div className="col-span-full">
+              <GlassPanel className="p-4 sm:p-5">
+                <EmptyState
+                  icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                  message={t('safety.noData', 'No safety data available for this vehicle.')}
+                />
               </GlassPanel>
             </div>
           ) : (
