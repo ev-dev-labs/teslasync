@@ -35,7 +35,7 @@ type HypertableSize struct {
 
 // HypertableMetricsRepo is the disk-usage read path.
 type HypertableMetricsRepo struct {
-	db *database.DB
+	exec database.DBTX
 }
 
 // NewHypertableMetricsRepo constructs the repo. Returns nil when db
@@ -44,7 +44,7 @@ func NewHypertableMetricsRepo(db *database.DB) *HypertableMetricsRepo {
 	if db == nil || db.Pool == nil {
 		return nil
 	}
-	return &HypertableMetricsRepo{db: db}
+	return &HypertableMetricsRepo{exec: db.Pool}
 }
 
 // ErrTimescaleUnavailable is returned when the timescaledb extension
@@ -79,7 +79,7 @@ SELECT h.hypertable_name,
        ) cc ON TRUE
  WHERE h.hypertable_schema = 'public'
  ORDER BY total_bytes DESC NULLS LAST`
-	rows, err := r.db.Pool.Query(ctx, sql)
+	rows, err := r.exec.Query(ctx, sql)
 	if err != nil {
 		if isTimescaleMissing(err) {
 			return nil, ErrTimescaleUnavailable
@@ -169,7 +169,7 @@ SELECT c.hypertable_name,
  WHERE c.hypertable_schema = 'public'
    AND c.range_end < $1
  GROUP BY c.hypertable_name`
-	rows, err := r.db.Pool.Query(ctx, sql, cutoff)
+	rows, err := r.exec.Query(ctx, sql, cutoff)
 	if err != nil {
 		if isTimescaleMissing(err) {
 			return nil, ErrTimescaleUnavailable
@@ -182,11 +182,14 @@ SELECT c.hypertable_name,
 		var name string
 		var bytes int64
 		if err := rows.Scan(&name, &bytes); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("hypertable_metrics: bytes_at_cutoff scan: %w", err)
 		}
 		out[name] = bytes
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("hypertable_metrics: bytes_at_cutoff rows: %w", err)
+	}
+	return out, nil
 }
 
 // isTimescaleMissing maps the common pg errors that indicate the

@@ -45,7 +45,7 @@ type SlowQuery struct {
 
 // SlowQueriesRepo is the read+snapshot path for slow query analytics.
 type SlowQueriesRepo struct {
-	db *database.DB
+	exec database.DBTX
 }
 
 // NewSlowQueriesRepo constructs the repo. Returns nil when db is nil.
@@ -53,7 +53,7 @@ func NewSlowQueriesRepo(db *database.DB) *SlowQueriesRepo {
 	if db == nil || db.Pool == nil {
 		return nil
 	}
-	return &SlowQueriesRepo{db: db}
+	return &SlowQueriesRepo{exec: db.Pool}
 }
 
 // OrderBy is the canonical sort key for TopLive. A future TopSnapshot
@@ -123,7 +123,7 @@ SELECT queryid::bigint, query, calls,
  ORDER BY %s DESC NULLS LAST
  LIMIT $1`, orderByColumnLive(orderBy))
 
-	rows, err := r.db.Pool.Query(ctx, sql, limit)
+	rows, err := r.exec.Query(ctx, sql, limit)
 	if err != nil {
 		if isMissingRelationError(err) {
 			return nil, ErrPgStatStatementsUnavailable
@@ -180,7 +180,7 @@ SELECT now(), queryid::bigint,
   FROM pg_stat_statements
  WHERE calls > 0
 ON CONFLICT (ts, queryid) DO NOTHING`
-	tag, err := r.db.Pool.Exec(ctx, sql)
+	tag, err := r.exec.Exec(ctx, sql)
 	if err != nil {
 		if isMissingRelationError(err) {
 			return 0, ErrPgStatStatementsUnavailable
@@ -205,7 +205,7 @@ SELECT queryid, query_fingerprint, calls, total_time_ms, mean_time_ms,
   FROM slow_query_snapshot
  WHERE queryid = $1
  ORDER BY ts DESC LIMIT $2`
-	rows, err := r.db.Pool.Query(ctx, sql, queryID, limit)
+	rows, err := r.exec.Query(ctx, sql, queryID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("slow_queries: historical: %w", err)
 	}
@@ -223,10 +223,13 @@ SELECT queryid, query_fingerprint, calls, total_time_ms, mean_time_ms,
 		q.SharedBlksRead = read
 		out = append(out, q)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("slow_queries: historical rows: %w", err)
+	}
 	if out == nil {
 		out = []SlowQuery{}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // normaliseFingerprint compresses whitespace and trims to 400 chars
