@@ -3474,6 +3474,9 @@
         "title": "No orders",
         "synced": "No active orders found on this Tesla account.",
         "unsynced": "No order data yet. Refresh to fetch the latest orders from Tesla."
+      },
+      "board": {
+        "aria": "Orders board"
       }
     }
   },
