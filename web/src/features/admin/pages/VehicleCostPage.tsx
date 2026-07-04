@@ -41,6 +41,12 @@ import {
 } from '../components/vehicle-cost';
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
 
+// Stable empty-array reference for the no-data state. Feeding a fresh `[]`
+// into the `costBars` / `topTalkers` `useMemo` dependency lists on every
+// render would invalidate them needlessly before the first successful fetch
+// lands; a shared constant keeps the derives stable.
+const EMPTY_VEHICLES: VehicleCostRow[] = [];
+
 export default function VehicleCostPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.vehicleCost.pageTitle', 'Vehicle Ingest Cost'));
@@ -62,7 +68,7 @@ export default function VehicleCostPage() {
     void query.refetch();
   };
 
-  const vehicles = query.data?.vehicles ?? [];
+  const vehicles = query.data?.vehicles ?? EMPTY_VEHICLES;
   const totals = query.data?.totals;
 
   const nameOf = useMemo(
