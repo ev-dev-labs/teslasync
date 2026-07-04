@@ -2859,7 +2859,11 @@
       "timestampRelative": "Relative",
       "timestampUnix": "Unix",
       "timestampInvalidUnix": "Enter a valid Unix timestamp",
-      "timestampInvalidIso": "Enter a valid ISO 8601 timestamp"
+      "timestampInvalidIso": "Enter a valid ISO 8601 timestamp",
+      "hashInputLabel": "Text to hash",
+      "hashPlaceholder": "Enter text to hash...",
+      "hashInsecureContext": "SHA-256 requires a secure context (HTTPS or localhost).",
+      "hashError": "Could not compute hash."
     },
     "searchTools": "Search tools...",
     "noToolsFound": "No tools match your search",
