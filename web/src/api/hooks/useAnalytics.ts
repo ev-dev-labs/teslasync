@@ -66,7 +66,7 @@ export function useFleetAnalytics(
 export function useMileageStats(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.mileage(vehicleId),
-    queryFn: ({ signal }) => request<MileageStats>(`/mileage/stats?vehicle_id=${vehicleId}`, { signal }),
+    queryFn: ({ signal }) => request<MileageStats>(`/mileage/stats?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
   });
 }
@@ -78,7 +78,7 @@ export function useMileageStats(vehicleId: string) {
 export function useMonthlyMileage(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.monthlyMileage(vehicleId),
-    queryFn: ({ signal }) => request<MonthlyMileageResponse>(`/mileage/monthly?vehicle_id=${vehicleId}`, { signal }),
+    queryFn: ({ signal }) => request<MonthlyMileageResponse>(`/mileage/monthly?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
     select: (resp) => safeArray<MonthlyMileageBucket>(resp?.months),
   });
@@ -91,7 +91,7 @@ export function useMonthlyMileage(vehicleId: string) {
 export function useDailyMileage(vehicleId: string, days = 90) {
   return useQuery({
     queryKey: analyticsKeys.dailyMileage(vehicleId, days),
-    queryFn: ({ signal }) => request<DailyMileageResponse>(`/mileage/daily?vehicle_id=${vehicleId}&days=${days}`, { signal }),
+    queryFn: ({ signal }) => request<DailyMileageResponse>(`/mileage/daily?vehicle_id=${encodeURIComponent(vehicleId)}&days=${days}`, { signal }),
     enabled: !!vehicleId,
     select: (resp) => safeArray<DailyMileageBucket>(resp?.days),
   });
@@ -100,7 +100,7 @@ export function useDailyMileage(vehicleId: string, days = 90) {
 export function useCostBreakdown(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.cost(vehicleId),
-    queryFn: ({ signal }) => request<CostBreakdown>(`/analytics/tco?vehicle_id=${vehicleId}`, { signal }),
+    queryFn: ({ signal }) => request<CostBreakdown>(`/analytics/tco?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
   });
 }
@@ -116,7 +116,7 @@ export function useCostBreakdown(vehicleId: string) {
 export function useTimeline(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.timeline(vehicleId),
-    queryFn: ({ signal }) => request<{ transitions: TimelineEvent[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`, { signal }),
+    queryFn: ({ signal }) => request<{ transitions: TimelineEvent[] }>(`/vehicle-states/timeline?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
     select: (data) => safeArray(data?.transitions),
   });
@@ -126,7 +126,7 @@ export function useTimeline(vehicleId: string) {
 export function useStateSummary(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.stateSummary(vehicleId),
-    queryFn: ({ signal }) => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${vehicleId}`, { signal }),
+    queryFn: ({ signal }) => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -135,7 +135,7 @@ export function useStateSummary(vehicleId: string) {
 export function useWeeklyDigest(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.weeklyDigest(vehicleId),
-    queryFn: ({ signal }) => request<WeeklyDigestData>(`/vehicles/${vehicleId}/weekly-digest`, { signal }),
+    queryFn: ({ signal }) => request<WeeklyDigestData>(`/vehicles/${encodeURIComponent(vehicleId)}/weekly-digest`, { signal }),
     enabled: !!vehicleId,
     retry: false,
     staleTime: STALE_TIMES.STATIC,
@@ -208,7 +208,7 @@ export function useLifetimeStats(vehicleId?: string) {
     queryKey: analyticsKeys.lifetime(vehicleId),
     queryFn: ({ signal }) =>
       request<LifetimeStats>(
-        `/analytics/lifetime${vehicleId ? `?vehicle_id=${vehicleId}` : ''}`, { signal },
+        `/analytics/lifetime${vehicleId ? `?vehicle_id=${encodeURIComponent(vehicleId)}` : ''}`, { signal },
       ),
     staleTime: STALE_TIMES.SLOW,
   });
@@ -221,7 +221,7 @@ export function useYearReview(year: number, vehicleId?: string) {
     queryKey: ['year-review', year, vehicleId] as const,
     queryFn: ({ signal }) =>
       request<import('@/api/types').YearReview>(
-        `/analytics/year-review?year=${year}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`, { signal },
+        `/analytics/year-review?year=${year}${vehicleId ? `&vehicle_id=${encodeURIComponent(vehicleId)}` : ''}`, { signal },
       ),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STATIC,
@@ -293,7 +293,7 @@ export function useBatteryCells(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.batteryCells(vehicleId),
     queryFn: ({ signal }) =>
-      request<BatteryCellData>(`/analytics/battery-cells?vehicle_id=${vehicleId}`, { signal }),
+      request<BatteryCellData>(`/analytics/battery-cells?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
   });
 }
@@ -373,7 +373,7 @@ export function useRangeProjection(vehicleId: string) {
   return useQuery({
     queryKey: ['analytics', 'range-projection', vehicleId] as const,
     queryFn: ({ signal }) =>
-      request<RangeProjection>(`/analytics/range-projection?vehicle_id=${vehicleId}`, { signal }),
+      request<RangeProjection>(`/analytics/range-projection?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
   });
 }
@@ -434,7 +434,7 @@ export function useTemperatureImpact(vehicleId: string) {
     queryKey: analyticsKeys.temperatureImpact(vehicleId),
     queryFn: ({ signal }) =>
       request<TemperatureImpactResponse>(
-        `/analytics/temperature-impact?vehicle_id=${vehicleId}`,
+        `/analytics/temperature-impact?vehicle_id=${encodeURIComponent(vehicleId)}`,
         { signal },
       ),
     enabled: !!vehicleId,
