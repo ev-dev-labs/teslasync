@@ -86,8 +86,12 @@ type DLQReplayAuditInsert struct {
 }
 
 // DLQReplayAuditRepo persists + queries audit rows for the DLQ inspector.
+//
+// exec is the database.DBTX execution seam (satisfied by *pgxpool.Pool
+// in production). Holding the interface rather than the concrete pool
+// lets Insert/Recent be unit tested against the in-repo DBTX fake.
 type DLQReplayAuditRepo struct {
-	db *database.DB
+	exec database.DBTX
 }
 
 // NewDLQReplayAuditRepo constructs a repo bound to db. Panics on nil
@@ -98,7 +102,7 @@ func NewDLQReplayAuditRepo(db *database.DB) *DLQReplayAuditRepo {
 	if db == nil {
 		panic("database: NewDLQReplayAuditRepo: db is nil")
 	}
-	return &DLQReplayAuditRepo{db: db}
+	return &DLQReplayAuditRepo{exec: db.Pool}
 }
 
 // Insert writes a single audit row and returns its assigned ID. The
@@ -113,7 +117,7 @@ func NewDLQReplayAuditRepo(db *database.DB) *DLQReplayAuditRepo {
 // going through the `payload::jsonb` cast which will reject non-JSON
 // — falling back to NULL via json.Valid check below.
 func (r *DLQReplayAuditRepo) Insert(ctx context.Context, in DLQReplayAuditInsert) (int64, error) {
-	if r == nil || r.db == nil {
+	if r == nil || r.exec == nil {
 		return 0, errors.New("database: DLQReplayAuditRepo: nil repo or db")
 	}
 	if in.Actor == "" {
@@ -158,7 +162,7 @@ func (r *DLQReplayAuditRepo) Insert(ctx context.Context, in DLQReplayAuditInsert
 	}
 
 	var id int64
-	err := r.db.Pool.QueryRow(ctx,
+	err := r.exec.QueryRow(ctx,
 		`INSERT INTO dlq_replay_audit
 		   (actor, actor_ip, dlq_id, src_topic, dst_topic, payload, reason, result, error, trace_id)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -176,7 +180,7 @@ func (r *DLQReplayAuditRepo) Insert(ctx context.Context, in DLQReplayAuditInsert
 // Limit is clamped to [1, 500]. Filter by dlq_id when only-recent-for-
 // this-message is desired; pass empty string for the global view.
 func (r *DLQReplayAuditRepo) Recent(ctx context.Context, dlqID string, limit int) ([]DLQReplayAuditRecord, error) {
-	if r == nil || r.db == nil {
+	if r == nil || r.exec == nil {
 		return nil, errors.New("database: DLQReplayAuditRepo: nil repo or db")
 	}
 	if limit <= 0 {
@@ -188,14 +192,14 @@ func (r *DLQReplayAuditRepo) Recent(ctx context.Context, dlqID string, limit int
 	var rows pgx.Rows
 	var err error
 	if dlqID == "" {
-		rows, err = r.db.Pool.Query(ctx,
+		rows, err = r.exec.Query(ctx,
 			`SELECT id, replayed_at, actor, actor_ip::text, dlq_id, src_topic, dst_topic,
 			        payload, reason, result, error, trace_id
 			   FROM dlq_replay_audit
 			   ORDER BY id DESC
 			   LIMIT $1`, limit)
 	} else {
-		rows, err = r.db.Pool.Query(ctx,
+		rows, err = r.exec.Query(ctx,
 			`SELECT id, replayed_at, actor, actor_ip::text, dlq_id, src_topic, dst_topic,
 			        payload, reason, result, error, trace_id
 			   FROM dlq_replay_audit
