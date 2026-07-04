@@ -19,7 +19,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { TabNav } from '@/components/ui/TabNav';
 import { PinButton } from '@/components/ui/PinButton';
 import { PrintButton } from '@/components/ui/PrintButton';
-import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlEnum, useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
@@ -77,16 +77,39 @@ const SEVERITY_HEX: Record<AlertSeverity, string> = {
 
 interface QuietHours { start: string; end: string; enabled: boolean }
 
-function loadQuietHours(): QuietHours {
+const DEFAULT_QUIET_HOURS: QuietHours = { start: '22:00', end: '07:00', enabled: false };
+
+/**
+ * Read the legacy localStorage quiet-hours fallback. Validates the parsed
+ * shape defensively: a corrupted or non-object payload (e.g. the literal
+ * `"null"`, a bare number, or a truncated blob) must NOT leak through as the
+ * return value, or `isQuietHoursActive` would dereference a non-object and
+ * throw. Exported for unit testing.
+ */
+export function loadQuietHours(): QuietHours {
   try {
     const raw = localStorage.getItem('teslasync-quiet-hours');
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return { start: '22:00', end: '07:00', enabled: false };
+    if (!raw) return { ...DEFAULT_QUIET_HOURS };
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_QUIET_HOURS };
+    const obj = parsed as Partial<QuietHours>;
+    return {
+      start: typeof obj.start === 'string' ? obj.start : DEFAULT_QUIET_HOURS.start,
+      end: typeof obj.end === 'string' ? obj.end : DEFAULT_QUIET_HOURS.end,
+      enabled: obj.enabled === true,
+    };
+  } catch {
+    return { ...DEFAULT_QUIET_HOURS };
+  }
 }
 
-function isQuietHoursActive(qh: QuietHours): boolean {
-  if (!qh.enabled) return false;
+/**
+ * Whether the current wall-clock time falls inside the quiet-hours window.
+ * Tolerates a missing/malformed argument (returns `false`) and handles the
+ * midnight-wrapping case (start > end). Exported for unit testing.
+ */
+export function isQuietHoursActive(qh: QuietHours | null | undefined): boolean {
+  if (!qh?.enabled) return false;
   const now = new Date();
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   if (qh.start <= qh.end) return hhmm >= qh.start && hhmm < qh.end;
@@ -100,13 +123,18 @@ export default function AlertsListPage() {
   const savedView = useSavedViewUrl();
   const { locale } = useDateFormat();
 
-  const [filter, setFilter] = useUrlEnum<'all' | 'unread' | 'critical'>(
+  const [filter] = useUrlEnum<'all' | 'unread' | 'critical'>(
     'filter',
     ['all', 'unread', 'critical'] as const,
     'all',
   );
-  const [alertSearch, setAlertSearch] = useUrlString('q', '');
+  const [alertSearch] = useUrlString('q', '');
   const [alertPage, setAlertPage] = useUrlNumber('page', 1);
+  // filter / q / page are separate URL keys but are always changed together
+  // (any status or search change resets pagination). Writing them through the
+  // atomic batcher avoids the react-router v6 snapshot race where two
+  // single-key `setX(..., {replace})` calls in one handler discard each other.
+  const setUrlParams = useUrlBatch();
   const alertsPerPage = 20;
 
   const alertsQuery = useAlerts();
@@ -221,6 +249,9 @@ export default function AlertsListPage() {
     }
     alerts.forEach(a => {
       const d = new Date(a.created_at);
+      // Guard Intl.DateTimeFormat().format() against an invalid date — it
+      // throws RangeError on NaN, which would crash the whole page.
+      if (Number.isNaN(d.getTime())) return;
       if (now - d.getTime() > 7 * 86400000) return;
       const key = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d);
       const sev = a.severity as AlertSeverity;
@@ -272,6 +303,18 @@ export default function AlertsListPage() {
     reopenMut.mutate(id);
   }, [reopenMut]);
 
+  const applyStatusFilter = useCallback((next: 'all' | 'unread' | 'critical') => {
+    setUrlParams({ filter: next === 'all' ? null : next, page: null });
+  }, [setUrlParams]);
+
+  const applySearch = useCallback((value: string) => {
+    setUrlParams({ q: value, page: null });
+  }, [setUrlParams]);
+
+  const clearAllFilters = useCallback(() => {
+    setUrlParams({ q: null, filter: null, page: null });
+  }, [setUrlParams]);
+
   return (
     <PageContainer
       title={t('Alerts')}
@@ -283,10 +326,7 @@ export default function AlertsListPage() {
         <div className="flex flex-wrap items-center justify-end gap-3">
           <RangePicker
             value={{ start, end }}
-            onChange={(r) => {
-              setRange(r);
-              if (alertPage !== 1) setAlertPage(1);
-            }}
+            onChange={setRange}
             align="end"
             triggerTestId="alerts-range"
           />
@@ -413,7 +453,7 @@ export default function AlertsListPage() {
                 icon={<Icons.alertCircle className="h-4 w-4" />}
                 action={{
                   label: t('alerts.viewCritical', 'View critical'),
-                  onClick: () => { setFilter('critical'); setAlertPage(1); },
+                  onClick: () => applyStatusFilter('critical'),
                 }}
               >
                 {t('alerts.criticalCallout', '{{count}} critical alert needs attention', { count: criticalCount })}
@@ -548,7 +588,7 @@ export default function AlertsListPage() {
         <FilterBar>
           <SearchInput
             value={alertSearch}
-            onChange={(v) => { setAlertSearch(v); setAlertPage(1); }}
+            onChange={applySearch}
             placeholder={t('alerts.searchPlaceholder', 'Search by title or message…')}
             className="w-full sm:w-72"
             historyScope="alerts"
@@ -562,7 +602,7 @@ export default function AlertsListPage() {
                 { key: 'critical', label: `${t('Critical')} (${criticalCount})` },
               ]}
               active={filter}
-              onChange={k => { setFilter(k as 'all' | 'unread' | 'critical'); setAlertPage(1); }}
+              onChange={k => applyStatusFilter(k as 'all' | 'unread' | 'critical')}
             />
           </div>
         </FilterBar>
@@ -575,7 +615,7 @@ export default function AlertsListPage() {
                     key: 'q',
                     label: t('alerts.filterLabel.search', 'Search'),
                     value: alertSearch,
-                    onRemove: () => { setAlertSearch(''); setAlertPage(1); },
+                    onRemove: () => applySearch(''),
                   } satisfies FilterChipDescriptor
                 : null,
               filter !== 'all'
@@ -586,16 +626,12 @@ export default function AlertsListPage() {
                       filter === 'unread'
                         ? t('Unread')
                         : t('Critical'),
-                    onRemove: () => { setFilter('all'); setAlertPage(1); },
+                    onRemove: () => applyStatusFilter('all'),
                   } satisfies FilterChipDescriptor
                 : null,
             ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
           }
-          onClearAll={() => {
-            setAlertSearch('');
-            setFilter('all');
-            setAlertPage(1);
-          }}
+          onClearAll={clearAllFilters}
         />
       </FadeIn>
 
