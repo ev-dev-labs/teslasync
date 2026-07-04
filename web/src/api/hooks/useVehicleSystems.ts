@@ -82,7 +82,12 @@ export function useServiceRecords() {
 export function useSoftwareUpdates(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.softwareUpdates(vehicleId),
-    queryFn: ({ signal }) => request<SoftwareUpdate[]>('/software-updates', { signal }),
+    // The query is keyed + gated per vehicle, so the request MUST scope to that
+    // vehicle. The backend /software-updates handler filters by the vehicle_id
+    // query param; omitting it returned every vehicle's updates under a
+    // per-vehicle cache key (stale cross-vehicle data).
+    queryFn: ({ signal }) =>
+      request<SoftwareUpdate[]>(`/software-updates?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
