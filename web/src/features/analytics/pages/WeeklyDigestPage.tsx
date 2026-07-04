@@ -52,6 +52,14 @@ export default function WeeklyDigestPage() {
   const summaryLoading = drivesLoading || chargingLoading;
   const summaryError = drivesError ?? chargingError ?? null;
 
+  // AIDigestNarration feeds this id into a POST body (`vehicle_id`), so coerce
+  // it to a finite number at the boundary and drop anything non-numeric —
+  // forwarding a NaN would serialise to `null` on the wire. `0` is a valid id
+  // and is intentionally preserved (an empty selection is the only "no id").
+  const parsedVehicleId = Number(selectedVehicleId);
+  const aiVehicleId =
+    selectedVehicleId !== '' && Number.isFinite(parsedVehicleId) ? parsedVehicleId : undefined;
+
   const actions = (
     <Select
       options={vehicleOptions}
@@ -159,9 +167,7 @@ export default function WeeklyDigestPage() {
         unchanged and remains the canonical baseline for every user.
       */}
       <FadeIn delay={0.25}>
-        <AIDigestNarration
-          vehicleId={selectedVehicleId ? Number(selectedVehicleId) : undefined}
-        />
+        <AIDigestNarration vehicleId={aiVehicleId} />
       </FadeIn>
     </PageContainer>
   );
