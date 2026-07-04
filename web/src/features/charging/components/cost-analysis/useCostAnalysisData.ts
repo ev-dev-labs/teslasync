@@ -11,13 +11,16 @@ import type {
   TouInsights, GasComparison, LifetimeMetrics,
 } from './types';
 
+/** SI meters per statute mile — used to derive gasoline-equivalent gallons. */
+const METERS_PER_MILE = 1609.344;
+
 interface UseCostAnalysisDataParams {
   sessions: ChargingSession[] | undefined;
   gasPrice: number;
   mpg: number;
   electricityRate: number;
-  toDistanceDisplay: (km: number) => number;
-  isMiles: boolean;
+  /** Converts SI meters to the user's display distance unit (km or mi). */
+  toDistanceDisplay: (meters: number) => number;
 }
 
 interface UseCostAnalysisDataResult {
@@ -37,7 +40,6 @@ export function useCostAnalysisData({
   mpg,
   electricityRate,
   toDistanceDisplay,
-  isMiles,
 }: UseCostAnalysisDataParams): UseCostAnalysisDataResult {
   const coreStats = useMemo(() => {
     if (!sessions || sessions.length === 0) return null;
@@ -51,7 +53,7 @@ export function useCostAnalysisData({
       totalDistanceM += (distanceAddedM(s) ?? 0);
     });
 
-    const distVal = toDistanceDisplay(totalDistanceM / 1609.344);
+    const distVal = toDistanceDisplay(totalDistanceM);
     const costPerDist = distVal > 0 ? totalCost / distVal : 0;
 
     const gallonsEquiv = totalEnergy / KWH_PER_GALLON;
@@ -175,10 +177,12 @@ export function useCostAnalysisData({
   const gasComparison = useMemo<GasComparison | null>(() => {
     if (!coreStats) return null;
     const { totalEnergy, totalCost, totalDistanceM } = coreStats;
-    const distMiles = toDistanceDisplay(totalDistanceM / 1609.344);
-    const gallonsNeeded = isMiles
-      ? distMiles / mpg
-      : toDistanceDisplay(totalDistanceM / 1609.344) / mpg;
+    // Per-distance costs are surfaced in the user's display unit (km or mi).
+    const distDisplay = toDistanceDisplay(totalDistanceM);
+    // MPG is intrinsically miles-per-gallon, so the gasoline-equivalent
+    // gallons must derive from miles regardless of the chosen display unit.
+    const distMiles = totalDistanceM / METERS_PER_MILE;
+    const gallonsNeeded = mpg > 0 ? distMiles / mpg : 0;
     const gasCostCalc = gallonsNeeded * gasPrice;
     const evCostCalc = totalEnergy * electricityRate;
     const monthlySavings =
@@ -194,10 +198,10 @@ export function useCostAnalysisData({
       savings: gasCostCalc - totalCost,
       monthlySavings,
       yearlySavings,
-      costPerMileGas: distMiles > 0 ? gasCostCalc / distMiles : 0,
-      costPerMileEV: distMiles > 0 ? totalCost / distMiles : 0,
+      costPerMileGas: distDisplay > 0 ? gasCostCalc / distDisplay : 0,
+      costPerMileEV: distDisplay > 0 ? totalCost / distDisplay : 0,
     };
-  }, [coreStats, gasPrice, mpg, electricityRate, isMiles, toDistanceDisplay, monthlyData.length]);
+  }, [coreStats, gasPrice, mpg, electricityRate, toDistanceDisplay, monthlyData.length]);
 
   const lifetimeMetrics = useMemo<LifetimeMetrics | null>(() => {
     if (!sessions || sessions.length === 0 || !coreStats) return null;
