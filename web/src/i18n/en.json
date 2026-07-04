@@ -1415,6 +1415,9 @@
       "delete": {
         "success": "Conversation deleted",
         "error": "Failed to delete conversation"
+      },
+      "send": {
+        "error": "Failed to send message"
       }
     },
     "export": {
