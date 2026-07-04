@@ -2,23 +2,46 @@ package periodstats
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
+// statsQuerier is the minimal read surface the period-stats aggregates need:
+// a single-row query executor. Both *pgxpool.Pool and database.DBTX satisfy
+// it, so production passes db.Pool while tests pass an in-memory fake — no
+// live database, per the package's hermetic test contract. Deliberately
+// narrow (interface segregation) so a fake only implements QueryRow.
+type statsQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// computeTimeout bounds the two aggregate queries behind
+// GET /analytics/period-stats so a stalled connection cannot pin a request
+// goroutine indefinitely. Belt-and-suspenders alongside the per-connection
+// statement_timeout configured on the pool.
+const computeTimeout = 15 * time.Second
+
 // Handler serves period comparison analytics.
 type Handler struct {
-	db *database.DB
+	q statsQuerier
 }
 
 func NewHandler(db *database.DB) *Handler {
-	return &Handler{db: db}
+	var q statsQuerier
+	if db != nil && db.Pool != nil {
+		q = db.Pool
+	}
+	return &Handler{q: q}
 }
 
 // PeriodStats is the canonical period-stats envelope returned by
@@ -44,42 +67,70 @@ type PeriodStats struct {
 // "all time" (no date filter), mirroring the canonical
 // /analytics/period-stats?days=0 contract the SPA already uses.
 //
-// Returns (stats, queryErr). The queryErr is non-nil ONLY when the
-// drives query fails; a charging-query failure is logged and
-// folded into a zero-energy/zero-cost envelope (parity with the
-// historical handler so the SPA never sees a 500 caused by a
-// recent charging-table schema drift).
+// Returns (stats, queryErr). The queryErr is non-nil when the drives
+// query fails (or the database handle is nil); a charging-query failure
+// is logged and folded into a zero-energy/zero-cost envelope (parity with
+// the historical handler so the SPA never sees a 500 caused by a recent
+// charging-table schema drift).
 //
 // Extracted from Handler.Get so the AI period-compare-narration
 // adapter can ground its narration in the SAME deterministic envelope
 // the chart renders.
 func ComputePeriodStats(ctx context.Context, db *database.DB, vehicleID int64, days int) (PeriodStats, error) {
+	if db == nil || db.Pool == nil {
+		return PeriodStats{}, errors.New("periodstats: compute period stats: nil database handle")
+	}
+	return computePeriodStats(ctx, db.Pool, vehicleID, days)
+}
+
+// computePeriodStats is the connection-shape-agnostic core behind
+// ComputePeriodStats. It reads through a statsQuerier so the aggregate
+// logic can be exercised with an in-memory fake (no live database). The
+// trailing window is parameterised ($2) — never string-interpolated — and
+// days <= 0 means "all time" (no window predicate), mirroring the canonical
+// /analytics/period-stats?days=0 contract the SPA already uses.
+func computePeriodStats(ctx context.Context, q statsQuerier, vehicleID int64, days int) (PeriodStats, error) {
+	if q == nil {
+		return PeriodStats{}, errors.New("periodstats: compute period stats: nil querier")
+	}
+
+	// days <= 0 -> all time. Otherwise bound both aggregates to the trailing
+	// window with a parameterised interval ($2 days) so the day count is a
+	// bound value, not interpolated SQL text.
+	args := []any{vehicleID}
 	dateFilter := ""
 	if days > 0 {
-		dateFilter = " AND started_at > NOW() - interval '" + strconv.Itoa(days) + " days'"
+		args = append(args, days)
+		dateFilter = " AND started_at > NOW() - ($2::double precision * INTERVAL '1 day')"
 	}
 
-	// Total distance and drives use SI canonical distance_m / duration_s.
-	// Convert to km/min at the JSON-populate site.
-	var totalDistM, totalDurS *float64
+	// Total distance and drives from SI canonical distance_m; converted to km
+	// at the JSON-populate site below. COALESCE keeps the sum non-NULL, but the
+	// pointer scan target stays defensive against a NULL leaking through.
+	var totalDistM *float64
 	var totalDrives int
-	err := db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*), COALESCE(SUM(distance_m), 0), COALESCE(SUM(duration_s), 0)
-		 FROM drives WHERE vehicle_id = $1 AND ended_at IS NOT NULL`+dateFilter, vehicleID,
-	).Scan(&totalDrives, &totalDistM, &totalDurS)
-	if err != nil {
-		return PeriodStats{}, err
+	if err := q.QueryRow(ctx,
+		`SELECT COUNT(*), COALESCE(SUM(distance_m), 0)
+		 FROM drives WHERE vehicle_id = $1 AND ended_at IS NOT NULL`+dateFilter, args...,
+	).Scan(&totalDrives, &totalDistM); err != nil {
+		return PeriodStats{}, fmt.Errorf("periodstats: drives aggregate query: %w", err)
 	}
 
-	// Energy and cost from charging sessions use SI canonical
-	// total_energy_added_wh and cost_decimal columns.
+	// Energy and cost from charging sessions (SI canonical
+	// total_energy_added_wh + NUMERIC cost_decimal). A charging-query failure
+	// is folded into a zero-energy / zero-cost envelope — parity with the
+	// historical handler so a charging-table schema drift never turns into a
+	// 500 for the SPA. Logged at Warn: degraded, not fatal.
 	var energyAddedWh, totalCost *float64
-	err = db.Pool.QueryRow(ctx,
+	if err := q.QueryRow(ctx,
 		`SELECT COALESCE(SUM(total_energy_added_wh), 0), COALESCE(SUM(cost_decimal::float8), 0)
-		 FROM charging_sessions WHERE vehicle_id = $1`+dateFilter, vehicleID,
-	).Scan(&energyAddedWh, &totalCost)
-	if err != nil {
-		log.Error().Err(err).Msg("period-stats: charging query")
+		 FROM charging_sessions WHERE vehicle_id = $1`+dateFilter, args...,
+	).Scan(&energyAddedWh, &totalCost); err != nil {
+		log.Warn().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Int("days", days).
+			Msg("periodstats: charging aggregate query failed; folding to zero energy/cost")
 		energyAddedWh = new(float64)
 		totalCost = new(float64)
 	}
@@ -110,21 +161,24 @@ func ComputePeriodStats(ctx context.Context, db *database.DB, vehicleID int64, d
 	// CO2 saved vs ICE: ~120g/km for ICE, ~0 for EV (grid emissions vary)
 	co2Saved := distKm * 0.120 // 120g/km saved → kg
 
-	sf := func(v float64) float64 {
-		if math.IsNaN(v) || math.IsInf(v, 0) {
-			return 0
-		}
-		return math.Round(v*100) / 100
-	}
-
 	return PeriodStats{
-		TotalDistance: sf(distKm),
+		TotalDistance: roundStat(distKm),
 		TotalDrives:   totalDrives,
-		EnergyUsed:    sf(energyKWh),
-		AvgEfficiency: sf(avgEff),
-		TotalCost:     sf(cost),
-		CO2Saved:      sf(co2Saved),
+		EnergyUsed:    roundStat(energyKWh),
+		AvgEfficiency: roundStat(avgEff),
+		TotalCost:     roundStat(cost),
+		CO2Saved:      roundStat(co2Saved),
 	}, nil
+}
+
+// roundStat rounds v to 2 decimals, mapping NaN/Inf to 0 so a degenerate
+// input never serialises as an invalid JSON number. The rounding is part of
+// the wire contract the chart and the AI narration both quote.
+func roundStat(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return math.Round(v*100) / 100
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
@@ -139,12 +193,21 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	daysStr := r.URL.Query().Get("days")
-	days, _ := strconv.Atoi(daysStr)
+	// days is optional; a missing/blank/unparseable value means "all time"
+	// (days = 0), matching the documented /analytics/period-stats?days=0
+	// contract the SPA relies on.
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
 
-	stats, err := ComputePeriodStats(r.Context(), h.db, vehicleID, days)
+	ctx, cancel := context.WithTimeout(r.Context(), computeTimeout)
+	defer cancel()
+
+	stats, err := computePeriodStats(ctx, h.q, vehicleID, days)
 	if err != nil {
-		log.Error().Err(err).Msg("period-stats: drives query")
+		log.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Int("days", days).
+			Msg("periodstats: period-stats query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query period stats")
 		return
 	}
