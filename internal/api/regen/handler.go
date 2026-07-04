@@ -11,17 +11,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
 // RegenHandler handles regenerative braking analytics HTTP requests.
 type RegenHandler struct {
-	db *database.DB
+	repo regenRepository
 }
 
+// NewRegenHandler builds the handler backed by the production
+// pgx-backed repository. The signature is preserved for router wiring;
+// the data-access seam lives behind regenRepository so the handler can be
+// exercised in tests without a live database.
 func NewRegenHandler(db *database.DB) *RegenHandler {
-	return &RegenHandler{db: db}
+	return &RegenHandler{repo: newRegenRepo(db)}
+}
+
+// newRegenHandlerForTest injects a fake repository. Test-only.
+func newRegenHandlerForTest(repo regenRepository) *RegenHandler {
+	return &RegenHandler{repo: repo}
 }
 
 const (
@@ -34,6 +42,42 @@ const (
 	largeCapacityWh    = 100000.0
 )
 
+// driveRegen is one per-drive entry in the Stats response. Distance is
+// reported in miles (legacy "distance" field semantics); avg_speed_mps is
+// raw SI metres-per-second; duration_s is seconds. JSON keys are stable
+// wire contract — do not rename without coordinating the frontend.
+type driveRegen struct {
+	ID          int64     `json:"id"`
+	StartDate   time.Time `json:"start_date"`
+	Distance    float64   `json:"distance"`
+	DurationS   float64   `json:"duration_s"`
+	SpeedAvgMps *float64  `json:"avg_speed_mps"`
+	PowerMaxW   *float64  `json:"avg_power_w"`
+	PowerMinW   *float64  `json:"min_power_w"`
+	StartSocPct *float64  `json:"start_soc_pct"`
+	EndSocPct   *float64  `json:"end_soc_pct"`
+	Efficiency  float64   `json:"efficiency"`
+	RegenScore  float64   `json:"regen_score"`
+}
+
+// monthlySummary is one month bucket in the Stats response. AvgRegenPower
+// is SI watts despite the avg_regen_power_kw key (see monthlyRegenRow);
+// AvgSpeed is mph.
+type monthlySummary struct {
+	Month         string  `json:"month"`
+	DriveCount    int     `json:"drive_count"`
+	AvgRegenPower float64 `json:"avg_regen_power_kw"`
+	AvgSpeed      float64 `json:"avg_speed"`
+	AvgEfficiency float64 `json:"avg_efficiency"`
+}
+
+// Stats serves GET /analytics/regen?vehicle_id=...[&start=...&end=...].
+//
+// Optional date bounds via ?start=YYYY-MM-DD&end=YYYY-MM-DD (or RFC 3339)
+// scope every sub-query to the same window so the picker controls the
+// whole response uniformly. When omitted: full history, no trailing-window
+// fallback. A per-drive list, a monthly summary, and lifetime cagg totals
+// are combined into a single envelope.
 func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
@@ -45,193 +89,52 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
+	// A non-positive id can never match a real vehicle row (ids are
+	// positive BIGSERIAL); reject it up front rather than issue queries
+	// that can only ever return empty. Mirrors the sibling mileage handler.
+	if vehicleID <= 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be positive")
+		return
+	}
 
-	// Optional date bounds via standard ?start=YYYY-MM-DD&end=YYYY-MM-DD.
-	// When supplied, all four sub-queries (per-drive list, monthly summary,
-	// lifetime cagg totals) are scoped to the same window so the picker
-	// controls the entire response uniformly. When omitted: full history,
-	// no trailing-window fallback.
 	startTime, endTime := apiparams.ParseDateRange(r)
 	hasRange := !startTime.IsZero() && !endTime.IsZero()
 
 	ctx := r.Context()
 
-	capacityWh, capacitySource := lookupVehicleCapacityWh(ctx, h.db, vehicleID)
+	capacityWh, capacitySource := h.capacity(ctx, vehicleID)
 
-	// Per-drive regen stats use the SI canonical drives schema (migration
-	// 000185): distance_m, duration_s, avg_speed_mps, avg_power_w,
-	// start_soc_pct, end_soc_pct, started_at. JSON shape kept (now-SI-suffixed
-	// names: duration_s, avg_speed_mps, avg_power_w, start_soc_pct,
-	// end_soc_pct) — frontend already mismatched these field names against
-	// the legacy backend tags so the rename is forward-compatible.
-	type driveRegen struct {
-		ID          int64     `json:"id"`
-		StartDate   time.Time `json:"start_date"`
-		Distance    float64   `json:"distance"`
-		DurationS   float64   `json:"duration_s"`
-		SpeedAvgMps *float64  `json:"avg_speed_mps"`
-		PowerMaxW   *float64  `json:"avg_power_w"`
-		PowerMinW   *float64  `json:"min_power_w"`
-		StartSocPct *float64  `json:"start_soc_pct"`
-		EndSocPct   *float64  `json:"end_soc_pct"`
-		Efficiency  float64   `json:"efficiency"`
-		RegenScore  float64   `json:"regen_score"`
-	}
-
-	driveRows, err := h.db.Pool.Query(ctx, `
-		SELECT id, started_at, distance_m, duration_s, avg_speed_mps,
-			avg_power_w, NULL::float8,
-			start_soc_pct::float8, end_soc_pct::float8,
-			CASE WHEN distance_m > 0
-			     THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
-			     ELSE 0 END as efficiency
-		FROM drives
-		WHERE vehicle_id = $1 AND distance_m > $3
-			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
-		ORDER BY started_at DESC`,
-		vehicleID, metersPerMile, twoMilesMeters,
-		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime))
+	driveRows, err := h.repo.DriveRegens(ctx, vehicleID, hasRange, startTime, endTime)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get regen drive data")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("regen: failed to get drive data")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get regen data")
 		return
 	}
-	defer driveRows.Close()
+	drives := buildDriveRegens(driveRows)
 
-	var drives []driveRegen
-	for driveRows.Next() {
-		var d driveRegen
-		var distM *float64
-		var durS *int64
-		if err := driveRows.Scan(&d.ID, &d.StartDate, &distM, &durS, &d.SpeedAvgMps,
-			&d.PowerMaxW, &d.PowerMinW, &d.StartSocPct, &d.EndSocPct, &d.Efficiency); err != nil {
-			log.Error().Err(err).Msg("failed to scan regen drive row")
-			continue
-		}
-		// Distance reported in miles (legacy "distance" field semantics preserved).
-		if distM != nil {
-			d.Distance = *distM / metersPerMile
-		}
-		if durS != nil {
-			d.DurationS = float64(*durS)
-		}
-		// Regen score: based on regen power (W) relative to speed (m/s).
-		if d.PowerMinW != nil {
-			regenW := math.Abs(*d.PowerMinW)
-			speedFactor := 1.0
-			if d.SpeedAvgMps != nil && *d.SpeedAvgMps > 0 {
-				// Preserves the legacy ratio shape (kW / mph * 10).
-				speedFactor = (regenW / wattsPerKilowatt) / (*d.SpeedAvgMps / mpsPerMph) * 10
-			}
-			d.RegenScore = math.Min(math.Round(speedFactor*10)/10, 100)
-		}
-		drives = append(drives, d)
-	}
-	if drives == nil {
-		drives = []driveRegen{}
-	}
-
-	// Monthly regen summary. avg_power_w averaged in W then converted to
-	// kW in Go to keep the response key avg_regen_power_kw stable for the
-	// frontend.
-	type monthlySummary struct {
-		Month         string  `json:"month"`
-		DriveCount    int     `json:"drive_count"`
-		AvgRegenPower float64 `json:"avg_regen_power_kw"`
-		AvgSpeed      float64 `json:"avg_speed"`
-		AvgEfficiency float64 `json:"avg_efficiency"`
-	}
-
-	monthRows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', started_at) as month,
-			COUNT(*) as drive_count,
-			AVG(ABS(COALESCE(avg_power_w, 0))) as avg_regen_power_w,
-			AVG(avg_speed_mps) as avg_speed_mps,
-			AVG(CASE WHEN distance_m > 0
-			         THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
-			         ELSE 0 END) as avg_efficiency
-		FROM drives
-		WHERE vehicle_id = $1 AND distance_m > $3
-			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
-		GROUP BY month ORDER BY month`,
-		vehicleID, metersPerMile, twoMilesMeters,
-		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime))
+	monthRows, err := h.repo.MonthlyRegens(ctx, vehicleID, hasRange, startTime, endTime)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get monthly regen data")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("regen: failed to get monthly data")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get regen data")
 		return
 	}
-	defer monthRows.Close()
+	monthly := buildMonthlyRegens(monthRows)
 
-	var monthly []monthlySummary
-	for monthRows.Next() {
-		var m monthlySummary
-		var monthTime time.Time
-		var avgPowerW, avgSpeedMps, avgEff *float64
-		if err := monthRows.Scan(&monthTime, &m.DriveCount, &avgPowerW, &avgSpeedMps, &avgEff); err != nil {
-			log.Error().Err(err).Msg("failed to scan monthly regen row")
-			continue
-		}
-		m.Month = monthTime.Format("2006-01")
-		if avgPowerW != nil {
-			m.AvgRegenPower = math.Round(*avgPowerW*10) / 10
-		}
-		if avgSpeedMps != nil {
-			m.AvgSpeed = math.Round((*avgSpeedMps/mpsPerMph)*10) / 10
-		}
-		if avgEff != nil {
-			m.AvgEfficiency = math.Round(*avgEff*10) / 10
-		}
-		monthly = append(monthly, m)
-	}
-	if monthly == nil {
-		monthly = []monthlySummary{}
-	}
-
-	// Lifetime regen/drive energy from SI-canonical cagg_fleet_stats (Wh).
-	// When a range is supplied we scope to the window via the daily `day`
-	// column so the gauges/cards/MetricBars stay in sync with the per-drive
-	// and monthly views above.
-	var totalRegenWh, totalDriveWh float64
-	if err := h.db.Pool.QueryRow(ctx, `
-		SELECT
-			COALESCE(SUM(total_regen_wh), 0),
-			COALESCE(SUM(total_energy_wh), 0)
-		FROM cagg_fleet_stats
-		WHERE vehicle_id = $1
-			AND ($2::date IS NULL OR day BETWEEN $2::date AND $3::date)`,
-		vehicleID,
-		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime),
-	).Scan(&totalRegenWh, &totalDriveWh); err != nil && err != pgx.ErrNoRows {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("regen: cagg_fleet_stats query failed")
-	}
-	regenRatio := 0.0
-	if totalDriveWh > 0 {
-		regenRatio = totalRegenWh / totalDriveWh * 100
-	}
-
-	var monthlyAvgRegen float64
-	if len(monthly) > 0 {
-		sum := 0.0
-		for _, m := range monthly {
-			sum += m.AvgRegenPower
-		}
-		monthlyAvgRegen = math.Round(sum/float64(len(monthly))*10) / 10
-	}
-
-	// Free charges equivalent (based on vehicle-specific estimated capacity)
-	freeCharges := 0.0
-	if totalRegenWh > 0 && capacityWh > 0 {
-		freeCharges = math.Round(totalRegenWh/capacityWh*10) / 10
+	// Lifetime regen/drive energy is non-fatal: a cagg read failure
+	// degrades the gauges to zero rather than failing the whole response.
+	totalRegenWh, totalDriveWh, err := h.repo.LifetimeEnergy(ctx, vehicleID, hasRange, startTime, endTime)
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("regen: cagg_fleet_stats query failed")
+		totalRegenWh, totalDriveWh = 0, 0
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":        vehicleID,
 		"total_regen_wh":    math.Round(totalRegenWh*100) / 100,
 		"total_drive_wh":    math.Round(totalDriveWh*100) / 100,
-		"regen_ratio":       math.Round(regenRatio*10) / 10,
-		"monthly_avg_regen": monthlyAvgRegen,
-		"free_charges":      freeCharges,
+		"regen_ratio":       math.Round(regenRatio(totalRegenWh, totalDriveWh)*10) / 10,
+		"monthly_avg_regen": avgMonthlyRegen(monthly),
+		"free_charges":      freeChargesEquivalent(totalRegenWh, capacityWh),
 		"monthly_summary":   monthly,
 		"drives":            drives,
 		// Capacity estimate metadata
@@ -240,22 +143,123 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
-	var vin string
-	var model *string
-	err := db.Pool.QueryRow(ctx,
-		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
-	).Scan(&vin, &model)
+// capacity resolves the vehicle's estimated usable battery capacity (Wh)
+// and the provenance of that estimate. A repository lookup failure (e.g.
+// unknown vehicle) is non-fatal and falls back to the platform default —
+// the regen endpoint reports data for any id rather than 404ing.
+func (h *RegenHandler) capacity(ctx context.Context, vehicleID int64) (float64, string) {
+	vin, model, err := h.repo.VehicleModel(ctx, vehicleID)
 	if err != nil {
 		return defaultCapacityWh, "default"
 	}
-	m := ""
-	if model != nil {
-		m = *model
-	}
-	return estimateBatteryCapacityWh(vin, m)
+	return estimateBatteryCapacityWh(vin, model)
 }
 
+// buildDriveRegens converts scanned drive rows into the response shape,
+// applying the metres→miles distance conversion, the duration cast, and
+// the regen-score derivation. Always returns a non-nil slice so the JSON
+// field marshals to [] rather than null.
+func buildDriveRegens(rows []driveRegenRow) []driveRegen {
+	out := make([]driveRegen, 0, len(rows))
+	for _, row := range rows {
+		d := driveRegen{
+			ID:          row.ID,
+			StartDate:   row.StartDate,
+			SpeedAvgMps: row.SpeedAvgMps,
+			PowerMaxW:   row.PowerAvgW,
+			PowerMinW:   row.PowerMinW,
+			StartSocPct: row.StartSocPct,
+			EndSocPct:   row.EndSocPct,
+			Efficiency:  row.Efficiency,
+		}
+		if row.DistanceM != nil {
+			d.Distance = *row.DistanceM / metersPerMile
+		}
+		if row.DurationS != nil {
+			d.DurationS = float64(*row.DurationS)
+		}
+		d.RegenScore = regenScore(row.PowerMinW, row.SpeedAvgMps)
+		out = append(out, d)
+	}
+	return out
+}
+
+// buildMonthlyRegens converts scanned month buckets into the response
+// shape. AvgRegenPower stays in watts; AvgSpeed is converted m/s→mph. All
+// three numeric fields are rounded to one decimal. Always returns a
+// non-nil slice.
+func buildMonthlyRegens(rows []monthlyRegenRow) []monthlySummary {
+	out := make([]monthlySummary, 0, len(rows))
+	for _, row := range rows {
+		m := monthlySummary{
+			Month:      row.Month.Format("2006-01"),
+			DriveCount: row.DriveCount,
+		}
+		if row.AvgPowerW != nil {
+			m.AvgRegenPower = math.Round(*row.AvgPowerW*10) / 10
+		}
+		if row.AvgSpeedMps != nil {
+			m.AvgSpeed = math.Round((*row.AvgSpeedMps/mpsPerMph)*10) / 10
+		}
+		if row.AvgEff != nil {
+			m.AvgEfficiency = math.Round(*row.AvgEff*10) / 10
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
+// regenScore derives a 0–100 regen quality score from the (absolute)
+// regen power and average speed. Preserves the legacy ratio shape
+// (kW / mph * 10) and caps at 100. When speed is unknown or non-positive
+// the score defaults to the legacy 1.0 floor; a nil power yields 0.
+func regenScore(powerMinW, speedAvgMps *float64) float64 {
+	if powerMinW == nil {
+		return 0
+	}
+	regenW := math.Abs(*powerMinW)
+	speedFactor := 1.0
+	if speedAvgMps != nil && *speedAvgMps > 0 {
+		speedFactor = (regenW / wattsPerKilowatt) / (*speedAvgMps / mpsPerMph) * 10
+	}
+	return math.Min(math.Round(speedFactor*10)/10, 100)
+}
+
+// regenRatio is the share of drive energy recovered via regen, as a
+// percentage. Guarded against a zero (or negative) drive-energy divide.
+func regenRatio(totalRegenWh, totalDriveWh float64) float64 {
+	if totalDriveWh <= 0 {
+		return 0
+	}
+	return totalRegenWh / totalDriveWh * 100
+}
+
+// avgMonthlyRegen averages the per-month AvgRegenPower values, rounded to
+// one decimal. Empty input yields 0.
+func avgMonthlyRegen(monthly []monthlySummary) float64 {
+	if len(monthly) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, m := range monthly {
+		sum += m.AvgRegenPower
+	}
+	return math.Round(sum/float64(len(monthly))*10) / 10
+}
+
+// freeChargesEquivalent expresses lifetime regen energy as whole/partial
+// battery charges, rounded to one decimal. Zero (or negative) regen
+// energy or capacity yields 0.
+func freeChargesEquivalent(totalRegenWh, capacityWh float64) float64 {
+	if totalRegenWh <= 0 || capacityWh <= 0 {
+		return 0
+	}
+	return math.Round(totalRegenWh/capacityWh*10) / 10
+}
+
+// estimateBatteryCapacityWh estimates usable pack capacity (Wh) from the
+// VIN's battery-type character (8th position) with a model-name fallback.
+// Unknown vehicles fall back to the platform default.
 func estimateBatteryCapacityWh(vin string, model string) (float64, string) {
 	if len(vin) >= 8 {
 		switch vin[7] {
