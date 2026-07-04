@@ -33,17 +33,49 @@ export const redisSignalKeys = {
 export type { RedisSignalEntry, RedisSignalsMeta, RedisSignalsResponse };
 
 /**
+ * A vehicle id is queryable only when it is a real, positive whole number.
+ *
+ * The read is disabled for `null` (no vehicle selected) and — defensively —
+ * for `0`, negative, fractional, or non-finite ids so the viewer can never
+ * issue a malformed `?vehicle_id=NaN` (or `?vehicle_id=0`) request against
+ * the devtools route. Vehicle ids are int64 > 0 on the backend, so a
+ * non-positive/non-integer value only ever arrives from a contract
+ * violation upstream — swallowing it here keeps the network layer honest.
+ */
+export function isQueryableVehicleId(
+  vehicleId: number | null,
+): vehicleId is number {
+  return vehicleId !== null && Number.isInteger(vehicleId) && vehicleId > 0;
+}
+
+/**
+ * Pure builder for the `useRedisSignals` query config. Extracted so the
+ * enabled / refetch-interval / query-key policy is unit-testable without
+ * standing up a React tree — mirroring the testable-helper pattern used by
+ * the sibling DLQ / log-stream hooks.
+ */
+export function redisSignalsQueryOptions(
+  vehicleId: number | null,
+  autoRefresh: boolean,
+) {
+  return {
+    queryKey: redisSignalKeys.detail(vehicleId),
+    // `enabled` below guarantees a positive integer id before this runs,
+    // so the cast never widens past what the guard already proved.
+    queryFn: () => getRedisSignals(vehicleId as number),
+    enabled: isQueryableVehicleId(vehicleId),
+    refetchInterval: autoRefresh ? INTERVALS.REALTIME : (false as const),
+  };
+}
+
+/**
  * Reads every cached signal for a vehicle from the Redis L2 HSET.
- * Disabled until a vehicle is selected; polls at the realtime interval
- * while `autoRefresh` is on so the viewer can watch live telemetry land.
+ * Disabled until a valid vehicle is selected; polls at the realtime
+ * interval while `autoRefresh` is on so the viewer can watch live
+ * telemetry land.
  */
 export function useRedisSignals(vehicleId: number | null, autoRefresh: boolean) {
-  return useQuery({
-    queryKey: redisSignalKeys.detail(vehicleId),
-    queryFn: () => getRedisSignals(vehicleId as number),
-    enabled: vehicleId !== null,
-    refetchInterval: autoRefresh ? INTERVALS.REALTIME : false,
-  });
+  return useQuery(redisSignalsQueryOptions(vehicleId, autoRefresh));
 }
 
 /** Purges a single vehicle's Redis L2 HSET. Returns the raw response so the
