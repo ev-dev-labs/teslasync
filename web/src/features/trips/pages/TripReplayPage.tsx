@@ -62,10 +62,16 @@ function fmtDuration(ms: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-/** Format drive duration in minutes as "Xh Ym" */
+/** Format drive duration in minutes as "Xh Ym". Rounds to whole minutes and
+ *  normalizes the carry so 59.6 → "1h 0m" instead of the "60m" (or worse,
+ *  "23h 60m") that the naive `Math.round(min % 60)` produced. Non-finite or
+ *  negative input collapses to "0m" so an upstream data bug surfaces as a sane
+ *  placeholder instead of "NaNm" leaking into the KPI band. */
 function fmtDriveTime(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
+  if (!Number.isFinite(min) || min <= 0) return '0m';
+  const totalMin = Math.round(min);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
@@ -295,9 +301,21 @@ export default function TripReplayPage() {
   /* ---- Speed + Power timeline data (shared with TripReplayCharts) ---- */
   const timelineData: TripReplayChartPoint[] = useMemo(() => {
     if (positions.length === 0) return [];
-    const t0 = new Date(positions[0].timestamp).getTime();
+    // Anchor on the first *parseable* timestamp (mirrors
+    // useTripReplay.buildTimeline). A single unparseable first row must not
+    // turn every X value into NaN and blank the speed/power chart.
+    let t0 = NaN;
+    for (const p of positions) {
+      const t = new Date(p.timestamp).getTime();
+      if (Number.isFinite(t)) {
+        t0 = t;
+        break;
+      }
+    }
+    const anchored = Number.isFinite(t0);
     return positions.map((p, i) => {
-      const elapsedMin = (new Date(p.timestamp).getTime() - t0) / 60_000;
+      const t = new Date(p.timestamp).getTime();
+      const elapsedMin = anchored && Number.isFinite(t) ? (t - t0) / 60_000 : 0;
       return {
         index: i,
         time: Number(elapsedMin.toFixed(3)),
@@ -478,7 +496,7 @@ export default function TripReplayPage() {
               <StatCard
                 label={t('replay.summary.efficiency', 'Efficiency')}
                 value={efficiency != null ? fmtNumber(efficiency) : '—'}
-                unit={efficiency != null ? 'Wh/km' : undefined}
+                unit={efficiency != null ? `Wh/${distanceUnit}` : undefined}
                 icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
               />
             </StaggerItem>
