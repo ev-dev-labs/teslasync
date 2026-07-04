@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -69,9 +69,16 @@ export default function StatisticsPage() {
   // backend `total_distance` and `vehicle_comparison[].distance` are SI km;
   // `avg_efficiency` is SI Wh/km. Convert at the display boundary so values
   // match the user's distance-unit preference.
-  const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
-  const whPerKmToDisplay = (whPerKm: number) =>
-    distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+  // Memoised so the derived `compData`/`stateData` charts keep a stable
+  // dependency identity across re-renders (they close over `fromKm`).
+  const fromKm = useCallback(
+    (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit),
+    [distanceUnit],
+  );
+  const whPerKmToDisplay = useCallback(
+    (whPerKm: number) => (distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm),
+    [distanceUnit],
+  );
   const savedView = useSavedViewUrl();
 
   const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
@@ -114,11 +121,12 @@ export default function StatisticsPage() {
     useBatteryHealthAnalytics(activeId || null);
   const { data: mileage, isLoading: mileageLoading, error: mileageError } = useMileageStats(activeId);
   const { data: stateSummary, isLoading: stateLoading } = useStateSummary(activeId);
-  const { data: fleet, isLoading: fleetLoading, error: fleetError } = useFleetAnalytics(30, startDate);
+  const { data: fleet, isLoading: fleetLoading, error: fleetError } =
+    useFleetAnalytics({ start: startDate, end: endDate });
 
   /* ── Derived ───────────────────────────────────────────────────── */
   const avgDriveDistance = stats && stats.total_drives > 0
-    ? stats.total_distance / stats.total_drives : 0;
+    ? (stats.total_distance ?? 0) / stats.total_drives : 0;
 
   const stateData = useMemo(() => {
     if (!stateSummary?.length) return [];
@@ -164,6 +172,7 @@ export default function StatisticsPage() {
           onChange={(e) => onPickVehicle(e.target.value)}
           options={vehicleOptions}
           placeholder={t('statistics.selectVehicle', 'Select Vehicle')}
+          aria-label={t('statistics.selectVehicle', 'Select Vehicle')}
         />
       )}
       <RangePicker
