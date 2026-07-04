@@ -37,7 +37,7 @@ import { typography } from '@/lib/tokens';
 /* ── Helpers ───────────────────────────────────────────────────── */
 
 /** Color a cell by how far it deviates from the pack average (mV). */
-function cellColor(voltage: number, avg: number): string {
+export function cellColor(voltage: number, avg: number): string {
   const delta = Math.abs(voltage - avg) * 1000;
   if (delta < 5) return '#10b981';  // emerald – nominal
   if (delta < 15) return '#f59e0b'; // amber – slight deviation
@@ -61,7 +61,7 @@ function statusIcon(status: CellStatus) {
 }
 
 /** Build a histogram of voltage distribution across buckets. */
-function buildHistogram(cells: CellReading[]): { bucket: string; count: number }[] {
+export function buildHistogram(cells: CellReading[]): { bucket: string; count: number }[] {
   if (cells.length === 0) return [];
   const voltages = cells.map((c) => c.voltage ?? 0);
   const min = Math.min(...voltages);
@@ -198,11 +198,11 @@ export default function BatteryCellsPage() {
   const histogram = useMemo(() => buildHistogram(cells), [cells]);
 
   const minCell = useMemo(
-    () => (cells.length ? cells.reduce((a, b) => (a.voltage < b.voltage ? a : b)) : null),
+    () => (cells.length ? cells.reduce((a, b) => ((a.voltage ?? 0) < (b.voltage ?? 0) ? a : b)) : null),
     [cells],
   );
   const maxCell = useMemo(
-    () => (cells.length ? cells.reduce((a, b) => (a.voltage > b.voltage ? a : b)) : null),
+    () => (cells.length ? cells.reduce((a, b) => ((a.voltage ?? 0) > (b.voltage ?? 0) ? a : b)) : null),
     [cells],
   );
 
