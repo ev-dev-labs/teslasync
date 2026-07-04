@@ -7358,7 +7358,13 @@
     "speedTooltipLabel": "Speed",
     "noMapData": "Route data is not available for this shared drive.",
     "footer": "Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence",
-    "learnMore": "Learn more →"
+    "learnMore": "Learn more →",
+    "toast": {
+      "created": "Share link created",
+      "createError": "Failed to create share link",
+      "revoked": "Share link revoked",
+      "revokeError": "Failed to revoke share link"
+    }
   },
   "sharing": {
     "trips": {
