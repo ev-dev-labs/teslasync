@@ -43,7 +43,13 @@ export interface FeatureCompositionRow {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  // Arrays are `typeof 'object'` too, but a Tesla feature-config value is
+  // either a bare boolean flag or a keyed "configured" object — never a
+  // positional array. Excluding arrays keeps the documented "plain object"
+  // contract: a top-level array yields an empty list instead of junk
+  // index-keyed rows, and an array-valued feature falls through to the
+  // boolean-flag branch instead of being mis-read as a configured object.
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -76,8 +82,9 @@ export function parseFeatureEntries(data: unknown): FeatureFlagEntry[] {
 
 /** Compute enabled/disabled totals and the enabled rate from parsed rows. */
 export function summarizeFeatureEntries(entries: FeatureFlagEntry[]): FeatureFlagSummary {
-  const total = entries.length;
-  const enabled = entries.reduce((n, e) => (e.enabled ? n + 1 : n), 0);
+  const rows = entries ?? [];
+  const total = rows.length;
+  const enabled = rows.reduce((n, e) => (e.enabled ? n + 1 : n), 0);
   const disabled = total - enabled;
   const enabledRate = total > 0 ? (enabled / total) * 100 : 0;
   return { total, enabled, disabled, enabledRate };
@@ -89,10 +96,11 @@ export function summarizeFeatureEntries(entries: FeatureFlagEntry[]): FeatureFla
  * all-zero column.
  */
 export function buildFeatureComposition(entries: FeatureFlagEntry[]): FeatureCompositionRow[] {
+  const all = entries ?? [];
   const order: FeatureFlagKind[] = ['flag', 'configured'];
   return order
     .map((kind): FeatureCompositionRow => {
-      const rows = entries.filter((e) => e.kind === kind);
+      const rows = all.filter((e) => e.kind === kind);
       const enabled = rows.reduce((n, e) => (e.enabled ? n + 1 : n), 0);
       return { kind, enabled, disabled: rows.length - enabled, total: rows.length };
     })
