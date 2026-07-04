@@ -32,6 +32,21 @@ export function BackendTool({
     mutationFn: () => apiFetch(endpoint, method, bodyBuilder?.()),
   })
 
+  // `apiFetch` resolves to the parsed body, or a `{ error: string }`
+  // envelope when the request fails — it never rejects. Any truthy `error`
+  // field means failure (mirrors the sibling FleetApiSection tools). We
+  // normalise it to a human-readable message here so a truthy-but-non-string
+  // error can no longer leave the result panel stuck on its idle copy.
+  const result = mutation.data
+  const rawError = result?.error
+  const hasError = Boolean(rawError)
+  const errorText =
+    typeof rawError === 'string' && rawError.trim() !== ''
+      ? rawError
+      : hasError
+        ? t('devtools.backendTool.requestFailed', 'Request failed')
+        : undefined
+
   return (
     <ToolCard icon={icon} color={color} title={title} description={description}>
       {children}
@@ -43,20 +58,23 @@ export function BackendTool({
           onClick={() => mutation.mutate()}
           icon={<Play className="h-3.5 w-3.5" />}
         >
-          {t('Run')}
+          {t('devtools.backendTool.run', 'Run')}
         </Button>
-        {mutation.data && (
-          <Badge variant={mutation.data.error ? 'danger' : 'success'} size="sm" dot>
-            {mutation.data.error ? t('Failed') : t('Success')}
+        {result && (
+          <Badge
+            variant={hasError ? 'danger' : 'success'}
+            size="sm"
+            dot
+            role="status"
+          >
+            {hasError
+              ? t('devtools.backendTool.failed', 'Failed')
+              : t('devtools.backendTool.success', 'Success')}
           </Badge>
         )}
       </div>
-      {mutation.data && (
-        <ResultPanel
-          title={title}
-          data={mutation.data.error ? undefined : mutation.data}
-          error={typeof mutation.data.error === 'string' ? mutation.data.error : undefined}
-        />
+      {result && (
+        <ResultPanel title={title} data={hasError ? undefined : result} error={errorText} />
       )}
     </ToolCard>
   )
