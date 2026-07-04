@@ -2872,7 +2872,9 @@
       "vin_plant": "Plant",
       "vin_serial": "Serial",
       "vin_results": "Decoded VIN",
-      "vin_hint": "Enter at least 11 characters to decode a VIN"
+      "vin_hint": "Enter at least 11 characters to decode a VIN",
+      "colorPreview": "Color preview",
+      "colorInvalidHex": "Enter a valid 6-digit hex color, e.g. #3b82f6"
     },
     "searchTools": "Search tools...",
     "noToolsFound": "No tools match your search",
