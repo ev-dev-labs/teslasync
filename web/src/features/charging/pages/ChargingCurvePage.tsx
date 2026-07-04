@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BatteryCharging } from 'lucide-react';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
@@ -50,9 +50,29 @@ export default function ChargingCurvePage() {
     [sessions],
   );
 
-  const handleSessionChange = (e: ChangeEvent<HTMLSelectElement>) => {
+  const handleSessionChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedSessionId(Number(e.target.value) || null);
-  };
+  }, []);
+
+  const handleRangeChange = useCallback(
+    (r: { start: string; end: string }) => {
+      setRange(r);
+      setSelectedSessionId(null);
+    },
+    [setRange],
+  );
+
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  // Session ids are globally-unique DB primary keys, so a selection made for
+  // one vehicle can never match another vehicle's sessions. Reset it on every
+  // vehicle switch so the inspector falls back to its hint instead of stranding
+  // the <Select> on a value that is absent from the new option list.
+  useEffect(() => {
+    setSelectedSessionId(null);
+  }, [activeVehicleId]);
 
   /* ── Derived data ────────────────────────────────────────────────────── */
 
@@ -82,21 +102,23 @@ export default function ChargingCurvePage() {
     [selectedSession],
   );
 
-  /* ── Per-section async wrapper ───────────────────────────────────────────
-   * Keeps every panel visible with its OWN loading / error / empty state so
-   * we never gate the whole page behind a single `{data && …}` flag. */
+  /* ── Per-section async wrappers ──────────────────────────────────────────
+   * Keep every panel visible with its OWN loading / error / empty state so we
+   * never gate the whole page behind a single `{data && …}` flag. `errorPanel`
+   * is shared by the KPI band and `section` so a failed fetch surfaces a
+   * retryable error everywhere instead of leaking a misleading all-zero KPI. */
+  const errorPanel = (): ReactNode => (
+    <GlassPanel className="p-4 sm:p-5">
+      <QueryError
+        error={error}
+        onRetry={handleRetry}
+        resourceName={t('charging.curve.resource', 'Charging sessions')}
+      />
+    </GlassPanel>
+  );
+
   const section = (height: number, emptyMessage: string, content: () => ReactNode): ReactNode => {
-    if (isError) {
-      return (
-        <GlassPanel className="p-4 sm:p-5">
-          <QueryError
-            error={error}
-            onRetry={() => refetch()}
-            resourceName={t('charging.curve.resource', 'Charging sessions')}
-          />
-        </GlassPanel>
-      );
-    }
+    if (isError) return errorPanel();
     if (isLoading) {
       return (
         <GlassPanel className="p-4 sm:p-5">
@@ -131,10 +153,7 @@ export default function ChargingCurvePage() {
           <VehicleSelect />
           <RangePicker
             value={{ start, end }}
-            onChange={(r) => {
-              setRange(r);
-              setSelectedSessionId(null);
-            }}
+            onChange={handleRangeChange}
             align="end"
             triggerTestId="charging-curve-range"
           />
@@ -153,13 +172,17 @@ export default function ChargingCurvePage() {
       {/* 1 — KPI band (full-width responsive metric grid) */}
       <FadeIn delay={0.05}>
         <section aria-label={t('charging.curve.summary', 'Summary metrics')}>
-          <SummaryStatsGrid stats={stats} loading={isLoading} />
+          {isError ? errorPanel() : <SummaryStatsGrid stats={stats} loading={isLoading} />}
         </section>
       </FadeIn>
 
       {/* 2 — Session selector + hero curve with detail sidebar */}
       <FadeIn delay={0.1}>
-        <section className="space-y-4" data-tour="charging-curve">
+        <section
+          className="space-y-4"
+          data-tour="charging-curve"
+          aria-label={t('charging.curve.sessionInspector', 'Session inspector')}
+        >
           <GlassPanel className="p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="w-full sm:max-w-sm">
@@ -213,7 +236,10 @@ export default function ChargingCurvePage() {
 
       {/* 4 — Charger-type + speed-trend bento (two charts side-by-side on wide) */}
       <FadeIn delay={0.2}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section
+          className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+          aria-label={t('charging.curve.chargerBreakdown', 'Charger breakdown')}
+        >
           {section(280, emptyMsg, () => <ChargerTypeChart sessions={sessions} />)}
           {section(280, emptyMsg, () => <SpeedTrendChart sessions={sessions} />)}
         </section>
