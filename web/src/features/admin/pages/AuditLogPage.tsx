@@ -92,8 +92,10 @@ export default function AuditLogPage() {
 
   const queryParams = useMemo<AuditLogQueryParams>(() => {
     const p: AuditLogQueryParams = { limit: Number(limit), offset };
-    if (since) p.since = new Date(since).toISOString();
-    if (until) p.until = new Date(until).toISOString();
+    const sinceIso = toIsoOrUndefined(since);
+    const untilIso = toIsoOrUndefined(until);
+    if (sinceIso) p.since = sinceIso;
+    if (untilIso) p.until = untilIso;
     if (category) p.categories = [category];
     if (action) p.actions = [action];
     if (actor) p.actors = [actor];
@@ -122,6 +124,16 @@ export default function AuditLogPage() {
   );
   const categoriesCount = categoriesQuery.data?.categories?.length ?? 0;
   const actionsCount = actionsQuery.data?.actions?.length ?? 0;
+
+  // KPI honesty: only trust a derived count once its source query has
+  // actually returned. While a query is loading or has errored, a raw 0
+  // would read as "there are genuinely zero entries" when in truth we just
+  // couldn't load them — surface the universal "—" placeholder instead so
+  // the header never reports a fabricated zero (mirrors the
+  // RedisSignalViewerPage error-honesty contract).
+  const countsReady = logQuery.data !== undefined && !logQuery.error;
+  const categoriesReady = categoriesQuery.data !== undefined && !categoriesQuery.error;
+  const actionsReady = actionsQuery.data !== undefined && !actionsQuery.error;
 
   const categoryOptions = useMemo<{ value: string; label: string }[]>(() => {
     const list = categoriesQuery.data?.categories ?? [];
@@ -288,37 +300,37 @@ export default function AuditLogPage() {
         >
           <MetricCard
             label={t('admin.auditLog.kpiEntries', 'Entries shown')}
-            value={rows.length}
+            value={countsReady ? rows.length : '—'}
             icon={<ListChecks className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
             label={t('admin.auditLog.kpiOk', 'OK (in view)')}
-            value={okCount}
+            value={countsReady ? okCount : '—'}
             icon={<CheckCircle2 className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
             label={t('admin.auditLog.kpiFailed', 'Failed (in view)')}
-            value={failedCount}
+            value={countsReady ? failedCount : '—'}
             icon={<AlertTriangle className="h-5 w-5" />}
             color="red"
           />
           <MetricCard
             label={t('admin.auditLog.kpiActors', 'Actors (in view)')}
-            value={distinctActors}
+            value={countsReady ? distinctActors : '—'}
             icon={<Users className="h-5 w-5" />}
             color="blue"
           />
           <MetricCard
             label={t('admin.auditLog.kpiCategories', 'Categories')}
-            value={categoriesCount}
+            value={categoriesReady ? categoriesCount : '—'}
             icon={<Tags className="h-5 w-5" />}
             color="purple"
           />
           <MetricCard
             label={t('admin.auditLog.kpiActions', 'Action types')}
-            value={actionsCount}
+            value={actionsReady ? actionsCount : '—'}
             icon={<Activity className="h-5 w-5" />}
             color="amber"
           />
@@ -629,4 +641,16 @@ function formatJSON(raw: string): string {
   } catch {
     return raw;
   }
+}
+
+/**
+ * Convert a `datetime-local` input value (`YYYY-MM-DDTHH:mm`, local time) to
+ * an ISO-8601 UTC string for the API query. Returns `undefined` for empty or
+ * unparseable input so a malformed value can never throw
+ * `RangeError: Invalid time value` while `queryParams` is derived mid-render.
+ */
+function toIsoOrUndefined(local: string): string | undefined {
+  if (!local) return undefined;
+  const ms = Date.parse(local);
+  return Number.isNaN(ms) ? undefined : new Date(ms).toISOString();
 }
