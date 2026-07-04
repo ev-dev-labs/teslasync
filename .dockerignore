@@ -8,3 +8,15 @@ helm/
 grafana/
 web/node_modules
 web/dist
+
+# Keep the API/web image build context small. The ~260MB Windows Docker build
+# context was canceling mid-transfer ("error from sender: context canceled").
+# None of these are needed by any build stage: go-builder's `COPY . .` only
+# compiles Go sources + migrations, and the only docs artifact used is
+# docs/public/openapi.yaml (kept — only docs/.vitepress + node_modules excluded).
+**/node_modules
+apps/
+scripts/
+bin/
+backups/
+docs/.vitepress
