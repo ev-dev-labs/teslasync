@@ -141,12 +141,13 @@ func (e *PollEngine) Assess(vin string, data *tesla.VehicleDataResponse) PollDec
 		e.vehicles[vin] = vs
 	}
 	previous := vs.LastResponse
+	lastPollTime := vs.LastPollTime
 	e.mu.Unlock()
 
 	ctx := &EvalContext{
 		Current:       data,
 		Previous:      previous,
-		TimeSinceLast: time.Since(vs.LastPollTime),
+		TimeSinceLast: time.Since(lastPollTime),
 		VehicleState:  data.State,
 	}
 
@@ -174,15 +175,19 @@ func (e *PollEngine) Assess(vin string, data *tesla.VehicleDataResponse) PollDec
 		reasons = append(reasons, "all signals indicate vehicle is idle")
 	}
 
-	// Determine profile and interval
-	// Update consecutive idle BEFORE computing interval so backoff is immediate
+	// Determine profile and interval under the write lock so the ConsecIdle
+	// mutation and the interval computation that reads it stay atomic with
+	// respect to concurrent GetVehicleState/GetAllVehicleStates readers.
+	// Update consecutive idle BEFORE computing interval so backoff is immediate.
+	e.mu.Lock()
 	if highestActivity <= Idle {
 		vs.ConsecIdle++
 	} else {
 		vs.ConsecIdle = 0
 	}
-
+	consecIdle := vs.ConsecIdle
 	profile, interval := e.computeInterval(highestActivity, vs, data)
+	e.mu.Unlock()
 
 	// Check predictor for upcoming state changes
 	var prediction *PredictionInfo
@@ -236,7 +241,7 @@ func (e *PollEngine) Assess(vin string, data *tesla.VehicleDataResponse) PollDec
 		Str("activity", highestActivity.String()).
 		Str("profile", string(profile)).
 		Dur("next_interval", interval).
-		Int("consec_idle", vs.ConsecIdle).
+		Int("consec_idle", consecIdle).
 		Strs("reasons", reasons).
 		Msg("poll engine assessment")
 
