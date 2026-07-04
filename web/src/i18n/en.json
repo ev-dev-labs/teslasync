@@ -2813,7 +2813,8 @@
       "kindAnonymous": {
         "acknowledged": "Acknowledged",
         "reopened": "Reopened",
-        "commented": "Comment added"
+        "commented": "Comment added",
+        "created": "Alert created"
       },
       "empty": "No events yet"
     },
