@@ -144,7 +144,7 @@ export function useSlowQueries(orderBy: SlowQueryOrderBy = 'mean_time', limit = 
  * costs evolve over minutes, not seconds.
  */
 export function useVehicleCost(since: Date | null = null, limit = 100) {
-  const sinceISO = since ? since.toISOString() : null;
+  const sinceISO = toISOStringOrNull(since);
   const sinceParam = sinceISO ? `&since=${encodeURIComponent(sinceISO)}` : '';
   return useQuery({
     queryKey: operatorConfidenceKeys.vehicleCost(sinceISO, limit),
@@ -274,7 +274,7 @@ export function useAuditChainVerify(
   limit = 1000,
   enabled = false,
 ) {
-  const sinceISO = since ? since.toISOString() : null;
+  const sinceISO = toISOStringOrNull(since);
   const sinceParam = sinceISO ? `&since=${encodeURIComponent(sinceISO)}` : '';
   return useQuery({
     queryKey: operatorConfidenceKeys.auditVerify(sinceISO, limit),
@@ -319,6 +319,21 @@ export function useGDPRExport(id: string | null) {
 }
 
 // ---------- helpers --------------------------------------------------------
+
+/**
+ * Converts a Date to an ISO-8601 string, returning null for a null input
+ * OR an invalid Date. Guards the render path: a caller that builds `since`
+ * from user input (e.g. `new Date(userValue)`) can hand us an invalid Date
+ * whose `.toISOString()` throws `RangeError: Invalid time value`. Because
+ * this runs in the hook body (not the deferred queryFn), an unguarded call
+ * would crash the component synchronously. Falling back to null degrades to
+ * the "no since filter" default instead.
+ */
+function toISOStringOrNull(d: Date | null): string | null {
+  if (d == null) return null;
+  const ms = d.getTime();
+  return Number.isNaN(ms) ? null : d.toISOString();
+}
 
 function buildAuditLogQuery(params: AuditLogQueryParams): string {
   const u = new URLSearchParams();
