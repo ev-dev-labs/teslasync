@@ -46,20 +46,19 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
       onChange,
       size = 'md',
       className,
-      // Accessibility naming must land on the interactive `role="switch"`
-      // button, not the neutral wrapper `<div>`. Pull these out of the
-      // spread so an `aria-label`/`aria-labelledby` passed by icon-only
-      // callers actually names the switch for assistive tech.
       'aria-label': ariaLabel,
-      'aria-labelledby': ariaLabelledBy,
+      'aria-labelledby': ariaLabelledby,
       ...props
     },
     ref,
   ) => {
     const labelId = useId();
-    // A caller-supplied `aria-labelledby` wins; otherwise the visible `label`
-    // (when present) names the switch via its generated id.
-    const resolvedLabelledBy = ariaLabelledBy ?? (label ? labelId : undefined);
+    // A visible `label` owns the accessible name via `aria-labelledby`.
+    // Otherwise honour an explicit `aria-labelledby` / `aria-label` from the
+    // caller so icon-only switches (e.g. a card's enable toggle) expose an
+    // accessible name ON the switch button — a spread `aria-label` would
+    // otherwise land on the wrapper div and be ignored by assistive tech.
+    const buttonLabelledBy = label ? labelId : ariaLabelledby;
     return (
       <div
         ref={ref}
@@ -76,8 +75,8 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           type="button"
           role="switch"
           aria-checked={checked}
-          aria-label={ariaLabel}
-          aria-labelledby={resolvedLabelledBy}
+          aria-labelledby={buttonLabelledBy}
+          aria-label={buttonLabelledBy ? undefined : ariaLabel}
           onClick={() => onChange(!checked)}
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
