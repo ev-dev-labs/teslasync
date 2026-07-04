@@ -196,7 +196,8 @@ export function useWebErrorsSummary() {
 export function useSecurityEvents(vehicleId: string) {
   return useQuery({
     queryKey: adminKeys.securityEvents(vehicleId),
-    queryFn: ({ signal }) => request<SecurityEvent[]>(`/security?vehicle_id=${vehicleId}`, { signal }),
+    queryFn: ({ signal }) =>
+      request<SecurityEvent[]>(`/security?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -255,7 +256,8 @@ export function useCreateExport() {
 export function useVehicleStateMachine(vehicleId: string) {
   return useQuery({
     queryKey: adminKeys.vehicleState(vehicleId),
-    queryFn: ({ signal }) => request<VehicleState>(`/vehicles/${vehicleId}/state`, { signal }),
+    queryFn: ({ signal }) =>
+      request<VehicleState>(`/vehicles/${encodeURIComponent(vehicleId)}/state`, { signal }),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.CRITICAL,
   });
@@ -275,7 +277,11 @@ export function useVehicleStateMachine(vehicleId: string) {
 export function useStateTimeline(vehicleId: string, days = 7) {
   return useQuery({
     queryKey: [...adminKeys.stateTimeline(vehicleId), days],
-    queryFn: ({ signal }) => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=${days}`, { signal }),
+    queryFn: ({ signal }) =>
+      request<{ transitions: StateTransition[] }>(
+        `/vehicle-states/timeline?vehicle_id=${encodeURIComponent(vehicleId)}&days=${days}`,
+        { signal },
+      ),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.FAST,
   });
