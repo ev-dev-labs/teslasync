@@ -8,6 +8,7 @@ import (
 	alertmsgcore "github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	"github.com/rs/zerolog/log"
 )
 
 const maxAlertRequestBodyBytes = 1 << 20
@@ -115,16 +116,19 @@ func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http
 // RenderBody — the exact same code path as production — so it can
 // never drift from real notifications.
 func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxAlertRequestBodyBytes))
 	if err != nil {
+		log.Warn().Err(err).Str("handler", "MessagePreview").Msg("failed to read alert message-preview request body")
 		httpx.WriteError(w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
-	defer r.Body.Close()
 
 	var req alertMessagePreviewRequest
 	if len(body) > 0 {
 		if err := json.Unmarshal(body, &req); err != nil {
+			log.Warn().Err(err).Str("handler", "MessagePreview").Msg("invalid JSON in alert message-preview request")
 			httpx.WriteError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 			return
 		}
