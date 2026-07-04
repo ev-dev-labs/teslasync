@@ -2921,7 +2921,10 @@
       "noErrors": "No fleet telemetry errors recorded"
     },
     "title": "Developer Tools",
-    "subtitle": "Fleet API, telemetry, infrastructure & utilities"
+    "subtitle": "Fleet API, telemetry, infrastructure & utilities",
+    "resultPanel": {
+      "noResult": "No result yet"
+    }
   },
   "error": {
     "loadFailed": "Failed to load data",
