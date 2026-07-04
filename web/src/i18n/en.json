@@ -3085,6 +3085,7 @@
         "fp": "Front Passenger",
         "rd": "Rear Driver",
         "rp": "Rear Passenger",
+        "aria": "Window status by position",
         "allClosed": "All Closed",
         "openVenting": "{{count}} Open/Venting"
       },
