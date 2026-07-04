@@ -37,7 +37,12 @@ interface FlagEditDrawerProps {
 function defaultValueJson(initial: FeatureFlagEntry | null): string {
   if (!initial) return '';
   try {
-    return JSON.stringify(initial.value, null, 2);
+    // JSON.stringify returns `undefined` (NOT a string) for `undefined`,
+    // functions, and symbols — a nuance TS's lib types hide. Coalesce so the
+    // caller always receives a real string; otherwise the seeded `valueInput`
+    // becomes `undefined` and the next `valueInput.trim()` in `parsed` throws,
+    // blank-crashing the drawer for a flag whose stored value is `undefined`.
+    return JSON.stringify(initial.value, null, 2) ?? '';
   } catch {
     return '';
   }
