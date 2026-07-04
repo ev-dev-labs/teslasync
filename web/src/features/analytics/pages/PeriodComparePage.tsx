@@ -146,13 +146,18 @@ export default function PeriodComparePage() {
   };
 
   // Hide the disambiguation banner for accounts with only one vehicle —
-  // they can't usefully cross-navigate to fleet comparison anyway.
+  // they can't usefully cross-navigate to fleet comparison anyway. Guard on
+  // `vehiclesLoaded`: on the very first render `vehicles` is still `undefined`
+  // (count 0), so without this guard the effect would hide the banner before
+  // the list resolves and never re-show it — suppressing the banner for every
+  // account, including the multi-vehicle ones it exists to serve.
+  const vehiclesLoaded = vehicles !== undefined;
   const vehicleCount = (vehicles ?? []).length;
   useEffect(() => {
-    if (vehicleCount < 2 && bannerVisible) {
+    if (vehiclesLoaded && vehicleCount < 2 && bannerVisible) {
       setBannerVisible(false);
     }
-  }, [vehicleCount, bannerVisible]);
+  }, [vehiclesLoaded, vehicleCount, bannerVisible]);
 
   /* ── Derived data ── */
 
