@@ -61,8 +61,12 @@ type FeatureFlagChangeInsert struct {
 
 // FeatureFlagChangesRepo persists + queries audit rows for the flag
 // store admin endpoints.
+//
+// exec is the database.DBTX execution seam (satisfied by *pgxpool.Pool
+// in production). Holding the interface rather than the concrete pool
+// lets Insert/Recent be unit tested against the in-repo DBTX fake.
 type FeatureFlagChangesRepo struct {
-	db *database.DB
+	exec database.DBTX
 }
 
 // NewFeatureFlagChangesRepo constructs a repo bound to db. Panics on
@@ -71,14 +75,14 @@ func NewFeatureFlagChangesRepo(db *database.DB) *FeatureFlagChangesRepo {
 	if db == nil {
 		panic("database: NewFeatureFlagChangesRepo: db is nil")
 	}
-	return &FeatureFlagChangesRepo{db: db}
+	return &FeatureFlagChangesRepo{exec: db.Pool}
 }
 
 // Insert writes a single audit row and returns its assigned ID.
 // Operation must be one of the FeatureFlagOp* constants — the CHECK
 // constraint on the column rejects unknown values at the DB layer.
 func (r *FeatureFlagChangesRepo) Insert(ctx context.Context, in FeatureFlagChangeInsert) (int64, error) {
-	if r == nil || r.db == nil {
+	if r == nil || r.exec == nil {
 		return 0, errors.New("database: FeatureFlagChangesRepo: nil repo or db")
 	}
 	if in.Actor == "" {
@@ -114,7 +118,7 @@ func (r *FeatureFlagChangesRepo) Insert(ctx context.Context, in FeatureFlagChang
 	}
 
 	var id int64
-	err := r.db.Pool.QueryRow(ctx,
+	err := r.exec.QueryRow(ctx,
 		`INSERT INTO feature_flag_changes
 		   (actor, actor_ip, flag_key, operation, old_value, new_value, reason, trace_id)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -132,7 +136,7 @@ func (r *FeatureFlagChangesRepo) Insert(ctx context.Context, in FeatureFlagChang
 // Limit is clamped to [1, 500]. Filter by flagKey when only-recent-for-
 // this-flag is desired; pass empty string for the global view.
 func (r *FeatureFlagChangesRepo) Recent(ctx context.Context, flagKey string, limit int) ([]FeatureFlagChange, error) {
-	if r == nil || r.db == nil {
+	if r == nil || r.exec == nil {
 		return nil, errors.New("database: FeatureFlagChangesRepo: nil repo or db")
 	}
 	if limit <= 0 {
@@ -144,13 +148,13 @@ func (r *FeatureFlagChangesRepo) Recent(ctx context.Context, flagKey string, lim
 	var rows pgx.Rows
 	var err error
 	if flagKey == "" {
-		rows, err = r.db.Pool.Query(ctx,
+		rows, err = r.exec.Query(ctx,
 			`SELECT id, changed_at, actor, actor_ip::text, flag_key, operation, old_value, new_value, reason, trace_id
 			   FROM feature_flag_changes
 			   ORDER BY id DESC
 			   LIMIT $1`, limit)
 	} else {
-		rows, err = r.db.Pool.Query(ctx,
+		rows, err = r.exec.Query(ctx,
 			`SELECT id, changed_at, actor, actor_ip::text, flag_key, operation, old_value, new_value, reason, trace_id
 			   FROM feature_flag_changes
 			  WHERE flag_key = $1
