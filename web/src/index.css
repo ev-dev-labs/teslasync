@@ -67,6 +67,11 @@
   --theme-primary-rgb: 0, 240, 255;
   --theme-accent: #4f46e5;
   --theme-accent-rgb: 79, 70, 229;
+  /* Contrasting foreground for solid accent fills (primary buttons, FAB…).
+     Recomputed per-accent in ThemeProvider.applyThemeCSS; these are the
+     defaults for the neon-cyan/indigo starting palette. */
+  --theme-on-primary: #0a0a0f;
+  --theme-on-accent: #ffffff;
   /*
    * Density tokens (Phase 40 / Prompt 44).
    *
