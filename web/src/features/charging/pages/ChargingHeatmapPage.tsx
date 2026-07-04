@@ -66,6 +66,7 @@ export default function ChargingHeatmapPage() {
     let totalEnergyWh = 0;
     let totalCost = 0;
     let totalDurationS = 0;
+    let durationCount = 0;
     for (const s of sessions) {
       totalEnergyWh += s.total_energy_added_wh ?? 0;
       totalCost += s.cost_decimal ?? 0;
@@ -73,13 +74,16 @@ export default function ChargingHeatmapPage() {
       const ended = s.ended_at ? new Date(s.ended_at).getTime() : Number.NaN;
       if (Number.isFinite(started) && Number.isFinite(ended) && ended > started) {
         totalDurationS += (ended - started) / 1000;
+        durationCount += 1;
       }
     }
     return {
       count: sessions.length,
       totalEnergyWh,
       totalCost,
-      avgDurationS: totalDurationS / sessions.length,
+      // Average only over sessions that actually have a measured duration —
+      // live (unfinished) or timestamp-less sessions must not dilute the mean.
+      avgDurationS: durationCount > 0 ? totalDurationS / durationCount : 0,
     };
   }, [sessions]);
 
