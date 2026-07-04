@@ -63,7 +63,12 @@ export function downloadSettingsBundle(bundle: SettingsBundle, filename?: string
   try {
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename ?? defaultExportFilename();
+    // A blank/whitespace `filename` is not the same as an omitted one:
+    // `??` only guards null/undefined, so `''` would set an empty
+    // download name and the browser silently drops the intended `.json`
+    // filename. Fall back to the dated default in that case too.
+    const trimmed = filename?.trim();
+    a.download = trimmed ? trimmed : defaultExportFilename();
     document.body.appendChild(a);
     a.click();
     a.remove();
