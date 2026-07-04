@@ -66,9 +66,9 @@ export default function DBHealthPage() {
   const sortedTables = useMemo(() => {
     const sorted = [...tables];
     sorted.sort((a, b) => {
-      if (sortKey === 'size') return (b.sizeBytes ?? b.rowCount) - (a.sizeBytes ?? a.rowCount);
-      if (sortKey === 'rows') return b.rowCount - a.rowCount;
-      return a.name.localeCompare(b.name);
+      if (sortKey === 'size') return (b.sizeBytes ?? b.rowCount ?? 0) - (a.sizeBytes ?? a.rowCount ?? 0);
+      if (sortKey === 'rows') return (b.rowCount ?? 0) - (a.rowCount ?? 0);
+      return (a.name ?? '').localeCompare(b.name ?? '');
     });
     return sorted;
   }, [tables, sortKey]);
@@ -77,7 +77,7 @@ export default function DBHealthPage() {
   const chartData = useMemo(
     () =>
       [...tables]
-        .sort((a, b) => b.rowCount - a.rowCount)
+        .sort((a, b) => (b.rowCount ?? 0) - (a.rowCount ?? 0))
         .slice(0, 15)
         .map((tbl) => ({
           name: tbl.name.length > 20 ? tbl.name.slice(0, 18) + '…' : tbl.name,
@@ -98,7 +98,7 @@ export default function DBHealthPage() {
   const pool = poolData;
   const poolUsage =
     pool?.maxOpen && pool.maxOpen > 0
-      ? Math.min((pool.inUse / pool.maxOpen) * 100, 100)
+      ? Math.min(Math.max(((pool.inUse ?? 0) / pool.maxOpen) * 100, 0), 100)
       : 0;
 
   const totalRows = useMemo(
