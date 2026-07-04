@@ -9,15 +9,27 @@ import type { FeatureFlagSummary } from './parseFeatureFlags';
 interface FeatureConfigKpisProps {
   summary: FeatureFlagSummary;
   isLoading: boolean;
+  /**
+   * Set when the feature-config fetch failed with no cached data to fall
+   * back on. When present the KPIs render em-dashes rather than fabricating
+   * zeros (a `0`-count is a claim we can't back up when the source errored);
+   * the sibling panels surface the actionable `<QueryError>`.
+   */
+  error?: unknown;
 }
+
+/** Em-dash placeholder for a metric whose true value is currently unknown. */
+const UNKNOWN = '—';
 
 /**
  * Full-width KPI band summarising the parsed feature-config: total feature
  * count, enabled / disabled splits, and the enabled rate. Renders a
  * layout-preserving skeleton while the first fetch is in flight so the row
- * doesn't jump when data lands.
+ * doesn't jump when data lands, and degrades every value to an em-dash when
+ * the source errored with nothing to show so it never invents a "0 features"
+ * headline.
  */
-export function FeatureConfigKpis({ summary, isLoading }: FeatureConfigKpisProps) {
+export function FeatureConfigKpis({ summary, isLoading, error }: FeatureConfigKpisProps) {
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -28,25 +40,25 @@ export function FeatureConfigKpis({ summary, isLoading }: FeatureConfigKpisProps
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <MetricCard
         label={t('featureConfig.kpi.total', 'Total Features')}
-        value={fmtInt(summary.total)}
+        value={error ? UNKNOWN : fmtInt(summary.total)}
         icon={<Flag className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
         label={t('featureConfig.kpi.enabled', 'Enabled')}
-        value={fmtInt(summary.enabled)}
+        value={error ? UNKNOWN : fmtInt(summary.enabled)}
         icon={<ToggleRight className="h-5 w-5" aria-hidden="true" />}
         color="green"
       />
       <MetricCard
         label={t('featureConfig.kpi.disabled', 'Disabled')}
-        value={fmtInt(summary.disabled)}
+        value={error ? UNKNOWN : fmtInt(summary.disabled)}
         icon={<ToggleLeft className="h-5 w-5" aria-hidden="true" />}
         color="amber"
       />
       <MetricCard
         label={t('featureConfig.kpi.enabledRate', 'Enabled Rate')}
-        value={fmtPercent(summary.enabledRate, 0)}
+        value={error ? UNKNOWN : fmtPercent(summary.enabledRate, 0)}
         icon={<Percent className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />
