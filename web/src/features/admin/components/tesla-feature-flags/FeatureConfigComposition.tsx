@@ -44,8 +44,8 @@ export function FeatureConfigComposition({
 
   const chartData = useMemo(
     () =>
-      composition.map((row) => ({
-        name: kindLabel[row.kind],
+      (composition ?? []).map((row) => ({
+        name: kindLabel[row.kind] ?? row.kind,
         enabled: row.enabled ?? 0,
         disabled: row.disabled ?? 0,
       })),
@@ -60,7 +60,9 @@ export function FeatureConfigComposition({
       </PanelTitle>
 
       {isLoading ? (
-        <Skeleton height={224} />
+        <div role="status" aria-busy="true" aria-label={t('common.loading', 'Loading')}>
+          <Skeleton height={224} />
+        </div>
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : chartData.length === 0 ? (
