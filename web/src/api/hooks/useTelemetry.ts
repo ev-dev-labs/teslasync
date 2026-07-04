@@ -144,7 +144,12 @@ export function useSignalStats(vehicleId: number) {
 export function useSignalHistory(vehicleId: number, signal: string, hours: number) {
   return useQuery({
     queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
-    queryFn: ({ signal }) => request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal }),
+    // Rename the query context's AbortSignal so it does NOT shadow the outer
+    // `signal` (the signal NAME). Destructuring `{ signal }` here would
+    // stringify the AbortSignal into the URL path segment
+    // (`/signals/1/[object AbortSignal]/history`) and drop the name entirely.
+    queryFn: ({ signal: abortSignal }) =>
+      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal: abortSignal }),
     enabled: vehicleId > 0 && !!signal,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -153,9 +158,9 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
 export function useSignalLog(vehicleId: number, signal: string, hours: number, page: number, pageSize: number) {
   return useQuery({
     queryKey: telemetryKeys.signalLog(vehicleId, signal, hours, page),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal: abortSignal }) =>
       request<SignalHistoryResponse>(
-        `/signals/${vehicleId}/${signal}/history?hours=${hours}&page=${page}&page_size=${pageSize}`, { signal }
+        `/signals/${vehicleId}/${signal}/history?hours=${hours}&page=${page}&page_size=${pageSize}`, { signal: abortSignal }
       ),
     enabled: vehicleId > 0 && !!signal,
   });
@@ -164,8 +169,8 @@ export function useSignalLog(vehicleId: number, signal: string, hours: number, p
 export function useSignalDiff(vehicleId: number, signal: string, from: string, to: string) {
   return useQuery({
     queryKey: telemetryKeys.signalDiff(vehicleId, signal, from, to),
-    queryFn: ({ signal }) =>
-      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`, { signal }),
+    queryFn: ({ signal: abortSignal }) =>
+      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`, { signal: abortSignal }),
     enabled: vehicleId > 0 && !!signal && !!from && !!to,
   });
 }
