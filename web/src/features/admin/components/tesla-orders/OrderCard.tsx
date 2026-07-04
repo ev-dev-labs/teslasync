@@ -3,9 +3,18 @@
  *
  * Rich per-order tile for the visual "orders board". Shows the model, a
  * lifecycle status badge, the order id, an assigned VIN and delivery date when
- * present, and an "upgradable" affordance. All fields are null-safe and every
- * label is i18n-driven.
+ * present, and an "upgradable" affordance. Every field is null-safe (missing
+ * values degrade to a placeholder rather than a blank cell) and every label is
+ * i18n-driven.
+ *
+ * The card exposes itself as a labelled `role="group"` so assistive tech reads
+ * a concise "{model} order, {status}" name while navigating the board's grid of
+ * tiles; the decorative lucide glyphs are all `aria-hidden`. It is `memo`-ised
+ * because the board renders one instance per order — the parent page refetches
+ * and re-renders on a slow interval, and each `order` reference is stable across
+ * renders, so the default shallow prop compare lets unchanged tiles skip work.
  */
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Package, Calendar, Fingerprint, Sparkles } from 'lucide-react';
 
@@ -19,12 +28,23 @@ interface OrderCardProps {
   order: TeslaOrder;
 }
 
-export function OrderCard({ order }: OrderCardProps) {
+function OrderCardImpl({ order }: OrderCardProps) {
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
 
+  const model = order.model || '—';
+  const statusLabel = formatOrderStatus(order.status);
+  const orderId = order.order_id || '—';
+
   return (
-    <GlassPanel className="flex h-full flex-col gap-3 p-4">
+    <GlassPanel
+      role="group"
+      aria-label={t('admin.teslaOrders.card.aria', '{{model}} order, {{status}}', {
+        model,
+        status: statusLabel,
+      })}
+      className="flex h-full flex-col gap-3 p-4"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <Package
@@ -32,11 +52,11 @@ export function OrderCard({ order }: OrderCardProps) {
             aria-hidden="true"
           />
           <Text as="span" weight="semibold" color="primary" className="truncate">
-            {order.model || '—'}
+            {model}
           </Text>
         </div>
         <Badge variant={orderStatusVariant(order.status)} size="sm">
-          {formatOrderStatus(order.status)}
+          {statusLabel}
         </Badge>
       </div>
 
@@ -49,9 +69,9 @@ export function OrderCard({ order }: OrderCardProps) {
             mono
             color="primary"
             className="truncate"
-            title={order.order_id}
+            title={order.order_id || undefined}
           >
-            {order.order_id}
+            {orderId}
           </Text>
         </div>
 
@@ -93,3 +113,5 @@ export function OrderCard({ order }: OrderCardProps) {
     </GlassPanel>
   );
 }
+
+export const OrderCard = memo(OrderCardImpl);
