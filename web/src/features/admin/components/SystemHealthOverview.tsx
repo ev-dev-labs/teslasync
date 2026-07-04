@@ -114,6 +114,9 @@ export function SystemHealthOverview({ rateLimit, queue }: SystemHealthOverviewP
       <div
         className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
         data-testid="system-overview-loading"
+        role="status"
+        aria-busy="true"
+        aria-label={t('system.overview.loading', 'Loading system health…')}
       >
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} height={92} />
