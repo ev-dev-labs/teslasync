@@ -110,7 +110,7 @@ export default function LiveSignalMonitorPage() {
 
   return (
     <PageContainer
-      title={t('liveMonitor.title', 'Live Signal Monitor')}
+      title={t('liveMonitor.title', 'Live Monitor')}
       subtitle={t('liveMonitor.subtitle', 'Real-time scrolling view of incoming vehicle signals')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
