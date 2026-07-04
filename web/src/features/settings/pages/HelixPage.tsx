@@ -25,6 +25,18 @@
  * permanent HelixMark icon, and `/settings` itself retains a one-line
  * breadcrumb card that links here.
  *
+ * Loading is owned by AISettings, not this page
+ * ─────────────────────────────────────────────
+ * This page does NOT gate its body behind a page-level
+ * `<PageContainer loading>` spinner. `AISettings` reads `useSettings()`
+ * itself and always renders its stable opt-in surface (KPI strip + mode
+ * picker) with a safe `off` default while the settings query is still in
+ * flight — that IS the ADR-015 §I7 "always rendered" contract. Wrapping
+ * it in a page-level spinner would blank that surface during the exact
+ * first-load window the contract exists to protect, so this page stays
+ * pure chrome (see the App.tsx route comment) and delegates all
+ * data / loading / empty / error handling to `AISettings`.
+ *
  * Layout (modern-ui full-width bento)
  * ───────────────────────────────────
  *   <PageContainer title="Helix">       page-level h1 + subtitle + breadcrumbs
@@ -47,14 +59,15 @@
 import { useTranslation } from 'react-i18next'
 import { PageContainer } from '@/components/layout'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { useSettings } from '@/api/hooks/useSettings'
 import { AISettings } from '../components'
 
 export default function HelixPage() {
   const { t } = useTranslation()
   usePageTitle(t('helix.page.title', 'Helix'))
-  const { isLoading } = useSettings()
 
+  // No page-level `loading` gate: AISettings owns its own settings query
+  // and must stay mounted so the opt-in surface is always rendered
+  // (ADR-015 §I7). See the module docstring for the full rationale.
   return (
     <PageContainer
       title={t('helix.page.title', 'Helix')}
@@ -62,7 +75,6 @@ export default function HelixPage() {
         'helix.page.subtitle',
         'Optional AI integration. Off by default — nothing runs until you opt in here.',
       )}
-      loading={isLoading}
       breadcrumbLabels={{
         integrations: t('helix.breadcrumb.integrations', 'Integrations'),
         helix: t('helix.page.title', 'Helix'),
