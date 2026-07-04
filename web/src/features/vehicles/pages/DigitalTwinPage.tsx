@@ -40,11 +40,11 @@ const STATUS_NEON: Record<string, NeonColor> = {
   idle: 'amber',
 };
 
-function statusNeon(status: string): NeonColor {
+export function statusNeon(status: string): NeonColor {
   return STATUS_NEON[status] ?? 'cyan';
 }
 
-function capitalize(value: string): string {
+export function capitalize(value: string): string {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '—';
 }
 
