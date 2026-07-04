@@ -240,6 +240,13 @@ export interface AppSettings {
   mode: string
   custom_primary: string
   custom_accent: string
+  /**
+   * DB-persisted list of onboarding tours the user has completed or skipped,
+   * as `"{tourId}:{version}"` tokens (e.g. "main:1"). Mirrors the per-tour
+   * localStorage flags so completion survives a cookies/site-data clear and
+   * syncs across devices. Optional for backward-compat with older responses.
+   */
+  completed_tours?: string[]
   gas_price_per_unit: number
   gas_unit: string
   gas_efficiency_mpg: number

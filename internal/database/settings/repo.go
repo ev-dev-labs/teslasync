@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
@@ -41,17 +42,21 @@ func NewSettingsRepo(db *database.DB) *SettingsRepo {
 // values without an extra round-trip.
 func settingsDefaults() *systemmodel.Settings {
 	return &systemmodel.Settings{
-		UnitOfLength:         "km",
-		UnitOfTemp:           "C",
-		UnitOfPressure:       "bar",
-		PreferredRange:       "rated",
-		Language:             "en",
-		BaseCostPerKWh:       0,
-		APISuspended:         false,
-		Theme:                "neon-cyan",
-		Mode:                 "dark",
-		CustomPrimary:        "#00b4d8",
-		CustomAccent:         "#e63946",
+		UnitOfLength:   "km",
+		UnitOfTemp:     "C",
+		UnitOfPressure: "bar",
+		PreferredRange: "rated",
+		Language:       "en",
+		BaseCostPerKWh: 0,
+		APISuspended:   false,
+		Theme:          "neon-cyan",
+		Mode:           "dark",
+		CustomPrimary:  "#00b4d8",
+		CustomAccent:   "#e63946",
+		// Empty (non-nil) so a fresh install serialises completed_tours as
+		// the JSON array "[]" rather than null. Onboarding tours are armed
+		// by default until the client records a completion marker.
+		CompletedTours:       []string{},
 		GasPricePerUnit:      3.50,
 		GasUnit:              "gallon",
 		GasEfficiencyMPG:     25,
@@ -171,6 +176,16 @@ func applySettingsRow(s *systemmodel.Settings, key, _ string, vText *string, vNu
 	case "custom_accent":
 		if vText != nil {
 			s.CustomAccent = *vText
+		}
+	case "completed_tours":
+		// Stored as a JSONB array of "{tourId}:{version}" markers. A NULL
+		// or malformed value leaves the settingsDefaults() empty slice in
+		// place so the field never decodes to nil.
+		if len(vJSON) > 0 {
+			var arr []string
+			if err := json.Unmarshal(vJSON, &arr); err == nil {
+				s.CompletedTours = NormalizeCompletedTours(arr)
+			}
 		}
 	case "gas_price_per_unit":
 		if vNum != nil {
@@ -436,10 +451,19 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) erro
 	if err != nil {
 		return fmt.Errorf("settings upsert ai_features_archived marshal: %w", err)
 	}
+	// Onboarding-tour completion markers. Replace semantics: the SPA always
+	// sends the full list. Normalise defensively (trim, drop blank/oversized
+	// entries, de-dupe, cap length) and marshal to a JSON array so an empty
+	// list persists as "[]" rather than null.
+	completedToursJSON, err := marshalStringArray(NormalizeCompletedTours(s.CompletedTours))
+	if err != nil {
+		return fmt.Errorf("settings upsert completed_tours marshal: %w", err)
+	}
 	jsonbRows := []rowJSONB{
 		{"ai_features", aiFeaturesJSON},
 		{"ai_provider_config", aiProviderJSON},
 		{"ai_features_archived", aiArchivedJSON},
+		{"completed_tours", completedToursJSON},
 	}
 
 	for _, rw := range textRows {
@@ -616,6 +640,58 @@ func marshalJSONOrEmpty(v any) (string, error) {
 	}
 	if len(b) == 0 || string(b) == "null" {
 		return "{}", nil
+	}
+	return string(b), nil
+}
+
+// MaxCompletedTours caps how many onboarding-tour completion markers are
+// persisted in the settings row. A well-behaved client sends only a handful
+// ("main:1", "vehicles:1", …); the cap stops a malformed or hostile payload
+// from growing the row without bound. Entries past the cap are dropped in
+// slice order.
+const MaxCompletedTours = 100
+
+// maxCompletedTourEntryLen bounds a single marker's length. Real markers are
+// short ("{tourId}:{version}"); anything longer is treated as junk and dropped
+// rather than persisted.
+const maxCompletedTourEntryLen = 128
+
+// NormalizeCompletedTours returns a defensively-cleaned copy of the
+// completed-tour marker list: each entry is trimmed, blank/oversized entries
+// are dropped, duplicates are removed (first occurrence wins), and the result
+// is capped at MaxCompletedTours. The return value is always non-nil so it
+// marshals to a JSON array ("[]") instead of null. Unknown tour ids are
+// preserved verbatim — the backend does not police the client's tour registry.
+func NormalizeCompletedTours(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := make(map[string]struct{}, len(in))
+	for _, entry := range in {
+		entry = strings.TrimSpace(entry)
+		if entry == "" || len(entry) > maxCompletedTourEntryLen {
+			continue
+		}
+		if _, dup := seen[entry]; dup {
+			continue
+		}
+		seen[entry] = struct{}{}
+		out = append(out, entry)
+		if len(out) >= MaxCompletedTours {
+			break
+		}
+	}
+	return out
+}
+
+// marshalStringArray serialises a string slice to a JSON array string,
+// returning "[]" for a nil or empty slice so the JSONB column always holds a
+// parseable array document (never the JSON literal null).
+func marshalStringArray(v []string) (string, error) {
+	if len(v) == 0 {
+		return "[]", nil
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
 	}
 	return string(b), nil
 }

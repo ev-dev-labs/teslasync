@@ -32,10 +32,13 @@ import {
   TOURS,
   dispatchTourStart,
   isTourCompleted as isTourCompletedById,
+  completedTourToken,
+  seedCompletedFromServer,
+  markTourCompleted,
   type TourStartEventDetail,
 } from '@/lib/tourRegistry'
 import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
@@ -57,6 +60,7 @@ import { VehiclePicker } from './VehiclePicker'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
 import type { Alert, Vehicle, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
@@ -750,6 +754,42 @@ export default function Layout() {
     activeTourDef ? { id: activeTourDef.id, version: activeTourDef.version } : undefined,
   )
 
+  // DB-backed tour completion. The per-tour "seen" flags live in localStorage,
+  // which is wiped when the user clears cookies/site data — so the intro tour
+  // used to re-appear after every clear. Mirror the flags into the persisted
+  // settings row (like theme/units) so completion survives a clear and syncs
+  // across devices.
+  const { data: settings, isFetched: settingsFetched } = useSettings()
+  const queryClient = useQueryClient()
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
+  const activeTourDefRef = useRef(activeTourDef)
+  activeTourDefRef.current = activeTourDef
+
+  const persistTourDone = useCallback((id: string, version: number) => {
+    const base = settingsRef.current
+    if (!base) return
+    const token = completedTourToken(id, version)
+    const current = base.completed_tours ?? []
+    if (current.includes(token)) return
+    const next = { ...base, completed_tours: [...current, token] }
+    // Optimistically update the cache so a second tour in the same session
+    // sees the first token, then persist (fire-and-forget — localStorage
+    // already suppresses a re-prompt this session).
+    queryClient.setQueryData(settingsKeys.settings, next)
+    request('/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(next),
+    }).catch(() => {})
+  }, [queryClient])
+
+  // Seed local per-tour flags from the server list so a cleared browser does
+  // not re-trigger a tour the user already finished. Idempotent.
+  useEffect(() => {
+    if (settings?.completed_tours) seedCompletedFromServer(settings.completed_tours)
+  }, [settings?.completed_tours])
+
   // Listen for "start tour" events from the launcher / palette / settings.
   useEffect(() => {
     const handler = (event: Event) => {
@@ -770,6 +810,12 @@ export default function Layout() {
   // funnel through the existing state machine instead of duplicating it.
   useEffect(() => {
     return subscribeToBroadcast((msg) => {
+      // Mirror a peer tab's completion into this tab's local flags so it does
+      // not re-auto-start the same tour.
+      if (msg.type === 'tour.completed') {
+        markTourCompleted(msg.tourId, msg.version)
+        return
+      }
       if (msg.type !== 'tour.replay-requested') return
       if (!msg.tourId || !TOURS[msg.tourId]) return
       dispatchTourStart(msg.tourId)
@@ -790,10 +836,15 @@ export default function Layout() {
   const wasTourActiveRef = useRef(false)
   useEffect(() => {
     if (wasTourActiveRef.current && !tour.isActive) {
+      // Tour just finished or was skipped — mirror completion into the DB so
+      // it survives a cookies/site-data clear (useTour already wrote the local
+      // flag). Then clear so a future launch can re-trigger it.
+      const def = activeTourDefRef.current
+      if (def) persistTourDone(def.id, def.version)
       setActiveTourId(null)
     }
     wasTourActiveRef.current = tour.isActive
-  }, [tour.isActive])
+  }, [tour.isActive, persistTourDone])
 
   // Auto-skip steps whose target element is missing (e.g. mobile hides them).
   useEffect(() => {
@@ -819,6 +870,11 @@ export default function Layout() {
   // prevents duplicate prompts.
   useEffect(() => {
     if (activeTourId) return
+    // Wait until settings have loaded (and thus the server-side completion
+    // list has been seeded into localStorage) before auto-starting, so a
+    // cleared browser that already finished the tour on the server does not
+    // flash it again before the seed lands.
+    if (!settingsFetched) return
     for (const def of Object.values(TOURS)) {
       if (!def.autoStart) continue
       if (isTourCompletedById(def.id, def.version)) continue
@@ -827,7 +883,7 @@ export default function Layout() {
         return () => window.clearTimeout(timer)
       }
     }
-  }, [location.pathname, vehicleCount, activeTourId])
+  }, [location.pathname, vehicleCount, activeTourId, settingsFetched])
 
   // Stale sessions count for Data Repair badge
   const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })

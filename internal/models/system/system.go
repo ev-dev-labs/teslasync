@@ -360,25 +360,33 @@ type FSMTransition struct {
 // above) and is accessed via its own repo methods. This eliminates the
 // pre-refactor JSONB carve-out (ADR-001, ADR-005).
 type Settings struct {
-	UnitOfLength      string  `json:"unit_of_length"`
-	UnitOfTemp        string  `json:"unit_of_temp"`
-	UnitOfPressure    string  `json:"unit_of_pressure"`
-	PreferredRange    string  `json:"preferred_range"`
-	Language          string  `json:"language"`
-	BaseCostPerKWh    float64 `json:"base_cost_per_kwh"`
-	APISuspended      bool    `json:"api_suspended"`
-	Theme             string  `json:"theme"`
-	Mode              string  `json:"mode"`
-	CustomPrimary     string  `json:"custom_primary"`
-	CustomAccent      string  `json:"custom_accent"`
-	GasPricePerUnit   float64 `json:"gas_price_per_unit"`
-	GasUnit           string  `json:"gas_unit"`
-	GasEfficiencyMPG  float64 `json:"gas_efficiency_mpg"`
-	DecimalPrecision  int     `json:"decimal_precision"`
-	QuietHoursEnabled bool    `json:"quiet_hours_enabled"`
-	QuietHoursStart   string  `json:"quiet_hours_start"`
-	QuietHoursEnd     string  `json:"quiet_hours_end"`
-	AlertDigestMode   string  `json:"alert_digest_mode"`
+	UnitOfLength   string  `json:"unit_of_length"`
+	UnitOfTemp     string  `json:"unit_of_temp"`
+	UnitOfPressure string  `json:"unit_of_pressure"`
+	PreferredRange string  `json:"preferred_range"`
+	Language       string  `json:"language"`
+	BaseCostPerKWh float64 `json:"base_cost_per_kwh"`
+	APISuspended   bool    `json:"api_suspended"`
+	Theme          string  `json:"theme"`
+	Mode           string  `json:"mode"`
+	CustomPrimary  string  `json:"custom_primary"`
+	CustomAccent   string  `json:"custom_accent"`
+	// CompletedTours records which onboarding tours the user has finished or
+	// skipped so that a client whose localStorage/cookies were cleared does
+	// not re-trigger a tour the user has already seen. Each entry is a
+	// "{tourId}:{version}" marker (e.g. "main:1"); bumping a tour's version
+	// re-arms it for everyone. Persisted as a JSONB array in the typed
+	// settings key/value table (ADR-011), mirroring ai_features. Always
+	// serialised as a JSON array — "[]" when empty, never null.
+	CompletedTours    []string `json:"completed_tours"`
+	GasPricePerUnit   float64  `json:"gas_price_per_unit"`
+	GasUnit           string   `json:"gas_unit"`
+	GasEfficiencyMPG  float64  `json:"gas_efficiency_mpg"`
+	DecimalPrecision  int      `json:"decimal_precision"`
+	QuietHoursEnabled bool     `json:"quiet_hours_enabled"`
+	QuietHoursStart   string   `json:"quiet_hours_start"`
+	QuietHoursEnd     string   `json:"quiet_hours_end"`
+	AlertDigestMode   string   `json:"alert_digest_mode"`
 	// CurrencySymbol is the Unicode glyph rendered alongside currency
 	// values (e.g. "$", "€", "£"). The frontend uses this verbatim;
 	// no ISO 4217 lookup is performed on the wire. Defaults to "$".

@@ -163,6 +163,15 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// completed_tours uses replace semantics — the SPA always sends the full
+	// list of "{tourId}:{version}" markers on save. Normalise defensively
+	// (trim, drop blank/oversized entries, de-dupe, cap at MaxCompletedTours)
+	// so a malformed payload cannot bloat the settings row, but never reject
+	// unknown tour ids: a newer client build may introduce tours this server
+	// has never heard of. NormalizeCompletedTours always returns a non-nil
+	// slice so the echoed response serialises as "[]" rather than null.
+	s.CompletedTours = settingsdb.NormalizeCompletedTours(s.CompletedTours)
+
 	// ADR-015 §I9: Get redacts AI secrets and archived feature state in off mode,
 	// so preserve stored values across SPA round-trips that omit those fields.
 	if s.AIProviderConfig == nil || s.AIFeaturesArchived == nil {
