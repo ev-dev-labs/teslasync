@@ -39,8 +39,27 @@ const thumbTranslate = {
  *   toggles via the wrapper's onClick (delegating to the button).
  */
 export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
-  ({ label, checked, onChange, size = 'md', className, ...props }, ref) => {
+  (
+    {
+      label,
+      checked,
+      onChange,
+      size = 'md',
+      className,
+      // Accessibility naming must land on the interactive `role="switch"`
+      // button, not the neutral wrapper `<div>`. Pull these out of the
+      // spread so an `aria-label`/`aria-labelledby` passed by icon-only
+      // callers actually names the switch for assistive tech.
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledBy,
+      ...props
+    },
+    ref,
+  ) => {
     const labelId = useId();
+    // A caller-supplied `aria-labelledby` wins; otherwise the visible `label`
+    // (when present) names the switch via its generated id.
+    const resolvedLabelledBy = ariaLabelledBy ?? (label ? labelId : undefined);
     return (
       <div
         ref={ref}
@@ -57,7 +76,8 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           type="button"
           role="switch"
           aria-checked={checked}
-          aria-labelledby={label ? labelId : undefined}
+          aria-label={ariaLabel}
+          aria-labelledby={resolvedLabelledBy}
           onClick={() => onChange(!checked)}
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
