@@ -147,9 +147,12 @@ export const ONBOARDING_STEPS = [
 
 /* ─── reference links ─────────────────────────────────────────────────── */
 
+// `title` is an i18n key; `label` is the English default rendered via
+// `t(title, label)` so the card never shows a raw key when a translation is
+// absent (none of these keys ship in the locale bundles today).
 export const REFERENCE_LINKS = [
-  { title: 'devtools.ref.fleetOverview', url: 'https://developer.tesla.com/docs/fleet-api', icon: 'BookOpen' as const },
-  { title: 'devtools.ref.partnerEndpoints', url: 'https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#register', icon: 'Globe' as const },
-  { title: 'devtools.ref.devPortal', url: 'https://developer.tesla.com', icon: 'ExternalLink' as const },
-  { title: 'devtools.ref.telemetryGuide', url: 'https://developer.tesla.com/docs/fleet-api/fleet-telemetry', icon: 'Radio' as const },
+  { title: 'devtools.ref.fleetOverview', label: 'Fleet API Overview', url: 'https://developer.tesla.com/docs/fleet-api', icon: 'BookOpen' as const },
+  { title: 'devtools.ref.partnerEndpoints', label: 'Partner Endpoints', url: 'https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#register', icon: 'Globe' as const },
+  { title: 'devtools.ref.devPortal', label: 'Developer Portal', url: 'https://developer.tesla.com', icon: 'ExternalLink' as const },
+  { title: 'devtools.ref.telemetryGuide', label: 'Fleet Telemetry Guide', url: 'https://developer.tesla.com/docs/fleet-api/fleet-telemetry', icon: 'Radio' as const },
 ]
