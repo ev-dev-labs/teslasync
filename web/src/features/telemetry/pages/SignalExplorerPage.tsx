@@ -28,8 +28,9 @@ import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlArray, useUrlNumber } from '@/hooks/useUrlState';
+import { useUrlArray, useUrlNumber, useUrlBatch, type UrlBatchUpdate } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
+import { getDatePreset, resolveAllTimeStart } from '@/lib/datePresets';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
@@ -49,6 +50,7 @@ import {
 } from '@/components/ai/AISignalExplorerNlFilter';
 
 const MAX_SIGNALS = 5;
+const DEFAULT_PER_PAGE = 25;
 
 const PER_PAGE_OPTIONS = [
   { value: '25', label: '25' },
@@ -67,15 +69,16 @@ export default function SignalExplorerPage() {
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  const { start, end, setRange, setPreset } = useRangeState({
+  const { start, end, setRange } = useRangeState({
     persistKey: 'signal-explorer.range',
     defaultPresetId: 'today',
   });
 
   const [exploreKey, setExploreKey] = useState<number | null>(null);
   const [page, setPage] = useUrlNumber('page', 1);
-  const [perPage, setPerPage] = useUrlNumber('size', 25);
+  const [perPage] = useUrlNumber('size', DEFAULT_PER_PAGE);
   const [isLive, setIsLive] = useState(false);
+  const setUrlBatch = useUrlBatch();
 
   const fromIso = useMemo(
     () => (start ? new Date(`${start}T00:00:00`).toISOString() : ''),
@@ -194,17 +197,39 @@ export default function SignalExplorerPage() {
   // callback runs only when the user clicks "Apply to filters" on a typed proposal.
   const handleApplyAiDraft = useCallback(
     (draft: SignalFilterDraft) => {
-      const next = draft.signals
+      // Apply every field the AI proposed in a SINGLE navigation. Firing the
+      // individual useUrl* setters back-to-back would clobber all but the last
+      // — react-router v6 hands each setter the same pre-handler searchParams
+      // snapshot, so the second navigate(replace) discards the first (see
+      // useUrlBatch). Batching keeps signals + range + page size atomic so an
+      // applied draft never lands half-populated.
+      const updates: UrlBatchUpdate = {};
+
+      const nextSignals = draft.signals
         .filter((s) => typeof s === 'string' && s.length > 0)
         .slice(0, MAX_SIGNALS);
-      if (next.length > 0) setSelectedSignals(next);
-      if (draft.range_preset) setPreset(draft.range_preset);
-      if (draft.per_page > 0) {
-        setPerPage(draft.per_page);
-        setPage(1);
+      if (nextSignals.length > 0) updates.signals = nextSignals.join(',');
+
+      if (draft.range_preset) {
+        const preset = getDatePreset(draft.range_preset);
+        if (preset) {
+          const resolved =
+            preset.id === 'all'
+              ? { start: resolveAllTimeStart(), end: preset.resolve().end }
+              : preset.resolve();
+          updates.from = resolved.start;
+          updates.to = resolved.end;
+        }
       }
+
+      if (draft.per_page > 0) {
+        updates.size = draft.per_page === DEFAULT_PER_PAGE ? null : String(draft.per_page);
+        updates.page = null;
+      }
+
+      if (Object.keys(updates).length > 0) setUrlBatch(updates);
     },
-    [setSelectedSignals, setPreset, setPerPage, setPage],
+    [setUrlBatch],
   );
 
   return (
@@ -314,7 +339,18 @@ export default function SignalExplorerPage() {
                     <Select
                       label={t('Per Page')}
                       value={String(perPage)}
-                      onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
+                      onChange={(e) => {
+                        // Atomic update — resetting to page 1 alongside the new
+                        // size in ONE navigation. Two separate useUrlNumber
+                        // setters here would clobber each other (react-router
+                        // v6 snapshot semantics), silently dropping the size
+                        // change so the dropdown appeared to do nothing.
+                        const nextSize = Number(e.target.value);
+                        setUrlBatch({
+                          size: nextSize === DEFAULT_PER_PAGE ? null : String(nextSize),
+                          page: null,
+                        });
+                      }}
                       options={PER_PAGE_OPTIONS}
                       className="w-24"
                     />
@@ -368,7 +404,10 @@ export default function SignalExplorerPage() {
               </GlassPanel>
             </FadeIn>
           ) : (
-            <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+            <section
+              aria-label={t('signalExplorer.results', 'Results')}
+              className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+            >
               {/* Hero — the multi-signal chart spans two of three columns on wide screens. */}
               <div className="xl:col-span-2">
                 <SignalChartPanel
