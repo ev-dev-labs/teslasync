@@ -3057,7 +3057,8 @@
         "windowOpens": "Window Open Events",
         "homelink": "HomeLink Detections",
         "guestMode": "Guest Mode Usage",
-        "totalEvents": "Total Events"
+        "totalEvents": "Total Events",
+        "aria": "Security statistics metrics"
       },
       "card": {
         "lockStatus": "Lock Status",
