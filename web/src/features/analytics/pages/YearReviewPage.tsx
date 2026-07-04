@@ -41,7 +41,7 @@ export default function YearReviewPage() {
   const { formatCurrency } = useFormatting();
 
   const vehicleIdParam = searchParams.get('vehicle_id') ?? '';
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vehicleList = vehicles ?? [];
   const vehicleOptions = useMemo(
     () => vehicleList.map((v) => ({ value: String(v.id), label: v.display_name || v.vin })),
@@ -66,10 +66,17 @@ export default function YearReviewPage() {
 
   const noActivity = !!data && (data.total_drives ?? 0) === 0 && (data.total_charge_sessions ?? 0) === 0;
 
+  // We don't yet know which vehicle to show while the fleet list is still
+  // loading, nor in the render frame before the auto-select effect fires.
+  // Both are loading states — surfacing the "pick a vehicle" empty prompt
+  // here would be misleading, so the gate treats them as a skeleton. The
+  // genuine empty prompt is reserved for a resolved-but-empty fleet.
+  const resolvingVehicle = vehiclesLoading || (!vehicleIdParam && vehicleList.length > 0);
+
   // Per-section state gate: skeleton while loading, QueryError on failure,
   // EmptyState when no vehicle/data, else the resolved content.
   const gate = (skeleton: ReactNode, content: (d: YearReview) => ReactNode): ReactNode => {
-    if (isLoading) return skeleton;
+    if (isLoading || resolvingVehicle) return skeleton;
     if (isError) return <QueryError error={error as Error} onRetry={refetch} />;
     if (data) return content(data);
     return (
