@@ -44,21 +44,37 @@ export default function CommandsPage() {
   const vehiclesLoading = vehiclesQuery.isLoading;
   const vehiclesError = vehiclesQuery.error;
 
-  // Live per-vehicle state, fanned out and polled. Failures degrade to `null`
-  // per vehicle so one unreachable car never blanks the whole board.
+  // Live per-vehicle state, fanned out and polled. Individual failures degrade
+  // to `null` per vehicle so one unreachable car never blanks the whole board;
+  // a total fan-out outage (every car unreachable) surfaces as a query error
+  // so the non-blocking states warning below can render.
   const statesQuery = useQuery({
     queryKey: ['command-vehicle-states', vehicles.map((v) => v.id)],
     queryFn: async () => {
+      let failures = 0;
       const entries = await Promise.all(
         vehicles.map(async (v) => {
           try {
             const data = await request<{ state: VehicleState }>(`/vehicles/${v.id}/state`);
             return [v.id, data.state ?? null] as const;
           } catch {
+            failures += 1;
             return [v.id, null] as const;
           }
         }),
       );
+      // A single unreachable car degrades to `null` for just that vehicle so
+      // the board keeps rendering. But if EVERY state fetch fails the fan-out
+      // is effectively down — surface that as a query error so the page shows
+      // its non-blocking warning banner instead of silently pretending every
+      // car simply has no live state.
+      if (vehicles.length > 0 && failures === vehicles.length) {
+        throw new Error(
+          t('commands.statesUnreachable', 'All {{count}} vehicles were unreachable', {
+            count: vehicles.length,
+          }),
+        );
+      }
       return Object.fromEntries(entries) as Record<number, VehicleState | null>;
     },
     enabled: vehicles.length > 0,
