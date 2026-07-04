@@ -7,7 +7,7 @@
  * canonical `<SourceLayerBadge>` so the colour language matches the diff and
  * FSM-debugger surfaces.
  */
-import { type ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layers } from 'lucide-react';
 
@@ -52,7 +52,35 @@ export function LiveSignalSourceBreakdown({
   noVehicleIcon,
 }: LiveSignalSourceBreakdownProps) {
   const { t } = useTranslation();
-  const total = stats.total;
+
+  // Single null-safe pass: derive count + clamped percentage per source layer
+  // once so the proportion bar and the stat cards read from the same model.
+  // `stats` is prop-driven — guarding `total` / `bySource` keeps a malformed or
+  // partial snapshot from throwing on `.total` or `bySource[key]`, and clamping
+  // stops a degenerate `total` (smaller than a facet count) from overflowing the
+  // track or printing ">100%".
+  const segments = useMemo(() => {
+    const total = Math.max(0, stats.total ?? 0);
+    const bySource = stats.bySource;
+    return SOURCE_META.map((meta) => {
+      const count = Math.max(0, bySource?.[meta.key] ?? 0);
+      const rawPct = total > 0 ? (count / total) * 100 : 0;
+      const pct = Math.min(100, Math.max(0, rawPct));
+      return { ...meta, count, pct, roundedPct: Math.round(pct) };
+    });
+  }, [stats.total, stats.bySource]);
+
+  const sourceCounts = stats.bySource;
+  const barAria = t(
+    'admin.liveSignals.sources.barAria',
+    'Signal source-layer distribution: {{l1}} live, {{stale}} stale, {{l2}} legacy, {{unknown}} unknown',
+    {
+      l1: sourceCounts?.l1 ?? 0,
+      stale: sourceCounts?.stale ?? 0,
+      l2: sourceCounts?.l2 ?? 0,
+      unknown: sourceCounts?.unknown ?? 0,
+    },
+  );
 
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
@@ -80,51 +108,43 @@ export function LiveSignalSourceBreakdown({
           <div
             className="flex h-3 overflow-hidden rounded-full bg-white/[0.05]"
             role="img"
-            aria-label={t(
-              'admin.liveSignals.sources.barAria',
-              'Signal source-layer distribution',
-            )}
+            aria-label={barAria}
           >
-            {SOURCE_META.map(({ key, bar }) => {
-              const count = stats.bySource[key] ?? 0;
-              const pct = total > 0 ? (count / total) * 100 : 0;
+            {segments.map(({ key, bar, pct, count, roundedPct, labelKey, labelFallback }) => {
               if (pct <= 0) return null;
               return (
                 <div
                   key={key}
                   className={cn('h-full', bar)}
                   style={{ width: `${pct}%` }}
+                  title={`${t(labelKey, labelFallback)}: ${count} (${roundedPct}%)`}
                 />
               );
             })}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {SOURCE_META.map(({ key, labelKey, labelFallback }) => {
-              const count = stats.bySource[key] ?? 0;
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-              return (
-                <div
-                  key={key}
-                  className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <SourceLayerBadge source={key} showLabel />
-                    <Caption className="tabular-nums">{pct}%</Caption>
-                  </div>
-                  <Text
-                    as="div"
-                    size="xl"
-                    weight="bold"
-                    color="primary"
-                    className="mt-2 tabular-nums"
-                  >
-                    {count}
-                  </Text>
-                  <Caption>{t(labelKey, labelFallback)}</Caption>
+            {segments.map(({ key, labelKey, labelFallback, count, roundedPct }) => (
+              <div
+                key={key}
+                className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <SourceLayerBadge source={key} showLabel />
+                  <Caption className="tabular-nums">{roundedPct}%</Caption>
                 </div>
-              );
-            })}
+                <Text
+                  as="div"
+                  size="xl"
+                  weight="bold"
+                  color="primary"
+                  className="mt-2 tabular-nums"
+                >
+                  {count}
+                </Text>
+                <Caption>{t(labelKey, labelFallback)}</Caption>
+              </div>
+            ))}
           </div>
         </div>
       </LiveSectionState>
