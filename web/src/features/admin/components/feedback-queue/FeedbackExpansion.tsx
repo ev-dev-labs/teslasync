@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button, Code, Input, Label, MaskedValue, Select, Subhead, Text } from '@/components/ui'
@@ -19,13 +19,31 @@ interface FeedbackExpansionProps {
  *  advisor. The manual controls remain the sole write path. */
 export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: FeedbackExpansionProps) {
   const { t } = useTranslation()
-  const [issueUrl, setIssueUrl] = useState(row.github_issue_url ?? '')
+  const persistedUrl = row.github_issue_url ?? ''
+  const [issueUrl, setIssueUrl] = useState(persistedUrl)
 
-  const statusOptions = [
-    { value: 'new', label: t('feedback.queue.status.new', 'New') },
-    { value: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged') },
-    { value: 'closed', label: t('feedback.queue.status.closed', 'Closed') },
-  ]
+  // Keep the local draft aligned with the server-persisted URL: when a
+  // mutation (Save URL / Forward to GitHub) round-trips and the parent
+  // re-renders this row with a new github_issue_url, reset the field to that
+  // value. The ref guards the reset so it fires only when the persisted value
+  // actually changes — an in-progress edit is never clobbered by an unrelated
+  // re-render.
+  const lastPersistedUrl = useRef(persistedUrl)
+  useEffect(() => {
+    if (persistedUrl !== lastPersistedUrl.current) {
+      lastPersistedUrl.current = persistedUrl
+      setIssueUrl(persistedUrl)
+    }
+  }, [persistedUrl])
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'new', label: t('feedback.queue.status.new', 'New') },
+      { value: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged') },
+      { value: 'closed', label: t('feedback.queue.status.closed', 'Closed') },
+    ],
+    [t],
+  )
 
   return (
     <div className="space-y-4 bg-[var(--surface-1)]/40 p-4">
@@ -105,11 +123,11 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: Fe
           variant="ghost"
           size="sm"
           onClick={() => onUpdate({ id: row.id, update: { github_issue_url: issueUrl } })}
-          disabled={updating || issueUrl === (row.github_issue_url ?? '')}
+          disabled={updating || issueUrl === persistedUrl}
         >
           {t('feedback.queue.action.saveUrl', 'Save URL')}
         </Button>
-        {bridgeEnabled && !row.github_issue_url && (
+        {bridgeEnabled && !persistedUrl && (
           <Button
             type="button"
             size="sm"
