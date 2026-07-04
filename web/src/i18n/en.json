@@ -11340,7 +11340,8 @@
       "failed": "Failed 24h",
       "failedHint": "Terminal failures",
       "noBudgets": "No active budgets",
-      "awaiting": "Awaiting data"
+      "awaiting": "Awaiting data",
+      "loading": "Loading system health…"
     },
     "detail": {
       "title": "Throttles & workers"
