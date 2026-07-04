@@ -8882,6 +8882,11 @@
     "connectFleet": "Connect your Tesla account and sync your fleet to start sending commands.",
     "confirm": {
       "typeToConfirm": "Type \"{{word}}\" to confirm:"
+    },
+    "toast": {
+      "success": "Command sent successfully",
+      "failed": "Command failed",
+      "error": "Command failed: {{message}}"
     }
   },
   "fsm": {
