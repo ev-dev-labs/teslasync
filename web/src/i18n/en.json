@@ -10505,6 +10505,7 @@
     "heading": "We couldn't find that page",
     "body": "{{path}} doesn't match any route.",
     "didYouMean": "Did you mean:",
+    "suggestionsLabel": "Suggested pages",
     "goBack": "Go back",
     "goHome": "Go to dashboard",
     "openSearch": "Open command palette"
