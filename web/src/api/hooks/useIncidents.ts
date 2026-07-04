@@ -8,6 +8,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { request } from '@/api/client'
+import { safeArray } from '@/lib/safeArray'
 
 export type IncidentStatus = 'investigating' | 'identified' | 'monitoring' | 'resolved'
 export type IncidentSeverity = 'minor' | 'major' | 'critical'
@@ -115,20 +116,37 @@ export function deleteIncident(id: number) {
 
 const KEY_LIST = (p: ListIncidentsParams) => ['status-incidents', 'list', p] as const
 const KEY_DETAIL = (id: number) => ['status-incidents', 'detail', id] as const
+const KEY_DETAIL_NOOP = ['status-incidents', 'detail', 'noop'] as const
+
+/**
+ * Guarantees the list payload is renderable no matter what the server (or a
+ * proxy) sends: `incidents` is always an array — even when the endpoint
+ * returns `{ "incidents": null }` — so consumers can `.map`/`.length` without
+ * a `?? []` guard, and `count` stays coherent with the array it describes.
+ */
+function normalizeIncidentList(data: IncidentListResponse): IncidentListResponse {
+  const incidents = safeArray(data?.incidents)
+  return { incidents, count: data?.count ?? incidents.length }
+}
 
 export function useIncidents(p: ListIncidentsParams = {}) {
   return useQuery({
     queryKey: KEY_LIST(p),
     queryFn: ({ signal }) => listIncidents(p, { signal }),
+    select: normalizeIncidentList,
     refetchInterval: 30_000,
   })
 }
 
 export function useIncident(id: number | null) {
+  // Incident ids are always positive (the backend rejects id <= 0 with 400),
+  // so treat null AND non-positive ids as "no selection" and keep the query
+  // disabled instead of firing a request the server would reject.
+  const enabled = id != null && id > 0
   return useQuery({
-    queryKey: id == null ? ['status-incidents', 'detail', 'noop'] : KEY_DETAIL(id),
+    queryKey: enabled ? KEY_DETAIL(id) : KEY_DETAIL_NOOP,
     queryFn: ({ signal }) => getIncident(id!, { signal }),
-    enabled: id != null,
+    enabled,
   })
 }
 
