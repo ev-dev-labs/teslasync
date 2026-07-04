@@ -1,3 +1,4 @@
+import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Settings2, Play, Pause, Info } from 'lucide-react';
@@ -32,21 +33,25 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
   const { t } = useTranslation();
   const toggleMut = useToggleGasPrice();
   const configMut = useUpdateGasPriceConfig();
+  const titleId = useId();
 
   const { data, isLoading, isError, error, refetch } = query;
   const enabled = data?.enabled ?? false;
   const interval = data?.poll_interval || '7d';
 
-  const intervalOptions = [
-    { value: 'daily', label: t('gas.daily', 'Daily') },
-    { value: '7d', label: t('gas.weekly', 'Weekly') },
-    { value: '15d', label: t('gas.biweekly', 'Bi-weekly') },
-    { value: '30d', label: t('gas.monthly', 'Monthly') },
-  ];
+  const intervalOptions = useMemo(
+    () => [
+      { value: 'daily', label: t('gas.daily', 'Daily') },
+      { value: '7d', label: t('gas.weekly', 'Weekly') },
+      { value: '15d', label: t('gas.biweekly', 'Bi-weekly') },
+      { value: '30d', label: t('gas.monthly', 'Monthly') },
+    ],
+    [t],
+  );
 
   return (
-    <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
+    <GlassPanel role="region" aria-labelledby={titleId} className="flex h-full flex-col p-4 sm:p-5">
+      <PanelTitle id={titleId} className="mb-3 flex items-center gap-2">
         <Settings2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('gas.config', 'Configuration')}
       </PanelTitle>
@@ -58,7 +63,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
           resourceName={t('gas.title', 'Gas Price Auto-Poll')}
         />
       ) : isLoading && !data ? (
-        <div className="space-y-4">
+        <div className="space-y-4" aria-hidden="true">
           <Skeleton height={64} className="rounded-xl" />
           <Skeleton height={64} className="rounded-xl" />
         </div>
