@@ -31,12 +31,103 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { convertDistanceFromSI, convertEnergyFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
-import type { DailyEnergy } from '@/types/energy';
+import type { DailyEnergy, EnergyFlowData } from '@/types/energy';
 
 /* ───────── Constants ───────── */
 
 const PRESET_IDS = ['today', '7d', '30d', '90d', 'mtd', 'ytd'];
+
+/** Universal "value unknown" placeholder (shared across the app). */
+const DASH = '—';
+
+/* ───────── Pure display helpers (exported for unit tests) ───────── */
+
+/** One point in the daily energy + distance charts. Every value is already in
+ *  the user's DISPLAY units — energy in kWh, distance in km|mi — so the charts,
+ *  the KPI band and the history table never disagree about what a number means. */
+export interface DailyChartPoint {
+  date: string;
+  /** Daily energy in kWh (converted from the SI watt-hours the API returns). */
+  energy: number;
+  /** Daily distance in the user's display unit (converted from SI metres). */
+  distance: number;
+}
+
+/** One point in the daily-efficiency chart. */
+export interface EfficiencyChartPoint {
+  date: string;
+  /** Efficiency in Wh per display distance unit (Wh/km or Wh/mi). */
+  efficiency: number;
+}
+
+/** Efficiency rating bucket, unit-aware. Lower Wh-per-distance is better. */
+export type EfficiencyRating = 'none' | 'excellent' | 'good' | 'high';
+
+/**
+ * Convert an efficiency figure from SI (watt-hours per metre) to the user's
+ * display unit (watt-hours per km or per mile), rounded to a whole number.
+ *
+ * `Wh/displayUnit = Wh/m × (metres per displayUnit)`; "metres per displayUnit"
+ * is derived from the canonical lib converter (`1 / metres→unit`) so no distance
+ * factor is hardcoded here (see unit-conversion.instructions.md). Null/undefined
+ * inputs fall back to 0 rather than producing NaN.
+ */
+export function scaleEfficiency(
+  whPerMeter: number | null | undefined,
+  distanceUnit: DistanceUnitPref,
+): number {
+  const perMeter = whPerMeter ?? 0;
+  const metersPerUnit = 1 / convertDistanceFromSI(1, distanceUnit);
+  return Math.round(perMeter * metersPerUnit);
+}
+
+/**
+ * Bucket an already-scaled average efficiency into a rating for badge display.
+ * Non-positive / non-finite values (no data yet) map to `'none'`.
+ */
+export function efficiencyRating(
+  avgEfficiency: number,
+  distanceUnit: DistanceUnitPref,
+): EfficiencyRating {
+  if (!(avgEfficiency > 0)) return 'none';
+  const excellent = distanceUnit === 'km' ? 150 : 240;
+  const good = distanceUnit === 'km' ? 200 : 320;
+  if (avgEfficiency < excellent) return 'excellent';
+  if (avgEfficiency < good) return 'good';
+  return 'high';
+}
+
+/** Total instantaneous charge power (kW) = DC + AC, null-safe. */
+export function computeChargePower(flow: EnergyFlowData | null | undefined): number {
+  return (flow?.dc_charging_power ?? 0) + (flow?.ac_charging_power ?? 0);
+}
+
+/** Build the daily energy + distance chart series in the user's display units. */
+export function buildDailyChartData(
+  rows: readonly DailyEnergy[],
+  distanceUnit: DistanceUnitPref,
+): DailyChartPoint[] {
+  return rows.map((d) => ({
+    date: formatDateShort(d.date),
+    energy: convertEnergyFromSI(d.energy_wh ?? 0, 'kWh'),
+    distance: convertDistanceFromSI(d.distance_m ?? 0, distanceUnit),
+  }));
+}
+
+/** Build the daily-efficiency chart series, dropping days without a value. */
+export function buildEfficiencyChartData(
+  rows: readonly DailyEnergy[],
+  distanceUnit: DistanceUnitPref,
+): EfficiencyChartPoint[] {
+  return rows
+    .filter((d) => (d.efficiency_wh_per_m ?? 0) > 0)
+    .map((d) => ({
+      date: formatDateShort(d.date),
+      efficiency: scaleEfficiency(d.efficiency_wh_per_m, distanceUnit),
+    }));
+}
 
 /* ───────── Flow diagram building blocks (local, non-exported) ───────── */
 
@@ -231,7 +322,7 @@ export default function EnergyFlowPage() {
   const { data: flow, isLoading: flowLoading, error: flowError, refetch: refetchFlow } = flowQuery;
 
   /* ─── Derived: real-time flow ─── */
-  const chargePower = (flow?.dc_charging_power ?? 0) + (flow?.ac_charging_power ?? 0);
+  const chargePower = computeChargePower(flow);
   const batterySOC = flow?.soc ?? 0;
   const chargeState = flow?.charge_state ?? null;
 
@@ -239,38 +330,22 @@ export default function EnergyFlowPage() {
   const dailyBreakdown: DailyEnergy[] = stats?.daily_breakdown ?? [];
 
   const dailyChartData = useMemo(
-    () =>
-      dailyBreakdown.map((d) => ({
-        date: formatDateShort(d.date),
-        energy_wh: d.energy_wh ?? 0,
-        distance: d.distance_m ?? 0,
-      })),
-    [dailyBreakdown],
+    () => buildDailyChartData(dailyBreakdown, distanceUnit),
+    [dailyBreakdown, distanceUnit],
   );
 
   const efficiencyChartData = useMemo(
-    () =>
-      dailyBreakdown
-        .filter((d) => (d.efficiency_wh_per_m ?? 0) > 0)
-        .map((d) => ({
-          date: formatDateShort(d.date),
-          efficiency:
-            distanceUnit === 'km'
-              ? Number((d.efficiency_wh_per_m * 1000).toFixed(0))
-              : Math.round(d.efficiency_wh_per_m * 1609.344),
-        })),
+    () => buildEfficiencyChartData(dailyBreakdown, distanceUnit),
     [dailyBreakdown, distanceUnit],
   );
 
   /* ─── Derived: stat values with unit conversion ─── */
-  const totalDistance = formatDistance(stats?.total_distance_m ?? 0);
+  const totalDistance = stats ? formatDistance(stats.total_distance_m ?? 0) : DASH;
 
-  const avgEfficiency = useMemo(() => {
-    const raw = stats?.avg_efficiency_wh_per_m ?? 0;
-    return distanceUnit === 'km'
-      ? Number((raw * 1000).toFixed(0))
-      : Math.round(raw * 1609.344);
-  }, [stats, distanceUnit]);
+  const avgEfficiency = useMemo(
+    () => scaleEfficiency(stats?.avg_efficiency_wh_per_m, distanceUnit),
+    [stats, distanceUnit],
+  );
 
   const efficiencyUnit = distanceUnit === 'km' ? t('energyFlow.units.whPerKm', 'Wh/km') : t('energyFlow.units.whPerMi', 'Wh/mi');
 
@@ -279,18 +354,18 @@ export default function EnergyFlowPage() {
     return period > 0 ? (stats?.total_energy_used_wh ?? 0) / period : 0;
   }, [stats]);
 
-  // Efficiency thresholds (unit-aware): lower Wh per unit distance is better.
-  const excellentThreshold = distanceUnit === 'km' ? 150 : 240;
-  const goodThreshold = distanceUnit === 'km' ? 200 : 320;
+  // Efficiency rating (unit-aware): lower Wh per unit distance is better.
+  const rating = efficiencyRating(avgEfficiency, distanceUnit);
   const effVariant =
-    avgEfficiency === 0 ? 'neutral'
-      : avgEfficiency < excellentThreshold ? 'success'
-        : avgEfficiency < goodThreshold ? 'warning' : 'danger';
+    rating === 'excellent' ? 'success'
+      : rating === 'good' ? 'warning'
+        : rating === 'high' ? 'danger'
+          : 'neutral';
   const effLabel =
-    avgEfficiency === 0 ? t('energyFlow.efficiency.noData', 'No Data')
-      : avgEfficiency < excellentThreshold ? t('energyFlow.efficiency.excellent', 'Excellent')
-        : avgEfficiency < goodThreshold ? t('energyFlow.efficiency.good', 'Good')
-          : t('energyFlow.efficiency.high', 'High');
+    rating === 'excellent' ? t('energyFlow.efficiency.excellent', 'Excellent')
+      : rating === 'good' ? t('energyFlow.efficiency.good', 'Good')
+        : rating === 'high' ? t('energyFlow.efficiency.high', 'High')
+          : t('energyFlow.efficiency.noData', 'No Data');
 
   /* ─── Table ─── */
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date', 'desc');
@@ -335,11 +410,11 @@ export default function EnergyFlowPage() {
         key: 'efficiency_wh_per_m',
         header: efficiencyUnit,
         sortable: true,
-        render: (row) => {
-          const raw = row.efficiency_wh_per_m ?? 0;
-          const val = distanceUnit === 'km' ? raw * 1000 : raw * 1609.344;
-          return <Text size="sm" mono color="primary">{fmtNumber(val, 0)}</Text>;
-        },
+        render: (row) => (
+          <Text size="sm" mono color="primary">
+            {fmtNumber(scaleEfficiency(row.efficiency_wh_per_m, distanceUnit), 0)}
+          </Text>
+        ),
       },
     ],
     [t, distanceUnit, efficiencyUnit, formatDistance, formatEnergy],
@@ -380,13 +455,13 @@ export default function EnergyFlowPage() {
         >
           <MetricCard
             label={t('energyFlow.kpi.totalEnergy', 'Total Energy')}
-            value={formatEnergy(stats?.total_energy_used_wh ?? 0)}
+            value={stats ? formatEnergy(stats.total_energy_used_wh ?? 0) : DASH}
             icon={<Zap className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
             label={t('energyFlow.kpi.totalCharged', 'Total Charged')}
-            value={formatEnergy(stats?.total_energy_charged_wh ?? 0)}
+            value={stats ? formatEnergy(stats.total_energy_charged_wh ?? 0) : DASH}
             icon={<Plug className="h-4 w-4" />}
             color="green"
           />
@@ -399,21 +474,21 @@ export default function EnergyFlowPage() {
           />
           <MetricCard
             label={t('energyFlow.kpi.efficiency', 'Efficiency')}
-            value={avgEfficiency}
+            value={stats ? avgEfficiency : DASH}
             icon={<Gauge className="h-4 w-4" />}
             color="amber"
             subtitle={efficiencyUnit}
           />
           <MetricCard
             label={t('energyFlow.kpi.co2Saved', 'CO₂ Saved')}
-            value={fmtNumber(stats?.co2_saved_kg ?? 0, 1)}
+            value={stats ? fmtNumber(stats.co2_saved_kg ?? 0, 1) : DASH}
             icon={<Leaf className="h-4 w-4" />}
             color="green"
             subtitle={t('energyFlow.units.kg', 'kg')}
           />
           <MetricCard
             label={t('energyFlow.kpi.period', 'Period')}
-            value={String(stats?.period_days ?? 0)}
+            value={stats ? String(stats.period_days ?? 0) : DASH}
             icon={<Calendar className="h-4 w-4" />}
             color="blue"
             subtitle={t('energyFlow.units.days', 'days')}
@@ -577,8 +652,8 @@ export default function EnergyFlowPage() {
                     <Legend />
                     <Area
                       {...AREA_DEFAULTS}
-                      dataKey="energy_wh"
-                      name={t('energyFlow.table.energy', 'Energy')}
+                      dataKey="energy"
+                      name={`${t('energyFlow.table.energy', 'Energy')} (${t('energyFlow.units.kwh', 'kWh')})`}
                       stroke={CHART_COLORS[0]}
                       fill="url(#gradEnergy)"
                     />
