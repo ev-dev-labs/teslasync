@@ -7,12 +7,32 @@ package gdpr
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+)
+
+// Package-local error sentinels. The database layer is domain-free (no
+// sibling repo imports internal/domain), so callers translate these to
+// HTTP status at the service/handler boundary — mirroring
+// admin.ErrPinnedAlreadyExists and export.ErrScheduledExport*.
+var (
+	// ErrConflict is returned by Insert when a manifest with the same id
+	// already exists (the id column is the PRIMARY KEY). It fulfils the
+	// documented Insert contract by mapping SQLSTATE 23505.
+	ErrConflict = errors.New("gdpr_artifact: already exists")
+
+	// ErrValidation is returned by Insert when the supplied manifest is
+	// missing a required field or carries an out-of-range value, before
+	// any database round trip is attempted.
+	ErrValidation = errors.New("gdpr_artifact: invalid manifest")
 )
 
 // StorageKind enumerates the supported backends. Used as a DB CHECK.
@@ -22,6 +42,13 @@ const (
 	StorageKindLocalFS StorageKind = "local_fs"
 	StorageKindS3      StorageKind = "s3"
 )
+
+// valid reports whether k is one of the persisted backends. Kept in sync
+// with the storage_kind CHECK constraint (mig 000212) so Insert rejects a
+// bad kind before the write reaches Postgres.
+func (k StorageKind) valid() bool {
+	return k == StorageKindLocalFS || k == StorageKindS3
+}
 
 // Artifact is the persisted manifest for a single export bundle.
 type Artifact struct {
@@ -38,34 +65,135 @@ type Artifact struct {
 	DownloadCount int         `json:"download_count"`
 }
 
-// ArtifactRepo is the manifest CRUD.
-type ArtifactRepo struct {
-	db *database.DB
+// validate checks the minimum invariants required to persist a manifest.
+// It guards the NOT NULL / CHECK columns of gdpr_export_artifact so a
+// malformed row fails fast with a typed error instead of surfacing as an
+// opaque driver constraint violation. Each failure wraps ErrValidation.
+func (a Artifact) validate() error {
+	switch {
+	case strings.TrimSpace(a.ID) == "":
+		return fmt.Errorf("%w: id is required", ErrValidation)
+	case strings.TrimSpace(a.ExportJobID) == "":
+		return fmt.Errorf("%w: export_job_id is required", ErrValidation)
+	case !a.StorageKind.valid():
+		return fmt.Errorf("%w: storage_kind %q must be local_fs or s3", ErrValidation, a.StorageKind)
+	case strings.TrimSpace(a.StoragePath) == "":
+		return fmt.Errorf("%w: storage_path is required", ErrValidation)
+	case strings.TrimSpace(a.SHA256) == "":
+		return fmt.Errorf("%w: sha256 is required", ErrValidation)
+	case a.ByteCount < 0:
+		return fmt.Errorf("%w: byte_count must be >= 0", ErrValidation)
+	case a.ExpiresAt.IsZero():
+		return fmt.Errorf("%w: expires_at is required", ErrValidation)
+	}
+	return nil
 }
 
-// NewArtifactRepo constructs the repo.
-func NewArtifactRepo(db *database.DB) *ArtifactRepo {
-	if db == nil || db.Pool == nil {
-		return nil
-	}
-	return &ArtifactRepo{db: db}
-}
+// artifactColumns is the canonical projection shared by every read path so
+// scanArtifact's destination order stays in lock-step with the SELECTs.
+const artifactColumns = `id, export_job_id, vehicle_id, storage_kind, storage_path,
+       sha256, byte_count, created_at, expires_at,
+       downloaded_at, download_count`
 
-// Insert persists a new manifest row. Returns ErrConflict if the id
-// already exists.
-func (r *ArtifactRepo) Insert(ctx context.Context, a Artifact) error {
-	if r == nil {
-		return nil
-	}
-	const sql = `
+const insertArtifactSQL = `
 INSERT INTO gdpr_export_artifact
   (id, export_job_id, vehicle_id, storage_kind, storage_path,
    sha256, byte_count, created_at, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := r.db.Pool.Exec(ctx, sql,
+
+const getByIDSQL = `
+SELECT ` + artifactColumns + `
+  FROM gdpr_export_artifact
+ WHERE id = $1`
+
+const listByVehicleSQL = `
+SELECT ` + artifactColumns + `
+  FROM gdpr_export_artifact
+ WHERE vehicle_id = $1
+ ORDER BY created_at DESC
+ LIMIT $2`
+
+const expiredSQL = `
+SELECT ` + artifactColumns + `
+  FROM gdpr_export_artifact
+ WHERE expires_at < now()
+ ORDER BY expires_at ASC
+ LIMIT $1`
+
+const recordDownloadSQL = `
+UPDATE gdpr_export_artifact
+   SET download_count = download_count + 1,
+       downloaded_at  = now()
+ WHERE id = $1`
+
+const deleteSQL = `DELETE FROM gdpr_export_artifact WHERE id = $1`
+
+// rowScanner is the Scan surface shared by pgx.Row and pgx.Rows, letting
+// GetByID (single row) and the list paths (row stream) share scanArtifact.
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+// scanArtifact reads one manifest row using the artifactColumns projection.
+// Centralising the destination list keeps the three read paths from drifting
+// out of column order — a class of bug that only shows up at runtime.
+func scanArtifact(s rowScanner) (Artifact, error) {
+	var a Artifact
+	var kind string
+	if err := s.Scan(
+		&a.ID, &a.ExportJobID, &a.VehicleID, &kind, &a.StoragePath,
+		&a.SHA256, &a.ByteCount, &a.CreatedAt, &a.ExpiresAt,
+		&a.DownloadedAt, &a.DownloadCount,
+	); err != nil {
+		return Artifact{}, err
+	}
+	a.StorageKind = StorageKind(kind)
+	return a, nil
+}
+
+// ArtifactRepo is the manifest CRUD.
+type ArtifactRepo struct {
+	// exec is the minimal pgx surface the repo needs, wired from db.Pool at
+	// construction. Declaring the seam (rather than reaching through a
+	// *database.DB) lets unit tests substitute a scripted fake without a
+	// live database — the codebase vendors no pgxmock/testcontainers harness
+	// (see achievement.UnlockRepo and drive.txRecorder for the same seam).
+	exec database.DBTX
+}
+
+// Compile-time guard that *pgxpool.Pool still satisfies the seam. If pgx
+// renames Exec/Query/QueryRow this fails at build time rather than at the
+// first request.
+var _ database.DBTX = (*pgxpool.Pool)(nil)
+
+// NewArtifactRepo constructs the repo. A nil db or nil pool means the GDPR
+// export subsystem is not configured on this deployment; the constructor
+// returns nil and every method is a safe no-op (the guarding service also
+// checks for nil before delegating).
+func NewArtifactRepo(db *database.DB) *ArtifactRepo {
+	if db == nil || db.Pool == nil {
+		return nil
+	}
+	return &ArtifactRepo{exec: db.Pool}
+}
+
+// Insert persists a new manifest row. It validates the manifest before the
+// round trip and returns ErrConflict if the id already exists.
+func (r *ArtifactRepo) Insert(ctx context.Context, a Artifact) error {
+	if r == nil {
+		return nil
+	}
+	if err := a.validate(); err != nil {
+		return fmt.Errorf("gdpr_artifact: insert: %w", err)
+	}
+	_, err := r.exec.Exec(ctx, insertArtifactSQL,
 		a.ID, a.ExportJobID, a.VehicleID, string(a.StorageKind), a.StoragePath,
 		a.SHA256, a.ByteCount, a.CreatedAt.UTC(), a.ExpiresAt.UTC())
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("gdpr_artifact: insert id %q: %w", a.ID, ErrConflict)
+		}
 		return fmt.Errorf("gdpr_artifact: insert: %w", err)
 	}
 	return nil
@@ -76,29 +204,18 @@ func (r *ArtifactRepo) GetByID(ctx context.Context, id string) (*Artifact, error
 	if r == nil {
 		return nil, nil
 	}
-	const sql = `
-SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
-       sha256, byte_count, created_at, expires_at,
-       downloaded_at, download_count
-  FROM gdpr_export_artifact
- WHERE id = $1`
-	var a Artifact
-	var kind string
-	err := r.db.Pool.QueryRow(ctx, sql, id).Scan(
-		&a.ID, &a.ExportJobID, &a.VehicleID, &kind, &a.StoragePath,
-		&a.SHA256, &a.ByteCount, &a.CreatedAt, &a.ExpiresAt,
-		&a.DownloadedAt, &a.DownloadCount)
-	if err == pgx.ErrNoRows {
+	a, err := scanArtifact(r.exec.QueryRow(ctx, getByIDSQL, id))
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("gdpr_artifact: get: %w", err)
 	}
-	a.StorageKind = StorageKind(kind)
 	return &a, nil
 }
 
-// ListByVehicle returns recent artifacts for a vehicle, newest first.
+// ListByVehicle returns recent artifacts for a vehicle, newest first. The
+// limit is clamped to (0, 200]; out-of-range values fall back to 50.
 func (r *ArtifactRepo) ListByVehicle(ctx context.Context, vehicleID int64, limit int) ([]Artifact, error) {
 	if r == nil {
 		return nil, nil
@@ -106,35 +223,23 @@ func (r *ArtifactRepo) ListByVehicle(ctx context.Context, vehicleID int64, limit
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	const sql = `
-SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
-       sha256, byte_count, created_at, expires_at,
-       downloaded_at, download_count
-  FROM gdpr_export_artifact
- WHERE vehicle_id = $1
- ORDER BY created_at DESC
- LIMIT $2`
-	rows, err := r.db.Pool.Query(ctx, sql, vehicleID, limit)
+	rows, err := r.exec.Query(ctx, listByVehicleSQL, vehicleID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("gdpr_artifact: list: %w", err)
 	}
 	defer rows.Close()
-	var out []Artifact
+	out := make([]Artifact, 0, limit)
 	for rows.Next() {
-		var a Artifact
-		var kind string
-		if err := rows.Scan(&a.ID, &a.ExportJobID, &a.VehicleID, &kind, &a.StoragePath,
-			&a.SHA256, &a.ByteCount, &a.CreatedAt, &a.ExpiresAt,
-			&a.DownloadedAt, &a.DownloadCount); err != nil {
+		a, err := scanArtifact(rows)
+		if err != nil {
 			return nil, fmt.Errorf("gdpr_artifact: scan: %w", err)
 		}
-		a.StorageKind = StorageKind(kind)
 		out = append(out, a)
 	}
-	if out == nil {
-		out = []Artifact{}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("gdpr_artifact: list rows: %w", err)
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // RecordDownload increments the download counter and stamps
@@ -143,20 +248,16 @@ func (r *ArtifactRepo) RecordDownload(ctx context.Context, id string) error {
 	if r == nil {
 		return nil
 	}
-	const sql = `
-UPDATE gdpr_export_artifact
-   SET download_count = download_count + 1,
-       downloaded_at  = now()
- WHERE id = $1`
-	_, err := r.db.Pool.Exec(ctx, sql, id)
+	_, err := r.exec.Exec(ctx, recordDownloadSQL, id)
 	if err != nil {
 		return fmt.Errorf("gdpr_artifact: record download: %w", err)
 	}
 	return nil
 }
 
-// Expired returns artifacts whose expires_at < now(). The retention
-// worker deletes the underlying files + the row.
+// Expired returns artifacts whose expires_at < now(), oldest first. The
+// retention worker deletes the underlying files + the row. The limit is
+// clamped to (0, 1000]; out-of-range values fall back to 100.
 func (r *ArtifactRepo) Expired(ctx context.Context, limit int) ([]Artifact, error) {
 	if r == nil {
 		return nil, nil
@@ -164,44 +265,32 @@ func (r *ArtifactRepo) Expired(ctx context.Context, limit int) ([]Artifact, erro
 	if limit <= 0 || limit > 1000 {
 		limit = 100
 	}
-	const sql = `
-SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
-       sha256, byte_count, created_at, expires_at,
-       downloaded_at, download_count
-  FROM gdpr_export_artifact
- WHERE expires_at < now()
- ORDER BY expires_at ASC
- LIMIT $1`
-	rows, err := r.db.Pool.Query(ctx, sql, limit)
+	rows, err := r.exec.Query(ctx, expiredSQL, limit)
 	if err != nil {
 		return nil, fmt.Errorf("gdpr_artifact: expired: %w", err)
 	}
 	defer rows.Close()
-	var out []Artifact
+	out := make([]Artifact, 0, limit)
 	for rows.Next() {
-		var a Artifact
-		var kind string
-		if err := rows.Scan(&a.ID, &a.ExportJobID, &a.VehicleID, &kind, &a.StoragePath,
-			&a.SHA256, &a.ByteCount, &a.CreatedAt, &a.ExpiresAt,
-			&a.DownloadedAt, &a.DownloadCount); err != nil {
+		a, err := scanArtifact(rows)
+		if err != nil {
 			return nil, fmt.Errorf("gdpr_artifact: scan: %w", err)
 		}
-		a.StorageKind = StorageKind(kind)
 		out = append(out, a)
 	}
-	if out == nil {
-		out = []Artifact{}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("gdpr_artifact: expired rows: %w", err)
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // Delete removes a manifest row. The underlying file removal is the
-// caller's responsibility.
+// caller's responsibility. Deleting an unknown id is a no-op, not an error.
 func (r *ArtifactRepo) Delete(ctx context.Context, id string) error {
 	if r == nil {
 		return nil
 	}
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM gdpr_export_artifact WHERE id = $1`, id)
+	_, err := r.exec.Exec(ctx, deleteSQL, id)
 	if err != nil {
 		return fmt.Errorf("gdpr_artifact: delete: %w", err)
 	}
