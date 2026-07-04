@@ -232,6 +232,11 @@ export default function DashboardsPage() {
   );
 
   const canCopy = dashboardJson.trim().length > 0;
+  // Clear resets the editor whenever there is *any* content — including
+  // whitespace-only text that `canCopy` (which trims) treats as empty.
+  // Reusing canCopy here would strand a user who wants to wipe stray
+  // whitespace or newlines with a single click.
+  const canClear = dashboardJson.length > 0;
 
   return (
     <div data-testid="power-dashboards-composer-root">
@@ -319,7 +324,7 @@ export default function DashboardsPage() {
                   <ClipboardCopy className="h-4 w-4" aria-hidden="true" />
                   {t('powerDashboards.editor.copy', 'Copy to clipboard')}
                 </Button>
-                <Button variant="secondary" onClick={handleClear} disabled={!canCopy}>
+                <Button variant="secondary" onClick={handleClear} disabled={!canClear}>
                   <Eraser className="h-4 w-4" aria-hidden="true" />
                   {t('powerDashboards.editor.clear', 'Clear')}
                 </Button>
