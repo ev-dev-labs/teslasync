@@ -18,6 +18,13 @@ interface GDPRLookupPanelProps {
 export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPanelProps) {
   const { t } = useTranslation();
 
+  // A single source of truth for "is there something to look up?". Both the
+  // button's disabled state AND the Enter-key shortcut gate on this so the two
+  // activation paths stay consistent (previously Enter fired even when the
+  // button was disabled). `?? ''` keeps the control safe if a caller ever
+  // passes an undefined value.
+  const trimmedId = (idInput ?? '').trim();
+
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-4">{t('admin.gdprExport.lookupTitle', 'Lookup artifact')}</PanelTitle>
@@ -28,10 +35,10 @@ export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPan
               <Input
                 label={t('admin.gdprExport.idLabel', 'Artifact ID')}
                 placeholder={t('admin.gdprExport.idPlaceholder', 'e.g. 8f4c…')}
-                value={idInput}
+                value={idInput ?? ''}
                 onChange={(e) => onIdChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') onLookup();
+                  if (e.key === 'Enter' && trimmedId) onLookup();
                 }}
               />
             </div>
@@ -39,7 +46,7 @@ export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPan
               variant="primary"
               size="md"
               onClick={onLookup}
-              disabled={!idInput.trim()}
+              disabled={!trimmedId}
               className="min-h-11 sm:w-auto"
             >
               <Search className="mr-1 h-4 w-4" aria-hidden="true" />
