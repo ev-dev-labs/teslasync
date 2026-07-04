@@ -23,7 +23,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlString } from '@/hooks/useUrlState';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+import { fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
@@ -91,16 +91,24 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
 };
 
 function formatHoursFromSeconds(seconds: number): string {
-  const minutes = seconds / 60;
-  const hours = minutes / 60;
-  const h = Math.floor(hours);
-  const m = (hours - h) * 60;
-  if (h === 0) return `${fmtInt(m)}m`;
-  return m >= 0.5 ? `${h}h ${fmtInt(m)}m` : `${h}h`;
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0m';
+  // Round to whole minutes ONCE, then split into h/m. Flooring the hours and
+  // rounding the leftover minutes independently used to emit "60m" (e.g.
+  // 3599s) or "1h 60m" (e.g. 7199s) at the boundary where the residual
+  // minutes rounded up to a full hour.
+  const totalMinutes = Math.round(seconds / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 function formatDurationFromSeconds(seconds: number): string {
-  if (seconds < 60) return `${fmtInt(seconds)}s`;
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0s';
+  const rounded = Math.round(seconds);
+  // Only sub-minute durations render in seconds; once rounding tips the value
+  // to a full minute defer to the h/m formatter so we never emit "60s".
+  if (rounded < 60) return `${rounded}s`;
   return formatHoursFromSeconds(seconds);
 }
 
@@ -139,6 +147,9 @@ export default function TimelinePage() {
   const days = useMemo(() => {
     const startMs = new Date(`${start}T00:00:00`).getTime();
     const endMs = new Date(`${end}T00:00:00`).getTime();
+    // useRangeState always yields valid ISO dates, but guard anyway so a
+    // malformed range never sends `days=NaN` to the API.
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) return 7;
     return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
   }, [start, end]);
 
@@ -328,10 +339,14 @@ export default function TimelinePage() {
 
   /* ─── Actions (vehicle selector + refresh) ─── */
 
-  const vehicleOptions = vehicles.map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
+  const vehicleOptions = useMemo(
+    () =>
+      vehicles.map((v) => ({
+        value: String(v.id),
+        label: v.display_name || v.vin,
+      })),
+    [vehicles],
+  );
 
   const actions = (
     <div className="flex items-center gap-3">
@@ -341,6 +356,7 @@ export default function TimelinePage() {
           value={activeId}
           onChange={(e) => onPickVehicle(e.target.value)}
           placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
+          aria-label={t('timeline.selectVehicle', 'Select Vehicle')}
         />
       )}
       <RangePicker
@@ -352,8 +368,12 @@ export default function TimelinePage() {
         triggerTestId="timeline-range"
       />
       <DataFreshnessAuto query={timelineQuery} />
-      <Button variant="ghost" onClick={() => refetch()}>
-        <RefreshCw className="h-4 w-4" />
+      <Button
+        variant="ghost"
+        onClick={() => refetch()}
+        aria-label={t('timeline.refresh', 'Refresh timeline')}
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>
     </div>
   );
