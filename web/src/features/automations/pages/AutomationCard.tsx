@@ -1,7 +1,7 @@
 /**
  * AutomationCard — displays a single automation with toggle, status, actions menu.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog, PinButton, PanelTitle, Text, Caption } from '@/components/ui';
@@ -56,6 +56,18 @@ export function AutomationCard({
   const uiStatus = useMemo(() => getUIStatus(a), [a]);
   const status = statusStyles[uiStatus];
   const conflicts = a.conflicts ?? [];
+  const failureCount = a.failure_count ?? 0;
+
+  // Dismiss the actions menu on Escape so keyboard users can close it without
+  // reaching for the mouse-only backdrop overlay.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
 
   const handleToggle = useCallback(
     (checked: boolean) => {
@@ -112,12 +124,14 @@ export function AutomationCard({
                 size="sm"
                 onClick={() => setMenuOpen(!menuOpen)}
                 aria-label={t('automations.menu', 'Actions menu')}
+                aria-haspopup="true"
+                aria-expanded={menuOpen}
               >
                 <MoreVertical className="h-4 w-4" />
               </UiButton>
               {menuOpen && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setMenuOpen(false)} />
                   <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--border-subtle)] bg-gray-900 py-1 shadow-xl">
                     <UiButton
                       type="button"
@@ -202,12 +216,12 @@ export function AutomationCard({
           </Caption>
           <Caption aria-hidden="true">·</Caption>
           <Caption>{t('automations.runs', 'Runs')}: {a.execution_count ?? 0}</Caption>
-          {a.failure_count > 0 && (
+          {failureCount > 0 && (
             <>
               <Caption aria-hidden="true">·</Caption>
               <Caption className="flex items-center gap-1 text-rose-300">
                 <XCircle className="h-3 w-3" aria-hidden="true" />
-                {t('automations.fails', 'Fails')}: {a.failure_count}
+                {t('automations.fails', 'Fails')}: {failureCount}
               </Caption>
             </>
           )}
