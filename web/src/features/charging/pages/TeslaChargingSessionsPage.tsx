@@ -34,20 +34,30 @@ import { cn } from '@/lib/cn';
 
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
 
-/** Format seconds to "Xh Ym" */
-function formatDurationSeconds(seconds: number | null): string {
-  if (seconds == null) return '—';
+/**
+ * Format an SI-seconds duration to "Xh Ym".
+ * Guards null / undefined / NaN / Infinity / negative input by returning an
+ * em dash so malformed telemetry can never render "NaNm" or "-2m".
+ */
+export function formatDurationSeconds(seconds: number | null | undefined): string {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—';
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
 
-/** Aggregate sessions by month for the cost chart */
-function buildMonthlyCost(sessions: TeslaChargingSession[]): { month: string; total: number }[] {
+/**
+ * Aggregate sessions by month for the cost chart. Rows whose
+ * `charge_start_datetime` is missing or unparseable are skipped so a single
+ * malformed timestamp can't pollute the chart with a "NaN-NaN" bucket.
+ */
+export function buildMonthlyCost(sessions: TeslaChargingSession[]): { month: string; total: number }[] {
   const map = new Map<string, number>();
   for (const s of sessions) {
+    if (!s.charge_start_datetime) continue;
     const d = new Date(s.charge_start_datetime);
+    if (Number.isNaN(d.getTime())) continue;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     map.set(key, (map.get(key) ?? 0) + (s.total_cost ?? 0));
   }
@@ -56,7 +66,7 @@ function buildMonthlyCost(sessions: TeslaChargingSession[]): { month: string; to
     .map(([month, total]) => ({ month, total }));
 }
 
-interface GroupBucket {
+export interface GroupBucket {
   key: string;
   count: number;
   energyWh: number;
@@ -64,7 +74,7 @@ interface GroupBucket {
 }
 
 /** Roll sessions up by a string key, summing count / energy / cost (all null-safe). */
-function groupSessions(
+export function groupSessions(
   sessions: TeslaChargingSession[],
   keyOf: (s: TeslaChargingSession) => string,
 ): GroupBucket[] {
@@ -131,7 +141,7 @@ export default function TeslaChargingSessionsPage() {
   // Derived breakdown: energy grouped by charger type (Supercharger / DC / etc.).
   const chargerTypeBreakdown = useMemo(() => {
     const unknown = t('tesla_sessions.unknownType', 'Unknown');
-    return groupSessions(sessions, (s) => s.charger_type ?? unknown)
+    return groupSessions(sessions, (s) => s.charger_type || unknown)
       .sort((a, b) => b.energyWh - a.energyWh || b.cost - a.cost);
   }, [sessions, t]);
   const maxChargerEnergy = useMemo(
