@@ -97,7 +97,10 @@ export default function VehicleAccessPage() {
   const [revokeTarget, setRevokeTarget] = useState<VehicleInvitation | null>(null);
 
   const handleRemoveDriver = useCallback(() => {
-    if (!removeTarget?.share_user_id || !vehicleId) return;
+    // Match the actions-column render predicate (`share_user_id != null`) so a
+    // driver whose share id is present-but-falsy (0) is still removable —
+    // otherwise the row shows a Remove button that silently no-ops on confirm.
+    if (removeTarget?.share_user_id == null || !vehicleId) return;
     removeDriver.mutate(
       { vehicleId, shareUserId: removeTarget.share_user_id },
       { onSettled: () => setRemoveTarget(null) },
