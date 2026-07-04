@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Zap, TrendingUp, Thermometer, Fuel, Gauge, Car, Leaf, Route, AlertCircle,
@@ -38,7 +38,7 @@ import type { Drive } from '@/types/driving';
 /* ------------------------------------------------------------------ */
 
 /** Efficiency → color ramp (dynamic; used as a computed chart/dot color). */
-function efficiencyColor(wh: number): string {
+export function efficiencyColor(wh: number): string {
   if (wh < 140) return '#39ff14';
   if (wh < 170) return '#10b981';
   if (wh < 200) return '#00f0ff';
@@ -47,7 +47,7 @@ function efficiencyColor(wh: number): string {
 }
 
 /** Derive Wh/km efficiency for a drive from battery delta + distance, or null. */
-function getEfficiency(drive: Drive): number | null {
+export function getEfficiency(drive: Drive): number | null {
   const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
   if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1000);
   return null;
@@ -79,10 +79,38 @@ export default function EfficiencyPage() {
   const tempUnit = unitPrefs.temperature;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-  const toEfficiencyDisplay = (whPerKm: number) => (unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm);
+  // Per-drive SI converters. `drives` fields are SI (distanceM = meters,
+  // avgSpeedMps = m/s, outsideTempAvgC = °C); getEfficiency() returns Wh/km.
+  // Memoised so the derived-data useMemo hooks below keep stable dependencies.
+  const toDistanceDisplay = useCallback(
+    (value: number) => convertDistanceFromSI(value, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
+  const toSpeedDisplay = useCallback(
+    (value: number) => convertSpeedFromSI(value, unitPrefs.speed),
+    [unitPrefs.speed],
+  );
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, unitPrefs.temperature),
+    [unitPrefs.temperature],
+  );
+  const toEfficiencyDisplay = useCallback(
+    (whPerKm: number) => (unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm),
+    [unitPrefs.distance],
+  );
+
+  // `useDrivingStats` returns legacy display-scalar fields, NOT SI:
+  // totalDistanceKm (km), avgSpeedKmh / topSpeedKmh (km/h), avgEfficiencyWhKm
+  // (Wh/km). Bridge km → m and km/h → m/s before the SI converters so both
+  // unit preferences render correctly — mirrors FleetComparePage's fromKm/fromKmh.
+  const toStatsDistanceDisplay = useCallback(
+    (km: number) => convertDistanceFromSI(km * 1000, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
+  const toStatsSpeedDisplay = useCallback(
+    (kmh: number) => convertSpeedFromSI((kmh * 1000) / 3600, unitPrefs.speed),
+    [unitPrefs.speed],
+  );
 
   const defaultStartDate = useMemo(() => {
     const d = new Date(); d.setDate(d.getDate() - 30);
@@ -194,8 +222,10 @@ export default function EfficiencyPage() {
       if (b) {
         b.count++;
         b.totalEff += eff;
-        b.totalDist += toDistanceDisplay(d.distanceM);
-        b.totalSpeed += toSpeedDisplay(d.avgSpeedMps ?? 0);
+        // Accumulate SI (meters, m/s); the DataTable render converts once via
+        // toDistanceDisplay / toSpeedDisplay. Converting here too double-converted.
+        b.totalDist += d.distanceM;
+        b.totalSpeed += d.avgSpeedMps ?? 0;
       }
     });
     return buckets
@@ -214,7 +244,7 @@ export default function EfficiencyPage() {
     ? fmtNumber((stats.avgEfficiencyWhKm / 1000) * 0.12, 3)
     : '—';
   const distancePerKwh = stats && stats.avgEfficiencyWhKm > 0
-    ? fmtNumber(toDistanceDisplay((1000 / stats.avgEfficiencyWhKm) * 1000), 1)
+    ? fmtNumber(toStatsDistanceDisplay(1000 / stats.avgEfficiencyWhKm), 1)
     : '—';
 
   /* ---- Energy insight tiles ---- */
@@ -223,8 +253,8 @@ export default function EfficiencyPage() {
         { key: 'regen', label: t('efficiency.totalRegen', 'Total Regen'), value: formatEnergy(stats.regenEnergyWh ?? 0, { precision: 1 }), icon: <Zap className="h-4 w-4" />, color: 'green' as const },
         { key: 'ratio', label: t('efficiency.regenRatioLabel', 'Regen Ratio'), value: `${fmtNumber((stats.regenRatio ?? 0) * 100)}%`, icon: <TrendingUp className="h-4 w-4" />, color: 'cyan' as const },
         { key: 'co2', label: t('efficiency.co2Label', 'CO₂ Saved'), value: `${fmtInt(stats.co2SavedKg ?? 0)} ${t('efficiency.kgUnit', 'kg')}`, icon: <Leaf className="h-4 w-4" />, color: 'green' as const },
-        { key: 'dist', label: t('efficiency.totalDistLabel', 'Total Distance'), value: `${fmtInt(toDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`, icon: <Route className="h-4 w-4" />, color: 'cyan' as const },
-        { key: 'top', label: t('efficiency.topSpeed', 'Top Speed'), value: `${fmtInt(toSpeedDisplay(stats.topSpeedKmh ?? 0))} ${speedUnit}`, icon: <Gauge className="h-4 w-4" />, color: 'purple' as const },
+        { key: 'dist', label: t('efficiency.totalDistLabel', 'Total Distance'), value: `${fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`, icon: <Route className="h-4 w-4" />, color: 'cyan' as const },
+        { key: 'top', label: t('efficiency.topSpeed', 'Top Speed'), value: `${fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} ${speedUnit}`, icon: <Gauge className="h-4 w-4" />, color: 'purple' as const },
         { key: 'cost', label: t('efficiency.costPerKmLabel', 'Est. Cost/km'), value: `$${costPerKm}`, icon: <Fuel className="h-4 w-4" />, color: 'amber' as const },
       ]
     : [];
@@ -277,10 +307,10 @@ export default function EfficiencyPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
               <MetricCard label={t('efficiency.avgConsumption', 'Avg Consumption')} value={fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} subtitle={efficiencyUnit} icon={<Zap className="h-5 w-5" />} color="amber" />
               <MetricCard label={t('efficiency.efficiencyLabel', 'Efficiency')} value={distancePerKwh} subtitle={`${distanceUnit}/kWh`} icon={<Gauge className="h-5 w-5" />} color="cyan" />
-              <MetricCard label={t('efficiency.avgSpeed', 'Avg Speed')} value={fmtNumber(toSpeedDisplay(stats.avgSpeedKmh ?? 0))} subtitle={speedUnit} icon={<TrendingUp className="h-5 w-5" />} color="green" />
-              <MetricCard label={t('efficiency.topSpeed', 'Top Speed')} value={fmtInt(toSpeedDisplay(stats.topSpeedKmh ?? 0))} subtitle={speedUnit} icon={<Gauge className="h-5 w-5" />} color="purple" />
+              <MetricCard label={t('efficiency.avgSpeed', 'Avg Speed')} value={fmtNumber(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} subtitle={speedUnit} icon={<TrendingUp className="h-5 w-5" />} color="green" />
+              <MetricCard label={t('efficiency.topSpeed', 'Top Speed')} value={fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} subtitle={speedUnit} icon={<Gauge className="h-5 w-5" />} color="purple" />
               <MetricCard label={t('efficiency.co2Label', 'CO₂ Saved')} value={fmtInt(stats.co2SavedKg ?? 0)} subtitle={t('efficiency.kgUnit', 'kg')} icon={<Leaf className="h-5 w-5" />} color="green" />
-              <MetricCard label={t('efficiency.totalDistLabel', 'Total Distance')} value={fmtInt(toDistanceDisplay(stats.totalDistanceKm ?? 0))} subtitle={distanceUnit} icon={<Route className="h-5 w-5" />} color="cyan" />
+              <MetricCard label={t('efficiency.totalDistLabel', 'Total Distance')} value={fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} subtitle={distanceUnit} icon={<Route className="h-5 w-5" />} color="cyan" />
               <MetricCard label={t('efficiency.costPerKm', 'Est. Cost/km')} value={`$${costPerKm}`} icon={<Fuel className="h-5 w-5" />} color="amber" />
               <MetricCard label={t('efficiency.drivesAnalyzed', 'Drives Analyzed')} value={fmtInt(stats.totalDrives ?? 0)} icon={<Car className="h-5 w-5" />} color="blue" />
             </div>
@@ -316,7 +346,7 @@ export default function EfficiencyPage() {
                   </div>
                   <div className="space-y-4">
                     <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0)} max={300} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`} />
-                    <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={toSpeedDisplay(stats.avgSpeedKmh ?? 0)} max={150} color="#10b981" sublabel={`${fmtInt(toSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`} />
+                    <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0)} max={150} color="#10b981" sublabel={`${fmtInt(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`} />
                     <MetricBar label={t('efficiency.regenRatio', 'Regen Ratio')} value={(stats.regenRatio ?? 0) * 100} max={100} color="#a855f7" sublabel={`${fmtNumber((stats.regenRatio ?? 0) * 100)}%`} />
                     <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationS ?? 0} max={Math.max(stats.totalDurationS ?? 0, 36000)} color="#f59e0b" sublabel={formatDuration(stats.totalDurationS ?? 0, { precision: 1 })} />
                   </div>
