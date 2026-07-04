@@ -75,5 +75,10 @@ export const INTENTIONAL_ORPHANS: readonly OrphanWaiver[] = [
  * @param file - bare filename relative to `web/src/api/hooks/`, e.g. `useAlerts.ts`
  */
 export function isIntentionalOrphan(file: string): boolean {
+  // Defensive: the hook-coverage audit that consumes this predicate lives
+  // outside the typed SPA build, so `file` can arrive empty/undefined from an
+  // untyped caller. A blank name is never an intentional orphan — short-circuit
+  // before scanning so the contract (exact bare-filename match) stays explicit.
+  if (!file) return false;
   return INTENTIONAL_ORPHANS.some((entry) => entry.file === file);
 }
