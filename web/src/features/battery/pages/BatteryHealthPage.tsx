@@ -64,31 +64,31 @@ const insightIconClass = {
   critical: 'text-rose-300',
 } as const;
 
-function gaugeColor(score: number): string {
+export function gaugeColor(score: number): string {
   if (score >= 90) return CHART_COLORS[1];
   if (score >= 70) return CHART_COLORS[3];
   return CHART_COLORS[5];
 }
 
-function healthVariant(score: number): 'success' | 'warning' | 'danger' {
+export function healthVariant(score: number): 'success' | 'warning' | 'danger' {
   if (score >= 90) return 'success';
   if (score >= 70) return 'warning';
   return 'danger';
 }
 
-function healthLabel(score: number, t: (k: string, fb: string) => string): string {
+export function healthLabel(score: number, t: (k: string, fb: string) => string): string {
   if (score >= 90) return t('battery.health.excellent', 'Excellent');
   if (score >= 70) return t('battery.health.good', 'Good');
   return t('battery.health.degraded', 'Degraded');
 }
 
-function degradationColor(pct: number): string {
+export function degradationColor(pct: number): string {
   if (pct <= 5) return '#10b981';
   if (pct <= 15) return '#f59e0b';
   return '#ef4444';
 }
 
-function buildInsights(
+export function buildInsights(
   health: BatteryHealthAnalytics,
   sessions: ChargingSession[] | null,
   t: TFunction,
@@ -170,7 +170,7 @@ function buildInsights(
   return items;
 }
 
-function buildRecommendations(
+export function buildRecommendations(
   health: BatteryHealthAnalytics,
   t: (k: string, fb: string) => string,
 ): string[] {
@@ -186,6 +186,59 @@ function buildRecommendations(
   if (tips.length === 0)
     tips.push(t('battery.tip.great', 'Your battery health looks great — keep up the good habits!'));
   return tips;
+}
+
+/** Round to one decimal numerically (never via a locale string — `+"1,234.5"` is NaN). */
+function roundTo1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+interface EnergyBreakdown {
+  pieData: { name: string; value: number; fill: string }[];
+  acCount: number;
+  dcCount: number;
+  totalEnergy: number;
+  totalSessions: number;
+}
+
+/**
+ * Aggregate AC vs DC charging energy across sessions. A session counts as DC
+ * when it carries a charger type or peaks above 20 kW. Returns `null` for an
+ * empty input so callers render an empty state. Pie values are rounded
+ * numerically so large totals (≥1000 kWh) stay finite instead of collapsing to
+ * NaN through a thousands-separated string.
+ */
+export function computeEnergyBreakdown(
+  sessions: ChargingSession[],
+): EnergyBreakdown | null {
+  if (sessions.length === 0) return null;
+  let acEnergy = 0;
+  let dcEnergy = 0;
+  let acCount = 0;
+  let dcCount = 0;
+  sessions.forEach((s) => {
+    const isDC =
+      (s.charger_type != null && s.charger_type.length > 0) ||
+      (s.peak_power_w != null && s.peak_power_w > 20_000);
+    const energy = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
+    if (isDC) {
+      dcEnergy += energy;
+      dcCount++;
+    } else {
+      acEnergy += energy;
+      acCount++;
+    }
+  });
+  return {
+    pieData: [
+      { name: 'AC', value: roundTo1(acEnergy), fill: '#10b981' },
+      { name: 'DC', value: roundTo1(dcEnergy), fill: '#f59e0b' },
+    ],
+    acCount,
+    dcCount,
+    totalEnergy: acEnergy + dcEnergy,
+    totalSessions: sessions.length,
+  };
 }
 
 const QUICK_LINKS: { to: string; labelKey: string; fallback: string }[] = [
@@ -396,10 +449,10 @@ export default function BatteryHealthPage() {
       endCount: 0,
     }));
     items.forEach((s) => {
-      const si = Math.min(Math.floor(s.start_soc_pct / 10), 9);
+      const si = Math.min(Math.max(0, Math.floor((s.start_soc_pct ?? 0) / 10)), 9);
       buckets[si].startCount++;
       if (s.end_soc_pct != null) {
-        const ei = Math.min(Math.floor(s.end_soc_pct / 10), 9);
+        const ei = Math.min(Math.max(0, Math.floor(s.end_soc_pct / 10)), 9);
         buckets[ei].endCount++;
       }
     });
@@ -420,29 +473,10 @@ export default function BatteryHealthPage() {
   }, [sessions]);
 
   /* ── Derived: AC/DC breakdown ──────────────────────────────────── */
-  const energyBreakdown = useMemo(() => {
-    const items = sessions ?? [];
-    if (items.length === 0) return null;
-    let acEnergy = 0, dcEnergy = 0, acCount = 0, dcCount = 0;
-    items.forEach((s) => {
-      const isDC =
-        (s.charger_type != null && s.charger_type.length > 0) ||
-        (s.peak_power_w != null && s.peak_power_w > 20_000);
-      const energy = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
-      if (isDC) { dcEnergy += energy; dcCount++; }
-      else { acEnergy += energy; acCount++; }
-    });
-    return {
-      pieData: [
-        { name: 'AC', value: +(fmtNumber(acEnergy, 1)), fill: '#10b981' },
-        { name: 'DC', value: +(fmtNumber(dcEnergy, 1)), fill: '#f59e0b' },
-      ],
-      acCount,
-      dcCount,
-      totalEnergy: acEnergy + dcEnergy,
-      totalSessions: items.length,
-    };
-  }, [sessions]);
+  const energyBreakdown = useMemo(
+    () => computeEnergyBreakdown(sessions ?? []),
+    [sessions],
+  );
 
   const yearsTo80 = projectionTrustworthy
     ? fmtNumber(degradation!.prediction!.years_to_80_pct, 1)
@@ -477,6 +511,11 @@ export default function BatteryHealthPage() {
   const capacityNowPct = health.original_capacity > 0
     ? Math.max(0, Math.min(100, (health.estimated_capacity / health.original_capacity) * 100))
     : 0;
+
+  // Backend may omit the history array entirely; guard every render-time
+  // access so the "New vs Now" range cells degrade to a placeholder instead
+  // of throwing on `.length` / `[0]`.
+  const history = health.history ?? [];
 
   /* ── Main render ───────────────────────────────────────────────── */
   return (
@@ -854,23 +893,23 @@ export default function BatteryHealthPage() {
                 />
                 <StatCell
                   label={t('battery.newVsNow.rangeNew', 'Range When New')}
-                  value={health.history.length > 0 ? fmtInt(fromKm(health.history[0].range_km)) : '—'}
+                  value={history.length > 0 ? fmtInt(fromKm(history[0].range_km)) : '—'}
                   unit={unitPrefs.distance}
                 />
                 <StatCell
                   label={t('battery.newVsNow.rangeNow', 'Range Now')}
                   value={
-                    health.history.length > 0
-                      ? fmtInt(fromKm(health.history[health.history.length - 1].range_km))
+                    history.length > 0
+                      ? fmtInt(fromKm(history[history.length - 1].range_km))
                       : '—'
                   }
                   unit={unitPrefs.distance}
                   accent="text-emerald-300"
                   note={
-                    health.history.length >= 2 ? (
+                    history.length >= 2 ? (
                       <Text as="p" size="2xs" className="mt-1 text-rose-300">
                         -{fmtInt(fromKm(
-                          health.history[0].range_km - health.history[health.history.length - 1].range_km,
+                          history[0].range_km - history[history.length - 1].range_km,
                         ))} {unitPrefs.distance} {t('battery.newVsNow.lost', 'lost')}
                       </Text>
                     ) : undefined
