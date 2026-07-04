@@ -39,12 +39,18 @@ export function GasPriceKpiBand({ query }: GasPriceKpiBandProps) {
   const priceKwh = data?.current_price_kwh_eq ?? 0;
   const lastPoll = data?.last_poll_time;
 
+  // Only paint the skeleton band on the very first load (no cached status
+  // yet). A background refetch that already has data keeps the KPIs on
+  // screen so the band doesn't flash empty on every poll interval.
+  const firstLoad = isLoading && !data;
+
   return (
     <section
       aria-label={t('gas.kpis', 'Gas price summary')}
+      aria-busy={firstLoad || undefined}
       className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
     >
-      {isLoading && !data ? (
+      {firstLoad ? (
         Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} height={92} className="rounded-xl" />
         ))
