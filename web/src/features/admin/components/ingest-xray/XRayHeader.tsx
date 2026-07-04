@@ -104,14 +104,14 @@ export function XRayHeader({
       />
       <MetricCard
         label={t('admin.xray.stats.window', 'Window')}
-        value={t(`admin.xray.windowLabel.${windowSel}`, WINDOW_LABEL[windowSel])}
+        value={t(`admin.xray.windowLabel.${windowSel}`, WINDOW_LABEL[windowSel] ?? windowSel)}
         icon={<Clock className="h-5 w-5" />}
         color="green"
         subtitle={t('admin.xray.stats.windowSub', 'observation horizon')}
       />
       <MetricCard
         label={t('admin.xray.stats.bucket', 'Bucket')}
-        value={t(`admin.xray.bucketLabel.${bucketSel}`, BUCKET_LABEL[bucketSel])}
+        value={t(`admin.xray.bucketLabel.${bucketSel}`, BUCKET_LABEL[bucketSel] ?? bucketSel)}
         icon={<Timer className="h-5 w-5" />}
         color="cyan"
         subtitle={t('admin.xray.stats.bucketSub', 'aggregation interval')}
