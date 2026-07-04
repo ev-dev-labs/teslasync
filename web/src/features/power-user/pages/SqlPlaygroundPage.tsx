@@ -37,7 +37,7 @@
 //   - I8 propose-only: the page never auto-executes the LLM's proposal. The
 //     user must explicitly click Apply to editor and then explicitly click Run.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Info, Play, TerminalSquare, Trash2 } from 'lucide-react';
 
@@ -105,7 +105,19 @@ export default function SqlPlaygroundPage() {
   }, [sql]);
 
   const handleApplyAiDraft = useCallback((draft: ReadonlySQLDraft) => {
-    setSql(draft.sql);
+    // The draft arrives from an SSE tool_result payload — defend the render
+    // against a malformed frame whose `sql` is missing so the controlled
+    // Textarea never flips to an uncontrolled `undefined` value.
+    setSql(draft.sql ?? '');
+    setRunMessage('');
+  }, []);
+
+  // Editing the query invalidates any run guidance shown for the *previous*
+  // query — clear it so a stale "copy this into your DB client" callout never
+  // lingers over a changed (or emptied) editor. A stable identity also keeps
+  // the Textarea's onChange reference constant across renders.
+  const handleSqlChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
+    setSql(e.target.value);
     setRunMessage('');
   }, []);
 
@@ -180,7 +192,7 @@ export default function SqlPlaygroundPage() {
               </PanelTitle>
               <Textarea
                 value={sql}
-                onChange={(e) => setSql(e.target.value)}
+                onChange={handleSqlChange}
                 placeholder={t(
                   'powerSql.editor.placeholder',
                   'SELECT COUNT(*) FROM drives WHERE started_at >= NOW() - INTERVAL \'7 days\'',
