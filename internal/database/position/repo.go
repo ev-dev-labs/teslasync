@@ -66,6 +66,14 @@ func NewPositionRepo(db *database.DB) *PositionRepo {
 // positionColumns is the SI canonical SELECT column list (migration 000182).
 const positionColumns = `vehicle_id, ts, lat, lng, heading_deg, speed_mps, altitude_m, gps_state`
 
+// positionInsertColumns is the CopyFrom column list for BulkInsert. It MUST
+// stay aligned — same order and same length — with the []any returned by
+// positionCopyRow; a mismatch would silently write each value into the wrong
+// column. The alignment invariant is pinned by a test.
+var positionInsertColumns = []string{
+	"vehicle_id", "ts", "lat", "lng", "heading_deg", "speed_mps", "altitude_m", "gps_state",
+}
+
 // BulkInsert streams positions into the `positions` hypertable using
 // pgx.CopyFrom. This is the high-throughput write path used by Fleet
 // Telemetry batch flushes; per-row Insert is intentionally not
@@ -81,24 +89,13 @@ func (r *PositionRepo) BulkInsert(ctx context.Context, ps []telemetrymodel.Posit
 	}
 
 	rows := pgx.CopyFromSlice(len(ps), func(i int) ([]any, error) {
-		p := ps[i]
-		latVal, lngVal := getLatLng(p)
-		return []any{
-			p.VehicleID,
-			p.Ts,
-			latVal,
-			lngVal,
-			headingInt16ToDegPtr(p.Heading),
-			mphPtrToMpsPtr(p.SpeedMph),
-			p.ElevationM,
-			p.GpsState,
-		}, nil
+		return positionCopyRow(ps[i]), nil
 	})
 
 	_, err := r.db.Pool.CopyFrom(
 		ctx,
 		pgx.Identifier{"positions"},
-		[]string{"vehicle_id", "ts", "lat", "lng", "heading_deg", "speed_mps", "altitude_m", "gps_state"},
+		positionInsertColumns,
 		rows,
 	)
 	if err != nil {
@@ -107,16 +104,40 @@ func (r *PositionRepo) BulkInsert(ctx context.Context, ps []telemetrymodel.Posit
 	return nil
 }
 
+// positionCopyRow assembles one CopyFrom row for the `positions` hypertable,
+// converting the legacy source units carried on telemetrymodel.Position (mph
+// speed, int16 heading) to the SI columns at the boundary. The value order
+// MUST match positionInsertColumns — the alignment is pinned by a test so a
+// reordering that would corrupt writes fails before production.
+func positionCopyRow(p telemetrymodel.Position) []any {
+	latVal, lngVal := getLatLng(p)
+	return []any{
+		p.VehicleID,
+		p.Ts,
+		latVal,
+		lngVal,
+		headingInt16ToDegPtr(p.Heading),
+		mphPtrToMpsPtr(p.SpeedMph),
+		p.ElevationM,
+		p.GpsState,
+	}
+}
+
+// listByVehicleSQL selects the SI-canonical positions for one vehicle within
+// an inclusive time window, oldest first. Kept as a package const so its shape
+// (columns, filter, ordering) can be pinned by a test without a live database.
+const listByVehicleSQL = `
+		SELECT ` + positionColumns + `
+		FROM positions
+		WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3
+		ORDER BY ts
+	`
+
 // ListByVehicle returns positions for a vehicle within the inclusive
 // time window [from, to], ordered chronologically. SI columns are
 // converted back to legacy display units at the boundary.
 func (r *PositionRepo) ListByVehicle(ctx context.Context, vehicleID int64, from, to time.Time) ([]telemetrymodel.Position, error) {
-	rows, err := r.db.Pool.Query(ctx, `
-		SELECT `+positionColumns+`
-		FROM positions
-		WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3
-		ORDER BY ts
-	`, vehicleID, from, to)
+	rows, err := r.db.Pool.Query(ctx, listByVehicleSQL, vehicleID, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("positions-repo-list-by-vehicle: %w", err)
 	}
@@ -124,38 +145,53 @@ func (r *PositionRepo) ListByVehicle(ctx context.Context, vehicleID int64, from,
 
 	var out []telemetrymodel.Position
 	for rows.Next() {
-		var p telemetrymodel.Position
 		var (
-			latVal     float64
-			lngVal     float64
-			headingDeg *float64
-			speedMps   *float64
+			vehicleIDCol int64
+			ts           time.Time
+			latVal       float64
+			lngVal       float64
+			headingDeg   *float64
+			speedMps     *float64
+			altitudeM    *float64
+			gpsState     *string
 		)
 		if err := rows.Scan(
-			&p.VehicleID,
-			&p.Ts,
+			&vehicleIDCol,
+			&ts,
 			&latVal,
 			&lngVal,
 			&headingDeg,
 			&speedMps,
-			&p.ElevationM,
-			&p.GpsState,
+			&altitudeM,
+			&gpsState,
 		); err != nil {
 			return nil, fmt.Errorf("positions-repo-list-by-vehicle: %w", err)
 		}
-		setLatLng(&p, latVal, lngVal)
-		p.Heading = headingDegPtrToInt16(headingDeg)
-		p.SpeedMph = mpsPtrToMphPtrPos(speedMps)
-		// The SI schema has no legacy free-text source column; surface it
-		// as empty so the JSON shape stays stable while the value is
-		// honestly absent.
-		p.Source = ""
-		out = append(out, p)
+		out = append(out, positionFromSI(vehicleIDCol, ts, latVal, lngVal, headingDeg, speedMps, altitudeM, gpsState))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("positions-repo-list-by-vehicle: %w", err)
 	}
 	return out, nil
+}
+
+// positionFromSI reconstructs a telemetrymodel.Position from one scanned
+// SI `positions` row, converting the SI columns back into the legacy display
+// units the model exposes (heading_deg -> int16, m/s -> mph). It is the
+// read-side inverse of positionCopyRow. The legacy free-text source column was
+// dropped by migration 000182, so Source is surfaced as empty — honestly
+// absent rather than fabricated.
+func positionFromSI(vehicleID int64, ts time.Time, lat, lng float64, headingDeg, speedMps, altitudeM *float64, gpsState *string) telemetrymodel.Position {
+	var p telemetrymodel.Position
+	p.VehicleID = vehicleID
+	p.Ts = ts
+	setLatLng(&p, lat, lng)
+	p.Heading = headingDegPtrToInt16(headingDeg)
+	p.SpeedMph = mpsPtrToMphPtrPos(speedMps)
+	p.ElevationM = altitudeM
+	p.GpsState = gpsState
+	p.Source = ""
+	return p
 }
 
 // getLatLng returns the geographic coordinates from p via reflection so the
@@ -184,13 +220,19 @@ func headingInt16ToDegPtr(h *int16) *float64 {
 }
 
 // headingDegPtrToInt16 converts a nullable SI heading_deg back into the
-// legacy *int16 form exposed on telemetrymodel.Position. Out-of-range or NaN
-// values yield nil.
+// legacy *int16 form exposed on telemetrymodel.Position. NaN, ±Inf, or values
+// that round outside the int16 range yield nil — an unchecked int16()
+// conversion of such a value is implementation-defined in Go and would
+// silently corrupt the heading rather than honestly reporting "unknown".
 func headingDegPtrToInt16(d *float64) *int16 {
-	if d == nil || math.IsNaN(*d) {
+	if d == nil || math.IsNaN(*d) || math.IsInf(*d, 0) {
 		return nil
 	}
-	v := int16(math.Round(*d))
+	r := math.Round(*d)
+	if r < math.MinInt16 || r > math.MaxInt16 {
+		return nil
+	}
+	v := int16(r)
 	return &v
 }
 
