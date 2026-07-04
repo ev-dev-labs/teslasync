@@ -157,7 +157,10 @@ const emptyBuckets = (): Record<OrderStatusBucket, number> => ({
 });
 
 /** Compute every page-level aggregate in a single pass. Always null-safe. */
-export function computeOrderStats(orders: TeslaOrder[]): OrderStats {
+export function computeOrderStats(
+  orders: TeslaOrder[] | null | undefined,
+): OrderStats {
+  const list = (orders ?? []).filter(Boolean);
   const byBucket = emptyBuckets();
   const modelSet = new Set<string>();
   let upgradable = 0;
@@ -166,7 +169,7 @@ export function computeOrderStats(orders: TeslaOrder[]): OrderStats {
   let nextMs = Number.POSITIVE_INFINITY;
   const now = Date.now();
 
-  for (const order of orders) {
+  for (const order of list) {
     byBucket[bucketOfStatus(order.status)] += 1;
     if (order.model) modelSet.add(order.model);
     if (order.is_upgradable) upgradable += 1;
@@ -186,7 +189,7 @@ export function computeOrderStats(orders: TeslaOrder[]): OrderStats {
   })).filter((b) => b.count > 0);
 
   return {
-    total: orders.length,
+    total: list.length,
     byBucket,
     buckets,
     delivered: byBucket.delivered,
