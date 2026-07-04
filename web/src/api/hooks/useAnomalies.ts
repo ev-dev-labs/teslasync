@@ -23,13 +23,46 @@ export interface AnomalyEntry {
   message: string;
 }
 
+/* ── Window bounds ────────────────────────────────────────── */
+
+/**
+ * Detection-window bounds enforced by the backend handler
+ * (`GET /analytics/anomalies` clamps `days` to `[1, 30]` and falls back to
+ * 7 for anything outside that range). Mirrored here so the request URL AND
+ * the query key agree with the window the server actually uses — otherwise
+ * an out-of-range `days` caches a 7-day answer under, say, a `100` key.
+ */
+export const ANOMALY_MIN_DAYS = 1;
+export const ANOMALY_MAX_DAYS = 30;
+export const ANOMALY_DEFAULT_DAYS = 7;
+
+/**
+ * Normalises a requested window into the backend-accepted `[1, 30]` range.
+ * Non-finite or non-positive input falls back to {@link ANOMALY_DEFAULT_DAYS};
+ * fractional values are truncated toward zero before clamping.
+ */
+export function clampAnomalyDays(days: number): number {
+  if (!Number.isFinite(days) || days <= 0) return ANOMALY_DEFAULT_DAYS;
+  return Math.min(Math.max(Math.trunc(days), ANOMALY_MIN_DAYS), ANOMALY_MAX_DAYS);
+}
+
 /* ── Hook ─────────────────────────────────────────────────── */
 
-export function useAnomalies(vehicleId: string | null, days = 7) {
+export function useAnomalies(vehicleId: string | null, days = ANOMALY_DEFAULT_DAYS) {
+  const windowDays = clampAnomalyDays(days);
+  // Trim so a whitespace-only id is treated as "no vehicle" instead of
+  // firing a request the backend rejects with 400 "vehicle_id is required".
+  const id = vehicleId?.trim() ?? '';
+  const enabled = id !== '';
+
   return useQuery({
-    queryKey: ['anomalies', vehicleId, days],
-    queryFn: ({ signal }) => request<AnomalyData>(`/analytics/anomalies?vehicle_id=${vehicleId}&days=${days}`, { signal }),
-    enabled: vehicleId !== null,
+    queryKey: ['anomalies', vehicleId, windowDays],
+    queryFn: ({ signal }) =>
+      request<AnomalyData>(
+        `/analytics/anomalies?vehicle_id=${encodeURIComponent(id)}&days=${windowDays}`,
+        { signal },
+      ),
+    enabled,
     staleTime: STALE_TIMES.SLOW,
   });
 }
