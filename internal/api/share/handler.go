@@ -3,6 +3,8 @@ package share
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"math"
 	"net/http"
 	"time"
@@ -16,16 +18,50 @@ import (
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
+// The handler depends on four narrow persistence ports rather than concrete
+// repos so every path can be exercised end-to-end with in-memory fakes and no
+// pgx pool. In production each port is satisfied by its repository:
+//
+//	shareTokenStore    <- *sharing.TokenRepo
+//	driveByIDFetcher   <- *drivedb.DriveRepo
+//	positionLister     <- *positiondb.PositionRepo
+//	vehicleByIDFetcher <- *vehicledb.VehicleRepo
+
+// shareTokenStore is the persistence port for share tokens.
+type shareTokenStore interface {
+	Create(ctx context.Context, st *drivemodel.ShareToken) error
+	GetByToken(ctx context.Context, token string) (*drivemodel.ShareToken, error)
+	ListByDrive(ctx context.Context, driveID int64) ([]*drivemodel.ShareToken, error)
+	IncrementViews(ctx context.Context, id int64) error
+	Delete(ctx context.Context, token string) error
+}
+
+// driveByIDFetcher fetches a single drive header.
+type driveByIDFetcher interface {
+	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)
+}
+
+// positionLister returns the position samples for a vehicle within a window.
+type positionLister interface {
+	ListByVehicle(ctx context.Context, vehicleID int64, from, to time.Time) ([]telemetrymodel.Position, error)
+}
+
+// vehicleByIDFetcher fetches a single vehicle.
+type vehicleByIDFetcher interface {
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+}
+
 // ShareHandler handles authenticated share management and public share views.
 type ShareHandler struct {
-	shareRepo   *sharing.TokenRepo
-	driveRepo   *drivedb.DriveRepo
-	posRepo     *positiondb.PositionRepo
-	vehicleRepo *vehicledb.VehicleRepo
+	shareRepo   shareTokenStore
+	driveRepo   driveByIDFetcher
+	posRepo     positionLister
+	vehicleRepo vehicleByIDFetcher
 }
 
 func NewShareHandler(db *database.DB) *ShareHandler {
@@ -120,7 +156,9 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req createShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// All fields are optional, so an empty body is valid and yields defaults;
+	// only a malformed (non-empty, non-JSON) body is a 400.
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -147,7 +185,14 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 		st.Description = &req.Description
 	}
 	if req.ExpiresInDays > 0 {
-		exp := time.Now().UTC().Add(time.Duration(req.ExpiresInDays) * 24 * time.Hour)
+		// Clamp before the duration multiply: an unbounded day count overflows
+		// int64 nanoseconds and would wrap to a past instant, silently creating
+		// an already-expired ("410 Gone") share.
+		days := req.ExpiresInDays
+		if days > maxExpiryDays {
+			days = maxExpiryDays
+		}
+		exp := time.Now().UTC().Add(time.Duration(days) * 24 * time.Hour)
 		st.ExpiresAt = &exp
 	}
 
@@ -158,7 +203,7 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().
-		Str("token", st.Token[:8]+"...").
+		Str("token", truncateToken(st.Token)).
 		Int64("drive_id", driveID).
 		Msg("share link created")
 
@@ -196,12 +241,12 @@ func (h *ShareHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.shareRepo.Delete(r.Context(), token); err != nil {
-		log.Error().Err(err).Str("token", token[:8]+"...").Msg("share: failed to revoke")
+		log.Error().Err(err).Str("token", truncateToken(token)).Msg("share: failed to revoke")
 		httpx.WriteError(w, http.StatusNotFound, "share link not found")
 		return
 	}
 
-	log.Info().Str("token", token[:8]+"...").Msg("share link revoked")
+	log.Info().Str("token", truncateToken(token)).Msg("share link revoked")
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
 
@@ -360,6 +405,23 @@ func safeDeref(s *string, fallback string) string {
 		return *s
 	}
 	return fallback
+}
+
+// maxExpiryDays bounds share-link lifetime. Beyond ~106k days the
+// time.Duration multiply in Create overflows int64 nanoseconds and wraps to a
+// past instant; 10 years is well inside the safe range and a sane upper bound
+// for a public link.
+const maxExpiryDays = 3650
+
+// truncateToken returns a short, log-safe prefix of a share token. It never
+// panics on short/empty input — the raw URL token handled by Revoke is
+// caller-supplied and may be shorter than the 32-char generated form, so a
+// naive token[:8] would panic with a slice-bounds error.
+func truncateToken(token string) string {
+	if len(token) <= 8 {
+		return token
+	}
+	return token[:8] + "..."
 }
 
 func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
