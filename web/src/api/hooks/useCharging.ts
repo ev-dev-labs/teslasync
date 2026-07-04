@@ -201,7 +201,10 @@ export function getTeslaChargingInvoiceURL(contentId: string): string {
   // Direct <a href> download URL — not a request() call, so the full API
   // prefix must be included here. Split to avoid tripping the hook-URL audit
   // that forbids hardcoded API version prefixes inside hook files.
-  return `/api/${'v1'}/tesla/charging/invoice/${contentId}`;
+  // Encode the opaque content id so a value containing '/', '?', '#' or '&'
+  // (or any other reserved char) can't break out of the path segment and
+  // corrupt the download URL / inject query params.
+  return `/api/${'v1'}/tesla/charging/invoice/${encodeURIComponent(contentId)}`;
 }
 
 // --- Tesla Fleet Charging Sessions (business accounts only) ---
