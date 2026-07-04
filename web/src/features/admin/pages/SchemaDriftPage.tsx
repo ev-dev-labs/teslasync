@@ -33,7 +33,7 @@ import {
 } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { formatDateTime, formatRelativeTime } from '@/lib/dateFormat';
 import { useSchemaDrift } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
@@ -44,7 +44,7 @@ import type { SchemaDrift, SchemaFingerprint } from '@/types/admin-operator-conf
 function formatDelta(delta: number | null | undefined): string {
   const d = delta ?? 0;
   if (d === 0) return '0';
-  return d > 0 ? `+${fmtNumber(d)}` : fmtNumber(d);
+  return d > 0 ? `+${fmtInt(d)}` : fmtInt(d);
 }
 
 /** Per-count comparisons treat a zero delta as a match. */
@@ -246,8 +246,8 @@ function DeltaTile({ label, icon, delta, current, expected, isLoading, hasData }
           <MetricValue>{formatDelta(delta)}</MetricValue>
           <Caption className="mt-1 block truncate">
             {t('admin.schemaDrift.deltaSub', '{{current}} current · {{expected}} expected', {
-              current: fmtNumber(current ?? 0),
-              expected: fmtNumber(expected ?? 0),
+              current: fmtInt(current ?? 0),
+              expected: fmtInt(expected ?? 0),
             })}
           </Caption>
           <SeverityBadge severity={tone(delta)} size="sm" className="mt-2 self-start">
@@ -350,7 +350,7 @@ function FingerprintStat({ label, value }: { label: string; value: number | null
   return (
     <div className="rounded-md bg-[var(--surface-2)] px-2 py-2 text-center">
       <Text as="div" size="lg" weight="bold" color="primary" className="tabular-nums">
-        {value != null ? fmtNumber(value) : '—'}
+        {value != null ? fmtInt(value) : '—'}
       </Text>
       <Caption className="mt-0.5 block">{label}</Caption>
     </div>
@@ -433,8 +433,8 @@ function CategoryRow({ label, current, expected, delta }: CategoryRowProps) {
         <Text as="div" variant="body" className="truncate">{label}</Text>
         <Caption className="tabular-nums">
           {t('admin.schemaDrift.currentExpected', '{{current}} → {{expected}}', {
-            current: fmtNumber(current ?? 0),
-            expected: fmtNumber(expected ?? 0),
+            current: fmtInt(current ?? 0),
+            expected: fmtInt(expected ?? 0),
           })}
         </Caption>
       </div>
