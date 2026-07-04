@@ -2837,7 +2837,7 @@
   "devtools": {
     "utils": {
       "base64": "Base64",
-      "base64Desc": "Base64Desc",
+      "base64Desc": "Encode and decode Base64 text",
       "computeSha256": "Compute Sha256"
     },
     "searchTools": "Search tools...",
