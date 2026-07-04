@@ -102,21 +102,26 @@ export function FlagCompositionPanel({
   }
 
   return (
-    <div className="space-y-3">
+    <div
+      className="space-y-3"
+      role="list"
+      aria-label={t('admin.flags.composition.ariaLabel', 'Flag value-type composition')}
+    >
       {rows.map((row) => {
         const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
         return (
-          <MetricBar
-            key={row.kind}
-            label={kindLabels[row.kind]}
-            value={row.count}
-            max={total || row.count}
-            color={KIND_COLOR[row.kind]}
-            sublabel={t('admin.flags.composition.sublabel', '{{count}} · {{pct}}%', {
-              count: row.count,
-              pct,
-            })}
-          />
+          <div key={row.kind} role="listitem">
+            <MetricBar
+              label={kindLabels[row.kind]}
+              value={row.count}
+              max={total || row.count}
+              color={KIND_COLOR[row.kind]}
+              sublabel={t('admin.flags.composition.sublabel', '{{count}} · {{pct}}%', {
+                count: row.count,
+                pct,
+              })}
+            />
+          </div>
         );
       })}
     </div>
