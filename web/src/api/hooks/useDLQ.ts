@@ -43,6 +43,23 @@ export const dlqKeys = {
 };
 
 /**
+ * Clamp a caller-supplied audit `limit` into the server-accepted window.
+ * `useDLQAudit`'s contract promises the cap, so enforce it in one place:
+ * a fat-fingered `limit={100000}` must not translate into an unbounded
+ * audit scan on the read path. Fractional inputs are floored; sub-1
+ * values are lifted to 1; non-finite input (NaN / ±Infinity) falls back
+ * to the default page size. Exported so the clamp is unit-testable
+ * independently of React Query wiring.
+ */
+export function clampAuditLimit(limit: number): number {
+  if (!Number.isFinite(limit)) return PAGINATION.DEFAULT_LIMIT;
+  const floored = Math.floor(limit);
+  if (floored < 1) return 1;
+  if (floored > PAGINATION.MAX_LIMIT) return PAGINATION.MAX_LIMIT;
+  return floored;
+}
+
+/**
  * List of recent DLQ entries plus the server-side `replay_enabled` flag
  * (mirrors `DLQ_REPLAY_ENABLED` env). Polled at INTERVALS.STANDARD; the
  * DLQ shouldn't move quickly under normal operation so a 30 s cadence is
@@ -67,7 +84,12 @@ export function useDLQList() {
  * fetched it's safe to read from cache for the lifetime of the page.
  */
 export function useDLQEntry(id: number | null | undefined, enabled = true) {
-  const numericId = typeof id === 'number' && id > 0 ? id : 0;
+  // The id is interpolated straight into a URL path segment the Go handler
+  // parses as an integer, so reject anything that isn't a positive whole
+  // number (NaN / Infinity / fractional) up front — such a value would only
+  // produce a guaranteed 400 round-trip.
+  const numericId =
+    typeof id === 'number' && Number.isInteger(id) && id > 0 ? id : 0;
   return useQuery({
     queryKey: dlqKeys.entry(numericId),
     queryFn: ({ signal }) =>
@@ -88,16 +110,20 @@ export function useDLQAudit(
   limit: number = PAGINATION.DEFAULT_LIMIT,
 ) {
   const scoped = typeof dlqId === 'number' && dlqId > 0;
+  // Clamp once and reuse for both the cache key and the URL so a
+  // caller-supplied out-of-range limit can't split the cache from the
+  // request it actually made.
+  const safeLimit = clampAuditLimit(limit);
   const queryKey = scoped
-    ? dlqKeys.entryAudit(dlqId, limit)
-    : dlqKeys.audit(limit);
+    ? dlqKeys.entryAudit(dlqId, safeLimit)
+    : dlqKeys.audit(safeLimit);
 
   return useQuery({
     queryKey,
     queryFn: ({ signal }) => {
       const url = scoped
-        ? `/system/dlq/${dlqId}/audit?limit=${limit}`
-        : `/system/dlq/audit?limit=${limit}`;
+        ? `/system/dlq/${dlqId}/audit?limit=${safeLimit}`
+        : `/system/dlq/audit?limit=${safeLimit}`;
       return request<DLQAuditResponse>(url, { signal });
     },
     staleTime: STALE_TIMES.MODERATE,
@@ -131,7 +157,7 @@ export function useDLQReplay() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['system', 'dlq'] });
       success('admin.dlq.toast.replaySuccess', 'Replay published to {{topic}}', {
-        topic: res.dst_topic,
+        topic: res?.dst_topic ?? '—',
       });
     },
     onError: (err) => {
