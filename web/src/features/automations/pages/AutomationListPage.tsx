@@ -117,8 +117,16 @@ export default function AutomationListPage() {
 
   const runBulk = useCallback(
     async (ids: RowKey[], op: 'enable' | 'disable' | 'delete') => {
-      await bulkUpdate.mutateAsync({ ids: ids.map((i) => Number(i)), op });
-      setSelectedKeys([]);
+      try {
+        await bulkUpdate.mutateAsync({ ids: ids.map((i) => Number(i)), op });
+        // Only drop the selection once the server confirms the op — a failed
+        // mutation keeps the rows selected so the user can retry.
+        setSelectedKeys([]);
+      } catch {
+        // The bulk mutation hook already surfaces a toast on failure. Swallow
+        // the rejection here so the toolbar's fire-and-forget onClick never
+        // leaks an unhandled promise rejection.
+      }
     },
     [bulkUpdate],
   );
