@@ -1,5 +1,39 @@
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '@/components/feedback/Toast';
+
+/**
+ * Extracts a human-readable detail line from an arbitrary thrown value.
+ *
+ * TanStack Query types mutation errors as `unknown`, so `error()` may be handed
+ * an `Error`, a string, a bare status code, `null`, or a duck-typed
+ * `{ message }` object. Returns `undefined` when there is nothing meaningful to
+ * show so the toast renders its translated title alone rather than an empty
+ * secondary line or the useless `"[object Object]"` that a naive `String(err)`
+ * would produce for a message-less object.
+ *
+ *   - `Error` / duck-typed `{ message: string }` → the trimmed message.
+ *   - `string` / `number` / `boolean` / `bigint`  → its string form.
+ *   - `null` / `undefined` / message-less object   → `undefined` (title only).
+ *
+ * Whitespace-only messages collapse to `undefined` for the same reason.
+ */
+function errorDetail(err: unknown): string | undefined {
+  if (err == null) return undefined;
+  let msg: string | undefined;
+  if (err instanceof Error) {
+    msg = err.message;
+  } else if (typeof err === 'string') {
+    msg = err;
+  } else if (typeof err === 'object') {
+    const maybe = (err as { message?: unknown }).message;
+    msg = typeof maybe === 'string' ? maybe : undefined;
+  } else {
+    msg = String(err);
+  }
+  const trimmed = msg?.trim();
+  return trimmed ? trimmed : undefined;
+}
 
 /**
  * useMutationToast — i18n-aware bridge between TanStack Query mutations and
@@ -35,17 +69,31 @@ export function useMutationToast() {
   const toast = useToast();
   const { t } = useTranslation();
 
-  return {
-    success(key: string, fallback: string, vars?: Record<string, unknown>) {
-      toast.success(t(key, { defaultValue: fallback, ...(vars ?? {}) }));
-    },
-    error(
-      err: unknown,
-      key = 'toast.common.error',
-      fallback = 'Something went wrong',
-    ) {
-      const detail = err instanceof Error ? err.message : err == null ? undefined : String(err);
-      toast.error(t(key, { defaultValue: fallback }), detail);
-    },
-  };
+  // The toast dispatcher and translator can change identity between renders:
+  // the ToastProvider rebuilds its context value whenever a toast is added or
+  // removed, and `t` rebinds on a language switch. Hold the latest pair in a
+  // ref so the returned `success` / `error` keep a STABLE identity across
+  // renders — callers can safely spread them into dependency arrays or hand
+  // them to memoised children without triggering needless re-runs — while
+  // still dispatching through the current providers.
+  const latest = useRef({ toast, t });
+  latest.current = { toast, t };
+
+  return useMemo(
+    () => ({
+      success(key: string, fallback: string, vars?: Record<string, unknown>) {
+        const { toast, t } = latest.current;
+        toast.success(t(key, { defaultValue: fallback, ...(vars ?? {}) }));
+      },
+      error(
+        err: unknown,
+        key = 'toast.common.error',
+        fallback = 'Something went wrong',
+      ) {
+        const { toast, t } = latest.current;
+        toast.error(t(key, { defaultValue: fallback }), errorDetail(err));
+      },
+    }),
+    [],
+  );
 }
