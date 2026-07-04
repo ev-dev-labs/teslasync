@@ -224,19 +224,40 @@ const FALLBACK: ActivityVisual = {
 };
 
 /**
+ * Own-property lookup into REGISTRY.
+ *
+ * REGISTRY is a plain object literal, so it inherits `Object.prototype`
+ * members (`toString`, `constructor`, `hasOwnProperty`, `valueOf`,
+ * `__proto__`, …). A bare `REGISTRY[key]` truthy check would resolve those
+ * inherited functions for any action that happens to share one of those
+ * names — returning a `Function`/`Object.prototype` masquerading as an
+ * `ActivityVisual` and crashing consumers that read `.icon`/`.color` off it
+ * (React renders `<undefined />`). Restricting lookups to the registry's own
+ * keys makes such actions fall through to FALLBACK like any other unknown.
+ */
+function lookup(key: string): ActivityVisual | undefined {
+  return Object.prototype.hasOwnProperty.call(REGISTRY, key)
+    ? REGISTRY[key]
+    : undefined;
+}
+
+/**
  * Resolves an action string to its visual descriptor, falling back to
  * progressively shorter prefixes. `vehicle.command.wake` matches first;
  * if absent, `vehicle.command`, then `vehicle`, then the generic fallback.
  */
-export function getActivityVisual(action: string): ActivityVisual {
+export function getActivityVisual(action: string | null | undefined): ActivityVisual {
   if (!action) return FALLBACK;
   const normalized = action.trim();
-  if (REGISTRY[normalized]) return REGISTRY[normalized];
+  if (!normalized) return FALLBACK;
+
+  const exact = lookup(normalized);
+  if (exact) return exact;
 
   const parts = normalized.split('.');
   for (let i = parts.length - 1; i > 0; i--) {
-    const prefix = parts.slice(0, i).join('.');
-    if (REGISTRY[prefix]) return REGISTRY[prefix];
+    const match = lookup(parts.slice(0, i).join('.'));
+    if (match) return match;
   }
   return FALLBACK;
 }
