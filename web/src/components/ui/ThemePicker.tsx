@@ -118,7 +118,7 @@ export function ThemePicker({
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.displayMode', 'Display Mode')}
             </p>
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-xs text-[var(--text-muted)]">
               {t('theme.modeCount', '{{count}} modes', { count: modeCount })}
             </span>
           </div>
@@ -137,7 +137,7 @@ export function ThemePicker({
             )}
             {groupedModes.map(([cat, items]) => (
               <div key={cat}>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   {cat} <span className="font-normal text-[var(--text-muted)]">({items.length})</span>
                 </p>
                 <div className={cn('grid gap-3', modeGridCols)}>
