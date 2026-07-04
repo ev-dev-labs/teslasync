@@ -7,7 +7,7 @@
  * data-bound section owns its loading / error / empty state independently.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,13 +20,13 @@ import { GlassPanel, Badge, Button, Pagination, PanelTitle, Text, Caption } from
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+import { RangePicker, VehicleSelect, type RangePickerValue } from '@/components/forms';
 import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai/AISoftwareUpdateChangelogSummarizer';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
-import { useUrlNumber } from '@/hooks/useUrlState';
+import { useUrlNumber, useUrlBatch } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { neonColorMap } from '@/lib/tokens';
@@ -73,7 +73,8 @@ export default function SoftwareUpdatesPage() {
 
   const { vehicleId, vehicles } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
-  const { start, end, setRange } = useRangeState({
+  const setUrl = useUrlBatch();
+  const { start, end } = useRangeState({
     persistKey: 'software-updates.range',
     defaultPresetId: 'all',
   });
@@ -164,21 +165,35 @@ export default function SoftwareUpdatesPage() {
       ? (page - 1) * PAGE_SIZE + updates.length
       : page * PAGE_SIZE + 1;
 
+  // Reset pagination to page 1 whenever the range changes, writing the range
+  // AND the page in a SINGLE navigation. Two separate URL setters (setRange +
+  // setPage) race under react-router v6: both callbacks read the same params
+  // snapshot, so the second setSearchParams(replace) discards the first — a
+  // range change made while on page ≥ 2 silently reverted the range. Batching
+  // via useUrlBatch is the same fix documented in useUrlState.ts.
+  const handleRangeChange = useCallback(
+    (r: RangePickerValue) => {
+      setUrl({ from: r.start, to: r.end, page: null });
+    },
+    [setUrl],
+  );
+
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const actions = (
     <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
       <VehicleSelect />
       <RangePicker
         value={{ start, end }}
-        onChange={(r) => {
-          setRange(r);
-          if (page !== 1) setPage(1);
-        }}
+        onChange={handleRangeChange}
         align="end"
         triggerTestId="software-updates-range"
       />
       <Button
         variant="ghost"
-        onClick={() => refetch()}
+        onClick={handleRetry}
         aria-label={t('common.refresh', 'Refresh')}
       >
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
@@ -219,7 +234,7 @@ export default function SoftwareUpdatesPage() {
             {isLoading ? (
               <Skeleton height={224} />
             ) : isError ? (
-              <QueryError error={error} onRetry={() => refetch()} />
+              <QueryError error={error} onRetry={handleRetry} />
             ) : cadence.length === 0 ? (
               <EmptyState
                 icon={<BarChart3 className="h-8 w-8" />}
@@ -238,7 +253,7 @@ export default function SoftwareUpdatesPage() {
             {isLoading ? (
               <Skeleton height={160} />
             ) : isError ? (
-              <QueryError error={error} onRetry={() => refetch()} />
+              <QueryError error={error} onRetry={handleRetry} />
             ) : totalUpdates === 0 ? (
               <EmptyState
                 icon={<ListChecks className="h-8 w-8" />}
@@ -268,7 +283,7 @@ export default function SoftwareUpdatesPage() {
               {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
             </div>
           ) : isError ? (
-            <QueryError error={error} onRetry={() => refetch()} />
+            <QueryError error={error} onRetry={handleRetry} />
           ) : updates.length === 0 ? (
             <EmptyState
               icon={<Smartphone className="h-12 w-12" />}
