@@ -24,9 +24,11 @@
 //	h := apiaihydrators.NewFromSearcher(fake)
 //
 // Methods record which corpus was invoked via the CallLog map keyed
-// by the same name used in handler.go's run() helper
-// ("vehicles", "drives", "charging", ...) so tests can assert which
-// corpora the handler chose to fan out to.
+// by the same lowercase name handler.go's run() helper uses — the
+// singular search.SearchType* values ("vehicle", "drive", "charging",
+// "alert", "notification", "geofence", "automation", "location",
+// "trip") — so tests can assert which corpora the handler chose to
+// fan out to.
 package searchtest
 
 import (
@@ -38,10 +40,15 @@ import (
 
 // FakeSearcher is an in-memory implementation of search.Searcher.
 // Each Search* method returns whatever was preloaded into Hits /
-// Errs keyed by the lowercased call name ("vehicles", "drives",
-// "charging", "alerts", "notifications", "geofences",
-// "automations", "locations", "trips"). The empty-string key is
-// the catch-all default.
+// Errs keyed by the singular search.SearchType* value its corpus
+// uses ("vehicle", "drive", "charging", "alert", "notification",
+// "geofence", "automation", "location", "trip").
+//
+// Resolution precedence for a corpus name: a corpus-specific non-nil
+// Errs entry wins, then a corpus-specific Hits entry (even an
+// explicit nil slice, so a test can preload a deliberate empty
+// result), then the empty-string catch-all — Errs[""] then Hits[""]
+// — which lets a test preload one default that every corpus returns.
 type FakeSearcher struct {
 	mu      sync.Mutex
 	Hits    map[string][]search.SearchHit
@@ -65,13 +72,23 @@ func (f *FakeSearcher) record(name string) {
 	f.CallLog[name]++
 }
 
+// lookup resolves the hits/error for a corpus using the precedence
+// documented on FakeSearcher: a corpus-specific non-nil error wins,
+// then corpus-specific hits (even an explicit nil slice), then the
+// empty-string catch-all error, then the empty-string catch-all hits.
 func (f *FakeSearcher) lookup(name string) ([]search.SearchHit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if err, ok := f.Errs[name]; ok && err != nil {
 		return nil, err
 	}
-	return f.Hits[name], nil
+	if hits, ok := f.Hits[name]; ok {
+		return hits, nil
+	}
+	if err, ok := f.Errs[""]; ok && err != nil {
+		return nil, err
+	}
+	return f.Hits[""], nil
 }
 
 func (f *FakeSearcher) SearchVehicles(_ context.Context, _ string, _ int64, _ int) ([]search.SearchHit, error) {
