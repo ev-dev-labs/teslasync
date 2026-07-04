@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { History } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Text, Badge, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, Badge, DataTable, useSortToggle, type Column } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -21,9 +21,37 @@ interface GasPriceHistoryTableProps {
 export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+  const { sortKey, sortDir, onSort } = useSortToggle('effective_from', 'desc');
 
   const { data, isLoading, isError, error, refetch } = query;
   const rows = data ?? [];
+
+  // The columns advertise themselves as sortable, so the parent MUST own the
+  // sort state and hand a pre-sorted array back to <DataTable> — the table
+  // itself is presentational and only fires `onSort`, it never reorders rows.
+  // Sorting a defensive copy keeps the query's cached array immutable, and
+  // every accessor is null-guarded so one malformed record can't scramble the
+  // whole view.
+  const sortedRows = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      switch (sortKey) {
+        case 'effective_from': {
+          const ta = Date.parse(a.effective_from);
+          const tb = Date.parse(b.effective_from);
+          return ((Number.isNaN(ta) ? 0 : ta) - (Number.isNaN(tb) ? 0 : tb)) * dir;
+        }
+        case 'price_per_unit':
+          return ((a.price_per_unit ?? 0) - (b.price_per_unit ?? 0)) * dir;
+        case 'unit':
+          return (a.unit ?? '').localeCompare(b.unit ?? '') * dir;
+        case 'efficiency_mpg':
+          return ((a.efficiency_mpg ?? 0) - (b.efficiency_mpg ?? 0)) * dir;
+        default:
+          return 0;
+      }
+    });
+  }, [rows, sortKey, sortDir]);
 
   const columns = useMemo<Column<GasPriceHistory>[]>(
     () => [
@@ -102,8 +130,11 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
         <DataTable
           tableId="admin:gas-price-history"
           columns={columns}
-          data={rows}
+          data={sortedRows}
           keyExtractor={(r) => r.id}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={onSort}
           emptyMessage={t('gas.noHistoryRows', 'No price history recorded yet.')}
           pagination
         />
