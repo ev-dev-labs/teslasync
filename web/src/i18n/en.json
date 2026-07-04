@@ -2839,7 +2839,15 @@
       "hashInputLabel": "Text to hash",
       "hashPlaceholder": "Enter text to hash...",
       "hashInsecureContext": "SHA-256 requires a secure context (HTTPS or localhost).",
-      "hashError": "Could not compute hash."
+      "hashError": "Could not compute hash.",
+      "vin_mfr": "Manufacturer",
+      "vin_model": "Model",
+      "vin_drive": "Drive",
+      "vin_year": "Year",
+      "vin_plant": "Plant",
+      "vin_serial": "Serial",
+      "vin_results": "Decoded VIN",
+      "vin_hint": "Enter at least 11 characters to decode a VIN"
     },
     "searchTools": "Search tools...",
     "noToolsFound": "No tools match your search",
