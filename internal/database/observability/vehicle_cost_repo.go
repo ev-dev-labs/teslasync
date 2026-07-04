@@ -48,7 +48,7 @@ type VehicleCostReport struct {
 // estimate not a measurement to avoid a per-call `pg_total_relation_size`
 // scan; the admin UI labels it accordingly.
 func (r *IngestXRayRepo) VehicleCostReport(ctx context.Context, since time.Time, limit int) (*VehicleCostReport, error) {
-	if r == nil || r.pool == nil {
+	if r == nil || r.exec == nil {
 		return nil, fmt.Errorf("database: VehicleCostReport: nil repo or pool")
 	}
 	if limit <= 0 {
@@ -90,7 +90,7 @@ SELECT a.vehicle_id,
  ORDER BY a.row_count DESC
  LIMIT $2`
 
-	rows, err := r.pool.Query(ctx, sql, since, limit)
+	rows, err := r.exec.Query(ctx, sql, since, limit)
 	if err != nil {
 		// Older installations might not have signal_log_failures.
 		// Surface the report without DLQ counts rather than failing
@@ -147,7 +147,7 @@ SELECT a.vehicle_id,
   LEFT JOIN vehicles v ON v.id = a.vehicle_id
  ORDER BY a.row_count DESC
  LIMIT $2`
-	rows, err := r.pool.Query(ctx, sql, since, limit)
+	rows, err := r.exec.Query(ctx, sql, since, limit)
 	if err != nil {
 		return nil, fmt.Errorf("database: vehicleCostReportNoDLQ: query: %w", err)
 	}
@@ -165,5 +165,8 @@ SELECT a.vehicle_id,
 		rep.Totals.TotalBytesEst += row.SignalBytesEst
 		rep.Totals.TotalRate24h += row.IngestRate24h
 	}
-	return rep, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("database: vehicleCostReportNoDLQ: rows: %w", err)
+	}
+	return rep, nil
 }

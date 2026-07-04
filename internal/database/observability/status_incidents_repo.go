@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -58,12 +59,13 @@ const (
 
 // Sentinel errors so handlers can map repo failures to HTTP statuses.
 var (
-	ErrIncidentInvalidSeverity = errors.New("status_incidents: invalid severity")
-	ErrIncidentInvalidStatus   = errors.New("status_incidents: invalid status")
-	ErrIncidentInvalidSource   = errors.New("status_incidents: invalid source")
-	ErrIncidentTitleLength     = errors.New("status_incidents: title length out of bounds")
-	ErrIncidentMessageLength   = errors.New("status_incidents: message length out of bounds")
-	ErrIncidentNotFound        = errors.New("status_incidents: not found")
+	ErrIncidentInvalidSeverity  = errors.New("status_incidents: invalid severity")
+	ErrIncidentInvalidStatus    = errors.New("status_incidents: invalid status")
+	ErrIncidentInvalidSource    = errors.New("status_incidents: invalid source")
+	ErrIncidentTitleLength      = errors.New("status_incidents: title length out of bounds")
+	ErrIncidentMessageLength    = errors.New("status_incidents: message length out of bounds")
+	ErrIncidentNotFound         = errors.New("status_incidents: not found")
+	ErrIncidentRepoUnconfigured = errors.New("status_incidents: repo not configured")
 )
 
 // Incident is the canonical row shape. JSON tags align with the
@@ -122,12 +124,44 @@ type IncidentPatch struct {
 
 // IncidentRepo wires the queries to the shared pool.
 type IncidentRepo struct {
-	db *database.DB
+	exec database.DBTX
 }
 
-// NewIncidentRepo wires a repository against the shared pool.
+// NewIncidentRepo wires a repository against the shared pool. A nil db
+// (or a db with a nil pool) yields a repo whose methods return
+// ErrIncidentRepoUnconfigured rather than dereferencing a nil pool.
 func NewIncidentRepo(db *database.DB) *IncidentRepo {
-	return &IncidentRepo{db: db}
+	var exec database.DBTX
+	if db != nil && db.Pool != nil {
+		exec = db.Pool
+	}
+	return &IncidentRepo{exec: exec}
+}
+
+// ready reports whether the repo has a usable execution seam. It is the
+// single nil-guard used by every method so a mis-wired repo returns a
+// clean error instead of panicking on a nil pool.
+func (r *IncidentRepo) ready() error {
+	if r == nil || r.exec == nil {
+		return ErrIncidentRepoUnconfigured
+	}
+	return nil
+}
+
+// capText truncates s to at most maxBytes bytes without splitting a
+// multi-byte UTF-8 rune. A naive s[:maxBytes] slice can cut a rune in
+// half, producing invalid UTF-8 that PostgreSQL rejects on write; this
+// backs off to the previous rune boundary. maxBytes <= 0 or an s that
+// already fits is returned unchanged.
+func capText(s string, maxBytes int) string {
+	if maxBytes <= 0 || len(s) <= maxBytes {
+		return s
+	}
+	truncated := s[:maxBytes]
+	for len(truncated) > 0 && !utf8.ValidString(truncated) {
+		truncated = truncated[:len(truncated)-1]
+	}
+	return truncated
 }
 
 // ValidateIncidentSeverity normalises and validates a severity string.
@@ -177,6 +211,9 @@ func validateIncidentTitle(t string) error {
 // (`InitialMessage`, defaulting to "Incident opened.") so the timeline
 // is never empty.
 func (r *IncidentRepo) Insert(ctx context.Context, in IncidentInsert) (Incident, error) {
+	if err := r.ready(); err != nil {
+		return Incident{}, err
+	}
 	title := strings.TrimSpace(in.Title)
 	if err := validateIncidentTitle(title); err != nil {
 		return Incident{}, err
@@ -206,7 +243,7 @@ func (r *IncidentRepo) Insert(ctx context.Context, in IncidentInsert) (Incident,
 		return Incident{}, err
 	}
 	if len(in.Description) > IncidentDescriptionMaxLen {
-		in.Description = in.Description[:IncidentDescriptionMaxLen]
+		in.Description = capText(in.Description, IncidentDescriptionMaxLen)
 	}
 	startedAt := in.StartedAt
 	if startedAt.IsZero() {
@@ -220,7 +257,7 @@ func (r *IncidentRepo) Insert(ctx context.Context, in IncidentInsert) (Incident,
 		initialMsg = "Incident opened."
 	}
 	if len(initialMsg) > IncidentMessageMaxLen {
-		initialMsg = initialMsg[:IncidentMessageMaxLen]
+		initialMsg = capText(initialMsg, IncidentMessageMaxLen)
 	}
 	updates := []IncidentUpdate{{
 		At:      startedAt,
@@ -242,7 +279,7 @@ func (r *IncidentRepo) Insert(ctx context.Context, in IncidentInsert) (Incident,
 		createdBy = in.CreatedBy
 	}
 
-	row := r.db.Pool.QueryRow(ctx, `
+	row := r.exec.QueryRow(ctx, `
 		INSERT INTO status_incidents (
 			title, description, severity, status, source,
 			affected_components, updates, started_at, created_by, auto_dedupe_key
@@ -271,7 +308,10 @@ func (r *IncidentRepo) Insert(ctx context.Context, in IncidentInsert) (Incident,
 // Get fetches a single incident by ID. Returns ErrIncidentNotFound
 // when the row doesn't exist.
 func (r *IncidentRepo) Get(ctx context.Context, id int64) (Incident, error) {
-	row := r.db.Pool.QueryRow(ctx, `
+	if err := r.ready(); err != nil {
+		return Incident{}, err
+	}
+	row := r.exec.QueryRow(ctx, `
 		SELECT id, title, description, severity, status, source,
 		       affected_components, updates, started_at, resolved_at,
 		       created_at, updated_at, COALESCE(created_by, ''),
@@ -297,6 +337,9 @@ type IncidentListParams struct {
 // List returns incidents ordered by recency (started_at desc). When
 // ActiveOnly is true, resolved_at must be NULL. Limit defaults to 50.
 func (r *IncidentRepo) List(ctx context.Context, p IncidentListParams) ([]Incident, error) {
+	if err := r.ready(); err != nil {
+		return nil, err
+	}
 	limit := p.Limit
 	if limit <= 0 || limit > 200 {
 		limit = 50
@@ -311,7 +354,7 @@ func (r *IncidentRepo) List(ctx context.Context, p IncidentListParams) ([]Incide
 		q += ` WHERE resolved_at IS NULL`
 	}
 	q += ` ORDER BY started_at DESC LIMIT $1`
-	rows, err := r.db.Pool.Query(ctx, q, limit)
+	rows, err := r.exec.Query(ctx, q, limit)
 	if err != nil {
 		return nil, fmt.Errorf("status_incidents: list: %w", err)
 	}
@@ -331,10 +374,13 @@ func (r *IncidentRepo) List(ctx context.Context, p IncidentListParams) ([]Incide
 // given auto_dedupe_key, used by the auto-detector to avoid creating
 // a new row every health-monitor tick.
 func (r *IncidentRepo) FindByDedupeKey(ctx context.Context, key string) (Incident, error) {
+	if err := r.ready(); err != nil {
+		return Incident{}, err
+	}
 	if key == "" {
 		return Incident{}, ErrIncidentNotFound
 	}
-	row := r.db.Pool.QueryRow(ctx, `
+	row := r.exec.QueryRow(ctx, `
 		SELECT id, title, description, severity, status, source,
 		       affected_components, updates, started_at, resolved_at,
 		       created_at, updated_at, COALESCE(created_by, ''),
@@ -370,7 +416,7 @@ func (r *IncidentRepo) Patch(ctx context.Context, id int64, p IncidentPatch, aut
 	if p.Description != nil {
 		d := *p.Description
 		if len(d) > IncidentDescriptionMaxLen {
-			d = d[:IncidentDescriptionMaxLen]
+			d = capText(d, IncidentDescriptionMaxLen)
 		}
 		current.Description = d
 	}
@@ -414,7 +460,7 @@ func (r *IncidentRepo) Patch(ctx context.Context, id int64, p IncidentPatch, aut
 	if err != nil {
 		return Incident{}, fmt.Errorf("status_incidents: marshal updates: %w", err)
 	}
-	row := r.db.Pool.QueryRow(ctx, `
+	row := r.exec.QueryRow(ctx, `
 		UPDATE status_incidents SET
 			title = $2, description = $3, severity = $4, status = $5,
 			affected_components = $6, updates = $7, resolved_at = $8,
@@ -463,7 +509,7 @@ func (r *IncidentRepo) AppendUpdate(ctx context.Context, id int64, message, stat
 	} else if current.ResolvedAt != nil {
 		resolvedAt = *current.ResolvedAt
 	}
-	row := r.db.Pool.QueryRow(ctx, `
+	row := r.exec.QueryRow(ctx, `
 		UPDATE status_incidents SET
 			status = $2, updates = $3, resolved_at = $4, updated_at = NOW()
 		 WHERE id = $1
@@ -479,7 +525,10 @@ func (r *IncidentRepo) AppendUpdate(ctx context.Context, id int64, message, stat
 // Delete removes an incident outright. Used only by the admin "purge"
 // path; the SPA never exposes a hard-delete button (resolve instead).
 func (r *IncidentRepo) Delete(ctx context.Context, id int64) error {
-	tag, err := r.db.Pool.Exec(ctx, `DELETE FROM status_incidents WHERE id = $1`, id)
+	if err := r.ready(); err != nil {
+		return err
+	}
+	tag, err := r.exec.Exec(ctx, `DELETE FROM status_incidents WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("status_incidents: delete: %w", err)
 	}
