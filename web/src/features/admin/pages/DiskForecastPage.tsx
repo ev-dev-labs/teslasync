@@ -260,6 +260,13 @@ export default function DiskForecastPage() {
             Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} height={92} className="rounded-xl" />
             ))
+          ) : showError ? (
+            // A genuine (non-503) fetch failure must not surface fabricated
+            // zero totals — mirror the error state the sections below own so
+            // the whole band reads as "failed", not "0 B on disk".
+            <div className="col-span-full">
+              <QueryError error={query.error} onRetry={retry} />
+            </div>
           ) : (
             <>
               <MetricCard
