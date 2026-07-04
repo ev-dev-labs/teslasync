@@ -1,13 +1,32 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { request } from '../client';
 import { useToast } from '@/components/feedback/Toast';
 import { vehicleKeys } from './useVehicles';
 import { isTeslaAuthExpiredError } from '@/lib/resilience';
 import { queueTeslaMutation } from '@/lib/teslaAuthRecovery';
 
+/**
+ * Result of `POST /vehicles/{id}/command`.
+ *
+ * The backend command handler answers HTTP 200 in BOTH the success and
+ * failure cases, discriminated by `success`:
+ *   • success → `{ success: true,  result: "success" }`
+ *   • failure → `{ success: false, error:  "<reason>" }`
+ *
+ * Every field is optional so a 204 / malformed body decodes into an
+ * object we can safely read without throwing. `message` is accepted for
+ * forward-compatibility with a future handler revision that returns a
+ * friendlier human string; today the failure reason lives in `error`.
+ */
 interface CommandResult {
-  success: boolean;
-  message: string;
+  success?: boolean;
+  /** Present on the success path (currently the literal `"success"`). */
+  result?: string;
+  /** Present on the failure path — the real reason the command was rejected. */
+  error?: string;
+  /** Optional friendly message (not currently emitted by the backend). */
+  message?: string;
 }
 
 interface SendCommandParams {
@@ -30,6 +49,7 @@ interface SendCommandParams {
 export function useVehicleCommand() {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { t } = useTranslation();
 
   const mutation = useMutation({
     mutationFn: ({ vehicleId, command, params }: SendCommandParams) =>
@@ -43,10 +63,14 @@ export function useVehicleCommand() {
       queryClient.invalidateQueries({ queryKey: ['command-latest', vehicleId] });
       queryClient.invalidateQueries({ queryKey: ['command-history', String(vehicleId)] });
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
-      if (data.success) {
-        toast.success(data.message || 'Command sent successfully');
+      if (data?.success) {
+        toast.success(data.message || t('commands.toast.success', 'Command sent successfully'));
       } else {
-        toast.error(data.message || 'Command failed');
+        // Surface the backend's `error` (or a future `message`) so the user
+        // learns WHY the command was rejected instead of a generic failure.
+        toast.error(
+          data?.error || data?.message || t('commands.toast.failed', 'Command failed'),
+        );
       }
     },
     onError: (err: Error, variables) => {
@@ -58,7 +82,9 @@ export function useVehicleCommand() {
         // <TeslaReauthBanner> is the user-facing recovery surface.
         return;
       }
-      toast.error(`Command failed: ${err.message}`);
+      toast.error(
+        t('commands.toast.error', 'Command failed: {{message}}', { message: err.message }),
+      );
     },
   });
 
