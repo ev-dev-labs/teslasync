@@ -21,11 +21,11 @@ import (
 // keeps queries simple — there's only one user today, all rows are returned in
 // chronological order so the UI can pick the slice it needs client-side.
 type ChartAnnotationRepo struct {
-	db *database.DB
+	pool adminPool
 }
 
 func NewChartAnnotationRepo(db *database.DB) *ChartAnnotationRepo {
-	return &ChartAnnotationRepo{db: db}
+	return &ChartAnnotationRepo{pool: db.Pool}
 }
 
 // ChartAnnotationFilter narrows a List call to a vehicle, time window, and/or
@@ -55,7 +55,7 @@ func (r *ChartAnnotationRepo) List(ctx context.Context, f ChartAnnotationFilter)
 		  AND ($4::text = '' OR scope = '{}'::text[] OR $4 = ANY(scope))
 		ORDER BY occurred_at DESC, id DESC`
 
-	rows, err := r.db.Pool.Query(ctx, query, f.VehicleID, f.From, f.To, f.Scope)
+	rows, err := r.pool.Query(ctx, query, f.VehicleID, f.From, f.To, f.Scope)
 	if err != nil {
 		return nil, fmt.Errorf("chart_annotations list query: %w", err)
 	}
@@ -88,7 +88,7 @@ func (r *ChartAnnotationRepo) GetByID(ctx context.Context, id int64) (*dashboard
 		WHERE id = $1`
 
 	a := &dashboardmodel.ChartAnnotation{}
-	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&a.ID, &a.UserID, &a.VehicleID, &a.OccurredAt, &a.Category,
 		&a.Title, &a.Description, &a.Scope, &a.Color,
 		&a.CreatedAt, &a.UpdatedAt,
@@ -115,7 +115,7 @@ func (r *ChartAnnotationRepo) Create(ctx context.Context, a *dashboardmodel.Char
 	if scope == nil {
 		scope = []string{}
 	}
-	if err := r.db.Pool.QueryRow(ctx, query,
+	if err := r.pool.QueryRow(ctx, query,
 		a.UserID, a.VehicleID, a.OccurredAt, string(a.Category),
 		a.Title, a.Description, scope, a.Color, now,
 	).Scan(&a.ID, &a.CreatedAt, &a.UpdatedAt); err != nil {
@@ -193,7 +193,7 @@ func (r *ChartAnnotationRepo) Update(ctx context.Context, id int64, patch ChartA
 	if scope == nil {
 		scope = []string{}
 	}
-	tag, execErr := r.db.Pool.Exec(ctx, query,
+	tag, execErr := r.pool.Exec(ctx, query,
 		id, existing.OccurredAt, string(existing.Category), existing.Title,
 		existing.Description, scope, existing.Color, now,
 	)
@@ -209,7 +209,7 @@ func (r *ChartAnnotationRepo) Update(ctx context.Context, id int64, patch ChartA
 // Delete removes an annotation by id. Returns pgx.ErrNoRows when the row was
 // already gone so the handler can return 404 cleanly.
 func (r *ChartAnnotationRepo) Delete(ctx context.Context, id int64) error {
-	tag, err := r.db.Pool.Exec(ctx, `DELETE FROM chart_annotations WHERE id = $1`, id)
+	tag, err := r.pool.Exec(ctx, `DELETE FROM chart_annotations WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("chart_annotations delete: %w", err)
 	}

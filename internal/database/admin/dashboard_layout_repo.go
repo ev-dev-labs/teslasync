@@ -21,11 +21,11 @@ import (
 // currently selected vehicle. NULL on either side means "any" — see model
 // docs for the global-vs-pinned semantics.
 type DashboardLayoutRepo struct {
-	db *database.DB
+	pool adminPool
 }
 
 func NewDashboardLayoutRepo(db *database.DB) *DashboardLayoutRepo {
-	return &DashboardLayoutRepo{db: db}
+	return &DashboardLayoutRepo{pool: db.Pool}
 }
 
 // List returns every layout for the user, optionally filtered to a single
@@ -42,7 +42,7 @@ func (r *DashboardLayoutRepo) List(ctx context.Context, userID *int64, vehicleID
 		  AND ($2::bigint IS NULL OR vehicle_id IS NULL OR vehicle_id = $2)
 		ORDER BY is_default DESC, name ASC, id ASC`
 
-	rows, err := r.db.Pool.Query(ctx, query, userID, vehicleID)
+	rows, err := r.pool.Query(ctx, query, userID, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("dashboard_layouts list query: %w", err)
 	}
@@ -70,7 +70,7 @@ func (r *DashboardLayoutRepo) GetByID(ctx context.Context, id int64) (*dashboard
 		WHERE id = $1`
 
 	l := &dashboardmodel.DashboardLayout{}
-	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&l.ID, &l.UserID, &l.VehicleID, &l.Name, &l.IsDefault, &l.Layout,
 		&l.CreatedAt, &l.UpdatedAt,
 	)
@@ -92,7 +92,7 @@ func (r *DashboardLayoutRepo) Create(ctx context.Context, l *dashboardmodel.Dash
 		RETURNING id, created_at, updated_at`
 
 	now := time.Now().UTC()
-	if err := r.db.Pool.QueryRow(ctx, query,
+	if err := r.pool.QueryRow(ctx, query,
 		l.UserID, l.VehicleID, l.Name, l.IsDefault, l.Layout, now,
 	).Scan(&l.ID, &l.CreatedAt, &l.UpdatedAt); err != nil {
 		return fmt.Errorf("dashboard_layouts create: %w", err)
@@ -110,7 +110,7 @@ func (r *DashboardLayoutRepo) Update(ctx context.Context, id int64, name string,
 		WHERE id = $1`
 
 	now := time.Now().UTC()
-	tag, err := r.db.Pool.Exec(ctx, query, id, name, layout, isDefault, now)
+	tag, err := r.pool.Exec(ctx, query, id, name, layout, isDefault, now)
 	if err != nil {
 		return fmt.Errorf("dashboard_layouts update: %w", err)
 	}
@@ -123,7 +123,7 @@ func (r *DashboardLayoutRepo) Update(ctx context.Context, id int64, name string,
 // Delete removes a layout by id. Returns pgx.ErrNoRows if the row was
 // already gone (so the handler can return 404 cleanly).
 func (r *DashboardLayoutRepo) Delete(ctx context.Context, id int64) error {
-	tag, err := r.db.Pool.Exec(ctx, `DELETE FROM dashboard_layouts WHERE id = $1`, id)
+	tag, err := r.pool.Exec(ctx, `DELETE FROM dashboard_layouts WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("dashboard_layouts delete: %w", err)
 	}
@@ -138,7 +138,7 @@ func (r *DashboardLayoutRepo) Delete(ctx context.Context, id int64) error {
 // layout in the same scope. Wraps both writes in a transaction so a partial
 // failure can never leave two rows flagged as default.
 func (r *DashboardLayoutRepo) SetDefault(ctx context.Context, id int64) error {
-	tx, err := r.db.Pool.Begin(ctx)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("dashboard_layouts set_default begin: %w", err)
 	}
