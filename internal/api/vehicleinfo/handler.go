@@ -1,6 +1,7 @@
 package vehicleinfo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,17 +12,46 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 
 	"github.com/rs/zerolog/log"
 )
 
+// teslaInfoClient is the slice of *tesla.Client the handler needs to fetch
+// per-vehicle account metadata from Tesla's Fleet API. Depending on the
+// interface (rather than the concrete client) lets the unit tests inject a
+// fake without a live Fleet API connection or partner token.
+type teslaInfoClient interface {
+	HasValidToken() bool
+	GetMobileEnabled(ctx context.Context, vin string) ([]byte, int, error)
+	GetVehicleOptions(ctx context.Context, vin string) ([]byte, int, error)
+	GetVehicleSpecs(ctx context.Context, vin string) ([]byte, int, error)
+	GetSubscriptionEligibility(ctx context.Context, vin string) ([]byte, int, error)
+	GetUpgradeEligibility(ctx context.Context, vin string) ([]byte, int, error)
+	GetWarrantyDetails(ctx context.Context) ([]byte, int, error)
+}
+
+// userConfigStore is the subset of *tesladb.TeslaUserConfigRepo used to read
+// and persist the stored metadata blobs.
+type userConfigStore interface {
+	GetByType(ctx context.Context, configType string) (*teslamodel.TeslaUserConfig, error)
+	Upsert(ctx context.Context, configType, data string) error
+}
+
+// vehicleFinder is the subset of *vehicledb.VehicleRepo used to resolve a
+// vehicle id to its VIN.
+type vehicleFinder interface {
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+}
+
 // Handler serves per-vehicle info stored in tesla_user_config:
 // mobile_enabled, option codes, and vehicle specs.
 type Handler struct {
-	teslaClient *tesla.Client
-	configRepo  *tesladb.TeslaUserConfigRepo
-	vehicleRepo *vehicledb.VehicleRepo
+	teslaClient teslaInfoClient
+	configRepo  userConfigStore
+	vehicleRepo vehicleFinder
 }
 
 // NewHandler wires Tesla account metadata dependencies.
@@ -39,20 +69,48 @@ type vehicleInfoEnvelope struct {
 	FetchedAt *string         `json:"fetched_at"`
 }
 
-// resolveVIN looks up the vehicle VIN from the vehicleID URL param.
-func (h *Handler) resolveVIN(r *http.Request) (string, error) {
+// resolveVIN maps the {vehicleID} URL param to the vehicle's VIN and the
+// HTTP status a caller should surface on failure:
+//
+//	400 — the param is missing or non-numeric (client error)
+//	404 — no vehicle with that id exists
+//	500 — the lookup itself failed (database error)
+//
+// On success it returns the VIN, http.StatusOK, and a nil error.
+func (h *Handler) resolveVIN(r *http.Request) (string, int, error) {
 	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		return "", fmt.Errorf("invalid vehicle ID: %w", err)
+		return "", http.StatusBadRequest, fmt.Errorf("invalid vehicle ID: %w", err)
 	}
 	vehicle, err := h.vehicleRepo.GetByID(r.Context(), vehicleID)
 	if err != nil {
-		return "", fmt.Errorf("fetch vehicle: %w", err)
+		return "", http.StatusInternalServerError, fmt.Errorf("fetch vehicle %d: %w", vehicleID, err)
 	}
 	if vehicle == nil {
-		return "", fmt.Errorf("vehicle not found")
+		return "", http.StatusNotFound, fmt.Errorf("vehicle %d not found", vehicleID)
 	}
-	return vehicle.VIN, nil
+	return vehicle.VIN, http.StatusOK, nil
+}
+
+// resolveVINOrWriteError resolves the VIN or writes the appropriate error
+// response, returning ok=false when the caller should stop. Server-side
+// failures are logged with the underlying error but surfaced to the client
+// as a generic message so internal details never leak over the wire.
+func (h *Handler) resolveVINOrWriteError(w http.ResponseWriter, r *http.Request) (string, bool) {
+	vin, status, err := h.resolveVIN(r)
+	if err != nil {
+		switch status {
+		case http.StatusNotFound:
+			httpx.WriteError(w, status, "vehicle not found")
+		case http.StatusInternalServerError:
+			log.Error().Err(err).Msg("failed to resolve vehicle for vehicle-info endpoint")
+			httpx.WriteError(w, status, "failed to resolve vehicle")
+		default:
+			httpx.WriteError(w, status, "invalid vehicle ID")
+		}
+		return "", false
+	}
+	return vin, true
 }
 
 // ---------- Mobile Enabled ----------
@@ -60,9 +118,8 @@ func (h *Handler) resolveVIN(r *http.Request) (string, error) {
 // MobileEnabled returns stored mobile_enabled status from DB.
 // GET /api/v1/vehicles/{vehicleID}/mobile-enabled
 func (h *Handler) MobileEnabled(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	h.getVehicleConfig(w, r, "mobile_enabled:"+vin)
@@ -71,9 +128,8 @@ func (h *Handler) MobileEnabled(w http.ResponseWriter, r *http.Request) {
 // RefreshMobileEnabled fetches mobile_enabled from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/mobile-enabled/refresh
 func (h *Handler) RefreshMobileEnabled(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	configKey := "mobile_enabled:" + vin
@@ -87,9 +143,8 @@ func (h *Handler) RefreshMobileEnabled(w http.ResponseWriter, r *http.Request) {
 // VehicleOptions returns stored option codes from DB.
 // GET /api/v1/vehicles/{vehicleID}/options
 func (h *Handler) VehicleOptions(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	h.getVehicleConfig(w, r, "vehicle_options:"+vin)
@@ -98,9 +153,8 @@ func (h *Handler) VehicleOptions(w http.ResponseWriter, r *http.Request) {
 // RefreshVehicleOptions fetches options from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/options/refresh
 func (h *Handler) RefreshVehicleOptions(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	configKey := "vehicle_options:" + vin
@@ -114,9 +168,8 @@ func (h *Handler) RefreshVehicleOptions(w http.ResponseWriter, r *http.Request) 
 // VehicleSpecs returns stored specs from DB.
 // GET /api/v1/vehicles/{vehicleID}/specs
 func (h *Handler) VehicleSpecs(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	h.getVehicleConfig(w, r, "vehicle_specs:"+vin)
@@ -127,9 +180,8 @@ func (h *Handler) VehicleSpecs(w http.ResponseWriter, r *http.Request) {
 // redundant calls if specs were already fetched within the last 24 hours.
 // POST /api/v1/vehicles/{vehicleID}/specs/refresh
 func (h *Handler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	configKey := "vehicle_specs:" + vin
@@ -162,9 +214,8 @@ func (h *Handler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.Request) {
 // SubscriptionEligibility returns stored subscription eligibility from DB.
 // GET /api/v1/vehicles/{vehicleID}/subscriptions
 func (h *Handler) SubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	h.getVehicleConfig(w, r, "subscriptions:"+vin)
@@ -173,9 +224,8 @@ func (h *Handler) SubscriptionEligibility(w http.ResponseWriter, r *http.Request
 // RefreshSubscriptionEligibility fetches subscription eligibility from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/subscriptions/refresh
 func (h *Handler) RefreshSubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	configKey := "subscriptions:" + vin
@@ -189,9 +239,8 @@ func (h *Handler) RefreshSubscriptionEligibility(w http.ResponseWriter, r *http.
 // UpgradeEligibility returns stored upgrade eligibility from DB.
 // GET /api/v1/vehicles/{vehicleID}/upgrades
 func (h *Handler) UpgradeEligibility(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	h.getVehicleConfig(w, r, "upgrades:"+vin)
@@ -200,9 +249,8 @@ func (h *Handler) UpgradeEligibility(w http.ResponseWriter, r *http.Request) {
 // RefreshUpgradeEligibility fetches upgrade eligibility from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/upgrades/refresh
 func (h *Handler) RefreshUpgradeEligibility(w http.ResponseWriter, r *http.Request) {
-	vin, err := h.resolveVIN(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
 		return
 	}
 	configKey := "upgrades:" + vin
@@ -292,8 +340,12 @@ func (h *Handler) refreshVehicleConfig(
 
 	data := string(envelope.Response)
 
-	// mobile_enabled returns a bare boolean (true/false) — wrap as {"enabled": <bool>}
-	if configType == "mobile_enabled" {
+	// mobile_enabled returns a bare boolean (true/false) — wrap as
+	// {"enabled": <bool>}. The empty/null check below runs AFTER this guard,
+	// so we must skip wrapping when the response is missing/null; otherwise a
+	// blank Tesla response would produce syntactically invalid JSON such as
+	// {"enabled":} that later fails to parse on read.
+	if configType == "mobile_enabled" && data != "" && data != "null" {
 		data = fmt.Sprintf(`{"enabled":%s}`, data)
 	}
 
