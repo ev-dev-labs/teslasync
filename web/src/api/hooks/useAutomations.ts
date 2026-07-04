@@ -107,8 +107,15 @@ export function useToggleAutomation() {
         body: JSON.stringify({ enabled }),
       }),
     queryKeys: [automationKeys.all],
-    updater: (prev, { id, enabled }) =>
-      prev?.map((a) => (a.id === id ? { ...a, enabled } : a)),
+    updater: (prev, { id, enabled }) => {
+      // The `['automations']` prefix also matches the object-shaped
+      // `['automations', id]` detail cache written by `useAutomation`.
+      // Guard so the optimistic `.map` only runs on the array-shaped list
+      // and non-array sibling caches are left untouched — otherwise
+      // `prev.map` throws "prev.map is not a function" and breaks the toggle.
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((a) => (a.id === id ? { ...a, enabled } : a));
+    },
     broadcast: true,
     onMutate: () => {
       // Optimistic flip already applied by the helper. Toast waits for
@@ -179,6 +186,7 @@ export function useBulkAutomationsUpdate() {
     mutationFn: (vars: { ids: number[]; op: AutomationBulkOp }) =>
       request<AutomationBulkResult>('/automations/bulk', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: vars.ids, op: vars.op }),
       }),
     onSuccess: (_data, vars) => {
@@ -215,7 +223,10 @@ export function useAutomation(id: number | string | undefined) {
   const numericId = typeof id === 'string' ? Number(id) : id;
   return useQuery({
     queryKey: automationKeys.detail(numericId!),
-    queryFn: ({ signal }) => request<AutomationFull>(`/automations/${id}`, { signal }),
+    // Fetch with the validated numeric id so the request URL, the query
+    // key, and the `enabled` guard all agree (a string like "05" resolves
+    // to the same cache key AND the same canonical `/automations/5` URL).
+    queryFn: ({ signal }) => request<AutomationFull>(`/automations/${numericId}`, { signal }),
     enabled: numericId != null && !Number.isNaN(numericId) && numericId > 0,
   });
 }
@@ -266,7 +277,7 @@ export const presetKeys = {
 };
 
 export function useAutomationPresets(category?: string) {
-  const queryParam = category ? `?category=${category}` : '';
+  const queryParam = category ? `?category=${encodeURIComponent(category)}` : '';
   return useQuery({
     queryKey: category ? presetKeys.category(category) : presetKeys.all,
     queryFn: ({ signal }) =>
@@ -278,7 +289,8 @@ export function useAutomationPresets(category?: string) {
 export function useAutomationPreset(id: string | undefined) {
   return useQuery({
     queryKey: presetKeys.detail(id!),
-    queryFn: ({ signal }) => request<AutomationPreset>(`/automations/presets/${id}`, { signal }),
+    queryFn: ({ signal }) =>
+      request<AutomationPreset>(`/automations/presets/${encodeURIComponent(id!)}`, { signal }),
     enabled: !!id,
     staleTime: STALE_TIMES.STATIC,
   });
