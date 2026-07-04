@@ -9,6 +9,64 @@ import (
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
+// Shared list-limit bounds for the Tesla energy history endpoints.
+const (
+	teslaEnergyHistoryDefaultLimit = 500
+	teslaEnergyHistoryMaxLimit     = 1000
+)
+
+const (
+	teslaEnergyHistorySelectSQL = `SELECT id, energy_site_id, period, timestamp,
+		solar_energy_wh, battery_energy_in_wh, battery_energy_out_wh,
+		grid_energy_in_wh, grid_energy_out_wh, consumer_energy_wh,
+		fetched_at
+		FROM tesla_energy_history
+		WHERE energy_site_id = $1 AND period = $2 AND timestamp >= $3 AND timestamp <= $4
+		ORDER BY timestamp ASC
+		LIMIT $5`
+
+	teslaEnergyHistoryUpsertSQL = `INSERT INTO tesla_energy_history (
+		energy_site_id, period, timestamp,
+		solar_energy_wh, battery_energy_in_wh, battery_energy_out_wh,
+		grid_energy_in_wh, grid_energy_out_wh, consumer_energy_wh,
+		fetched_at
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+	ON CONFLICT (energy_site_id, period, timestamp) DO UPDATE SET
+		solar_energy_wh = EXCLUDED.solar_energy_wh,
+		battery_energy_in_wh = EXCLUDED.battery_energy_in_wh,
+		battery_energy_out_wh = EXCLUDED.battery_energy_out_wh,
+		grid_energy_in_wh = EXCLUDED.grid_energy_in_wh,
+		grid_energy_out_wh = EXCLUDED.grid_energy_out_wh,
+		consumer_energy_wh = EXCLUDED.consumer_energy_wh,
+		fetched_at = EXCLUDED.fetched_at`
+
+	teslaEnergyBackupSelectSQL = `SELECT id, energy_site_id, period, timestamp, duration_seconds, fetched_at
+		FROM tesla_energy_backup_events
+		WHERE energy_site_id = $1 AND timestamp >= $2 AND timestamp <= $3
+		ORDER BY timestamp ASC
+		LIMIT $4`
+
+	teslaEnergyBackupUpsertSQL = `INSERT INTO tesla_energy_backup_events (
+		energy_site_id, period, timestamp, duration_seconds, fetched_at
+	) VALUES ($1,$2,$3,$4,$5)
+	ON CONFLICT (energy_site_id, period, timestamp) DO UPDATE SET
+		duration_seconds = EXCLUDED.duration_seconds,
+		fetched_at = EXCLUDED.fetched_at`
+
+	teslaEnergyWCSelectSQL = `SELECT id, energy_site_id, din, timestamp, energy_wh, fetched_at
+		FROM tesla_energy_wc_charging
+		WHERE energy_site_id = $1 AND timestamp >= $2 AND timestamp <= $3
+		ORDER BY timestamp ASC
+		LIMIT $4`
+
+	teslaEnergyWCUpsertSQL = `INSERT INTO tesla_energy_wc_charging (
+		energy_site_id, din, timestamp, energy_wh, fetched_at
+	) VALUES ($1,$2,$3,$4,$5)
+	ON CONFLICT (energy_site_id, COALESCE(din, ''), timestamp) DO UPDATE SET
+		energy_wh = EXCLUDED.energy_wh,
+		fetched_at = EXCLUDED.fetched_at`
+)
+
 // ---------------------------------------------------------------------------
 // TeslaEnergyHistoryRepo — energy measurements (kind=energy)
 // ---------------------------------------------------------------------------
@@ -19,24 +77,16 @@ type TeslaEnergyHistoryRepo struct {
 }
 
 func NewTeslaEnergyHistoryRepo(db *database.DB) *TeslaEnergyHistoryRepo {
+	if db == nil {
+		panic("energy.NewTeslaEnergyHistoryRepo: db must not be nil")
+	}
 	return &TeslaEnergyHistoryRepo{db: db}
 }
 
 // GetByRange returns energy history for a site filtered by period and date range.
 func (r *TeslaEnergyHistoryRepo) GetByRange(ctx context.Context, siteID int64, period string, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyHistory, error) {
-	if limit <= 0 || limit > 1000 {
-		limit = 500
-	}
-	query := `SELECT id, energy_site_id, period, timestamp,
-		solar_energy_wh, battery_energy_in_wh, battery_energy_out_wh,
-		grid_energy_in_wh, grid_energy_out_wh, consumer_energy_wh,
-		fetched_at
-		FROM tesla_energy_history
-		WHERE energy_site_id = $1 AND period = $2 AND timestamp >= $3 AND timestamp <= $4
-		ORDER BY timestamp ASC
-		LIMIT $5`
-
-	rows, err := r.db.Pool.Query(ctx, query, siteID, period, since, until, limit)
+	limit = clampLimit(limit, teslaEnergyHistoryDefaultLimit, teslaEnergyHistoryMaxLimit)
+	rows, err := r.db.Pool.Query(ctx, teslaEnergyHistorySelectSQL, siteID, period, since, until, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query tesla energy history: %w", err)
 	}
@@ -64,25 +114,13 @@ func (r *TeslaEnergyHistoryRepo) UpsertBatch(ctx context.Context, entries []*tes
 		return 0, nil
 	}
 
-	query := `INSERT INTO tesla_energy_history (
-		energy_site_id, period, timestamp,
-		solar_energy_wh, battery_energy_in_wh, battery_energy_out_wh,
-		grid_energy_in_wh, grid_energy_out_wh, consumer_energy_wh,
-		fetched_at
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-	ON CONFLICT (energy_site_id, period, timestamp) DO UPDATE SET
-		solar_energy_wh = EXCLUDED.solar_energy_wh,
-		battery_energy_in_wh = EXCLUDED.battery_energy_in_wh,
-		battery_energy_out_wh = EXCLUDED.battery_energy_out_wh,
-		grid_energy_in_wh = EXCLUDED.grid_energy_in_wh,
-		grid_energy_out_wh = EXCLUDED.grid_energy_out_wh,
-		consumer_energy_wh = EXCLUDED.consumer_energy_wh,
-		fetched_at = EXCLUDED.fetched_at`
-
 	now := time.Now().UTC()
 	upserted := 0
 	for _, e := range entries {
-		_, err := r.db.Pool.Exec(ctx, query,
+		if e == nil {
+			return upserted, fmt.Errorf("upsert tesla energy history: nil entry at index %d", upserted)
+		}
+		_, err := r.db.Pool.Exec(ctx, teslaEnergyHistoryUpsertSQL,
 			e.EnergySiteID, e.Period, e.Timestamp,
 			e.SolarEnergyWh, e.BatteryEnergyInWh, e.BatteryEnergyOutWh,
 			e.GridEnergyInWh, e.GridEnergyOutWh, e.ConsumerEnergyWh,
@@ -106,21 +144,16 @@ type TeslaEnergyBackupEventRepo struct {
 }
 
 func NewTeslaEnergyBackupEventRepo(db *database.DB) *TeslaEnergyBackupEventRepo {
+	if db == nil {
+		panic("energy.NewTeslaEnergyBackupEventRepo: db must not be nil")
+	}
 	return &TeslaEnergyBackupEventRepo{db: db}
 }
 
 // GetByRange returns backup events for a site filtered by date range.
 func (r *TeslaEnergyBackupEventRepo) GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyBackupEvent, error) {
-	if limit <= 0 || limit > 1000 {
-		limit = 500
-	}
-	query := `SELECT id, energy_site_id, period, timestamp, duration_seconds, fetched_at
-		FROM tesla_energy_backup_events
-		WHERE energy_site_id = $1 AND timestamp >= $2 AND timestamp <= $3
-		ORDER BY timestamp ASC
-		LIMIT $4`
-
-	rows, err := r.db.Pool.Query(ctx, query, siteID, since, until, limit)
+	limit = clampLimit(limit, teslaEnergyHistoryDefaultLimit, teslaEnergyHistoryMaxLimit)
+	rows, err := r.db.Pool.Query(ctx, teslaEnergyBackupSelectSQL, siteID, since, until, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query tesla energy backup events: %w", err)
 	}
@@ -146,17 +179,13 @@ func (r *TeslaEnergyBackupEventRepo) UpsertBatch(ctx context.Context, entries []
 		return 0, nil
 	}
 
-	query := `INSERT INTO tesla_energy_backup_events (
-		energy_site_id, period, timestamp, duration_seconds, fetched_at
-	) VALUES ($1,$2,$3,$4,$5)
-	ON CONFLICT (energy_site_id, period, timestamp) DO UPDATE SET
-		duration_seconds = EXCLUDED.duration_seconds,
-		fetched_at = EXCLUDED.fetched_at`
-
 	now := time.Now().UTC()
 	upserted := 0
 	for _, e := range entries {
-		_, err := r.db.Pool.Exec(ctx, query,
+		if e == nil {
+			return upserted, fmt.Errorf("upsert tesla energy backup event: nil entry at index %d", upserted)
+		}
+		_, err := r.db.Pool.Exec(ctx, teslaEnergyBackupUpsertSQL,
 			e.EnergySiteID, e.Period, e.Timestamp,
 			e.DurationSeconds, now,
 		)
@@ -178,21 +207,16 @@ type TeslaEnergyWCChargingRepo struct {
 }
 
 func NewTeslaEnergyWCChargingRepo(db *database.DB) *TeslaEnergyWCChargingRepo {
+	if db == nil {
+		panic("energy.NewTeslaEnergyWCChargingRepo: db must not be nil")
+	}
 	return &TeslaEnergyWCChargingRepo{db: db}
 }
 
 // GetByRange returns wall connector charging history for a site filtered by date range.
 func (r *TeslaEnergyWCChargingRepo) GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyWCCharging, error) {
-	if limit <= 0 || limit > 1000 {
-		limit = 500
-	}
-	query := `SELECT id, energy_site_id, din, timestamp, energy_wh, fetched_at
-		FROM tesla_energy_wc_charging
-		WHERE energy_site_id = $1 AND timestamp >= $2 AND timestamp <= $3
-		ORDER BY timestamp ASC
-		LIMIT $4`
-
-	rows, err := r.db.Pool.Query(ctx, query, siteID, since, until, limit)
+	limit = clampLimit(limit, teslaEnergyHistoryDefaultLimit, teslaEnergyHistoryMaxLimit)
+	rows, err := r.db.Pool.Query(ctx, teslaEnergyWCSelectSQL, siteID, since, until, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query tesla energy wc charging: %w", err)
 	}
@@ -218,17 +242,13 @@ func (r *TeslaEnergyWCChargingRepo) UpsertBatch(ctx context.Context, entries []*
 		return 0, nil
 	}
 
-	query := `INSERT INTO tesla_energy_wc_charging (
-		energy_site_id, din, timestamp, energy_wh, fetched_at
-	) VALUES ($1,$2,$3,$4,$5)
-	ON CONFLICT (energy_site_id, COALESCE(din, ''), timestamp) DO UPDATE SET
-		energy_wh = EXCLUDED.energy_wh,
-		fetched_at = EXCLUDED.fetched_at`
-
 	now := time.Now().UTC()
 	upserted := 0
 	for _, e := range entries {
-		_, err := r.db.Pool.Exec(ctx, query,
+		if e == nil {
+			return upserted, fmt.Errorf("upsert tesla energy wc charging: nil entry at index %d", upserted)
+		}
+		_, err := r.db.Pool.Exec(ctx, teslaEnergyWCUpsertSQL,
 			e.EnergySiteID, e.DIN, e.Timestamp,
 			e.EnergyWh, now,
 		)
