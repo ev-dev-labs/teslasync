@@ -64,7 +64,9 @@ export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
           resourceName={t('gas.title', 'Gas Price Auto-Poll')}
         />
       ) : isLoading && rows.length === 0 ? (
-        <Skeleton height={240} className="rounded-xl" />
+        <div role="status" aria-busy="true" aria-label={t('common.loading', 'Loading')}>
+          <Skeleton height={240} className="rounded-xl" />
+        </div>
       ) : rows.length === 0 ? (
         <EmptyState
           icon={<TrendingUp className="h-8 w-8" />}
