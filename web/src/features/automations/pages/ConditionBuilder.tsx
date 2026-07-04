@@ -111,6 +111,12 @@ export function createDefaultCondition(kind: AutomationConditionKind): Automatio
       return { kind, place_id: 0, state: 'inside' };
     case 'condition_other_automation':
       return { kind, other_automation_id: 0, state: 'enabled' };
+    default:
+      // Defensive fallback: the declared return type is non-optional, so an
+      // unrecognized kind (e.g. a future step type reaching this code before
+      // its case is added) must still yield a valid condition rather than
+      // `undefined`, which would corrupt the conditions array.
+      return { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 20 };
   }
 }
 
@@ -358,7 +364,8 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
       );
     }
 
-    case 'condition_time_window':
+    case 'condition_time_window': {
+      const selectedDays = condition.days_of_week ?? [];
       return (
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiInput
@@ -392,7 +399,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             </Text>
             <div className="mt-1 flex gap-1">
               {DAYS.map((label, day) => {
-                const active = condition.days_of_week.includes(day);
+                const active = selectedDays.includes(day);
                 return (
                   <UiButton
                     key={label}
@@ -407,8 +414,8 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
                     }`}
                     onClick={() => {
                       const days = active
-                        ? condition.days_of_week.filter((currentDay) => currentDay !== day)
-                        : [...condition.days_of_week, day].sort();
+                        ? selectedDays.filter((currentDay) => currentDay !== day)
+                        : [...selectedDays, day].sort((a, b) => a - b);
                       onChange({ ...condition, days_of_week: days });
                     }}
                   >
@@ -420,6 +427,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
           </div>
         </div>
       );
+    }
 
     case 'condition_geofence':
       return (
