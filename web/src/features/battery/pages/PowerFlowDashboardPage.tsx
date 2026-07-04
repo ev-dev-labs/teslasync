@@ -66,9 +66,23 @@ function FlowArrow({ from, to, power, active }: FlowArrowProps) {
         <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
       )}
       <span>{to}</span>
-      <span className="ml-auto tabular-nums">{fmtWatts(power)}</span>
+      {/* The arrow already encodes flow direction (sign), so show the magnitude
+          only — a signed "-2.0 kW" next to a direction arrow double-encodes the
+          sign and reads as a nonsensical negative flow. */}
+      <span className="ml-auto tabular-nums">{fmtWatts(power == null ? null : Math.abs(power))}</span>
     </div>
   );
+}
+
+/**
+ * Grid-status → Badge variant. `Active` is healthy (green); any other known
+ * status (e.g. an outage / islanded state) is a danger (red). A missing status
+ * is *unknown*, not an error, so it renders neutral rather than a misleading
+ * red danger chip.
+ */
+function gridStatusVariant(status: string | null): 'success' | 'danger' | 'neutral' {
+  if (status == null) return 'neutral';
+  return status === 'Active' ? 'success' : 'danger';
 }
 
 /* ───────── Page ───────── */
@@ -198,7 +212,7 @@ export default function PowerFlowDashboardPage() {
             <Caption>{t('powerFlow.statusUnavailable', 'Live status unavailable — refresh to fetch')}</Caption>
           ) : (
             <>
-              <Badge variant={gridStatus === 'Active' ? 'success' : 'danger'}>
+              <Badge variant={gridStatusVariant(gridStatus)}>
                 <Zap className="h-3 w-3" aria-hidden="true" />
                 {t('powerFlow.grid', 'Grid')}: {gridStatus ?? t('powerFlow.unknown', 'Unknown')}
               </Badge>
@@ -343,7 +357,7 @@ export default function PowerFlowDashboardPage() {
                   {
                     label: t('powerFlow.gridStatus', 'Grid Status'),
                     value: (
-                      <Badge variant={gridStatus === 'Active' ? 'success' : 'danger'} size="sm">
+                      <Badge variant={gridStatusVariant(gridStatus)} size="sm">
                         {gridStatus ?? t('powerFlow.unknown', 'Unknown')}
                       </Badge>
                     ),
