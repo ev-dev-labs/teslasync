@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { UserCheck, UserX, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { UserCheck, UserX, ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react'
 
 import { GlassPanel, PanelTitle, Code } from '@/components/ui'
 import { KVList, DateTime } from '@/components/data-display'
@@ -9,6 +9,14 @@ import type { ImpersonationStatus } from '@/api/hooks/useImpersonation'
 interface ImpersonationStatusPanelProps {
   status: ImpersonationStatus | undefined
   isLoading: boolean
+  /**
+   * Surfaced when the status query fails. Optional so existing callers
+   * keep compiling. When set while a last-good `status` is still present
+   * the panel keeps rendering that state rather than masking it — a
+   * transient background-refetch failure must not lie to an admin by
+   * flipping a live "active" session to "not impersonating".
+   */
+  isError?: boolean
 }
 
 /**
@@ -17,7 +25,11 @@ interface ImpersonationStatusPanelProps {
  * surfaces the original admin, the impersonated subject, and the cookie
  * expiry — read straight from the API and formatted at the display boundary.
  */
-export function ImpersonationStatusPanel({ status, isLoading }: ImpersonationStatusPanelProps) {
+export function ImpersonationStatusPanel({
+  status,
+  isLoading,
+  isError = false,
+}: ImpersonationStatusPanelProps) {
   const { t } = useTranslation()
 
   return (
@@ -28,9 +40,27 @@ export function ImpersonationStatusPanel({ status, isLoading }: ImpersonationSta
       </PanelTitle>
 
       {isLoading ? (
-        <Skeleton height={140} />
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('impersonation.status.loading', 'Loading session status…')}
+          data-testid="impersonation-status-loading"
+        >
+          <Skeleton height={140} />
+        </div>
+      ) : isError && !status ? (
+        <InlineCallout
+          variant="danger"
+          icon={<AlertTriangle />}
+          testId="impersonation-status-error"
+        >
+          {t(
+            'impersonation.status.error',
+            'Session status is unavailable right now. Use the refresh control above to try again.',
+          )}
+        </InlineCallout>
       ) : status?.mode === 'open' ? (
-        <InlineCallout variant="warning" icon={<ShieldAlert />}>
+        <InlineCallout variant="warning" icon={<ShieldAlert />} testId="impersonation-status-open">
           {t(
             'impersonation.status.open',
             'Forward-auth is disabled, so impersonation is unavailable on this install.',
@@ -38,7 +68,11 @@ export function ImpersonationStatusPanel({ status, isLoading }: ImpersonationSta
         </InlineCallout>
       ) : status?.mode === 'active' ? (
         <div className="space-y-4">
-          <InlineCallout variant="success" icon={<UserCheck />}>
+          <InlineCallout
+            variant="success"
+            icon={<UserCheck />}
+            testId="impersonation-status-active"
+          >
             {t(
               'impersonation.status.activeCallout',
               'Impersonation is active. End it from the banner at the top of the screen.',
@@ -62,7 +96,7 @@ export function ImpersonationStatusPanel({ status, isLoading }: ImpersonationSta
           />
         </div>
       ) : (
-        <InlineCallout variant="info" icon={<UserX />}>
+        <InlineCallout variant="info" icon={<UserX />} testId="impersonation-status-inactive">
           {t(
             'impersonation.status.inactive',
             'You are not impersonating anyone. Pick a subject from the table to start a support session.',
