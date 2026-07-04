@@ -19,7 +19,7 @@
 // validates everything in NormalizeScheduledExportInput and returns
 // 400 with a useful message that we surface via toast. Doubling the
 // validators would only invite drift.
-import { useState, type FormEvent } from 'react';
+import { useCallback, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -31,6 +31,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Heading, Text, Code } from '@/components/ui/Typography';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { QueryError } from '@/components/feedback/QueryError';
 import { TimeStamp } from '@/components/data-display';
 import { Icons } from '@/lib/icons';
 import {
@@ -87,7 +88,7 @@ function inputFromRow(row: ScheduledExport): ScheduledExportInput {
 
 export function ScheduledExportsPanel() {
   const { t } = useTranslation();
-  const { data, isLoading } = useScheduledExports();
+  const { data, isLoading, isError, error, refetch } = useScheduledExports();
   const create = useCreateScheduledExport();
   const update = useUpdateScheduledExport();
   const remove = useDeleteScheduledExport();
@@ -99,6 +100,12 @@ export function ScheduledExportsPanel() {
   const [pendingDelete, setPendingDelete] = useState<ScheduledExport | null>(null);
 
   const rows = data ?? [];
+
+  // Stable identity so QueryError's offline auto-retry effect doesn't
+  // re-subscribe on every render.
+  const handleRetry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   function startCreate() {
     setForm(emptyInput());
@@ -337,6 +344,14 @@ export function ScheduledExportsPanel() {
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
+        ) : isError && rows.length === 0 ? (
+          // A failed load must not masquerade as "no schedules yet" — surface
+          // an actionable error with retry instead of the empty placeholder.
+          <QueryError
+            error={error}
+            onRetry={handleRetry}
+            resourceName={t('dataExport.scheduled.resourceName', 'Scheduled exports')}
+          />
         ) : rows.length === 0 ? (
           // no-action: panel header already exposes a "New schedule" button
           <EmptyState
