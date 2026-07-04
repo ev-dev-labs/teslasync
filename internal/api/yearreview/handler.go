@@ -1,6 +1,8 @@
 package yearreview
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -13,14 +15,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// yearReviewQueryBudget bounds the whole year-review request. The handler
+// fans out ~13 sequential aggregations across drives, charging_sessions,
+// settings and vehicles; a single overall deadline guarantees a stuck or
+// slow database can never hang the request beyond this budget, independent
+// of the per-connection statement_timeout.
+const yearReviewQueryBudget = 15 * time.Second
+
+// dbQuerier is the read port Handler depends on: the Query + QueryRow subset
+// of database.DBTX that *pgxpool.Pool satisfies directly. Depending on this
+// narrow interface (interface segregation) rather than the concrete
+// *database.DB keeps the handler unit-testable with an in-memory fake — no
+// live Postgres required — while NewHandler still wires the real pool in
+// production.
+type dbQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 // Handler serves Spotify Wrapped-style annual driving reports.
 type Handler struct {
-	db *database.DB
+	q dbQuerier
 }
 
 // NewHandler creates an annual report handler.
 func NewHandler(db *database.DB) *Handler {
-	return &Handler{db: db}
+	return &Handler{q: db.Pool}
 }
 
 type driveHighlight struct {
@@ -54,7 +74,8 @@ func roundYR(v float64, decimals int) float64 {
 
 // GetYearReview returns a full-year aggregation for a single vehicle.
 func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	ctx, cancel := context.WithTimeout(r.Context(), yearReviewQueryBudget)
+	defer cancel()
 
 	vidStr := r.URL.Query().Get("vehicle_id")
 	if vidStr == "" {
@@ -83,15 +104,15 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	yearEnd := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	var vDisplayName, vModel string
-	err = h.db.Pool.QueryRow(ctx,
+	err = h.q.QueryRow(ctx,
 		`SELECT display_name, COALESCE(model, '') FROM vehicles WHERE id = $1`, vehicleID,
 	).Scan(&vDisplayName, &vModel)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 			return
 		}
-		log.Error().Err(err).Msg("year-review: failed to get vehicle")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: failed to get vehicle")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get vehicle")
 		return
 	}
@@ -102,7 +123,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	var totalDrives int
 	var totalDistKm, totalDrivingMin float64
 	var fastestSpeed, coldestTemp, hottestTemp *float64
-	err = h.db.Pool.QueryRow(ctx, `
+	err = h.q.QueryRow(ctx, `
 		SELECT COUNT(*),
 		       COALESCE(SUM(distance_m) / 1000.0, 0),
 		       COALESCE(SUM(duration_s) / 60.0, 0),
@@ -127,7 +148,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	// distance_m. Wh/km = energy_used_wh / (distance_m / 1000). Filter
 	// distance_m > 1609.344 (1 mile, matching the previous threshold).
 	var avgEffWhKm float64
-	if err = h.db.Pool.QueryRow(ctx, `
+	if err = h.q.QueryRow(ctx, `
 		SELECT COALESCE(AVG(
 			CASE WHEN distance_m > 1609.344 AND energy_used_wh > 0
 			THEN energy_used_wh / (distance_m / 1000.0)
@@ -147,7 +168,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	// cost_decimal NUMERIC, started_at / ended_at.
 	var totalChargeSessions int
 	var totalEnergyKwh, totalChargingCost float64
-	err = h.db.Pool.QueryRow(ctx, `
+	err = h.q.QueryRow(ctx, `
 		SELECT COUNT(*),
 		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
 		       COALESCE(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal::float8 ELSE 0 END), 0)
@@ -165,12 +186,12 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var gasPrice, gasEffMPG float64
-	err = h.db.Pool.QueryRow(ctx,
+	err = h.q.QueryRow(ctx,
 		`SELECT
 		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
 		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
 	).Scan(&gasPrice, &gasEffMPG)
-	if err != nil && err != pgx.ErrNoRows {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		log.Warn().Err(err).Msg("year-review: failed to get settings, using defaults")
 	}
 	if gasPrice <= 0 {
@@ -199,11 +220,17 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		var distM float64
 		var durS float64
 		var startAddr, endAddr *string
-		err := h.db.Pool.QueryRow(ctx, query, args...).Scan(
+		err := h.q.QueryRow(ctx, query, args...).Scan(
 			&dh.DriveID, &startDate, &distM, &durS,
 			&startAddr, &endAddr,
 		)
 		if err != nil {
+			// No matching drive (ErrNoRows) is expected when the vehicle
+			// has no qualifying drives that year; surface only genuine
+			// query/transport failures so a silent DB error stays visible.
+			if !errors.Is(err, pgx.ErrNoRows) {
+				log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: highlight query failed")
+			}
 			return nil
 		}
 		dh.Date = startDate.Format("2006-01-02")
@@ -241,7 +268,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		monthlyMap[m] = &monthStat{Month: m}
 	}
 
-	driveMonthRows, err := h.db.Pool.Query(ctx, `
+	driveMonthRows, err := h.q.Query(ctx, `
 		SELECT EXTRACT(MONTH FROM started_at)::int AS m, COUNT(*),
 		       COALESCE(SUM(distance_m) / 1000.0, 0)
 		FROM drives
@@ -261,10 +288,13 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		if ierr := driveMonthRows.Err(); ierr != nil {
+			log.Warn().Err(ierr).Int64("vehicle_id", vehicleID).Msg("year-review: drive-month rows iteration failed")
+		}
 		driveMonthRows.Close()
 	}
 
-	chargeMonthRows, err := h.db.Pool.Query(ctx, `
+	chargeMonthRows, err := h.q.Query(ctx, `
 		SELECT EXTRACT(MONTH FROM started_at)::int AS m,
 		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
 		       COALESCE(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal::float8 ELSE 0 END), 0)
@@ -285,6 +315,9 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		if ierr := chargeMonthRows.Err(); ierr != nil {
+			log.Warn().Err(ierr).Int64("vehicle_id", vehicleID).Msg("year-review: charge-month rows iteration failed")
+		}
 		chargeMonthRows.Close()
 	}
 
@@ -295,7 +328,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 
 	mostActiveDOW := ""
 	var dowIdx, dowCnt int
-	if err := h.db.Pool.QueryRow(ctx, `
+	if err := h.q.QueryRow(ctx, `
 		SELECT EXTRACT(DOW FROM started_at)::int AS dow, COUNT(*) AS cnt
 		FROM drives
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND distance_m > 0
@@ -311,7 +344,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 
 	mostActiveHour := 0
 	var hrIdx, hrCnt int
-	if err := h.db.Pool.QueryRow(ctx, `
+	if err := h.q.QueryRow(ctx, `
 		SELECT EXTRACT(HOUR FROM started_at)::int AS hr, COUNT(*) AS cnt
 		FROM drives
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND distance_m > 0
@@ -347,7 +380,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	// fast_charger_brand). Supercharger detection uses charger_type ILIKE
 	// 'Tesla%'; dc_fast = any other non-NULL charger_type; ac_other = NULL.
 	var superchargerCnt, dcFastCnt, acOtherCnt int
-	chargeTypeRows, err := h.db.Pool.Query(ctx, `
+	chargeTypeRows, err := h.q.Query(ctx, `
 		SELECT
 			CASE
 				WHEN charger_type ILIKE 'Tesla%' THEN 'supercharger'
@@ -376,6 +409,9 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		if ierr := chargeTypeRows.Err(); ierr != nil {
+			log.Warn().Err(ierr).Int64("vehicle_id", vehicleID).Msg("year-review: charge-type rows iteration failed")
+		}
 		chargeTypeRows.Close()
 	}
 
@@ -391,7 +427,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 
 	// Average charge start SOC from SI column start_soc_pct (REAL).
 	var avgChargeStartSOC float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	_ = h.q.QueryRow(ctx, `
 		SELECT COALESCE(AVG(start_soc_pct), 0)
 		FROM charging_sessions
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND start_soc_pct > 0
