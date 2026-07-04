@@ -24,6 +24,10 @@ export function ApiKeyCard({ apiKey, onRevoke, onDelete, revoking = false }: Api
   const { t } = useTranslation();
   const expired = isKeyExpired(apiKey);
   const KeyIcon = KEY_ICON;
+  // Single source of truth for the human label: falls back to "Unnamed key"
+  // so the icon-only Revoke/Delete actions still announce a meaningful
+  // accessible name (an empty `name` otherwise yields "Revoke key ").
+  const displayName = apiKey.name || t('apiKeys.unnamed', 'Unnamed key');
 
   return (
     <div
@@ -41,7 +45,7 @@ export function ApiKeyCard({ apiKey, onRevoke, onDelete, revoking = false }: Api
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Text size="sm" weight="semibold" color="primary" className="truncate">
-              {apiKey.name || t('apiKeys.unnamed', 'Unnamed key')}
+              {displayName}
             </Text>
             <ApiKeyPermissionBadge perm={apiKey.permissions} />
             {expired && (
@@ -61,7 +65,7 @@ export function ApiKeyCard({ apiKey, onRevoke, onDelete, revoking = false }: Api
               onClick={() => onRevoke(apiKey.id)}
               loading={revoking}
               icon={<XCircle className="h-4 w-4" aria-hidden="true" />}
-              aria-label={t('apiKeys.revokeAria', 'Revoke key {{name}}', { name: apiKey.name })}
+              aria-label={t('apiKeys.revokeAria', 'Revoke key {{name}}', { name: displayName })}
               title={t('apiKeys.revoke', 'Revoke')}
               className={cn(ICON_BTN, 'hover:bg-neon-amber/10 hover:text-amber-300')}
             />
@@ -70,7 +74,7 @@ export function ApiKeyCard({ apiKey, onRevoke, onDelete, revoking = false }: Api
             variant="ghost"
             onClick={() => onDelete(apiKey)}
             icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-            aria-label={t('apiKeys.deleteAria', 'Delete key {{name}}', { name: apiKey.name })}
+            aria-label={t('apiKeys.deleteAria', 'Delete key {{name}}', { name: displayName })}
             title={t('apiKeys.delete', 'Delete')}
             className={cn(ICON_BTN, 'hover:bg-neon-red/10 hover:text-rose-300')}
           />
