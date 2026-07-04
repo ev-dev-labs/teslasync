@@ -48,37 +48,37 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
             <div className="grid grid-cols-3 gap-3 mb-3">
               {stats.avgOutsideTemp != null ? (
                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.outsideTemp', 'Outside Temperature')}</p>
+                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.outsideTemp', 'Outside Temperature')}</p>
                   <p className="text-sm font-bold text-blue-400">{fmtNumber(stats.avgOutsideTemp)}{tempUnit}</p>
                 </div>
               ) : null}
               {stats.avgInsideTemp != null ? (
                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.insideTemp', 'Inside Temperature')}</p>
+                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.insideTemp', 'Inside Temperature')}</p>
                   <p className="text-sm font-bold text-orange-400">{fmtNumber(stats.avgInsideTemp)}{tempUnit}</p>
                 </div>
               ) : null}
               {driverAvg != null ? (
                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.driverTemp', 'Driver Temperature')}</p>
+                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.driverTemp', 'Driver Temperature')}</p>
                   <p className="text-sm font-bold text-rose-400">{fmtNumber(driverAvg)}{tempUnit}</p>
                 </div>
               ) : null}
               {passengerAvg != null ? (
                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.passengerTemp', 'Passenger Temperature')}</p>
+                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.passengerTemp', 'Passenger Temperature')}</p>
                   <p className="text-sm font-bold text-purple-400">{fmtNumber(passengerAvg)}{tempUnit}</p>
                 </div>
               ) : null}
               {stats.climateStatus != null ? (
                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.climate', 'Climate')}</p>
+                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.climate', 'Climate')}</p>
                   <p className={`text-sm font-bold ${stats.climateStatus === 'On' ? 'text-green-400' : 'text-[var(--text-muted)]'}`}>{stats.climateStatus}</p>
                 </div>
               ) : null}
               {stats.maxFanSpeed != null ? (
                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.fanStatus', 'Fan Status')}</p>
+                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.fanStatus', 'Fan Status')}</p>
                   <p className="text-sm font-bold text-cyan-400">{t('driveDetail.avg', 'Avg')} {fmtInt(stats.avgFanSpeed)} · Max {stats.maxFanSpeed}</p>
                 </div>
               ) : null}

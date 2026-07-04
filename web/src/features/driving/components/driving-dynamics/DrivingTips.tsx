@@ -2,8 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Lightbulb, ShieldCheck, AlertTriangle } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
-import { FadeIn } from '@/components/motion';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { MotorStats, ThrottleStyle } from './helpers';
 
@@ -38,33 +37,29 @@ export default function DrivingTips({ motorStats, throttleStyle }: DrivingTipsPr
   }, [motorStats, t]);
 
   return (
-    <FadeIn delay={0.6}>
-      <GlassPanel className="p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <Lightbulb className="h-5 w-5 text-yellow-400" />
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            {t('dynamics.recommendations', 'Driving Style Recommendations')}
-          </h2>
-        </div>
-        <div className="space-y-3">
-          {tips.map((tip, i) => (
-            <div
-              key={i}
-              className={cn(
-                'flex items-start gap-3 rounded-lg p-3',
-                'bg-white/[0.03] border border-white/[0.06]',
-              )}
-            >
-              {throttleStyle === 'conservative' ? (
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-              ) : (
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
-              )}
-              <span className="text-sm text-[var(--text-secondary)]">{tip}</span>
-            </div>
-          ))}
-        </div>
-      </GlassPanel>
-    </FadeIn>
+    <GlassPanel className="h-full p-4 sm:p-5">
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />
+        {t('dynamics.recommendations', 'Driving Style Recommendations')}
+      </PanelTitle>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {tips.map((tip, i) => (
+          <div
+            key={i}
+            className={cn(
+              'flex items-start gap-3 rounded-lg p-3',
+              'bg-white/[0.03] border border-white/[0.06]',
+            )}
+          >
+            {throttleStyle === 'conservative' ? (
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+            )}
+            <Text as="span" size="sm" color="secondary">{tip}</Text>
+          </div>
+        ))}
+      </div>
+    </GlassPanel>
   );
 }

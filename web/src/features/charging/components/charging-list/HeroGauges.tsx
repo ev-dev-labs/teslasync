@@ -25,7 +25,7 @@ export function HeroGauges({ stats }: HeroGaugesProps) {
             <p className="text-2xl font-bold text-emerald-300">
               $<AnimatedNumber value={parseFloat(fmtNumber(stats.avgCostPerKwh ?? 0, 2))} decimals={3} />
             </p>
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
+            <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider mt-1">
               {t('charging.gauges.avgCostPerKwh', 'Avg $/kWh')}
             </p>
           </div>

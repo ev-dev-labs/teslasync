@@ -129,7 +129,7 @@ function ChartLegend({ chartData }: { chartData: ChartDataPoint[] }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-[10px] leading-tight">
+    <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-2xs leading-tight">
       {items.map((item) => (
         <span key={item.label} className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="inline-block w-4 border-t-2" style={{ borderColor: item.color, borderStyle: item.dash ? 'dashed' : 'solid' }} />

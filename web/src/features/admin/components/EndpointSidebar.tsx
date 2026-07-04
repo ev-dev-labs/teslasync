@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Button as UiButton, Input as UiInput } from '@/components/ui';
+import { Button as UiButton, Input as UiInput, Text } from '@/components/ui';
 
 /* ─── types ───────────────────────────────────────────────────────────── */
 
@@ -53,7 +53,7 @@ export function MethodBadge({ method, className }: { method: string; className?:
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold w-12 text-center shrink-0',
+        'inline-flex items-center justify-center px-1.5 py-0.5 rounded text-2xs font-mono font-bold w-12 text-center shrink-0',
         METHOD_COLORS[method] ?? 'bg-gray-500/20 text-[var(--text-muted)]',
         className,
       )}
@@ -95,10 +95,10 @@ function TagGroup({
             open && 'rotate-180',
           )}
         />
-        <span className="flex-1 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
+        <Text size="xs" weight="semibold" color="secondary" className="flex-1 uppercase tracking-wider">
           {tag}
-        </span>
-        <span className="text-[10px] text-[var(--text-muted)] font-mono">{endpoints.length}</span>
+        </Text>
+        <Text size="2xs" color="muted" mono>{endpoints.length}</Text>
       </UiButton>
       {open && (
         <div>
@@ -119,9 +119,9 @@ function TagGroup({
                   title={ep.summary}
                 >
                   <MethodBadge method={ep.method} />
-                  <span className="truncate text-[var(--text-secondary)] font-mono text-[11px]">
+                  <Text size="xs" color="secondary" mono className="truncate">
                     {ep.path}
-                  </span>
+                  </Text>
                 </UiButton>
               );
             })}
@@ -173,9 +173,9 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
       </div>
 
       {/* Endpoint count */}
-      <div className="px-3 py-1.5 text-[10px] text-[var(--text-muted)] border-b border-white/[0.04]">
+      <Text as="div" size="2xs" color="muted" className="px-3 py-1.5 border-b border-white/[0.04]">
         {filtered.length} {t('playground.endpoints', 'endpoints')}
-      </div>
+      </Text>
 
       {/* Tag groups */}
       <div className="flex-1 overflow-y-auto">
@@ -191,9 +191,9 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
         ))}
 
         {filtered.length === 0 && (
-          <div className="px-3 py-6 text-center text-xs text-[var(--text-muted)]">
+          <Text as="p" variant="caption" className="px-3 py-6 text-center">
             {t('playground.noResults', 'No matching endpoints')}
-          </div>
+          </Text>
         )}
       </div>
     </div>

@@ -39,21 +39,21 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-[10px] text-[var(--text-muted)]">{t('widget.power', 'Power')}</p>
+                <p className="text-2xs text-[var(--text-muted)]">{t('widget.power', 'Power')}</p>
                 <p className="text-sm font-bold text-emerald-300">{fmtNumber(state.charger_power)} kW</p>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--text-muted)]">{t('widget.rate', 'Rate')}</p>
+                <p className="text-2xs text-[var(--text-muted)]">{t('widget.rate', 'Rate')}</p>
                 <p className="text-sm font-bold text-[var(--text-primary)]">
                   {fmtInt(convertDistanceFromSI(state.charge_rate ?? 0, distanceUnit))} {distanceUnit}/h
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--text-muted)]">{t('widget.battery', 'Battery')}</p>
+                <p className="text-2xs text-[var(--text-muted)]">{t('widget.battery', 'Battery')}</p>
                 <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level}%</p>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--text-muted)]">
+                <p className="text-2xs text-[var(--text-muted)]">
                   {t('widget.timeToFull', 'Time to Full')}
                 </p>
                 <p className="text-sm font-bold text-[var(--text-primary)]">

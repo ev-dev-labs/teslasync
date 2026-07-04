@@ -204,7 +204,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
             {this.state.retryCount > 0 && (
-              <p className="mt-4 text-[10px] text-[var(--text-muted)]">
+              <p className="mt-4 text-2xs text-[var(--text-muted)]">
                 Retry attempt {this.state.retryCount}
               </p>
             )}

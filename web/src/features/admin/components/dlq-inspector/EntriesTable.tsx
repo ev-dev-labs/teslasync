@@ -14,7 +14,10 @@ import { useTranslation } from 'react-i18next';
 import {
   Badge,
   Button,
+  Caption,
+  Code,
   DataTable,
+  Text,
   useSortToggle,
   type Column,
 } from '@/components/ui';
@@ -70,29 +73,25 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       header: t('admin.dlq.cols.reason', 'Reason'),
       sortable: true,
       visibleOnMobile: true,
-      render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-primary)]">
-          {row.parsed_reason || '—'}
-        </span>
-      ),
+      render: (row) => <Code>{row.parsed_reason || '—'}</Code>,
     },
     {
       key: 'parsed_vin',
       header: t('admin.dlq.cols.vin', 'VIN'),
       sortable: true,
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text mono size="xs" color="muted">
           {row.parsed_vin ?? '—'}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'parsed_source_topic',
       header: t('admin.dlq.cols.topic', 'Source topic'),
       render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
+        <Text mono size="xs" color="muted">
           {row.parsed_source_topic ?? '—'}
-        </span>
+        </Text>
       ),
     },
     {
@@ -107,11 +106,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       header: t('admin.dlq.cols.size', 'Payload'),
       align: 'right',
       sortable: true,
-      render: (row) => (
-        <span className="text-xs text-[var(--text-muted)]">
-          {formatBytes(row.raw_payload_size)}
-        </span>
-      ),
+      render: (row) => <Caption>{formatBytes(row.raw_payload_size)}</Caption>,
     },
     {
       key: 'replayable',

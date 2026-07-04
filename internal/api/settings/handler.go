@@ -117,6 +117,39 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "chart_palette must be 'cb_safe' or 'neon'")
 		return
 	}
+	// ── Typography validation (Typography Unit 0) ──
+	// Mirror the union types + slider bounds in FontProvider.tsx. Empty values
+	// are tolerated (a partial round-trip keeps the stored default).
+	validFontFamily := map[string]bool{"inter": true, "system": true, "roboto": true, "source": true, "plex": true, "atkinson": true, "custom": true}
+	if s.FontFamily != "" && !validFontFamily[s.FontFamily] {
+		httpx.WriteError(w, http.StatusBadRequest, "font_family must be one of inter/system/roboto/source/plex/atkinson/custom")
+		return
+	}
+	validFontMono := map[string]bool{"jetbrains": true, "fira": true, "plex-mono": true, "system": true, "custom": true}
+	if s.FontMono != "" && !validFontMono[s.FontMono] {
+		httpx.WriteError(w, http.StatusBadRequest, "font_mono must be one of jetbrains/fira/plex-mono/system/custom")
+		return
+	}
+	if len(s.FontCustomSans) > 200 || len(s.FontCustomMono) > 200 {
+		httpx.WriteError(w, http.StatusBadRequest, "font_custom_sans / font_custom_mono must be 200 characters or less")
+		return
+	}
+	if len(s.FontTracking) > 16 {
+		httpx.WriteError(w, http.StatusBadRequest, "font_tracking must be 16 characters or less")
+		return
+	}
+	if s.FontScale != 0 && (s.FontScale < 0.5 || s.FontScale > 2) {
+		httpx.WriteError(w, http.StatusBadRequest, "font_scale must be between 0.5 and 2")
+		return
+	}
+	if s.FontLeading != 0 && (s.FontLeading < 1 || s.FontLeading > 2.5) {
+		httpx.WriteError(w, http.StatusBadRequest, "font_leading must be between 1 and 2.5")
+		return
+	}
+	if s.FontHeadingWeight != 0 && (s.FontHeadingWeight < 100 || s.FontHeadingWeight > 900) {
+		httpx.WriteError(w, http.StatusBadRequest, "font_heading_weight must be between 100 and 900")
+		return
+	}
 	// ADR-015 §I2 — three modes, one flag. Validate so a typo in
 	// the request body cannot poison the DB and inadvertently
 	// flip the user out of the off-by-default state.
@@ -129,6 +162,15 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "ai_cost_cap_cents must be >= 0")
 		return
 	}
+
+	// completed_tours uses replace semantics — the SPA always sends the full
+	// list of "{tourId}:{version}" markers on save. Normalise defensively
+	// (trim, drop blank/oversized entries, de-dupe, cap at MaxCompletedTours)
+	// so a malformed payload cannot bloat the settings row, but never reject
+	// unknown tour ids: a newer client build may introduce tours this server
+	// has never heard of. NormalizeCompletedTours always returns a non-nil
+	// slice so the echoed response serialises as "[]" rather than null.
+	s.CompletedTours = settingsdb.NormalizeCompletedTours(s.CompletedTours)
 
 	// ADR-015 §I9: Get redacts AI secrets and archived feature state in off mode,
 	// so preserve stored values across SPA round-trips that omit those fields.

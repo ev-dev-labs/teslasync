@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Button as UiButton, CopyButton } from '@/components/ui';
+import { GlassPanel, Button as UiButton, CopyButton, Text } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -127,7 +127,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
         variant="ghost"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="!h-auto !px-0 !py-0 text-[11px] text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
+        className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.codeSnippet', 'Code Snippet')}
@@ -143,7 +143,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
                 onClick={() => setFormat(f.value)}
                 aria-pressed={format === f.value}
                 className={cn(
-                  '!h-auto !px-2 !py-0.5 text-[10px] font-medium',
+                  '!h-auto !px-2 !py-0.5 text-2xs font-medium',
                   format === f.value
                     ? '!bg-[var(--surface-2)] text-[var(--text-primary)]'
                     : 'text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]',
@@ -159,10 +159,10 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
               size="sm"
               withToast
               label={t('playground.copy', 'Copy')}
-              className="!text-[10px] !px-2 !py-0.5 !h-auto"
+              className="!text-2xs !px-2 !py-0.5 !h-auto"
             />
           </div>
-          <pre className="p-3 text-[11px] font-mono text-[var(--text-secondary)] overflow-x-auto whitespace-pre">
+          <pre className="p-3 text-xs font-mono text-[var(--text-secondary)] overflow-x-auto whitespace-pre">
             {snippet}
           </pre>
         </div>
@@ -187,13 +187,13 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
         variant="ghost"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="!h-auto !px-0 !py-0 text-[11px] text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
+        className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.responseHeaders', 'Response Headers')} ({entries.length})
       </UiButton>
       {open && (
-        <div className="mt-1 rounded-lg border border-white/[0.04] bg-[var(--surface-overlay)] p-2 text-[10px] font-mono text-[var(--text-muted)] space-y-0.5 max-h-40 overflow-y-auto">
+        <div className="mt-1 rounded-lg border border-white/[0.04] bg-[var(--surface-overlay)] p-2 text-2xs font-mono text-[var(--text-muted)] space-y-0.5 max-h-40 overflow-y-auto">
           {entries.map(([k, v]) => (
             <div key={k}>
               <span className="text-[var(--text-secondary)]">{k}:</span> {v}
@@ -214,9 +214,9 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
 
   return (
     <GlassPanel className="p-3">
-      <h4 className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+      <Text as="h4" size="2xs" weight="semibold" color="muted" className="uppercase tracking-wider mb-2">
         {t('playground.history', 'Recent Requests')}
-      </h4>
+      </Text>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {history.map((h, i) => (
           <UiButton
@@ -224,12 +224,12 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
             type="button"
             variant="ghost"
             onClick={() => onReplay(h)}
-            className="!h-auto flex-shrink-0 gap-1.5 !rounded-md border border-white/[0.04] !bg-white/[0.03] !px-2 !py-1 font-mono text-[10px] hover:!bg-white/[0.06]"
+            className="!h-auto flex-shrink-0 gap-1.5 !rounded-md border border-white/[0.04] !bg-white/[0.03] !px-2 !py-1 font-mono text-2xs hover:!bg-white/[0.06]"
             title={`${h.method} ${h.path} → ${h.status} (${h.duration}ms)`}
           >
             <span
               className={cn(
-                'px-1 py-0.5 rounded text-[8px] font-bold',
+                'px-1 py-0.5 rounded text-2xs font-bold',
                 h.method === 'GET' ? 'bg-green-500/20 text-green-400' :
                 h.method === 'POST' ? 'bg-blue-500/20 text-blue-400' :
                 h.method === 'DELETE' ? 'bg-red-500/20 text-red-400' :
@@ -259,9 +259,9 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
     <div className="space-y-3">
       {/* Response */}
       <GlassPanel className="p-4">
-        <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+        <Text as="h4" size="xs" weight="semibold" color="secondary" className="uppercase tracking-wider mb-3">
           {t('playground.response', 'Response')}
-        </h4>
+        </Text>
 
         {loading && <Skeleton className="h-48 rounded-lg" />}
 
@@ -278,12 +278,12 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
               'flex items-center justify-between rounded-lg border px-4 py-2 mb-3',
               statusBg(response.status),
             )}>
-              <span className={cn('font-mono text-sm font-bold', statusColor(response.status))}>
+              <Text size="sm" weight="bold" mono className={statusColor(response.status)}>
                 {response.status} {response.statusText}
-              </span>
-              <span className="text-xs text-[var(--text-muted)]">
+              </Text>
+              <Text variant="caption">
                 {response.duration}ms · {formatBytes(response.size)}
-              </span>
+              </Text>
             </div>
 
             {/* Body */}

@@ -563,7 +563,7 @@ function WebhookRow({
               <Text variant="bodySm" className="text-[var(--text-muted)]">
                 {t('webhookChannels.test.signature', 'Signature:')}
               </Text>
-              <code className="flex-1 truncate rounded bg-[var(--surface-1)] px-2 py-0.5 text-[10px]">
+              <code className="flex-1 truncate rounded bg-[var(--surface-1)] px-2 py-0.5 text-2xs">
                 {testResult.signature}
               </code>
             </div>
@@ -573,7 +573,7 @@ function WebhookRow({
               <summary className="cursor-pointer text-[var(--text-muted)]">
                 {t('webhookChannels.test.body', 'Response body')}
               </summary>
-              <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[var(--surface-1)] p-2 text-[10px]">
+              <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[var(--surface-1)] p-2 text-2xs">
                 {testResult.body_preview}
                 {testResult.truncated
                   ? `\n${t('webhookChannels.test.truncated', '… (truncated)')}`

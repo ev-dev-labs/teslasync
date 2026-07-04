@@ -1,9 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DollarSign } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { EmptyState } from '@/components/feedback';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
@@ -29,7 +27,6 @@ import {
   CostForecastSection,
   LifetimeSummary,
   EnvironmentalImpact,
-  LoadingSkeleton,
 } from '../components/cost-analysis';
 
 export default function CostAnalysisPage() {
@@ -60,13 +57,19 @@ export default function CostAnalysisPage() {
   const [mpg, setMpg] = useState(DEFAULT_MPG);
   const [electricityRate, setElectricityRate] = useState(DEFAULT_ELECTRICITY_RATE);
 
-  const { data: sessions, isLoading } = useChargingSessionsPaginated(vehicleId, {
+  // ── Data ─────────────────────────────────────────────────────────────
+  const sessionsQuery = useChargingSessionsPaginated(vehicleId, {
     limit: 5000,
     start: startDate,
     end: endDate,
   });
+  const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = sessionsQuery;
+  const retrySessions = useCallback(() => { void sessionsQuery.refetch(); }, [sessionsQuery]);
+
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
-  const { data: forecastData } = useCostForecast(vehicleIdStr);
+  const forecastQuery = useCostForecast(vehicleIdStr);
+  const { data: forecastData, isLoading: forecastLoading, error: forecastError } = forecastQuery;
+  const retryForecast = useCallback(() => { void forecastQuery.refetch(); }, [forecastQuery]);
 
   const {
     coreStats, monthlyData, costPerKwhTrend, chargerTypeData,
@@ -75,69 +78,83 @@ export default function CostAnalysisPage() {
     sessions, gasPrice, mpg, electricityRate, toDistanceDisplay, isMiles,
   });
 
-  if (isLoading) return <LoadingSkeleton />;
-
-  if (!sessions || sessions.length === 0) {
-    return (
-      <FadeIn>
-        <div className="flex min-h-[60vh] items-center justify-center p-6">
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<DollarSign className="h-12 w-12 text-[var(--text-muted)]" />}
-            title={t('costAnalysis.empty.title', 'No Charging Data')}
-            message={t(
-              'costAnalysis.empty.message',
-              'Start charging your vehicle to see cost analysis and savings trends.',
-            )}
-          />
-        </div>
-      </FadeIn>
-    );
-  }
+  const actions = (
+    <div data-print-hide className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <VehicleSelect />
+      <RangePicker
+        value={{ start: startDate, end: endDate }}
+        onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+        align="end"
+        triggerTestId="cost-analysis-range"
+      />
+      <SavedViewMenu
+        route="/cost-analysis"
+        currentQuery={savedView.currentQuery}
+        onApply={savedView.apply}
+      />
+      <PrintButton />
+    </div>
+  );
 
   return (
     <PageContainer
       title={t('costAnalysis.title', 'Cost Analysis')}
       subtitle={t('costAnalysis.subtitle', 'Electricity cost trends, gas savings, and charging economics')}
-      actions={
-        <div className="flex flex-wrap items-center gap-3">
-          <div data-print-hide className="flex flex-wrap items-center gap-3">
-            <VehicleSelect />
-            <RangePicker
-              value={{ start: startDate, end: endDate }}
-              onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-              align="end"
-              triggerTestId="cost-analysis-range"
-            />
-            <SavedViewMenu
-              route="/cost-analysis"
-              currentQuery={savedView.currentQuery}
-              onApply={savedView.apply}
-            />
-            <PrintButton />
-          </div>
-        </div>
-      }
+      actions={actions}
+      query={sessionsQuery}
     >
-      <div className="space-y-6">
-        <div data-tour="cost-analysis">
-        <CostSummaryCards
-          coreStats={coreStats}
-          gasPrice={gasPrice}
-          distanceUnit={distanceUnit}
-          isMiles={isMiles}
-        />
-        </div>
+      {/* 1 — KPI band */}
+      <FadeIn>
+        <section data-tour="cost-analysis" aria-label={t('costAnalysis.kpis', 'Cost summary metrics')}>
+          <CostSummaryCards
+            coreStats={coreStats}
+            gasPrice={gasPrice}
+            distanceUnit={distanceUnit}
+            isMiles={isMiles}
+            isLoading={sessionsLoading}
+            error={sessionsError}
+            onRetry={retrySessions}
+          />
+        </section>
+      </FadeIn>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <MonthlyCostChart data={monthlyData} vehicleId={vehicleId} />
-          <CostPerKwhChart data={costPerKwhTrend} />
-        </div>
+      {/* 2 — Cost trends: hero area chart + rate line */}
+      <FadeIn delay={0.05}>
+        <section
+          aria-label={t('costAnalysis.trends', 'Cost trends')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <div className="xl:col-span-2">
+            <MonthlyCostChart
+              data={monthlyData}
+              vehicleId={vehicleId}
+              isLoading={sessionsLoading}
+              error={sessionsError}
+              onRetry={retrySessions}
+            />
+          </div>
+          <CostPerKwhChart
+            data={costPerKwhTrend}
+            isLoading={sessionsLoading}
+            error={sessionsError}
+            onRetry={retrySessions}
+          />
+        </section>
+      </FadeIn>
 
+      {/* 3 — Charger-type economics */}
+      <FadeIn delay={0.1}>
         <ChargerTypeBreakdown
           data={chargerTypeData}
           totalCost={coreStats?.totalCost ?? 1}
+          isLoading={sessionsLoading}
+          error={sessionsError}
+          onRetry={retrySessions}
         />
+      </FadeIn>
 
+      {/* 4 — Gas vs EV savings calculator */}
+      <FadeIn delay={0.1}>
         <SavingsCalculator
           gasComparison={gasComparison}
           gasPrice={gasPrice}
@@ -147,21 +164,67 @@ export default function CostAnalysisPage() {
           onMpgChange={setMpg}
           onElectricityRateChange={setElectricityRate}
           distanceUnit={distanceUnit}
+          isLoading={sessionsLoading}
+          error={sessionsError}
+          onRetry={retrySessions}
         />
+      </FadeIn>
 
-        <MonthlyCostTable data={monthlyData} />
+      {/* 5 — Monthly breakdown table */}
+      <FadeIn delay={0.1}>
+        <MonthlyCostTable
+          data={monthlyData}
+          isLoading={sessionsLoading}
+          error={sessionsError}
+          onRetry={retrySessions}
+        />
+      </FadeIn>
 
-        <TimeOfUseAnalysis hourlyData={hourlyData} touInsights={touInsights} />
+      {/* 6 — Time-of-use analysis */}
+      <FadeIn delay={0.1}>
+        <TimeOfUseAnalysis
+          hourlyData={hourlyData}
+          touInsights={touInsights}
+          isLoading={sessionsLoading}
+          error={sessionsError}
+          onRetry={retrySessions}
+        />
+      </FadeIn>
 
-        <AICostForecastNarration vehicleId={vehicleId ?? undefined} />
+      {/* 7 — Opt-in AI narration (self-gated; absent in ai_mode=off) */}
+      <AICostForecastNarration vehicleId={vehicleId ?? undefined} />
 
-        <CostForecastSection forecastData={forecastData} />
+      {/* 8 — Deterministic cost forecast */}
+      <FadeIn delay={0.1}>
+        <CostForecastSection
+          forecastData={forecastData}
+          isLoading={forecastLoading}
+          error={forecastError}
+          onRetry={retryForecast}
+        />
+      </FadeIn>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <LifetimeSummary lifetimeMetrics={lifetimeMetrics} coreStats={coreStats} />
-          <EnvironmentalImpact coreStats={coreStats} />
-        </div>
-      </div>
+      {/* 9 — Lifetime summary + environmental impact */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('costAnalysis.impact', 'Lifetime and environmental impact')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+        >
+          <LifetimeSummary
+            lifetimeMetrics={lifetimeMetrics}
+            coreStats={coreStats}
+            isLoading={sessionsLoading}
+            error={sessionsError}
+            onRetry={retrySessions}
+          />
+          <EnvironmentalImpact
+            coreStats={coreStats}
+            isLoading={sessionsLoading}
+            error={sessionsError}
+            onRetry={retrySessions}
+          />
+        </section>
+      </FadeIn>
     </PageContainer>
   );
 }

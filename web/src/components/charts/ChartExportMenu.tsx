@@ -137,7 +137,7 @@ export function ChartExportMenu({
         type="button"
         variant="ghost"
         size="sm"
-        className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
+        className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
         icon={<Download className="h-3.5 w-3.5" />}
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}

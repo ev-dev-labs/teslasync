@@ -22,16 +22,17 @@ import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface StatorTempChartProps {
   data: MotorChartDataPoint[];
+  loading?: boolean;
 }
 
-export function StatorTempChart({ data }: StatorTempChartProps) {
+export function StatorTempChart({ data, loading = false }: StatorTempChartProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
 
-  if (data.length <= 1) return null;
+  const empty = data.length <= 1;
 
   return (
     <FadeIn delay={0.23}>
@@ -39,6 +40,8 @@ export function StatorTempChart({ data }: StatorTempChartProps) {
         title={t('drivetrain.statorTempHistory', 'Stator Temperature History')}
         subtitle={t('drivetrain.statorTempSub', 'Motor stator temperature over recent snapshots')}
         ariaLabel={t('drivetrain.statorTempHistory.aria', 'Front, rear-left and rear-right motor stator temperature history line chart')}
+        loading={loading}
+        empty={empty}
         data={data.map((d) => ({
           time: d.time,
           stator: d.stator,

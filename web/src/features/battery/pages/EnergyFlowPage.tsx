@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import {
   Battery, Car, Plug, Thermometer, Cpu,
   ArrowRight, ArrowDown, Zap,
@@ -9,9 +8,11 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, DataTable, useSortToggle, type Column } from '@/components/ui';
+import {
+  GlassPanel, Badge, DataTable, useSortToggle, type Column,
+  PanelTitle, Text, Caption, Label, MetricValue,
+} from '@/components/ui';
 import { RangePicker, VehicleSelect } from '@/components/forms';
-import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, ChartGradient,
@@ -20,103 +21,198 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   AREA_DEFAULTS,
 } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
+import { useRangeState } from '@/hooks/useRangeState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { request } from '@/api/client';
-import { useEnergyFlow } from '@/api/hooks/useEnergy';
-
-/* ───────── Types (match actual API response from energy_handler.go) ───────── */
-
-interface DailyBreakdownEntry {
-  date: string;
-  energy_wh: number;
-  distance_m: number;
-  efficiency_wh_per_m: number;
-  cost: number;
-}
-
-interface EnergyStatsResponse {
-  vehicle_id: number;
-  period_days: number;
-  total_energy_used_wh: number;
-  total_energy_charged_wh: number;
-  total_wh: number;
-  total_cost: number;
-  total_distance_m: number;
-  avg_efficiency_wh_per_m: number;
-  co2_saved_kg: number;
-  daily_breakdown: DailyBreakdownEntry[];
-}
+import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
+import type { DailyEnergy } from '@/types/energy';
 
 /* ───────── Constants ───────── */
 
 const PRESET_IDS = ['today', '7d', '30d', '90d', 'mtd', 'ytd'];
 
-/* ───────── Flow Arrow ───────── */
+/* ───────── Flow diagram building blocks (local, non-exported) ───────── */
 
-function FlowArrow({
-  direction,
-  power,
-  color,
+/** A directional power chip between two flow nodes. Arrow flips from vertical
+ *  (stacked, mobile) to horizontal (row, ≥sm). Colour is data-driven, so the
+ *  inline style is a sanctioned dynamic value, not a static token. */
+function FlowConnector({
   label,
+  value,
+  color,
+  active,
 }: {
-  direction: 'right' | 'down';
-  power: number;
-  color: string;
   label: string;
+  value: string;
+  color: string;
+  active: boolean;
 }) {
-  const { t } = useTranslation();
-  const Icon = direction === 'right' ? ArrowRight : ArrowDown;
-  const isActive = Math.abs(power) > 0.01;
-
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-        {label}
-      </span>
+      <Label>{label}</Label>
       <div
         className={cn(
-          'flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-opacity',
-          !isActive && 'opacity-30',
+          'flex items-center gap-1 rounded-full px-3 py-1 transition-opacity',
+          !active && 'opacity-30',
         )}
         style={{
           backgroundColor: `${color}18`,
           color,
-          boxShadow: isActive ? `0 0 12px ${color}40` : 'none',
+          boxShadow: active ? `0 0 12px ${color}40` : undefined,
         }}
       >
-        <Icon className="h-3.5 w-3.5" />
-        <span>{fmtNumber(Math.abs(power), 1)} {t('kW')}</span>
+        <ArrowDown className="h-3.5 w-3.5 sm:hidden" aria-hidden="true" />
+        <ArrowRight className="hidden h-3.5 w-3.5 sm:block" aria-hidden="true" />
+        <Text size="xs" weight="semibold">{value}</Text>
       </div>
     </div>
   );
+}
+
+/** A node (Grid / Battery / Motor) in the live energy-flow diagram. */
+function FlowNode({
+  icon,
+  label,
+  glow = 'none',
+  dimmed = false,
+  children,
+  sublabel,
+}: {
+  icon: ReactNode;
+  label: string;
+  glow?: 'cyan' | 'green' | 'purple' | 'none';
+  dimmed?: boolean;
+  children?: ReactNode;
+  sublabel?: string;
+}) {
+  return (
+    <GlassPanel
+      hover
+      glow={glow}
+      className={cn('flex flex-col items-center gap-2 p-4 text-center', dimmed && 'opacity-50')}
+    >
+      {icon}
+      <Text size="xs" weight="medium" color="secondary">{label}</Text>
+      {children}
+      {sublabel ? <Caption>{sublabel}</Caption> : null}
+    </GlassPanel>
+  );
+}
+
+/** One row in the live-power breakdown side panel. */
+function LivePowerRow({
+  icon,
+  label,
+  value,
+  valueClass,
+  dimmed = false,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  valueClass?: string;
+  dimmed?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3 rounded-lg bg-white/[0.02] px-3 py-2',
+        dimmed && 'opacity-50',
+      )}
+    >
+      <div className="flex items-center gap-2">
+        {icon}
+        <Caption>{label}</Caption>
+      </div>
+      <Text size="sm" weight="semibold" className={valueClass ?? 'text-[var(--text-primary)]'}>
+        {value}
+      </Text>
+    </div>
+  );
+}
+
+/** One tile in the efficiency-metrics side panel: value + status chip. */
+function EfficiencyStat({
+  label,
+  value,
+  valueClass,
+  badge,
+}: {
+  label: string;
+  value: string;
+  valueClass: string;
+  badge: ReactNode;
+}) {
+  return (
+    <GlassPanel className="flex items-center justify-between gap-3 p-4">
+      <div className="min-w-0">
+        <Caption>{label}</Caption>
+        <MetricValue className={cn('mt-0.5', valueClass)}>{value}</MetricValue>
+      </div>
+      {badge}
+    </GlassPanel>
+  );
+}
+
+/* ───────── Section state wrapper ───────── */
+
+/** Renders a data section's own loading / error / empty / no-vehicle state so
+ *  no section is gated behind a single page-level guard. */
+function SectionState({
+  noVehicle,
+  loading,
+  error,
+  empty,
+  noVehicleMessage,
+  emptyMessage,
+  onRetry,
+  skeletonHeight = 220,
+  children,
+}: {
+  noVehicle: boolean;
+  loading: boolean;
+  error: unknown;
+  empty: boolean;
+  noVehicleMessage: string;
+  emptyMessage: string;
+  onRetry?: () => void;
+  skeletonHeight?: number;
+  children: ReactNode;
+}) {
+  if (noVehicle) {
+    return <EmptyState icon={<Car className="h-8 w-8" />} message={noVehicleMessage} />;
+  }
+  if (loading) return <Skeleton height={skeletonHeight} rounded />;
+  if (error) return <QueryError error={error} onRetry={onRetry} />;
+  if (empty) return <EmptyState icon={<Zap className="h-8 w-8" />} message={emptyMessage} />;
+  return <>{children}</>;
 }
 
 /* ───────── Main Page ───────── */
 
 export default function EnergyFlowPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Energy Flow'));
+  usePageTitle(t('energyFlow.title', 'Energy Flow'));
 
   const { vehicleId } = useSelectedVehicle();
-  const { unitPrefs, formatDistance, formatEnergy } = useUnits();
+  const { formatDistance, formatEnergy, unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
+
   const { start, end, setRange } = useRangeState({
     persistKey: 'energy-flow.range',
     defaultPresetId: '7d',
   });
 
-  // Backend currently accepts trailing ?days=N only. We compute days from the
-  // selected start/end (inclusive). Custom historical ranges that don't end
-  // today still resolve to a trailing window — documented limitation that the
-  // presetsOnly RangePicker UI hints at by hiding the calendar grid.
+  // Backend accepts a trailing `?days=N` window. Compute the inclusive day
+  // count from the picker; `presetsOnly` hides the calendar so custom windows
+  // that don't end today can't imply a precision the API doesn't honour.
   const days = useMemo(() => {
     const startMs = new Date(`${start}T00:00:00`).getTime();
     const endMs = new Date(`${end}T00:00:00`).getTime();
@@ -124,19 +220,15 @@ export default function EnergyFlowPage() {
   }, [start, end]);
 
   const activeId = vehicleId != null ? String(vehicleId) : null;
+  const noVehicle = activeId == null;
 
-  // Historical stats from GET /vehicles/{id}/energy
-  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
-    queryKey: ['energy-stats', activeId, days],
-    queryFn: () => request<EnergyStatsResponse>(`/vehicles/${activeId}/energy?days=${days}`),
-    enabled: activeId != null,
-    staleTime: 30_000,
-  });
+  // Historical stats — GET /vehicles/{id}/energy?days=N
+  const statsQuery = useEnergyStats(activeId, days);
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = statsQuery;
 
-  // Real-time flow from GET /vehicles/{id}/energy/flow
-  const { data: flow } = useEnergyFlow(activeId);
-
-  const isLoading = statsLoading;
+  // Real-time flow — GET /vehicles/{id}/energy/flow
+  const flowQuery = useEnergyFlow(activeId);
+  const { data: flow, isLoading: flowLoading, error: flowError, refetch: refetchFlow } = flowQuery;
 
   /* ─── Derived: real-time flow ─── */
   const chargePower = (flow?.dc_charging_power ?? 0) + (flow?.ac_charging_power ?? 0);
@@ -144,30 +236,30 @@ export default function EnergyFlowPage() {
   const chargeState = flow?.charge_state ?? null;
 
   /* ─── Derived: daily chart data ─── */
-  const dailyBreakdown = stats?.daily_breakdown ?? [];
+  const dailyBreakdown: DailyEnergy[] = stats?.daily_breakdown ?? [];
 
   const dailyChartData = useMemo(
     () =>
       dailyBreakdown.map((d) => ({
         date: formatDateShort(d.date),
-        energy_wh: d.energy_wh,
-        distance: d.distance_m,
+        energy_wh: d.energy_wh ?? 0,
+        distance: d.distance_m ?? 0,
       })),
-    [dailyBreakdown, distanceUnit],
+    [dailyBreakdown],
   );
 
   const efficiencyChartData = useMemo(
     () =>
       dailyBreakdown
-        .filter((d) => d.efficiency_wh_per_m > 0)
+        .filter((d) => (d.efficiency_wh_per_m ?? 0) > 0)
         .map((d) => ({
           date: formatDateShort(d.date),
           efficiency:
             distanceUnit === 'km'
               ? Number((d.efficiency_wh_per_m * 1000).toFixed(0))
-              : d.efficiency_wh_per_m * 1609.344,
+              : Math.round(d.efficiency_wh_per_m * 1609.344),
         })),
-    [dailyBreakdown],
+    [dailyBreakdown, distanceUnit],
   );
 
   /* ─── Derived: stat values with unit conversion ─── */
@@ -180,12 +272,25 @@ export default function EnergyFlowPage() {
       : Math.round(raw * 1609.344);
   }, [stats, distanceUnit]);
 
-  const efficiencyUnit = distanceUnit === 'km' ? 'Wh/km' : 'Wh/mi';
+  const efficiencyUnit = distanceUnit === 'km' ? t('energyFlow.units.whPerKm', 'Wh/km') : t('energyFlow.units.whPerMi', 'Wh/mi');
 
   const avgEnergyPerDay = useMemo(() => {
     const period = stats?.period_days ?? 0;
     return period > 0 ? (stats?.total_energy_used_wh ?? 0) / period : 0;
   }, [stats]);
+
+  // Efficiency thresholds (unit-aware): lower Wh per unit distance is better.
+  const excellentThreshold = distanceUnit === 'km' ? 150 : 240;
+  const goodThreshold = distanceUnit === 'km' ? 200 : 320;
+  const effVariant =
+    avgEfficiency === 0 ? 'neutral'
+      : avgEfficiency < excellentThreshold ? 'success'
+        : avgEfficiency < goodThreshold ? 'warning' : 'danger';
+  const effLabel =
+    avgEfficiency === 0 ? t('energyFlow.efficiency.noData', 'No Data')
+      : avgEfficiency < excellentThreshold ? t('energyFlow.efficiency.excellent', 'Excellent')
+        : avgEfficiency < goodThreshold ? t('energyFlow.efficiency.good', 'Good')
+          : t('energyFlow.efficiency.high', 'High');
 
   /* ─── Table ─── */
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date', 'desc');
@@ -193,43 +298,37 @@ export default function EnergyFlowPage() {
   const sortedDailyRows = useMemo(() => {
     const rows = dailyBreakdown.slice();
     return sortFn(rows, (row, key) => {
-      if (key === 'energy_wh') return row.energy_wh;
-      if (key === 'distance_m') return row.distance_m;
-      if (key === 'efficiency_wh_per_m') return row.efficiency_wh_per_m;
+      if (key === 'energy_wh') return row.energy_wh ?? 0;
+      if (key === 'distance_m') return row.distance_m ?? 0;
+      if (key === 'efficiency_wh_per_m') return row.efficiency_wh_per_m ?? 0;
       return row.date;
     });
   }, [dailyBreakdown, sortFn]);
 
-  const historyColumns: Column<DailyBreakdownEntry>[] = useMemo(
+  const historyColumns: Column<DailyEnergy>[] = useMemo(
     () => [
       {
         key: 'date',
-        header: t('Date'),
+        header: t('energyFlow.table.date', 'Date'),
         sortable: true,
-        render: (row) => (
-          <span className="text-xs text-[var(--text-secondary)]">
-            {formatDateShort(row.date)}
-          </span>
-        ),
+        render: (row) => <Text variant="bodySm">{formatDateShort(row.date)}</Text>,
       },
       {
         key: 'energy_wh',
-        header: t('Energy'),
+        header: t('energyFlow.table.energy', 'Energy'),
         sortable: true,
         render: (row) => (
-          <span className="font-mono text-sm font-semibold text-[var(--text-primary)]">
-            {formatEnergy(row.energy_wh)}
-          </span>
+          <Text size="sm" weight="semibold" mono color="primary">
+            {formatEnergy(row.energy_wh ?? 0)}
+          </Text>
         ),
       },
       {
         key: 'distance_m',
-        header: `${t('Distance')} (${distanceUnit})`,
+        header: `${t('energyFlow.table.distance', 'Distance')} (${distanceUnit})`,
         sortable: true,
         render: (row) => (
-          <span className="font-mono text-sm text-[var(--text-primary)]">
-            {formatDistance(row.distance_m)}
-          </span>
+          <Text size="sm" mono color="primary">{formatDistance(row.distance_m ?? 0)}</Text>
         ),
       },
       {
@@ -237,15 +336,9 @@ export default function EnergyFlowPage() {
         header: efficiencyUnit,
         sortable: true,
         render: (row) => {
-          const val =
-            distanceUnit === 'km'
-              ? row.efficiency_wh_per_m * 1000
-              : row.efficiency_wh_per_m * 1609.344;
-          return (
-            <span className="font-mono text-sm text-[var(--text-primary)]">
-              {fmtNumber(val, 0)}
-            </span>
-          );
+          const raw = row.efficiency_wh_per_m ?? 0;
+          const val = distanceUnit === 'km' ? raw * 1000 : raw * 1609.344;
+          return <Text size="sm" mono color="primary">{fmtNumber(val, 0)}</Text>;
         },
       },
     ],
@@ -254,368 +347,378 @@ export default function EnergyFlowPage() {
 
   /* ───── Vehicle & Range Controls ───── */
 
-  const rangeButtons = (
-    <RangePicker
-      value={{ start, end }}
-      onChange={(r) => setRange(r)}
-      presetIds={PRESET_IDS}
-      presetsOnly
-      align="end"
-      triggerTestId="energy-flow-range"
-    />
-  );
-
   const actions = (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       <VehicleSelect />
-      {rangeButtons}
+      <RangePicker
+        value={{ start, end }}
+        onChange={(r) => setRange(r)}
+        presetIds={PRESET_IDS}
+        presetsOnly
+        align="end"
+        triggerTestId="energy-flow-range"
+      />
     </div>
   );
 
-  /* ───── Loading skeleton ───── */
-
-  if (isLoading) {
-    return (
-      <PageContainer title={t('Energy Flow')} subtitle={t('Power distribution and energy analysis')} actions={actions}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} height={120} rounded />
-          ))}
-        </div>
-      </PageContainer>
-    );
-  }
-
-  /* ───── Empty / Error ───── */
-
-  if (!stats && !isLoading) {
-    return (
-      <PageContainer
-        title={t('Energy Flow')}
-        subtitle={t('Power distribution and energy analysis')}
-        error={statsError as Error | null}
-        actions={actions}
-      >
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Zap className="h-10 w-10" />}
-          title={t('No Data')}
-          message={t('No energy flow data available for this vehicle and time range.')}
-        />
-      </PageContainer>
-    );
-  }
-
-  /* ─── Efficiency thresholds (unit-aware) ─── */
-  const excellentThreshold = distanceUnit === 'km' ? 150 : 240;
-  const goodThreshold = distanceUnit === 'km' ? 200 : 320;
+  const noVehicleMsg = t('energyFlow.noVehicle', 'Select a vehicle to view its energy flow.');
 
   /* ───── Main render ───── */
 
   return (
-    <PageContainer title={t('Energy Flow')} subtitle={t('Power distribution and energy analysis')} actions={actions}>
-      {/* ── Section 1: Energy Flow Diagram (real-time via /energy/flow) ── */}
+    <PageContainer
+      title={t('energyFlow.title', 'Energy Flow')}
+      subtitle={t('energyFlow.subtitle', 'Power distribution and energy analysis')}
+      actions={actions}
+      query={[statsQuery, flowQuery]}
+    >
+      {/* ── 1 — KPI band: full-width responsive metric grid ── */}
       <FadeIn>
-        <GlassPanel className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5" style={{ color: CHART_COLORS[0] }} />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                {t('Energy Flow Diagram')}
-              </span>
-            </div>
-            {chargeState && (
-              <Badge variant={chargeState === 'Charging' ? 'success' : 'neutral'} size="sm">
-                {t(chargeState)}
-              </Badge>
-            )}
-          </div>
-
-          <div className="grid grid-cols-5 items-center gap-4">
-            {/* Grid → Battery */}
-            <GlassPanel glow="green" className="flex flex-col items-center gap-2 p-4">
-              <Plug className="h-8 w-8" style={{ color: CHART_COLORS[1] }} />
-              <span className="text-xs font-medium text-[var(--text-secondary)]">
-                {t('Grid')}
-              </span>
-            </GlassPanel>
-
-            <FlowArrow direction="right" power={chargePower} color={CHART_COLORS[1]} label={t('Charging')} />
-
-            {/* Battery center — SOC from real-time flow */}
-            <GlassPanel glow="cyan" className="flex flex-col items-center gap-3 p-5">
-              <Battery className="h-8 w-8" style={{ color: CHART_COLORS[0] }} />
-              <RadialGauge value={batterySOC} max={100} label={t('Battery')} unit="%" color={CHART_COLORS[0]} size={100} />
-              {flow?.energy_remaining != null && (
-                <span className="text-xs text-[var(--text-muted)]">
-                  {fmtNumber(flow.energy_remaining, 1)} {t('kWh')}
-                </span>
-              )}
-            </GlassPanel>
-
-            {/* Motor — no real-time data available */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                {t('Driving')}
-              </span>
-              <div
-                className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold opacity-30"
-                style={{ backgroundColor: `${CHART_COLORS[0]}18`, color: CHART_COLORS[0] }}
-              >
-                <ArrowRight className="h-3.5 w-3.5" />
-                <span>{t('N/A')}</span>
-              </div>
-            </div>
-
-            <GlassPanel className="flex flex-col items-center gap-2 p-4 opacity-50">
-              <Car className="h-8 w-8" style={{ color: CHART_COLORS[0] }} />
-              <span className="text-xs font-medium text-[var(--text-secondary)]">
-                {t('Motor')}
-              </span>
-              <span className="text-[10px] text-[var(--text-muted)]">{t('No live data')}</span>
-            </GlassPanel>
-          </div>
-
-          {/* Bottom row: live charging breakdown + greyed-out aux */}
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:mx-auto lg:max-w-2xl">
-            <GlassPanel className="flex flex-col items-center gap-1 p-3">
-              <Zap className="h-5 w-5" style={{ color: CHART_COLORS[1] }} />
-              <span className="text-[11px] text-[var(--text-muted)]">{t('DC Power')}</span>
-              <span className="text-xs font-semibold" style={{ color: CHART_COLORS[1] }}>
-                {fmtNumber(flow?.dc_charging_power ?? 0, 1)} {t('kW')}
-              </span>
-            </GlassPanel>
-
-            <GlassPanel className="flex flex-col items-center gap-1 p-3">
-              <Activity className="h-5 w-5" style={{ color: CHART_COLORS[5] }} />
-              <span className="text-[11px] text-[var(--text-muted)]">{t('AC Power')}</span>
-              <span className="text-xs font-semibold" style={{ color: CHART_COLORS[5] }}>
-                {fmtNumber(flow?.ac_charging_power ?? 0, 1)} {t('kW')}
-              </span>
-            </GlassPanel>
-
-            <GlassPanel className="flex flex-col items-center gap-1 p-3 opacity-50">
-              <Thermometer className="h-5 w-5" style={{ color: CHART_COLORS[3] }} />
-              <span className="text-[11px] text-[var(--text-muted)]">{t('HVAC')}</span>
-              <span className="text-xs text-[var(--text-muted)]">{t('N/A')}</span>
-            </GlassPanel>
-
-            <GlassPanel className="flex flex-col items-center gap-1 p-3 opacity-50">
-              <Cpu className="h-5 w-5" style={{ color: CHART_COLORS[2] }} />
-              <span className="text-[11px] text-[var(--text-muted)]">{t('Accessories')}</span>
-              <span className="text-xs text-[var(--text-muted)]">{t('N/A')}</span>
-            </GlassPanel>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* ── Section 2: Summary MetricCards (historical from /energy) ── */}
-      <FadeIn delay={0.1}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <section
+          aria-label={t('energyFlow.kpis', 'Energy summary metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
+        >
           <MetricCard
-            label={t('Total Energy')}
+            label={t('energyFlow.kpi.totalEnergy', 'Total Energy')}
             value={formatEnergy(stats?.total_energy_used_wh ?? 0)}
             icon={<Zap className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('Total Charged')}
+            label={t('energyFlow.kpi.totalCharged', 'Total Charged')}
             value={formatEnergy(stats?.total_energy_charged_wh ?? 0)}
             icon={<Plug className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
-            label={t('Distance')}
+            label={t('energyFlow.kpi.distance', 'Distance')}
             value={totalDistance}
             icon={<Car className="h-4 w-4" />}
             color="purple"
             subtitle={distanceUnit}
           />
           <MetricCard
-            label={t('Efficiency')}
+            label={t('energyFlow.kpi.efficiency', 'Efficiency')}
             value={avgEfficiency}
             icon={<Gauge className="h-4 w-4" />}
             color="amber"
             subtitle={efficiencyUnit}
           />
           <MetricCard
-            label={t('CO₂ Saved')}
+            label={t('energyFlow.kpi.co2Saved', 'CO₂ Saved')}
             value={fmtNumber(stats?.co2_saved_kg ?? 0, 1)}
             icon={<Leaf className="h-4 w-4" />}
             color="green"
-            subtitle={t('kg')}
+            subtitle={t('energyFlow.units.kg', 'kg')}
           />
           <MetricCard
-            label={t('Period')}
+            label={t('energyFlow.kpi.period', 'Period')}
             value={String(stats?.period_days ?? 0)}
             icon={<Calendar className="h-4 w-4" />}
             color="blue"
-            subtitle={t('days')}
+            subtitle={t('energyFlow.units.days', 'days')}
           />
-        </div>
+        </section>
       </FadeIn>
 
-      {/* ── Section 3: Daily Energy Usage AreaChart ── */}
-      <FadeIn delay={0.2}>
-        <GlassPanel className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Activity className="h-4 w-4" style={{ color: CHART_COLORS[0] }} />
-            <span className="text-sm font-semibold text-[var(--text-primary)]">
-              {t('Daily Energy Usage')}
-            </span>
-          </div>
+      {/* ── 2 — Live energy flow hero + live power breakdown ── */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {/* Hero: real-time flow diagram (Grid → Battery → Motor) */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <PanelTitle className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('energyFlow.diagram.title', 'Energy Flow Diagram')}
+              </PanelTitle>
+              {chargeState ? (
+                <Badge variant={chargeState === 'Charging' ? 'success' : 'neutral'} size="sm">
+                  {t(chargeState)}
+                </Badge>
+              ) : null}
+            </div>
 
-          {dailyChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={dailyChartData} margin={chartMarginLabeled} {...chartAnimation}>
-                <defs>
-                  <ChartGradient id="gradEnergy" color={CHART_COLORS[0]} />
-                </defs>
-                {chartGrid}
-                <XAxis dataKey="date" tick={axisTick} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                <Area
-                  {...AREA_DEFAULTS}
-                  dataKey="energy_wh"
-                  name={t('Energy')}
-                  stroke={CHART_COLORS[0]}
-                  fill="url(#gradEnergy)"
+            <SectionState
+              noVehicle={noVehicle}
+              loading={flowLoading}
+              error={flowError}
+              empty={false}
+              noVehicleMessage={noVehicleMsg}
+              emptyMessage={t('energyFlow.diagram.noData', 'No live flow data available.')}
+              onRetry={() => refetchFlow()}
+              skeletonHeight={200}
+            >
+              <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-5">
+                <FlowNode
+                  glow="green"
+                  icon={<Plug className="h-8 w-8" style={{ color: CHART_COLORS[1] }} aria-hidden="true" />}
+                  label={t('energyFlow.node.grid', 'Grid')}
                 />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No daily energy data available.')} />
-          )}
-        </GlassPanel>
+
+                <FlowConnector
+                  label={t('energyFlow.node.charging', 'Charging')}
+                  value={`${fmtNumber(chargePower, 1)} ${t('energyFlow.units.kw', 'kW')}`}
+                  color={CHART_COLORS[1]}
+                  active={Math.abs(chargePower) > 0.01}
+                />
+
+                <FlowNode
+                  glow="cyan"
+                  icon={<Battery className="h-8 w-8" style={{ color: CHART_COLORS[0] }} aria-hidden="true" />}
+                  label={t('energyFlow.node.battery', 'Battery')}
+                  sublabel={
+                    flow?.energy_remaining != null
+                      ? `${fmtNumber(flow.energy_remaining, 1)} ${t('energyFlow.units.kwh', 'kWh')}`
+                      : undefined
+                  }
+                >
+                  <RadialGauge
+                    value={batterySOC}
+                    max={100}
+                    label={t('energyFlow.node.battery', 'Battery')}
+                    unit="%"
+                    color={CHART_COLORS[0]}
+                    size={100}
+                  />
+                </FlowNode>
+
+                <FlowConnector
+                  label={t('energyFlow.node.driving', 'Driving')}
+                  value={t('energyFlow.na', 'N/A')}
+                  color={CHART_COLORS[0]}
+                  active={false}
+                />
+
+                <FlowNode
+                  dimmed
+                  icon={<Car className="h-8 w-8" style={{ color: CHART_COLORS[0] }} aria-hidden="true" />}
+                  label={t('energyFlow.node.motor', 'Motor')}
+                  sublabel={t('energyFlow.node.noLiveData', 'No live data')}
+                />
+              </div>
+            </SectionState>
+          </GlassPanel>
+
+          {/* Side: live power breakdown */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('energyFlow.livePower.title', 'Live Power')}
+            </PanelTitle>
+
+            <SectionState
+              noVehicle={noVehicle}
+              loading={flowLoading}
+              error={flowError}
+              empty={false}
+              noVehicleMessage={noVehicleMsg}
+              emptyMessage={t('energyFlow.livePower.noData', 'No live power data available.')}
+              onRetry={() => refetchFlow()}
+              skeletonHeight={200}
+            >
+              <div className="space-y-2">
+                <LivePowerRow
+                  icon={<Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                  label={t('energyFlow.livePower.dc', 'DC Power')}
+                  value={`${fmtNumber(flow?.dc_charging_power ?? 0, 1)} ${t('energyFlow.units.kw', 'kW')}`}
+                  valueClass="text-cyan-300"
+                />
+                <LivePowerRow
+                  icon={<Activity className="h-4 w-4 text-indigo-300" aria-hidden="true" />}
+                  label={t('energyFlow.livePower.ac', 'AC Power')}
+                  value={`${fmtNumber(flow?.ac_charging_power ?? 0, 1)} ${t('energyFlow.units.kw', 'kW')}`}
+                  valueClass="text-indigo-300"
+                />
+                <LivePowerRow
+                  dimmed
+                  icon={<Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />}
+                  label={t('energyFlow.livePower.hvac', 'HVAC')}
+                  value={t('energyFlow.na', 'N/A')}
+                />
+                <LivePowerRow
+                  dimmed
+                  icon={<Cpu className="h-4 w-4 text-purple-300" aria-hidden="true" />}
+                  label={t('energyFlow.livePower.accessories', 'Accessories')}
+                  value={t('energyFlow.na', 'N/A')}
+                />
+              </div>
+            </SectionState>
+          </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* ── Section 4: Daily Distance + Efficiency Charts ── */}
+      {/* ── 3 — Daily energy usage (hero chart) + efficiency metrics ── */}
+      <FadeIn delay={0.2}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('energyFlow.usage.title', 'Daily Energy Usage')}
+            </PanelTitle>
+            <SectionState
+              noVehicle={noVehicle}
+              loading={statsLoading}
+              error={statsError}
+              empty={dailyChartData.length === 0}
+              noVehicleMessage={noVehicleMsg}
+              emptyMessage={t('energyFlow.usage.noData', 'No daily energy data available.')}
+              onRetry={() => refetchStats()}
+            >
+              <div className="h-64 sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyChartData} margin={chartMarginLabeled} {...chartAnimation}>
+                    <defs>
+                      <ChartGradient id="gradEnergy" color={CHART_COLORS[0]} />
+                    </defs>
+                    {chartGrid}
+                    <XAxis dataKey="date" tick={axisTick} />
+                    <YAxis tick={axisTick} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend />
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="energy_wh"
+                      name={t('energyFlow.table.energy', 'Energy')}
+                      stroke={CHART_COLORS[0]}
+                      fill="url(#gradEnergy)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </SectionState>
+          </GlassPanel>
+
+          {/* Efficiency metrics side panel */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('energyFlow.metrics.title', 'Efficiency Metrics')}
+            </PanelTitle>
+            <SectionState
+              noVehicle={noVehicle}
+              loading={statsLoading}
+              error={statsError}
+              empty={!stats}
+              noVehicleMessage={noVehicleMsg}
+              emptyMessage={t('energyFlow.metrics.noData', 'No efficiency metrics available.')}
+              onRetry={() => refetchStats()}
+              skeletonHeight={240}
+            >
+              <div className="space-y-3">
+                <EfficiencyStat
+                  label={efficiencyUnit}
+                  value={fmtNumber(avgEfficiency, 0)}
+                  valueClass="text-cyan-300"
+                  badge={<Badge variant={effVariant} size="sm">{effLabel}</Badge>}
+                />
+                <EfficiencyStat
+                  label={t('energyFlow.kpi.co2Saved', 'CO₂ Saved')}
+                  value={fmtNumber(stats?.co2_saved_kg ?? 0, 1)}
+                  valueClass="text-emerald-300"
+                  badge={<Badge variant="success" size="sm">{t('energyFlow.units.kgCo2', 'kg CO₂')}</Badge>}
+                />
+                <EfficiencyStat
+                  label={t('energyFlow.metrics.avgPerDay', 'Avg Energy/Day')}
+                  value={formatEnergy(avgEnergyPerDay)}
+                  valueClass="text-amber-300"
+                  badge={<Badge variant="info" size="sm">{t('energyFlow.metrics.perDay', 'per day')}</Badge>}
+                />
+              </div>
+            </SectionState>
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* ── 4 — Daily distance + daily efficiency charts ── */}
       <FadeIn delay={0.3}>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* Daily Distance BarChart */}
-          <GlassPanel className="p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" style={{ color: CHART_COLORS[1] }} />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                {t('Daily Distance')}
-              </span>
-            </div>
-
-            {dailyChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={dailyChartData} margin={chartMarginLabeled} {...chartAnimation}>
-                  {chartGrid}
-                  <XAxis dataKey="date" tick={axisTick} />
-                  <YAxis tick={axisTick} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend />
-                  <Bar
-                    dataKey="distance"
-                    name={`${t('Distance')} (${distanceUnit})`}
-                    fill={CHART_COLORS[1]}
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No daily distance data available.')} />
-            )}
+        <section className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('energyFlow.distance.title', 'Daily Distance')}
+            </PanelTitle>
+            <SectionState
+              noVehicle={noVehicle}
+              loading={statsLoading}
+              error={statsError}
+              empty={dailyChartData.length === 0}
+              noVehicleMessage={noVehicleMsg}
+              emptyMessage={t('energyFlow.distance.noData', 'No daily distance data available.')}
+              onRetry={() => refetchStats()}
+            >
+              <div className="h-64 sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyChartData} margin={chartMarginLabeled} {...chartAnimation}>
+                    {chartGrid}
+                    <XAxis dataKey="date" tick={axisTick} />
+                    <YAxis tick={axisTick} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend />
+                    <Bar
+                      dataKey="distance"
+                      name={`${t('energyFlow.table.distance', 'Distance')} (${distanceUnit})`}
+                      fill={CHART_COLORS[1]}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </SectionState>
           </GlassPanel>
 
-          {/* Efficiency Over Time */}
-          <GlassPanel className="p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" style={{ color: CHART_COLORS[3] }} />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                {t('Daily Efficiency')}
-              </span>
-            </div>
-
-            {efficiencyChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={efficiencyChartData} margin={chartMarginLabeled} {...chartAnimation}>
-                  {chartGrid}
-                  <XAxis dataKey="date" tick={axisTick} />
-                  <YAxis tick={axisTick} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend />
-                  <Bar
-                    dataKey="efficiency"
-                    name={efficiencyUnit}
-                    fill={CHART_COLORS[3]}
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No efficiency data available.')} />
-            )}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              {t('energyFlow.dailyEfficiency.title', 'Daily Efficiency')}
+            </PanelTitle>
+            <SectionState
+              noVehicle={noVehicle}
+              loading={statsLoading}
+              error={statsError}
+              empty={efficiencyChartData.length === 0}
+              noVehicleMessage={noVehicleMsg}
+              emptyMessage={t('energyFlow.dailyEfficiency.noData', 'No efficiency data available.')}
+              onRetry={() => refetchStats()}
+            >
+              <div className="h-64 sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={efficiencyChartData} margin={chartMarginLabeled} {...chartAnimation}>
+                    {chartGrid}
+                    <XAxis dataKey="date" tick={axisTick} />
+                    <YAxis tick={axisTick} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend />
+                    <Bar
+                      dataKey="efficiency"
+                      name={efficiencyUnit}
+                      fill={CHART_COLORS[3]}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </SectionState>
           </GlassPanel>
-        </div>
+        </section>
       </FadeIn>
 
-      {/* ── Section 5: Efficiency Metrics ── */}
+      {/* ── 5 — Daily energy history (full-width detail band) ── */}
       <FadeIn delay={0.4}>
-        <GlassPanel className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" style={{ color: CHART_COLORS[1] }} />
-            <span className="text-sm font-semibold text-[var(--text-primary)]">
-              {t('Efficiency Metrics')}
-            </span>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <GlassPanel className="flex flex-col items-center gap-2 p-4">
-              <span className="text-xs text-[var(--text-muted)]">{efficiencyUnit}</span>
-              <span className="text-2xl font-bold" style={{ color: CHART_COLORS[0] }}>
-                {fmtNumber(avgEfficiency, 0)}
-              </span>
-              <Badge variant={
-                avgEfficiency === 0 ? 'neutral' :
-                avgEfficiency < excellentThreshold ? 'success' :
-                avgEfficiency < goodThreshold ? 'warning' : 'danger'
-              } size="sm">
-                {avgEfficiency === 0 ? t('No Data') :
-                 avgEfficiency < excellentThreshold ? t('Excellent') :
-                 avgEfficiency < goodThreshold ? t('Good') : t('High')}
-              </Badge>
-            </GlassPanel>
-
-            <GlassPanel className="flex flex-col items-center gap-2 p-4">
-              <span className="text-xs text-[var(--text-muted)]">{t('CO₂ Saved')}</span>
-              <span className="text-2xl font-bold" style={{ color: CHART_COLORS[1] }}>
-                {fmtNumber(stats?.co2_saved_kg ?? 0, 1)}
-              </span>
-              <Badge variant="success" size="sm">
-                {t('kg CO₂')}
-              </Badge>
-            </GlassPanel>
-
-            <GlassPanel className="flex flex-col items-center gap-2 p-4">
-              <span className="text-xs text-[var(--text-muted)]">{t('Avg Energy/Day')}</span>
-              <span className="text-2xl font-bold" style={{ color: CHART_COLORS[3] }}>
-                {formatEnergy(avgEnergyPerDay)}
-              </span>
-              <Badge variant="info" size="sm">
-                {t('per day')}
-              </Badge>
-            </GlassPanel>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* ── Section 6: Daily Energy History Table ── */}
-      <FadeIn delay={0.5}>
-        <GlassPanel className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" style={{ color: CHART_COLORS[4] }} />
-            <span className="text-sm font-semibold text-[var(--text-primary)]">
-              {t('Daily Energy History')}
-            </span>
-          </div>
-
-          {sortedDailyRows.length > 0 ? (
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-purple-300" aria-hidden="true" />
+            {t('energyFlow.history.title', 'Daily Energy History')}
+          </PanelTitle>
+          <SectionState
+            noVehicle={noVehicle}
+            loading={statsLoading}
+            error={statsError}
+            empty={sortedDailyRows.length === 0}
+            noVehicleMessage={noVehicleMsg}
+            emptyMessage={t('energyFlow.history.noData', 'No energy history records available.')}
+            onRetry={() => refetchStats()}
+            skeletonHeight={280}
+          >
             <DataTable
               tableId="battery:energy-flow-history"
               columns={historyColumns}
@@ -624,13 +727,11 @@ export default function EnergyFlowPage() {
               sortKey={sortKey}
               sortDir={sortDir}
               onSort={onSort}
-              emptyMessage={t('No energy records found.')}
+              emptyMessage={t('energyFlow.history.empty', 'No energy records found.')}
               compact
               pagination
             />
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No energy history records available.')} />
-          )}
+          </SectionState>
         </GlassPanel>
       </FadeIn>
     </PageContainer>

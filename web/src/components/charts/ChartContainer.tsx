@@ -6,6 +6,7 @@ import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
 import { Button } from '@/components/ui/Button';
+import { Text } from '@/components/ui/Typography';
 import { FullscreenButton } from '@/components/ui/FullscreenButton';
 import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
@@ -374,14 +375,17 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       >
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <h3
+            <Text
+              as="h3"
               id={titleId}
-              className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+              size="sm"
+              weight="semibold"
+              color="primary"
             >
               {title}
-            </h3>
+            </Text>
             {subtitle && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+              <Text as="p" variant="caption">{subtitle}</Text>
             )}
           </div>
           <div
@@ -400,7 +404,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
+                  className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                   icon={<Plus className="h-3.5 w-3.5" />}
                   onClick={() => setPopoverOpen(true)}
                   aria-label={t('annotations.add', 'Add annotation')}
@@ -412,7 +416,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   className={cn(
                     '!h-7 !w-7 !p-0',
                     hidden
-                      ? 'text-gray-300 hover:text-gray-500 dark:text-white/20 dark:hover:text-white/40'
+                      ? 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                       : 'text-blue-400 hover:text-blue-300',
                   )}
                   icon={hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -454,7 +458,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             {visibleAnnotations.map((ann) => (
               <span
                 key={ann.id}
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-white/60"
+                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-2xs text-[var(--text-secondary)]"
                 title={ann.description ?? ann.label}
               >
                 <Tag className="h-2.5 w-2.5" aria-hidden="true" />

@@ -45,6 +45,11 @@ export type BroadcastMessage =
   // ── Theme ────────────────────────────────────────────────────────────────
   | { type: 'theme.changed'; themeId: string; modeId: string }
   | { type: 'theme.customColors'; primary: string; accent: string }
+  // ── Typography / fonts ─────────────────────────────────────────────────────
+  // Emitted by FontProvider on any font-preference change. Peer tabs re-read
+  // the persisted `teslasync-font-*` values and re-apply the CSS vars; the
+  // payload is a hint only (subscribers reconcile from their own state).
+  | { type: 'font.changed' }
   // ── Auth ─────────────────────────────────────────────────────────────────
   | { type: 'auth.logout' }
   // ── Notifications ────────────────────────────────────────────────────────

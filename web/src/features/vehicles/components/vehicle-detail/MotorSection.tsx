@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Cog, Activity, Thermometer, Gauge, Settings, Zap, Battery } from 'lucide-react'
 
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, PanelTitle } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
@@ -29,12 +29,10 @@ export function MotorSection({ motorData }: MotorSectionProps) {
 
   return (
     <GlassPanel className="p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Cog className="h-4 w-4 text-[var(--neon-cyan)]" />
-        <span className="text-lg font-bold text-[var(--text-primary)]">
-          {t('vehicles.detail.motor', 'Powertrain')}
-        </span>
-      </div>
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Cog className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('vehicles.detail.motor', 'Powertrain')}
+      </PanelTitle>
       {motorData ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <MetricCard

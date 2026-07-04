@@ -1,32 +1,49 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { cn } from '@/lib/cn';
 import { formatBytes, fmtInt as libFmtInt } from '@/lib/numberFormat';
-
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { TimeStamp } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { useToast } from '@/components/feedback/Toast';
 import { formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
+import { neonColorMap, typography, type NeonColor } from '@/lib/tokens';
+import { Icons } from '@/lib/icons';
+
+import { PageContainer } from '@/components/layout';
+import {
+  GlassPanel,
+  Badge,
+  Button,
+  Input,
+  Select,
+  Checkbox,
+  DataTable,
+  PanelTitle,
+  Label,
+  Text,
+  HelperText,
+  type Column,
+} from '@/components/ui';
+import { MetricCard, TimeStamp } from '@/components/data-display';
+import {
+  Skeleton,
+  EmptyState,
+  QueryError,
+  AlertBanner,
+  JobProgressDrawer,
+  RequiresAuth,
+} from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+import { useToast } from '@/components/feedback/Toast';
+
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { request } from '@/api/client';
-import { useCreateAccountExport, useExportColumns } from '@/api/hooks/useExports';
-import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
-import { RequiresAuth } from '@/components/feedback/RequiresAuth';
+import {
+  useCreateAccountExport,
+  useExportColumns,
+  exportDownloadUrl,
+} from '@/api/hooks/useExports';
 import { ScheduledExportsPanel } from './ScheduledExportsPanel';
 import type { Vehicle } from '@/api/types';
-
-import { Icons } from '@/lib/icons';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -79,7 +96,7 @@ const EXPORT_TYPES: {
   icon: typeof Icons.vehicle;
   descKey: string;
   desc: string;
-  color: string;
+  color: NeonColor;
 }[] = [
   { value: 'drives', labelKey: 'dataExport.types.drives', label: 'Drives', icon: Icons.vehicle, descKey: 'dataExport.types.drivesDesc', desc: 'Export drive sessions, routes, and efficiency data', color: 'cyan' },
   { value: 'charging', labelKey: 'dataExport.types.charging', label: 'Charging', icon: Icons.charging, descKey: 'dataExport.types.chargingDesc', desc: 'Export charging sessions and energy data', color: 'green' },
@@ -155,48 +172,50 @@ function ExportTypeSelector({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div
+      role="radiogroup"
+      aria-label={t('dataExport.wizard.step1', 'STEP 1 — Select Data Type')}
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+    >
       {EXPORT_TYPES.map((et) => {
         const Icon = et.icon;
         const active = selected === et.value;
+        const c = neonColorMap[et.color];
         return (
           <GlassPanel
             key={et.value}
+            role="radio"
+            aria-checked={active}
+            aria-label={t(et.labelKey, et.label)}
+            tabIndex={0}
             hover
             onClick={() => onChange(et.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onChange(et.value);
+              }
+            }}
             className={cn(
-              'p-4 text-left transition-all duration-normal cursor-pointer border-2 rounded-xl',
-              active
-                ? 'border-[var(--border-strong)]'
-                : 'border-transparent hover:border-[var(--border-subtle)]',
+              'min-h-11 cursor-pointer rounded-xl border-2 p-4 text-left transition-all duration-normal',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+              active ? cn(c.border, c.glow) : 'border-transparent hover:border-[var(--border-subtle)]',
             )}
-            style={active ? { borderColor: `var(--neon-${et.color})` } : undefined}
           >
-            <div className="flex items-center gap-2.5 mb-2">
-              <div
-                className={cn(
-                  'p-1.5 rounded-lg',
-                  active ? 'bg-[var(--surface-2)]' : 'bg-[var(--surface-2)]',
-                )}
-                style={active ? { background: `color-mix(in srgb, var(--neon-${et.color}) 15%, transparent)` } : undefined}
-              >
+            <div className="mb-2 flex items-center gap-2.5">
+              <div className={cn('rounded-lg p-1.5', active ? c.bg : 'bg-[var(--surface-2)]')}>
                 <Icon
-                  className={cn('h-4 w-4', active ? 'text-white' : 'text-[var(--text-muted)]')}
-                  style={active ? { color: `var(--neon-${et.color})` } : undefined}
+                  className={cn('h-4 w-4', active ? c.text : 'text-[var(--text-muted)]')}
+                  aria-hidden="true"
                 />
               </div>
-              <span
-                className={cn(
-                  'text-sm font-semibold',
-                  active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
-                )}
-              >
+              <Text as="span" size="sm" weight="semibold" color={active ? 'primary' : 'secondary'}>
                 {t(et.labelKey, et.label)}
-              </span>
+              </Text>
             </div>
-            <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
+            <Text as="p" variant="caption" className="leading-relaxed">
               {t(et.descKey, et.desc)}
-            </p>
+            </Text>
           </GlassPanel>
         );
       })}
@@ -213,7 +232,7 @@ function FormatSelector({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex gap-3">
+    <div className="flex flex-wrap gap-3" role="group" aria-label={t('dataExport.wizard.step2', 'STEP 2 — Choose Format')}>
       {EXPORT_FORMATS.map((f) => {
         const Icon = f.icon;
         const active = selected === f.value;
@@ -222,7 +241,8 @@ function FormatSelector({
             key={f.value}
             variant={active ? 'primary' : 'outline'}
             size="md"
-            icon={<Icon className="h-4 w-4" />}
+            aria-pressed={active}
+            icon={<Icon className="h-4 w-4" aria-hidden="true" />}
             onClick={() => onChange(f.value)}
           >
             {t(f.labelKey, f.label)}
@@ -242,7 +262,7 @@ function DatePresetSelector({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2" role="group" aria-label={t('dataExport.presets.aria', 'Date range presets')}>
       {DATE_PRESETS.map((p) => {
         const active = selected === p.days;
         return (
@@ -250,6 +270,7 @@ function DatePresetSelector({
             key={p.days}
             size="sm"
             variant={active ? 'primary' : 'ghost'}
+            aria-pressed={active}
             onClick={() => onChange(p.days)}
           >
             {t(p.labelKey, p.label)}
@@ -266,7 +287,7 @@ function StatusBadge({ status }: { status: ExportStatus }) {
   const Icon = cfg.icon;
   return (
     <Badge variant={cfg.badgeVariant} size="sm">
-      <Icon className={cn('h-3 w-3', cfg.spinning && 'animate-spin')} />
+      <Icon className={cn('h-3 w-3', cfg.spinning && 'animate-spin')} aria-hidden="true" />
       {t(cfg.labelKey, cfg.label)}
     </Badge>
   );
@@ -286,8 +307,8 @@ function TypeBadge({ type }: { type: ExportType }) {
 function FormatBadge({ format }: { format: ExportFormat }) {
   return (
     <Badge variant={format === 'csv' ? 'info' : 'warning'} size="sm">
-      {format === 'csv' && <Icons.fileSpreadsheet className="h-3 w-3" />}
-      {format === 'json' && <Icons.fileJson className="h-3 w-3" />}
+      {format === 'csv' && <Icons.fileSpreadsheet className="h-3 w-3" aria-hidden="true" />}
+      {format === 'json' && <Icons.fileJson className="h-3 w-3" aria-hidden="true" />}
       {format.toUpperCase()}
     </Badge>
   );
@@ -295,19 +316,23 @@ function FormatBadge({ format }: { format: ExportFormat }) {
 
 function FormatInfoCards() {
   const { t } = useTranslation();
+  const previewClass = cn(
+    'rounded-lg bg-[var(--surface-overlay)] p-3',
+    typography.family.mono,
+    typography.size['2xs'],
+    typography.color.muted,
+  );
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4">
       <GlassPanel className="p-4" hover glow="cyan">
-        <div className="flex items-center gap-2 mb-3">
-          <Icons.fileSpreadsheet className="h-5 w-5 text-neon-cyan" />
-          <span className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('dataExport.csvPreview', 'CSV Preview')}
-          </span>
+        <div className="mb-3 flex items-center gap-2">
+          <Icons.fileSpreadsheet className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+          <PanelTitle>{t('dataExport.csvPreview', 'CSV Preview')}</PanelTitle>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-3">
+        <Text as="p" variant="caption" className="mb-3">
           {t('dataExport.csvDesc', 'Comma-separated values, compatible with Excel and Google Sheets')}
-        </p>
-        <div className="rounded-lg bg-[var(--surface-overlay)] p-3 font-mono text-[11px] text-[var(--text-muted)]">
+        </Text>
+        <div className={previewClass}>
           <p>date,distance_m,efficiency_wh_per_m</p>
           <p>2025-01-15,45200,0.152</p>
           <p>2025-01-16,32800,0.148</p>
@@ -315,16 +340,14 @@ function FormatInfoCards() {
       </GlassPanel>
 
       <GlassPanel className="p-4" hover glow="purple">
-        <div className="flex items-center gap-2 mb-3">
-          <Icons.fileJson className="h-5 w-5 text-neon-purple" />
-          <span className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('dataExport.jsonPreview', 'JSON Preview')}
-          </span>
+        <div className="mb-3 flex items-center gap-2">
+          <Icons.fileJson className="h-5 w-5 text-purple-300" aria-hidden="true" />
+          <PanelTitle>{t('dataExport.jsonPreview', 'JSON Preview')}</PanelTitle>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-3">
+        <Text as="p" variant="caption" className="mb-3">
           {t('dataExport.jsonDesc', 'Structured JSON format for programmatic access')}
-        </p>
-        <div className="rounded-lg bg-[var(--surface-overlay)] p-3 font-mono text-[11px] text-[var(--text-muted)]">
+        </Text>
+        <div className={previewClass}>
           <p>{`[{ "date": "2025-01-15",`}</p>
           <p>{`   "distance_m": 45200,`}</p>
           <p>{`   "efficiency": 152 }]`}</p>
@@ -344,11 +367,9 @@ function DataOverviewCard({
   const { t } = useTranslation();
   return (
     <GlassPanel className="p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Icons.database className="h-4 w-4 text-neon-cyan" />
-        <span className="text-sm font-semibold text-[var(--text-primary)]">
-          {t('dataExport.dataOverview', 'Data Overview')}
-        </span>
+      <div className="mb-3 flex items-center gap-2">
+        <Icons.database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <PanelTitle>{t('dataExport.dataOverview', 'Data Overview')}</PanelTitle>
       </div>
       {isLoading ? (
         <div className="space-y-2">
@@ -357,25 +378,25 @@ function DataOverviewCard({
         </div>
       ) : overview ? (
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <Icons.vehicle className="h-3.5 w-3.5 text-neon-cyan" />
-            <span>{fmtInt(overview.drives)} {t('dataExport.drives', 'Drives')}</span>
+          <div className="flex items-center gap-2">
+            <Icons.vehicle className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
+            <Text size="xs" color="secondary">
+              {fmtInt(overview.drives)} {t('dataExport.drives', 'Drives')}
+            </Text>
           </div>
-          <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <Icons.charging className="h-3.5 w-3.5 text-neon-green" />
-            <span>{fmtInt(overview.charging_sessions)} {t('dataExport.chargingSessions', 'Charging Sessions')}</span>
+          <div className="flex items-center gap-2">
+            <Icons.charging className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
+            <Text size="xs" color="secondary">
+              {fmtInt(overview.charging_sessions)} {t('dataExport.chargingSessions', 'Charging Sessions')}
+            </Text>
           </div>
         </div>
       ) : (
-        <p className="text-xs text-[var(--text-muted)]">{t('dataExport.unavailable', 'Unavailable')}</p>
+        <Text as="p" variant="caption">{t('dataExport.unavailable', 'Unavailable')}</Text>
       )}
     </GlassPanel>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Custom date range inputs                                           */
-/* ------------------------------------------------------------------ */
 
 function CustomDateRange({
   startDate,
@@ -390,16 +411,16 @@ function CustomDateRange({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex gap-3 items-end">
+    <div className="flex flex-wrap gap-3">
       <Input
         type="date"
-        label={t('Start')}
+        label={t('dataExport.startDate', 'Start')}
         value={startDate}
         onChange={(e) => onStartChange(e.target.value)}
       />
       <Input
         type="date"
-        label={t('End')}
+        label={t('dataExport.endDate', 'End')}
         value={endDate}
         onChange={(e) => onEndChange(e.target.value)}
       />
@@ -421,10 +442,10 @@ function StatsRow({
   const { t } = useTranslation();
   const totalExports = jobs?.length ?? 0;
 
-  const totalSize = useMemo(() => {
-    if (!jobs) return 0;
-    return jobs.reduce((sum, j) => sum + (j.file_size ?? 0), 0);
-  }, [jobs]);
+  const totalSize = useMemo(
+    () => (jobs ?? []).reduce((sum, j) => sum + (j.file_size ?? 0), 0),
+    [jobs],
+  );
 
   const mostExportedType = useMemo(() => {
     if (!jobs || jobs.length === 0) return '—';
@@ -446,7 +467,7 @@ function StatsRow({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} height={80} rounded />
         ))}
@@ -455,7 +476,7 @@ function StatsRow({
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <MetricCard
         label={t('Total Exports')}
         value={totalExports}
@@ -556,27 +577,21 @@ function ExportWizard({
   }, [vehicles, t]);
 
   return (
-    <GlassPanel className="p-6" glow="cyan">
-      <div className="flex items-center gap-2 mb-5">
-        <Icons.fileDown className="h-5 w-5 text-neon-cyan" />
-        <h2 className="text-base font-semibold text-[var(--text-primary)]">
-          {t('dataExport.wizardTitle', 'New Export')}
-        </h2>
+    <GlassPanel className="p-4 sm:p-5 lg:p-6" glow="cyan">
+      <div className="mb-5 flex items-center gap-2">
+        <Icons.fileDown className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+        <PanelTitle>{t('dataExport.wizardTitle', 'New Export')}</PanelTitle>
       </div>
 
       {/* Step 1: Export Type */}
       <div className="mb-5">
-        <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-          {t('dataExport.wizard.step1', 'STEP 1 — Select Data Type')}
-        </p>
+        <Label className="mb-2 block">{t('dataExport.wizard.step1', 'STEP 1 — Select Data Type')}</Label>
         <ExportTypeSelector selected={exportType} onChange={handleExportTypeChange} />
       </div>
 
       {/* Step 2: Format */}
       <div className="mb-5">
-        <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-          {t('dataExport.wizard.step2', 'STEP 2 — Choose Format')}
-        </p>
+        <Label className="mb-2 block">{t('dataExport.wizard.step2', 'STEP 2 — Choose Format')}</Label>
         <FormatSelector selected={exportFormat} onChange={setExportFormat} />
       </div>
 
@@ -590,9 +605,7 @@ function ExportWizard({
       {/* Step 3: Vehicle */}
       {vehicles && vehicles.length > 0 && (
         <div className="mb-5 max-w-xs">
-          <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-            {t('dataExport.wizard.step3', 'STEP 3 — Select Vehicle')}
-          </p>
+          <Label className="mb-2 block">{t('dataExport.wizard.step3', 'STEP 3 — Select Vehicle')}</Label>
           <Select
             options={vehicleOptions}
             value={vehicleId}
@@ -604,15 +617,14 @@ function ExportWizard({
 
       {/* Step 4: Date Range */}
       <div className="mb-6">
-        <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-          {t('dataExport.wizard.step4', 'STEP 4 — Date Range')}
-        </p>
+        <Label className="mb-2 block">{t('dataExport.wizard.step4', 'STEP 4 — Date Range')}</Label>
         <DatePresetSelector selected={useCustomRange ? -1 : presetDays} onChange={handlePresetChange} />
         <div className="mt-3 flex items-center gap-3">
           <Button
             variant={useCustomRange ? 'primary' : 'ghost'}
             size="sm"
-            icon={<Icons.calendar className="h-3.5 w-3.5" />}
+            aria-pressed={useCustomRange}
+            icon={<Icons.calendar className="h-3.5 w-3.5" aria-hidden="true" />}
             onClick={() => setUseCustomRange(!useCustomRange)}
           >
             {t('dataExport.customRange', 'Custom Range')}
@@ -635,7 +647,7 @@ function ExportWizard({
         variant="primary"
         size="lg"
         loading={isPending}
-        icon={<Icons.download className="h-4 w-4" />}
+        icon={<Icons.download className="h-4 w-4" aria-hidden="true" />}
         onClick={handleSubmit}
       >
         {t('Start Export')}
@@ -686,9 +698,7 @@ function ColumnPickerSection({
   if (isLoading) {
     return (
       <div className="mb-5">
-        <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-          {t('dataExport.columns.title', 'STEP 2½ — Columns')}
-        </p>
+        <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — Columns')}</Label>
         <Skeleton className="h-24 w-full" />
       </div>
     );
@@ -745,17 +755,15 @@ function ColumnPickerSection({
 
   return (
     <div className="mb-5" data-testid="export-column-picker">
-      <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-        {t('dataExport.columns.title', 'STEP 2½ — Columns')}
-      </p>
+      <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — Columns')}</Label>
       <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-[var(--text-secondary)]">
+          <HelperText className="max-w-prose">
             {t(
               'dataExport.columns.helperText',
               'Select which columns to include in the export. Required columns cannot be removed.',
             )}
-          </p>
+          </HelperText>
           <div className="flex gap-2">
             <Button
               variant="ghost"
@@ -785,29 +793,29 @@ function ColumnPickerSection({
             const checked = selectedSet.has(col.name);
             const required = requiredSet.has(col.name);
             return (
-              <label
+              <div
                 key={col.name}
-                className={cn(
-                  'flex items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-2 text-xs',
-                  required ? 'opacity-70' : 'cursor-pointer hover:bg-[var(--surface-2)]',
-                )}
                 data-testid={`export-column-row-${col.name}`}
+                className={cn(
+                  'flex min-h-11 items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-2',
+                  required ? 'opacity-70' : 'hover:bg-[var(--surface-2)]',
+                )}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
+                  size="sm"
                   checked={checked}
                   disabled={required}
                   onChange={() => toggleColumn(col.name)}
+                  label={col.label}
                   aria-label={col.label}
                   data-testid={`export-column-checkbox-${col.name}`}
                 />
-                <span className="text-[var(--text-primary)]">{col.label}</span>
-                {required ? (
-                  <span className="ml-auto rounded-sm bg-amber-500/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-300">
+                {required && (
+                  <Badge variant="warning" size="sm" className="ml-auto">
                     {t('dataExport.columns.alwaysIncluded', 'Required')}
-                  </span>
-                ) : null}
-              </label>
+                  </Badge>
+                )}
+              </div>
             );
           })}
         </div>
@@ -823,12 +831,14 @@ function ColumnPickerSection({
 function ExportHistoryTable({
   jobs,
   isLoading,
+  error,
   vehicles,
   onDownload,
   onRefresh,
 }: {
   jobs: ExportJobSummary[] | undefined;
   isLoading: boolean;
+  error?: unknown;
   vehicles: Vehicle[] | undefined;
   onDownload: (job: ExportJobSummary) => void;
   onRefresh: () => void;
@@ -872,9 +882,9 @@ function ExportHistoryTable({
         key: 'vehicle',
         header: t('Vehicle'),
         render: (row) => (
-          <span className="text-xs text-[var(--text-secondary)]">
+          <Text size="xs" color="secondary">
             {row.vehicle_id ? vehicleMap.get(row.vehicle_id) ?? `#${row.vehicle_id}` : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -882,9 +892,9 @@ function ExportHistoryTable({
         header: t('Records'),
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-[var(--text-secondary)]">
+          <Text size="xs" color="secondary">
             {row.record_count != null ? fmtInt(row.record_count) : '—'}
-          </span>
+          </Text>
         ),
       },
       {
@@ -892,18 +902,18 @@ function ExportHistoryTable({
         header: t('Size'),
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-[var(--text-secondary)]">
+          <Text size="xs" color="secondary">
             {formatBytes(row.file_size, { zeroAsEmpty: true, gbDecimals: 2 })}
-          </span>
+          </Text>
         ),
       },
       {
         key: 'duration',
         header: t('Duration'),
         render: (row) => (
-          <span className="text-xs text-[var(--text-muted)]">
+          <Text size="xs" color="muted">
             {formatDurationMsLong(row.duration_ms)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -923,55 +933,57 @@ function ExportHistoryTable({
             <Button
               variant="ghost"
               size="sm"
-              icon={<Icons.download className="h-3.5 w-3.5" />}
+              icon={<Icons.download className="h-3.5 w-3.5" aria-hidden="true" />}
               onClick={() => onDownload(row)}
             >
               {t('Download')}
             </Button>
           ) : row.status === 'failed' && row.error_message ? (
-            <span
-              className="text-[11px] text-rose-300 truncate max-w-[120px] inline-block"
+            <Text
+              as="span"
+              variant="error"
+              className="inline-block max-w-[120px] truncate"
               title={row.error_message}
             >
               {row.error_message}
-            </span>
+            </Text>
           ) : null,
       },
     ],
     [t, vehicleMap, onDownload],
   );
 
-  if (isLoading) {
-    return (
-      <GlassPanel className="p-6">
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} height={40} />
-          ))}
-        </div>
-      </GlassPanel>
-    );
-  }
-
   return (
-    <GlassPanel className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
+    <GlassPanel className="overflow-hidden p-0">
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('dataExport.exportHistory', 'Export History')}
-          </h2>
+          <PanelTitle>{t('dataExport.exportHistory', 'Export History')}</PanelTitle>
           {activeJobs > 0 && (
             <Badge variant="info" size="sm" dot>
               {activeJobs} {t('dataExport.active', 'Active')}
             </Badge>
           )}
         </div>
-        <Button variant="ghost" size="sm" icon={<Icons.refresh className="h-3.5 w-3.5" />} onClick={onRefresh}>
+        <Button variant="ghost" size="sm" icon={<Icons.refresh className="h-3.5 w-3.5" aria-hidden="true" />} onClick={onRefresh}>
           {t('dataExport.refresh', 'Refresh')}
         </Button>
       </div>
 
-      {!jobs || jobs.length === 0 ? (
+      {error ? (
+        <div className="p-5">
+          <QueryError
+            error={error}
+            onRetry={onRefresh}
+            resourceName={t('dataExport.resourceName', 'Export jobs')}
+          />
+        </div>
+      ) : isLoading && (!jobs || jobs.length === 0) ? (
+        <div className="space-y-3 p-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} height={40} />
+          ))}
+        </div>
+      ) : !jobs || jobs.length === 0 ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Icons.fileDown className="h-10 w-10" />}
           title={t('dataExport.noExports', 'No Exports Yet')}
@@ -1031,85 +1043,59 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
   );
 
   return (
-    <GlassPanel className="p-6" glow="cyan">
-      <div className="flex items-start gap-3 mb-4">
+    <GlassPanel className="p-4 sm:p-5 lg:p-6" glow="cyan">
+      <div className="mb-4 flex items-start gap-3">
         <div className="rounded-lg bg-cyan-400/10 p-2">
           <Icons.package className="h-5 w-5 text-cyan-300" aria-hidden="true" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">
-            {t('dataExport.account.title', 'Download my data')}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        <div className="min-w-0 flex-1">
+          <PanelTitle>{t('dataExport.account.title', 'Download my data')}</PanelTitle>
+          <Text as="p" size="sm" color="secondary" className="mt-1">
             {t(
               'dataExport.account.subtitle',
               'Get a single ZIP containing every table we store for you — drives, charging, signal history, alerts, settings, and a manifest. Use this for backup, migration, or your personal records.',
             )}
-          </p>
+          </Text>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <div>
-          <label
-            htmlFor="account-export-vehicle"
-            className="block text-xs font-medium text-[var(--text-muted)] mb-1"
-          >
-            {t('dataExport.account.vehicle', 'Vehicle')}
-          </label>
-          <Select
-            id="account-export-vehicle"
-            value={vehicleId}
-            onChange={(e) => setVehicleId(e.target.value)}
-            options={vehicleOptions}
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="account-export-start"
-            className="block text-xs font-medium text-[var(--text-muted)] mb-1"
-          >
-            {t('dataExport.account.startDate', 'Start date (optional)')}
-          </label>
-          <Input
-            id="account-export-start"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="account-export-end"
-            className="block text-xs font-medium text-[var(--text-muted)] mb-1"
-          >
-            {t('dataExport.account.endDate', 'End date (optional)')}
-          </label>
-          <Input
-            id="account-export-end"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </div>
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Select
+          label={t('dataExport.account.vehicle', 'Vehicle')}
+          value={vehicleId}
+          onChange={(e) => setVehicleId(e.target.value)}
+          options={vehicleOptions}
+        />
+        <Input
+          label={t('dataExport.account.startDate', 'Start date (optional)')}
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+        <Input
+          label={t('dataExport.account.endDate', 'End date (optional)')}
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-white/[0.06]">
-        <div className="flex items-start gap-2 text-xs text-[var(--text-muted)]">
-          <Icons.alertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
-          <span>
+      <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-2">
+          <Icons.alertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+          <Text as="span" variant="caption">
             {t(
               'dataExport.account.warning',
               'Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.',
             )}
-          </span>
+          </Text>
         </div>
         <Button
           variant="primary"
           size="md"
           onClick={handleStart}
           loading={createAccount.isPending}
-          icon={<Icons.download className="h-4 w-4" />}
+          icon={<Icons.download className="h-4 w-4" aria-hidden="true" />}
         >
           {t('dataExport.account.start', 'Start full export')}
         </Button>
@@ -1141,7 +1127,7 @@ export default function DataExportPage() {
     refetchInterval: 10_000,
   });
 
-  const { data: vehicles, isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
+  const { data: vehicles } = useQuery<Vehicle[]>({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
@@ -1167,7 +1153,7 @@ export default function DataExportPage() {
   /* --- Handlers --- */
 
   const handleDownload = useCallback((job: ExportJobSummary) => {
-    window.open(`/api/v1/export/jobs/${job.id}/download`, '_blank');
+    window.open(exportDownloadUrl(job.id), '_blank');
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -1189,76 +1175,92 @@ export default function DataExportPage() {
     return { drives, charging_sessions: charging };
   }, [jobs]);
 
-  const isLoading = jobsLoading || vehiclesLoading;
-
   /* --- Render --- */
 
   return (
     <PageContainer
       title={t('dataExport.title', 'Data Export')}
       subtitle={t('dataExport.subtitle', 'Export vehicle data in CSV or JSON format')}
-      loading={isLoading}
-      error={jobsError as Error | null}
       actions={
         <Button
           variant="ghost"
           size="sm"
-          icon={<Icons.refresh className="h-4 w-4" />}
+          icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
           onClick={handleRefresh}
         >
           {t('dataExport.refresh', 'Refresh')}
         </Button>
       }
     >
-      {/* Stats */}
+      {/* Non-blocking load error — the History panel below also renders its
+          own QueryError so each section stays self-sufficient. */}
+      {jobsError && (
+        <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" aria-hidden="true" />}>
+          {t('dataExport.loadError', 'Failed to load export jobs')}
+        </AlertBanner>
+      )}
+
+      {/* 1 — KPI band */}
       <FadeIn>
-        <StatsRow jobs={jobs} isLoading={jobsLoading} />
+        <section aria-label={t('dataExport.stats.aria', 'Export summary metrics')}>
+          <StatsRow jobs={jobs} isLoading={jobsLoading} />
+        </section>
       </FadeIn>
 
-      {/* GDPR-style "Download my data" */}
-      <FadeIn delay={0.025}>
-        <AccountExportPanel vehicles={vehicles} />
-      </FadeIn>
-
-      {/* Export Wizard */}
+      {/* 2 — Primary bento: export wizard (hero) + context rail */}
       <FadeIn delay={0.05}>
-        <ExportWizard
-          vehicles={vehicles}
-          onSubmit={handleSubmit}
-          isPending={submitExport.isPending}
-        />
+        <section
+          aria-label={t('dataExport.create.aria', 'Create a new export')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+        >
+          <div className="xl:col-span-2">
+            <ExportWizard
+              vehicles={vehicles}
+              onSubmit={handleSubmit}
+              isPending={submitExport.isPending}
+            />
+          </div>
+          <div className="space-y-4 xl:col-span-1">
+            <DataOverviewCard overview={dataOverview} isLoading={jobsLoading} />
+            <FormatInfoCards />
+          </div>
+        </section>
       </FadeIn>
 
-      {/* Format Info + Data Overview row */}
+      {/* 3 — GDPR-style "Download my data" full-width band */}
       <FadeIn delay={0.1}>
-        <div className="space-y-4">
-          <FormatInfoCards />
-          <DataOverviewCard overview={dataOverview} isLoading={jobsLoading} />
-        </div>
+        <section aria-label={t('dataExport.account.aria', 'Full account export')}>
+          <AccountExportPanel vehicles={vehicles} />
+        </section>
       </FadeIn>
 
-      {/* Export History */}
+      {/* 4 — Export history detail band */}
       <FadeIn delay={0.15}>
-        <ExportHistoryTable
-          jobs={jobs}
-          isLoading={jobsLoading}
-          vehicles={vehicles}
-          onDownload={handleDownload}
-          onRefresh={handleRefresh}
-        />
+        <section aria-label={t('dataExport.history.aria', 'Export history')}>
+          <ExportHistoryTable
+            jobs={jobs}
+            isLoading={jobsLoading}
+            error={jobsError}
+            vehicles={vehicles}
+            onDownload={handleDownload}
+            onRefresh={handleRefresh}
+          />
+        </section>
       </FadeIn>
 
-      {/* Recurring scheduled exports panel. Wrapped in <RequiresAuth>
+      {/* 5 — Recurring scheduled exports panel. Wrapped in <RequiresAuth>
           because the underlying API takes ownership from
           FORWARD_AUTH_HEADER; in open mode the placeholder explains
           why the section can't render. */}
       <FadeIn delay={0.2}>
-        <RequiresAuth
-          capability="session_list"
-          feature={t('dataExport.scheduled.feature', 'Scheduled exports')}
-        >
-          <ScheduledExportsPanel />
-        </RequiresAuth>
+        <section aria-label={t('dataExport.scheduled.aria', 'Scheduled exports')}>
+          <RequiresAuth
+            capability="session_list"
+            feature={t('dataExport.scheduled.feature', 'Scheduled exports')}
+          >
+            <ScheduledExportsPanel />
+          </RequiresAuth>
+        </section>
       </FadeIn>
 
       {/* Floating job progress drawer — visible across the page */}

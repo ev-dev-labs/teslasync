@@ -188,9 +188,19 @@ export const typography = {
     primary: 'text-[var(--text-primary)]',
     secondary: 'text-[var(--text-secondary)]',
     muted: 'text-[var(--text-muted)]',
-    subtle: 'text-white/60 dark:text-white/60',
-    disabled: 'text-white/40',
-    inverse: 'text-black/90 dark:text-white/90',
+    // Theme- and forced-colors-safe: resolve through the --text-* vars so
+    // contrast holds in every mode (dark/light/oled/…/High-Contrast) instead
+    // of the non-adaptive text-white/N literals these used to carry.
+    subtle: 'text-[var(--text-secondary)]',
+    disabled: 'text-[var(--text-muted)]',
+    // Text placed on an inverted surface (e.g. a flipped tooltip / accent
+    // fill). --text-inverse is dark in dark themes and light in light themes
+    // (see index.css :root + :root.light-mode).
+    inverse: 'text-[var(--text-inverse)]',
+    // Text / icons on a solid, saturated accent fill (bright neon button,
+    // checkbox tick). Stays dark in every theme because the fill stays bright
+    // (see index.css --text-on-accent — no light-mode override).
+    onAccent: 'text-[var(--text-on-accent)]',
   },
 
   family: {

@@ -77,7 +77,7 @@ function TirePressureContent({
               getBorder(t.pa),
             )}
           >
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t.label}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t.label}</p>
             <p className={cn('text-xl font-bold font-mono', getColor(t.pa))}>
               {formatPressure(paToKpa(t.pa))}
             </p>
@@ -87,7 +87,7 @@ function TirePressureContent({
       <div className="text-center">
         <span
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+            'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',
             allGood
               ? 'border-green-500/30 bg-green-500/10 text-green-400'
               : anyBad

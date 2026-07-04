@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { TabNav } from '@/components/ui';
-import { DataFreshnessAuto } from '@/components/data-display';
 import { RangePicker } from '@/components/forms';
+import { FadeIn } from '@/components/motion';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -25,7 +25,6 @@ export default function AnalyticsPage() {
   });
 
   const fleetQuery = useFleetAnalytics({ start, end });
-  const { data, isLoading, error } = fleetQuery;
 
   const tabs = useMemo(
     () => [
@@ -38,16 +37,13 @@ export default function AnalyticsPage() {
   );
 
   const headerActions = (
-    <div className="flex items-center gap-3">
-      <DataFreshnessAuto query={fleetQuery} />
-      <RangePicker
-        value={{ start, end }}
-        onChange={setRange}
-        presetIds={['7d', '30d', '90d', '1y', 'all']}
-        align="end"
-        triggerTestId="analytics-range"
-      />
-    </div>
+    <RangePicker
+      value={{ start, end }}
+      onChange={setRange}
+      presetIds={['7d', '30d', '90d', '1y', 'all']}
+      align="end"
+      triggerTestId="analytics-range"
+    />
   );
 
   return (
@@ -55,19 +51,25 @@ export default function AnalyticsPage() {
       title={t('analytics.title', 'Fleet Analytics')}
       subtitle={t('analytics.subtitle', 'Comprehensive fleet performance insights')}
       actions={headerActions}
-      loading={isLoading}
-      error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+      query={fleetQuery}
     >
-      <HeroGauges data={data} />
+      {/* 1 — KPI band: full-width responsive metric grid, self-sufficient loading */}
+      <FadeIn>
+        <section aria-label={t('analytics.hero.kpis', 'Fleet summary metrics')}>
+          <HeroGauges query={fleetQuery} />
+        </section>
+      </FadeIn>
 
-      <div className="mt-4">
+      {/* 2 — Domain switcher */}
+      <nav className="mt-4" aria-label={t('analytics.tabsNav', 'Analytics sections')}>
         <TabNav tabs={tabs} active={activeTab} onChange={(k) => setActiveTab(k as TabKey)} />
-      </div>
+      </nav>
 
-      {activeTab === 'overview' && <OverviewTab data={data} />}
-      {activeTab === 'driving' && <DrivingTab data={data} />}
-      {activeTab === 'charging' && <ChargingTab data={data} />}
-      {activeTab === 'battery' && <BatteryTab data={data} />}
+      {/* 3 — Active domain: responsive bento of charts, tables and breakdowns */}
+      {activeTab === 'overview' && <OverviewTab query={fleetQuery} />}
+      {activeTab === 'driving' && <DrivingTab query={fleetQuery} />}
+      {activeTab === 'charging' && <ChargingTab query={fleetQuery} />}
+      {activeTab === 'battery' && <BatteryTab query={fleetQuery} />}
     </PageContainer>
   );
 }

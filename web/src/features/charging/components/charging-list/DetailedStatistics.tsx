@@ -23,27 +23,27 @@ export function DetailedStatistics({ stats, enhanced }: DetailedStatisticsProps)
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">
         <div>
           <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={stats.count} /></p>
-          <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.totalSessions', 'Total Sessions')}</p>
+          <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.totalSessions', 'Total Sessions')}</p>
         </div>
         <div>
           <p className="text-lg font-bold text-[var(--text-primary)]">{formatDuration(enhanced.avgDuration)}</p>
-          <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.avgDuration', 'Avg Duration')}</p>
+          <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.avgDuration', 'Avg Duration')}</p>
         </div>
         <div>
           <p className="text-lg font-bold text-purple-300">{fmtWithUnit(stats.avgPower, 'kW')}</p>
-          <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.avgPower', 'Avg Power')}</p>
+          <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.avgPower', 'Avg Power')}</p>
         </div>
         <div>
           <p className="text-lg font-bold text-[var(--text-primary)]">{enhanced.mostCommonType[0]}</p>
-          <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.topCharger', 'Top Charger')} ({enhanced.mostCommonType[1]}×)</p>
+          <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.topCharger', 'Top Charger')} ({enhanced.mostCommonType[1]}×)</p>
         </div>
         <div>
           <p className="text-lg font-bold text-amber-300"><Currency value={stats.totalCost} /></p>
-          <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.totalCost', 'Total Cost')}</p>
+          <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.totalCost', 'Total Cost')}</p>
         </div>
         <div>
           <p className="text-lg font-bold text-emerald-300"><Currency value={stats.avgCostPerKwh} precision={3} /></p>
-          <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.avgCostPerKwh', 'Avg $/kWh')}</p>
+          <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.avgCostPerKwh', 'Avg $/kWh')}</p>
         </div>
       </div>
     </GlassPanel>

@@ -23,16 +23,17 @@ import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface TemperatureTrendChartProps {
   data: ChartDataPoint[];
+  loading?: boolean;
 }
 
-export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
+export function TemperatureTrendChart({ data, loading = false }: TemperatureTrendChartProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
 
-  if (data.length <= 1) return null;
+  const empty = data.length <= 1;
 
   return (
     <FadeIn delay={0.25}>
@@ -40,6 +41,8 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
         title={t('drivetrain.tempHistory', 'Temperature Trend')}
         subtitle={t('drivetrain.tempHistorySub', 'Outside temperature recorded during recent drives')}
         ariaLabel={t('drivetrain.tempHistory.aria', 'Outside temperature trend line chart per recent drive')}
+        loading={loading}
+        empty={empty}
         data={data.map((d) => ({ date: d.date, outsideTemp: d.outsideTemp }))}
         dataColumns={[
           { key: 'date', label: t('drivetrain.col.date', 'Date') },

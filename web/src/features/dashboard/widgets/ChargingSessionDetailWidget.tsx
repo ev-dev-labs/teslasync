@@ -206,7 +206,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             <span className="text-2xl font-bold text-emerald-300">
               {fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh ?? 0, 'kWh'), 1)}
             </span>
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.chargingSessionDetail.unitKwh', 'kWh added')}
             </span>
             <Badge variant={charger.variant} size="sm">

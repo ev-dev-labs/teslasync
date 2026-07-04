@@ -1,10 +1,17 @@
-// LiveLogsPage
+// LiveLogsPage — modern-ui full-width redesign
 //
 // Operator-facing live log tail. Streams the API server's structured
 // zerolog events via the SSE endpoint at GET /admin/logs/stream (see
-// internal/api/admin_log_stream_handler.go) and renders them in a
+// internal/api/adminlogstream/handler.go) and renders them in a
 // virtualized DataTable so the browser stays responsive even when the
 // server is gushing thousands of lines per minute.
+//
+// Full-bleed bento layout (mobile-first, reflows to more columns on wide
+// screens — never a centered narrow strip):
+//   1. KPI band    — connection / visible / buffered / received / drops / level
+//   2. Filters     — level (server), grep (server), vehicle id (client)
+//   3. AI summary  — opt-in Helix log/trace summarization (self-hiding)
+//   4. Live stream — the hero: virtualized log table (full width, tall)
 //
 // The page intentionally NEVER auto-runs anything destructive — it is
 // a read-only window onto the existing log pipeline. Filters are:
@@ -17,11 +24,22 @@
 // Auto-scroll follows new events to the bottom; toggling it off — or
 // scrolling up manually — pins the table at the user's position.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Activity,
   AlertTriangle,
+  ArrowDownToLine,
+  Database,
   Download,
+  Filter,
   Pause,
   Play,
   RefreshCw,
@@ -29,18 +47,22 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import { PageContainer, Stack } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import {
   Badge,
   Button,
+  Caption,
+  DataTable,
   GlassPanel,
   Input,
+  MetricLabel,
+  PanelTitle,
   Select,
+  Text,
   Toggle,
-  DataTable,
   type Column,
 } from '@/components/ui';
-import { Caption, MetricLabel, Text } from '@/components/ui/Typography';
+import { MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AILogTraceSummarization } from '@/components/ai/AILogTraceSummarization';
@@ -52,6 +74,8 @@ import {
   type LogStreamLevel,
   type UseLogStreamOptions,
 } from '@/api/hooks/useLogStream';
+import { fmtInt } from '@/lib/numberFormat';
+import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 
 // ── helpers ─────────────────────────────────────────────────────────
@@ -159,36 +183,74 @@ function ConnectionBadge({
   const { t } = useTranslation();
   if (hasError) {
     return (
-      <Badge variant="danger" data-testid="livelogs-status-badge">
+      <Badge variant="danger" dot data-testid="livelogs-status-badge">
         {t('liveLogs.status.error', 'Connection error')}
       </Badge>
     );
   }
   if (!enabled) {
     return (
-      <Badge variant="neutral" data-testid="livelogs-status-badge">
+      <Badge variant="neutral" dot data-testid="livelogs-status-badge">
         {t('liveLogs.status.disconnected', 'Disconnected')}
       </Badge>
     );
   }
   if (!isConnected) {
     return (
-      <Badge variant="info" data-testid="livelogs-status-badge">
+      <Badge variant="info" dot data-testid="livelogs-status-badge">
         {t('liveLogs.status.connecting', 'Connecting…')}
       </Badge>
     );
   }
   if (paused) {
     return (
-      <Badge variant="warning" data-testid="livelogs-status-badge">
+      <Badge variant="warning" dot data-testid="livelogs-status-badge">
         {t('liveLogs.status.paused', 'Paused (still receiving)')}
       </Badge>
     );
   }
   return (
-    <Badge variant="success" data-testid="livelogs-status-badge">
+    <Badge variant="success" dot data-testid="livelogs-status-badge">
       {t('liveLogs.status.connected', 'Live')}
     </Badge>
+  );
+}
+
+/**
+ * KPI shell that mirrors `MetricCard`'s chrome (subtle surface + neon
+ * icon chip) so a non-numeric value — the live connection badge — sits
+ * flush in the metric band beside the numeric `MetricCard`s.
+ */
+function StatKpiShell({
+  label,
+  icon,
+  color = 'cyan',
+  children,
+}: {
+  label: string;
+  icon: ReactNode;
+  color?: NeonColor;
+  children: ReactNode;
+}) {
+  const c = neonColorMap[color];
+  return (
+    <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-3 transition-colors hover:border-white/[0.08]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <MetricLabel className="mb-1 truncate">{label}</MetricLabel>
+          <div className="mt-0.5">{children}</div>
+        </div>
+        <div
+          className={cn(
+            'flex shrink-0 items-center justify-center rounded-lg p-1.5 ring-1',
+            c.bg,
+            c.ring,
+          )}
+        >
+          <div className={c.text}>{icon}</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -372,9 +434,9 @@ export default function LiveLogsPage({
         header: t('liveLogs.table.time', 'Time'),
         defaultWidth: 110,
         render: (row) => (
-          <span className="font-mono text-xs text-[var(--text-secondary)]">
+          <Text mono size="xs" color="secondary">
             {formatTime(row.receivedAt)}
-          </span>
+          </Text>
         ),
       },
       {
@@ -393,12 +455,12 @@ export default function LiveLogsPage({
         key: 'message',
         header: t('liveLogs.table.message', 'Message'),
         render: (row) => (
-          <span className="block break-words font-mono text-xs text-[var(--text-primary)]">
+          <Text variant="code" className="block break-words">
             <HighlightedText
               text={extractMessage(row.parsed, row.payload)}
               pattern={grepPattern}
             />
-          </span>
+          </Text>
         ),
       },
       {
@@ -411,21 +473,25 @@ export default function LiveLogsPage({
           return (
             <span className="flex flex-wrap gap-1">
               {fields.slice(0, 6).map(([k, v]) => (
-                <span
+                <Text
+                  as="span"
                   key={k}
-                  className="rounded border border-[var(--border-subtle)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-secondary)]"
+                  mono
+                  size="2xs"
+                  color="secondary"
+                  className="rounded border border-[var(--border-subtle)] bg-[var(--surface-2)] px-1.5 py-0.5"
                   title={`${k}=${v}`}
                 >
                   <span className="text-[var(--text-muted)]">{k}=</span>
                   <span className="text-[var(--text-primary)]">
                     {v.length > 32 ? `${v.slice(0, 32)}…` : v}
                   </span>
-                </span>
+                </Text>
               ))}
               {fields.length > 6 ? (
-                <span className="px-1 font-mono text-[10px] text-[var(--text-muted)]">
+                <Text mono size="2xs" color="muted" className="px-1">
                   +{fields.length - 6}
-                </span>
+                </Text>
               ) : null}
             </span>
           );
@@ -434,23 +500,159 @@ export default function LiveLogsPage({
     ];
   }, [grepPattern, t]);
 
-  const filterPanel = (
-    <GlassPanel className="p-4" data-testid="livelogs-filters">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <div>
-          <Select
-            label={t('liveLogs.filters.level', 'Minimum level')}
-            value={level}
-            onChange={(e) =>
-              setLevel((e.target.value as LogStreamLevel) ?? 'info')
-            }
-            options={LEVEL_OPTIONS.map((o) => ({
-              value: o.value,
-              label: t(o.i18nKey, o.defaultLabel),
-            }))}
-            data-testid="livelogs-level-select"
-          />
-        </div>
+  // Connection state → neon hue for the status KPI icon chip. Color is
+  // never the only signal — the ConnectionBadge carries text + a dot too.
+  const statusColor: NeonColor = stream.error
+    ? 'red'
+    : !enabled
+      ? 'amber'
+      : !stream.isConnected
+        ? 'blue'
+        : paused
+          ? 'amber'
+          : 'green';
+
+  // Stream toolbar — lives in the PageContainer header actions so the
+  // primary live controls stay reachable and wrap under the title on
+  // mobile (PageContainer already does flex-col → flex-row).
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <Toggle
+        label={t('liveLogs.controls.autoscroll', 'Auto-scroll')}
+        checked={autoscroll}
+        onChange={setAutoscroll}
+        size="sm"
+        data-testid="livelogs-autoscroll-toggle"
+      />
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => setPaused((p) => !p)}
+        icon={
+          paused ? (
+            <Play className="h-4 w-4" aria-hidden />
+          ) : (
+            <Pause className="h-4 w-4" aria-hidden />
+          )
+        }
+        data-testid="livelogs-pause-button"
+      >
+        {paused
+          ? t('liveLogs.controls.resume', 'Resume')
+          : t('liveLogs.controls.pause', 'Pause')}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleClear}
+        icon={<Trash2 className="h-4 w-4" aria-hidden />}
+        data-testid="livelogs-clear-button"
+      >
+        {t('liveLogs.controls.clear', 'Clear buffer')}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleDownload}
+        disabled={filteredEvents.length === 0}
+        icon={<Download className="h-4 w-4" aria-hidden />}
+        data-testid="livelogs-download-button"
+      >
+        {t('liveLogs.controls.download', 'Download visible (.txt)')}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleReconnect}
+        icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+        data-testid="livelogs-reconnect-button"
+      >
+        {t('liveLogs.controls.reconnect', 'Reconnect')}
+      </Button>
+    </div>
+  );
+
+  // KPI band — full-width metric grid: 2 cols on phone, 3 on tablet,
+  // 6 across on wide monitors (reflows, never a centered strip).
+  const kpiBand = (
+    <section
+      aria-label={t('liveLogs.kpi.aria', 'Live stream metrics')}
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+    >
+      <StatKpiShell
+        label={t('liveLogs.kpi.connection', 'Connection')}
+        icon={<Activity className="h-4 w-4" aria-hidden />}
+        color={statusColor}
+      >
+        <ConnectionBadge
+          isConnected={stream.isConnected}
+          paused={paused}
+          hasError={stream.error !== null}
+          enabled={enabled}
+        />
+      </StatKpiShell>
+      <MetricCard
+        label={t('liveLogs.kpi.visible', 'Visible')}
+        value={fmtInt(filteredEvents.length)}
+        icon={<ScrollText className="h-5 w-5" aria-hidden />}
+        color="cyan"
+        subtitle={t('liveLogs.kpi.visibleSub', 'After filters')}
+      />
+      <MetricCard
+        label={t('liveLogs.kpi.buffered', 'Buffered')}
+        value={fmtInt(stream.events.length)}
+        icon={<Database className="h-5 w-5" aria-hidden />}
+        color="blue"
+        subtitle={t('liveLogs.kpi.capacity', {
+          max: fmtInt(LOG_STREAM_MAX_EVENTS),
+          defaultValue: '{{max}} max',
+        })}
+      />
+      <MetricCard
+        label={t('liveLogs.kpi.received', 'Received')}
+        value={fmtInt(stream.totalReceived)}
+        icon={<ArrowDownToLine className="h-5 w-5" aria-hidden />}
+        color="green"
+        subtitle={t('liveLogs.kpi.receivedSub', 'Since mount')}
+      />
+      <MetricCard
+        label={t('liveLogs.kpi.drops', 'Server drops')}
+        value={fmtInt(stream.drops)}
+        icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+        color={stream.drops > 0 ? 'red' : 'amber'}
+        subtitle={t('liveLogs.kpi.dropsSub', 'Buffer overflow')}
+      />
+      <MetricCard
+        label={t('liveLogs.kpi.minLevel', 'Min level')}
+        value={(level ?? 'info').toUpperCase()}
+        icon={<Filter className="h-5 w-5" aria-hidden />}
+        color="purple"
+        subtitle={t('liveLogs.kpi.minLevelSub', 'Server filter')}
+      />
+    </section>
+  );
+
+  // Filters — server-side level + grep, client-side vehicle id. Full
+  // width; grep spans two columns on wide screens where it matters most.
+  const filtersPanel = (
+    <GlassPanel className="p-4 sm:p-5" data-testid="livelogs-filters">
+      <PanelTitle className="mb-3 flex items-center gap-2">
+        <Filter className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('liveLogs.section.filters', 'Filters')}
+      </PanelTitle>
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-4">
+        <Select
+          label={t('liveLogs.filters.level', 'Minimum level')}
+          value={level}
+          onChange={(e) =>
+            setLevel((e.target.value as LogStreamLevel) ?? 'info')
+          }
+          options={LEVEL_OPTIONS.map((o) => ({
+            value: o.value,
+            label: t(o.i18nKey, o.defaultLabel),
+          }))}
+          data-testid="livelogs-level-select"
+        />
         <div className="md:col-span-2">
           <Input
             label={t('liveLogs.filters.grep', 'Grep (regular expression)')}
@@ -475,108 +677,97 @@ export default function LiveLogsPage({
             data-testid="livelogs-grep-input"
           />
         </div>
+        <Input
+          label={t('liveLogs.filters.vehicleId', 'Vehicle ID')}
+          value={vehicleFilter}
+          onChange={(e) => setVehicleFilter(e.target.value.trim())}
+          placeholder={t(
+            'liveLogs.filters.vehicleIdPlaceholder',
+            'Numeric — applied client-side',
+          )}
+          data-testid="livelogs-vehicle-input"
+          inputMode="numeric"
+        />
+      </div>
+    </GlassPanel>
+  );
+
+  // Error surface — only mounted when the stream fetch fails, so it never
+  // leaves a phantom gap in the space-y rhythm when healthy.
+  const errorPanel = (
+    <GlassPanel
+      className="border border-rose-500/30 p-4"
+      data-testid="livelogs-error"
+    >
+      <div className="flex items-start gap-3">
+        <AlertTriangle
+          className="h-5 w-5 shrink-0 text-rose-300"
+          aria-hidden
+        />
         <div>
-          <Input
-            label={t('liveLogs.filters.vehicleId', 'Vehicle ID')}
-            value={vehicleFilter}
-            onChange={(e) => setVehicleFilter(e.target.value.trim())}
-            placeholder={t(
-              'liveLogs.filters.vehicleIdPlaceholder',
-              'Numeric — applied client-side',
-            )}
-            data-testid="livelogs-vehicle-input"
-            inputMode="numeric"
-          />
+          <MetricLabel className="mb-1 block">
+            {t('liveLogs.error.title', 'Could not connect to log stream')}
+          </MetricLabel>
+          <Text variant="bodySm" as="p">
+            {stream.error?.message ||
+              t(
+                'liveLogs.error.hint',
+                'Check your network and admin permissions, then click Reconnect.',
+              )}
+          </Text>
         </div>
       </div>
     </GlassPanel>
   );
 
-  const controlsPanel = (
-    <GlassPanel className="p-4" data-testid="livelogs-controls">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <ConnectionBadge
-            isConnected={stream.isConnected}
-            paused={paused}
-            hasError={stream.error !== null}
-            enabled={enabled}
-          />
-          <Caption>
-            {t('liveLogs.stats.buffered', {
-              count: stream.events.length,
-              defaultValue: 'Buffered: {{count}}',
-            })}
-          </Caption>
-          <Caption>
-            {t('liveLogs.stats.received', {
-              count: stream.totalReceived,
-              defaultValue: 'Received: {{count}}',
-            })}
-          </Caption>
-          {stream.drops > 0 ? (
-            <Caption className="text-amber-300">
-              {t('liveLogs.stats.drops', {
-                count: stream.drops,
-                defaultValue: 'Server drops: {{count}}',
-              })}
-            </Caption>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Toggle
-            label={t('liveLogs.controls.autoscroll', 'Auto-scroll')}
-            checked={autoscroll}
-            onChange={setAutoscroll}
-            size="sm"
-            data-testid="livelogs-autoscroll-toggle"
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setPaused((p) => !p)}
-            icon={
-              paused ? (
-                <Play className="h-4 w-4" aria-hidden />
-              ) : (
-                <Pause className="h-4 w-4" aria-hidden />
-              )
+  // Live stream — the hero. Full-bleed, tall virtualized table. Handles
+  // its own empty state so the panel is always present (never hidden).
+  const streamPanel = (
+    <GlassPanel className="p-3 sm:p-4" data-testid="livelogs-table-panel">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <PanelTitle className="flex items-center gap-2">
+          <ScrollText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t('liveLogs.stream.title', 'Live stream')}
+        </PanelTitle>
+        <Caption>
+          {t('liveLogs.stats.buffered', {
+            count: stream.events.length,
+            defaultValue: 'Buffered: {{count}}',
+          })}{' '}
+          / {fmtInt(LOG_STREAM_MAX_EVENTS)}
+        </Caption>
+      </div>
+      <div ref={tableWrapRef}>
+        {filteredEvents.length === 0 ? (
+          <EmptyState
+            icon={<ScrollText className="h-10 w-10" aria-hidden />}
+            title={t('liveLogs.title', 'Live logs')}
+            message={t(
+              'liveLogs.empty.noEvents',
+              'No log events yet. Trigger activity (e.g. start a charging session) to see live output.',
+            )}
+            action={
+              !enabled
+                ? {
+                    label: t('liveLogs.controls.reconnect', 'Reconnect'),
+                    onClick: handleReconnect,
+                  }
+                : undefined
             }
-            data-testid="livelogs-pause-button"
-          >
-            {paused
-              ? t('liveLogs.controls.resume', 'Resume')
-              : t('liveLogs.controls.pause', 'Pause')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            icon={<Trash2 className="h-4 w-4" aria-hidden />}
-            data-testid="livelogs-clear-button"
-          >
-            {t('liveLogs.controls.clear', 'Clear buffer')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDownload}
-            disabled={filteredEvents.length === 0}
-            icon={<Download className="h-4 w-4" aria-hidden />}
-            data-testid="livelogs-download-button"
-          >
-            {t('liveLogs.controls.download', 'Download visible (.txt)')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleReconnect}
-            icon={<RefreshCw className="h-4 w-4" aria-hidden />}
-            data-testid="livelogs-reconnect-button"
-          >
-            {t('liveLogs.controls.reconnect', 'Reconnect')}
-          </Button>
-        </div>
+          />
+        ) : (
+          <DataTable<LogStreamEvent>
+            tableId="admin:live-logs"
+            data={filteredEvents}
+            columns={columns}
+            keyExtractor={(row) => row.seq}
+            virtualized={filteredEvents.length > 200}
+            rowHeight={36}
+            maxHeight={560}
+            density="compact"
+            className="font-mono text-xs"
+          />
+        )}
       </div>
     </GlassPanel>
   );
@@ -588,87 +779,19 @@ export default function LiveLogsPage({
         'liveLogs.subtitle',
         "Stream the API server's structured log events in real time. Filter by severity and an optional regular expression. The connection is dropped when you navigate away.",
       )}
+      actions={toolbar}
     >
-      <FadeIn>
-        <Stack className="gap-4">
-          <AILogTraceSummarization
-            fromUnix={aiFromUnix}
-            toUnix={aiToUnix}
-            vehicleId={aiVehicleId}
-          />
-          {filterPanel}
-          {controlsPanel}
-          {stream.error ? (
-            <GlassPanel
-              className="border border-rose-500/30 p-4"
-              data-testid="livelogs-error"
-            >
-              <div className="flex items-start gap-3">
-                <AlertTriangle
-                  className="h-5 w-5 shrink-0 text-rose-300"
-                  aria-hidden
-                />
-                <div>
-                  <MetricLabel className="mb-1 block">
-                    {t(
-                      'liveLogs.error.title',
-                      'Could not connect to log stream',
-                    )}
-                  </MetricLabel>
-                  <Text variant="bodySm" as="p">
-                    {stream.error.message ||
-                      t(
-                        'liveLogs.error.hint',
-                        'Check your network and admin permissions, then click Reconnect.',
-                      )}
-                  </Text>
-                </div>
-              </div>
-            </GlassPanel>
-          ) : null}
-          <GlassPanel className="p-2" data-testid="livelogs-table-panel">
-            <div ref={tableWrapRef}>
-              {filteredEvents.length === 0 ? (
-                <EmptyState
-                  icon={<ScrollText className="h-10 w-10" aria-hidden />}
-                  title={t('liveLogs.title', 'Live logs')}
-                  message={t(
-                    'liveLogs.empty.noEvents',
-                    'No log events yet. Trigger activity (e.g. start a charging session) to see live output.',
-                  )}
-                  action={
-                    !enabled
-                      ? {
-                          label: t('liveLogs.controls.reconnect', 'Reconnect'),
-                          onClick: handleReconnect,
-                        }
-                      : undefined
-                  }
-                />
-              ) : (
-                <DataTable<LogStreamEvent>
-                  tableId="admin:live-logs"
-                  data={filteredEvents}
-                  columns={columns}
-                  keyExtractor={(row) => row.seq}
-                  virtualized={filteredEvents.length > 200}
-                  rowHeight={36}
-                  maxHeight={520}
-                  density="compact"
-                  className={cn('font-mono text-xs')}
-                />
-              )}
-            </div>
-          </GlassPanel>
-          <Caption>
-            {t('liveLogs.stats.buffered', {
-              count: stream.events.length,
-              defaultValue: 'Buffered: {{count}}',
-            })}{' '}
-            / max {LOG_STREAM_MAX_EVENTS}
-          </Caption>
-        </Stack>
-      </FadeIn>
+      <div className="space-y-4 sm:space-y-6">
+        <FadeIn>{kpiBand}</FadeIn>
+        <FadeIn delay={0.05}>{filtersPanel}</FadeIn>
+        <AILogTraceSummarization
+          fromUnix={aiFromUnix}
+          toUnix={aiToUnix}
+          vehicleId={aiVehicleId}
+        />
+        {stream.error ? <FadeIn delay={0.1}>{errorPanel}</FadeIn> : null}
+        <FadeIn delay={0.15}>{streamPanel}</FadeIn>
+      </div>
     </PageContainer>
   );
 }

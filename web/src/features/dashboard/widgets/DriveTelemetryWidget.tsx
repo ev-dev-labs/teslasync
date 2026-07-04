@@ -252,11 +252,11 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           <div className="flex flex-wrap items-center gap-3 pb-2">
             {stats.map((s) => (
               <div key={s.label} className="flex flex-col">
-                <span className="text-[10px] text-[var(--text-muted)]">{s.label}</span>
+                <span className="text-2xs text-[var(--text-muted)]">{s.label}</span>
                 <span className="text-sm font-semibold text-[var(--text-primary)]">
                   {s.value}
                   {s.unit && (
-                    <span className="ml-0.5 text-[10px] font-normal text-[var(--text-muted)]">
+                    <span className="ml-0.5 text-2xs font-normal text-[var(--text-muted)]">
                       {s.unit}
                     </span>
                   )}
@@ -287,26 +287,26 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-1 flex-shrink-0">
             <div className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: palette.series[0] }} />
-              <span className="text-[10px] text-[var(--text-secondary)]">
+              <span className="text-2xs text-[var(--text-secondary)]">
                 {t('widget.driveTelemetry.speed', 'Speed')}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: palette.series[1] }} />
-              <span className="text-[10px] text-[var(--text-secondary)]">
+              <span className="text-2xs text-[var(--text-secondary)]">
                 {t('widget.driveTelemetry.power', 'Power (kW)')}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#f59e0b' }} />
-              <span className="text-[10px] text-[var(--text-secondary)]">
+              <span className="text-2xs text-[var(--text-secondary)]">
                 {t('widget.driveTelemetry.battery', 'Battery %')}
               </span>
             </div>
             {isWide && (
               <div className="flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#9ca3af' }} />
-                <span className="text-[10px] text-[var(--text-secondary)]">
+                <span className="text-2xs text-[var(--text-secondary)]">
                   {t('widget.driveTelemetry.elevation', 'Elevation')}
                 </span>
               </div>

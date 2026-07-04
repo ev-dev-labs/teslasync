@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, ArrowDown, ArrowUpDown, Pause, Play, Radio, Trash2 } from 'lucide-react';
 
-import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, type Column } from '@/components/ui';
 import { StatCard, FreshnessIndicator } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { formatTime } from '@/lib/dateFormat';
@@ -20,9 +20,9 @@ import { cn } from '@/lib/cn';
 import type { SignalEntry } from '@/types/telemetry';
 
 const TYPE_VALUE_COLOR: Record<string, string> = {
-  number: 'text-cyan-400',
-  string: 'text-green-400',
-  boolean: 'text-amber-400',
+  number: 'text-cyan-300',
+  string: 'text-emerald-300',
+  boolean: 'text-amber-300',
 };
 
 export interface LiveSignalTailProps {
@@ -76,23 +76,23 @@ export function LiveSignalTail({
       key: 'time',
       header: t('liveMonitor.time', 'Time'),
       render: (entry) => (
-        <span className="font-mono text-[var(--text-muted)] whitespace-nowrap text-xs">
+        <Text mono size="xs" color="muted" className="whitespace-nowrap">
           {formatTime(entry.timestamp)}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'signal',
       header: t('liveMonitor.signal', 'Signal'),
       render: (entry) => (
-        <span className="font-mono text-[var(--text-primary)] whitespace-nowrap text-xs">{entry.name}</span>
+        <Code className="whitespace-nowrap">{entry.name}</Code>
       ),
     },
     {
       key: 'value',
       header: t('liveMonitor.value', 'Value'),
       render: (entry) => (
-        <span className={cn('font-mono whitespace-nowrap text-xs', TYPE_VALUE_COLOR[entry.type])}>{entry.value}</span>
+        <Text mono size="xs" className={cn('whitespace-nowrap', TYPE_VALUE_COLOR[entry.type])}>{entry.value}</Text>
       ),
     },
     {
@@ -120,7 +120,7 @@ export function LiveSignalTail({
           {title ? (
             <div className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-red-500 animate-pulse" />
-              <span className="section-title">{title}</span>
+              <Text variant="sectionTitle">{title}</Text>
             </div>
           ) : null}
           <Input

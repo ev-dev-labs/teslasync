@@ -149,7 +149,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
                       {fmtEventTime(ev.timestamp ?? '')}
                     </span>
                   </div>
-                  <Badge variant="neutral" className="shrink-0 text-[10px]">
+                  <Badge variant="neutral" className="shrink-0 text-2xs">
                     {fmtDuration(ev.duration_seconds ?? 0)}
                   </Badge>
                 </div>
@@ -207,7 +207,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
                     <p className="text-xs text-[var(--text-primary)] truncate">
                       {fmtEventTime(ev.timestamp ?? '')}
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)]">
+                    <p className="text-2xs text-[var(--text-muted)]">
                       {t('widget.backupHistory.duration', 'Duration')}: {fmtDuration(ev.duration_seconds ?? 0)}
                     </p>
                   </div>

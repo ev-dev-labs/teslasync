@@ -26,7 +26,7 @@ export function InfoTile({
       <p className={cn('text-lg font-semibold truncate', color)} title={String(display)}>
         {display}
       </p>
-      {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{sub}</p>}
+      {sub && <p className="text-2xs text-[var(--text-muted)] mt-0.5">{sub}</p>}
     </GlassPanel>
   )
 }

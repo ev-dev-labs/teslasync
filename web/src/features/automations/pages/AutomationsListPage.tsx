@@ -1,19 +1,21 @@
 /**
- * AutomationsListPage — the main automations hub.
+ * AutomationsListPage — the automations command center.
  *
- * Displays automation cards with toggles, a stats bar, filters,
- * and a live activity feed powered by SSE.
+ * Full-width, mobile-first bento: a KPI band, a filter toolbar, a collapsible
+ * quick-start preset gallery, and a hero split that pairs the automations
+ * workspace (cards) with a live activity-feed sidebar on wide screens. Every
+ * data-bound section owns its own loading / empty / error state.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button as UiButton, Input as UiInput, Select as UiSelect, Badge } from '@/components/ui';
-import { StatCard } from '@/components/data-display/StatCard';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
+import { PageContainer } from '@/components/layout';
+import {
+  GlassPanel, Button, Input, Select, Badge, SectionTitle, Text, Caption,
+} from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { AlertBanner, EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAutomationEvents } from '@/hooks/useAutomationEvents';
 import {
@@ -23,17 +25,18 @@ import {
   useDeleteAutomation,
   useTestRunAutomation,
   useReEnableAutomation,
+  useImportAutomations,
 } from '@/api/hooks/useAutomations';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePinned } from '@/api/hooks/usePinned';
 import { AutomationCard } from './AutomationCard';
 import { AutomationActivityFeed } from './AutomationActivityFeed';
+import { PresetGallery } from './PresetGallery';
 import {
   Zap, Plus, Upload, ListFilter, AlertTriangle,
   Pause, Power, ShieldOff, Sparkles, ChevronRight,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
-import { PresetGallery } from './PresetGallery';
 
 // ─── Filter types ─────────────────────────────────────────────────────────────
 
@@ -107,9 +110,19 @@ export default function AutomationsListPage() {
   const navigate = useNavigate();
   usePageTitle(t('automations.title', 'Automations'));
 
-  // Data hooks
-  const { data: automations, isLoading } = useAutomations();
-  const { data: historyResponse, isLoading: historyLoading } = useAutomationHistory(20);
+  // Data hooks — each section below owns its own loading / empty / error state.
+  const {
+    data: automations,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useAutomations();
+  const {
+    data: historyResponse,
+    isLoading: historyLoading,
+    error: historyError,
+  } = useAutomationHistory(20);
   const { data: vehicles } = useVehicles();
   const { events: liveEvents, connectionState, firingNow } = useAutomationEvents({ maxEvents: 50 });
 
@@ -118,42 +131,42 @@ export default function AutomationsListPage() {
   const deleteMutation = useDeleteAutomation();
   const testRunMutation = useTestRunAutomation();
   const reEnableMutation = useReEnableAutomation();
+  const importMutation = useImportAutomations();
 
-  // Import file ref
+  // Import file input — validation errors surface via alert; network
+  // success/failure is handled by the mutation's toast + query invalidation.
   const importInputRef = useRef<HTMLInputElement>(null);
-  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data: unknown = JSON.parse(text);
-      if (!isAutomationImportEnvelope(data)) {
-        throw new Error(t(
-          'automations.importTypedEnvelopeRequired',
-          'Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.',
-        ));
+  const handleImportFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed: unknown = JSON.parse(text);
+        if (!isAutomationImportEnvelope(parsed)) {
+          throw new Error(
+            t(
+              'automations.importTypedEnvelopeRequired',
+              'Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.',
+            ),
+          );
+        }
+        importMutation.mutate(parsed);
+      } catch (err) {
+        const message = err instanceof Error
+          ? err.message
+          : t('automations.importUnknownError', 'Unknown error');
+        window.alert(
+          t('automations.importFailedWithReason', 'Typed automation import failed: {{message}}', {
+            message,
+          }),
+        );
+      } finally {
+        if (importInputRef.current) importInputRef.current.value = '';
       }
-      const { request } = await import('@/api/client');
-      await request('/automations/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      window.location.reload();
-    } catch (err) {
-      console.error('Import failed:', err);
-      const message = err instanceof Error
-        ? err.message
-        : t('automations.importUnknownError', 'Unknown error');
-      window.alert(t(
-        'automations.importFailedWithReason',
-        'Typed automation import failed: {{message}}',
-        { message },
-      ));
-    } finally {
-      if (importInputRef.current) importInputRef.current.value = '';
-    }
-  }, [t]);
+    },
+    [t, importMutation],
+  );
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -218,6 +231,8 @@ export default function AutomationsListPage() {
     });
   }, [filteredItems, automationPins]);
 
+  const hasActiveFilter = statusFilter !== 'all' || search.trim().length > 0;
+
   // Callbacks
   const handleToggle = useCallback(
     (id: number, enabled: boolean) => {
@@ -251,118 +266,139 @@ export default function AutomationsListPage() {
     <PageContainer
       title={t('automations.title', 'Automations')}
       subtitle={t('automations.subtitle', 'Automate vehicle actions with typed triggers, conditions, and action chains')}
-      loading={isLoading}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <UiInput
+          <Input
             ref={importInputRef}
             type="file"
             accept=".json"
             className="hidden"
             onChange={handleImportFile}
+            aria-label={t('automations.importFileLabel', 'Choose automation export file')}
           />
-          <UiButton type="button" variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
-            <Upload className="mr-1.5 h-4 w-4" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => importInputRef.current?.click()}
+            loading={importMutation.isPending}
+          >
+            <Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {t('automations.import', 'Import')}
-          </UiButton>
-          <UiButton type="button" variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
-            <Plus className="mr-1.5 h-4 w-4" />
+          </Button>
+          <Button type="button" variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {t('automations.create', 'Create')}
-          </UiButton>
+          </Button>
         </div>
       }
     >
-      {/* Stats bar */}
+      {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard
+        <section
+          aria-label={t('automations.stats.aria', 'Automation summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          <MetricCard
             label={t('automations.stats.total', 'Total')}
             value={stats.total}
-            icon={<ListFilter className="h-4 w-4" />}
+            icon={<ListFilter className="h-5 w-5" />}
+            color="cyan"
           />
-          <StatCard
+          <MetricCard
             label={t('automations.stats.active', 'Active')}
             value={stats.active}
-            icon={<Power className="h-4 w-4 text-green-400" />}
+            icon={<Power className="h-5 w-5" />}
+            color="green"
           />
-          <StatCard
+          <MetricCard
             label={t('automations.stats.disabled', 'Disabled')}
             value={stats.disabled}
-            icon={<Pause className="h-4 w-4 text-[var(--text-secondary)]" />}
+            icon={<Pause className="h-5 w-5" />}
+            color="blue"
           />
-          <StatCard
+          <MetricCard
             label={t('automations.stats.autoDisabled', 'Auto-Disabled')}
             value={stats.autoDisabled}
-            icon={<ShieldOff className="h-4 w-4 text-red-400" />}
-            className={stats.autoDisabled > 0 ? 'border-red-500/20' : undefined}
+            icon={<ShieldOff className="h-5 w-5" />}
+            color="red"
+            className={stats.autoDisabled > 0 ? 'border-neon-red/30' : undefined}
           />
-        </div>
+        </section>
       </FadeIn>
 
-      {/* Filters */}
-      <FadeIn delay={0.03}>
-        <GlassPanel className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <UiSelect
+      {/* 2 — Auto-disabled warning (conditional, self-contained) */}
+      {stats.autoDisabled > 0 && (
+        <FadeIn delay={0.03}>
+          <AlertBanner
+            variant="danger"
+            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
+            title={t('automations.autoDisabledTitle', 'Attention needed')}
+          >
+            {t(
+              'automations.autoDisabledWarning',
+              '{{count}} automation(s) have been auto-disabled due to repeated failures.',
+              { count: stats.autoDisabled },
+            )}
+          </AlertBanner>
+        </FadeIn>
+      )}
+
+      {/* 3 — Filter toolbar */}
+      <FadeIn delay={0.05}>
+        <GlassPanel className="p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <Select
               options={localizedStatusFilterOptions}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="w-40"
+              className="w-full sm:w-44"
               aria-label={t('automations.filterStatus', 'Filter by status')}
             />
-            <UiInput
+            <Input
               placeholder={t('automations.search', 'Search automations...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-64"
+              className="w-full sm:w-64"
+              aria-label={t('automations.search', 'Search automations...')}
             />
-            {(statusFilter !== 'all' || search) && (
-              <Badge variant="neutral" className="text-xs">
-                {filteredItems.length} / {items.length}
+            {hasActiveFilter && (
+              <Badge variant="neutral" className="self-start sm:self-auto">
+                {t('automations.filterCount', '{{shown}} / {{total}}', {
+                  shown: filteredItems.length,
+                  total: items.length,
+                })}
               </Badge>
             )}
           </div>
         </GlassPanel>
       </FadeIn>
 
-      {/* Auto-disabled warning banner */}
-      {stats.autoDisabled > 0 && (
-        <FadeIn delay={0.04}>
-          <div className="flex items-center gap-3 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            <AlertTriangle className="h-5 w-5 shrink-0" />
-            <span>
-              {t(
-                'automations.autoDisabledWarning',
-                `${stats.autoDisabled} automation(s) have been auto-disabled due to repeated failures.`,
-              )}
-            </span>
-          </div>
-        </FadeIn>
-      )}
-
-      {/* Preset gallery (collapsible) */}
-      <FadeIn delay={0.045}>
-        <GlassPanel className="p-5">
+      {/* 4 — Quick-start preset gallery (collapsible) */}
+      <FadeIn delay={0.07}>
+        <GlassPanel className="p-4 sm:p-5">
           <details className="group">
             <summary
-              className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[var(--text-primary)] select-none rounded-md -m-1 p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 [&::-webkit-details-marker]:hidden [&::marker]:content-none"
+              className="flex items-center gap-2 cursor-pointer select-none rounded-md -m-1 p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 [&::-webkit-details-marker]:hidden [&::marker]:content-none"
               aria-label={t('automations.presets.toggleAria', 'Show or hide quick start templates')}
             >
               <ChevronRight
-                className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-90 shrink-0"
+                className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-90"
                 aria-hidden="true"
               />
-              <Sparkles className="h-4 w-4 text-cyan-400 shrink-0" aria-hidden="true" />
-              <span>{t('automations.presets.title', 'Quick Start Templates')}</span>
-              <span className="text-xs font-normal text-[var(--text-muted)] ml-1">
+              <Sparkles className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+              <Text variant="body" className="font-semibold">
+                {t('automations.presets.title', 'Quick Start Templates')}
+              </Text>
+              <Caption className="ml-1 hidden sm:inline">
                 {t('automations.presets.hint', 'One-click install')}
-              </span>
-              <span className="ml-auto text-xs font-normal text-[var(--text-muted)] group-open:hidden">
+              </Caption>
+              <Caption className="ml-auto group-open:hidden">
                 {t('automations.presets.expand', 'Click to expand')}
-              </span>
-              <span className="ml-auto text-xs font-normal text-[var(--text-muted)] hidden group-open:inline">
+              </Caption>
+              <Caption className="ml-auto hidden group-open:inline">
                 {t('automations.presets.collapse', 'Click to collapse')}
-              </span>
+              </Caption>
             </summary>
             <div className="mt-4">
               <PresetGallery />
@@ -371,60 +407,87 @@ export default function AutomationsListPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* Automation cards */}
-      <FadeIn delay={0.05}>
-        {filteredItems.length > 0 ? (
-          <StaggerContainer className="space-y-3">
-            {sortedItems.map((a) => (
-              <StaggerItem key={a.id}>
-                <AutomationCard
-                  automation={a}
-                  isFiring={firingNow.has(a.id)}
-                  vehicleName={a.vehicle_id != null ? vehicleLookup.get(a.vehicle_id) : undefined}
-                  onToggle={handleToggle}
-                  onReEnable={handleReEnable}
-                  onDelete={handleDelete}
-                  onTestRun={handleTestRun}
-                />
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        ) : (
-          <GlassPanel className="p-8">
-            {items.length === 0 ? (
-              <EmptyState
-                icon={<Zap className="h-8 w-8" />}
-                message={t('automations.empty', 'No automations yet. Create a typed automation to get started!')}
-                actionTo={{
-                  label: t('automations.empty.cta', 'Create automation'),
-                  to: '/automations/new',
-                }}
-              />
-            ) : (
-              <EmptyState
-                icon={<Zap className="h-8 w-8" />}
-                message={t('automations.noMatch', 'No automations match your filters')}
-                action={{
-                  label: t('automations.noMatch.cta', 'Reset filters'),
-                  onClick: () => {
-                    setSearch('');
-                    setStatusFilter('all');
-                  },
-                }}
-              />
-            )}
-          </GlassPanel>
-        )}
-      </FadeIn>
+      {/* 5 — Hero split: automations workspace + live activity sidebar */}
+      <FadeIn delay={0.09}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+          {/* Automations workspace (hero, spans 2 of 3 on wide screens) */}
+          <div className="min-w-0 space-y-3 xl:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <SectionTitle>{t('automations.yourAutomations', 'Your Automations')}</SectionTitle>
+              <Caption>
+                {t('automations.showingCount', 'Showing {{count}}', { count: sortedItems.length })}
+              </Caption>
+            </div>
 
-      {/* Activity feed */}
-      <AutomationActivityFeed
-        history={historyItems}
-        historyStats={historyStats}
-        isLoading={historyLoading}
-        liveEvents={liveEvents}
-        connectionState={connectionState}
-      />
+            {isError ? (
+              <GlassPanel className="p-6">
+                <QueryError error={error} onRetry={() => refetch()} />
+              </GlassPanel>
+            ) : isLoading ? (
+              <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={`auto-skel-${i}`} className="h-40 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : sortedItems.length > 0 ? (
+              <StaggerContainer className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                {sortedItems.map((a) => (
+                  <StaggerItem key={a.id}>
+                    <AutomationCard
+                      automation={a}
+                      isFiring={firingNow.has(a.id)}
+                      vehicleName={a.vehicle_id != null ? vehicleLookup.get(a.vehicle_id) : undefined}
+                      onToggle={handleToggle}
+                      onReEnable={handleReEnable}
+                      onDelete={handleDelete}
+                      onTestRun={handleTestRun}
+                    />
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+            ) : items.length === 0 ? (
+              <GlassPanel className="p-8">
+                <EmptyState
+                  icon={<Zap className="h-8 w-8" />}
+                  message={t('automations.empty', 'No automations yet. Create a typed automation to get started!')}
+                  actionTo={{
+                    label: t('automations.empty.cta', 'Create automation'),
+                    to: '/automations/new',
+                  }}
+                />
+              </GlassPanel>
+            ) : (
+              <GlassPanel className="p-8">
+                <EmptyState
+                  icon={<Zap className="h-8 w-8" />}
+                  message={t('automations.noMatch', 'No automations match your filters')}
+                  action={{
+                    label: t('automations.noMatch.cta', 'Reset filters'),
+                    onClick: () => {
+                      setSearch('');
+                      setStatusFilter('all');
+                    },
+                  }}
+                />
+              </GlassPanel>
+            )}
+          </div>
+
+          {/* Live activity feed (context sidebar, spans 1 of 3; sticky on wide) */}
+          <div className="min-w-0 xl:col-span-1">
+            <div className="xl:sticky xl:top-4">
+              <AutomationActivityFeed
+                history={historyItems}
+                historyStats={historyStats}
+                isLoading={historyLoading}
+                error={historyError}
+                liveEvents={liveEvents}
+                connectionState={connectionState}
+              />
+            </div>
+          </div>
+        </section>
+      </FadeIn>
     </PageContainer>
   );
 }

@@ -327,7 +327,7 @@ export function WidgetPicker({
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
               {highlightMatch(w.description, query)}
             </p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-1">
+            <p className="text-2xs text-[var(--text-muted)] mt-1">
               {w.defaultSize.cols}×{w.defaultSize.rows} grid
               {query && (
                 <span className="ml-2 text-[var(--text-muted)]">
@@ -378,7 +378,7 @@ export function WidgetPicker({
             icon={<Search className="h-4 w-4" />}
             className="w-full"
           />
-          <span className="text-[10px] text-[var(--text-muted)] mt-1 block">
+          <span className="text-2xs text-[var(--text-muted)] mt-1 block">
             {filteredWidgets.length} {t('widgets.available', 'widgets available')}
           </span>
         </div>
@@ -395,10 +395,10 @@ export function WidgetPicker({
             aria-selected={categoryFilter === 'all'}
             onClick={() => setCategoryFilter('all')}
             className={cn(
-              'h-7 rounded-full border px-3 text-[11px] font-medium transition-colors',
+              'h-7 rounded-full border px-3 text-xs font-medium transition-colors',
               categoryFilter === 'all'
                 ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-white',
+                : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
             )}
           >
             {t('widgets.allCategories', 'All')}
@@ -411,10 +411,10 @@ export function WidgetPicker({
               aria-selected={categoryFilter === cat}
               onClick={() => setCategoryFilter(cat)}
               className={cn(
-                'h-7 rounded-full border px-3 text-[11px] font-medium transition-colors',
+                'h-7 rounded-full border px-3 text-xs font-medium transition-colors',
                 categoryFilter === cat
                   ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                  : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-white',
+                  : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
               )}
             >
               {CATEGORY_LABELS[cat]}
@@ -463,7 +463,7 @@ export function WidgetPicker({
                     <span className="text-sm font-medium text-[var(--text-primary)]">
                       {preset.name}
                     </span>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                    <p className="text-2xs text-[var(--text-muted)] mt-0.5">
                       {preset.widgets.length} {t('dashboard.widgets', 'widgets')}
                     </p>
                   </UiButton>
@@ -491,7 +491,7 @@ export function WidgetPicker({
                     size="sm"
                     disabled={addableSearchWidgets.length === 0}
                     onClick={() => handleAddMany(addableSearchWidgets.map((widget) => widget.id))}
-                    className="h-7 px-2 text-[10px] text-[var(--text-secondary)] hover:text-white"
+                    className="h-7 px-2 text-2xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   >
                     {t('widgets.addAllCount', '+ Add all {{count}}', {
                       count: addableSearchWidgets.length,
@@ -522,7 +522,7 @@ export function WidgetPicker({
                     size="sm"
                     disabled={addableCategoryWidgets.length === 0}
                     onClick={() => handleAddMany(addableCategoryWidgets.map((widget) => widget.id))}
-                    className="h-7 px-2 text-[10px] text-[var(--text-secondary)] hover:text-white"
+                    className="h-7 px-2 text-2xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   >
                     {t('widgets.addAllCount', '+ Add all {{count}}', {
                       count: addableCategoryWidgets.length,

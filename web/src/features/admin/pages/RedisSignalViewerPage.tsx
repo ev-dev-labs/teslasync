@@ -1,20 +1,55 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Database, Search, RefreshCw, Trash2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+  Database,
+  Hash,
+  Layers,
+  RefreshCw,
+  Search,
+  Server,
+  ToggleLeft,
+  Trash2,
+  Type as TypeIcon,
+} from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, MaskedValue, type Column } from '@/components/ui'
-import { StatCard } from '@/components/data-display'
-import { Skeleton, EmptyState } from '@/components/feedback'
+import {
+  Badge,
+  Button,
+  Code,
+  ConfirmDialog,
+  DataTable,
+  GlassPanel,
+  HelperText,
+  Input,
+  MaskedValue,
+  PanelTitle,
+  Select,
+  Text,
+  Toggle,
+  useSortToggle,
+  type Column,
+} from '@/components/ui'
+import {
+  DataFreshnessAuto,
+  KVList,
+  MetricBar,
+  MetricCard,
+} from '@/components/data-display'
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
 import { useToast } from '@/components/feedback/Toast'
 import { FadeIn } from '@/components/motion'
 import { useVehicles } from '@/api/hooks/useVehicles'
-import { getRedisSignals, purgeRedisSignals, purgeAllRedisSignals, type RedisSignalEntry } from '@/api/devtools'
+import {
+  useRedisSignals,
+  usePurgeAllRedisSignals,
+  usePurgeRedisSignals,
+  type RedisSignalEntry,
+} from '@/api/hooks/useRedisSignals'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { fmtInt } from '@/lib/numberFormat'
-import { INTERVALS } from '@/lib/constants'
 import { isApiError, type ApiError } from '@/lib/resilience'
 import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
 
@@ -22,12 +57,25 @@ import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../compone
 
 type SignalCategory = 'Battery' | 'Charging' | 'Driving' | 'Climate' | 'Other'
 
+const CATEGORY_ORDER: SignalCategory[] = ['Battery', 'Charging', 'Driving', 'Climate', 'Other']
+
 const CATEGORY_COLORS: Record<SignalCategory, 'success' | 'info' | 'warning' | 'neutral' | 'danger'> = {
   Battery: 'success',
   Charging: 'info',
   Driving: 'warning',
   Climate: 'danger',
   Other: 'neutral',
+}
+
+// Toned-down hex per category for the breakdown bars. Passed as a dynamic
+// `color` prop to the shared <MetricBar>, never an inline static style, so
+// the bars stay on-palette with the category badges without neon body text.
+const CATEGORY_BAR_COLOR: Record<SignalCategory, string> = {
+  Battery: '#10b981',
+  Charging: '#06b6d4',
+  Driving: '#f59e0b',
+  Climate: '#f43f5e',
+  Other: '#64748b',
 }
 
 function categorizeSignal(name: string): SignalCategory {
@@ -67,7 +115,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       key: 'name',
       header: t('redis.signalName', 'Signal Name'),
       sortable: true,
-      render: (row) => <span className="font-mono text-sm text-[var(--text-primary)]">{row.name}</span>,
+      render: (row) => <Text mono size="sm" color="primary">{row.name}</Text>,
     },
     {
       key: 'value',
@@ -96,12 +144,12 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
             ? 'text-cyan-300'
             : typeof row.value === 'boolean'
               ? 'text-purple-300'
-              : 'text-amber-300';
+              : 'text-amber-300'
         return (
-          <span className={`font-mono text-sm ${colorClass}`}>
+          <Text mono size="sm" className={colorClass}>
             {String(row.value)}
-          </span>
-        );
+          </Text>
+        )
       },
     },
     {
@@ -123,7 +171,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       sortable: true,
       render: (row) => (
         <Badge variant={CATEGORY_COLORS[row.category]} size="sm">
-          {row.category}
+          {t(`redis.categoryName.${row.category}`, row.category)}
         </Badge>
       ),
     },
@@ -131,13 +179,13 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Redis Signal Viewer Page
+   Redis Signal Viewer Page — modern-ui full-width bento redesign
    ═══════════════════════════════════════════════════════════════════════ */
 
 export default function RedisSignalViewerPage() {
   const { t } = useTranslation()
   usePageTitle(t('redis.title', 'Redis Signal Viewer'))
-  const { formatTime } = useDateFormat()
+  const { formatDateTime } = useDateFormat()
 
   const { data: vehicles } = useVehicles()
   const vehicleList = vehicles ?? []
@@ -160,6 +208,10 @@ export default function RedisSignalViewerPage() {
   const queryClient = useQueryClient()
   const toast = useToast()
 
+  // Data flows exclusively through the @/api/hooks layer. The read query
+  // key stays ['redis-signals', vehicleId] so the purge invalidations below
+  // still trigger the expected refetch.
+  const signalQuery = useRedisSignals(selectedVehicleId, autoRefresh)
   const {
     data: signalData,
     isLoading,
@@ -167,26 +219,25 @@ export default function RedisSignalViewerPage() {
     error,
     isError,
     refetch,
-  } = useQuery({
-    queryKey: ['redis-signals', selectedVehicleId],
-    queryFn: () => getRedisSignals(selectedVehicleId!),
-    enabled: selectedVehicleId !== null,
-    refetchInterval: autoRefresh ? INTERVALS.REALTIME : false,
-  })
+  } = signalQuery
+  const purgeOne = usePurgeRedisSignals()
+  const purgeAll = usePurgeAllRedisSignals()
 
   const selectedVehicle = useMemo(
     () => vehicleList.find((v) => v.id === selectedVehicleId),
     [vehicleList, selectedVehicleId],
   )
   const selectedVehicleLabel =
-    selectedVehicle?.display_name || selectedVehicle?.vin || (selectedVehicleId !== null ? `Vehicle ${selectedVehicleId}` : '')
+    selectedVehicle?.display_name ||
+    selectedVehicle?.vin ||
+    (selectedVehicleId !== null ? t('redis.vehicleFallback', 'Vehicle {{id}}', { id: selectedVehicleId }) : '')
 
   const handlePurgeConfirm = async () => {
     if (purgeMode === null) return
     setIsPurging(true)
     try {
       if (purgeMode === 'one' && purgeTargetId !== null) {
-        const res = await purgeRedisSignals(purgeTargetId)
+        const res = await purgeOne.mutateAsync(purgeTargetId)
         if (res.purged) {
           toast.success(
             t('redis.purgeSuccess', 'Redis L2 cache purged'),
@@ -201,7 +252,7 @@ export default function RedisSignalViewerPage() {
         await queryClient.invalidateQueries({ queryKey: ['redis-signals', purgeTargetId] })
         await queryClient.invalidateQueries({ queryKey: ['redis-signal-keys'] })
       } else if (purgeMode === 'all') {
-        const res = await purgeAllRedisSignals()
+        const res = await purgeAll.mutateAsync()
         if (res.has_more) {
           toast.warning(
             t('redis.purgeAllPartial', 'Redis L2 cache partially purged'),
@@ -272,9 +323,19 @@ export default function RedisSignalViewerPage() {
   }, [rows, search, categoryFilter])
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { Battery: 0, Charging: 0, Driving: 0, Climate: 0, Other: 0 }
+    const counts: Record<SignalCategory, number> = { Battery: 0, Charging: 0, Driving: 0, Climate: 0, Other: 0 }
     for (const row of rows) {
       counts[row.category] = (counts[row.category] ?? 0) + 1
+    }
+    return counts
+  }, [rows])
+
+  const typeCounts = useMemo(() => {
+    const counts = { number: 0, string: 0, boolean: 0 }
+    for (const row of rows) {
+      if (row.type === 'number') counts.number += 1
+      else if (row.type === 'string') counts.string += 1
+      else if (row.type === 'boolean') counts.boolean += 1
     }
     return counts
   }, [rows])
@@ -287,7 +348,7 @@ export default function RedisSignalViewerPage() {
   // When the upstream query failed, the diagnostic
   // banner takes over so the operator sees the real failure mode (cache
   // not wired, redis unreachable, generic 5xx, network) instead of the
-  // legacy "no signals cached" black box. Stat cards also display a
+  // legacy "no signals cached" black box. Metric cards also display a
   // placeholder so the top-of-page numbers don't lie about a 0 count.
   const errorBannerProps: DiagnosticErrorProps = !isError
     ? {}
@@ -298,202 +359,313 @@ export default function RedisSignalViewerPage() {
 
   const vehicleOptions = vehicleList.map((v) => ({
     value: String(v.id),
-    label: v.display_name || v.vin || `Vehicle ${v.id}`,
+    label: v.display_name || v.vin || t('redis.vehicleFallback', 'Vehicle {{id}}', { id: v.id }),
   }))
+
+  /* ─── toolbar (header actions) ─── */
+
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <Select
+        aria-label={t('redis.selectVehicleLabel', 'Select vehicle')}
+        className="min-w-[11rem]"
+        value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
+        onChange={(e) => {
+          const val = e.target.value
+          setSelectedVehicleId(val ? Number(val) : null)
+        }}
+        options={[{ value: '', label: t('redis.selectVehicle', 'Select vehicle…') }, ...vehicleOptions]}
+      />
+      <Toggle
+        label={t('redis.autoRefresh', 'Auto-refresh')}
+        checked={autoRefresh}
+        onChange={setAutoRefresh}
+      />
+      {selectedVehicleId !== null && <DataFreshnessAuto query={signalQuery} />}
+      <Button
+        type="button"
+        variant="ghost"
+        aria-label={t('redis.refresh', 'Refresh')}
+        onClick={() => refetch()}
+        disabled={selectedVehicleId === null || isFetching}
+      >
+        <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} aria-hidden="true" />
+        <span className="hidden sm:inline">{t('redis.refresh', 'Refresh')}</span>
+      </Button>
+    </div>
+  )
 
   return (
     <PageContainer
       title={t('redis.title', 'Redis Signal Viewer')}
-      subtitle={t('redis.subtitle', 'Inspect cached signal values in Redis')}
+      subtitle={t('redis.subtitle', 'Inspect cached signal values in Redis (L2)')}
+      actions={actions}
     >
-      <div className="space-y-6">
-        {/* Controls */}
-        <FadeIn>
-          <GlassPanel>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="w-64">
-                <UiSelect
-                  value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setSelectedVehicleId(val ? Number(val) : null)
-                  }}
-                  options={[{ value: '', label: t('redis.selectVehicle', 'Select vehicle…') }, ...vehicleOptions]}
+      {/* 1 — KPI band: full-width responsive metric grid */}
+      <FadeIn>
+        <section
+          aria-label={t('redis.kpis', 'Cache metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
+        >
+          <MetricCard
+            label={t('redis.totalSignals', 'Total Signals')}
+            value={showStatPlaceholder ? '—' : fmtInt(signalData?.signal_count ?? 0)}
+            icon={<Database className="h-5 w-5" aria-hidden="true" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('redis.numbers', 'Numbers')}
+            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.number)}
+            icon={<Hash className="h-5 w-5" aria-hidden="true" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('redis.strings', 'Strings')}
+            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.string)}
+            icon={<TypeIcon className="h-5 w-5" aria-hidden="true" />}
+            color="amber"
+          />
+          <MetricCard
+            label={t('redis.booleans', 'Booleans')}
+            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.boolean)}
+            icon={<ToggleLeft className="h-5 w-5" aria-hidden="true" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('redis.l1Signals', 'L1 Signals')}
+            value={showStatPlaceholder || !meta ? '—' : fmtInt(meta.l1_signal_count)}
+            subtitle={t('redis.l1Subtitle', 'In-process store')}
+            icon={<Layers className="h-5 w-5" aria-hidden="true" />}
+            color="blue"
+          />
+          <MetricCard
+            label={t('redis.l2Fields', 'L2 Fields')}
+            value={showStatPlaceholder || !meta ? '—' : fmtInt(meta.redis_field_count)}
+            subtitle={t('redis.l2Subtitle', 'Redis HSET')}
+            icon={<Server className="h-5 w-5" aria-hidden="true" />}
+            color="green"
+          />
+        </section>
+      </FadeIn>
+
+      {/* 2 — Main bento: signals table (hero) + cache side column */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 3xl:grid-cols-4">
+        {/* Hero — cached signals table with its own filter row */}
+        <FadeIn delay={0.05} className="xl:col-span-2 3xl:col-span-3">
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <PanelTitle className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('redis.cachedSignals', 'Cached Signals')}
+              </PanelTitle>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+                  <Input
+                    aria-label={t('redis.searchLabel', 'Filter signals by name')}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t('redis.searchPlaceholder', 'Filter signals…')}
+                    className="pl-9 sm:w-56"
+                  />
+                </div>
+                <Select
+                  aria-label={t('redis.categoryLabel', 'Filter by category')}
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  options={[
+                    { value: 'all', label: t('redis.allCategories', 'All Categories') },
+                    ...CATEGORY_ORDER.map((c) => ({
+                      value: c,
+                      label: `${t(`redis.categoryName.${c}`, c)} (${categoryCounts[c] ?? 0})`,
+                    })),
+                  ]}
                 />
               </div>
+            </div>
 
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
-                <UiInput
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t('redis.searchPlaceholder', 'Filter signals…')}
-                  className="pl-9"
+            <div className="mt-4">
+              {selectedVehicleId === null ? (
+                <EmptyState /* no-action: transient empty state — surfaces when no vehicle is selected; no specific recovery action available */
+                  icon={<Database className="h-10 w-10" />}
+                  message={t('redis.selectPrompt', 'Select a vehicle to view its cached Redis signals')}
                 />
-              </div>
-
-              <UiSelect
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                options={[
-                  { value: 'all', label: t('redis.allCategories', 'All Categories') },
-                  { value: 'Battery', label: `Battery (${categoryCounts.Battery})` },
-                  { value: 'Charging', label: `Charging (${categoryCounts.Charging})` },
-                  { value: 'Driving', label: `Driving (${categoryCounts.Driving})` },
-                  { value: 'Climate', label: `Climate (${categoryCounts.Climate})` },
-                  { value: 'Other', label: `Other (${categoryCounts.Other})` },
-                ]}
-              />
-
-              <div className="flex items-center gap-2">
-                <Toggle checked={autoRefresh} onChange={setAutoRefresh} />
-                <span className="text-sm text-[var(--text-secondary)]">{t('redis.autoRefresh', 'Auto-refresh')}</span>
-              </div>
-
-              <UiButton
-                type="button"
-                variant="secondary"
-                onClick={() => refetch()}
-                disabled={selectedVehicleId === null || isFetching}
-                className="gap-1.5 !rounded-lg !bg-white/[0.06] !px-3 !py-2 text-sm text-[var(--text-primary)] hover:!bg-[var(--surface-2)] disabled:opacity-40"
-              >
-                <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-                {t('redis.refresh', 'Refresh')}
-              </UiButton>
-
-              {/* Purge buttons — destructive ops behind explicit confirm.
-                  Per-vehicle uses the standard danger-confirm; cluster-wide
-                  PurgeAll requires the operator to type "PURGE ALL" to
-                  prevent accidental wipe of every vehicle's L2 cache.
-                  The button labels are explicit about Redis L2 so operators
-                  don't expect cross-pod L1 invalidation. */}
-              <UiButton
-                type="button"
-                variant="danger"
-                onClick={openPurgeOne}
-                disabled={selectedVehicleId === null || isPurging}
-                className="gap-1.5"
-                title={t('redis.purgeButtonTitle', 'Delete this vehicle\u2019s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.')}
-              >
-                <Trash2 className="h-4 w-4" />
-                {t('redis.purgeButton', 'Purge Redis (L2)')}
-              </UiButton>
-
-              <UiButton
-                type="button"
-                variant="danger"
-                onClick={openPurgeAll}
-                disabled={isPurging}
-                className="gap-1.5 !bg-red-700 hover:!bg-red-800"
-                title={t('redis.purgeAllButtonTitle', 'Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.')}
-              >
-                <Trash2 className="h-4 w-4" />
-                {t('redis.purgeAllButton', 'Purge All Redis')}
-              </UiButton>
-            </div>
-          </GlassPanel>
-        </FadeIn>
-
-        {/* Persistent diagnostic chips — visible whenever a vehicle is
-            selected so engineers don't have to clear the table to see
-            mode/VIN/last-seen. */}
-        {selectedVehicleId !== null && meta && (
-          <FadeIn>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <Badge
-                size="sm"
-                variant={meta.live_signal_store_mode === 'hybrid' ? 'success' : 'danger'}
-              >
-                {t('redis.headerChip.mode', 'Mode: {{mode}}', { mode: meta.live_signal_store_mode })}
-              </Badge>
-              {meta.vehicle_vin && (
-                <Badge size="sm" variant="neutral">
-                  <code className="font-mono">{meta.vehicle_vin}</code>
-                </Badge>
-              )}
-              {meta.l1_last_seen_at && (
-                <Badge size="sm" variant="info">
-                  {t('redis.headerChip.l1Seen', 'L1 last: {{date}}', {
-                    date: formatTime(meta.l1_last_seen_at),
-                  })}
-                </Badge>
-              )}
-            </div>
-          </FadeIn>
-        )}
-
-        {/* Stats */}
-        {selectedVehicleId !== null && (
-          <FadeIn>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatCard
-                label={t('redis.totalSignals', 'Total Signals')}
-                value={showStatPlaceholder ? '—' : fmtInt(signalData?.signal_count ?? 0)}
-                icon={<Database className="h-5 w-5" />}
-              />
-              <StatCard
-                label={t('redis.numbers', 'Numbers')}
-                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'number').length)}
-              />
-              <StatCard
-                label={t('redis.strings', 'Strings')}
-                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'string').length)}
-              />
-              <StatCard
-                label={t('redis.booleans', 'Booleans')}
-                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'boolean').length)}
-              />
-            </div>
-          </FadeIn>
-        )}
-
-        {/* Table */}
-        <FadeIn>
-          <GlassPanel>
-            {selectedVehicleId === null ? (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                icon={<Database className="h-10 w-10" />}
-                message={t('redis.selectPrompt', 'Select a vehicle to view its cached Redis signals')}
-              />
-            ) : isLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            ) : filteredRows.length === 0 ? (
-              rows.length === 0 || isError ? (
-                <RedisDiagnosticEmptyState
-                  vehicleId={selectedVehicleId!}
-                  meta={meta}
-                  onSelectVehicle={setSelectedVehicleId}
-                  {...errorBannerProps}
-                />
+              ) : isLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              ) : filteredRows.length === 0 ? (
+                rows.length === 0 || isError ? (
+                  <RedisDiagnosticEmptyState
+                    vehicleId={selectedVehicleId}
+                    meta={meta}
+                    onSelectVehicle={setSelectedVehicleId}
+                    {...errorBannerProps}
+                  />
+                ) : (
+                  <EmptyState /* no-action: transient empty state — surfaces when the filter excludes every row; clearing the filter recovers */
+                    icon={<Search className="h-10 w-10" />}
+                    message={t('redis.noMatch', 'No signals match the current filter')}
+                  />
+                )
               ) : (
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                  icon={<Search className="h-10 w-10" />}
-                  message={t('redis.noMatch', 'No signals match the current filter')}
+                <DataTable
+                  tableId="admin:redis-signals"
+                  data={filteredRows}
+                  columns={columns}
+                  keyExtractor={(row) => row.name}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                  pagination={{ defaultPageSize: 50 }}
+                  virtualized
+                  rowHeight={48}
                 />
-              )
-            ) : (
-              <DataTable
-                tableId="admin:redis-signals"
-                data={filteredRows}
-                columns={columns}
-                keyExtractor={(row) => row.name}
-                sortKey={sortKey}
-                sortDir={sortDir}
-                onSort={onSort}
-                pagination={{ defaultPageSize: 50 }}
-                virtualized
-                rowHeight={48}
-              />
-            )}
+              )}
+            </div>
           </GlassPanel>
         </FadeIn>
-      </div>
+
+        {/* Side column — diagnostics, category mix, destructive cache actions */}
+        <div className="space-y-4 xl:col-span-1">
+          {/* Cache diagnostics — folds the mode / VIN / last-seen chips into a
+              richer meta readout that stays visible alongside the table. */}
+          <FadeIn delay={0.1}>
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="flex items-center gap-2">
+                <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('redis.cacheDiagnostics', 'Cache Diagnostics')}
+              </PanelTitle>
+              <div className="mt-3">
+                {selectedVehicleId === null ? (
+                  <EmptyState /* no-action: transient — no vehicle selected yet */
+                    icon={<Server className="h-8 w-8" />}
+                    message={t('redis.diagSelect', 'Select a vehicle to inspect its cache state')}
+                  />
+                ) : isError ? (
+                  <QueryError error={error} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
+                ) : isLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                  </div>
+                ) : meta ? (
+                  <KVList
+                    items={[
+                      {
+                        label: t('redis.diag.mode', 'Live store mode'),
+                        value: (
+                          <Badge size="sm" variant={meta.live_signal_store_mode === 'hybrid' ? 'success' : 'danger'}>
+                            {meta.live_signal_store_mode}
+                          </Badge>
+                        ),
+                      },
+                      { label: t('redis.diag.vin', 'VIN'), value: meta.vehicle_vin ? <Code>{meta.vehicle_vin}</Code> : '—' },
+                      { label: t('redis.diag.key', 'Redis key'), value: <Code>{meta.redis_key}</Code> },
+                      { label: t('redis.diag.l1', 'L1 signals'), value: fmtInt(meta.l1_signal_count) },
+                      { label: t('redis.diag.l2', 'L2 fields (raw)'), value: fmtInt(meta.redis_field_count) },
+                      { label: t('redis.diag.l1Seen', 'L1 last seen'), value: meta.l1_last_seen_at ? formatDateTime(meta.l1_last_seen_at) : '—' },
+                      { label: t('redis.diag.l2Seen', 'L2 last seen'), value: meta.l2_last_seen_at ? formatDateTime(meta.l2_last_seen_at) : '—' },
+                    ]}
+                  />
+                ) : (
+                  <EmptyState /* no-action: backend predates the meta block; nothing to configure */
+                    icon={<Server className="h-8 w-8" />}
+                    message={t('redis.diagUnavailable', 'Cache diagnostics are unavailable for this vehicle')}
+                  />
+                )}
+              </div>
+            </GlassPanel>
+          </FadeIn>
+
+          {/* Signal categories — surfaces the category mix that previously
+              only lived inside the filter dropdown labels. */}
+          <FadeIn delay={0.15}>
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('redis.categories', 'Signal Categories')}
+              </PanelTitle>
+              <div className="mt-3">
+                {selectedVehicleId === null ? (
+                  <EmptyState /* no-action: transient — no vehicle selected yet */
+                    icon={<Layers className="h-8 w-8" />}
+                    message={t('redis.catSelect', 'Select a vehicle to see its signal category mix')}
+                  />
+                ) : isLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </div>
+                ) : rows.length === 0 ? (
+                  <EmptyState /* no-action: transient — no categorized signals cached */
+                    icon={<Layers className="h-8 w-8" />}
+                    message={t('redis.catEmpty', 'No categorized signals to summarize')}
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {CATEGORY_ORDER.map((cat) => (
+                      <MetricBar
+                        key={cat}
+                        label={t(`redis.categoryName.${cat}`, cat)}
+                        value={categoryCounts[cat] ?? 0}
+                        max={Math.max(rows.length, 1)}
+                        color={CATEGORY_BAR_COLOR[cat]}
+                        sublabel={fmtInt(categoryCounts[cat] ?? 0)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </GlassPanel>
+          </FadeIn>
+
+          {/* Danger zone — destructive cache actions behind explicit confirm.
+              Per-vehicle uses the standard danger-confirm; cluster-wide
+              PurgeAll requires the operator to type "PURGE ALL". */}
+          <FadeIn delay={0.2}>
+            <GlassPanel className="border border-rose-500/20 bg-rose-500/5 p-4 sm:p-5">
+              <PanelTitle className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4 text-rose-300" aria-hidden="true" />
+                {t('redis.cacheActions', 'Cache Actions')}
+              </PanelTitle>
+              <HelperText className="mt-2">
+                {t('redis.cacheActionsHint', 'Purge deletes the Redis L2 HSET only. The in-process L1 cache on each pod is untouched and refills from new telemetry.')}
+              </HelperText>
+              <div className="mt-3 flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={openPurgeOne}
+                  disabled={selectedVehicleId === null || isPurging}
+                  className="justify-center"
+                  title={t('redis.purgeButtonTitle', 'Delete this vehicle\u2019s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.')}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  {t('redis.purgeButton', 'Purge Redis (L2)')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={openPurgeAll}
+                  disabled={isPurging}
+                  className="justify-center !bg-red-700 hover:!bg-red-800"
+                  title={t('redis.purgeAllButtonTitle', 'Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.')}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  {t('redis.purgeAllButton', 'Purge All Redis')}
+                </Button>
+              </div>
+            </GlassPanel>
+          </FadeIn>
+        </div>
+      </section>
 
       <ConfirmDialog
         open={purgeMode !== null}

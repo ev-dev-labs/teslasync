@@ -84,7 +84,7 @@ export function SignalSparklinePreview({
     return (
       <span
         className={cn(
-          'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide',
+          'inline-flex items-center rounded px-1.5 py-0.5 text-2xs uppercase tracking-wide',
           'text-[var(--text-muted)] border border-[var(--glass-border)]',
           className,
         )}
@@ -111,7 +111,7 @@ export function SignalSparklinePreview({
   if (numericSeries.length < 2) {
     return (
       <span
-        className={cn('text-[10px] text-[var(--text-muted)]', className)}
+        className={cn('text-2xs text-[var(--text-muted)]', className)}
         title="No samples in last hour"
       >
         —

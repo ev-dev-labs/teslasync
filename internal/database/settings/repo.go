@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
@@ -41,17 +42,21 @@ func NewSettingsRepo(db *database.DB) *SettingsRepo {
 // values without an extra round-trip.
 func settingsDefaults() *systemmodel.Settings {
 	return &systemmodel.Settings{
-		UnitOfLength:         "km",
-		UnitOfTemp:           "C",
-		UnitOfPressure:       "bar",
-		PreferredRange:       "rated",
-		Language:             "en",
-		BaseCostPerKWh:       0,
-		APISuspended:         false,
-		Theme:                "neon-cyan",
-		Mode:                 "dark",
-		CustomPrimary:        "#00b4d8",
-		CustomAccent:         "#e63946",
+		UnitOfLength:   "km",
+		UnitOfTemp:     "C",
+		UnitOfPressure: "bar",
+		PreferredRange: "rated",
+		Language:       "en",
+		BaseCostPerKWh: 0,
+		APISuspended:   false,
+		Theme:          "neon-cyan",
+		Mode:           "dark",
+		CustomPrimary:  "#00b4d8",
+		CustomAccent:   "#e63946",
+		// Empty (non-nil) so a fresh install serialises completed_tours as
+		// the JSON array "[]" rather than null. Onboarding tours are armed
+		// by default until the client records a completion marker.
+		CompletedTours:       []string{},
 		GasPricePerUnit:      3.50,
 		GasUnit:              "gallon",
 		GasEfficiencyMPG:     25,
@@ -69,6 +74,15 @@ func settingsDefaults() *systemmodel.Settings {
 		UIDensity:            "comfortable",
 		TimeFormatDefault:    "relative",
 		ChartPalette:         "cb_safe",
+		// Typography defaults — mirror DEFAULT_FONT_PREFS in FontProvider.tsx.
+		FontFamily:        "inter",
+		FontMono:          "jetbrains",
+		FontCustomSans:    "",
+		FontCustomMono:    "",
+		FontScale:         1,
+		FontLeading:       1.5,
+		FontTracking:      "0em",
+		FontHeadingWeight: 700,
 		// ADR-015: AI is strictly additive and default-off. A struct
 		// freshly built from defaults must satisfy `AIMode=='off'`
 		// AND `AIFeatures` must be a non-nil empty map so callers can
@@ -163,6 +177,16 @@ func applySettingsRow(s *systemmodel.Settings, key, _ string, vText *string, vNu
 		if vText != nil {
 			s.CustomAccent = *vText
 		}
+	case "completed_tours":
+		// Stored as a JSONB array of "{tourId}:{version}" markers. A NULL
+		// or malformed value leaves the settingsDefaults() empty slice in
+		// place so the field never decodes to nil.
+		if len(vJSON) > 0 {
+			var arr []string
+			if err := json.Unmarshal(vJSON, &arr); err == nil {
+				s.CompletedTours = NormalizeCompletedTours(arr)
+			}
+		}
 	case "gas_price_per_unit":
 		if vNum != nil {
 			s.GasPricePerUnit = *vNum
@@ -230,6 +254,38 @@ func applySettingsRow(s *systemmodel.Settings, key, _ string, vText *string, vNu
 	case "chart_palette":
 		if vText != nil {
 			s.ChartPalette = *vText
+		}
+	case "font_family":
+		if vText != nil {
+			s.FontFamily = *vText
+		}
+	case "font_mono":
+		if vText != nil {
+			s.FontMono = *vText
+		}
+	case "font_custom_sans":
+		if vText != nil {
+			s.FontCustomSans = *vText
+		}
+	case "font_custom_mono":
+		if vText != nil {
+			s.FontCustomMono = *vText
+		}
+	case "font_scale":
+		if vNum != nil {
+			s.FontScale = *vNum
+		}
+	case "font_leading":
+		if vNum != nil {
+			s.FontLeading = *vNum
+		}
+	case "font_tracking":
+		if vText != nil {
+			s.FontTracking = *vText
+		}
+	case "font_heading_weight":
+		if vNum != nil {
+			s.FontHeadingWeight = int(*vNum)
 		}
 	case "ai_mode":
 		if vText != nil {
@@ -351,6 +407,11 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) erro
 		{"ui_density", s.UIDensity},
 		{"time_format_default", s.TimeFormatDefault},
 		{"chart_palette", s.ChartPalette},
+		{"font_family", s.FontFamily},
+		{"font_mono", s.FontMono},
+		{"font_custom_sans", s.FontCustomSans},
+		{"font_custom_mono", s.FontCustomMono},
+		{"font_tracking", s.FontTracking},
 		// ADR-015: ai_mode is the top-level AI gate. Validation
 		// (one of 'off' / 'local' / 'cloud') happens in the
 		// settings handler before reaching this layer.
@@ -362,6 +423,9 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) erro
 		{"gas_efficiency_mpg", s.GasEfficiencyMPG},
 		{"decimal_precision", float64(s.DecimalPrecision)},
 		{"ai_cost_cap_cents", float64(s.AICostCapCents)},
+		{"font_scale", s.FontScale},
+		{"font_leading", s.FontLeading},
+		{"font_heading_weight", float64(s.FontHeadingWeight)},
 	}
 	boolRows := []rowBool{
 		{"api_suspended", s.APISuspended},
@@ -387,10 +451,19 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) erro
 	if err != nil {
 		return fmt.Errorf("settings upsert ai_features_archived marshal: %w", err)
 	}
+	// Onboarding-tour completion markers. Replace semantics: the SPA always
+	// sends the full list. Normalise defensively (trim, drop blank/oversized
+	// entries, de-dupe, cap length) and marshal to a JSON array so an empty
+	// list persists as "[]" rather than null.
+	completedToursJSON, err := marshalStringArray(NormalizeCompletedTours(s.CompletedTours))
+	if err != nil {
+		return fmt.Errorf("settings upsert completed_tours marshal: %w", err)
+	}
 	jsonbRows := []rowJSONB{
 		{"ai_features", aiFeaturesJSON},
 		{"ai_provider_config", aiProviderJSON},
 		{"ai_features_archived", aiArchivedJSON},
+		{"completed_tours", completedToursJSON},
 	}
 
 	for _, rw := range textRows {
@@ -567,6 +640,58 @@ func marshalJSONOrEmpty(v any) (string, error) {
 	}
 	if len(b) == 0 || string(b) == "null" {
 		return "{}", nil
+	}
+	return string(b), nil
+}
+
+// MaxCompletedTours caps how many onboarding-tour completion markers are
+// persisted in the settings row. A well-behaved client sends only a handful
+// ("main:1", "vehicles:1", …); the cap stops a malformed or hostile payload
+// from growing the row without bound. Entries past the cap are dropped in
+// slice order.
+const MaxCompletedTours = 100
+
+// maxCompletedTourEntryLen bounds a single marker's length. Real markers are
+// short ("{tourId}:{version}"); anything longer is treated as junk and dropped
+// rather than persisted.
+const maxCompletedTourEntryLen = 128
+
+// NormalizeCompletedTours returns a defensively-cleaned copy of the
+// completed-tour marker list: each entry is trimmed, blank/oversized entries
+// are dropped, duplicates are removed (first occurrence wins), and the result
+// is capped at MaxCompletedTours. The return value is always non-nil so it
+// marshals to a JSON array ("[]") instead of null. Unknown tour ids are
+// preserved verbatim — the backend does not police the client's tour registry.
+func NormalizeCompletedTours(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := make(map[string]struct{}, len(in))
+	for _, entry := range in {
+		entry = strings.TrimSpace(entry)
+		if entry == "" || len(entry) > maxCompletedTourEntryLen {
+			continue
+		}
+		if _, dup := seen[entry]; dup {
+			continue
+		}
+		seen[entry] = struct{}{}
+		out = append(out, entry)
+		if len(out) >= MaxCompletedTours {
+			break
+		}
+	}
+	return out
+}
+
+// marshalStringArray serialises a string slice to a JSON array string,
+// returning "[]" for a nil or empty slice so the JSONB column always holds a
+// parseable array document (never the JSON literal null).
+func marshalStringArray(v []string) (string, error) {
+	if len(v) == 0 {
+		return "[]", nil
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
 	}
 	return string(b), nil
 }

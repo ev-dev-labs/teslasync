@@ -1,11 +1,16 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen } from 'lucide-react';
+import {
+  BookOpen, RefreshCw, Boxes, ArrowDownToLine, ArrowUpToLine, Tags, History, Timer,
+} from 'lucide-react';
 import yaml from 'js-yaml';
+import { cn } from '@/lib/cn';
+import { type NeonColor } from '@/lib/tokens';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
-import { EmptyState, Skeleton } from '@/components/feedback';
+import { GlassPanel, Button, Text } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { apiUrl, request } from '@/api/client';
@@ -227,7 +232,7 @@ export default function ApiPlaygroundPage() {
   const lastRequestRef = useRef<{ method: string; url: string; body?: string }>({ method: 'GET', url: '' });
 
   // Fetch and parse OpenAPI spec as text so YAML keys are preserved.
-  const { data: endpoints, isLoading: specLoading, error: specError } = useQuery<ParsedEndpoint[]>({
+  const specQuery = useQuery<ParsedEndpoint[]>({
     queryKey: ['openapi-spec'],
     queryFn: async () => {
       const text = await request<string>('/system/openapi', {
@@ -240,6 +245,7 @@ export default function ApiPlaygroundPage() {
     },
     staleTime: Infinity,
   });
+  const { data: endpoints, isLoading: specLoading, refetch: refetchSpec } = specQuery;
 
   const handleSelect = useCallback((ep: ParsedEndpoint) => {
     setSelected(ep);
@@ -268,12 +274,13 @@ export default function ApiPlaygroundPage() {
         return next;
       });
     } catch (err) {
+      const failMsg = err instanceof Error ? err.message : t('playground.requestFailed', 'Request failed');
       setResponse({
         status: 0,
-        statusText: 'Network Error',
+        statusText: t('playground.networkError', 'Network Error'),
         headers: {},
-        body: { error: err instanceof Error ? err.message : 'Request failed' },
-        bodyText: err instanceof Error ? err.message : 'Request failed',
+        body: { error: failMsg },
+        bodyText: failMsg,
         duration: 0,
         size: 0,
         contentType: 'text/plain',
@@ -281,7 +288,7 @@ export default function ApiPlaygroundPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleReplay = useCallback((entry: HistoryEntry) => {
     // Find matching endpoint
@@ -296,74 +303,152 @@ export default function ApiPlaygroundPage() {
 
   const allEndpoints = endpoints ?? [];
 
+  // KPI band — every value is derived from the already-loaded spec and the
+  // local request history, so the overview never fetches or fabricates data.
+  const stats = useMemo(() => {
+    const list = endpoints ?? [];
+    const total = list.length;
+    const read = list.filter((e) => e.method === 'GET').length;
+    const groups = new Set(list.map((e) => e.tag || 'Other')).size;
+    return { total, read, write: total - read, groups };
+  }, [endpoints]);
+
+  const historyStats = useMemo(() => {
+    if (history.length === 0) return { count: 0, avgMs: 0 };
+    const sum = history.reduce((acc, h) => acc + (h.duration ?? 0), 0);
+    return { count: history.length, avgMs: Math.round(sum / history.length) };
+  }, [history]);
+
+  const kpis: Array<{ key: string; label: string; value: string | number; icon: ReactNode; color: NeonColor }> = [
+    { key: 'total', label: t('playground.kpi.total', 'Total Endpoints'), value: stats.total, icon: <Boxes className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
+    { key: 'read', label: t('playground.kpi.read', 'Read (GET)'), value: stats.read, icon: <ArrowDownToLine className="h-5 w-5" aria-hidden="true" />, color: 'green' },
+    { key: 'write', label: t('playground.kpi.write', 'Write Ops'), value: stats.write, icon: <ArrowUpToLine className="h-5 w-5" aria-hidden="true" />, color: 'amber' },
+    { key: 'groups', label: t('playground.kpi.groups', 'API Groups'), value: stats.groups, icon: <Tags className="h-5 w-5" aria-hidden="true" />, color: 'purple' },
+    { key: 'recent', label: t('playground.kpi.recent', 'Recent Requests'), value: historyStats.count, icon: <History className="h-5 w-5" aria-hidden="true" />, color: 'blue' },
+    { key: 'latency', label: t('playground.kpi.latency', 'Avg Latency'), value: historyStats.count > 0 ? `${historyStats.avgMs} ms` : '—', icon: <Timer className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
+  ];
+
+  const actions = (
+    <Button
+      variant="ghost"
+      onClick={() => refetchSpec()}
+      disabled={specLoading}
+      aria-label={t('playground.refresh', 'Reload API spec')}
+    >
+      <RefreshCw className={cn('h-4 w-4', specLoading && 'animate-spin')} aria-hidden="true" />
+    </Button>
+  );
+
   return (
     <PageContainer
       title={t('playground.title', 'API Playground')}
       subtitle={t('playground.subtitle', 'Explore and test TeslaSync API endpoints')}
-      loading={specLoading}
-      error={specError instanceof Error ? specError : specError ? new Error(String(specError)) : null}
+      actions={actions}
+      query={specQuery}
     >
+      {/* 1 — KPI band: derived spec + history metrics, full-width responsive strip */}
       <FadeIn>
-        <div className="flex gap-4 min-h-[600px]">
-          {/* Sidebar */}
-          <GlassPanel className="w-72 shrink-0 overflow-hidden flex flex-col">
-            {specLoading ? (
-              <div className="p-4 space-y-2">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <Skeleton key={i} className="h-6 rounded" />
-                ))}
-              </div>
-            ) : (
-              <EndpointSidebar
-                endpoints={allEndpoints}
-                selected={selected}
-                onSelect={handleSelect}
-              />
-            )}
-          </GlassPanel>
+        <section
+          aria-label={t('playground.kpis', 'API overview metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
+        >
+          {specLoading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} height={84} className="rounded-xl" />
+              ))
+            : kpis.map((k) => (
+                <MetricCard key={k.key} label={k.label} value={k.value} icon={k.icon} color={k.color} />
+              ))}
+        </section>
+      </FadeIn>
 
-          {/* Main panel */}
-          <div className="flex-1 space-y-4 min-w-0">
-            {!selected ? (
-              <GlassPanel className="p-8">
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      {/* 2 — Workspace: endpoint explorer + request/response, full-bleed bento */}
+      <FadeIn delay={0.1}>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[20rem_minmax(0,1fr)] xl:gap-5">
+          {/* Endpoint explorer — sticky, self-scrolling nav column */}
+          <aside
+            aria-label={t('playground.explorer', 'Endpoint explorer')}
+            className="xl:sticky xl:top-4 xl:self-start"
+          >
+            <GlassPanel className="flex h-[26rem] flex-col overflow-hidden xl:h-[calc(100vh-13rem)]">
+              {specLoading ? (
+                <div className="space-y-2 p-4">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <Skeleton key={i} height={24} className="rounded" />
+                  ))}
+                </div>
+              ) : specQuery.isError ? (
+                <div className="p-4">
+                  <QueryError
+                    error={specQuery.error}
+                    onRetry={() => refetchSpec()}
+                    resourceName={t('playground.spec', 'API spec')}
+                  />
+                </div>
+              ) : allEndpoints.length === 0 ? (
+                <EmptyState /* no-action: transient empty state — surfaces when the spec exposes no endpoints; no specific recovery action available */
                   icon={<BookOpen className="h-8 w-8" />}
-                  message={t('playground.selectEndpoint', 'Select an endpoint from the sidebar to start testing')}
+                  message={t('playground.noEndpoints', 'No endpoints found in the API spec')}
+                />
+              ) : (
+                <EndpointSidebar
+                  endpoints={allEndpoints}
+                  selected={selected}
+                  onSelect={handleSelect}
+                />
+              )}
+            </GlassPanel>
+          </aside>
+
+          {/* Request / response workspace */}
+          <section
+            aria-label={t('playground.workspace', 'Request workspace')}
+            className="min-w-0 space-y-4"
+          >
+            {!selected ? (
+              <GlassPanel className="p-6 sm:p-8">
+                <EmptyState /* no-action: transient empty state — surfaces before an endpoint is picked; selecting one is the recovery path */
+                  icon={<BookOpen className="h-8 w-8" />}
+                  message={t('playground.selectEndpoint', 'Select an endpoint from the explorer to start testing')}
                 />
                 {allEndpoints.length > 0 && (
-                  <p className="text-center text-xs text-[var(--text-muted)] mt-2">
+                  <Text as="p" variant="caption" className="mt-2 text-center">
                     {t('playground.endpointCount', '{{count}} endpoints available', { count: allEndpoints.length })}
-                  </p>
+                  </Text>
                 )}
               </GlassPanel>
             ) : (
-              <>
-                {/* Request builder */}
-                <RequestBuilder
-                  endpoint={selected}
-                  onSend={handleSend}
-                  loading={loading}
-                />
+              <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 2xl:gap-5">
+                {/* Request column — builder + generated code snippet */}
+                <section
+                  aria-label={t('playground.request', 'Request')}
+                  className="min-w-0 space-y-4"
+                >
+                  <RequestBuilder endpoint={selected} onSend={handleSend} loading={loading} />
+                  {response && (
+                    <SnippetPanel
+                      method={lastRequestRef.current.method}
+                      url={apiUrl(lastRequestRef.current.url)}
+                      body={lastRequestRef.current.body}
+                    />
+                  )}
+                </section>
 
-                {/* Code snippet for current request */}
-                {response && (
-                  <SnippetPanel
-                    method={lastRequestRef.current.method}
-                    url={apiUrl(lastRequestRef.current.url)}
-                    body={lastRequestRef.current.body}
+                {/* Response column — status, body, headers, replay history */}
+                <section
+                  aria-label={t('playground.responseSection', 'Response')}
+                  className="min-w-0"
+                >
+                  <ResponseViewer
+                    response={response}
+                    loading={loading}
+                    history={history}
+                    onReplay={handleReplay}
                   />
-                )}
-
-                {/* Response viewer */}
-                <ResponseViewer
-                  response={response}
-                  loading={loading}
-                  history={history}
-                  onReplay={handleReplay}
-                />
-              </>
+                </section>
+              </div>
             )}
-          </div>
+          </section>
         </div>
       </FadeIn>
     </PageContainer>

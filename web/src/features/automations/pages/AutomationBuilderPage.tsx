@@ -4,20 +4,30 @@ import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
+  Circle,
+  Cog,
+  Filter,
+  ListChecks,
   PlayCircle,
+  Power,
   Save,
   X,
   Zap,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import {
+  Badge,
   GlassPanel,
   Input as UiInput,
+  PanelTitle,
   Select as UiSelect,
   Button as UiButton,
+  Text,
   Toggle,
   Textarea as UiTextarea,
 } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import { AlertBanner, DraftRecoveryBanner, EmptyState, EditConflictBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
@@ -428,6 +438,38 @@ export default function AutomationBuilderPage() {
   const selectedTrigger = form.triggers[0] ?? null;
   const notificationChannels = channels ?? [];
 
+  // Derived, null-safe summary of the automation's current shape — drives the
+  // KPI band and the readiness checklist so the builder communicates progress
+  // at a glance without the user having to hit Save to discover what's missing.
+  const selectedTriggerLabel = useMemo(() => {
+    if (!selectedTrigger) {
+      return t('automations.builder.triggerNone', 'Not set');
+    }
+    const match = TRIGGER_TYPES.find((option) => option.value === selectedTrigger.kind);
+    return match
+      ? t(match.labelKey, match.fallback)
+      : t('automations.builder.triggerNone', 'Not set');
+  }, [selectedTrigger, t]);
+
+  const conditionCount = form.conditions.length;
+  const actionCount = form.actions.length;
+  const nameReady = form.name.trim() !== '';
+  const triggerReady = form.triggers.length > 0 && !form.triggers.some(triggerNeedsPlace);
+  const actionsReady = form.actions.length > 0 && !form.actions.some(actionIsIncomplete);
+  const allReady = nameReady
+    && triggerReady
+    && actionsReady
+    && !form.conditions.some(conditionNeedsPlace);
+
+  const readinessItems = useMemo(
+    () => [
+      { key: 'name', ok: nameReady, label: t('automations.builder.readyName', 'Name added') },
+      { key: 'trigger', ok: triggerReady, label: t('automations.builder.readyTrigger', 'Trigger configured') },
+      { key: 'actions', ok: actionsReady, label: t('automations.builder.readyActions', 'At least one action') },
+    ],
+    [nameReady, triggerReady, actionsReady, t],
+  );
+
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setFormValue((previous) => ({ ...previous, [key]: value }));
     setDirty(true);
@@ -573,25 +615,28 @@ export default function AutomationBuilderPage() {
         'Configure supported typed triggers, conditions, and actions for your automation.',
       )}
       breadcrumbLabels={breadcrumbLabels}
+      actions={(
+        <UiButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleBackToList}
+          className="min-h-11 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          icon={<ArrowLeft className="h-4 w-4" />}
+          aria-label={t('automations.builder.backToList', 'Back to Automations')}
+        >
+          {t('automations.builder.backToList', 'Back to Automations')}
+        </UiButton>
+      )}
     >
       <form
         onSubmit={(event) => {
           event.preventDefault();
           handleSave();
         }}
-        className="max-w-4xl space-y-6"
+        className="space-y-6"
       >
-        <UiButton
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleBackToList}
-          className="self-start text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          icon={<ArrowLeft className="h-4 w-4" />}
-        >
-          {t('automations.builder.backToList', 'Back to Automations')}
-        </UiButton>
-
+        {/* Session / concurrency banners — full width, top of page */}
         <EditConflictBanner
           resourceKey={leaseKey}
           resourceLabel={t('editConflict.resource.automation', 'This automation')}
@@ -609,162 +654,264 @@ export default function AutomationBuilderPage() {
           />
         )}
 
+        {/* 1 — Summary KPI band: reflows from 2 → 4 columns, fills the width */}
         <FadeIn>
-          <AINLAutomationBuilder vehicleId={aiVehicleId ?? undefined} />
-        </FadeIn>
-
-        <FadeIn>
-          <AIGeofenceAwareAutomationSuggestions
-            vehicleId={aiVehicleId ?? undefined}
-            onApplyDraft={(proposedDraft) => {
-              // Copy the typed Automation graph
-              // proposed by the AI panel into the canonical
-              // baseline form state. The AI panel never persists
-              // directly; the user reviews the populated form and
-              // clicks Save (which goes through the canonical
-              // POST /api/v1/automations write path —
-              // useCreateAutomationFull). Re-uses the existing
-              // per-step normalizers so the typed envelope is
-              // byte-equivalent to one the canonical
-              // POST /api/v1/automations handler accepts.
-              setFormValue((previous) => ({
-                ...previous,
-                name: proposedDraft.name,
-                description: proposedDraft.description ?? '',
-                vehicle_id: proposedDraft.vehicle_id ?? null,
-                enabled: proposedDraft.enabled ?? true,
-                // The LLM-produced AutomationTriggerInput / etc.
-                // have the same wire shape as the editing-time
-                // AutomationTriggerStepInput modulo a TS-only
-                // field-omission difference; the normalizers read
-                // only the discriminated `kind` fields so the
-                // structural cast is safe and runtime-equivalent
-                // to the byte-shape POST /api/v1/automations
-                // accepts.
-                triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
-                conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
-                actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
-              }));
-              setDirty(true);
-            }}
-          />
-        </FadeIn>
-
-        <FadeIn>
-          <FormSection title={t('automations.builder.general', 'General')}>
-            <UiInput
-              label={t('automations.builder.name', 'Name')}
-              value={form.name}
-              onChange={(event) => update('name', event.target.value)}
-              placeholder={t('automations.builder.namePlaceholder', 'Morning Commute Prep')}
-              required
-            />
-            <UiTextarea
-              label={t('automations.builder.description', 'Description')}
-              value={form.description}
-              onChange={(event) => update('description', event.target.value)}
-              placeholder={t(
-                'automations.builder.descriptionPlaceholder',
-                'Prepare the car for the morning commute',
-              )}
-              rows={2}
-            />
-            <UiSelect
-              label={t('automations.builder.vehicle', 'Vehicle')}
-              options={vehicleOptions}
-              value={form.vehicle_id != null ? String(form.vehicle_id) : ''}
-              onChange={(event) => update(
-                'vehicle_id',
-                event.target.value ? Number(event.target.value) : null,
-              )}
-            />
-            <Toggle
-              label={t('automations.builder.enabled', 'Enabled')}
-              checked={form.enabled}
-              onChange={(enabled) => update('enabled', enabled)}
-            />
-          </FormSection>
-        </FadeIn>
-
-        <FadeIn delay={0.05}>
-          <div data-tour="automation-builder">
-          <FormSection
-            title={t('automations.builder.when', 'When (Trigger)')}
-            description={t(
-              'automations.builder.whenDesc',
-              'Choose the supported typed contract that starts this automation.',
-            )}
+          <section
+            aria-label={t('automations.builder.summary', 'Automation summary')}
+            className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:gap-5"
           >
-            <UiSelect
-              label={t('automations.builder.triggerType', 'Trigger Type')}
-              help={{
-                i18nKey: 'help.fields.automations.triggerType',
-                content: 'Decides when this automation starts: signal change, geofence enter/exit, time of day, charging event, or another automation completing.',
-              }}
-              options={triggerOptions}
-              value={selectedTrigger?.kind ?? ''}
-              onChange={(event) => handleTriggerKindChange(event.target.value)}
+            <MetricCard
+              label={t('automations.builder.summaryTrigger', 'Trigger')}
+              value={selectedTriggerLabel}
+              icon={<Zap className="h-5 w-5" />}
+              color="cyan"
             />
-            {selectedTrigger ? (
-              <GlassPanel className="mt-3 p-4">
-                <TriggerConfigurator
-                  trigger={selectedTrigger}
-                  onChange={(trigger) => update('triggers', [trigger])}
+            <MetricCard
+              label={t('automations.builder.summaryConditions', 'Conditions')}
+              value={conditionCount}
+              icon={<Filter className="h-5 w-5" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('automations.builder.summaryActions', 'Actions')}
+              value={actionCount}
+              icon={<Cog className="h-5 w-5" />}
+              color="green"
+            />
+            <MetricCard
+              label={t('automations.builder.summaryStatus', 'Status')}
+              value={form.enabled
+                ? t('automations.builder.statusEnabled', 'Enabled')
+                : t('automations.builder.statusDisabled', 'Disabled')}
+              icon={<Power className="h-5 w-5" />}
+              color={form.enabled ? 'green' : 'amber'}
+            />
+          </section>
+        </FadeIn>
+
+        {/* 2 — Two-pane bento: build canvas (hero) + assist rail */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+          {/* Build canvas — the When → Only If → Then flow */}
+          <div className="space-y-6 xl:col-span-2">
+            <FadeIn>
+              <FormSection title={t('automations.builder.general', 'General')}>
+                <UiInput
+                  label={t('automations.builder.name', 'Name')}
+                  value={form.name}
+                  onChange={(event) => update('name', event.target.value)}
+                  placeholder={t('automations.builder.namePlaceholder', 'Morning Commute Prep')}
+                  required
                 />
-              </GlassPanel>
-            ) : (
-              <GlassPanel className="mt-3 p-4">
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                  message={t(
-                    'automations.builder.emptyTrigger',
-                    'Select a supported trigger type to configure when this automation starts.',
+                <UiTextarea
+                  label={t('automations.builder.description', 'Description')}
+                  value={form.description}
+                  onChange={(event) => update('description', event.target.value)}
+                  placeholder={t(
+                    'automations.builder.descriptionPlaceholder',
+                    'Prepare the car for the morning commute',
                   )}
+                  rows={2}
                 />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end">
+                  <UiSelect
+                    label={t('automations.builder.vehicle', 'Vehicle')}
+                    options={vehicleOptions}
+                    value={form.vehicle_id != null ? String(form.vehicle_id) : ''}
+                    onChange={(event) => update(
+                      'vehicle_id',
+                      event.target.value ? Number(event.target.value) : null,
+                    )}
+                  />
+                  <Toggle
+                    label={t('automations.builder.enabled', 'Enabled')}
+                    checked={form.enabled}
+                    onChange={(enabled) => update('enabled', enabled)}
+                  />
+                </div>
+              </FormSection>
+            </FadeIn>
+
+            <FadeIn delay={0.05}>
+              <div data-tour="automation-builder">
+                <FormSection
+                  title={t('automations.builder.when', 'When (Trigger)')}
+                  description={t(
+                    'automations.builder.whenDesc',
+                    'Choose the supported typed contract that starts this automation.',
+                  )}
+                >
+                  <UiSelect
+                    label={t('automations.builder.triggerType', 'Trigger Type')}
+                    help={{
+                      i18nKey: 'help.fields.automations.triggerType',
+                      content: 'Decides when this automation starts: signal change, geofence enter/exit, time of day, charging event, or another automation completing.',
+                    }}
+                    options={triggerOptions}
+                    value={selectedTrigger?.kind ?? ''}
+                    onChange={(event) => handleTriggerKindChange(event.target.value)}
+                  />
+                  {selectedTrigger ? (
+                    <GlassPanel className="mt-3 p-4">
+                      <TriggerConfigurator
+                        trigger={selectedTrigger}
+                        onChange={(trigger) => update('triggers', [trigger])}
+                      />
+                    </GlassPanel>
+                  ) : (
+                    <GlassPanel className="mt-3 p-4">
+                      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                        message={t(
+                          'automations.builder.emptyTrigger',
+                          'Select a supported trigger type to configure when this automation starts.',
+                        )}
+                      />
+                    </GlassPanel>
+                  )}
+                </FormSection>
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={0.1}>
+              <div data-tour="automation-conditions">
+                <FormSection
+                  title={t('automations.builder.onlyIf', 'Only If (Conditions)')}
+                  description={t(
+                    'automations.builder.onlyIfDesc',
+                    'Optional checks that must pass before actions run.',
+                  )}
+                >
+                  <ConditionBuilder
+                    conditions={form.conditions}
+                    onChange={(conditions) => update('conditions', conditions)}
+                  />
+                </FormSection>
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={0.15}>
+              <div data-tour="automation-actions">
+                <FormSection
+                  title={t('automations.builder.then', 'Then (Actions)')}
+                  description={t(
+                    'automations.builder.thenDesc',
+                    'Actions are executed in order.',
+                  )}
+                >
+                  <ActionBuilder
+                    actions={form.actions}
+                    channels={notificationChannels}
+                    onChange={(actions) => update('actions', actions)}
+                  />
+                </FormSection>
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* Assist rail — readiness, AI helpers, preset hint */}
+          <aside
+            aria-label={t('automations.builder.assistant', 'Builder assistant')}
+            className="space-y-6 xl:col-span-1 xl:sticky xl:top-4 xl:self-start"
+          >
+            <FadeIn>
+              <GlassPanel className="p-4 sm:p-5">
+                <PanelTitle className="mb-3 flex items-center gap-2">
+                  <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  {t('automations.builder.readiness', 'Readiness')}
+                </PanelTitle>
+                <ul className="space-y-2">
+                  {readinessItems.map((item) => (
+                    <li key={item.key} className="flex items-center gap-2">
+                      {item.ok ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                      ) : (
+                        <Circle className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                      )}
+                      <Text
+                        as="span"
+                        variant="bodySm"
+                        className={item.ok ? 'text-[var(--text-primary)]' : undefined}
+                      >
+                        {item.label}
+                      </Text>
+                      <span className="sr-only">
+                        {item.ok
+                          ? t('automations.builder.readyDone', 'complete')
+                          : t('automations.builder.readyPending', 'incomplete')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4">
+                  <Badge variant={allReady ? 'success' : 'neutral'} size="lg">
+                    {allReady
+                      ? t('automations.builder.readyToSave', 'Ready to save')
+                      : t('automations.builder.notReady', 'Not ready yet')}
+                  </Badge>
+                </div>
               </GlassPanel>
-            )}
-          </FormSection>
-          </div>
-        </FadeIn>
+            </FadeIn>
 
-        <FadeIn delay={0.1}>
-          <div data-tour="automation-conditions">
-          <FormSection
-            title={t('automations.builder.onlyIf', 'Only If (Conditions)')}
-            description={t(
-              'automations.builder.onlyIfDesc',
-              'Optional checks that must pass before actions run.',
-            )}
-          >
-            <ConditionBuilder
-              conditions={form.conditions}
-              onChange={(conditions) => update('conditions', conditions)}
-            />
-          </FormSection>
-          </div>
-        </FadeIn>
+            <FadeIn>
+              <AINLAutomationBuilder vehicleId={aiVehicleId ?? undefined} />
+            </FadeIn>
 
-        <FadeIn delay={0.15}>
-          <div data-tour="automation-actions">
-          <FormSection
-            title={t('automations.builder.then', 'Then (Actions)')}
-            description={t(
-              'automations.builder.thenDesc',
-              'Actions are executed in order.',
-            )}
-          >
-            <ActionBuilder
-              actions={form.actions}
-              channels={notificationChannels}
-              onChange={(actions) => update('actions', actions)}
-            />
-          </FormSection>
-          </div>
-        </FadeIn>
+            <FadeIn>
+              <AIGeofenceAwareAutomationSuggestions
+                vehicleId={aiVehicleId ?? undefined}
+                onApplyDraft={(proposedDraft) => {
+                  // Copy the typed Automation graph
+                  // proposed by the AI panel into the canonical
+                  // baseline form state. The AI panel never persists
+                  // directly; the user reviews the populated form and
+                  // clicks Save (which goes through the canonical
+                  // POST /api/v1/automations write path —
+                  // useCreateAutomationFull). Re-uses the existing
+                  // per-step normalizers so the typed envelope is
+                  // byte-equivalent to one the canonical
+                  // POST /api/v1/automations handler accepts.
+                  setFormValue((previous) => ({
+                    ...previous,
+                    name: proposedDraft.name,
+                    description: proposedDraft.description ?? '',
+                    vehicle_id: proposedDraft.vehicle_id ?? null,
+                    enabled: proposedDraft.enabled ?? true,
+                    // The LLM-produced AutomationTriggerInput / etc.
+                    // have the same wire shape as the editing-time
+                    // AutomationTriggerStepInput modulo a TS-only
+                    // field-omission difference; the normalizers read
+                    // only the discriminated `kind` fields so the
+                    // structural cast is safe and runtime-equivalent
+                    // to the byte-shape POST /api/v1/automations
+                    // accepts.
+                    triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
+                    conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
+                    actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
+                  }));
+                  setDirty(true);
+                }}
+              />
+            </FadeIn>
 
+            {!isEdit && (
+              <FadeIn>
+                <GlassPanel className="p-4 sm:p-5">
+                  <Text as="p" variant="bodySm">
+                    {t(
+                      'automations.builder.presetHint',
+                      'Not sure where to start? Browse typed automation templates.',
+                    )}
+                  </Text>
+                </GlassPanel>
+              </FadeIn>
+            )}
+          </aside>
+        </div>
+
+        {/* 3 — Save-time feedback: conflicts + errors, full width */}
         {conflicts.length > 0 && (
-          <FadeIn delay={0.2}>
+          <FadeIn>
             <div data-tour="automation-conflicts">
-            <ConflictWarnings conflicts={conflicts} />
+              <ConflictWarnings conflicts={conflicts} />
             </div>
           </FadeIn>
         )}
@@ -779,56 +926,48 @@ export default function AutomationBuilderPage() {
           </AlertBanner>
         )}
 
+        {/* 4 — Action bar */}
         <FadeIn delay={0.25}>
-          <div className="flex flex-wrap items-center gap-3">
-            <UiButton type="submit" loading={isSaving} disabled={isSaving}>
-              <Save className="mr-2 h-4 w-4" />
-              {isEdit
-                ? t('automations.builder.save', 'Save')
-                : t('automations.builder.create', 'Create')}
-            </UiButton>
-            {(savedId ?? automationId) && (
+          <GlassPanel className="p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <UiButton type="submit" loading={isSaving} disabled={isSaving} className="min-h-11">
+                <Save className="mr-2 h-4 w-4" />
+                {isEdit
+                  ? t('automations.builder.save', 'Save')
+                  : t('automations.builder.create', 'Create')}
+              </UiButton>
+              {(savedId ?? automationId) && (
+                <UiButton
+                  type="button"
+                  variant="secondary"
+                  onClick={handleTestRun}
+                  loading={testRunMutation.isPending}
+                  disabled={testRunMutation.isPending}
+                  className="min-h-11"
+                >
+                  <PlayCircle className="mr-2 h-4 w-4" />
+                  {t('automations.builder.testRun', 'Test Run')}
+                </UiButton>
+              )}
               <UiButton
                 type="button"
-                variant="secondary"
-                onClick={handleTestRun}
-                loading={testRunMutation.isPending}
-                disabled={testRunMutation.isPending}
+                variant="ghost"
+                onClick={handleBackToList}
+                className="min-h-11"
               >
-                <PlayCircle className="mr-2 h-4 w-4" />
-                {t('automations.builder.testRun', 'Test Run')}
+                <X className="mr-2 h-4 w-4" />
+                {t('automations.builder.cancel', 'Cancel')}
               </UiButton>
-            )}
-            <UiButton
-              type="button"
-              variant="ghost"
-              onClick={handleBackToList}
-            >
-              <X className="mr-2 h-4 w-4" />
-              {t('automations.builder.cancel', 'Cancel')}
-            </UiButton>
 
-            {testRunMutation.isSuccess && (
-              <span className="text-sm text-green-400">
-                <Zap className="mr-1 inline h-4 w-4" />
-                {t('automations.builder.testRunStarted', 'Test run started!')}
-              </span>
-            )}
-          </div>
+              {testRunMutation.isSuccess && (
+                <Badge variant="success" size="lg">
+                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t('automations.builder.testRunStarted', 'Test run started!')}
+                </Badge>
+              )}
+            </div>
+          </GlassPanel>
         </FadeIn>
-
-        {!isEdit && (
-          <FadeIn delay={0.3}>
-            <GlassPanel className="p-4 text-center">
-              <p className="text-sm text-[var(--text-secondary)]">
-                {t(
-                  'automations.builder.presetHint',
-                   'Not sure where to start? Browse typed automation templates.',
-                )}
-              </p>
-            </GlassPanel>
-          </FadeIn>
-        )}
       </form>
       {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </PageContainer>

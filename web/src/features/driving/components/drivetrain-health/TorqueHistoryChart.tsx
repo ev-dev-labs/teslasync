@@ -21,12 +21,13 @@ import type { MotorChartDataPoint } from './constants';
 
 interface TorqueHistoryChartProps {
   data: MotorChartDataPoint[];
+  loading?: boolean;
 }
 
-export function TorqueHistoryChart({ data }: TorqueHistoryChartProps) {
+export function TorqueHistoryChart({ data, loading = false }: TorqueHistoryChartProps) {
   const { t } = useTranslation();
 
-  if (data.length <= 1 || !data.some((d) => d.torque !== null)) return null;
+  const empty = data.length <= 1 || !data.some((d) => d.torque !== null);
 
   return (
     <FadeIn delay={0.24}>
@@ -34,6 +35,8 @@ export function TorqueHistoryChart({ data }: TorqueHistoryChartProps) {
         title={t('drivetrain.torqueHistory', 'Motor Torque')}
         subtitle={t('drivetrain.torqueHistorySub', 'Drive inverter torque output over time')}
         ariaLabel={t('drivetrain.torqueHistory.aria', 'Motor inverter torque output history area chart')}
+        loading={loading}
+        empty={empty}
         data={data.map((d) => ({ time: d.time, torque: d.torque }))}
         dataColumns={[
           { key: 'time', label: t('drivetrain.col.time', 'Time') },

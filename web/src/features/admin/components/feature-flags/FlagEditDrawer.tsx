@@ -132,7 +132,7 @@ export function FlagEditDrawer({
               placeholder={t('admin.flags.editor.keyPlaceholder', 'feature.dlq.replay_enabled')}
             />
             {editing && (
-              <Text variant="bodySm" as="p" className="text-[var(--text-muted)]">
+              <Text variant="helper" as="p">
                 {t(
                   'admin.flags.editor.keyImmutable',
                   'Flag keys are immutable once created. Delete + re-create to rename.',

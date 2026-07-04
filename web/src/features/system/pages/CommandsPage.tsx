@@ -1,40 +1,56 @@
 /**
- * CommandsPage — remote control center for Tesla fleet.
+ * CommandsPage — modern-ui, full-width remote control center for the Tesla fleet.
  *
- * Renders fleet stats and a VehicleCommandCenter per vehicle.
- * Each command center handles search, favorites, collapsible categories,
- * and command execution via the config-driven command system.
+ * Renders a fleet KPI band and a VehicleCommandCenter per vehicle. Each command
+ * center handles search, favorites, collapsible categories, and command
+ * execution via the config-driven command system. Data loads through TanStack
+ * queries against /vehicles + /vehicles/{id}/state; every section owns its own
+ * loading / empty / error state so nothing is gated behind a single guard.
  */
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  Car, Wifi, Power, RefreshCw, Terminal, Layers, History, AlertTriangle,
+} from 'lucide-react';
+
 import { PageContainer } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, Badge, Button, PanelTitle } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { EmptyState, Skeleton } from '@/components/feedback';
+import { EmptyState, Skeleton, AlertBanner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
-import { Car, Wifi, Power, Loader2, Activity, AlertTriangle, History } from 'lucide-react';
-import type { Vehicle, VehicleState } from '../commands';
+import { COMMANDS, CATEGORY_ORDER, type Vehicle, type VehicleState } from '../commands';
 import { VehicleCommandCenter } from '../components/VehicleCommandCenter';
+
+/** How often the live vehicle-state fan-out re-polls, in ms. */
+const STATE_REFRESH_MS = 15_000;
 
 export default function CommandsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('commands.title', 'Commands'));
 
-  const { data: vehicles, isLoading } = useQuery({
+  // Fleet roster — the command centers below are keyed off this list.
+  const vehiclesQuery = useQuery({
     queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
+    queryFn: ({ signal }) => request<Vehicle[]>('/vehicles', { signal }),
   });
+  const vehicles = vehiclesQuery.data ?? [];
+  const vehiclesLoading = vehiclesQuery.isLoading;
+  const vehiclesError = vehiclesQuery.error;
 
-  const { data: statesMap, error: statesError } = useQuery({
-    queryKey: ['command-vehicle-states', vehicles?.map(v => v.id)],
+  // Live per-vehicle state, fanned out and polled. Failures degrade to `null`
+  // per vehicle so one unreachable car never blanks the whole board.
+  const statesQuery = useQuery({
+    queryKey: ['command-vehicle-states', vehicles.map((v) => v.id)],
     queryFn: async () => {
-      if (!vehicles) return {};
       const entries = await Promise.all(
-        vehicles.map(async v => {
+        vehicles.map(async (v) => {
           try {
             const data = await request<{ state: VehicleState }>(`/vehicles/${v.id}/state`);
             return [v.id, data.state ?? null] as const;
@@ -45,80 +61,149 @@ export default function CommandsPage() {
       );
       return Object.fromEntries(entries) as Record<number, VehicleState | null>;
     },
-    enabled: !!vehicles && vehicles.length > 0,
-    refetchInterval: 15_000,
+    enabled: vehicles.length > 0,
+    refetchInterval: STATE_REFRESH_MS,
   });
+  const states = statesQuery.data ?? {};
+  const statesError = statesQuery.error;
 
-  const states = statesMap ?? {};
-  const onlineCount = vehicles?.filter(v => v.state !== 'asleep' && v.state !== 'offline').length ?? 0;
+  const onlineCount = useMemo(
+    () => vehicles.filter((v) => v.state !== 'asleep' && v.state !== 'offline').length,
+    [vehicles],
+  );
+  const asleepCount = Math.max(0, vehicles.length - onlineCount);
+
+  // Single-vehicle fleets stay full-bleed (a 2-col grid would leave dead space);
+  // multi-vehicle fleets reflow into two columns on very wide monitors.
+  const centersClass = vehicles.length > 1
+    ? 'grid grid-cols-1 gap-4 sm:gap-5 2xl:grid-cols-2'
+    : 'space-y-4 sm:space-y-5';
 
   return (
     <PageContainer
       title={t('commands.pageTitle', 'Vehicle Commands')}
       subtitle={t('commands.subtitle', 'Remote control center for your Tesla fleet')}
-      loading={isLoading}
+      query={[vehiclesQuery, statesQuery]}
       actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <Link
-            to="/command-history"
-            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <History className="h-3.5 w-3.5" />
-            {t('commands.viewHistory', 'View History')}
-          </Link>
-          {vehicles && vehicles.length > 0 && (
-            <span className="text-xs text-[var(--text-muted)]">
-              <span className="text-emerald-300 font-medium">{onlineCount}</span>/{vehicles.length} {t('online')}
-            </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {vehicles.length > 0 && (
+            <Badge variant="success" size="lg" className="min-h-11">
+              <Wifi className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('commands.onlineCount', '{{online}}/{{total}} online', {
+                online: onlineCount,
+                total: vehicles.length,
+              })}
+            </Badge>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-11"
+            icon={<History className="h-4 w-4" aria-hidden="true" />}
+            onClick={() => navigate('/command-history')}
+          >
+            {t('commands.viewHistory', 'View History')}
+          </Button>
         </div>
       }
     >
-      {/* Stats */}
+      {/* 1 — Fleet KPI band: full-width responsive metric grid */}
       <FadeIn>
-        {vehicles && vehicles.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <MetricCard label={t('Vehicles')} value={vehicles.length} icon={<Car className="h-4 w-4" />} color="cyan" />
-            <MetricCard label={t('Online')} value={onlineCount} icon={<Wifi className="h-4 w-4" />} color="green" />
-            <MetricCard label={t('Asleep')} value={(vehicles?.length ?? 0) - onlineCount} icon={<Power className="h-4 w-4" />} color="amber" />
-            <MetricCard label={t('Refresh')} value="15s" icon={<Loader2 className="h-4 w-4" />} color="purple" />
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Activity className="h-8 w-8 opacity-20" />}
-            message={t('common.noData', 'No data available')}
-            className="py-8"
-          />
-        )}
+        <section
+          aria-label={t('commands.fleetStats', 'Fleet status')}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+        >
+          {vehiclesLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} height={86} className="rounded-xl" />
+            ))
+          ) : (
+            <>
+              <MetricCard
+                label={t('commands.kpi.vehicles', 'Vehicles')}
+                value={vehicles.length}
+                icon={<Car className="h-4 w-4" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('commands.kpi.online', 'Online')}
+                value={onlineCount}
+                icon={<Wifi className="h-4 w-4" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('commands.kpi.asleep', 'Asleep')}
+                value={asleepCount}
+                icon={<Power className="h-4 w-4" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('commands.kpi.commands', 'Commands')}
+                value={COMMANDS.length}
+                icon={<Terminal className="h-4 w-4" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('commands.kpi.categories', 'Categories')}
+                value={CATEGORY_ORDER.length}
+                icon={<Layers className="h-4 w-4" />}
+                color="blue"
+              />
+              <MetricCard
+                label={t('commands.kpi.refresh', 'Auto-refresh')}
+                value={`${STATE_REFRESH_MS / 1000}s`}
+                icon={<RefreshCw className="h-4 w-4" />}
+                color="cyan"
+              />
+            </>
+          )}
+        </section>
       </FadeIn>
 
+      {/* 2 — Non-blocking notice when the live-state fan-out fails */}
       {statesError && (
-        <GlassPanel className="p-3 flex items-center gap-2 bg-neon-red/5 border-neon-red/20">
-          <AlertTriangle className="h-4 w-4 text-neon-red" />
-          <span className="text-xs text-rose-300">
-            {t('commands.statesError', 'Failed to load vehicle states')}: {(statesError as Error).message}
-          </span>
-        </GlassPanel>
+        <FadeIn>
+          <AlertBanner variant="warning" icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}>
+            {t('commands.statesError', 'Failed to load vehicle states')}: {getErrorMessage(statesError)}
+          </AlertBanner>
+        </FadeIn>
       )}
 
-      {/* Vehicle Command Centers */}
-      {isLoading ? (
-        <div className="space-y-6">{[1, 2].map(i => <Skeleton key={i} className="h-72" />)}</div>
-      ) : vehicles && vehicles.length > 0 ? (
-        <StaggerContainer className="space-y-6">
-          {vehicles.map(v => (
-            <StaggerItem key={v.id}>
-              <VehicleCommandCenter vehicle={v} state={states[v.id] ?? null} />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Car className="h-8 w-8" />}
-          title={t('commands.noVehicles', 'No vehicles found')}
-          message={t('commands.connectFleet', 'Connect your Tesla account and sync your fleet to start sending commands.')}
-        />
-      )}
+      {/* 3 — Vehicle command centers: full-width detail band */}
+      <FadeIn delay={0.1}>
+        <section aria-label={t('commands.centers', 'Vehicle command centers')}>
+          {vehiclesError ? (
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3">{t('commands.pageTitle', 'Vehicle Commands')}</PanelTitle>
+              <AlertBanner variant="danger" icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}>
+                {t('commands.loadError', 'Failed to load your fleet')}: {getErrorMessage(vehiclesError)}
+              </AlertBanner>
+            </GlassPanel>
+          ) : vehiclesLoading ? (
+            <div className="grid grid-cols-1 gap-4 sm:gap-5 2xl:grid-cols-2">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} height={288} className="rounded-2xl" />
+              ))}
+            </div>
+          ) : vehicles.length === 0 ? (
+            <GlassPanel className="p-4 sm:p-5">
+              <EmptyState /* no-action: onboarding empty state — the CTA copy already points users to Tesla account sync */
+                icon={<Car className="h-8 w-8" />}
+                title={t('commands.noVehicles', 'No vehicles found')}
+                message={t('commands.connectFleet', 'Connect your Tesla account and sync your fleet to start sending commands.')}
+              />
+            </GlassPanel>
+          ) : (
+            <StaggerContainer className={centersClass}>
+              {vehicles.map((v) => (
+                <StaggerItem key={v.id}>
+                  <VehicleCommandCenter vehicle={v} state={states[v.id] ?? null} />
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          )}
+        </section>
+      </FadeIn>
     </PageContainer>
   );
 }

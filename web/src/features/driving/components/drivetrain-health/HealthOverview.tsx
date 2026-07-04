@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, SectionTitle, Text, MetricValue } from '@/components/ui';
 import { AnimatedNumber } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 
 import { HEALTH_GLOW, type HealthStatus } from './constants';
@@ -14,25 +14,38 @@ interface HealthOverviewProps {
   overallHealth: HealthStatus;
   healthScore: number;
   motorStatus: string;
+  /** Whether the drivetrain-health query resolved with real data. */
+  hasData: boolean;
+  loading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
 export function HealthOverview({
   overallHealth,
   healthScore,
   motorStatus,
+  hasData,
+  loading = false,
+  error,
+  onRetry,
 }: HealthOverviewProps) {
   const { t } = useTranslation();
 
+  // Toned status accent (300-level). Color is always paired with the badge
+  // text + icon so status is never conveyed by color alone.
   const healthTextClass =
     overallHealth === 'good'
-      ? 'text-emerald-500'
+      ? 'text-emerald-300'
       : overallHealth === 'warning'
-        ? 'text-amber-500'
-        : 'text-red-500';
+        ? 'text-amber-300'
+        : 'text-rose-300';
+
+  const showAlert = hasData && !loading && !error && overallHealth !== 'good';
 
   return (
     <>
-      {overallHealth !== 'good' && (
+      {showAlert && (
         <FadeIn>
           <AlertBanner
             variant={getAlertVariant(overallHealth)}
@@ -41,7 +54,7 @@ export function HealthOverview({
                 ? t('drivetrain.alert.criticalTitle', 'Critical Temperature Warning')
                 : t('drivetrain.alert.warningTitle', 'Elevated Temperatures Detected')
             }
-            icon={<AlertTriangle className="h-4 w-4" />}
+            icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
           >
             {overallHealth === 'critical'
               ? t(
@@ -57,36 +70,53 @@ export function HealthOverview({
       )}
 
       <FadeIn>
-        <GlassPanel glow={HEALTH_GLOW[overallHealth]} className="p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              {overallHealth === 'good' ? (
-                <CheckCircle className={cn('h-10 w-10 shrink-0', healthTextClass)} />
-              ) : (
-                <AlertTriangle className={cn('h-10 w-10 shrink-0', healthTextClass)} />
-              )}
-              <div>
-                <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-                  {overallHealth === 'good'
-                    ? t('drivetrain.healthGood', 'Drivetrain Healthy')
-                    : overallHealth === 'warning'
-                      ? t('drivetrain.healthWarn', 'Drivetrain Running Warm')
-                      : t('drivetrain.healthCrit', 'Drivetrain Overheating')}
-                </h2>
-                <p className="text-sm text-[var(--text-muted)]">
-                  {t('drivetrain.motorState', 'Motor State')}: {motorStatus}
-                </p>
+        <GlassPanel
+          glow={hasData && !loading && !error ? HEALTH_GLOW[overallHealth] : 'none'}
+          className="p-4 sm:p-5"
+        >
+          {loading ? (
+            <Skeleton height={72} />
+          ) : error ? (
+            <QueryError
+              error={error}
+              onRetry={onRetry}
+              resourceName={t('drivetrain.title', 'Drivetrain Health')}
+            />
+          ) : !hasData ? (
+            <EmptyState /* no-action: transient — health data missing until first telemetry */
+              message={t('drivetrain.noHealth', 'No drivetrain health data available yet')}
+            />
+          ) : (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                {overallHealth === 'good' ? (
+                  <CheckCircle className={cn('h-10 w-10 shrink-0', healthTextClass)} aria-hidden="true" />
+                ) : (
+                  <AlertTriangle className={cn('h-10 w-10 shrink-0', healthTextClass)} aria-hidden="true" />
+                )}
+                <div>
+                  <SectionTitle>
+                    {overallHealth === 'good'
+                      ? t('drivetrain.healthGood', 'Drivetrain Healthy')
+                      : overallHealth === 'warning'
+                        ? t('drivetrain.healthWarn', 'Drivetrain Running Warm')
+                        : t('drivetrain.healthCrit', 'Drivetrain Overheating')}
+                  </SectionTitle>
+                  <Text as="p" size="sm" color="muted">
+                    {t('drivetrain.motorState', 'Motor State')}: {motorStatus}
+                  </Text>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant={healthBadgeVariant(overallHealth)} size="lg" dot>
+                  {t(`drivetrain.health.${overallHealth}`, overallHealth.toUpperCase())}
+                </Badge>
+                <MetricValue className={cn('!text-2xl', healthTextClass)}>
+                  <AnimatedNumber value={healthScore} suffix="%" />
+                </MetricValue>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Badge variant={healthBadgeVariant(overallHealth)} size="lg" dot>
-                {t(`drivetrain.health.${overallHealth}`, overallHealth.toUpperCase())}
-              </Badge>
-              <span className={cn('text-2xl font-bold', healthTextClass)}>
-                <AnimatedNumber value={healthScore} suffix="%" />
-              </span>
-            </div>
-          </div>
+          )}
         </GlassPanel>
       </FadeIn>
     </>

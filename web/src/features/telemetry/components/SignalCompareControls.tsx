@@ -156,7 +156,7 @@ export function SignalCompareControls({
                 type="button"
                 onClick={() => onCategoryChange(category === c.id ? null : c.id)}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-wide transition-colors',
+                  'rounded-full border px-2.5 py-1 text-xs uppercase tracking-wide transition-colors',
                   category === c.id
                     ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
                     : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',

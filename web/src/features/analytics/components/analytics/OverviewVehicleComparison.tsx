@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@/components/ui';
+import { PieChart as PieChartIcon, Trophy, Radar as RadarIcon, BarChart3 } from 'lucide-react';
 import {
   ChartTooltip,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
@@ -8,17 +8,22 @@ import {
   PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
+import { Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
-import type { FleetAnalytics } from '@/api/types';
-import { SectionTitle } from './helpers';
+import { AnalyticsPanel } from './AnalyticsPanel';
 import { PIE_COLORS } from './constants';
+import type { FleetAnalyticsQuery } from './constants';
 
 const KM_PER_MILE = 1.609344;
 
-export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | undefined }) {
+/**
+ * The four fleet-comparison panels (Fleet Usage, Efficiency Leaderboard,
+ * Vehicle Comparison radar, Energy & Activity). Rendered as bare grid items
+ * (a fragment) so they flow into the Overview tab's single bento grid.
+ */
+export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -27,6 +32,8 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
   const whPerKmToDisplay = (whPerKm: number) =>
     distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 
+  const { data, isLoading, isError, error, refetch } = query;
+  const err = isError ? error : undefined;
   const vehicles = data?.vehicle_comparison ?? [];
 
   const leaderboard = useMemo(() => {
@@ -41,128 +48,152 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
     const maxEnergy = Math.max(...vehicles.map((v) => safe(v.energy)), 1);
     const maxDrives = Math.max(...vehicles.map((v) => safe(v.drives)), 1);
     const maxEff = Math.max(...vehicles.map((v) => safe(v.efficiency)), 1);
-    return ['Distance', 'Energy', 'Drives', 'Efficiency'].map((metric) => {
-      const row: Record<string, string | number> = { metric };
+    // Stable switch key kept separate from the localized spoke label so the
+    // radar axis renders translated text while the math stays key-driven.
+    const metrics = [
+      { key: 'distance' as const, label: t('analytics.overview.radar.distance', 'Distance') },
+      { key: 'energy' as const, label: t('analytics.overview.radar.energy', 'Energy') },
+      { key: 'drives' as const, label: t('analytics.overview.radar.drives', 'Drives') },
+      { key: 'efficiency' as const, label: t('analytics.overview.radar.efficiency', 'Efficiency') },
+    ];
+    return metrics.map(({ key, label }) => {
+      const row: Record<string, string | number> = { metric: label };
       vehicles.forEach((v) => {
-        switch (metric) {
-          case 'Distance': row[v.name] = (safe(v.distance) / maxDist) * 100; break;
-          case 'Energy': row[v.name] = (safe(v.energy) / maxEnergy) * 100; break;
-          case 'Drives': row[v.name] = (safe(v.drives) / maxDrives) * 100; break;
-          case 'Efficiency': row[v.name] = ((maxEff - safe(v.efficiency)) / maxEff) * 100; break;
+        switch (key) {
+          case 'distance': row[v.name] = (safe(v.distance) / maxDist) * 100; break;
+          case 'energy': row[v.name] = (safe(v.energy) / maxEnergy) * 100; break;
+          case 'drives': row[v.name] = (safe(v.drives) / maxDrives) * 100; break;
+          case 'efficiency': row[v.name] = ((maxEff - safe(v.efficiency)) / maxEff) * 100; break;
         }
       });
       return row;
     });
-  }, [vehicles]);
+  }, [vehicles, t]);
 
   return (
     <>
-      {/* Fleet Usage Donut + Efficiency Leaderboard */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <GlassPanel className="p-4">
-          <SectionTitle>{t('analytics.overview.fleetUsage', 'Fleet Usage')}</SectionTitle>
-          {vehicles.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={vehicles.map((v) => ({ name: v.name, value: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit) }))}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={95}
-                  paddingAngle={3}
-                >
-                  {vehicles.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noVehicles', 'No vehicle data')} />
-          )}
-        </GlassPanel>
-
-        <GlassPanel className="p-4">
-          <SectionTitle>{t('analytics.overview.effLeaderboard', 'Efficiency Leaderboard')}</SectionTitle>
-          {leaderboard.length > 0 ? (
-            <div className="mt-3 space-y-3">
-              {leaderboard.map((v, idx) => (
-                <div key={v.id}>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-[var(--text-primary)] font-medium">
-                      #{idx + 1} {v.name}
-                    </span>
-                    <span className="text-[var(--text-muted)]">
-                      {fmtNumber(whPerKmToDisplay(safe(v.efficiency)), 1)} {efficiencyUnit}
-                    </span>
-                  </div>
-                  <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
-                      style={{ width: `${v.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noEfficiency', 'No efficiency data')} />
-          )}
-        </GlassPanel>
-      </div>
-
-      {/* Radar Vehicle Comparison + Energy & Activity */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <GlassPanel className="p-4">
-          <SectionTitle>{t('analytics.overview.vehicleComparison', 'Vehicle Comparison')}</SectionTitle>
-          {radarData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-                <PolarGrid stroke="rgba(255,255,255,0.06)" />
-                <PolarAngleAxis dataKey="metric" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                {vehicles.map((v, i) => (
-                  <Radar
-                    key={v.id}
-                    name={v.name}
-                    dataKey={v.name}
-                    stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                    fill={CHART_COLORS[i % CHART_COLORS.length]}
-                    fillOpacity={0.15}
-                    strokeWidth={2}
-                  />
+      {/* Fleet Usage Donut */}
+      <AnalyticsPanel
+        title={t('analytics.overview.fleetUsage', 'Fleet Usage')}
+        icon={<PieChartIcon className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={vehicles.length === 0}
+        emptyMessage={t('analytics.overview.noVehicles', 'No vehicle data')}
+      >
+        <div className="h-64 sm:h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={vehicles.map((v) => ({ name: v.name, value: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit) }))}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={95}
+                paddingAngle={3}
+              >
+                {vehicles.map((_, i) => (
+                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                 ))}
-                <Tooltip content={<ChartTooltip />} />
-              </RadarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noComparison', 'Need 2+ vehicles for comparison')} />
-          )}
-        </GlassPanel>
+              </Pie>
+              <Tooltip content={<ChartTooltip />} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </AnalyticsPanel>
 
-        <GlassPanel className="p-4">
-          <SectionTitle>{t('analytics.overview.energyActivity', 'Energy & Activity')}</SectionTitle>
-          {vehicles.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={vehicles} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="name" tick={axisTickSm} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                <Bar dataKey="energy" name={t('analytics.overview.energykWh', 'Energy (kWh)')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="drives" name={t('analytics.overview.drives', 'Drives')} fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noVehicles', 'No vehicle data')} />
-          )}
-        </GlassPanel>
-      </div>
+      {/* Efficiency Leaderboard */}
+      <AnalyticsPanel
+        title={t('analytics.overview.effLeaderboard', 'Efficiency Leaderboard')}
+        icon={<Trophy className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={leaderboard.length === 0}
+        emptyMessage={t('analytics.overview.noEfficiency', 'No efficiency data')}
+      >
+        <div className="space-y-3">
+          {leaderboard.map((v, idx) => (
+            <div key={v.id}>
+              <div className="mb-1 flex items-center justify-between">
+                <Text size="xs" weight="medium" color="primary">
+                  #{idx + 1} {v.name}
+                </Text>
+                <Text size="xs" color="muted">
+                  {fmtNumber(whPerKmToDisplay(safe(v.efficiency)), 1)} {efficiencyUnit}
+                </Text>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
+                  style={{ width: `${v.pct}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </AnalyticsPanel>
+
+      {/* Radar Vehicle Comparison */}
+      <AnalyticsPanel
+        title={t('analytics.overview.vehicleComparison', 'Vehicle Comparison')}
+        icon={<RadarIcon className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={radarData.length === 0}
+        emptyMessage={t('analytics.overview.noComparison', 'Need 2+ vehicles for comparison')}
+      >
+        <div className="h-64 sm:h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+              <PolarGrid stroke="var(--glass-border)" />
+              <PolarAngleAxis dataKey="metric" tick={axisTick} />
+              {vehicles.map((v, i) => (
+                <Radar
+                  key={v.id}
+                  name={v.name}
+                  dataKey={v.name}
+                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                  fill={CHART_COLORS[i % CHART_COLORS.length]}
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                />
+              ))}
+              <Tooltip content={<ChartTooltip />} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      </AnalyticsPanel>
+
+      {/* Energy & Activity */}
+      <AnalyticsPanel
+        title={t('analytics.overview.energyActivity', 'Energy & Activity')}
+        icon={<BarChart3 className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={vehicles.length === 0}
+        emptyMessage={t('analytics.overview.noVehicles', 'No vehicle data')}
+      >
+        <div className="h-64 sm:h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={vehicles} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="name" tick={axisTickSm} />
+              <YAxis tick={axisTick} />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend />
+              <Bar dataKey="energy" name={t('analytics.overview.energykWh', 'Energy (kWh)')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="drives" name={t('analytics.overview.drives', 'Drives')} fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </AnalyticsPanel>
     </>
   );
 }

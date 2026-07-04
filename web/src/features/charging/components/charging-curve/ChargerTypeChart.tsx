@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { ChargingSession } from '@/api/types';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
+import { Text } from '@/components/ui';
 import {
   ChartContainer,
   ChartTooltip,
@@ -121,19 +122,19 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
         {chargerTypeStats.map((ct) => (
           <div
             key={ct.label}
-            className="flex items-center justify-between text-xs text-[var(--text-secondary)]"
+            className="flex items-center justify-between"
           >
             <div className="flex items-center gap-1.5">
               <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: CHARGER_COLORS[ct.label] ?? CHART_COLORS[3] }}
               />
-              <span>{ct.label}</span>
+              <Text variant="bodySm">{ct.label}</Text>
             </div>
-            <span>
+            <Text variant="bodySm">
               {fmtInt(ct.count)} {t('charging.curve.sessions', 'sessions')} ·{' '}
               {fmtNumber(ct.avgDuration)} {t('charging.curve.minAvg', 'min avg')}
-            </span>
+            </Text>
           </div>
         ))}
       </div>

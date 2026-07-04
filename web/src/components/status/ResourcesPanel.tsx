@@ -11,7 +11,7 @@
  */
 
 import { type ReactNode } from 'react'
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 
 export interface ResourceRow {
@@ -36,7 +36,7 @@ export interface ResourcesPanelProps {
 export function ResourcesPanel({ rows, footnote, id, className }: ResourcesPanelProps) {
   return (
     <GlassPanel id={id} className={cn('p-4', className)}>
-      <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Resources</h3>
+      <Text as="h3" size="sm" weight="semibold" color="primary" className="mb-3">Resources</Text>
 
       <div className="space-y-3">
         {rows.map((row) => (
@@ -45,7 +45,7 @@ export function ResourcesPanel({ rows, footnote, id, className }: ResourcesPanel
       </div>
 
       {footnote && (
-        <div className="mt-3 text-xs text-[var(--text-muted)]">{footnote}</div>
+        <Text as="div" variant="caption" className="mt-3">{footnote}</Text>
       )}
     </GlassPanel>
   )
@@ -75,15 +75,15 @@ function ResourceRowItem({ row }: { row: ResourceRow }) {
         {row.icon && (
           <span className="shrink-0 text-[var(--text-secondary)]" aria-hidden>{row.icon}</span>
         )}
-        <span className="flex-1 truncate text-sm text-[var(--text-secondary)]">{row.label}</span>
-        <span className={cn('shrink-0 text-sm font-medium tabular-nums', textColor)}>
+        <Text as="span" size="sm" color="secondary" className="flex-1 truncate">{row.label}</Text>
+        <Text as="span" size="sm" weight="medium" className={cn('shrink-0 tabular-nums', textColor)}>
           {row.valueText}
           {row.metaText && (
-            <span className="ml-1 text-xs text-[var(--text-muted)] font-normal">
+            <Text as="span" size="xs" weight="regular" color="muted" className="ml-1">
               {row.metaText}
-            </span>
+            </Text>
           )}
-        </span>
+        </Text>
       </div>
       {percent != null && (
         <div

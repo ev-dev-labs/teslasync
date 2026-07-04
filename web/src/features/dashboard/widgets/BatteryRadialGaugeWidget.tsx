@@ -107,7 +107,7 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
             </div>
 
             {state.is_charging && (
-              <p className="text-[10px] text-emerald-300 animate-pulse mt-1">
+              <p className="text-2xs text-emerald-300 animate-pulse mt-1">
                 ⚡ {t('widget.charging', 'Charging')}
               </p>
             )}

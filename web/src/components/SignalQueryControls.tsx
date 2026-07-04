@@ -177,7 +177,7 @@ export function SignalMultiSelect({ vehicleId, selected, onChange, maxSignals }:
           {selected.map(sig => (
             <span key={sig} className="inline-flex items-center gap-1 rounded-lg bg-neon-cyan/10 border border-neon-cyan/25 px-2 py-0.5 text-xs font-mono text-neon-cyan">
               {sig}
-              <button type="button" onClick={() => removeSignal(sig)} className="touch-target-overlay hover:text-white transition-colors" aria-label={`Remove ${sig}`}>
+              <button type="button" onClick={() => removeSignal(sig)} className="touch-target-overlay hover:text-[var(--text-primary)] transition-colors" aria-label={`Remove ${sig}`}>
                 <X className="h-3 w-3" />
               </button>
             </span>
@@ -207,7 +207,7 @@ export function SignalMultiSelect({ vehicleId, selected, onChange, maxSignals }:
               </button>
             ))}
             {filtered.length > 50 && (
-              <p className="px-3 py-1.5 text-[10px] text-[var(--text-muted)]">
+              <p className="px-3 py-1.5 text-2xs text-[var(--text-muted)]">
                 {filtered.length - 50} more — refine search
               </p>
             )}
@@ -379,7 +379,7 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
       {/* Server-side pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <span className="text-[10px] text-[var(--text-muted)]">{fmtInt(total)} records</span>
+          <span className="text-2xs text-[var(--text-muted)]">{fmtInt(total)} records</span>
           <div className="flex items-center gap-1">
             <button onClick={() => onPageChange(1)} disabled={page <= 1} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>

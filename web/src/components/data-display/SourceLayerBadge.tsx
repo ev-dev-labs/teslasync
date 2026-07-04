@@ -88,7 +88,7 @@ export function SourceLayerBadge({ source, ageMs, showLabel, className }: Source
         data-source={key}
         className={cn(
           'inline-flex items-center justify-center rounded px-1.5 py-px font-mono uppercase',
-          'text-[10px] tracking-wider leading-none',
+          'text-2xs tracking-wider leading-none',
           showLabel ? 'min-w-[2.5rem]' : 'min-w-[1.5rem]',
           style.tint,
           className,

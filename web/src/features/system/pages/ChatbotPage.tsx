@@ -11,8 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { Send, Square, History as HistoryIcon } from 'lucide-react';
 import { HelixMark } from '@/components/branding/HelixMark';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, Textarea } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Button, Textarea, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -35,7 +35,7 @@ import {
   type UIChatMessage,
 } from '../components/chatbot/ChatMessageItem';
 import { SessionList } from '../components/chatbot/SessionList';
-import { SuggestedPrompts } from '../components/chatbot/SuggestedPrompts';
+import { ChatWelcome } from '../components/chatbot/ChatWelcome';
 // Chatbot LLM surface
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
 // in off mode (ADR-015 §I5 + §I6).
@@ -287,7 +287,10 @@ export default function ChatbotPage() {
                   content:
                     (m.streamedText && m.streamedText.length > 0
                       ? m.streamedText + '\n\n'
-                      : '') + `(AI error: ${ev.message})`,
+                      : '') +
+                    t('chatbot.aiError', '(AI error: {{message}})', {
+                      message: ev.message,
+                    }),
                   streamedText: undefined,
                 }
               : m,
@@ -297,7 +300,7 @@ export default function ChatbotPage() {
         setPendingAiRequest(null);
       }
     },
-    [sessionsQuery],
+    [sessionsQuery, t],
   );
 
   const aiStream = useAiStream({
@@ -694,182 +697,171 @@ export default function ChatbotPage() {
         </div>
       }
     >
-      <div className="flex flex-col flex-1 gap-4 min-h-0">
+      <section
+        aria-label={t('chatbot.aria.workspace', 'Assistant workspace')}
+        className="flex flex-1 flex-col gap-4 min-h-0"
+      >
         <AIVoiceMode />
-        <div
-          className="flex flex-1 gap-4 min-h-0 relative"
-          style={{ height: 'calc(100dvh - 12rem)' }}
-        >
-          {showSessions && (
-          isMobile ? (
-            <div
-              className="fixed inset-0 z-40 flex"
-              role="dialog"
-              aria-modal="true"
-              aria-label={t('chatbot.history', 'History')}
-            >
+
+        <div className="relative flex min-h-0 gap-4 h-[calc(100dvh_-_12rem)]">
+          {showSessions &&
+            (isMobile ? (
               <div
-                className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
-                onClick={() => setShowSessions(false)}
-                aria-hidden="true"
-              />
-              <div className="relative h-full w-[85vw] max-w-sm">
+                className="fixed inset-0 z-40 flex"
+                role="dialog"
+                aria-modal="true"
+                aria-label={t('chatbot.history', 'History')}
+              >
+                <div
+                  className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
+                  onClick={() => setShowSessions(false)}
+                  aria-hidden="true"
+                />
+                <div className="relative h-full w-[85vw] max-w-sm">
+                  <SessionList
+                    sessions={sessions}
+                    activeSessionId={sessionId}
+                    onSelect={(id) => {
+                      loadSession(id);
+                      setShowSessions(false);
+                    }}
+                    onNewChat={() => {
+                      startNewSession();
+                      setShowSessions(false);
+                    }}
+                    onRename={handleRename}
+                    onDelete={handleDelete}
+                    isLoading={sessionsQuery.isLoading}
+                    className="h-full w-full"
+                  />
+                </div>
+              </div>
+            ) : (
+              <FadeIn>
                 <SessionList
                   sessions={sessions}
                   activeSessionId={sessionId}
-                  onSelect={(id) => {
-                    loadSession(id);
-                    setShowSessions(false);
-                  }}
-                  onNewChat={() => {
-                    startNewSession();
-                    setShowSessions(false);
-                  }}
+                  onSelect={loadSession}
+                  onNewChat={startNewSession}
                   onRename={handleRename}
                   onDelete={handleDelete}
                   isLoading={sessionsQuery.isLoading}
-                  className="h-full w-full"
+                  className="h-full"
                 />
-              </div>
-            </div>
-          ) : (
-            <FadeIn>
-              <SessionList
-                sessions={sessions}
-                activeSessionId={sessionId}
-                onSelect={loadSession}
-                onNewChat={startNewSession}
-                onRename={handleRename}
-                onDelete={handleDelete}
-                isLoading={sessionsQuery.isLoading}
-                className="h-full"
-              />
-            </FadeIn>
-          )
-        )}
-
-        <GlassPanel className="flex flex-col flex-1 min-w-0 !p-0 overflow-hidden">
-          <div
-            role="log"
-            aria-live="polite"
-            aria-relevant="additions"
-            aria-label={t('chatbot.aria.conversation', 'Conversation')}
-            className="flex-1 overflow-y-auto p-4 space-y-3"
-          >
-            {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full space-y-6 py-12">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-purple-500/10 blur-xl scale-150" />
-                  <div className="relative rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-6 border border-[var(--border-subtle)]">
-                    <HelixMark className="h-12 w-12 text-purple-300" aria-hidden="true" />
-                  </div>
-                </div>
-                <div className="text-center space-y-2">
-                  <p className="text-lg font-semibold text-[var(--text-primary)]">
-                    {t('chatbot.howCanIHelp', 'How can Helix help you?')}
-                  </p>
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    {t(
-                      'chatbot.askAbout',
-                      'Ask about your vehicles, drives, charging, and more',
-                    )}
-                  </p>
-                </div>
-                <SuggestedPrompts
-                  onPick={(text) => {
-                    setInput(text);
-                    inputRef.current?.focus();
-                  }}
-                />
-              </div>
-            ) : (
-              messages.map((msg, i) => {
-                const prev = messages[i - 1];
-                const next = messages[i + 1];
-                const isFirstInGroup = !prev || prev.role !== msg.role;
-                const isLastInGroup = !next || next.role !== msg.role;
-                return (
-                  <ChatMessageItem
-                    key={msg.id}
-                    message={msg}
-                    isLastAssistant={msg.id === lastAssistantId}
-                    isLastUser={msg.id === lastUserId}
-                    isFirstInGroup={isFirstInGroup}
-                    isLastInGroup={isLastInGroup}
-                    actionsDisabled={isStreaming || sendMut.isPending}
-                    onRegenerate={handleRegenerate}
-                    onEditAndResend={handleEditAndResend}
-                  />
-                );
-              })
-            )}
-
-            {isWaiting && (
-              <FadeIn>
-                <div className="flex gap-3 items-start">
-                  <div className="rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5 border border-purple-500/20">
-                    <HelixMark className="h-4 w-4 text-purple-300" aria-hidden="true" />
-                  </div>
-                  <GlassPanel className="!p-3 flex items-center gap-2">
-                    <TypingDots reduceMotion={motion.reduce} />
-                    <span className="text-sm text-[var(--text-secondary)]">
-                      {t('chatbot.thinking', 'Helix is thinking…')}
-                    </span>
-                  </GlassPanel>
-                </div>
               </FadeIn>
-            )}
+            ))}
 
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="p-3 sm:p-4 border-t border-[var(--glass-border)]">
-            <VisuallyHidden as="label" htmlFor="chatbot-input">
-              {t('chatbot.inputLabel', 'Message')}
-            </VisuallyHidden>
-            <div className="flex items-end gap-2 sm:gap-3">
-              <div className="flex-1 min-w-0">
-                <Textarea
-                  ref={inputRef}
-                  id="chatbot-input"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={t(
-                    'chatbot.placeholder',
-                    'Ask about your fleet…',
+          <GlassPanel className="flex min-w-0 flex-1 flex-col overflow-hidden !p-0">
+            <div
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions"
+              aria-label={t('chatbot.aria.conversation', 'Conversation')}
+              className="flex-1 overflow-y-auto"
+            >
+              <div className="flex min-h-full flex-col items-center px-3 py-4 sm:px-4">
+                <div className="flex w-full max-w-3xl flex-1 flex-col space-y-3">
+                  {messages.length === 0 ? (
+                    <ChatWelcome
+                      onPick={(text) => {
+                        setInput(text);
+                        inputRef.current?.focus();
+                      }}
+                    />
+                  ) : (
+                    messages.map((msg, i) => {
+                      const prev = messages[i - 1];
+                      const next = messages[i + 1];
+                      const isFirstInGroup = !prev || prev.role !== msg.role;
+                      const isLastInGroup = !next || next.role !== msg.role;
+                      return (
+                        <ChatMessageItem
+                          key={msg.id}
+                          message={msg}
+                          isLastAssistant={msg.id === lastAssistantId}
+                          isLastUser={msg.id === lastUserId}
+                          isFirstInGroup={isFirstInGroup}
+                          isLastInGroup={isLastInGroup}
+                          actionsDisabled={isStreaming || sendMut.isPending}
+                          onRegenerate={handleRegenerate}
+                          onEditAndResend={handleEditAndResend}
+                        />
+                      );
+                    })
                   )}
-                  rows={1}
-                  className="resize-none min-h-[40px] max-h-40"
-                  aria-label={t('chatbot.inputLabel', 'Message')}
-                />
+
+                  {isWaiting && (
+                    <FadeIn>
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg border border-purple-500/20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5">
+                          <HelixMark className="h-4 w-4 text-purple-300" aria-hidden="true" />
+                        </div>
+                        <GlassPanel className="flex items-center gap-2 !p-3">
+                          <TypingDots reduceMotion={motion.reduce} />
+                          <Text size="sm" color="secondary">
+                            {t('chatbot.thinking', 'Helix is thinking…')}
+                          </Text>
+                        </GlassPanel>
+                      </div>
+                    </FadeIn>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
-              {isStreaming ? (
-                <Button
-                  onClick={stopAll}
-                  variant="secondary"
-                  icon={<Square className="h-4 w-4" />}
-                  aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
-                  title={t('chatbot.actions.stopHint', 'Stop reveal (Esc)')}
-                  className="shrink-0"
-                >
-                  <span className="hidden sm:inline">{t('chatbot.actions.stop', 'Stop')}</span>
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() || sendMut.isPending || isAiStreaming}
-                  variant="primary"
-                  icon={<Send className="h-4 w-4" />}
-                  aria-label={t('chatbot.actions.send', 'Send message')}
-                  className="shrink-0"
-                />
-              )}
             </div>
-          </div>
-        </GlassPanel>
+
+            <div className="border-t border-[var(--glass-border)] px-3 py-3 sm:px-4">
+              <div className="flex justify-center">
+                <div className="w-full max-w-3xl">
+                  <VisuallyHidden as="label" htmlFor="chatbot-input">
+                    {t('chatbot.inputLabel', 'Message')}
+                  </VisuallyHidden>
+                  <div className="flex items-end gap-2 sm:gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Textarea
+                        ref={inputRef}
+                        id="chatbot-input"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={t(
+                          'chatbot.placeholder',
+                          'Ask about your fleet…',
+                        )}
+                        rows={1}
+                        className="max-h-40 min-h-[44px] resize-none"
+                        aria-label={t('chatbot.inputLabel', 'Message')}
+                      />
+                    </div>
+                    {isStreaming ? (
+                      <Button
+                        onClick={stopAll}
+                        variant="secondary"
+                        icon={<Square className="h-4 w-4" />}
+                        aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
+                        title={t('chatbot.actions.stopHint', 'Stop reveal (Esc)')}
+                        className="shrink-0"
+                      >
+                        <span className="hidden sm:inline">{t('chatbot.actions.stop', 'Stop')}</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleSend}
+                        disabled={!input.trim() || sendMut.isPending || isAiStreaming}
+                        variant="primary"
+                        icon={<Send className="h-4 w-4" />}
+                        aria-label={t('chatbot.actions.send', 'Send message')}
+                        className="shrink-0"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </GlassPanel>
         </div>
-      </div>
+      </section>
     </PageContainer>
   );
 }

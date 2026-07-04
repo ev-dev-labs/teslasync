@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Zap, Gauge, Thermometer, Activity } from 'lucide-react';
 
 import { Grid } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -38,38 +38,34 @@ export default function MotorEfficiencyInsights({
     <FadeIn delay={0.35}>
       <Grid cols={{ default: 1, md: 3 }} gap={4}>
         {/* Torque Distribution */}
-        <GlassPanel className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-blue-400" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t('dynamics.torqueDistribution', 'Torque Distribution')}
-            </h3>
-          </div>
+        <GlassPanel className="h-full p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-indigo-300" aria-hidden="true" />
+            {t('dynamics.torqueDistribution', 'Torque Distribution')}
+          </PanelTitle>
           {motorStats ? (
             <div className="space-y-2 text-sm text-[var(--text-secondary)]">
-              <div className="flex justify-between"><span>{t('dynamics.avgTorque', 'Avg Torque')}</span><span className="font-mono">{fmtNumber(motorStats.avgTorque, 1)} Nm</span></div>
-              <div className="flex justify-between"><span>{t('dynamics.maxTorque', 'Max Torque')}</span><span className="font-mono">{fmtNumber(motorStats.maxTorque, 1)} Nm</span></div>
-              <div className="flex justify-between"><span>{t('dynamics.highTorqueTime', 'High Torque Time')}</span><span className="font-mono">{fmtNumber(motorStats.highTorquePct, 1)}%</span></div>
+              <div className="flex justify-between"><span>{t('dynamics.avgTorque', 'Avg Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.avgTorque, 1)} Nm</Text></div>
+              <div className="flex justify-between"><span>{t('dynamics.maxTorque', 'Max Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.maxTorque, 1)} Nm</Text></div>
+              <div className="flex justify-between"><span>{t('dynamics.highTorqueTime', 'High Torque Time')}</span><Text as="span" mono>{fmtNumber(motorStats.highTorquePct, 1)}%</Text></div>
             </div>
           ) : noData}
         </GlassPanel>
 
         {/* Throttle Behavior */}
-        <GlassPanel className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-cyan-400" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t('dynamics.throttleBehavior', 'Throttle Behavior')}
-            </h3>
-          </div>
+        <GlassPanel className="h-full p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('dynamics.throttleBehavior', 'Throttle Behavior')}
+          </PanelTitle>
           {motorStats ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgPower', 'Avg Power')}</span>
-                <span className="font-mono">{fmtNumber(motorStats.avgPower, 1)} kW</span>
+                <Text as="span" mono>{fmtNumber(motorStats.avgPower, 1)} kW</Text>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--text-secondary)]">{t('dynamics.drivingStyle', 'Style')}</span>
+                <Text as="span" size="sm" color="secondary">{t('dynamics.drivingStyle', 'Style')}</Text>
                 <Badge
                   variant={throttleStyle === 'conservative' ? 'success' : throttleStyle === 'moderate' ? 'warning' : 'danger'}
                   size="sm"
@@ -98,22 +94,20 @@ export default function MotorEfficiencyInsights({
         </GlassPanel>
 
         {/* Motor Thermal */}
-        <GlassPanel className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Thermometer className="h-4 w-4 text-amber-400" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t('dynamics.motorThermal', 'Motor Thermal')}
-            </h3>
-          </div>
+        <GlassPanel className="h-full p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />
+            {t('dynamics.motorThermal', 'Motor Thermal')}
+          </PanelTitle>
           {motorStats ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgMotorTemp', 'Avg Motor Temp')}</span>
-                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}{tempUnit}</span>
+                <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}{tempUnit}</Text>
               </div>
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.maxMotorTemp', 'Max Motor Temp')}</span>
-                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp), 1)}{tempUnit}</span>
+                <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp), 1)}{tempUnit}</Text>
               </div>
               <Badge
                 variant={motorStats.maxMotorTemp < 100 ? 'success' : motorStats.maxMotorTemp < 140 ? 'warning' : 'danger'}

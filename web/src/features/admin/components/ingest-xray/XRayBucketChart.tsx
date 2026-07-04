@@ -65,7 +65,7 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
       )}
       loading={loading}
       empty={isEmpty}
-      height={260}
+      height={300}
       data={series.map((s) => ({ bucket: s.bucket_start, count: s.count }))}
       dataColumns={[
         { key: 'bucket', label: t('admin.xray.chart.cols.bucket', 'Bucket') },
@@ -78,7 +78,7 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
       exportable
       exportFilename="ingest-xray-buckets"
     >
-      <ResponsiveContainer width="100%" height={260}>
+      <ResponsiveContainer width="100%" height={300}>
         <BarChart data={series} margin={chartMargin}>
           <CartesianGrid {...chartGrid} />
           <XAxis

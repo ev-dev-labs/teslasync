@@ -257,7 +257,7 @@ export function VehicleMultiSelect({
       </button>
 
       {isFleetEmpty && (
-        <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
           {t(
             'notifications.alertStudio.editor.vehiclesEmptyFleetHelp',
             'Add a vehicle in Settings → Vehicles to use this rule.',
@@ -266,7 +266,7 @@ export function VehicleMultiSelect({
       )}
 
       {hasError && (
-        <p id={errorId} role="alert" className="mt-1 text-[11px] text-[var(--danger)]">
+        <p id={errorId} role="alert" className="mt-1 text-xs text-[var(--danger)]">
           {errorText}
         </p>
       )}
@@ -297,7 +297,7 @@ export function VehicleMultiSelect({
                 className={cn(
                   'flex h-4 w-4 items-center justify-center rounded border',
                   value.kind === 'all_sticky'
-                    ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                    ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--text-on-accent)]'
                     : 'border-[var(--border-strong)]',
                 )}
               >
@@ -340,7 +340,7 @@ export function VehicleMultiSelect({
                     className={cn(
                       'flex h-4 w-4 items-center justify-center rounded border',
                       checked
-                        ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--text-on-accent)]'
                         : 'border-[var(--border-strong)]',
                     )}
                   >
@@ -378,7 +378,7 @@ export function VehicleMultiSelect({
                   <span className="flex items-center gap-2 truncate">
                     <span
                       aria-hidden
-                      className="flex h-4 w-4 items-center justify-center rounded border border-[var(--accent)] bg-[var(--accent)] text-white"
+                      className="flex h-4 w-4 items-center justify-center rounded border border-[var(--accent)] bg-[var(--accent)] text-[var(--text-on-accent)]"
                     >
                       <svg
                         viewBox="0 0 16 16"

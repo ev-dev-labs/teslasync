@@ -35,7 +35,7 @@ export function VinDecoderTool() {
             {Object.entries(decoded).map(([k, v]) => (
               <div key={k} className="rounded bg-[var(--surface-overlay)] px-3 py-2">
                 <span className="text-xs text-[var(--text-secondary)]">{t(`devtools.utils.vin_${k}`)}</span>
-                <p className="text-sm font-medium text-white">{v}</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{v}</p>
               </div>
             ))}
           </div>

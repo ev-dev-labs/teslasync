@@ -57,7 +57,7 @@ function WidgetChrome({
       >
         <div className="flex items-center gap-2">
           <GripHorizontal className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-          <span className="text-[11px] text-[var(--text-secondary)] font-medium">{def.name}</span>
+          <span className="text-xs text-[var(--text-secondary)] font-medium">{def.name}</span>
         </div>
         <div className="flex items-center gap-1">
           <UiButton

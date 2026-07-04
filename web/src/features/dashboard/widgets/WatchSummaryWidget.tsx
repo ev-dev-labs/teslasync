@@ -91,7 +91,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
               </span>
             )}
             {complication?.charging && (
-              <span className="text-[10px] text-emerald-300 animate-pulse">
+              <span className="text-2xs text-emerald-300 animate-pulse">
                 ⚡ {t('widget.charging', 'Charging')}
               </span>
             )}
@@ -140,7 +140,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
           <div className="grid grid-cols-2 gap-2">
             {/* Range */}
             <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.range', 'Range')}
               </span>
               {displayRange != null ? (
@@ -155,7 +155,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
 
             {/* Lock status */}
             <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.lockStatus', 'Lock')}
               </span>
               {isLocked != null ? (
@@ -178,7 +178,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
 
             {/* Cabin temp */}
             <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.cabinTemp', 'Cabin')}
               </span>
               {displayTemp != null ? (
@@ -193,7 +193,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
 
             {/* Last updated */}
             <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.lastSeen', 'Last Seen')}
               </span>
               <span className="truncate max-w-full">

@@ -20,7 +20,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
       <h3 className="section-title flex items-center gap-2 mb-5">
         <Activity className="h-4 w-4 text-cyan-300" /> Vehicle State
         {sseConnected && (
-          <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-300">
+          <span className="ml-auto flex items-center gap-1 text-2xs text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
             Live
           </span>

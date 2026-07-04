@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
+import { Gauge } from 'lucide-react';
 import { Grid } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
-import { FadeIn } from '@/components/motion';
+import { GlassPanel, Badge, PanelTitle, Caption, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { MotorSnapshot } from '@/api/types';
@@ -34,6 +34,21 @@ interface SpeedGearPanelProps {
   speedUnit: string;
 }
 
+/** One label / value / unit stat column. Keeps all three as siblings in a
+ *  single parent so callers (and the regression test) can read the value via
+ *  the label's parent. */
+function SpeedStat({ label, value, unit }: { label: string; value: string; unit: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <Caption>{label}</Caption>
+      <Text as="span" size="2xl" weight="semibold" color="primary" className="tabular-nums">
+        {value}
+      </Text>
+      <Caption>{unit}</Caption>
+    </div>
+  );
+}
+
 export default function SpeedGearPanel({ motorLatest, filteredDrives, toSpeedDisplay, speedUnit }: SpeedGearPanelProps) {
   const { t } = useTranslation();
 
@@ -58,43 +73,36 @@ export default function SpeedGearPanel({ motorLatest, filteredDrives, toSpeedDis
       : null;
 
   return (
-    <FadeIn delay={0.15}>
-      <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
-          {t('dynamics.speedGear', 'Speed & Gear')}
-        </h2>
-        <Grid cols={{ default: 2, md: 4 }} gap={6}>
-          <div className="flex flex-col items-center justify-center gap-2">
-            <span className={cn('text-5xl font-bold', shiftColor(motorLatest?.shift_state))}>
-              {motorLatest?.shift_state ?? '—'}
-            </span>
-            <Badge variant={shiftBadgeVariant(motorLatest?.shift_state)} size="sm">
-              {t('dynamics.shiftState', 'Shift State')}
-            </Badge>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.power', 'Motor Power')}</span>
-            <span className="text-2xl font-semibold text-white">
-              {motorLatest?.power_kw != null ? fmtNumber(motorLatest.power_kw) : '—'}
-            </span>
-            <span className="text-xs text-[var(--text-muted)]">kW</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}</span>
-            <span className="text-2xl font-semibold text-white">
-              {avgDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(avgDriveSpeedMps), 0) : '—'}
-            </span>
-            <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.topDriveSpeed', 'Top Drive Speed')}</span>
-            <span className="text-2xl font-semibold text-white">
-              {topDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(topDriveSpeedMps), 0) : '—'}
-            </span>
-            <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
-          </div>
-        </Grid>
-      </GlassPanel>
-    </FadeIn>
+    <GlassPanel className="h-full p-4 sm:p-5">
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Gauge className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+        {t('dynamics.speedGear', 'Speed & Gear')}
+      </PanelTitle>
+      <Grid cols={{ default: 2, md: 4 }} gap={6}>
+        <div className="flex flex-col items-center justify-center gap-2">
+          <Text as="span" weight="bold" className={cn('text-5xl tabular-nums', shiftColor(motorLatest?.shift_state))}>
+            {motorLatest?.shift_state ?? '—'}
+          </Text>
+          <Badge variant={shiftBadgeVariant(motorLatest?.shift_state)} size="sm">
+            {t('dynamics.shiftState', 'Shift State')}
+          </Badge>
+        </div>
+        <SpeedStat
+          label={t('dynamics.power', 'Motor Power')}
+          value={motorLatest?.power_kw != null ? fmtNumber(motorLatest.power_kw) : '—'}
+          unit="kW"
+        />
+        <SpeedStat
+          label={t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}
+          value={avgDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(avgDriveSpeedMps), 0) : '—'}
+          unit={speedUnit}
+        />
+        <SpeedStat
+          label={t('dynamics.topDriveSpeed', 'Top Drive Speed')}
+          value={topDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(topDriveSpeedMps), 0) : '—'}
+          unit={speedUnit}
+        />
+      </Grid>
+    </GlassPanel>
   );
 }

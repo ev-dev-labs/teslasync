@@ -4,16 +4,20 @@ import { useTranslation } from 'react-i18next';
 import {
   Battery, Thermometer, Lock, Shield, Wifi, Car,
   Gauge, Zap, TrendingUp, DollarSign, Leaf, Route,
-  ArrowLeftRight, Info, Calendar,
+  ArrowLeftRight, Info, Calendar, BarChart3,
 } from 'lucide-react';
 
-import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import {
+  GlassPanel, Select, Button, DataTable,
+  SectionTitle, PanelTitle, Text, Caption,
+  type SelectOption, type Column,
+} from '@/components/ui';
 import { StatCard } from '@/components/data-display';
-import { EmptyState, Skeleton, AlertBanner } from '@/components/feedback';
+import { EmptyState, Skeleton, AlertBanner, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartContainer, ChartTooltip, AREA_DEFAULTS,
+  ChartTooltip, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, BarChart, Bar,
   chartMarginLabeled, axisTick, chartAnimation,
@@ -57,13 +61,18 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
   const winner = getWinner(row.rawA, row.rawB, row.winner);
   const isWinner = winner === side;
   return (
-    <span className={cn(
-      'font-medium',
-      isWinner ? 'text-emerald-300' : 'text-[var(--text-primary)]',
-    )}>
+    <Text
+      as="span"
+      weight="medium"
+      className={cn(
+        'inline-flex items-center gap-1 tabular-nums',
+        isWinner ? 'text-emerald-300' : 'text-[var(--text-primary)]',
+      )}
+    >
       {value}
-      {isWinner && ' ✓'}
-    </span>
+      {/* ✓ pairs the winner color with a non-color signal (a11y). */}
+      {isWinner && <span aria-hidden="true">✓</span>}
+    </Text>
   );
 }
 
@@ -72,26 +81,54 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
 // have to dismiss it on every visit.
 const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.fleet';
 
+/* ── Status Row (label + value line inside a status card) ── */
+
+function StatusRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">{icon}</span>
+        <Text as="span" size="sm" color="secondary" className="truncate">{label}</Text>
+      </div>
+      <div className="shrink-0 text-right">{children}</div>
+    </div>
+  );
+}
+
 /* ── Status Card Sub-component ─────────────────────────── */
 
 function VehicleStatusCard({
   vehicle,
   state,
   isLoading,
+  isError,
+  error,
+  onRetry,
   formatDistance,
   formatTemperature,
 }: {
   vehicle: Vehicle | undefined;
   state: VehicleState | undefined;
   isLoading: boolean;
-  formatDistance: (mi: number, d?: number) => string;
-  formatTemperature: (c: number, d?: number) => string;
+  isError: boolean;
+  error: unknown;
+  onRetry: () => void;
+  formatDistance: (value: number | null | undefined, precision?: number) => string;
+  formatTemperature: (value: number | null | undefined, precision?: number) => string;
 }) {
   const { t } = useTranslation();
 
   if (isLoading) {
     return (
-      <GlassPanel className="p-5">
+      <GlassPanel className="p-4 sm:p-5">
         <Skeleton lines={5} />
       </GlassPanel>
     );
@@ -99,8 +136,21 @@ function VehicleStatusCard({
 
   if (!vehicle) {
     return (
-      <GlassPanel className="p-5">
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('comparison.selectVehicle', 'Select a vehicle')} />
+      <GlassPanel className="flex min-h-[16rem] items-center justify-center p-4 sm:p-5">
+        <EmptyState
+          /* no-action: transient empty state — surfaces before a vehicle is chosen */
+          icon={<Car className="h-8 w-8" aria-hidden="true" />}
+          message={t('comparison.selectVehicle', 'Select a vehicle')}
+        />
+      </GlassPanel>
+    );
+  }
+
+  if (isError) {
+    return (
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-3 truncate">{vehicle.display_name || vehicle.vin}</PanelTitle>
+        <QueryError error={error} onRetry={onRetry} resourceName={t('comparison.vehicleState', 'Vehicle state')} />
       </GlassPanel>
     );
   }
@@ -112,101 +162,96 @@ function VehicleStatusCard({
   const isOnline = vehicle.state === 'online';
 
   return (
-    <GlassPanel className="p-5">
+    <GlassPanel className="p-4 sm:p-5">
       <div className="mb-4 flex items-center gap-3">
         <div className={cn(
-          'flex h-10 w-10 items-center justify-center rounded-xl', isOnline ? 'bg-neon-green/10 ring-1 ring-neon-green/20' : 'bg-white/[0.04] ring-1 ring-white/[0.06]', )}>
-          <Car className={cn('h-5 w-5', isOnline ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
+          isOnline ? 'bg-neon-green/10 ring-neon-green/20' : 'bg-white/[0.04] ring-white/[0.06]',
+        )}>
+          <Car className={cn('h-5 w-5', isOnline ? 'text-emerald-300' : 'text-[var(--text-muted)]')} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-[var(--text-primary)]">
-            {vehicle.display_name || vehicle.vin}
-          </h3>
-          <p className="text-xs text-[var(--text-muted)]">
-            {vehicle.model} {vehicle.trim_badging ? `· ${vehicle.trim_badging}` : ''}
-          </p>
+          <PanelTitle className="truncate">{vehicle.display_name || vehicle.vin}</PanelTitle>
+          <Caption className="block truncate">
+            {vehicle.model}{vehicle.trim_badging ? ` · ${vehicle.trim_badging}` : ''}
+          </Caption>
         </div>
       </div>
 
       <div className="space-y-3">
         {/* Battery */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <Battery className="h-4 w-4 text-neon-green" />
-            {t('comparison.battery', 'Battery')}
-          </div>
-          <span className="text-sm font-medium text-[var(--text-primary)]">
+        <StatusRow icon={<Battery className="h-4 w-4" />} label={t('comparison.battery', 'Battery')}>
+          <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
             {batteryLevel != null ? `${batteryLevel}%` : '—'}
-          </span>
-        </div>
+          </Text>
+        </StatusRow>
         {batteryLevel != null && (
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+          <div
+            className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
+            role="progressbar"
+            aria-valuenow={Math.round(batteryLevel)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t('comparison.batteryLevel', 'Battery level')}
+          >
             <div
               className={cn(
-                'h-full rounded-full transition-all', batteryLevel > 50 ? 'bg-neon-green' : batteryLevel > 20 ? 'bg-neon-amber' : 'bg-neon-red', )}
-              style={{ width: `${Math.min(batteryLevel, 100)}%` }}
+                'h-full rounded-full transition-all',
+                batteryLevel > 50 ? 'bg-emerald-500' : batteryLevel > 20 ? 'bg-amber-500' : 'bg-rose-500',
+              )}
+              /* dynamic computed width — allowed inline style */
+              style={{ width: `${Math.min(Math.max(batteryLevel, 0), 100)}%` }}
             />
           </div>
         )}
 
         {/* Range */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <Gauge className="h-4 w-4 text-neon-cyan" />
-            {t('comparison.range', 'Range')}
-          </div>
-          <span className="text-sm font-medium text-[var(--text-primary)]">
+        <StatusRow icon={<Gauge className="h-4 w-4" />} label={t('comparison.range', 'Range')}>
+          <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
             {range != null ? formatDistance(range) : '—'}
-          </span>
-        </div>
+          </Text>
+        </StatusRow>
 
         {/* Temperature */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <Thermometer className="h-4 w-4 text-neon-amber" />
-            {t('comparison.temp', 'Temperature')}
-          </div>
-          <span className="text-sm font-medium text-[var(--text-primary)]">
+        <StatusRow icon={<Thermometer className="h-4 w-4" />} label={t('comparison.temp', 'Temperature')}>
+          <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
             {insideTemp != null ? formatTemperature(insideTemp) : '—'}
             {outsideTemp != null ? ` / ${formatTemperature(outsideTemp)}` : ''}
-          </span>
-        </div>
+          </Text>
+        </StatusRow>
 
         {/* Lock & Sentry */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <Lock className="h-4 w-4 text-violet-400" />
-            {t('comparison.security', 'Security')}
-          </div>
-          <div className="flex items-center gap-2">
-            {state ? (
-              <>
-                <span className={cn('text-xs', state.is_locked ? 'text-emerald-300' : 'text-rose-300')}>
-                  {state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
+        <StatusRow icon={<Lock className="h-4 w-4" />} label={t('comparison.security', 'Security')}>
+          {state ? (
+            <div className="flex items-center justify-end gap-2">
+              <Text as="span" size="xs" weight="medium" className={state.is_locked ? 'text-emerald-300' : 'text-rose-300'}>
+                {state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
+              </Text>
+              {state.sentry_mode && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-neon-cyan/20 bg-neon-cyan/10 px-1.5 py-0.5 text-cyan-300">
+                  <Shield className="h-3 w-3" aria-hidden="true" />
+                  <Text as="span" size="2xs" weight="medium">{t('comparison.sentry', 'Sentry')}</Text>
                 </span>
-                {state.sentry_mode && (
-                  <span className="text-xs text-cyan-300">
-                    <Shield className="inline h-3 w-3" /> {t('comparison.sentry', 'Sentry')}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-xs text-[var(--text-muted)]">—</span>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          ) : (
+            <Text as="span" size="xs" color="muted">—</Text>
+          )}
+        </StatusRow>
 
         {/* Status */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <Wifi className="h-4 w-4 text-sky-400" />
-            {t('comparison.status', 'Status')}
-          </div>
+        <StatusRow icon={<Wifi className="h-4 w-4" />} label={t('comparison.status', 'Status')}>
           <span className={cn(
-            'rounded-full px-2 py-0.5 text-xs font-medium', isOnline ? 'bg-neon-green/10 text-neon-green' : 'bg-white/[0.04] text-[var(--text-muted)]', )}>
-            {vehicle.state ?? t('comparison.unknown', 'Unknown')}
+            'inline-flex items-center rounded-full border px-2 py-0.5',
+            isOnline
+              ? 'border-neon-green/20 bg-neon-green/10 text-emerald-300'
+              : 'border-white/[0.06] bg-white/[0.04] text-[var(--text-muted)]',
+          )}>
+            <Text as="span" size="xs" weight="medium" className="capitalize">
+              {vehicle.state ?? t('comparison.unknown', 'Unknown')}
+            </Text>
           </span>
-        </div>
+        </StatusRow>
       </div>
     </GlassPanel>
   );
@@ -225,14 +270,18 @@ export default function FleetComparePage() {
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
   const { currencySymbol, formatCurrency } = useFormatting();
 
+  // i18n-safe "A vs B" comparison string for the KPI highlight cards — keeps the
+  // connector word translatable rather than hardcoding " vs ".
+  const vs = (a: string, b: string) =>
+    t('comparison.versus', '{{valueA}} vs {{valueB}}', { valueA: a, valueB: b });
+
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   // backend `useDrivingStats` returns explicit-SI fields:
-  // totalDistanceKm (km), avgSpeedKmh / topSpeedKmh (km/h), avgEfficiencyWhKm (Wh/km)
-  // Legacy toDistanceDisplay/toSpeedDisplay/toEfficiencyDisplay expect mi/mph/Wh-per-mi
-  // input so calling them on these km values silently mis-renders for both pref
-  // unit choices. Migrate to SI boundary helpers.
+  // totalDistanceKm (km), avgSpeedKmh / topSpeedKmh (km/h), avgEfficiencyWhKm (Wh/km).
+  // Convert through the SI boundary helpers so both preference unit choices render
+  // correctly (never call the legacy mi/mph/Wh-per-mi converters).
   const KM_PER_MILE = 1.609344;
   const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
   const fromKmh = (kmh: number) => convertSpeedFromSI((kmh * 1000) / 3600, speedUnit);
@@ -242,7 +291,7 @@ export default function FleetComparePage() {
   // reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
 
-  // accept ?leftId= and ?rightId= query params so other
+  // accept "leftId" / "rightId" router query params so other
   // pages (e.g. VehicleListPage's "Compare vehicles" button) can deep-link
   // straight into a pre-populated comparison.
   const [searchParams] = useSearchParams();
@@ -251,6 +300,13 @@ export default function FleetComparePage() {
 
   const [vehicleIdA, setVehicleIdA] = useState<string>(initialLeftId);
   const [vehicleIdB, setVehicleIdB] = useState<string>(initialRightId);
+
+  // Swap the two selected vehicles in place — keeps the comparison meaningful
+  // when the user wants A and B reversed without re-picking both selectors.
+  const swapVehicles = () => {
+    setVehicleIdA(vehicleIdB);
+    setVehicleIdB(vehicleIdA);
+  };
 
   // Disambiguation banner — defaults to visible, persists dismissal.
   const [bannerVisible, setBannerVisible] = useState<boolean>(() => {
@@ -270,7 +326,9 @@ export default function FleetComparePage() {
   };
 
   /* ── Vehicle list ── */
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const vehicles = vehiclesQuery.data;
+  const vehiclesLoading = vehiclesQuery.isLoading;
   const vehicleList = vehicles ?? [];
 
   // Auto-select first two vehicles if not provided via query params.
@@ -289,25 +347,34 @@ export default function FleetComparePage() {
   const numIdB = vehicleB?.id ?? 0;
 
   /* ── Vehicle state (live) ── */
-  const { data: stateDataA, isLoading: stateLoadingA } = useVehicleState(numIdA);
-  const { data: stateDataB, isLoading: stateLoadingB } = useVehicleState(numIdB);
-  const stateA = stateDataA?.state;
-  const stateB = stateDataB?.state;
+  const stateQueryA = useVehicleState(numIdA);
+  const stateQueryB = useVehicleState(numIdB);
+  const stateA = stateQueryA.data?.state;
+  const stateB = stateQueryB.data?.state;
 
   /* ── Driving stats (lifetime) ── */
-  const { data: drivingStatsA, isLoading: dStatsLoadA } = useDrivingStats(vehicleIdA || undefined);
-  const { data: drivingStatsB, isLoading: dStatsLoadB } = useDrivingStats(vehicleIdB || undefined);
+  const statsQueryA = useDrivingStats(vehicleIdA || undefined);
+  const statsQueryB = useDrivingStats(vehicleIdB || undefined);
+  const drivingStatsA = statsQueryA.data;
+  const drivingStatsB = statsQueryB.data;
 
   /* ── Cost breakdown (lifetime) ── */
-  const { data: costA } = useCostBreakdown(vehicleIdA || '');
-  const { data: costB } = useCostBreakdown(vehicleIdB || '');
+  const costQueryA = useCostBreakdown(vehicleIdA || '');
+  const costQueryB = useCostBreakdown(vehicleIdB || '');
+  const costA = costQueryA.data;
+  const costB = costQueryB.data;
 
-  /* ── Monthly mileage (for chart) ── */
-  const { data: monthlyA } = useMonthlyMileage(vehicleIdA || '');
-  const { data: monthlyB } = useMonthlyMileage(vehicleIdB || '');
+  /* ── Monthly mileage (for charts) ── */
+  const monthlyQueryA = useMonthlyMileage(vehicleIdA || '');
+  const monthlyQueryB = useMonthlyMileage(vehicleIdB || '');
+  const monthlyA = monthlyQueryA.data;
+  const monthlyB = monthlyQueryB.data;
 
   const isLoading = vehiclesLoading;
-  const statsLoading = dStatsLoadA || dStatsLoadB;
+  const statsLoading = statsQueryA.isLoading || statsQueryB.isLoading;
+  const monthlyLoading = monthlyQueryA.isLoading || monthlyQueryB.isLoading;
+  const monthlyError = monthlyQueryA.error ?? monthlyQueryB.error;
+  const retryMonthly = () => { monthlyQueryA.refetch(); monthlyQueryB.refetch(); };
 
   /* ── Select options with cross-disable ── */
   const optionsA: SelectOption[] = useMemo(
@@ -331,8 +398,7 @@ export default function FleetComparePage() {
   /* ── Monthly mileage chart data (merged & aligned) ──
      Backend `/mileage/monthly` returns
      `MonthlyMileageBucket{year_month, total_km, drive_count, …}`.
-     Distances stay in km here — the chart axis label already shows km
-     elsewhere on the page. */
+     Distances stay in km here — the chart axis already reads in km. */
   const monthlyChartData = useMemo(() => {
     const arrA = monthlyA ?? [];
     const arrB = monthlyB ?? [];
@@ -369,7 +435,7 @@ export default function FleetComparePage() {
       .sort((a, b) => a.month.localeCompare(b.month));
   }, [monthlyA, monthlyB]);
 
-  /* ── Charging sessions chart (drives per month as bar chart) ── */
+  /* ── Drives per month (bar chart) ── */
   const drivesChartData = useMemo(
     () => monthlyChartData.map(m => ({
       month: m.month,
@@ -473,7 +539,7 @@ export default function FleetComparePage() {
     ];
   }, [
     drivingStatsA, drivingStatsB, costA, costB,
-    t, fromKm, fromKmh, whPerKmToDisplay,
+    t, fromKm, fromKmh, whPerKmToDisplay, formatCurrency, formatEnergy,
     distanceUnit, speedUnit, efficiencyUnit, currencySymbol,
   ]);
 
@@ -482,7 +548,7 @@ export default function FleetComparePage() {
       {
         key: 'metric',
         header: t('comparison.metric', 'Metric'),
-        render: (r) => <span className="font-medium text-[var(--text-primary)]">{r.metric}</span>,
+        render: (r) => <Text as="span" weight="medium" color="primary">{r.metric}</Text>,
       },
       {
         key: 'valueA',
@@ -500,9 +566,9 @@ export default function FleetComparePage() {
 
   /* ── Render ── */
 
-  // single-vehicle accounts can't usefully use Fleet
-  // Comparison. Show a focused EmptyState that explains *why* and offers a
-  // path forward (manage vehicles), instead of empty selectors with no data.
+  // single-vehicle accounts can't usefully use Fleet Comparison. Show a
+  // focused EmptyState that explains *why* and offers a path forward
+  // (manage vehicles), instead of empty selectors with no data.
   if (!vehiclesLoading && vehicleList.length < 2) {
     return (
       <PageContainer
@@ -510,9 +576,9 @@ export default function FleetComparePage() {
         subtitle={t('comparison.subtitle', 'Compare two vehicles side by side')}
       >
         <FadeIn>
-          <GlassPanel className="p-8">
+          <GlassPanel className="p-6 sm:p-8">
             <EmptyState
-              icon={<Car className="h-10 w-10" />}
+              icon={<Car className="h-10 w-10" aria-hidden="true" />}
               title={t('fleetCompare.singleVehicle.title', 'Add a second vehicle to compare')}
               message={t(
                 'fleetCompare.singleVehicle.body',
@@ -534,24 +600,21 @@ export default function FleetComparePage() {
       title={t('comparison.title', 'Fleet Comparison')}
       subtitle={t('comparison.subtitle', 'Compare two vehicles side by side')}
       loading={isLoading}
+      query={[statsQueryA, statsQueryB]}
     >
-      {/* Disambiguation banner — points users who wanted the period view to
- the right page. Persists dismissal in localStorage. */}
+      {/* Disambiguation banner — points users who wanted the period view to the
+          right page. Persists dismissal in localStorage. */}
       {bannerVisible && (
         <FadeIn>
           <AlertBanner
             variant="info"
-            icon={<Calendar className="h-4 w-4" />}
+            icon={<Calendar className="h-4 w-4" aria-hidden="true" />}
             onClose={dismissBanner}
-            className="mb-4"
           >
-            {t(
-              'comparison.banner.toPeriodPrefix',
-              'Looking to compare time periods instead?',
-            )}{' '}
+            {t('comparison.banner.toPeriodPrefix', 'Looking to compare time periods instead?')}{' '}
             <Link
               to="/period-compare"
-              className="font-medium text-neon-cyan underline-offset-2 hover:underline"
+              className="font-medium text-cyan-300 underline-offset-2 hover:underline"
             >
               {t('comparison.banner.toPeriodCta', 'Open Period comparison →')}
             </Link>
@@ -559,145 +622,227 @@ export default function FleetComparePage() {
         </FadeIn>
       )}
 
-      {/* ── Vehicle Selectors ── */}
+      {/* ── Vehicle selector toolbar ── */}
       <FadeIn>
-        <GlassPanel className="mb-6 flex flex-wrap items-end gap-4 p-4">
-          <Select
-            label={t('comparison.vehicleA', 'Vehicle A')}
-            options={optionsA}
-            value={vehicleIdA}
-            onChange={(e) => setVehicleIdA(e.target.value)}
-            className="w-52"
-          />
-          <div className="flex items-center pb-2">
-            <ArrowLeftRight className="h-5 w-5 text-[var(--text-muted)]" />
-          </div>
-          <Select
-            label={t('comparison.vehicleB', 'Vehicle B')}
-            options={optionsB}
-            value={vehicleIdB}
-            onChange={(e) => setVehicleIdB(e.target.value)}
-            className="w-52"
-          />
-        </GlassPanel>
+        <section aria-label={t('comparison.selectVehicles', 'Select vehicles to compare')}>
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <Select
+                  label={t('comparison.vehicleA', 'Vehicle A')}
+                  options={optionsA}
+                  value={vehicleIdA}
+                  onChange={(e) => setVehicleIdA(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex justify-center sm:pb-1">
+                <Button
+                  variant="ghost"
+                  aria-label={t('comparison.swap', 'Swap vehicles')}
+                  onClick={swapVehicles}
+                  disabled={!vehicleIdA || !vehicleIdB}
+                  icon={<ArrowLeftRight className="h-4 w-4" aria-hidden="true" />}
+                  className="h-11 w-11 shrink-0 px-0 text-[var(--text-secondary)]"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <Select
+                  label={t('comparison.vehicleB', 'Vehicle B')}
+                  options={optionsB}
+                  value={vehicleIdB}
+                  onChange={(e) => setVehicleIdB(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* ── Side-by-Side Status Cards ── */}
+      {/* ── Key highlights (KPI band) ── */}
       <FadeIn delay={0.05}>
-        <div className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-            {t('comparison.currentStatus', 'Current Status')}
-          </h2>
-          <Grid cols={{ default: 1, md: 2 }} gap={4}>
+        <section aria-label={t('comparison.highlights', 'Key Highlights')} className="space-y-3">
+          <SectionTitle>{t('comparison.highlights', 'Key Highlights')}</SectionTitle>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            <StatCard
+              label={t('comparison.batteryDiff', 'Battery Level')}
+              value={vs(`${stateA?.battery_level ?? '—'}%`, `${stateB?.battery_level ?? '—'}%`)}
+              icon={<Battery className="h-4 w-4" aria-hidden="true" />}
+              loading={(stateQueryA.isLoading && !!vehicleIdA) || (stateQueryB.isLoading && !!vehicleIdB)}
+            />
+            <StatCard
+              label={t('comparison.efficiencyDiff', 'Avg Efficiency')}
+              value={vs(
+                fmtNumber(whPerKmToDisplay(drivingStatsA?.avgEfficiencyWhKm ?? 0)),
+                fmtNumber(whPerKmToDisplay(drivingStatsB?.avgEfficiencyWhKm ?? 0)),
+              )}
+              unit={efficiencyUnit}
+              icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+              loading={statsLoading}
+            />
+            <StatCard
+              label={t('comparison.costDiff', 'Charging Cost')}
+              value={vs(
+                formatCurrency(costA?.total_charging_cost ?? 0, 0),
+                formatCurrency(costB?.total_charging_cost ?? 0, 0),
+              )}
+              icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
+              loading={costQueryA.isLoading || costQueryB.isLoading}
+            />
+            <StatCard
+              label={t('comparison.co2Diff', 'CO₂ Saved')}
+              value={vs(
+                fmtNumber(drivingStatsA?.co2SavedKg ?? 0),
+                fmtNumber(drivingStatsB?.co2SavedKg ?? 0),
+              )}
+              unit="kg"
+              icon={<Leaf className="h-4 w-4" aria-hidden="true" />}
+              loading={statsLoading}
+            />
+          </div>
+        </section>
+      </FadeIn>
+
+      {/* ── Current status (side-by-side hero) ── */}
+      <FadeIn delay={0.1}>
+        <section aria-label={t('comparison.currentStatus', 'Current Status')} className="space-y-3">
+          <SectionTitle>{t('comparison.currentStatus', 'Current Status')}</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5">
             <VehicleStatusCard
               vehicle={vehicleA}
               state={stateA}
-              isLoading={stateLoadingA && !!vehicleIdA}
+              isLoading={stateQueryA.isLoading && !!vehicleIdA}
+              isError={stateQueryA.isError && !!vehicleIdA}
+              error={stateQueryA.error}
+              onRetry={() => stateQueryA.refetch()}
               formatDistance={formatDistance}
               formatTemperature={formatTemperature}
             />
             <VehicleStatusCard
               vehicle={vehicleB}
               state={stateB}
-              isLoading={stateLoadingB && !!vehicleIdB}
+              isLoading={stateQueryB.isLoading && !!vehicleIdB}
+              isError={stateQueryB.isError && !!vehicleIdB}
+              error={stateQueryB.error}
+              onRetry={() => stateQueryB.refetch()}
               formatDistance={formatDistance}
               formatTemperature={formatTemperature}
             />
-          </Grid>
-        </div>
+          </div>
+        </section>
       </FadeIn>
 
-      {/* ── Monthly Distance Chart (overlaid) ── */}
-      <FadeIn delay={0.1}>
-        {/* chart-a11y:no-table multi-vehicle overlay — caller can compare via the underlying tables on each vehicle's page */}
-        <ChartContainer
-          title={t('comparison.monthlyDistance', 'Monthly Distance')}
-          ariaLabel={t('comparison.monthlyDistance.aria', 'Monthly distance comparison line chart between two vehicles')}
-          height={300}
-        >
-          {monthlyChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyChartData} margin={chartMarginLabeled}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="month" tick={axisTick} />
-                <YAxis tick={axisTick} />
-                <Tooltip
-                  content={({ active, payload, label }) => (
-                    <ChartTooltip
-                      active={active}
-                      payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
-                      label={label as string}
-                    />
-                  )}
-                />
-                <Legend />
-                <Line
-                  {...AREA_DEFAULTS}
-                  dataKey="distA"
-                  name={nameA}
-                  stroke={palette[0]}
-                  {...chartAnimation}
-                />
-                <Line
-                  {...AREA_DEFAULTS}
-                  dataKey="distB"
-                  name={nameB}
-                  stroke={palette[1]}
-                  {...chartAnimation}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<TrendingUp className="h-8 w-8" />} message={t('comparison.noMonthlyData', 'No monthly data available yet')} />
-          )}
-        </ChartContainer>
-      </FadeIn>
-
-      {/* ── Drives per Month (bar chart) ── */}
+      {/* ── Trends (charts bento) ── */}
       <FadeIn delay={0.15}>
-        <div className="mt-6">
-          {/* chart-a11y:no-table multi-vehicle overlay — fleet rollup; SR users compare via per-vehicle pages */}
-          <ChartContainer
-            title={t('comparison.drivesPerMonth', 'Drives per Month')}
-            ariaLabel={t('comparison.drivesPerMonth.aria', 'Drives per month bar chart comparing two vehicles')}
-            height={280}
-          >
-            {drivesChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={drivesChartData} margin={chartMarginLabeled}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis dataKey="month" tick={axisTick} />
-                  <YAxis tick={axisTick} />
-                  <Tooltip
-                    content={({ active, payload, label }) => (
-                      <ChartTooltip
-                        active={active}
-                        payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
-                        label={label as string}
+        <section aria-label={t('comparison.trends', 'Trends over time')} className="space-y-3">
+          <SectionTitle>{t('comparison.trends', 'Trends over time')}</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+            {/* Monthly distance overlay */}
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('comparison.monthlyDistance', 'Monthly Distance')}
+              </PanelTitle>
+              {monthlyLoading ? (
+                <Skeleton height={260} />
+              ) : monthlyError ? (
+                <QueryError error={monthlyError} onRetry={retryMonthly} />
+              ) : monthlyChartData.length === 0 ? (
+                <EmptyState
+                  /* no-action: transient empty state — no monthly rollups yet */
+                  icon={<TrendingUp className="h-8 w-8" aria-hidden="true" />}
+                  message={t('comparison.noMonthlyData', 'No monthly data available yet')}
+                />
+              ) : (
+                <div className="h-64 sm:h-72">
+                  {/* chart-a11y:no-table multi-vehicle overlay — compare via each vehicle's page */}
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={monthlyChartData}
+                      margin={chartMarginLabeled}
+                      aria-label={t('comparison.monthlyDistance.aria', 'Monthly distance comparison line chart between two vehicles')}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis dataKey="month" tick={axisTick} />
+                      <YAxis tick={axisTick} />
+                      <Tooltip
+                        content={({ active, payload, label }) => (
+                          <ChartTooltip
+                            active={active}
+                            payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+                            label={label as string}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                  <Legend />
-                  <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
-                  <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Route className="h-8 w-8" />} message={t('comparison.noDrivesData', 'No drive data available yet')} />
-            )}
-          </ChartContainer>
-        </div>
+                      <Legend />
+                      <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} stroke={palette[0]} {...chartAnimation} />
+                      <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} stroke={palette[1]} {...chartAnimation} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </GlassPanel>
+
+            {/* Drives per month */}
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('comparison.drivesPerMonth', 'Drives per Month')}
+              </PanelTitle>
+              {monthlyLoading ? (
+                <Skeleton height={260} />
+              ) : monthlyError ? (
+                <QueryError error={monthlyError} onRetry={retryMonthly} />
+              ) : drivesChartData.length === 0 ? (
+                <EmptyState
+                  /* no-action: transient empty state — no drive rollups yet */
+                  icon={<Route className="h-8 w-8" aria-hidden="true" />}
+                  message={t('comparison.noDrivesData', 'No drive data available yet')}
+                />
+              ) : (
+                <div className="h-64 sm:h-72">
+                  {/* chart-a11y:no-table multi-vehicle overlay — fleet rollup; compare via per-vehicle pages */}
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={drivesChartData}
+                      margin={chartMarginLabeled}
+                      aria-label={t('comparison.drivesPerMonth.aria', 'Drives per month bar chart comparing two vehicles')}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis dataKey="month" tick={axisTick} />
+                      <YAxis tick={axisTick} allowDecimals={false} />
+                      <Tooltip
+                        content={({ active, payload, label }) => (
+                          <ChartTooltip
+                            active={active}
+                            payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+                            label={label as string}
+                          />
+                        )}
+                      />
+                      <Legend />
+                      <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
+                      <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </GlassPanel>
+          </div>
+        </section>
       </FadeIn>
 
-      {/* ── Lifetime Stats Comparison Table ── */}
+      {/* ── Lifetime statistics (detail band) ── */}
       <FadeIn delay={0.2}>
-        <div className="mt-6">
-          <GlassPanel className="p-4">
+        <section aria-label={t('comparison.lifetimeStats', 'Lifetime statistics')} className="space-y-3">
+          <SectionTitle>{t('comparison.lifetimeStats', 'Lifetime statistics')}</SectionTitle>
+          <GlassPanel className="p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2">
-              <Info className="h-4 w-4 text-[var(--text-muted)]" />
-              <p className="text-xs text-[var(--text-muted)]">
+              <Info className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+              <Caption>
                 {t('comparison.lifetimeNote', 'Statistics shown are lifetime totals across all tracked data.')}
-              </p>
+              </Caption>
             </div>
             {statsLoading ? (
               <Skeleton lines={8} />
@@ -711,43 +856,7 @@ export default function FleetComparePage() {
               />
             )}
           </GlassPanel>
-        </div>
-      </FadeIn>
-
-      {/* ── Quick Stat Cards (key differences) ── */}
-      <FadeIn delay={0.25}>
-        <div className="mt-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-            {t('comparison.highlights', 'Key Highlights')}
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              label={t('comparison.batteryDiff', 'Battery Level')}
-              value={`${stateA?.battery_level ?? '—'}% vs ${stateB?.battery_level ?? '—'}%`}
-              icon={<Battery className="h-4 w-4" />}
-              loading={stateLoadingA || stateLoadingB}
-            />
-            <StatCard
-              label={t('comparison.efficiencyDiff', 'Avg Efficiency')}
-              value={`${fmtNumber(whPerKmToDisplay(drivingStatsA?.avgEfficiencyWhKm ?? 0))} vs ${fmtNumber(whPerKmToDisplay(drivingStatsB?.avgEfficiencyWhKm ?? 0))}`}
-              unit={efficiencyUnit}
-              icon={<Zap className="h-4 w-4" />}
-              loading={statsLoading}
-            />
-            <StatCard
-              label={t('comparison.costDiff', 'Charging Cost')}
-              value={`${formatCurrency(costA?.total_charging_cost ?? 0, 0)} vs ${formatCurrency(costB?.total_charging_cost ?? 0, 0)}`}
-              icon={<DollarSign className="h-4 w-4" />}
-            />
-            <StatCard
-              label={t('comparison.co2Diff', 'CO₂ Saved')}
-              value={`${fmtNumber(drivingStatsA?.co2SavedKg ?? 0)} vs ${fmtNumber(drivingStatsB?.co2SavedKg ?? 0)}`}
-              unit="kg"
-              icon={<Leaf className="h-4 w-4" />}
-              loading={statsLoading}
-            />
-          </div>
-        </div>
+        </section>
       </FadeIn>
     </PageContainer>
   );

@@ -17,6 +17,8 @@ export const analyticsKeys = {
   stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
   weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
   lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
+  batteryCells: (vehicleId: string) => ['analytics', 'battery-cells', vehicleId] as const,
+  temperatureImpact: (vehicleId: string) => ['analytics', 'temperature-impact', vehicleId] as const,
 };
 
 export function useAnalyticsSummary(days = 30) {
@@ -223,5 +225,218 @@ export function useYearReview(year: number, vehicleId?: string) {
       ),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STATIC,
+  });
+}
+
+/* ── Battery Cells ──────────────────────────────────────────────── */
+
+/**
+ * Per-cell deviation classification emitted by the backend
+ * (`internal/api/batterycells/handler.go`). The wire values are
+ * `normal | slight_deviation | significant_deviation` — NOT the legacy
+ * `low/high/critical` the page used to assume.
+ */
+export type CellStatus = 'normal' | 'slight_deviation' | 'significant_deviation';
+
+/**
+ * A single synthetic cell reading. The backend numbers cells from 1 via
+ * the `cell_number` JSON field (there is no `cell_id`). Voltage is volts
+ * (SI); `delta_from_avg` is millivolts.
+ */
+export interface CellReading {
+  cell_number: number;
+  voltage: number;
+  delta_from_avg: number;
+  status: CellStatus;
+}
+
+/** One hourly bucket of brick-voltage history (7-day window). */
+export interface CellHistoryPoint {
+  timestamp: string;
+  min_voltage: number;
+  max_voltage: number;
+  avg_voltage: number;
+  imbalance_mv: number;
+}
+
+/**
+ * GET /analytics/battery-cells response. Voltages are volts (SI),
+ * temperatures are °C (SI); format at the display boundary with
+ * `useUnits()`. `status === 'no_data'` signals an empty payload (vehicle
+ * has never emitted brick voltages).
+ */
+export interface BatteryCellData {
+  status?: string;
+  total_cells: number;
+  avg_voltage: number;
+  min_voltage: number;
+  max_voltage: number;
+  voltage_spread: number;
+  imbalance_mv: number;
+  pack_voltage: number;
+  avg_temperature: number;
+  min_temperature: number;
+  max_temperature: number;
+  temp_spread: number;
+  cells: CellReading[];
+  history: CellHistoryPoint[];
+  min_cell?: string;
+  max_cell?: string;
+}
+
+/**
+ * GET /analytics/battery-cells?vehicle_id=X — per-cell voltage snapshot
+ * plus a 7-day hourly imbalance history. Reads SI directly from the API;
+ * callers convert at the render boundary.
+ */
+export function useBatteryCells(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.batteryCells(vehicleId),
+    queryFn: ({ signal }) =>
+      request<BatteryCellData>(`/analytics/battery-cells?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/* ── Projected Range ────────────────────────────────────────────── */
+
+/** A single named driver of the projection delta (e.g. temperature, speed). */
+export interface RangeFactor {
+  name: string;
+  impact_pct: number;
+  description: string;
+}
+
+/** One point on the rated-vs-projected range curve, keyed by battery %. */
+export interface RangeCurvePoint {
+  battery_pct: number;
+  rated_range: number;
+  projected_range: number;
+}
+
+/**
+ * One cell of the learned efficiency matrix. `wh_km` is watt-hours per
+ * kilometre (the analytics-layer canonical efficiency unit); `samples` is
+ * the number of qualifying drives that fed the bucket.
+ */
+export interface EfficiencyBucket {
+  temp_bucket: string;
+  speed_bucket: string;
+  wh_km: number;
+  samples: number;
+}
+
+/**
+ * A "what your range would be" scenario. Distances are kilometres, speed
+ * km/h, temperature °C — format at the render boundary via `useUnits()`.
+ */
+export interface RangeScenario {
+  name: string;
+  speed_kmh: number;
+  temp_c: number;
+  efficiency_wh_km: number;
+  range_km: number;
+  sample_count: number;
+  extras: string[];
+  is_current?: boolean;
+}
+
+/**
+ * GET /analytics/range-projection response. Distances are kilometres,
+ * energy watt-hours, temperature °C, speed km/h — all SI-floor analytics
+ * units. Never assume display units here; convert at the render boundary.
+ */
+export interface RangeProjection {
+  current_range_km: number;
+  projected_range_km: number;
+  battery_level: number;
+  efficiency_factor: number;
+  factors: RangeFactor[];
+  projection_curve: RangeCurvePoint[];
+  current_battery_pct: number;
+  usable_capacity_wh: number;
+  health_factor: number;
+  scenarios: RangeScenario[];
+  efficiency_matrix: EfficiencyBucket[];
+  tesla_estimate_km: number;
+  your_estimate_km: number;
+  accuracy_note: string;
+}
+
+/**
+ * GET /analytics/range-projection?vehicle_id=X — personalized range
+ * projection: your-vs-Tesla estimate, a rated/projected curve, a learned
+ * temperature×speed efficiency matrix, and what-if scenarios. Reads SI
+ * directly from the API; callers format at the display boundary.
+ */
+export function useRangeProjection(vehicleId: string) {
+  return useQuery({
+    queryKey: ['analytics', 'range-projection', vehicleId] as const,
+    queryFn: ({ signal }) =>
+      request<RangeProjection>(`/analytics/range-projection?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/**
+ * A single drive plotted on the temperature-vs-efficiency scatter. All
+ * physical quantities are SI as emitted by the backend: `outside_temp` is
+ * °C, `distance_km` is kilometres (already derived from SI metres in SQL),
+ * and `efficiency_wh_km` is watt-hours per kilometre. Format at the display
+ * boundary with `useUnits()` — never mutate these on the wire.
+ */
+export interface TemperatureImpactPoint {
+  outside_temp: number;
+  efficiency_wh_km: number;
+  distance_km: number;
+  drive_date: string;
+}
+
+/** Server-computed efficiency bucket (kept for API completeness). */
+export interface TemperatureImpactEfficiencyBucket {
+  temp_bucket: string;
+  drive_count: number;
+  avg_distance_km: number;
+  avg_duration_s: number;
+  avg_battery_pct_per_100km: number;
+  avg_temp: number;
+}
+
+/** One month of the seasonal trend. `avg_temp` is °C (SI). */
+export interface TemperatureImpactMonthlyTrend {
+  month: string;
+  avg_temp: number;
+  avg_efficiency: number;
+  drive_count: number;
+  total_distance: number;
+}
+
+/**
+ * Full GET /analytics/temperature-impact response. `vampire_drain` is always
+ * empty until signal_log reconstruction lands; callers should treat every
+ * array as possibly-absent and default with `?? []`.
+ */
+export interface TemperatureImpactResponse {
+  points: TemperatureImpactPoint[];
+  efficiency: TemperatureImpactEfficiencyBucket[];
+  vampire_drain: unknown[];
+  monthly_trend: TemperatureImpactMonthlyTrend[];
+}
+
+/**
+ * GET /analytics/temperature-impact?vehicle_id=X — how outside ambient
+ * temperature affects driving efficiency. Reads SI directly from the API;
+ * the page converts temperature/distance at the render boundary via
+ * `useUnits()`. Disabled until a vehicle is selected.
+ */
+export function useTemperatureImpact(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.temperatureImpact(vehicleId),
+    queryFn: ({ signal }) =>
+      request<TemperatureImpactResponse>(
+        `/analytics/temperature-impact?vehicle_id=${vehicleId}`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
   });
 }

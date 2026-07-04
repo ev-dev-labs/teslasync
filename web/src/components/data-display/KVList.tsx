@@ -21,7 +21,7 @@ export function KVList({ items, columns = 1, className }: KVListProps) {
       {items.map((item) => (
         <div key={item.label} className="flex justify-between py-2">
           <dt className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{item.label}</dt>
-          <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.value}</dd>
+          <dd className="text-sm font-medium text-[var(--text-primary)]">{item.value}</dd>
         </div>
       ))}
     </dl>

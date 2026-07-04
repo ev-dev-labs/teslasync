@@ -1,3 +1,5 @@
+export { StatusTile, type StatusTileProps } from './StatusTile';
+export { DigitalTwinPanel } from './DigitalTwinPanel';
 export { SummaryStatsRow } from './SummaryStatsRow';
 export { SecurityStatusCards } from './SecurityStatusCards';
 export { WindowStatusDetail } from './WindowStatusDetail';

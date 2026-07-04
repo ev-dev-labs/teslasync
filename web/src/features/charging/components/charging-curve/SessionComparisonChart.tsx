@@ -17,7 +17,7 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { FadeIn } from '@/components/motion';
+import { Text } from '@/components/ui';
 import { generateChargingCurve, getChargerLabel } from './helpers';
 
 interface SessionComparisonChartProps {
@@ -51,9 +51,8 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
   }, [comparisonSessions]);
 
   return (
-    <FadeIn delay={0.15}>
-      {/* chart-a11y:no-table dense overlay of up to 10 power curves; per-session detail available on the session page */}
-      <ChartContainer
+    // chart-a11y:no-table dense overlay of up to 10 power curves; per-session detail available on the session page
+    <ChartContainer
         title={t('charging.curve.sessionComparison', 'Session Comparison')}
         subtitle={t(
           'charging.curve.sessionComparisonDesc',
@@ -105,16 +104,15 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
         </ResponsiveContainer>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-2">
           {comparisonSessions.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+            <div key={s.id} className="flex items-center gap-1.5">
               <span
                 className="inline-block h-2 w-3 rounded-sm"
                 style={{ backgroundColor: palette[i % palette.length] }}
               />
-              {formatDateShort(s.started_at)}
+              <Text variant="bodySm">{formatDateShort(s.started_at)}</Text>
             </div>
           ))}
         </div>
       </ChartContainer>
-    </FadeIn>
   );
 }

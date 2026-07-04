@@ -138,7 +138,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
               value={displayDistance}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit} {t('widget.yearReview.inYear', 'in {year}').replace('{year}', String(currentYear))}
             </span>
           </div>

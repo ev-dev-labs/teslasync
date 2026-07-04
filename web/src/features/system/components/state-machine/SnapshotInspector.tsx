@@ -232,14 +232,14 @@ export function SnapshotInspector({
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-mono text-[11px] text-[var(--text-secondary)]">
+                    <div className="truncate font-mono text-xs text-[var(--text-secondary)]">
                       {row.name}
                     </div>
                     <div className="mt-0.5 break-all text-[var(--text-primary)]">
                       {formatValue(row.value)}
                     </div>
                     {diffMode && row.changed && row.previous !== undefined ? (
-                      <div className="mt-0.5 break-all text-[10px] text-[var(--text-muted)] line-through">
+                      <div className="mt-0.5 break-all text-2xs text-[var(--text-muted)] line-through">
                         {formatValue(row.previous)}
                       </div>
                     ) : null}

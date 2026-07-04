@@ -181,7 +181,7 @@ export function PillFilterBar({
             {typeof item.count === 'number' && (
               <span
                 className={cn(
-                  'ml-0.5 text-[10px] tabular-nums',
+                  'ml-0.5 text-2xs tabular-nums',
                   selected ? 'opacity-80' : 'opacity-60',
                 )}
               >

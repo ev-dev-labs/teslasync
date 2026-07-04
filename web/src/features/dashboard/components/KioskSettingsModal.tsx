@@ -123,7 +123,7 @@ export function KioskSettingsModal({
                       />
                       <span className="text-sm text-[var(--text-primary)]">{d.name}</span>
                       {d.isDefault && (
-                        <span className="text-[10px] text-[var(--text-muted)] ml-auto">
+                        <span className="text-2xs text-[var(--text-muted)] ml-auto">
                           {t('kiosk.default', 'Default')}
                         </span>
                       )}
@@ -215,7 +215,7 @@ export function KioskSettingsModal({
               value={Math.round((config.widgetOpacity ?? 1) * 100)}
               onChange={(n) => onUpdateConfig({ widgetOpacity: n / 100 })}
             />
-            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+            <div className="flex justify-between text-2xs text-[var(--text-muted)]">
               <span>{t('kiosk.transparent', 'Transparent')}</span>
               <span>{t('kiosk.solid', 'Solid')}</span>
             </div>
@@ -232,7 +232,7 @@ export function KioskSettingsModal({
               value={Math.round((config.backgroundOpacity ?? 1) * 100)}
               onChange={(n) => onUpdateConfig({ backgroundOpacity: n / 100 })}
             />
-            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+            <div className="flex justify-between text-2xs text-[var(--text-muted)]">
               <span>{t('kiosk.transparent', 'Transparent')}</span>
               <span>{t('kiosk.solid', 'Solid')}</span>
             </div>

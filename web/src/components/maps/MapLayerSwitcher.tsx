@@ -33,13 +33,13 @@ export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
           onClick={() => onChange(l.id)}
           title={l.label}
           className={clsx(
-            'flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors',
+            'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
             // Give each tile-style button its own
             // system-colour border so the active selection (which only
             // differs by background tint normally) remains distinguishable.
             'forced-colors:border forced-colors:border-[ButtonBorder]',
             current === l.id
-              ? 'bg-[var(--surface-2)] text-white shadow-sm'
+              ? 'bg-[var(--surface-2)] text-[var(--text-primary)] shadow-sm'
               : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
           )}
         >

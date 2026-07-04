@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import {
   MapContainer, Polyline, Popup, CircleMarker,
@@ -85,7 +85,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
                 pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.9 }}
               >
                 <Popup>
-                  <span className="text-sm font-medium">{origin.name || t('tripPlanner.map.origin', 'Origin')}</span>
+                  <Text size="sm" weight="medium">{origin.name || t('tripPlanner.map.origin', 'Origin')}</Text>
                 </Popup>
               </CircleMarker>
             )}
@@ -98,7 +98,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
                 pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9 }}
               >
                 <Popup>
-                  <span className="text-sm font-medium">{destination.name || t('tripPlanner.map.destination', 'Destination')}</span>
+                  <Text size="sm" weight="medium">{destination.name || t('tripPlanner.map.destination', 'Destination')}</Text>
                 </Popup>
               </CircleMarker>
             )}
@@ -114,11 +114,11 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
               >
                 <Popup>
                   <div className="text-sm">
-                    <p className="font-medium">{stop.name}</p>
-                    <p className="text-[var(--text-muted)]">
+                    <Text as="p" weight="medium">{stop.name}</Text>
+                    <Text as="p" color="muted">
                       {Math.round(stop.charge_from_soc)}% → {Math.round(stop.charge_to_soc)}%
                       ({Math.round(stop.charge_duration_s / 60)} min)
-                    </p>
+                    </Text>
                   </div>
                 </Popup>
               </CircleMarker>

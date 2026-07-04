@@ -2,11 +2,12 @@ import { useTranslation } from 'react-i18next';
 import {
   DollarSign, Zap, TrendingDown, Car, Fuel,
 } from 'lucide-react';
-import { StaggerContainer, StaggerItem } from '@/components/motion';
+import { MetricCard } from '@/components/data-display';
+import { GlassPanel } from '@/components/ui';
+import { Skeleton, QueryError } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
-import { StatBox } from './StatBox';
 import type { CoreStats } from './types';
 
 interface CostSummaryCardsProps {
@@ -14,75 +15,93 @@ interface CostSummaryCardsProps {
   gasPrice: number;
   distanceUnit: string;
   isMiles: boolean;
+  isLoading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
+
+const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6';
 
 export function CostSummaryCards({
   coreStats,
   gasPrice,
   distanceUnit,
   isMiles,
+  isLoading,
+  error,
+  onRetry,
 }: CostSummaryCardsProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { settings } = useSettings();
   const gasUnitLabel = settings.gas_unit === 'liter' ? 'L' : 'gal';
 
-  return (
-    <StaggerContainer>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <StaggerItem>
-          <StatBox
-            icon={<DollarSign className="h-5 w-5 text-cyan-400" />}
-            label={t('costAnalysis.stats.totalCost', 'Total Cost')}
-            value={formatCurrency(coreStats?.totalCost ?? 0, 2)}
-            sub={`${fmtInt(coreStats?.count ?? 0)} ${t('costAnalysis.stats.sessions', 'sessions')}`}
-            glow="cyan"
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatBox
-            icon={<Zap className="h-5 w-5 text-yellow-400" />}
-            label={t('costAnalysis.stats.avgPerKwh', 'Avg $/kWh')}
-            value={formatCurrency(coreStats?.avgCostPerKwh ?? 0, 3)}
-            sub={t('costAnalysis.stats.blendedRate', 'blended rate')}
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatBox
-            icon={<Car className="h-5 w-5 text-blue-400" />}
-            label={t('costAnalysis.stats.costPerDist', { unit: isMiles ? 'Mile' : 'km', defaultValue: 'Cost Per {{unit}}' })}
-            value={formatCurrency(coreStats?.costPerDist ?? 0, 3)}
-            sub={`per ${distanceUnit}`}
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatBox
-            icon={<Zap className="h-5 w-5 text-green-400" />}
-            label={t('costAnalysis.stats.totalEnergy', 'Total Energy')}
-            value={fmtWithUnit(coreStats?.totalEnergy ?? 0, 'kWh', 1)}
-            sub={fmtWithUnit(coreStats?.gallonsEquiv ?? 0, 'gal equiv', 1)}
-            glow="green"
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatBox
-            icon={<Fuel className="h-5 w-5 text-red-400" />}
-            label={t('costAnalysis.stats.gasSavings', 'Gas Savings $')}
-            value={formatCurrency(coreStats?.savings ?? 0, 2)}
-            sub={`vs ${formatCurrency(gasPrice, 2)}/${gasUnitLabel}`}
-            glow="green"
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatBox
-            icon={<TrendingDown className="h-5 w-5 text-emerald-400" />}
-            label={t('costAnalysis.stats.savingsPercent', 'Savings %')}
-            value={`${fmtNumber(coreStats?.savingsPercent ?? 0, 1)}%`}
-            sub={t('costAnalysis.stats.vsGasoline', 'vs gasoline')}
-            glow="green"
-          />
-        </StaggerItem>
+  if (error) {
+    return (
+      <GlassPanel className="p-4 sm:p-5">
+        <QueryError error={error} onRetry={onRetry} />
+      </GlassPanel>
+    );
+  }
+
+  if (isLoading && !coreStats) {
+    return (
+      <div className={GRID} aria-hidden="true">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <GlassPanel key={i} className="p-4">
+            <Skeleton height={12} width="60%" />
+            <Skeleton height={24} width="80%" className="mt-2" />
+            <Skeleton height={10} width="40%" className="mt-2" />
+          </GlassPanel>
+        ))}
       </div>
-    </StaggerContainer>
+    );
+  }
+
+  return (
+    <div className={GRID}>
+      <MetricCard
+        color="cyan"
+        icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
+        label={t('costAnalysis.stats.totalCost', 'Total Cost')}
+        value={formatCurrency(coreStats?.totalCost ?? 0, 2)}
+        subtitle={`${fmtInt(coreStats?.count ?? 0)} ${t('costAnalysis.stats.sessions', 'sessions')}`}
+      />
+      <MetricCard
+        color="amber"
+        icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+        label={t('costAnalysis.stats.avgPerKwh', 'Avg $/kWh')}
+        value={formatCurrency(coreStats?.avgCostPerKwh ?? 0, 3)}
+        subtitle={t('costAnalysis.stats.blendedRate', 'blended rate')}
+      />
+      <MetricCard
+        color="blue"
+        icon={<Car className="h-5 w-5" aria-hidden="true" />}
+        label={t('costAnalysis.stats.costPerDist', { unit: isMiles ? 'Mile' : 'km', defaultValue: 'Cost Per {{unit}}' })}
+        value={formatCurrency(coreStats?.costPerDist ?? 0, 3)}
+        subtitle={`${t('costAnalysis.stats.per', 'per')} ${distanceUnit}`}
+      />
+      <MetricCard
+        color="green"
+        icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+        label={t('costAnalysis.stats.totalEnergy', 'Total Energy')}
+        value={fmtWithUnit(coreStats?.totalEnergy ?? 0, 'kWh', 1)}
+        subtitle={fmtWithUnit(coreStats?.gallonsEquiv ?? 0, 'gal equiv', 1)}
+      />
+      <MetricCard
+        color="green"
+        icon={<Fuel className="h-5 w-5" aria-hidden="true" />}
+        label={t('costAnalysis.stats.gasSavings', 'Gas Savings $')}
+        value={formatCurrency(coreStats?.savings ?? 0, 2)}
+        subtitle={`${t('costAnalysis.stats.vs', 'vs')} ${formatCurrency(gasPrice, 2)}/${gasUnitLabel}`}
+      />
+      <MetricCard
+        color="green"
+        icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
+        label={t('costAnalysis.stats.savingsPercent', 'Savings %')}
+        value={`${fmtNumber(coreStats?.savingsPercent ?? 0, 1)}%`}
+        subtitle={t('costAnalysis.stats.vsGasoline', 'vs gasoline')}
+      />
+    </div>
   );
 }

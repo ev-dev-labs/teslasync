@@ -301,6 +301,44 @@ export async function fetchVehicleState(vehicleId: number): Promise<{ state?: Ve
   return { state, live: res.live ?? false }
 }
 
+/** One fleet-wide snapshot entry: a vehicle paired with its latest live state (or null). */
+export interface FleetStateEntry {
+  vehicle: Vehicle;
+  state: VehicleState | null;
+}
+
+/**
+ * Batch-fetch the latest live state for every vehicle in the fleet. Powers the
+ * Fleet list page's battery-summary panel, status breakdown, and per-card
+ * badges from a single query.
+ *
+ * `fetchVehicleState` is the sanctioned raw helper for batch reads where a
+ * per-vehicle hook can't be used (one query fans out to N requests). Each
+ * vehicle resolves independently — a single failing vehicle yields a null
+ * `state` instead of rejecting the whole batch, so one offline car never
+ * blanks the fleet summary. The query key is derived from the sorted id set so
+ * it stays stable across re-renders and only refetches when the fleet changes.
+ */
+export function useFleetStates(vehicles: Vehicle[]) {
+  const ids = vehicles.map((v) => v.id).sort((a, b) => a - b);
+  return useQuery({
+    queryKey: ['fleet-vehicle-states', ids],
+    queryFn: () =>
+      Promise.all(
+        vehicles.map(async (v): Promise<FleetStateEntry> => {
+          try {
+            const { state } = await fetchVehicleState(v.id);
+            return { vehicle: v, state: state ?? null };
+          } catch {
+            return { vehicle: v, state: null };
+          }
+        }),
+      ),
+    enabled: vehicles.length > 0,
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
 // ---------- Vehicle Info (mobile enabled, options, specs) ----------
 
 interface VehicleInfoEnvelope<T> {

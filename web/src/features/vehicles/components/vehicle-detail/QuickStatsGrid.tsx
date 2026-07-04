@@ -18,7 +18,7 @@ export function QuickStatsGrid({ state, status }: QuickStatsGridProps) {
   const { formatDistance, formatSpeed, formatTemperature } = useUnits()
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-8">
       <MetricCard
         label={t('common.battery', 'Battery')}
         value={`${state.battery_level}%`}

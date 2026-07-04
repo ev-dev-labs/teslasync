@@ -28,30 +28,30 @@ export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyConsumed', 'Energy Consumed')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.energyConsumed', 'Energy Consumed')}</p>
             <p className="text-lg font-bold text-amber-400">{stats.energyWh > 1000 ? fmtWithUnit(stats.energyWh / 1000, 'kWh') : `${fmtNumber(stats.energyWh)} Wh`}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyRecovered', 'Energy Recovered')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.energyRecovered', 'Energy Recovered')}</p>
             <p className="text-lg font-bold text-green-400">{stats.regenWh > 1000 ? fmtWithUnit(stats.regenWh / 1000, 'kWh') : `${fmtNumber(stats.regenWh)} Wh`}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.netConsumption', 'Net Consumption')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.netConsumption', 'Net Consumption')}</p>
             <p className="text-lg font-bold text-cyan-400">{(stats.energyWh - stats.regenWh) > 1000 ? fmtWithUnit((stats.energyWh - stats.regenWh) / 1000, 'kWh') : `${fmtNumber(stats.energyWh - stats.regenWh)} Wh`}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.efficiency', 'Efficiency')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.efficiency', 'Efficiency')}</p>
             <p className="text-lg font-bold text-purple-400">{stats.consumptionWhKm > 0 ? `${fmtNumber(toEfficiencyDisplay(stats.consumptionWhKm))} ${efficiencyUnit}` : '—'}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
             <p className="text-lg font-bold text-amber-400">
               {drive.startBatteryPct != null && drive.endBatteryPct != null ? `${drive.startBatteryPct - drive.endBatteryPct}%` : '—'}
               <span className="text-xs text-[var(--text-muted)] ml-1">{drive.startBatteryPct ?? '?'}% → {drive.endBatteryPct ?? '?'}%</span>
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.rangeUsed', 'Range Used')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.rangeUsed', 'Range Used')}</p>
             <p className="text-lg font-bold text-green-400">
               {stats.startRange != null && stats.endRange != null
                 ? fmtWithUnit(stats.startRange - stats.endRange, distanceUnit)

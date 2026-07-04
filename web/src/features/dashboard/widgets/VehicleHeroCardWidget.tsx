@@ -129,7 +129,7 @@ function CompactView({
       ) : (
         <span className="text-xl font-bold text-[var(--text-muted)]">—</span>
       )}
-      <span className="text-[10px] text-[var(--text-muted)] truncate max-w-full px-1">{name}</span>
+      <span className="text-2xs text-[var(--text-muted)] truncate max-w-full px-1">{name}</span>
     </div>
   );
 }
@@ -171,7 +171,7 @@ function FullView({
       </div>
 
       {/* Subtitle: model + trim */}
-      <p className="text-[11px] text-[var(--text-muted)] truncate -mt-1">
+      <p className="text-xs text-[var(--text-muted)] truncate -mt-1">
         {model}{trimBadging ? ` ${trimBadging}` : ''}
       </p>
 
@@ -252,7 +252,7 @@ function MetricCell({
     <div className="flex items-start gap-1.5 min-w-0">
       <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[10px] text-[var(--text-muted)] truncate">{label}</p>
+        <p className="text-2xs text-[var(--text-muted)] truncate">{label}</p>
         <p className={`text-sm font-semibold truncate ${valueColor ?? 'text-[var(--text-primary)]'}`}>
           {value}
         </p>

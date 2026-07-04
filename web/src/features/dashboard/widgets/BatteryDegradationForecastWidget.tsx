@@ -105,7 +105,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
           <div className="h-full flex flex-col gap-3 overflow-y-auto">
             {/* Projected 80% date — hero section */}
             <div className="text-center py-2">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
+              <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('widget.forecast.projected80', 'Projected 80% Capacity')}
               </p>
               <p className="text-2xl font-bold tabular-nums text-[var(--text-primary)]">
@@ -134,7 +134,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
             {/* Risk factors list */}
             {riskFactors.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
                   {t('widget.forecast.riskFactors', 'Risk Factors')}
                 </p>
                 <ul className="flex flex-col gap-1 overflow-y-auto max-h-40">
@@ -150,7 +150,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                         <span className="text-sm text-[var(--text-primary)] truncate block">
                           {rf.label ?? rf.name}
                         </span>
-                        <span className="text-[10px] text-[var(--text-muted)] truncate block">
+                        <span className="text-2xs text-[var(--text-muted)] truncate block">
                           {rf.detail ?? '—'}
                         </span>
                       </div>
@@ -169,7 +169,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
             {/* Recommendations as tip cards */}
             {tipItems.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
                   {t('widget.forecast.recommendations', 'Recommendations')}
                 </p>
                 <WidgetTipCards tips={tipItems} maxTips={3} />

@@ -188,7 +188,7 @@ export function SessionListSection({
                 size="sm"
                 onClick={() => onChargerFilterChange(f.key)}
                 className={cn(
-                  'px-2.5 py-1 h-auto rounded-md text-[11px] font-medium transition-all',
+                  'px-2.5 py-1 h-auto rounded-md text-xs font-medium transition-all',
                   chargerFilter === f.key
                     ? 'bg-white/[0.08] text-[var(--text-primary)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-transparent',
@@ -214,7 +214,7 @@ export function SessionListSection({
                 size="sm"
                 onClick={() => handleSortClick(k.key)}
                 className={cn(
-                  'px-2.5 py-1 h-auto rounded-md text-[11px] font-medium transition-all',
+                  'px-2.5 py-1 h-auto rounded-md text-xs font-medium transition-all',
                   sortBy === k.key
                     ? 'bg-white/[0.08] text-[var(--text-primary)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-transparent',

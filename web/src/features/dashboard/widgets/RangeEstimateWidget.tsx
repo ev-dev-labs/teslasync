@@ -24,7 +24,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
         {state ? (
           <div className="space-y-3">
             <div>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.ratedRange', 'Rated Range')}
               </p>
               <p className="text-xl font-bold text-cyan-300">
@@ -32,7 +32,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
               </p>
             </div>
             <div>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.idealRange', 'Ideal Range')}
               </p>
               <p className="text-lg font-semibold text-[var(--text-primary)]">

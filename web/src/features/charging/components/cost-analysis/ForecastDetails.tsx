@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Fuel, Lightbulb, Zap } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { FadeIn } from '@/components/motion';
+import { Text, Caption } from '@/components/ui';
 import { AnimatedNumber, Currency } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
 import {
   ChartTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
@@ -11,26 +9,36 @@ import {
 import { fmtNumber } from '@/lib/numberFormat';
 import { useFormatting } from '@/hooks/useFormatting';
 import type { CostForecastData } from '@/types/charging';
+import { CostSection } from './CostSection';
 
 interface ForecastDetailsProps {
   forecastData: CostForecastData | undefined;
+  isLoading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
-export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
+export function ForecastDetails({ forecastData, isLoading, error, onRetry }: ForecastDetailsProps) {
   const { t } = useTranslation();
   const { currencySymbol } = useFormatting();
+  const insights = forecastData?.insights ?? [];
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* Breakdown donut */}
-      <FadeIn>
-        <GlassPanel className="p-6">
-          <h3 className="mb-4 text-sm font-semibold text-white">
-            {t('costAnalysis.forecast.breakdown', 'Charging Breakdown')}
-          </h3>
-          {forecastData ? (
-            <div className="flex flex-col items-center">
-              <ResponsiveContainer width="100%" height={180}>
+      <CostSection
+        title={t('costAnalysis.forecast.breakdown', 'Charging Breakdown')}
+        isLoading={isLoading}
+        error={error}
+        onRetry={onRetry}
+        isEmpty={!forecastData}
+        emptyMessage={t('costAnalysis.forecast.noBreakdown', 'Breakdown will appear once charging data is available.')}
+        skeletonHeight={180}
+      >
+        {forecastData && (
+          <div className="flex flex-col items-center">
+            <div className="h-44 w-full" role="img" aria-label={t('costAnalysis.forecast.breakdownAria', 'Home versus Supercharger charging share')}>
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={[
@@ -49,101 +57,107 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
                   <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="mt-2 space-y-2 text-xs w-full">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
-                    <span className="text-[var(--text-secondary)]">{t('Home')}</span>
-                  </div>
-                  <span className="font-medium text-white"><Currency value={forecastData.breakdown.home.avg_cost_per_kwh} precision={3} />/kWh</span>
+            </div>
+            <div className="mt-2 w-full space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                  <Caption>{t('Home')}</Caption>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-                    <span className="text-[var(--text-secondary)]">{t('Supercharger')}</span>
-                  </div>
-                  <span className="font-medium text-white"><Currency value={forecastData.breakdown.supercharger.avg_cost_per_kwh} precision={3} />/kWh</span>
+                <Text size="xs" weight="medium" color="primary">
+                  <Currency value={forecastData.breakdown.home.avg_cost_per_kwh} precision={3} />/kWh
+                </Text>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+                  <Caption>{t('Supercharger')}</Caption>
                 </div>
+                <Text size="xs" weight="medium" color="primary">
+                  <Currency value={forecastData.breakdown.supercharger.avg_cost_per_kwh} precision={3} />/kWh
+                </Text>
               </div>
             </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.noBreakdown', 'Breakdown will appear once charging data is available.')} />
-          )}
-        </GlassPanel>
-      </FadeIn>
+          </div>
+        )}
+      </CostSection>
 
       {/* Savings */}
-      <FadeIn>
-        <GlassPanel className="p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-            <Fuel className="h-4 w-4 text-neon-green" />
-            {t('costAnalysis.forecast.savings', 'Gas vs EV Savings')}
-          </h3>
-          {forecastData ? (
-            <div className="space-y-4">
-              <div className="rounded-xl p-4 bg-neon-green/[0.06] border border-neon-green/10 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
-                  {t('costAnalysis.forecast.monthlySavings', 'Monthly Savings')}
-                </p>
-                <p className="text-3xl font-bold text-emerald-300">
-                  {currencySymbol}<AnimatedNumber value={forecastData.gas_comparison.monthly_savings} decimals={0} />
-                </p>
+      <CostSection
+        title={t('costAnalysis.forecast.savings', 'Gas vs EV Savings')}
+        icon={<Fuel className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
+        isLoading={isLoading}
+        error={error}
+        onRetry={onRetry}
+        isEmpty={!forecastData}
+        emptyMessage={t('costAnalysis.forecast.noSavings', 'Savings data will appear once driving history is available.')}
+        skeletonHeight={180}
+      >
+        {forecastData && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-neon-green/10 bg-neon-green/[0.06] p-4 text-center">
+              <Text variant="metricLabel" as="p" className="mb-1">
+                {t('costAnalysis.forecast.monthlySavings', 'Monthly Savings')}
+              </Text>
+              <Text as="p" size="3xl" weight="bold" className="text-emerald-300">
+                {currencySymbol}<AnimatedNumber value={forecastData.gas_comparison.monthly_savings} decimals={0} />
+              </Text>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="rounded-lg bg-white/[0.04] p-3">
+                <Text as="p" variant="caption">{t('costAnalysis.forecast.annual', 'Annual')}</Text>
+                <Text as="p" size="lg" weight="semibold" color="primary">
+                  <Currency value={forecastData.gas_comparison.annual_savings} precision={0} />
+                </Text>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="rounded-lg bg-white/[0.04] p-3">
-                  <p className="text-[10px] text-[var(--text-muted)]">{t('costAnalysis.forecast.annual', 'Annual')}</p>
-                  <p className="text-lg font-semibold text-white"><Currency value={forecastData.gas_comparison.annual_savings} precision={0} /></p>
-                </div>
-                <div className="rounded-lg bg-white/[0.04] p-3">
-                  <p className="text-[10px] text-[var(--text-muted)]">{t('costAnalysis.forecast.lifetime', 'Lifetime')}</p>
-                  <p className="text-lg font-semibold text-white"><Currency value={forecastData.gas_comparison.lifetime_savings} precision={0} /></p>
-                </div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)] space-y-1">
-                <div className="flex justify-between">
-                  <span>{t('costAnalysis.forecast.gasCost', 'Gas cost/mo')}</span>
-                  <Currency value={forecastData.gas_comparison.gas_cost_per_month} className="text-red-400" />
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('costAnalysis.forecast.evCost', 'EV cost/mo')}</span>
-                  <Currency value={forecastData.gas_comparison.ev_cost_per_month} className="text-green-400" />
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('costAnalysis.forecast.avgKm', 'Avg km/mo')}</span>
-                  <span>{fmtNumber(forecastData.gas_comparison.avg_km_per_month, 0)}</span>
-                </div>
+              <div className="rounded-lg bg-white/[0.04] p-3">
+                <Text as="p" variant="caption">{t('costAnalysis.forecast.lifetime', 'Lifetime')}</Text>
+                <Text as="p" size="lg" weight="semibold" color="primary">
+                  <Currency value={forecastData.gas_comparison.lifetime_savings} precision={0} />
+                </Text>
               </div>
             </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.noSavings', 'Savings data will appear once driving history is available.')} />
-          )}
-        </GlassPanel>
-      </FadeIn>
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <Caption>{t('costAnalysis.forecast.gasCost', 'Gas cost/mo')}</Caption>
+                <Currency value={forecastData.gas_comparison.gas_cost_per_month} className="text-rose-300" />
+              </div>
+              <div className="flex justify-between">
+                <Caption>{t('costAnalysis.forecast.evCost', 'EV cost/mo')}</Caption>
+                <Currency value={forecastData.gas_comparison.ev_cost_per_month} className="text-emerald-300" />
+              </div>
+              <div className="flex justify-between">
+                <Caption>{t('costAnalysis.forecast.avgKm', 'Avg km/mo')}</Caption>
+                <Caption>{fmtNumber(forecastData.gas_comparison.avg_km_per_month, 0)}</Caption>
+              </div>
+            </div>
+          </div>
+        )}
+      </CostSection>
 
       {/* Insights */}
-      <FadeIn>
-        <GlassPanel className="p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-            <Lightbulb className="h-4 w-4 text-neon-amber" />
-            {t('costAnalysis.forecast.insights', 'Insights')}
-          </h3>
-          {(forecastData?.insights ?? []).length > 0 ? (
-            <div className="space-y-3">
-              {(forecastData?.insights ?? []).map((insight, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 rounded-xl p-3 bg-white/[0.03] border border-white/[0.06]"
-                >
-                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-neon-amber" />
-                  <p className="text-sm text-[var(--text-secondary)]">{insight}</p>
-                </div>
-              ))}
+      <CostSection
+        title={t('costAnalysis.forecast.insights', 'Insights')}
+        icon={<Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />}
+        isLoading={isLoading}
+        error={error}
+        onRetry={onRetry}
+        isEmpty={insights.length === 0}
+        emptyMessage={t('costAnalysis.forecast.noInsights', 'Insights will appear as more data is collected.')}
+        skeletonHeight={180}
+      >
+        <div className="space-y-3">
+          {insights.map((insight, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3"
+            >
+              <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+              <Text variant="bodySm">{insight}</Text>
             </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.noInsights', 'Insights will appear as more data is collected.')} />
-          )}
-        </GlassPanel>
-      </FadeIn>
+          ))}
+        </div>
+      </CostSection>
     </div>
   );
 }

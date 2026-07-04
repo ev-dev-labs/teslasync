@@ -129,7 +129,7 @@ export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProp
     <GlassPanel className="p-6" data-testid="vehicle-settings-section">
       <div className="mb-4 space-y-1">
         <Heading level="section">{t('vehicleSettings.title', 'Per-vehicle settings')}</Heading>
-        <Text variant="bodySm" className="text-[var(--text-secondary)]">
+        <Text variant="bodySm">
           {t(
             'vehicleSettings.subtitle',
             'Override individual settings for this vehicle. Resets fall back to your account-wide values.',
@@ -246,12 +246,12 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start">
         <div className="lg:col-span-4 space-y-1">
           <div className="flex items-center gap-2">
-            <Text variant="bodySm" className="font-medium text-[var(--text-primary)]">
+            <Text size="xs" weight="medium" color="primary">
               {t(`vehicleSettings.keys.${descriptor.key}.label`, descriptor.key)}
             </Text>
             <SourcePill source={source} />
           </div>
-          <Text variant="caption" className="text-[var(--text-muted)]">
+          <Text variant="caption">
             {t(`vehicleSettings.keys.${descriptor.key}.help`, '')}
           </Text>
         </div>
@@ -260,8 +260,8 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
           {renderInput(descriptor, draft, setDraft)}
           {validationError ? (
             <Text
-              variant="caption"
-              className="mt-1 text-rose-300"
+              variant="error"
+              className="mt-1"
               data-testid={`vehicle-settings-error-${descriptor.key}`}
             >
               {validationError}

@@ -104,7 +104,7 @@ export function TourOverlay({
         </button>
 
         {/* Step counter */}
-        <div className="text-[10px] text-[var(--text-muted)] mb-1">
+        <div className="text-2xs text-[var(--text-muted)] mb-1">
           {currentStep + 1} / {totalSteps}
         </div>
 

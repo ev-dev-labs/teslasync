@@ -2,6 +2,50 @@
 <html lang="en" dir="ltr" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Typography no-FOUC bootstrap (Typography Unit 0).
+      // Applies the cached --font-* CSS variables from the `teslasync-font-*`
+      // localStorage keys BEFORE any stylesheet/module loads, so the very first
+      // paint already uses the user's chosen font / scale / line-height /
+      // tracking / heading weight. Mirrored by the belt in src/main.tsx and
+      // owned at runtime by src/components/ui/FontProvider.tsx.
+      (function () {
+        try {
+          var d = document.documentElement;
+          var ls = window.localStorage;
+          var SANS = {
+            inter: "'Inter', system-ui, -apple-system, sans-serif",
+            system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            roboto: "'Roboto', system-ui, -apple-system, sans-serif",
+            source: "'Source Sans 3', system-ui, -apple-system, sans-serif",
+            plex: "'IBM Plex Sans', system-ui, -apple-system, sans-serif",
+            atkinson: "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif"
+          };
+          var MONO = {
+            jetbrains: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+            fira: "'Fira Code', ui-monospace, monospace",
+            "plex-mono": "'IBM Plex Mono', ui-monospace, monospace",
+            system: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          };
+          var sansId = ls.getItem('teslasync-font-family');
+          var customSans = ls.getItem('teslasync-font-custom-sans');
+          if (sansId === 'custom' && customSans) d.style.setProperty('--font-sans', customSans + ', system-ui, -apple-system, sans-serif');
+          else if (sansId && SANS[sansId]) d.style.setProperty('--font-sans', SANS[sansId]);
+          var monoId = ls.getItem('teslasync-font-mono');
+          var customMono = ls.getItem('teslasync-font-custom-mono');
+          if (monoId === 'custom' && customMono) d.style.setProperty('--font-mono', customMono + ', ui-monospace, monospace');
+          else if (monoId && MONO[monoId]) d.style.setProperty('--font-mono', MONO[monoId]);
+          var scale = ls.getItem('teslasync-font-scale');
+          if (scale) d.style.setProperty('--font-scale', scale);
+          var leading = ls.getItem('teslasync-font-leading');
+          if (leading) d.style.setProperty('--leading', leading);
+          var tracking = ls.getItem('teslasync-font-tracking');
+          if (tracking) d.style.setProperty('--tracking', tracking);
+          var weight = ls.getItem('teslasync-font-heading-weight');
+          if (weight) d.style.setProperty('--font-weight-bold', weight);
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/svg+xml" sizes="192x192" href="/icons/icon-192.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
@@ -14,7 +58,11 @@
     <title>TeslaSync</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <!-- Centralized web-font loading (Typography Unit 0): every non-system
+         preset family is requested once here with display=swap so text is
+         visible immediately (system-ui fallback) even before a web font
+         loads. Never load fonts per-page. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Atkinson+Hyperlegible:wght@400;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
       /* Splash screen — brand reveal animation */

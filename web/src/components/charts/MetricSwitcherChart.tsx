@@ -168,7 +168,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
       onChange={onMetricChange}
       ariaLabel={`${title} metric`}
       scrollable
-      className="text-[11px]"
+      className="text-xs"
     />
   );
 

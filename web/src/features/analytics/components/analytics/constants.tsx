@@ -1,10 +1,18 @@
 import {
   BarChart3, Activity, Calendar, MapPin, Clock,
 } from 'lucide-react';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { CHART_COLORS } from '@/components/charts';
+import type { FleetAnalytics } from '@/api/types';
 
 export const TAB_KEYS = ['overview', 'driving', 'charging', 'battery'] as const;
 export type TabKey = (typeof TAB_KEYS)[number];
+
+/**
+ * Shared shape threaded from the page's `useFleetAnalytics()` down to every
+ * tab and section so each panel can own its loading / error / empty state.
+ */
+export type FleetAnalyticsQuery = UseQueryResult<FleetAnalytics>;
 
 export const PIE_COLORS = [
   CHART_COLORS[0], CHART_COLORS[1], CHART_COLORS[2],

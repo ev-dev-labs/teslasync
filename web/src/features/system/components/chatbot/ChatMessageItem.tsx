@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RotateCw, Pencil, Check, X } from 'lucide-react';
-import { Button, CopyButton, Textarea } from '@/components/ui';
+import { Button, CopyButton, Text, Textarea } from '@/components/ui';
 import { Avatar } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/dateFormat';
@@ -164,7 +164,9 @@ export function ChatMessageItem({
             </div>
           </div>
         ) : isUser ? (
-          <p className="whitespace-pre-wrap text-[var(--text-primary)] break-words">{visibleText}</p>
+          <Text as="p" color="primary" className="whitespace-pre-wrap break-words">
+            {visibleText}
+          </Text>
         ) : (
           <div className="text-[var(--text-primary)] break-words">
             <MarkdownRenderer>{visibleText}</MarkdownRenderer>
@@ -178,7 +180,9 @@ export function ChatMessageItem({
         )}
 
         {showTimestamp && (
-          <p className="text-[10px] mt-2 text-[var(--text-muted)]">{formatTime(message.created_at)}</p>
+          <Text as="p" size="2xs" color="muted" className="mt-2">
+            {formatTime(message.created_at)}
+          </Text>
         )}
 
         {showActions && (

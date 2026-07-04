@@ -2,10 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { Navigation, Gauge } from 'lucide-react';
 
 import { Grid } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { FadeIn } from '@/components/motion';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useUnits } from '@/hooks/useUnits';
@@ -87,48 +86,47 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   const cruiseSetDisplay = cruiseSetMps != null ? toSpeedDisplay(cruiseSetMps) : null;
 
   return (
-    <FadeIn delay={0.17}>
-      <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
-          {t('dynamics.autopilot', 'Autopilot & Cruise')}
-        </h2>
-        {hasAny ? (
-          <Grid cols={{ default: 1, sm: 3 }} gap={4}>
-            <StatCard
-              icon={<Gauge className="h-5 w-5" />}
-              label={t('dynamics.currentSpeed', 'Current Speed')}
-              value={
-                currentSpeedDisplay != null
-                  ? fmtNumber(currentSpeedDisplay, 0)
-                  : '—'
-              }
-              unit={speedUnit}
-            />
-            <StatCard
-              icon={<Navigation className="h-5 w-5" />}
-              label={t('dynamics.cruiseSetSpeed', 'Cruise Set Speed')}
-              value={
-                cruiseSetDisplay != null
-                  ? fmtNumber(cruiseSetDisplay, 0)
-                  : '—'
-              }
-              unit={speedUnit}
-            />
-            <StatCard
-              icon={<Navigation className="h-5 w-5" />}
-              label={t('dynamics.followDistance', 'Follow Distance')}
-              value={followDistance ?? '—'}
-            />
-          </Grid>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            message={t(
-              'dynamics.autopilotNoData',
-              'No cruise / autopilot telemetry received yet',
-            )}
+    <GlassPanel className="h-full p-4 sm:p-5">
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Navigation className="h-4 w-4 text-indigo-300" aria-hidden="true" />
+        {t('dynamics.autopilot', 'Autopilot & Cruise')}
+      </PanelTitle>
+      {hasAny ? (
+        <Grid cols={{ default: 1, sm: 3 }} gap={4}>
+          <StatCard
+            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+            label={t('dynamics.currentSpeed', 'Current Speed')}
+            value={
+              currentSpeedDisplay != null
+                ? fmtNumber(currentSpeedDisplay, 0)
+                : '—'
+            }
+            unit={speedUnit}
           />
-        )}
-      </GlassPanel>
-    </FadeIn>
+          <StatCard
+            icon={<Navigation className="h-5 w-5" aria-hidden="true" />}
+            label={t('dynamics.cruiseSetSpeed', 'Cruise Set Speed')}
+            value={
+              cruiseSetDisplay != null
+                ? fmtNumber(cruiseSetDisplay, 0)
+                : '—'
+            }
+            unit={speedUnit}
+          />
+          <StatCard
+            icon={<Navigation className="h-5 w-5" aria-hidden="true" />}
+            label={t('dynamics.followDistance', 'Follow Distance')}
+            value={followDistance ?? '—'}
+          />
+        </Grid>
+      ) : (
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          message={t(
+            'dynamics.autopilotNoData',
+            'No cruise / autopilot telemetry received yet',
+          )}
+        />
+      )}
+    </GlassPanel>
   );
 }

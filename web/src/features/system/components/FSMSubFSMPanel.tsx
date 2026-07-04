@@ -63,7 +63,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <StateBadge state={sub.state} fsmType={sub.type === 'drive' ? 'drive_session' : 'charge_session'} />
-                  <TimeStamp value={sub.start_time} className="text-[10px] text-[var(--text-muted)]" />
+                  <TimeStamp value={sub.start_time} className="text-2xs text-[var(--text-muted)]" />
                 </div>
               </div>
             </div>

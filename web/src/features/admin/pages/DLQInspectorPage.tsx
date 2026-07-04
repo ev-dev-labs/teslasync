@@ -10,19 +10,19 @@
  * disabled the page surfaces a persistent warning banner instead of
  * showing a useless "Replay" button.
  *
- * The audit log is dual-rendered: scoped to the open entry inside its
- * drawer, AND globally on the bottom panel of the page so a freshly
- * arrived operator can see the recent replay activity at a glance.
+ * The page is a full-width bento: a responsive KPI band, a hero row
+ * pairing the dead-letter entries table with a failure-reason breakdown,
+ * and a full-width global replay-audit log beneath so a freshly arrived
+ * operator can see recent replay activity at a glance.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertOctagon, History } from 'lucide-react';
+import { AlertOctagon, BarChart3, History } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, ConfirmDialog } from '@/components/ui';
-import { PanelTitle } from '@/components/ui/Typography';
+import { GlassPanel, ConfirmDialog, PanelTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner, SectionErrorBoundary } from '@/components/feedback';
+import { AlertBanner, QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   useDLQAudit,
@@ -36,6 +36,7 @@ import {
   AuditPanel,
   EntriesTable,
   EntryDrawer,
+  ReasonBreakdown,
   StatusHeader,
 } from '../components/dlq-inspector';
 
@@ -104,57 +105,84 @@ export default function DLQInspectorPage() {
       )}
       query={list}
     >
-      <FadeIn>
-        <div className="space-y-6">
-          {replayDisabledBanner && (
-            <AlertBanner
-              variant="warning"
-              title={t('admin.dlq.banners.replayBlockedTitle', 'Replay blocked')}
-              onClose={() => setReplayDisabledBanner(false)}
-            >
-              {t(
-                'admin.dlq.banners.replayBlockedMessage',
-                'The server rejected the replay because DLQ_REPLAY_ENABLED is not set. Restart the worker with this env var to enable replays.',
-              )}
-            </AlertBanner>
-          )}
+      <div className="space-y-6">
+        {replayDisabledBanner && (
+          <AlertBanner
+            variant="warning"
+            title={t('admin.dlq.banners.replayBlockedTitle', 'Replay blocked')}
+            onClose={() => setReplayDisabledBanner(false)}
+          >
+            {t(
+              'admin.dlq.banners.replayBlockedMessage',
+              'The server rejected the replay because DLQ_REPLAY_ENABLED is not set. Restart the worker with this env var to enable replays.',
+            )}
+          </AlertBanner>
+        )}
 
+        {/* 1 — KPI band: full-width responsive metric grid (2 → 3 → 6 cols) */}
+        <FadeIn>
           <SectionErrorBoundary name="dlq-status">
-            <StatusHeader data={list.data} loading={list.isLoading} />
+            <StatusHeader
+              data={list.data}
+              loading={list.isLoading}
+              error={list.isError ? list.error : undefined}
+            />
           </SectionErrorBoundary>
+        </FadeIn>
 
+        {/* 2 — Hero bento: entries table (spans 2 cols) + reason breakdown */}
+        <FadeIn delay={0.1}>
           <SectionErrorBoundary name="dlq-entries">
-            <GlassPanel className="p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <AlertOctagon className="h-5 w-5 text-[var(--text-muted)]" />
-                <PanelTitle>
+            <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+              <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+                <PanelTitle className="mb-3 flex items-center gap-2">
+                  <AlertOctagon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                   {t('admin.dlq.panels.entries', 'Dead-letter entries')}
                 </PanelTitle>
-              </div>
-              <EntriesTable
-                rows={list.data?.entries ?? []}
-                loading={list.isLoading}
-                onInspect={handleInspect}
-              />
-            </GlassPanel>
-          </SectionErrorBoundary>
+                {list.isError ? (
+                  <QueryError error={list.error} onRetry={() => list.refetch()} />
+                ) : (
+                  <EntriesTable
+                    rows={list.data?.entries ?? []}
+                    loading={list.isLoading}
+                    onInspect={handleInspect}
+                  />
+                )}
+              </GlassPanel>
 
-          <SectionErrorBoundary name="dlq-audit">
-            <GlassPanel className="p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <History className="h-5 w-5 text-[var(--text-muted)]" />
-                <PanelTitle>
-                  {t('admin.dlq.panels.audit', 'Recent replay activity')}
+              <GlassPanel className="p-4 sm:p-5">
+                <PanelTitle className="mb-3 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  {t('admin.dlq.panels.reasons', 'Failure reasons')}
                 </PanelTitle>
-              </div>
-              <AuditPanel
-                rows={audit.data?.rows ?? []}
-                loading={audit.isLoading}
-              />
+                <ReasonBreakdown
+                  rows={list.data?.entries ?? []}
+                  loading={list.isLoading}
+                  error={list.isError ? list.error : null}
+                  onRetry={() => list.refetch()}
+                />
+              </GlassPanel>
+            </section>
+          </SectionErrorBoundary>
+        </FadeIn>
+
+        {/* 3 — Detail band: full-width global replay-audit log */}
+        <FadeIn delay={0.2}>
+          <SectionErrorBoundary name="dlq-audit">
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('admin.dlq.panels.audit', 'Recent replay activity')}
+              </PanelTitle>
+              {audit.isError ? (
+                <QueryError error={audit.error} onRetry={() => audit.refetch()} />
+              ) : (
+                <AuditPanel rows={audit.data?.rows ?? []} loading={audit.isLoading} />
+              )}
             </GlassPanel>
           </SectionErrorBoundary>
-        </div>
-      </FadeIn>
+        </FadeIn>
+      </div>
 
       <EntryDrawer
         open={selected !== null}

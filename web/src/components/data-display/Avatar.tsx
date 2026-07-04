@@ -85,8 +85,8 @@ const SIZE_PX: Record<AvatarSize, number> = {
 };
 
 const SIZE_CLASSES: Record<AvatarSize, string> = {
-  xs: 'h-4 w-4 text-[8px]',
-  sm: 'h-6 w-6 text-[10px]',
+  xs: 'h-4 w-4 text-2xs',
+  sm: 'h-6 w-6 text-2xs',
   md: 'h-8 w-8 text-xs',
   lg: 'h-12 w-12 text-sm',
 };
@@ -192,7 +192,7 @@ export function Avatar({
   const inner = (
     <span
       className={cn(
-        'relative inline-flex shrink-0 items-center justify-center overflow-hidden font-semibold text-white select-none',
+        'relative inline-flex shrink-0 items-center justify-center overflow-hidden font-semibold text-[var(--text-secondary)] select-none',
         // Keep the avatar circle visible in Windows High
         // Contrast: a CanvasText border gives the chip a system-colour
         // outline since the bg-* colour is suppressed by forced-colors.
@@ -202,7 +202,12 @@ export function Avatar({
         !isAttributed && !showImage && 'bg-[var(--surface-2)]',
         className,
       )}
-      style={fallbackBg && !showImage ? { backgroundColor: fallbackBg } : undefined}
+      // Attributed avatars sit on a saturated palette fill, so pair a light
+      // foreground with the dynamic background — initials stay legible on the
+      // colored circle in every theme. The unattributed fallback glyph has no
+      // inline colour and inherits the themed --text-secondary from className
+      // above, so it stays visible on --surface-2 in light *and* dark.
+      style={fallbackBg && !showImage ? { backgroundColor: fallbackBg, color: '#fff' } : undefined}
       data-testid="avatar"
       data-avatar-kind={kind}
     >

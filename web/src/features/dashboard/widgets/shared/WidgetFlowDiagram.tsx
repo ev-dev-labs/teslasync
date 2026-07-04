@@ -164,25 +164,25 @@ export function WidgetFlowDiagram({
             />
 
             {/* icon or value */}
+            {/* fontSize is an SVG user-unit (scales with the 100×100 viewBox)
+                and cascades into the foreignObject HTML — no arbitrary px class. */}
             <foreignObject
               x={pos.cx - r}
               y={pos.cy - r}
               width={r * 2}
               height={r * 2}
+              fontSize={compact ? 5 : 6}
             >
               <div className="flex h-full w-full flex-col items-center justify-center">
                 {node.icon && (
-                  <span className={cn('text-[var(--text-primary)]', compact ? 'text-[5px]' : 'text-[6px]')}>
+                  <span className="text-[var(--text-primary)]">
                     {node.icon}
                   </span>
                 )}
                 <AnimatedNumber
                   value={node.value}
                   decimals={1}
-                  className={cn(
-                    'font-semibold text-[var(--text-primary)]',
-                    compact ? 'text-[4px]' : 'text-[5px]',
-                  )}
+                  className="font-semibold text-[var(--text-primary)]"
                 />
               </div>
             </foreignObject>
@@ -192,10 +192,8 @@ export function WidgetFlowDiagram({
               x={pos.cx}
               y={node.position === 'bottom' ? pos.cy + r + 5 : pos.cy - r - 2}
               textAnchor="middle"
-              className={cn(
-                'fill-white/60 font-medium',
-                compact ? 'text-[3px]' : 'text-[4px]',
-              )}
+              fontSize={compact ? 3 : 4}
+              className="fill-white/60 font-medium"
             >
               {label}
             </text>

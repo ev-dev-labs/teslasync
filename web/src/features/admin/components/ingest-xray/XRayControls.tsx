@@ -59,7 +59,10 @@ export function XRayControls({
     { value: '', label: t('admin.xray.controls.selectVehicle', 'Select vehicle…') },
     ...vehicles.map((v) => ({
       value: String(v.id),
-      label: v.display_name || v.vin || `Vehicle ${v.id}`,
+      label:
+        v.display_name ||
+        v.vin ||
+        t('admin.xray.controls.vehicleFallback', 'Vehicle {{id}}', { id: v.id }),
     })),
   ];
 
@@ -77,9 +80,12 @@ export function XRayControls({
     };
   });
 
+  // Toolbar-friendly, mobile-first widths: the vehicle picker takes a full row
+  // on phones while window + bucket share the next row; on `sm`+ they all sit
+  // inline in the PageContainer actions slot.
   return (
-    <div className="flex flex-wrap items-center gap-4">
-      <div className="w-64">
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
+      <div className="w-full sm:w-52">
         <Select
           value={vehicleId !== null ? String(vehicleId) : ''}
           onChange={(e) => {
@@ -91,7 +97,7 @@ export function XRayControls({
         />
       </div>
 
-      <div className="w-40">
+      <div className="min-w-[7rem] flex-1 sm:w-32 sm:flex-none">
         <Select
           value={windowSel}
           onChange={(e) => onWindowChange(e.target.value as IngestXRayWindow)}
@@ -100,7 +106,7 @@ export function XRayControls({
         />
       </div>
 
-      <div className="w-40">
+      <div className="min-w-[7rem] flex-1 sm:w-32 sm:flex-none">
         <Select
           value={bucketSel}
           onChange={(e) => onBucketChange(e.target.value as IngestXRayBucket)}

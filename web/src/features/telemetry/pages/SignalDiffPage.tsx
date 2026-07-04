@@ -1,22 +1,24 @@
 /**
  * SignalDiffPage — compare signal values between two snapshots in time.
  *
- * Refactored to compose the shared `SignalCompareControls` +
- * `SignalDiffTable`. The category-prefix list and date-presets now live
- * in `SignalCompareControls.tsx` so this page and the unified workspace
- * stay in lockstep.
+ * Modern-UI full-width redesign: a compare-controls filter bar, a responsive
+ * MetricCard KPI band, an aggregate "change analysis" bento
+ * (`SignalDiffBreakdown`), a bulk-actions toolbar, and the row-level
+ * `SignalDiffTable` as the full-width detail band.
+ *
+ * The category-prefix list and date-presets live in `SignalCompareControls`
+ * so this page and the unified workspace stay in lockstep.
  */
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
+import { GitCompare, Bell, Pin, PinOff, Filter, Layers, Clock, Sigma } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Select, CopyButton, Badge } from '@/components/ui';
-import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
-import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
-import { Skeleton } from '@/components/feedback';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Select, CopyButton, PanelTitle, Text } from '@/components/ui';
+import { MetricCard, BulkActionsToolbar, SavedViewMenu, type BulkAction } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   useSignals,
@@ -31,12 +33,38 @@ import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 
 import { SignalDiffTable } from '../components/SignalDiffTable';
+import { SignalDiffBreakdown } from '../components/SignalDiffBreakdown';
 import {
   SignalCompareControls,
   CATEGORY_PREFIXES,
   isoOrEmpty,
   toLocalDatetimeInput,
 } from '../components/SignalCompareControls';
+
+/** Coerce an arbitrary signal value to a finite number, or null when it isn't one. */
+function toNum(v: unknown): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  return null;
+}
+
+/** Compact human span (e.g. "1h 5m", "45s") for the window-span KPI. */
+function formatSpan(totalSeconds: number): string {
+  const s = Math.round(totalSeconds);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) {
+    const rem = s % 60;
+    return rem ? `${m}m ${rem}s` : `${m}m`;
+  }
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  return remM ? `${h}h ${remM}m` : `${h}h`;
+}
 
 export default function SignalDiffPage() {
   const { t } = useTranslation();
@@ -101,13 +129,14 @@ export default function SignalDiffPage() {
   // Server-side diff
   const atAIso = isoOrEmpty(atA);
   const atBIso = isoOrEmpty(atB);
-  const { data: diffResp, isLoading, error } = useSignalDiffServer(
+  const diffQuery = useSignalDiffServer(
     vehicleId,
     atAIso,
     atBIso,
     signalsCsv,
     { enabled: vehicleId > 0 && Boolean(atAIso) && Boolean(atBIso) },
   );
+  const { data: diffResp, isLoading, error, refetch } = diffQuery;
 
   const allRows: SignalDiffRow[] = diffResp?.data ?? [];
   const filteredRows = useMemo(() => {
@@ -123,6 +152,27 @@ export default function SignalDiffPage() {
     return rows;
   }, [allRows, signalFilter, activeCategory]);
   const filterActive = signalFilter.trim().length > 0 || activeCategory != null;
+  const initialLoading = isLoading && !diffResp;
+
+  // Derived KPI metrics (from the already-fetched rows — no extra hooks).
+  const numericChanges = useMemo(
+    () =>
+      filteredRows.reduce((acc, r) => {
+        const a = toNum(r.value_a);
+        const b = toNum(r.value_b);
+        return acc + (a !== null && b !== null && a !== b ? 1 : 0);
+      }, 0),
+    [filteredRows],
+  );
+  const categoriesAffected = useMemo(
+    () => CATEGORY_PREFIXES.filter((c) => filteredRows.some((r) => c.matches(r.name))).length,
+    [filteredRows],
+  );
+  const windowSpanLabel = useMemo(() => {
+    if (!atAIso || !atBIso) return '—';
+    const spanSec = Math.abs(new Date(atBIso).getTime() - new Date(atAIso).getTime()) / 1000;
+    return formatSpan(spanSec);
+  }, [atAIso, atBIso]);
 
   // Bulk actions
   const bulkActions: BulkAction[] = useMemo(
@@ -197,6 +247,7 @@ export default function SignalDiffPage() {
     <PageContainer
       title={t('signalDiff.title', 'Signal Diff')}
       subtitle={t('signalDiff.subtitle', 'Compare signal values between two snapshots in time')}
+      query={diffQuery}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <SavedViewMenu route="/telemetry/signal-diff" currentQuery={currentQuery} onApply={apply} />
@@ -206,6 +257,7 @@ export default function SignalDiffPage() {
         </div>
       }
     >
+      {/* 1 — Compare controls (filter bar): vehicle picker, windows, presets, filters */}
       <SignalCompareControls
         atA={atA}
         atB={atB}
@@ -216,9 +268,11 @@ export default function SignalDiffPage() {
         category={activeCategory}
         onCategoryChange={setActiveCategory}
         topSlot={
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
+          <div className="grid grid-cols-1 gap-2 sm:max-w-xs">
             <label className="space-y-1">
-              <span className="block text-xs text-[var(--text-muted)]">{t('signalDiff.vehicle', 'Vehicle')}</span>
+              <Text as="span" variant="caption" className="mb-1 block">
+                {t('signalDiff.vehicle', 'Vehicle')}
+              </Text>
               <Select
                 value={String(vehicleId || '')}
                 onChange={(e) => setVehicleIdParam(Number(e.target.value))}
@@ -229,20 +283,63 @@ export default function SignalDiffPage() {
         }
       />
 
-      <FadeIn delay={0.05}>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label={t('signalDiff.totalChanged', 'Changed signals')} value={isLoading ? '—' : String(allRows.length)} />
-          <StatCard label={t('signalDiff.visible', 'Visible after filter')} value={isLoading ? '—' : String(filteredRows.length)} />
-          <StatCard label={t('signalDiff.pinnedCount', 'Pinned')} value={String(pinnedSignals.size)} />
-          <StatCard
-            label={t('signalDiff.windowSpan', 'Window span')}
-            value={atAIso && atBIso
-              ? `${Math.abs(new Date(atBIso).getTime() - new Date(atAIso).getTime()) / 1000} s`
-              : '—'}
+      {/* 2 — KPI band: full-width responsive metric grid */}
+      <FadeIn>
+        <section
+          aria-label={t('signalDiff.kpisLabel', 'Diff summary')}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+        >
+          <MetricCard
+            label={t('signalDiff.totalChanged', 'Changed signals')}
+            value={initialLoading ? '—' : allRows.length}
+            icon={<GitCompare className="h-5 w-5" />}
+            color="cyan"
           />
-        </div>
+          <MetricCard
+            label={t('signalDiff.visible', 'Visible after filter')}
+            value={initialLoading ? '—' : filteredRows.length}
+            icon={<Filter className="h-5 w-5" />}
+            color="blue"
+          />
+          <MetricCard
+            label={t('signalDiff.numericChanges', 'Numeric changes')}
+            value={initialLoading ? '—' : numericChanges}
+            icon={<Sigma className="h-5 w-5" />}
+            color="green"
+          />
+          <MetricCard
+            label={t('signalDiff.categoriesAffected', 'Categories affected')}
+            value={initialLoading ? '—' : categoriesAffected}
+            icon={<Layers className="h-5 w-5" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('signalDiff.pinnedCount', 'Pinned')}
+            value={pinnedSignals.size}
+            icon={<Pin className="h-5 w-5" />}
+            color="amber"
+          />
+          <MetricCard
+            label={t('signalDiff.windowSpan', 'Window span')}
+            value={windowSpanLabel}
+            icon={<Clock className="h-5 w-5" />}
+            color="cyan"
+          />
+        </section>
       </FadeIn>
 
+      {/* 3 — Change analysis bento: category + source-layer + pinned breakdowns */}
+      <FadeIn delay={0.1}>
+        <SignalDiffBreakdown
+          rows={filteredRows}
+          loading={initialLoading}
+          error={error}
+          onRetry={() => refetch()}
+          pinnedSignals={pinnedSignals}
+        />
+      </FadeIn>
+
+      {/* 4 — Bulk actions (sticky) for the current table selection */}
       <BulkActionsToolbar
         selectedIds={selectedSignals}
         total={filteredRows.length}
@@ -250,24 +347,24 @@ export default function SignalDiffPage() {
         actions={bulkActions}
       />
 
-      <FadeIn delay={0.1}>
+      {/* 5 — Diff table: full-width detail band with its own states */}
+      <FadeIn delay={0.2}>
         <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <GitCompare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('signalDiff.tableTitle', 'Signal differences')}
+          </PanelTitle>
           {error ? (
-            <div className="rounded-md border border-rose-400/20 bg-rose-500/[0.05] p-3 text-sm text-rose-200">
-              {t('signalDiff.error', 'Failed to load diff')}
-            </div>
-          ) : null}
-          {isLoading && !diffResp ? (
+            <QueryError error={error} onRetry={() => refetch()} />
+          ) : initialLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
             </div>
           ) : allRows.length === 0 && !filterActive && atAIso && atBIso ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-              <GitCompare className="h-10 w-10 text-[var(--text-muted)] opacity-30" />
-              <p className="text-sm text-[var(--text-muted)]">
-                {t('signalDiff.noChanges', 'No signals changed between the two snapshots')}
-              </p>
-            </div>
+            <EmptyState
+              icon={<GitCompare className="h-10 w-10" aria-hidden="true" />}
+              message={t('signalDiff.noChanges', 'No signals changed between the two snapshots')}
+            />
           ) : (
             <SignalDiffTable
               rows={filteredRows}
@@ -279,14 +376,6 @@ export default function SignalDiffPage() {
               pinnedSignals={pinnedSignals}
             />
           )}
-          {pinnedSignals.size > 0 ? (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
-              <span className="text-xs text-[var(--text-muted)]">{t('signalDiff.pinnedLabel', 'Pinned:')}</span>
-              {Array.from(pinnedSignals).sort().map((s) => (
-                <Badge key={s} variant="neutral">{s}</Badge>
-              ))}
-            </div>
-          ) : null}
         </GlassPanel>
       </FadeIn>
     </PageContainer>

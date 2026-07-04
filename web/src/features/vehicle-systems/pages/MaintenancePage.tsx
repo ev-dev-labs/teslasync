@@ -1,44 +1,47 @@
 /**
- * MaintenancePage — vehicle maintenance tracker.
+ * MaintenancePage — vehicle maintenance tracker (modern-ui redesign).
  *
- * Shows maintenance items with progress/status, service history,
- * summary metrics, and scheduling. Supports multi-vehicle selection,
- * category filtering, and status sorting.
+ * A full-width, mobile-first bento cockpit: a KPI band, the opt-in Helix
+ * advisor, a hero items grid paired with an upcoming-service side panel, a
+ * cost + category-breakdown row, and a service-records detail band.
+ *
+ * SI contract: odometer-derived fields (`current_mileage`, `due_mileage`,
+ * `interval_miles`, record `mileage`) arrive as SI metres from the API. They
+ * are converted to the user's preferred unit at the render boundary via
+ * `useUnits().formatDistance`; the page never assumes miles.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/cn';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Currency } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { AlertBanner } from '@/components/feedback/AlertBanner';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { VehicleSelect } from '@/components/forms';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { formatDateTime, formatDate } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
-import { getErrorMessage } from '@/lib/errorMessage';
-import { useFormatting } from '@/hooks/useFormatting';
-import { request } from '@/api/client';
-import { AIPredictiveMaintenance } from '@/components/ai/AIPredictiveMaintenance';
 import {
-  Wrench, AlertTriangle, CheckCircle, Clock, ListChecks,
-  CalendarPlus, Filter, ArrowUpDown, Gauge, Tag,
-  DollarSign, TrendingUp, AlertCircle,
+  AlertTriangle, ArrowUpDown, CalendarPlus, CheckCircle, Clock,
+  DollarSign, Filter, Gauge, Layers, ListChecks, RefreshCw,
+  ShieldCheck, Tag, TrendingUp, Wrench,
 } from 'lucide-react';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+import { PageContainer } from '@/components/layout';
+import {
+  Badge, Button, DataTable, GlassPanel, PanelTitle, Select, Subhead, Text,
+  type Column,
+} from '@/components/ui';
+import { Currency, MetricBar, MetricCard } from '@/components/data-display';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+import { VehicleSelect } from '@/components/forms';
+import { AIPredictiveMaintenance } from '@/components/ai/AIPredictiveMaintenance';
+
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
+import { request } from '@/api/client';
+import { cn } from '@/lib/cn';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
+import { typography } from '@/lib/tokens';
+
+// ─── Types (snake_case, matching the Go maintenance handler JSON tags) ───────
 
 interface MaintenanceItem {
   id: number;
@@ -71,24 +74,55 @@ interface ServiceRecord {
 
 type MaintenanceStatus = 'good' | 'soon' | 'overdue' | 'completed';
 
+/** Distance formatter surface shared by the sub-components (SI metres in). */
+type DistanceFormatter = (value: number | null | undefined, options?: { precision?: number }) => string;
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const CATEGORY_COLORS: Record<string, string> = {
+/** category → semantic tone (toned 300-level shades, never neon body text). */
+const CATEGORY_TONE: Record<string, string> = {
   tires: 'cyan',
-  brakes: 'red',
-  battery: 'green',
+  brakes: 'rose',
+  battery: 'emerald',
   filters: 'amber',
-  fluids: 'purple',
-  wipers: 'cyan',
-  alignment: 'amber',
-  general: 'neutral',
+  fluids: 'indigo',
+  wipers: 'sky',
+  alignment: 'violet',
+  general: 'slate',
 };
 
-const STATUS_BADGE_MAP: Record<MaintenanceStatus, { variant: 'success' | 'warning' | 'danger' | 'info'; label: string }> = {
-  good: { variant: 'success', label: 'Good' },
-  soon: { variant: 'warning', label: 'Due Soon' },
-  overdue: { variant: 'danger', label: 'Overdue' },
-  completed: { variant: 'info', label: 'Completed' },
+/** tone → chip classes (static literals so Tailwind can tree-shake them). */
+const TONE_CHIP: Record<string, string> = {
+  cyan: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20',
+  rose: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
+  emerald: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+  amber: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+  indigo: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20',
+  sky: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
+  violet: 'bg-violet-500/10 text-violet-300 border-violet-500/20',
+  slate: 'bg-slate-500/10 text-slate-300 border-slate-500/20',
+};
+
+/** tone → hex for MetricBar fills + projection dots (dynamic, chart-token style). */
+const TONE_HEX: Record<string, string> = {
+  cyan: '#22d3ee',
+  rose: '#fb7185',
+  emerald: '#34d399',
+  amber: '#fbbf24',
+  indigo: '#818cf8',
+  sky: '#38bdf8',
+  violet: '#a78bfa',
+  slate: '#94a3b8',
+};
+
+const STATUS_BADGE_MAP: Record<
+  MaintenanceStatus,
+  { variant: 'success' | 'warning' | 'danger' | 'info'; labelKey: string; fallback: string }
+> = {
+  good: { variant: 'success', labelKey: 'maintenance.status.good', fallback: 'Good' },
+  soon: { variant: 'warning', labelKey: 'maintenance.status.soon', fallback: 'Due Soon' },
+  overdue: { variant: 'danger', labelKey: 'maintenance.status.overdue', fallback: 'Overdue' },
+  completed: { variant: 'info', labelKey: 'maintenance.status.completed', fallback: 'Completed' },
 };
 
 const STATUS_SORT_ORDER: Record<MaintenanceStatus, number> = {
@@ -98,17 +132,20 @@ const STATUS_SORT_ORDER: Record<MaintenanceStatus, number> = {
   completed: 3,
 };
 
-const SORT_OPTIONS = [
-  { value: 'status', label: 'Status' },
-  { value: 'name', label: 'Name' },
-  { value: 'due_date', label: 'Due Date' },
-  { value: 'category', label: 'Category' },
+const SORT_OPTIONS: Array<{ value: string; labelKey: string; fallback: string }> = [
+  { value: 'status', labelKey: 'maintenance.sort.status', fallback: 'Status' },
+  { value: 'name', labelKey: 'maintenance.sort.name', fallback: 'Name' },
+  { value: 'due_date', labelKey: 'maintenance.sort.dueDate', fallback: 'Due Date' },
+  { value: 'category', labelKey: 'maintenance.sort.category', fallback: 'Category' },
 ];
-
-
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function toneFor(category: string): string {
+  return CATEGORY_TONE[category] ?? 'slate';
+}
+
+/** Progress % is a ratio, so it is unit-agnostic (SI metres or months alike). */
 function computeProgress(item: MaintenanceItem): number {
   if (item.interval_miles && item.last_service_mileage != null) {
     const elapsed = item.current_mileage - item.last_service_mileage;
@@ -116,14 +153,12 @@ function computeProgress(item: MaintenanceItem): number {
   }
   if (item.interval_months && item.last_service_date) {
     const lastDate = new Date(item.last_service_date).getTime();
-    const now = Date.now();
     const intervalMs = item.interval_months * 30.44 * 24 * 60 * 60 * 1000;
-    const elapsed = now - lastDate;
+    const elapsed = Date.now() - lastDate;
     return Math.min(100, Math.max(0, (elapsed / intervalMs) * 100));
   }
   if (item.due_mileage) {
-    const pct = (item.current_mileage / item.due_mileage) * 100;
-    return Math.min(100, Math.max(0, pct));
+    return Math.min(100, Math.max(0, (item.current_mileage / item.due_mileage) * 100));
   }
   return 0;
 }
@@ -134,163 +169,11 @@ function statusFromPct(pct: number): MaintenanceStatus {
   return 'good';
 }
 
-function progressBarColor(pct: number): string {
-  if (pct >= 90) return 'bg-neon-red';
-  if (pct >= 70) return 'bg-neon-amber';
-  return 'bg-neon-green';
+function progressFillClass(pct: number): string {
+  if (pct >= 90) return 'bg-rose-500';
+  if (pct >= 70) return 'bg-amber-500';
+  return 'bg-emerald-500';
 }
-
-function categoryBgClass(category: string): string {
-  const color = CATEGORY_COLORS[category] ?? 'neutral';
-  const map: Record<string, string> = {
-    cyan: 'bg-neon-cyan/10 text-neon-cyan',
-    red: 'bg-neon-red/10 text-neon-red',
-    green: 'bg-neon-green/10 text-neon-green',
-    amber: 'bg-neon-amber/10 text-neon-amber',
-    purple: 'bg-neon-purple/10 text-neon-purple',
-    neutral: 'bg-[var(--surface-2)] text-[var(--text-secondary)]',
-  };
-  return map[color] ?? map.neutral;
-}
-
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
-function ProgressBar({ pct }: { pct: number }) {
-  return (
-    <div className="w-full h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
-      <div
-        className={cn('h-full rounded-full transition-all duration-slow', progressBarColor(pct))}
-        style={{ width: `${Math.min(pct, 100)}%` }}
-      />
-    </div>
-  );
-}
-
-function CategoryBadge({ category }: { category: string }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium capitalize',
-        categoryBgClass(category),
-      )}
-    >
-      <Tag className="h-3 w-3" />
-      {category}
-    </span>
-  );
-}
-
-function MaintenanceItemCard({
-  item,
-  t,
-}: {
-  item: MaintenanceItem;
-  t: (key: string) => string;
-}) {
-  const pct = computeProgress(item);
-  const derivedStatus = item.status === 'completed' ? 'completed' : statusFromPct(pct);
-  const badge = STATUS_BADGE_MAP[derivedStatus];
-
-  return (
-    <GlassPanel hover className="p-4 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <CategoryBadge category={item.category} />
-            <Badge variant={badge.variant} size="sm">{t(badge.label)}</Badge>
-          </div>
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] truncate">
-            {item.name}
-          </h3>
-          <p className="text-xs text-[var(--text-muted)] line-clamp-2 mt-0.5">
-            {item.description}
-          </p>
-        </div>
-      </div>
-
-      {derivedStatus !== 'completed' && (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
-            <span>{fmtNumber(pct, 0)}%</span>
-            <span>
-              {item.due_date && (
-                <>{t('Due')}: {formatDate(item.due_date)}</>
-              )}
-              {item.due_mileage && !item.due_date && (
-                <>{t('Due')}: {fmtNumber(item.due_mileage, 0)} {t('mi')}</>
-              )}
-            </span>
-          </div>
-          <ProgressBar pct={pct} />
-        </div>
-      )}
-
-      <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)] mt-auto">
-        {item.current_mileage > 0 && (
-          <span className="flex items-center gap-1">
-            <Gauge className="h-3 w-3" />
-            {fmtNumber(item.current_mileage, 0)} {t('mi')}
-          </span>
-        )}
-        {item.last_service_date && (
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {formatDate(item.last_service_date)}
-          </span>
-        )}
-      </div>
-    </GlassPanel>
-  );
-}
-
-// ─── Service Records columns ─────────────────────────────────────────────────
-
-function buildServiceColumns(t: (key: string) => string): Column<ServiceRecord>[] {
-  return [
-    {
-      key: 'date',
-      header: t('Date'),
-      sortable: true,
-      render: (r) => (
-        <span className="text-sm text-[var(--text-primary)]">{formatDateTime(r.date)}</span>
-      ),
-    },
-    {
-      key: 'description',
-      header: t('Description'),
-      render: (r) => (
-        <span className="text-sm text-[var(--text-primary)] truncate max-w-[200px] block">
-          {r.description}
-        </span>
-      ),
-    },
-    {
-      key: 'mileage',
-      header: t('Mileage'),
-      sortable: true,
-      render: (r) => (
-        <span className="text-sm tabular-nums">{fmtNumber(r.mileage, 0)} {t('mi')}</span>
-      ),
-    },
-    {
-      key: 'cost',
-      header: t('Cost'),
-      sortable: true,
-      render: (r) => (
-        <Currency value={r.cost} className="text-sm tabular-nums" />
-      ),
-    },
-    {
-      key: 'provider',
-      header: t('Provider'),
-      render: (r) => (
-        <span className="text-sm text-[var(--text-secondary)]">{r.provider || '—'}</span>
-      ),
-    },
-  ];
-}
-
-// ─── Sorting helpers ─────────────────────────────────────────────────────────
 
 function sortItems(items: MaintenanceItem[], sortBy: string): MaintenanceItem[] {
   const sorted = [...items];
@@ -314,12 +197,109 @@ function sortItems(items: MaintenanceItem[], sortBy: string): MaintenanceItem[] 
   return sorted;
 }
 
-// ─── Summary section (loading skeleton) ──────────────────────────────────────
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function ProgressBar({ pct }: { pct: number }) {
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+      <div
+        className={cn('h-full rounded-full transition-all duration-slow', progressFillClass(pct))}
+        style={{ width: `${Math.min(pct, 100)}%` }}
+      />
+    </div>
+  );
+}
+
+function CategoryChip({ category }: { category: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 capitalize',
+        typography.size.xs,
+        typography.weight.medium,
+        TONE_CHIP[toneFor(category)],
+      )}
+    >
+      <Tag className="h-3 w-3" aria-hidden="true" />
+      {category}
+    </span>
+  );
+}
+
+function StatusBadgeFor({ status }: { status: MaintenanceStatus }) {
+  const { t } = useTranslation();
+  const badge = STATUS_BADGE_MAP[status];
+  return (
+    <Badge variant={badge.variant} size="sm">
+      {t(badge.labelKey, badge.fallback)}
+    </Badge>
+  );
+}
+
+function MaintenanceItemCard({
+  item,
+  formatDistance,
+}: {
+  item: MaintenanceItem;
+  formatDistance: DistanceFormatter;
+}) {
+  const { t } = useTranslation();
+  const pct = computeProgress(item);
+  const derivedStatus = item.status === 'completed' ? 'completed' : statusFromPct(pct);
+
+  return (
+    <GlassPanel hover className="flex flex-col gap-3 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <CategoryChip category={item.category} />
+            <StatusBadgeFor status={derivedStatus} />
+          </div>
+          <Subhead className="truncate text-[var(--text-primary)]">{item.name}</Subhead>
+          <Text variant="caption" as="p" className="mt-0.5 line-clamp-2">
+            {item.description}
+          </Text>
+        </div>
+      </div>
+
+      {derivedStatus !== 'completed' && (
+        <div className="space-y-1">
+          <div className={cn('flex items-center justify-between', typography.size['2xs'], typography.color.muted)}>
+            <span className="tabular-nums">{fmtInt(pct)}%</span>
+            <span>
+              {item.due_date
+                ? `${t('maintenance.due', 'Due')}: ${formatDate(item.due_date)}`
+                : item.due_mileage
+                  ? `${t('maintenance.due', 'Due')}: ${formatDistance(item.due_mileage, { precision: 0 })}`
+                  : null}
+            </span>
+          </div>
+          <ProgressBar pct={pct} />
+        </div>
+      )}
+
+      <div className={cn('mt-auto flex flex-wrap items-center gap-4', typography.size.xs, typography.color.secondary)}>
+        {item.current_mileage > 0 && (
+          <span className="flex items-center gap-1">
+            <Gauge className="h-3 w-3" aria-hidden="true" />
+            {formatDistance(item.current_mileage, { precision: 0 })}
+          </span>
+        )}
+        {item.last_service_date && (
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" aria-hidden="true" />
+            {formatDate(item.last_service_date)}
+          </span>
+        )}
+      </div>
+    </GlassPanel>
+  );
+}
 
 function SummarySkeleton() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      {[1, 2, 3, 4].map((i) => (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
         <Skeleton key={i} className="h-24 rounded-xl" />
       ))}
     </div>
@@ -328,357 +308,465 @@ function SummarySkeleton() {
 
 function ItemsSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
         <Skeleton key={i} className="h-44 rounded-xl" />
       ))}
     </div>
   );
 }
 
-// ─── Page component ──────────────────────────────────────────────────────────
+// ─── Service-records table columns ───────────────────────────────────────────
+
+function buildServiceColumns(
+  t: (key: string, fallback: string) => string,
+  formatDistance: DistanceFormatter,
+): Column<ServiceRecord>[] {
+  return [
+    {
+      key: 'date',
+      header: t('maintenance.col.date', 'Date'),
+      sortable: true,
+      render: (r) => <Text variant="body">{formatDateTime(r.date)}</Text>,
+    },
+    {
+      key: 'description',
+      header: t('maintenance.col.description', 'Description'),
+      render: (r) => (
+        <Text as="span" variant="body" className="block max-w-[220px] truncate">
+          {r.description || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'mileage',
+      header: t('maintenance.col.mileage', 'Mileage'),
+      sortable: true,
+      render: (r) => <Text as="span" size="sm" className="tabular-nums">{formatDistance(r.mileage, { precision: 0 })}</Text>,
+    },
+    {
+      key: 'cost',
+      header: t('maintenance.col.cost', 'Cost'),
+      sortable: true,
+      render: (r) => <Currency value={r.cost} className={cn(typography.size.sm, 'tabular-nums')} />,
+    },
+    {
+      key: 'provider',
+      header: t('maintenance.col.provider', 'Provider'),
+      render: (r) => <Text as="span" size="sm" color="secondary">{r.provider || '—'}</Text>,
+    },
+  ];
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function MaintenancePage() {
   const { t } = useTranslation();
-  usePageTitle(t('Maintenance'));
+  usePageTitle(t('maintenance.title', 'Maintenance'));
+  const { formatDistance } = useUnits();
   const { formatCurrency } = useFormatting();
 
-  // ── Vehicle selection (global) ─────────────────────────────────────────
   const { vehicleId } = useSelectedVehicle();
+  const enabled = vehicleId !== null;
 
-  // ── Data fetching ──────────────────────────────────────────────────────
-  const { data: items, isLoading: loadingItems, error: itemsError } = useQuery({
+  const itemsQuery = useQuery({
     queryKey: ['maintenance', vehicleId],
     queryFn: () => request<MaintenanceItem[]>('/maintenance'),
-    enabled: vehicleId !== null,
+    enabled,
   });
-
-  const { data: records, isLoading: loadingRecords, error: recordsError } = useQuery({
-    queryKey: ['service-records', vehicleId],
+  const recordsQuery = useQuery({
+    queryKey: ['maintenance-records', vehicleId],
     queryFn: () => request<ServiceRecord[]>('/maintenance/records'),
-    enabled: vehicleId !== null,
+    enabled,
   });
 
-  // ── Filters & sorting ─────────────────────────────────────────────────
+  const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
+  const records = useMemo(() => recordsQuery.data ?? [], [recordsQuery.data]);
+
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('status');
 
-  const categories = useMemo(() => {
-    if (!items) return [];
-    const unique = Array.from(new Set(items.map((i) => i.category))).sort();
-    return unique;
-  }, [items]);
+  const categories = useMemo(
+    () => Array.from(new Set(items.map((i) => i.category))).sort(),
+    [items],
+  );
 
   const categoryOptions = useMemo(
     () => [
-      { value: 'all', label: t('All Categories') },
+      { value: 'all', label: t('maintenance.allCategories', 'All Categories') },
       ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) })),
     ],
     [categories, t],
   );
 
   const sortOptions = useMemo(
-    () => SORT_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) })),
+    () => SORT_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey, o.fallback) })),
     [t],
   );
 
-  // ── Filtered + sorted items ────────────────────────────────────────────
   const filteredItems = useMemo(() => {
-    if (!items) return [];
-    let result = items;
-    if (categoryFilter !== 'all') {
-      result = result.filter((i) => i.category === categoryFilter);
-    }
-    return sortItems(result, sortBy);
+    const scoped = categoryFilter === 'all' ? items : items.filter((i) => i.category === categoryFilter);
+    return sortItems(scoped, sortBy);
   }, [items, categoryFilter, sortBy]);
 
-  // ── Summary stats ──────────────────────────────────────────────────────
-  const summary = useMemo(() => {
-    if (!items) return { total: 0, soon: 0, overdue: 0, completed: 0 };
-    return items.reduce(
-      (acc, item) => {
-        acc.total++;
-        if (item.status === 'soon') acc.soon++;
-        else if (item.status === 'overdue') acc.overdue++;
-        else if (item.status === 'completed') acc.completed++;
-        return acc;
-      },
-      { total: 0, soon: 0, overdue: 0, completed: 0 },
-    );
-  }, [items]);
+  const summary = useMemo(
+    () =>
+      items.reduce(
+        (acc, item) => {
+          acc.total += 1;
+          if (item.status === 'soon') acc.soon += 1;
+          else if (item.status === 'overdue') acc.overdue += 1;
+          else if (item.status === 'completed') acc.completed += 1;
+          else acc.good += 1;
+          return acc;
+        },
+        { total: 0, good: 0, soon: 0, overdue: 0, completed: 0 },
+      ),
+    [items],
+  );
 
-  // ── Render ─────────────────────────────────────────────────────────────
-
-  const serviceColumns = useMemo(() => buildServiceColumns(t), [t]);
-
-  // ── Cost summary from service records ──────────────────────────────────
   const costStats = useMemo(() => {
-    if (!records || records.length === 0) return null;
+    if (records.length === 0) return null;
     const totalCost = records.reduce((s, r) => s + (r.cost ?? 0), 0);
-    const dates = records.map((r) => new Date(r.date).getTime()).filter((d) => !isNaN(d));
-    if (dates.length < 2) return { totalCost, annualCost: totalCost, avgPerService: totalCost / records.length };
+    const dates = records.map((r) => new Date(r.date).getTime()).filter((d) => !Number.isNaN(d));
+    if (dates.length < 2) {
+      return { totalCost, annualCost: totalCost, avgPerService: totalCost / records.length };
+    }
     const spanYears = Math.max((Math.max(...dates) - Math.min(...dates)) / (365.25 * 24 * 3600000), 0.1);
-    return {
-      totalCost,
-      annualCost: totalCost / spanYears,
-      avgPerService: totalCost / records.length,
-    };
+    return { totalCost, annualCost: totalCost / spanYears, avgPerService: totalCost / records.length };
   }, [records]);
 
-  // ── Service projections ────────────────────────────────────────────────
-  const projections = useMemo(() => {
-    if (!items || items.length === 0) return [];
-    return items
-      .filter((i) => i.status !== 'completed' && (i.interval_miles || i.interval_months))
-      .map((item) => {
-        const milesRemaining =
-          item.due_mileage != null ? Math.max(item.due_mileage - item.current_mileage, 0) : null;
-        const dueDate = item.due_date ? formatDate(item.due_date) : null;
-        return { name: item.name, category: item.category, milesRemaining, dueDate, status: item.status };
-      })
-      .sort((a, b) => {
-        if (a.status === 'overdue' && b.status !== 'overdue') return -1;
-        if (b.status === 'overdue' && a.status !== 'overdue') return 1;
-        return (a.milesRemaining ?? Infinity) - (b.milesRemaining ?? Infinity);
-      })
-      .slice(0, 8);
+  const categoryBreakdown = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of items) counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+    const max = Math.max(1, ...counts.values());
+    return Array.from(counts.entries())
+      .map(([category, count]) => ({ category, count, max, hex: TONE_HEX[toneFor(category)] }))
+      .sort((a, b) => b.count - a.count);
   }, [items]);
 
-  // ── Schedule handler ───────────────────────────────────────────────────
+  const projections = useMemo(
+    () =>
+      items
+        .filter((i) => i.status !== 'completed' && (i.interval_miles || i.interval_months))
+        .map((item) => ({
+          name: item.name,
+          category: item.category,
+          metersRemaining:
+            item.due_mileage != null ? Math.max(item.due_mileage - item.current_mileage, 0) : null,
+          dueDate: item.due_date ? formatDate(item.due_date) : null,
+          status: item.status,
+        }))
+        .sort((a, b) => {
+          if (a.status === 'overdue' && b.status !== 'overdue') return -1;
+          if (b.status === 'overdue' && a.status !== 'overdue') return 1;
+          return (a.metersRemaining ?? Infinity) - (b.metersRemaining ?? Infinity);
+        })
+        .slice(0, 8),
+    [items],
+  );
+
+  const serviceColumns = useMemo(() => buildServiceColumns(t, formatDistance), [t, formatDistance]);
+
   const handleSchedule = useCallback(() => {
-    // placeholder — would open scheduling modal
+    // Placeholder — a future slice opens the scheduling modal here. The
+    // deterministic reminders above remain the canonical baseline.
   }, []);
 
-  const anyError = [itemsError, recordsError].find(Boolean);
-  const isLoading = loadingItems || loadingRecords;
+  const handleRefresh = useCallback(() => {
+    itemsQuery.refetch();
+    recordsQuery.refetch();
+  }, [itemsQuery, recordsQuery]);
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <VehicleSelect />
+      <Button
+        variant="primary"
+        size="sm"
+        icon={<CalendarPlus className="h-4 w-4" />}
+        onClick={handleSchedule}
+      >
+        {t('maintenance.schedule', 'Schedule')}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleRefresh}
+        aria-label={t('maintenance.refresh', 'Refresh maintenance data')}
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+
   return (
     <PageContainer
-      title={t('Maintenance')}
-      subtitle={t('Service schedule, records, and upcoming maintenance')}
-      loading={isLoading && !items}
-      actions={<VehicleSelect />}
+      title={t('maintenance.title', 'Maintenance')}
+      subtitle={t('maintenance.subtitle', 'Service schedule, records, and upcoming maintenance')}
+      actions={actions}
+      query={[itemsQuery, recordsQuery]}
     >
-      {anyError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
-        </AlertBanner>
-      )}
-
-      {/* ── Summary metric cards ─────────────────────────────────── */}
+      {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        {loadingItems && !items ? (
-          <SummarySkeleton />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <MetricCard
-              icon={<ListChecks className="h-5 w-5" />}
-              label={t('Total Items')}
-              value={summary.total}
-              color="cyan"
-            />
-            <MetricCard
-              icon={<Clock className="h-5 w-5" />}
-              label={t('Due Soon')}
-              value={summary.soon}
-              color="amber"
-            />
-            <MetricCard
-              icon={<AlertTriangle className="h-5 w-5" />}
-              label={t('Overdue')}
-              value={summary.overdue}
-              color="red"
-            />
-            <MetricCard
-              icon={<CheckCircle className="h-5 w-5" />}
-              label={t('Completed')}
-              value={summary.completed}
-              color="green"
-            />
-          </div>
-        )}
+        <section aria-label={t('maintenance.kpis', 'Maintenance summary')}>
+          {itemsQuery.isLoading ? (
+            <SummarySkeleton />
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+              <MetricCard
+                icon={<ListChecks className="h-5 w-5" />}
+                label={t('maintenance.kpi.total', 'Total Items')}
+                value={summary.total}
+                color="cyan"
+              />
+              <MetricCard
+                icon={<AlertTriangle className="h-5 w-5" />}
+                label={t('maintenance.kpi.overdue', 'Overdue')}
+                value={summary.overdue}
+                color="red"
+              />
+              <MetricCard
+                icon={<Clock className="h-5 w-5" />}
+                label={t('maintenance.kpi.soon', 'Due Soon')}
+                value={summary.soon}
+                color="amber"
+              />
+              <MetricCard
+                icon={<ShieldCheck className="h-5 w-5" />}
+                label={t('maintenance.kpi.healthy', 'Healthy')}
+                value={summary.good}
+                color="green"
+              />
+              <MetricCard
+                icon={<CheckCircle className="h-5 w-5" />}
+                label={t('maintenance.kpi.completed', 'Completed')}
+                value={summary.completed}
+                color="blue"
+              />
+              <MetricCard
+                icon={<Layers className="h-5 w-5" />}
+                label={t('maintenance.kpi.categories', 'Categories')}
+                value={categories.length}
+                color="purple"
+              />
+            </div>
+          )}
+        </section>
       </FadeIn>
 
-      {/* ── Helix Predictive Maintenance (opt-in AI) ─────────────── */}
-      {/* withAiFeature returns null when                         */}
-      {/* ai_mode='off' OR the predictive-maintenance toggle is off. */}
-      {/* The deterministic reminders above remain the canonical    */}
-      {/* baseline; this card adds an opt-in narrative section.     */}
-      <FadeIn delay={0.03}>
+      {/* 2 — Helix predictive maintenance (opt-in AI; self-gating → null when off) */}
+      <FadeIn delay={0.05}>
         <AIPredictiveMaintenance vehicleId={vehicleId ?? undefined} />
       </FadeIn>
 
-      {/* ── Filter / Sort toolbar ────────────────────────────────── */}
-      <FadeIn delay={0.05}>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-[var(--text-muted)]" />
-            <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              options={categoryOptions}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4 text-[var(--text-muted)]" />
-            <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              options={sortOptions}
-            />
-          </div>
-          <div className="sm:ml-auto">
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<CalendarPlus className="h-4 w-4" />}
-              onClick={handleSchedule}
-            >
-              {t('Schedule Maintenance')}
-            </Button>
-          </div>
-        </div>
-      </FadeIn>
-
-      {/* ── Maintenance items grid ───────────────────────────────── */}
+      {/* 3 — Primary bento: hero items grid + upcoming projections side panel */}
       <FadeIn delay={0.1}>
-        {loadingItems && !items ? (
-          <ItemsSkeleton />
-        ) : filteredItems.length === 0 ? (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Wrench className="h-12 w-12" />}
-            title={t('No maintenance items')}
-            message={
-              categoryFilter !== 'all'
-                ? t('No items match the selected category. Try a different filter.')
-                : t('No maintenance items found for this vehicle.')
-            }
-          />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredItems.map((item) => (
-              <MaintenanceItemCard key={item.id} item={item} t={t} />
-            ))}
-          </div>
-        )}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <PanelTitle className="flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('maintenance.itemsTitle', 'Maintenance Items')}
+              </PanelTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Filter className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+                  <Select
+                    size="sm"
+                    aria-label={t('maintenance.filterCategory', 'Filter by category')}
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    options={categoryOptions}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <ArrowUpDown className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+                  <Select
+                    size="sm"
+                    aria-label={t('maintenance.sortBy', 'Sort items')}
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    options={sortOptions}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {itemsQuery.isLoading ? (
+              <ItemsSkeleton />
+            ) : itemsQuery.isError ? (
+              <QueryError error={itemsQuery.error} onRetry={() => itemsQuery.refetch()} />
+            ) : filteredItems.length === 0 ? (
+              <EmptyState
+                icon={<Wrench className="h-12 w-12" />}
+                title={t('maintenance.noItemsTitle', 'No maintenance items')}
+                message={
+                  categoryFilter !== 'all'
+                    ? t('maintenance.noItemsFiltered', 'No items match the selected category. Try a different filter.')
+                    : t('maintenance.noItems', 'No maintenance items found for this vehicle.')
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                {filteredItems.map((item) => (
+                  <MaintenanceItemCard key={item.id} item={item} formatDistance={formatDistance} />
+                ))}
+              </div>
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('maintenance.projectionsTitle', 'Service Projections')}
+            </PanelTitle>
+            {itemsQuery.isLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-8 rounded-lg" />
+                ))}
+              </div>
+            ) : itemsQuery.isError ? (
+              <QueryError error={itemsQuery.error} onRetry={() => itemsQuery.refetch()} />
+            ) : projections.length === 0 ? (
+              <EmptyState message={t('maintenance.noProjections', 'No upcoming service projections available.')} />
+            ) : (
+              <ul className="space-y-2.5">
+                {projections.map((p) => (
+                  <li key={p.name} className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="inline-block h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: TONE_HEX[toneFor(p.category)] }}
+                        aria-hidden="true"
+                      />
+                      <Text variant="bodySm" as="span" className="truncate">{p.name}</Text>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {p.metersRemaining != null && (
+                        <Text variant="caption" as="span" className="tabular-nums">
+                          {formatDistance(p.metersRemaining, { precision: 0 })}
+                        </Text>
+                      )}
+                      {p.dueDate && (
+                        <Text variant="caption" as="span">{p.dueDate}</Text>
+                      )}
+                      <StatusBadgeFor status={p.status as MaintenanceStatus} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* ── Cost Summary & Service Projections ────────────────────── */}
+      {/* 4 — Secondary bento: cost summary + category breakdown */}
       <FadeIn delay={0.15}>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* Estimated Annual Cost */}
-          <GlassPanel className="p-6">
-            <span className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              <DollarSign className="h-4 w-4 text-green-400" />
-              {t('Estimated Annual Cost')}
-            </span>
-            {loadingRecords && !records ? (
-              <Skeleton height={80} />
+        <section className="grid grid-cols-1 gap-4 2xl:grid-cols-2 xl:gap-5">
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('maintenance.costTitle', 'Estimated Annual Cost')}
+            </PanelTitle>
+            {recordsQuery.isLoading ? (
+              <Skeleton height={120} />
+            ) : recordsQuery.isError ? (
+              <QueryError error={recordsQuery.error} onRetry={() => recordsQuery.refetch()} />
             ) : costStats ? (
               <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <MetricCard
-                    label={t('Total Spent')}
+                    label={t('maintenance.totalSpent', 'Total Spent')}
                     value={formatCurrency(costStats.totalCost, 0)}
                     color="green"
                   />
                   <MetricCard
-                    label={t('Annual Est.')}
-                    value={`${formatCurrency(costStats.annualCost, 0)}/yr`}
+                    label={t('maintenance.annualEst', 'Annual Est.')}
+                    value={`${formatCurrency(costStats.annualCost, 0)}${t('maintenance.perYear', '/yr')}`}
                     color="cyan"
                   />
                   <MetricCard
-                    label={t('Avg / Service')}
+                    label={t('maintenance.avgService', 'Avg / Service')}
                     value={formatCurrency(costStats.avgPerService, 0)}
                     color="purple"
                   />
                 </div>
-                <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
-                  <p className="text-xs text-green-400">
-                    {t(
-                      'EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.',
-                    )}
-                  </p>
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <Text variant="bodySm" as="p" className="text-emerald-300">
+                    {t('maintenance.evNote', 'EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.')}
+                  </Text>
                 </div>
               </div>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No cost data available yet. Log service records to see cost estimates.')} />
+              <EmptyState message={t('maintenance.noCost', 'No cost data available yet. Log service records to see cost estimates.')} />
             )}
           </GlassPanel>
 
-          {/* Service Projections */}
-          <GlassPanel className="p-6">
-            <span className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              <TrendingUp className="h-4 w-4 text-purple-400" />
-              {t('Service Projections')}
-            </span>
-            {loadingItems && !items ? (
-              <Skeleton height={80} />
-            ) : projections.length > 0 ? (
-              <div className="space-y-2.5">
-                {projections.map((p) => {
-                  const badge = STATUS_BADGE_MAP[p.status as MaintenanceStatus] ?? STATUS_BADGE_MAP.good;
-                  return (
-                    <div key={p.name} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Wrench className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
-                        <span className="truncate text-[var(--text-secondary)]">{p.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {p.milesRemaining != null && (
-                          <span className="text-xs text-[var(--text-muted)]">
-                            {fmtNumber(p.milesRemaining, 0)} mi
-                          </span>
-                        )}
-                        {p.dueDate && (
-                          <span className="text-xs text-[var(--text-muted)]">{p.dueDate}</span>
-                        )}
-                        <Badge variant={badge.variant} size="sm">
-                          {t(badge.label)}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('maintenance.categoryTitle', 'Maintenance by Category')}
+            </PanelTitle>
+            {itemsQuery.isLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-8 rounded-lg" />
+                ))}
               </div>
+            ) : itemsQuery.isError ? (
+              <QueryError error={itemsQuery.error} onRetry={() => itemsQuery.refetch()} />
+            ) : categoryBreakdown.length === 0 ? (
+              <EmptyState message={t('maintenance.noCategory', 'No maintenance items to categorize yet.')} />
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No upcoming service projections available.')} />
+              <div className="space-y-3">
+                {categoryBreakdown.map((row) => (
+                  <MetricBar
+                    key={row.category}
+                    label={row.category.charAt(0).toUpperCase() + row.category.slice(1)}
+                    value={row.count}
+                    max={row.max}
+                    color={row.hex}
+                    sublabel={`${fmtInt(row.count)} ${t('maintenance.items', 'items')}`}
+                  />
+                ))}
+              </div>
             )}
           </GlassPanel>
-        </div>
+        </section>
       </FadeIn>
 
-      {/* ── Service records table ────────────────────────────────── */}
+      {/* 5 — Detail band: full-width service-records table */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-6">
-          <span className="text-sm font-semibold mb-4 block text-[var(--text-primary)]">
-            {t('Service Records')}
-          </span>
-
-          {loadingRecords && !records ? (
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('maintenance.recordsTitle', 'Service Records')}
+          </PanelTitle>
+          {recordsQuery.isLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
+              {[0, 1, 2].map((i) => (
                 <Skeleton key={i} className="h-12 rounded-lg" />
               ))}
             </div>
-          ) : !records?.length ? (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          ) : recordsQuery.isError ? (
+            <QueryError error={recordsQuery.error} onRetry={() => recordsQuery.refetch()} />
+          ) : records.length === 0 ? (
+            <EmptyState
               icon={<Wrench className="h-10 w-10" />}
-              message={t('No service records logged yet.')}
+              message={t('maintenance.noRecords', 'No service records logged yet.')}
             />
           ) : (
-            <>
-              <DataTable<ServiceRecord>
-                tableId="vehicle-systems:maintenance-records"
-                columns={serviceColumns}
-                data={records}
-                keyExtractor={(r) => r.id}
-                compact
-                pagination
-                emptyMessage={t('No service records found.')}
-              />
-            </>
+            <DataTable<ServiceRecord>
+              tableId="vehicle-systems:maintenance-records"
+              columns={serviceColumns}
+              data={records}
+              keyExtractor={(r) => r.id}
+              compact
+              pagination
+              emptyMessage={t('maintenance.noRecordsShort', 'No service records found.')}
+            />
           )}
         </GlassPanel>
       </FadeIn>

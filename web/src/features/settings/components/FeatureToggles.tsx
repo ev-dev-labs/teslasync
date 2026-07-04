@@ -46,7 +46,7 @@ export function FeatureToggles() {
           </div>
           <div className="flex items-center gap-3">
             {featureConfig?.fetched_at && (
-              <span className="text-[11px] text-[var(--text-muted)]">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('featureConfig.lastSynced', 'Synced')} {formatDateTime(featureConfig.fetched_at)}
               </span>
             )}

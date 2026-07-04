@@ -30,7 +30,7 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.odometer', 'Odometer (From → To)')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.odometer', 'Odometer (From → To)')}</p>
             <p className="text-lg font-bold text-cyan-400">
               {stats.odometerStart && stats.odometerEnd
                 ? `${fmtNumber(stats.odometerStart)} → ${fmtNumber(stats.odometerEnd)}`
@@ -39,7 +39,7 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">
+            <p className="text-2xs text-[var(--text-muted)] mb-1">
               {t('driveDetail.rangeStartEnd', 'Range (Start → End)')}
             </p>
             <p className="text-lg font-bold text-green-400">
@@ -50,26 +50,26 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.elevSummary', 'Elevation Summary')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.elevSummary', 'Elevation Summary')}</p>
             <div className="text-base font-bold">
               <span className="text-green-400 flex items-center justify-center gap-1"><ArrowUpRight className="h-3 w-3" />{fmtNumber(stats.elevGain)} m</span>
               <span className="text-red-400 flex items-center justify-center gap-1"><ArrowDownRight className="h-3 w-3" />{fmtNumber(stats.elevLoss)} m</span>
             </div>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyConsumed', 'Energy Consumed')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.energyConsumed', 'Energy Consumed')}</p>
             <p className="text-lg font-bold text-amber-400">
               {stats.energyWh > 1000 ? fmtWithUnit(stats.energyWh / 1000, 'kWh') : `${fmtNumber(stats.energyWh)} Wh`}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyRecovered', 'Energy Recovered')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.energyRecovered', 'Energy Recovered')}</p>
             <p className="text-lg font-bold text-green-400">
               {stats.regenWh > 1000 ? fmtWithUnit(stats.regenWh / 1000, 'kWh') : `${fmtNumber(stats.regenWh)} Wh`}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.consumptionRate', 'Consumption')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.consumptionRate', 'Consumption')}</p>
             <p className="text-lg font-bold text-purple-400">
               {stats.consumptionWhKm > 0 ? `${fmtNumber(toEfficiencyDisplay(stats.consumptionWhKm))}` : '—'}{' '}
               <span className="text-xs text-[var(--text-muted)]">{efficiencyUnit}</span>
@@ -78,18 +78,18 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
         </div>
         <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.avgPower', 'Avg Power')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.avgPower', 'Avg Power')}</p>
             <p className="text-lg font-bold text-amber-400">{fmtNumber(stats.avgPower)} <span className="text-xs text-[var(--text-muted)]">kW</span></p>
           </div>
           {stats.avgOutsideTemp !== null && (
             <div className="text-center">
-              <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.avgOutsideTemp', 'Avg Outside Temp')}</p>
+              <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.avgOutsideTemp', 'Avg Outside Temp')}</p>
               <p className="text-lg font-bold text-blue-400">{fmtNumber(stats.avgOutsideTemp)}{tempUnit}</p>
             </div>
           )}
           {stats.avgInsideTemp !== null && (
             <div className="text-center">
-              <p className="text-[10px] text-[var(--text-muted)] mb-1">
+              <p className="text-2xs text-[var(--text-muted)] mb-1">
                 {t('driveDetail.avgInsideTemp', 'Avg Inside Temp')}
               </p>
               <p className="text-lg font-bold text-orange-400">
@@ -98,11 +98,11 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
             </div>
           )}
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.minSpeed', 'Min Speed')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.minSpeed', 'Min Speed')}</p>
             <p className="text-lg font-bold text-[var(--text-secondary)]">{fmtInt(stats.minSpd)} {speedUnit}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
             <p className="text-lg font-bold text-amber-400">
               {drive.startBatteryPct != null && drive.endBatteryPct != null
                 ? `${drive.startBatteryPct - drive.endBatteryPct}%`
@@ -110,7 +110,7 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.netEnergy', 'Net Consumption')}</p>
+            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.netEnergy', 'Net Consumption')}</p>
             <p className="text-lg font-bold text-cyan-400">
               {(stats.energyWh - stats.regenWh) > 1000
                 ? fmtWithUnit((stats.energyWh - stats.regenWh) / 1000, 'kWh')

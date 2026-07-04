@@ -5,6 +5,7 @@ import {
   Select as UiSelect,
   Button as UiButton,
   GlassPanel,
+  Text,
   Textarea as UiTextarea,
 } from '@/components/ui';
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
@@ -284,9 +285,9 @@ export function ActionBuilder({ actions, channels, onChange }: ActionBuilderProp
       {actions.map((action, index) => (
         <GlassPanel key={`${action.kind}-${index}`} className="p-4">
           <div className="flex items-start gap-2">
-            <span className="mt-8 w-6 shrink-0 text-right font-mono text-xs text-[var(--text-muted)]">
+            <Text as="span" mono size="xs" color="muted" className="mt-8 w-6 shrink-0 text-right">
               {index + 1}.
-            </span>
+            </Text>
             <div className="flex-1 space-y-3">
               <div className="flex flex-wrap items-end gap-3">
                 <UiSelect

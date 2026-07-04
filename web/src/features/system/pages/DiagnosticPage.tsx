@@ -1,34 +1,48 @@
 // DiagnosticPage
 //
-// Operator-facing self-test wizard. A single button posts to
+// Operator-facing self-test cockpit. A single button posts to
 // `POST /system/diagnostic` and renders the structured report as a
-// list of cards (one per check) plus an overall hero badge. The
-// report can be copied to the clipboard or downloaded as a .txt
-// file for support escalation.
+// full-width bento: a hero result band (overall status + pass/warn/fail
+// distribution), a KPI summary strip, and a responsive grid of per-check
+// cards. The report can be copied to the clipboard or downloaded as a
+// .txt file for support escalation.
 //
 // We intentionally do NOT auto-run on mount. The endpoint fans out
-// concurrent probes against every shared dependency and is rate-
-// limited (20/min/IP) on the backend; surprise auto-runs would burn
-// budget for users who navigated here by mistake.
+// concurrent probes against every shared dependency and is rate-limited
+// (20/min/IP) on the backend; surprise auto-runs would burn budget for
+// users who navigated here by mistake.
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
   AlertTriangle,
   CheckCircle2,
   Download,
+  Gauge,
+  ListChecks,
   PlayCircle,
   RefreshCw,
   ShieldAlert,
+  ShieldCheck,
+  Timer,
   XCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { Stack } from '@/components/layout';
-import { Badge, Button, CopyButton, GlassPanel } from '@/components/ui';
-import { Heading, Text, Caption, MetricLabel } from '@/components/ui/Typography';
-import { EmptyState, Spinner } from '@/components/feedback';
+import {
+  Badge,
+  Button,
+  CopyButton,
+  GlassPanel,
+  Heading,
+  Text,
+  Caption,
+  MetricLabel,
+  SectionTitle,
+} from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { AlertBanner, EmptyState, Spinner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -47,9 +61,20 @@ import { cn } from '@/lib/cn';
 
 // ── helpers ─────────────────────────────────────────────────────────
 
-function statusBadgeVariant(
-  status: DiagnosticCheckStatus,
-): 'success' | 'warning' | 'danger' {
+type StatusTone = 'success' | 'warning' | 'danger';
+
+/** Aggregate derived from the report's checks — computed once in the
+ *  page and shared by the hero band + KPI strip (DRY, null-safe). */
+interface DiagnosticSummary {
+  total: number;
+  ok: number;
+  warn: number;
+  fail: number;
+  totalMs: number;
+  slowest: DiagnosticCheck | null;
+}
+
+function checkTone(status: DiagnosticCheckStatus): StatusTone {
   switch (status) {
     case 'ok':
       return 'success';
@@ -62,17 +87,43 @@ function statusBadgeVariant(
 }
 
 function overallTone(status: DiagnosticOverallStatus): {
-  variant: 'success' | 'warning' | 'danger';
+  tone: StatusTone;
   Icon: typeof CheckCircle2;
 } {
   switch (status) {
     case 'ok':
-      return { variant: 'success', Icon: CheckCircle2 };
+      return { tone: 'success', Icon: CheckCircle2 };
     case 'degraded':
-      return { variant: 'warning', Icon: AlertTriangle };
+      return { tone: 'warning', Icon: AlertTriangle };
     case 'down':
     default:
-      return { variant: 'danger', Icon: ShieldAlert };
+      return { tone: 'danger', Icon: ShieldAlert };
+  }
+}
+
+/** Rounded chip background+text for a status tone. */
+function toneChip(tone: StatusTone): string {
+  switch (tone) {
+    case 'success':
+      return 'bg-emerald-500/10 text-emerald-300';
+    case 'warning':
+      return 'bg-amber-500/10 text-amber-300';
+    case 'danger':
+    default:
+      return 'bg-rose-500/10 text-rose-300';
+  }
+}
+
+/** Solid segment fill for the distribution bar + legend dots. */
+function toneFill(tone: StatusTone): string {
+  switch (tone) {
+    case 'success':
+      return 'bg-emerald-500';
+    case 'warning':
+      return 'bg-amber-500';
+    case 'danger':
+    default:
+      return 'bg-rose-500';
   }
 }
 
@@ -88,6 +139,13 @@ function statusIcon(status: DiagnosticCheckStatus) {
   }
 }
 
+/** Compact human duration for probe timings (sub-second in ms, else s). */
+function formatMs(ms: number): string {
+  const v = Number.isFinite(ms) ? ms : 0;
+  if (v >= 1000) return `${(v / 1000).toFixed(v >= 10_000 ? 0 : 1)}s`;
+  return `${Math.round(v)}ms`;
+}
+
 function downloadFilename(reportTs: string, template: string): string {
   // Replace `{{ts}}` with a filesystem-safe slug. Use the report's
   // generated_at when present so re-running and saving twice never
@@ -100,31 +158,47 @@ function downloadFilename(reportTs: string, template: string): string {
   return template.replace('{{ts}}', stamp);
 }
 
+function summarize(report: DiagnosticReport | undefined): DiagnosticSummary {
+  const checks = report?.checks ?? [];
+  const slowest = checks.reduce<DiagnosticCheck | null>(
+    (m, c) => (!m || (c.duration_ms ?? 0) > (m.duration_ms ?? 0) ? c : m),
+    null,
+  );
+  return {
+    total: checks.length,
+    ok: checks.filter((c) => c.status === 'ok').length,
+    warn: checks.filter((c) => c.status === 'warn').length,
+    fail: checks.filter((c) => c.status === 'fail').length,
+    totalMs: checks.reduce((s, c) => s + (c.duration_ms ?? 0), 0),
+    slowest,
+  };
+}
+
 // ── components ──────────────────────────────────────────────────────
 
 function CheckCard({ check }: { check: DiagnosticCheck }) {
   const { t } = useTranslation();
-  const variant = statusBadgeVariant(check.status);
+  const tone = checkTone(check.status);
   return (
-    <GlassPanel className="p-4" data-testid={`diagnostic-check-${check.id}`}>
+    <GlassPanel
+      className="h-full p-4 sm:p-5"
+      data-testid={`diagnostic-check-${check.id}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span
             className={cn(
               'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-              variant === 'success' &&
-                'bg-emerald-500/10 text-emerald-300',
-              variant === 'warning' && 'bg-amber-500/10 text-amber-300',
-              variant === 'danger' && 'bg-rose-500/10 text-rose-300',
+              toneChip(tone),
             )}
           >
             {statusIcon(check.status)}
           </span>
           <div className="min-w-0">
-            <Heading level="panel" className="mb-1">
+            <Heading level="panel" className="mb-1 break-words">
               {check.name}
             </Heading>
-            <Caption className="block">{check.id}</Caption>
+            <Caption className="block break-words">{check.id}</Caption>
             <Text variant="bodySm" as="p" className="mt-2 break-words">
               {check.detail}
             </Text>
@@ -141,54 +215,156 @@ function CheckCard({ check }: { check: DiagnosticCheck }) {
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <Badge variant={variant}>
+          <Badge variant={tone}>
             {t(`diagnostic.status.${check.status}`, check.status.toUpperCase())}
           </Badge>
-          <Caption>{t('diagnostic.duration', { ms: check.duration_ms })}</Caption>
+          <Caption className="tabular-nums">
+            {t('diagnostic.duration', { ms: check.duration_ms })}
+          </Caption>
         </div>
       </div>
     </GlassPanel>
   );
 }
 
-function OverallHero({ report }: { report: DiagnosticReport }) {
+function OverallHero({
+  report,
+  summary,
+  actions,
+}: {
+  report: DiagnosticReport;
+  summary: DiagnosticSummary;
+  actions: ReactNode;
+}) {
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
-  const { variant, Icon } = overallTone(report.overall_status);
+  const { tone, Icon } = overallTone(report.overall_status);
+
+  const segments: { key: StatusTone; count: number; label: string }[] = [
+    { key: 'success', count: summary.ok, label: t('diagnostic.summary.passing', 'Passing') },
+    { key: 'warning', count: summary.warn, label: t('diagnostic.summary.warnings', 'Warnings') },
+    { key: 'danger', count: summary.fail, label: t('diagnostic.summary.failures', 'Failures') },
+  ];
+  const barAria = `${summary.ok} ${t('diagnostic.summary.passing', 'Passing')}, ${summary.warn} ${t('diagnostic.summary.warnings', 'Warnings')}, ${summary.fail} ${t('diagnostic.summary.failures', 'Failures')}`;
+
   return (
-    <GlassPanel className="p-5" data-testid="diagnostic-overall">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span
-            className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-full',
-              variant === 'success' &&
-                'bg-emerald-500/10 text-emerald-300',
-              variant === 'warning' && 'bg-amber-500/10 text-amber-300',
-              variant === 'danger' && 'bg-rose-500/10 text-rose-300',
-            )}
-          >
-            <Icon className="h-7 w-7" aria-hidden />
-          </span>
-          <div>
-            <Heading level="page">
-              {t(
-                `diagnostic.overall.${report.overall_status}`,
-                report.overall_status,
+    <section aria-label={t('diagnostic.overallSection', 'Overall result')}>
+      <GlassPanel className="p-4 sm:p-5" data-testid="diagnostic-overall">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span
+              className={cn(
+                'flex h-12 w-12 shrink-0 items-center justify-center rounded-full',
+                toneChip(tone),
               )}
-            </Heading>
-            <Caption className="block">
-              {t('diagnostic.lastRun', {
-                when: formatDateTime(report.generated_at),
-              })}
-            </Caption>
+            >
+              <Icon className="h-7 w-7" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <Heading level="section">
+                {t(`diagnostic.overall.${report.overall_status}`, report.overall_status)}
+              </Heading>
+              <Caption className="block">
+                {t('diagnostic.lastRun', { when: formatDateTime(report.generated_at) })}
+              </Caption>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={tone} size="lg">
+              {t('diagnostic.checkCount', { count: summary.total })}
+            </Badge>
+            {actions}
           </div>
         </div>
-        <Badge variant={variant} size="lg">
-          {t('diagnostic.checkCount', { count: report.checks.length })}
-        </Badge>
-      </div>
-    </GlassPanel>
+
+        <div className="mt-4">
+          <div
+            className="flex h-2.5 overflow-hidden rounded-full bg-white/[0.04]"
+            role="img"
+            aria-label={barAria}
+          >
+            {segments.map((s) => {
+              const pct = summary.total > 0 ? (s.count / summary.total) * 100 : 0;
+              if (pct <= 0) return null;
+              return (
+                <div
+                  key={s.key}
+                  className={cn('h-full', toneFill(s.key))}
+                  style={{ width: `${pct}%` }}
+                />
+              );
+            })}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+            {segments.map((s) => (
+              <div key={s.key} className="flex items-center gap-1.5">
+                <span className={cn('inline-block h-2.5 w-2.5 rounded-full', toneFill(s.key))} />
+                <Text variant="bodySm" as="span">
+                  {s.label}
+                </Text>
+                <Text
+                  as="span"
+                  size="xs"
+                  weight="semibold"
+                  color="primary"
+                  className="tabular-nums"
+                >
+                  {s.count}
+                </Text>
+              </div>
+            ))}
+          </div>
+        </div>
+      </GlassPanel>
+    </section>
+  );
+}
+
+function StatusSummary({ summary }: { summary: DiagnosticSummary }) {
+  const { t } = useTranslation();
+  return (
+    <section
+      aria-label={t('diagnostic.summary.title', 'Diagnostic summary')}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
+    >
+      <MetricCard
+        label={t('diagnostic.summary.total', 'Total checks')}
+        value={summary.total}
+        icon={<ListChecks className="h-5 w-5" aria-hidden />}
+        color="cyan"
+      />
+      <MetricCard
+        label={t('diagnostic.summary.passing', 'Passing')}
+        value={summary.ok}
+        icon={<ShieldCheck className="h-5 w-5" aria-hidden />}
+        color="green"
+      />
+      <MetricCard
+        label={t('diagnostic.summary.warnings', 'Warnings')}
+        value={summary.warn}
+        icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+        color="amber"
+      />
+      <MetricCard
+        label={t('diagnostic.summary.failures', 'Failures')}
+        value={summary.fail}
+        icon={<XCircle className="h-5 w-5" aria-hidden />}
+        color="red"
+      />
+      <MetricCard
+        label={t('diagnostic.summary.totalTime', 'Total time')}
+        value={formatMs(summary.totalMs)}
+        icon={<Timer className="h-5 w-5" aria-hidden />}
+        color="blue"
+      />
+      <MetricCard
+        label={t('diagnostic.summary.slowest', 'Slowest check')}
+        value={summary.slowest ? formatMs(summary.slowest.duration_ms ?? 0) : '—'}
+        subtitle={summary.slowest?.name}
+        icon={<Gauge className="h-5 w-5" aria-hidden />}
+        color="purple"
+      />
+    </section>
   );
 }
 
@@ -203,6 +379,8 @@ export default function DiagnosticPage() {
 
   const report = runDiagnostic.data;
   const isRunning = runDiagnostic.isPending;
+
+  const summary = useMemo(() => summarize(report), [report]);
 
   const handleRun = useCallback(() => {
     setLatestError(null);
@@ -239,10 +417,7 @@ export default function DiagnosticPage() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast?.success(
-      t(
-        'diagnostic.copyReportSuccess',
-        'Diagnostic report copied to clipboard',
-      ),
+      t('diagnostic.downloadSuccess', 'Diagnostic report downloaded'),
     );
   }, [report, reportText, t, toast]);
 
@@ -269,6 +444,29 @@ export default function DiagnosticPage() {
     </Button>
   );
 
+  const reportActions = report ? (
+    <div
+      className="flex flex-wrap items-center gap-2"
+      data-testid="diagnostic-actions"
+    >
+      <CopyButton
+        text={reportJson}
+        label={t('diagnostic.copyReport', 'Copy report')}
+        withToast
+        variant="secondary"
+        size="md"
+      />
+      <Button
+        variant="secondary"
+        onClick={handleDownload}
+        icon={<Download className="h-4 w-4" aria-hidden />}
+        data-testid="diagnostic-download-button"
+      >
+        {t('diagnostic.downloadReport', 'Download .txt')}
+      </Button>
+    </div>
+  ) : null;
+
   return (
     <PageContainer
       title={t('diagnostic.title', 'System diagnostic')}
@@ -278,75 +476,64 @@ export default function DiagnosticPage() {
       )}
       actions={runButton}
     >
-      <FadeIn>
-        <Stack className="gap-6">
-          {latestError ? (
-            <GlassPanel
-              className="border border-rose-500/30 p-4"
+      <div className="space-y-4 sm:space-y-6">
+        {latestError ? (
+          <FadeIn>
+            <AlertBanner
+              variant="danger"
+              icon={<ShieldAlert className="h-5 w-5" aria-hidden />}
+              title={t('diagnostic.errorTitle', 'Diagnostic failed to run')}
               data-testid="diagnostic-error"
             >
-              <div className="flex items-start gap-3">
-                <ShieldAlert
-                  className="h-5 w-5 shrink-0 text-rose-300"
-                  aria-hidden
-                />
-                <div>
-                  <Heading level="panel" className="mb-1">
-                    {t('diagnostic.errorTitle', 'Diagnostic failed to run')}
-                  </Heading>
-                  <Text variant="bodySm" as="p">
-                    {latestError.message ||
-                      t(
-                        'diagnostic.errorBody',
-                        'The diagnostic endpoint returned an error. Check API logs and try again.',
-                      )}
-                  </Text>
-                </div>
-              </div>
-            </GlassPanel>
-          ) : null}
+              {latestError.message ||
+                t(
+                  'diagnostic.errorBody',
+                  'The diagnostic endpoint returned an error. Check API logs and try again.',
+                )}
+            </AlertBanner>
+          </FadeIn>
+        ) : null}
 
-          {report ? <OverallHero report={report} /> : null}
-
-          {report ? (
-            <div
-              className="flex flex-wrap items-center gap-2"
-              data-testid="diagnostic-actions"
-            >
-              <CopyButton
-                text={reportJson}
-                label={t('diagnostic.copyReport', 'Copy report')}
-                withToast
-                variant="secondary"
-                size="md"
+        {report ? (
+          <>
+            <FadeIn>
+              <OverallHero
+                report={report}
+                summary={summary}
+                actions={reportActions}
               />
-              <Button
-                variant="secondary"
-                onClick={handleDownload}
-                icon={<Download className="h-4 w-4" aria-hidden />}
-                data-testid="diagnostic-download-button"
-              >
-                {t('diagnostic.downloadReport', 'Download .txt')}
-              </Button>
-            </div>
-          ) : null}
+            </FadeIn>
 
-          {report ? (
-            <StaggerContainer className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {report.checks.map((c) => (
-                <StaggerItem key={c.id}>
-                  <CheckCard check={c} />
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          ) : isRunning ? (
+            <FadeIn delay={0.05}>
+              <StatusSummary summary={summary} />
+            </FadeIn>
+
+            <FadeIn delay={0.1}>
+              <section aria-label={t('diagnostic.checksTitle', 'Dependency checks')}>
+                <SectionTitle className="mb-3">
+                  {t('diagnostic.checksTitle', 'Dependency checks')}
+                </SectionTitle>
+                <StaggerContainer className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {(report.checks ?? []).map((c) => (
+                    <StaggerItem key={c.id}>
+                      <CheckCard check={c} />
+                    </StaggerItem>
+                  ))}
+                </StaggerContainer>
+              </section>
+            </FadeIn>
+          </>
+        ) : isRunning ? (
+          <FadeIn>
             <GlassPanel className="flex items-center justify-center p-12">
               <Spinner
                 size="lg"
                 label={t('diagnostic.running', 'Running diagnostic…')}
               />
             </GlassPanel>
-          ) : (
+          </FadeIn>
+        ) : (
+          <FadeIn>
             <GlassPanel className="p-2">
               <EmptyState
                 icon={<Activity className="h-10 w-10" aria-hidden />}
@@ -361,9 +548,9 @@ export default function DiagnosticPage() {
                 }}
               />
             </GlassPanel>
-          )}
-        </Stack>
-      </FadeIn>
+          </FadeIn>
+        )}
+      </div>
     </PageContainer>
   );
 }

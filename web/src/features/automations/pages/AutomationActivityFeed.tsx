@@ -1,65 +1,76 @@
 /**
- * AutomationActivityFeed — displays recent execution history + live SSE events.
+ * AutomationActivityFeed — recent execution history + live SSE events.
+ *
+ * Rendered as the context sidebar of the automations hero split, so the layout
+ * stays legible in a narrow column: each row wraps its metadata under the
+ * automation name instead of relying on horizontal space. Owns its own
+ * loading / empty / error states.
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { formatDurationMs } from '@/lib/dateFormat';
+import { formatDurationMs, formatRelativeTime } from '@/lib/dateFormat';
 import { fmtPercent } from '@/lib/numberFormat';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { GlassPanel, Badge, SectionTitle, Text, Caption } from '@/components/ui';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
   CheckCircle, XCircle, SkipForward, Activity, Clock, Wifi, WifiOff, Zap,
 } from 'lucide-react';
 import type { AutomationHistory, AutomationHistoryStats } from '@/api/types';
 import type { AutomationActivityEvent } from '@/hooks/useAutomationEvents';
 
-// ─── History item ─────────────────────────────────────────────────────────────
+// ─── Status → icon + toned accent (color is never the only signal) ────────────
 
-const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; label: string }> = {
-  success: { icon: CheckCircle, color: 'text-green-400', label: 'Succeeded' },
-  partial: { icon: CheckCircle, color: 'text-amber-400', label: 'Partial' },
-  failed: { icon: XCircle, color: 'text-red-400', label: 'Failed' },
-  skipped: { icon: SkipForward, color: 'text-[var(--text-muted)]', label: 'Skipped' },
-  test: { icon: Zap, color: 'text-neon-cyan', label: 'Test' },
-  undo: { icon: Clock, color: 'text-purple-400', label: 'Undo' },
-  running: { icon: Activity, color: 'text-blue-400', label: 'Running' },
-  cancelled: { icon: XCircle, color: 'text-[var(--text-muted)]', label: 'Cancelled' },
+const statusConfig: Record<string, { icon: typeof CheckCircle; color: string }> = {
+  success: { icon: CheckCircle, color: 'text-emerald-300' },
+  partial: { icon: CheckCircle, color: 'text-amber-300' },
+  failed: { icon: XCircle, color: 'text-rose-300' },
+  skipped: { icon: SkipForward, color: 'text-[var(--text-muted)]' },
+  test: { icon: Zap, color: 'text-cyan-300' },
+  undo: { icon: Clock, color: 'text-purple-300' },
+  running: { icon: Activity, color: 'text-indigo-300' },
+  cancelled: { icon: XCircle, color: 'text-[var(--text-muted)]' },
 };
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
+const liveTypeMap: Record<string, { icon: typeof CheckCircle; color: string }> = {
+  'automation.triggered': { icon: Zap, color: 'text-cyan-300' },
+  'automation.succeeded': { icon: CheckCircle, color: 'text-emerald-300' },
+  'automation.failed': { icon: XCircle, color: 'text-rose-300' },
+  'automation.skipped': { icon: SkipForward, color: 'text-[var(--text-muted)]' },
+  'automation.state_changed': { icon: Activity, color: 'text-purple-300' },
+};
+
+// ─── History item ─────────────────────────────────────────────────────────────
 
 function HistoryRow({ item }: { item: AutomationHistory }) {
   const cfg = statusConfig[item.status] ?? statusConfig.running;
   const Icon = cfg.icon;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-white/[0.02]">
-      <Icon className={cn('h-4 w-4 shrink-0', cfg.color)} />
+    <div className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-white/[0.02]">
+      <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', cfg.color)} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <span className="font-medium text-[var(--text-primary)]">{item.automation_name}</span>
+        <Text as="p" variant="body" className="truncate font-medium">
+          {item.automation_name}
+        </Text>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <Caption>{formatRelativeTime(item.triggered_at)}</Caption>
+          <Caption aria-hidden="true">·</Caption>
+          <Caption>{formatDurationMs(item.duration_ms)}</Caption>
+          {item.actions_total > 0 && (
+            <>
+              <Caption aria-hidden="true">·</Caption>
+              <Caption>{item.actions_succeeded ?? 0}/{item.actions_total}</Caption>
+            </>
+          )}
+        </div>
         {item.error && (
-          <span className="ml-2 text-xs text-red-400/80">— {item.error}</span>
+          <Text as="p" variant="bodySm" className="mt-0.5 truncate text-rose-300">
+            {item.error}
+          </Text>
         )}
       </div>
-      <span className="shrink-0 text-xs text-[var(--text-muted)]">{timeAgo(item.triggered_at)}</span>
-      <span className="shrink-0 text-xs text-[var(--text-muted)]">{formatDurationMs(item.duration_ms)}</span>
-      {item.actions_total > 0 && (
-        <span className="shrink-0 text-xs text-[var(--text-muted)]">
-          {item.actions_succeeded}/{item.actions_total}
-        </span>
-      )}
     </div>
   );
 }
@@ -67,32 +78,35 @@ function HistoryRow({ item }: { item: AutomationHistory }) {
 // ─── Live SSE event row ───────────────────────────────────────────────────────
 
 function LiveEventRow({ event }: { event: AutomationActivityEvent }) {
-  const typeMap: Record<string, { icon: typeof CheckCircle; color: string }> = {
-    'automation.triggered': { icon: Zap, color: 'text-neon-cyan' },
-    'automation.succeeded': { icon: CheckCircle, color: 'text-green-400' },
-    'automation.failed': { icon: XCircle, color: 'text-red-400' },
-    'automation.skipped': { icon: SkipForward, color: 'text-[var(--text-muted)]' },
-    'automation.state_changed': { icon: Activity, color: 'text-purple-400' },
-  };
-  const cfg = typeMap[event.type] ?? typeMap['automation.triggered'];
+  const { t } = useTranslation();
+  const cfg = liveTypeMap[event.type] ?? liveTypeMap['automation.triggered'];
   const Icon = cfg.icon;
-  const name = 'name' in event.data ? (event.data as { name: string }).name : `#${(event.data as { automation_id: number }).automation_id}`;
+  const suffix = event.type.replace('automation.', '');
+  const name = 'name' in event.data
+    ? (event.data as { name: string }).name
+    : `#${(event.data as { automation_id: number }).automation_id}`;
+  const errMsg = 'error' in event.data ? (event.data as { error?: string }).error : undefined;
+  const reason = 'reason' in event.data ? (event.data as { reason?: string }).reason : undefined;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-neon-cyan/[0.03] px-3 py-2 text-sm">
-      <Icon className={cn('h-4 w-4 shrink-0 animate-pulse', cfg.color)} />
+    <div className="flex items-start gap-2.5 rounded-lg bg-cyan-500/[0.05] px-2.5 py-2">
+      <Icon className={cn('mt-0.5 h-4 w-4 shrink-0 animate-pulse', cfg.color)} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <span className="font-medium text-[var(--text-primary)]">{name}</span>
-        {'error' in event.data && (event.data as { error?: string }).error && (
-          <span className="ml-2 text-xs text-red-400/80">— {(event.data as { error: string }).error}</span>
+        <div className="flex items-center gap-2">
+          <Text as="span" variant="body" className="truncate font-medium">
+            {name}
+          </Text>
+          <Badge variant="neutral" size="sm" className="shrink-0">
+            {t(`automations.event.${suffix}`, suffix)}
+          </Badge>
+        </div>
+        {errMsg && (
+          <Text as="p" variant="bodySm" className="mt-0.5 truncate text-rose-300">
+            {errMsg}
+          </Text>
         )}
-        {'reason' in event.data && (event.data as { reason?: string }).reason && (
-          <span className="ml-2 text-xs text-[var(--text-muted)]">— {(event.data as { reason: string }).reason}</span>
-        )}
+        {reason && <Caption className="mt-0.5 block truncate">{reason}</Caption>}
       </div>
-      <Badge variant="neutral">
-        {event.type.replace('automation.', '')}
-      </Badge>
     </div>
   );
 }
@@ -103,6 +117,8 @@ interface AutomationActivityFeedProps {
   history: AutomationHistory[];
   historyStats: AutomationHistoryStats | null;
   isLoading: boolean;
+  /** Error from the history query — surfaces a QueryError in place. */
+  error?: unknown;
   liveEvents: AutomationActivityEvent[];
   connectionState: 'connected' | 'reconnecting';
 }
@@ -111,72 +127,87 @@ export function AutomationActivityFeed({
   history,
   historyStats,
   isLoading,
+  error,
   liveEvents,
   connectionState,
 }: AutomationActivityFeedProps) {
   const { t } = useTranslation();
 
   const recentLive = useMemo(() => liveEvents.slice(0, 5), [liveEvents]);
-  const items = history;
+  const items = history ?? [];
 
   return (
     <FadeIn delay={0.1}>
-      <GlassPanel className="p-6">
+      <GlassPanel className="p-4 sm:p-5">
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-[var(--text-secondary)]" />
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-              {t('automations.recentActivity', 'Recent Activity')}
-            </h2>
+        <div className="mb-4 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Activity className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+            <SectionTitle>{t('automations.recentActivity', 'Recent Activity')}</SectionTitle>
             {connectionState === 'connected' ? (
-              <span className="flex items-center gap-1 text-xs text-green-400">
-                <Wifi className="h-3 w-3" />
-                {t('automations.live', 'Live')}
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5">
+                <Wifi className="h-3 w-3 shrink-0 text-emerald-300" aria-hidden="true" />
+                <Caption className="text-emerald-300">{t('automations.live', 'Live')}</Caption>
               </span>
-            ) : connectionState === 'reconnecting' ? (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse">
-                <WifiOff className="h-3 w-3" />
-                {t('automations.reconnecting', 'Reconnecting')}
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5">
+                <WifiOff className="h-3 w-3 shrink-0 animate-pulse text-amber-300" aria-hidden="true" />
+                <Caption className="text-amber-300">{t('automations.reconnecting', 'Reconnecting')}</Caption>
               </span>
-            ) : null}
+            )}
           </div>
           {historyStats && historyStats.total_executions > 0 && (
-            <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
-              <span>{historyStats.total_executions} {t('automations.totalRuns', 'total')}</span>
-              <span className="text-green-400">{fmtPercent(historyStats.success_rate, 0)} {t('automations.successRate', 'success')}</span>
-              <span>{formatDurationMs(historyStats.avg_duration_ms)} {t('automations.avgDuration', 'avg')}</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <Caption>
+                {t('automations.totalRunsCount', '{{count}} total', {
+                  count: historyStats.total_executions,
+                })}
+              </Caption>
+              <Caption className="text-emerald-300">
+                {t('automations.successRateValue', '{{value}} success', {
+                  value: fmtPercent(historyStats.success_rate ?? 0, 0),
+                })}
+              </Caption>
+              <Caption>
+                {t('automations.avgDurationValue', '{{value}} avg', {
+                  value: formatDurationMs(historyStats.avg_duration_ms),
+                })}
+              </Caption>
             </div>
           )}
         </div>
 
-        {/* Live events (SSE) */}
-        {recentLive.length > 0 && (
-          <div className="mb-3 space-y-1">
-            {recentLive.map((evt) => (
-              <LiveEventRow key={evt.id} event={evt} />
-            ))}
-          </div>
-        )}
-
-        {/* History items */}
-        {isLoading ? (
+        {/* Body — self-contained loading / error / live+history / empty */}
+        {error ? (
+          <QueryError error={error} />
+        ) : isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={`skel-${i}`} className="h-10 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : items.length > 0 ? (
-          <div className="space-y-0.5">
-            {items.map((item) => (
-              <HistoryRow key={item.id} item={item} />
+              <Skeleton key={`hist-skel-${i}`} className="h-10 w-full rounded-lg" />
             ))}
           </div>
         ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Activity className="h-8 w-8" />}
-            message={t('automations.noHistory', 'No execution history yet')}
-          />
+          <>
+            {recentLive.length > 0 && (
+              <div className="mb-3 space-y-1">
+                {recentLive.map((evt) => (
+                  <LiveEventRow key={evt.id} event={evt} />
+                ))}
+              </div>
+            )}
+            {items.length > 0 ? (
+              <div className="space-y-0.5">
+                {items.map((item) => (
+                  <HistoryRow key={item.id} item={item} />
+                ))}
+              </div>
+            ) : recentLive.length === 0 ? (
+              <EmptyState
+                icon={<Activity className="h-8 w-8" />}
+                message={t('automations.noHistory', 'No execution history yet')}
+              />
+            ) : null}
+          </>
         )}
       </GlassPanel>
     </FadeIn>

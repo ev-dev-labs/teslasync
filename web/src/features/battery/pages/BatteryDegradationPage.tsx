@@ -5,12 +5,12 @@ import {
   Shield, Activity, Calendar, AlertTriangle,
 } from 'lucide-react';
 
-import { PageContainer, Grid } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { VehicleSelect } from '@/components/forms';
 import {
-  GlassPanel, Badge, DataTable, type Column,
+  GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column,
 } from '@/components/ui';
-import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
+import { MetricCard, MetricBar, DataFreshnessAuto } from '@/components/data-display';
 import {
   RadialGauge, ChartContainer, ChartLegend, ChartTooltip, renderAnnotationLines,
   chartGrid, axisTickSm, CHART_COLORS,
@@ -19,7 +19,7 @@ import {
   AREA_DEFAULTS, areaGradient,
   ChartBrush,
 } from '@/components/charts';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
@@ -57,16 +57,20 @@ function scoreVariant(score: number): 'success' | 'warning' | 'danger' {
   return 'danger';
 }
 
+/* Toned 300-level accents for the risk icon + score glyph — neon hues are
+   reserved for chips/borders/dots, never for content per the design language. */
 function riskScoreColor(score: number): string {
   if (score <= 25) return 'text-emerald-300';
   if (score <= 50) return 'text-amber-300';
-  return 'text-red-500';
+  return 'text-rose-300';
 }
 
-function riskBarColor(score: number): string {
-  if (score <= 25) return 'bg-neon-green';
-  if (score <= 50) return 'bg-neon-amber';
-  return 'bg-red-500';
+/* Hex fill for the shared <MetricBar> gradient (it takes a color string,
+   not a Tailwind class). */
+function riskBarHex(score: number): string {
+  if (score <= 25) return '#10b981';
+  if (score <= 50) return '#f59e0b';
+  return '#ef4444';
 }
 
 function riskBadgeVariant(score: number): 'success' | 'warning' | 'danger' {
@@ -108,12 +112,13 @@ export default function BatteryDegradationPage() {
   const { vehicleId: activeId } = useSelectedVehicle();
   const activeIdStr = activeId != null ? String(activeId) : null;
 
-  /* Battery health analytics (for overview stats, history table) */
+  /* Battery health analytics (overview stats, range chart, history table). */
   const healthQuery = useBatteryHealthAnalytics(activeIdStr);
-  const { data, isLoading, error } = healthQuery;
+  const { data } = healthQuery;
 
-  /* Degradation data (for prediction, risk factors, trend) */
-  const { data: degradation } = useBatteryDegradation(activeIdStr);
+  /* Degradation data (prediction, risk factors, projection band). */
+  const degQuery = useBatteryDegradation(activeIdStr);
+  const { data: degradation } = degQuery;
 
   /* URL-persisted hidden-series state lets users declutter and share
      the projection view. */
@@ -130,7 +135,7 @@ export default function BatteryDegradationPage() {
     [unitPrefs.distance],
   );
 
-  /* Chart data */
+  /* Range-loss chart data */
   const rangeData = useMemo(() => {
     if (!data?.history || data.history.length === 0) return [];
     const originalRange = data.history[0].range_km;
@@ -174,6 +179,10 @@ export default function BatteryDegradationPage() {
   const cycleDepthScore = data
     ? Math.max(0, Math.round(100 - data.avg_depth_of_discharge))
     : 0;
+
+  const riskFactors = degradation?.risk_factors ?? [];
+  const recommendations = degradation?.recommendations ?? [];
+  const soh = data?.current_soh ?? 0;
 
   /* Table columns */
   const columns: Column<DegradationEntry>[] = useMemo(
@@ -229,116 +238,239 @@ export default function BatteryDegradationPage() {
 
   return (
     <PageContainer
-      title={t('Battery Degradation')}
-      subtitle={t('Health trends, degradation predictions, and charging habit impact')}
-      loading={isLoading}
-      error={error as Error | null}
+      title={t('battery.degradation.title', 'Battery Degradation')}
+      subtitle={t('battery.degradation.subtitle', 'Health trends, degradation predictions, and charging habit impact')}
       actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <VehicleSelect />
           {/* Battery health analytics derive from a daily cagg; force amber after 24h. */}
           <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
         </div>
       }
     >
-      {/* ── Summary Metrics ───────────────────────────── */}
+      {/* ── 1 · KPI band ─────────────────────────────────── */}
       <FadeIn>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <MetricCard
-            label={t('Current SOH')}
-            value={`${fmtNumber(data?.current_soh ?? 0)}%`}
-            icon={<Battery className="h-4 w-4" />}
-            color="green"
-            help={{
-              i18nKey: 'help.battery.soh',
-              defaultValue:
-                'State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.',
-            }}
-          />
-          <MetricCard
-            label={t('Estimated Capacity')}
-            value={`${fmtNumber(data?.estimated_capacity ?? 0)} kWh`}
-            icon={<Zap className="h-4 w-4" />}
-            color="cyan"
-            help={{
-              i18nKey: 'help.battery.capacity',
-              defaultValue:
-                'Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.',
-            }}
-          />
-          <MetricCard
-            label={t('Degradation Rate')}
-            value={`${fmtNumber(data?.degradation_rate_yr ?? 0)}%/yr`}
-            icon={<TrendingDown className="h-4 w-4" />}
-            color="purple"
-            help={{
-              i18nKey: 'help.battery.degradationRate',
-              defaultValue:
-                'Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).',
-            }}
-          />
-          <MetricCard
-            label={t('Battery Age')}
-            value={data ? ageLabel(data.battery_age_months, t) : '—'}
-            icon={<Calendar className="h-4 w-4" />}
-          />
-        </div>
+        <section aria-label={t('battery.degradation.summary', 'Battery health summary')}>
+          {healthQuery.error ? (
+            <GlassPanel className="p-4 sm:p-5">
+              <QueryError error={healthQuery.error} />
+            </GlassPanel>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              {healthQuery.isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={92} />)
+              ) : (
+                <>
+                  <MetricCard
+                    label={t('Current SOH')}
+                    value={`${fmtNumber(data?.current_soh ?? 0)}%`}
+                    icon={<Battery className="h-4 w-4" />}
+                    color="green"
+                    help={{
+                      i18nKey: 'help.battery.soh',
+                      defaultValue:
+                        'State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.',
+                    }}
+                  />
+                  <MetricCard
+                    label={t('Estimated Capacity')}
+                    value={`${fmtNumber(data?.estimated_capacity ?? 0)} kWh`}
+                    icon={<Zap className="h-4 w-4" />}
+                    color="cyan"
+                    help={{
+                      i18nKey: 'help.battery.capacity',
+                      defaultValue:
+                        'Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.',
+                    }}
+                  />
+                  <MetricCard
+                    label={t('Degradation Rate')}
+                    value={`${fmtNumber(data?.degradation_rate_yr ?? 0)}%/yr`}
+                    icon={<TrendingDown className="h-4 w-4" />}
+                    color="purple"
+                    help={{
+                      i18nKey: 'help.battery.degradationRate',
+                      defaultValue:
+                        'Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).',
+                    }}
+                  />
+                  <MetricCard
+                    label={t('Battery Age')}
+                    value={data ? ageLabel(data.battery_age_months, t) : '—'}
+                    icon={<Calendar className="h-4 w-4" />}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </section>
       </FadeIn>
 
-      {/* ── Health Gauge + Cycle Stats ────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <FadeIn delay={0.05}>
-          <GlassPanel className="flex flex-col items-center justify-center p-6">
-            <RadialGauge
-              value={data?.current_soh ?? 0}
-              max={100}
-              label={t('Battery Health')}
-              unit="%"
-              color={sohColor(data?.current_soh ?? 0)}
-              size={180}
-            />
-            <div className="mt-3 flex items-center gap-2">
-              <Badge
-                variant={
-                  (data?.current_soh ?? 0) > 90
-                    ? 'success'
-                    : (data?.current_soh ?? 0) >= 80
-                      ? 'warning'
-                      : 'danger'
-                }
-              >
-                {(data?.current_soh ?? 0) > 90
-                  ? t('Excellent')
-                  : (data?.current_soh ?? 0) >= 80
-                    ? t('Good')
-                    : t('Degraded')}
-              </Badge>
+      {/* ── 2 · Hero: Health gauge + Trend & Projection ──── */}
+      <FadeIn delay={0.05}>
+        <section
+          aria-label={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+          className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3"
+        >
+          {/* Health gauge */}
+          <GlassPanel className="flex flex-col p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Battery className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('battery.degradation.healthTitle', 'Battery Health')}
+            </PanelTitle>
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 py-2">
+              {healthQuery.isLoading ? (
+                <Skeleton height={200} />
+              ) : (
+                <>
+                  <RadialGauge
+                    value={soh}
+                    max={100}
+                    label={t('Current SOH')}
+                    unit="%"
+                    color={sohColor(soh)}
+                    size={180}
+                  />
+                  <Badge
+                    variant={soh > 90 ? 'success' : soh >= 80 ? 'warning' : 'danger'}
+                  >
+                    {soh > 90
+                      ? t('Excellent')
+                      : soh >= 80
+                        ? t('Good')
+                        : t('Degraded')}
+                  </Badge>
+                </>
+              )}
             </div>
           </GlassPanel>
-        </FadeIn>
 
-        <FadeIn delay={0.1}>
-          <GlassPanel className="p-6">
-            <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-              <TrendingDown className="h-4 w-4 text-neon-purple" />
+          {/* Trend & projection chart (hero — spans 2 cols on wide screens) */}
+          {healthQuery.error || degQuery.error ? (
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-3">
+                {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+              </PanelTitle>
+              <QueryError error={healthQuery.error ?? degQuery.error} />
+            </GlassPanel>
+          ) : (
+            /* chart-a11y:no-table composed projection chart with confidence band; SR users get summary metrics in the cards above */
+            <ChartContainer
+              title={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+              ariaLabel={t('battery.degradation.trendTitle.aria', 'Battery health trend and 95% confidence projection chart')}
+              height={300}
+              className="xl:col-span-2"
+              chartKey="battery-degradation-trend"
+              loading={healthQuery.isLoading || degQuery.isLoading}
+              empty={projectionChartData.length === 0}
+              annotations={{ vehicleId: activeId, scope: 'battery', chartId: 'battery-degradation-trend' }}
+            >
+              {({ annotations: chartAnnotations }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={projectionChartData}>
+                    {chartGrid}
+                    <defs>
+                      <linearGradient id="ciBand" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#a855f7" stopOpacity={0.18} />
+                        <stop offset="100%" stopColor="#a855f7" stopOpacity={0.04} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
+                    <Tooltip content={<ChartTooltip />} />
+                    <ChartLegend state={trendHidden} />
+                    <ReferenceLine
+                      y={80}
+                      stroke="#f59e0b"
+                      strokeDasharray="6 4"
+                      label={{ value: t('battery.degradation.warranty', '80% Warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
+                    />
+                    <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="6 4" />
+                    {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                    {/* Confidence band (stacked areas: transparent base + visible band) */}
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="confidence_low"
+                      stackId="ci"
+                      stroke="none"
+                      fill="transparent"
+                      fillOpacity={0}
+                      legendType="none"
+                      connectNulls={false}
+                    />
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="confidence_band"
+                      stackId="ci"
+                      stroke="none"
+                      fill="url(#ciBand)"
+                      name={t('battery.degradation.confidence', '95% Confidence')}
+                      connectNulls={false}
+                      hide={trendHidden.isHidden('confidence_band')}
+                    />
+                    <Line
+                      {...AREA_DEFAULTS}
+                      dataKey="health"
+                      name={t('battery.degradation.actualHealth', 'Actual Health %')}
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      dot={{ fill: '#10b981', r: 3 }}
+                      connectNulls={false}
+                      hide={trendHidden.isHidden('health')}
+                    />
+                    <Line
+                      {...AREA_DEFAULTS}
+                      dataKey="projected"
+                      name={t('battery.degradation.projected', 'Projected %')}
+                      stroke="#a855f7"
+                      strokeDasharray="8 4"
+                      connectNulls={false}
+                      hide={trendHidden.isHidden('projected')}
+                    />
+                    {/*
+                      Brush enables zooming into specific months of the
+                      projection. Standalone chart — no ChartTimeRangeProvider
+                      needed since the range chart below uses a different X-axis
+                      dataKey ("date" vs "label").
+                    */}
+                    <ChartBrush dataKey="label" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
+            </ChartContainer>
+          )}
+        </section>
+      </FadeIn>
+
+      {/* ── 3 · Prediction + Charging Habits Impact ──────── */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
+          {/* Prediction (spans 2 cols on wide screens) */}
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-purple-300" aria-hidden="true" />
               {t('battery.degradation.prediction', 'Prediction')}
-            </div>
-            {degradation?.prediction?.has_enough_data ? (
+            </PanelTitle>
+            {degQuery.isLoading ? (
+              <Skeleton height={220} />
+            ) : degQuery.error ? (
+              <QueryError error={degQuery.error} />
+            ) : degradation?.prediction?.has_enough_data ? (
               <div className="space-y-4">
-                <div className="rounded-xl p-4 bg-neon-purple/[0.08] border border-neon-purple/15">
-                  <p className="text-sm text-[var(--text-secondary)]">
+                <div className="rounded-xl border border-neon-purple/15 bg-neon-purple/[0.08] p-4">
+                  <Text as="p" variant="bodySm">
                     {t('battery.degradation.predictionDesc', 'At current rate, battery reaches')}{' '}
-                    <span className="font-bold text-amber-300">80%</span>{' '}
+                    <Text weight="semibold" className="text-amber-300">80%</Text>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
-                    <span className="font-bold text-purple-300">
+                    <Text weight="semibold" className="text-purple-300">
                       ~{fmtNumber(degradation.prediction.years_to_80_pct ?? 0)} {t('battery.degradation.years', 'years')}
-                    </span>
+                    </Text>
                     {degradation.prediction.predicted_date && (
                       <> ({degradation.prediction.predicted_date})</>
                     )}
-                  </p>
+                  </Text>
                 </div>
-                <Grid cols={{ default: 2 }} gap={3}>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                   <MetricCard
                     label={t('battery.degradation.rate', 'Degradation Rate')}
                     value={`${fmtNumber(Math.abs(degradation.prediction.slope_per_year))}%/yr`}
@@ -357,8 +489,6 @@ export default function BatteryDegradationPage() {
                       degradation.stress_level === 'Medium' ? 'amber' : 'red'
                     }
                   />
-                </Grid>
-                <div className="grid grid-cols-2 gap-4">
                   <MetricCard
                     label={t('battery.degradation.totalCycles', 'Total Cycles')}
                     value={fmtNumber(data?.total_cycles ?? degradation.current_cycles ?? 0)}
@@ -382,327 +512,261 @@ export default function BatteryDegradationPage() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl p-4 bg-white/[0.02] text-center">
-                <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-neon-amber/50" />
-                <p className="text-sm text-[var(--text-secondary)]">
-                  {t('battery.degradation.needMore', 'Need more data points to generate prediction (minimum 3 snapshots required)')}
-                </p>
-              </div>
+              <EmptyState /* no-action: prediction needs a minimum snapshot count that isn't met yet */
+                icon={<AlertTriangle className="h-8 w-8" />}
+                message={t('battery.degradation.needMore', 'Need more data points to generate prediction (minimum 3 snapshots required)')}
+              />
             )}
           </GlassPanel>
-        </FadeIn>
-      </div>
 
-      {/* ── Health Trend & Projection ─────────────────── */}
-      {projectionChartData.length > 0 ? (
-        <FadeIn delay={0.15}>
-          {/* chart-a11y:no-table composed projection chart with confidence band; SR users get summary metrics in the cards above */}
-          <ChartContainer
-            title={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
-            ariaLabel={t('battery.degradation.trendTitle.aria', 'Battery health trend and 95% confidence projection chart')}
-            height={300}
-            chartKey="battery-degradation-trend"
-            annotations={{ vehicleId: activeId, scope: 'battery', chartId: 'battery-degradation-trend' }}
-          >
-            {({ annotations: chartAnnotations }) => (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={projectionChartData}>
-                  {chartGrid}
-                  <defs>
-                    <linearGradient id="ciBand" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.18} />
-                      <stop offset="100%" stopColor="#a855f7" stopOpacity={0.04} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
-                  <Tooltip content={<ChartTooltip />} />
-                  <ChartLegend state={trendHidden} />
-                  <ReferenceLine
-                    y={80}
-                    stroke="#f59e0b"
-                    strokeDasharray="6 4"
-                    label={{ value: t('battery.degradation.warranty', '80% Warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
-                  />
-                  <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="6 4" />
-                  {renderAnnotationLines(chartAnnotations, (ts) => ts)}
-                  {/* Confidence band (stacked areas: transparent base + visible band) */}
-                  <Area
-                    {...AREA_DEFAULTS}
-                    dataKey="confidence_low"
-                    stackId="ci"
-                    stroke="none"
-                    fill="transparent"
-                    fillOpacity={0}
-                    legendType="none"
-                    connectNulls={false}
-                  />
-                  <Area
-                    {...AREA_DEFAULTS}
-                    dataKey="confidence_band"
-                    stackId="ci"
-                    stroke="none"
-                    fill="url(#ciBand)"
-                    name={t('battery.degradation.confidence', '95% Confidence')}
-                    connectNulls={false}
-                    hide={trendHidden.isHidden('confidence_band')}
-                  />
-                  <Line
-                    {...AREA_DEFAULTS}
-                    dataKey="health"
-                    name={t('battery.degradation.actualHealth', 'Actual Health %')}
-                    stroke="#10b981"
-                    strokeWidth={2.5}
-                    dot={{ fill: '#10b981', r: 3 }}
-                    connectNulls={false}
-                    hide={trendHidden.isHidden('health')}
-                  />
-                  <Line
-                    {...AREA_DEFAULTS}
-                    dataKey="projected"
-                    name={t('battery.degradation.projected', 'Projected %')}
-                    stroke="#a855f7"
-                    strokeDasharray="8 4"
-                    connectNulls={false}
-                    hide={trendHidden.isHidden('projected')}
-                  />
-                  {/*
-                    Brush enables zooming into specific months of the
-                    projection. Standalone chart — no ChartTimeRangeProvider
-                    needed since the range chart below uses a different X-axis
-                    dataKey ("date" vs "label").
-                  */}
-                  <ChartBrush dataKey="label" />
-                </ComposedChart>
-              </ResponsiveContainer>
+          {/* Charging habits impact */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('battery.degradation.chargingImpact', 'Charging Habits Impact')}
+            </PanelTitle>
+            {degQuery.isLoading ? (
+              <Skeleton height={120} />
+            ) : degQuery.error ? (
+              <QueryError error={degQuery.error} />
+            ) : degradation ? (
+              <AlertBanner
+                variant={
+                  degradation.stress_level === 'Low' ? 'success' :
+                  degradation.stress_level === 'Medium' ? 'warning' : 'danger'
+                }
+                icon={<Thermometer className="h-5 w-5" aria-hidden="true" />}
+                title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${habits?.deep_discharge_count ?? 0} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${degradation.stress_level ?? t('battery.degradation.unknown', 'Unknown')} ${t('battery.degradation.stressLabel', 'stress')}`}
+              >
+                {degradation.stress_level === 'Low'
+                  ? t('battery.degradation.stressLow', 'Your charging habits are optimal for battery longevity.')
+                  : degradation.stress_level === 'Medium'
+                    ? t('battery.degradation.stressMedium', 'Consider reducing fast charging frequency and avoiding full charges when possible.')
+                    : t('battery.degradation.stressHigh', 'High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.')}
+              </AlertBanner>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when charging history is missing */
+                icon={<Zap className="h-8 w-8" />}
+                message={t('battery.degradation.noStress', 'Charging impact will appear once charging history is available.')}
+              />
             )}
-          </ChartContainer>
-        </FadeIn>
-      ) : (
-        <Skeleton height={280} />
-      )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
 
-      {/* ── Range Loss Chart ──────────────────────────── */}
-      {rangeData.length > 0 ? (
-        <FadeIn delay={0.2}>
-          <GlassPanel className="p-6">
-            <div className="mb-4 text-sm font-semibold">
+      {/* ── 4 · Analysis: Range loss + Risk factors ──────── */}
+      <FadeIn delay={0.15}>
+        <section className="grid grid-cols-1 gap-3 sm:gap-4 2xl:grid-cols-2">
+          {/* Range loss over time */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Battery className="h-4 w-4 text-indigo-300" aria-hidden="true" />
               {t('battery.degradation.rangeLoss', 'Range Loss Over Time')}
-            </div>
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={rangeData}>
-                {chartGrid}
-                <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
-                <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                {areaGradient('origRange', CHART_COLORS[0], 0.25)}
-                {areaGradient('curRange', CHART_COLORS[2])}
-                <Area
-                  {...AREA_DEFAULTS}
-                  dataKey="original"
-                  name={t('Original Range')}
-                  stroke={CHART_COLORS[0]}
-                  fill="url(#origRange)"
-                />
-                <Area
-                  {...AREA_DEFAULTS}
-                  dataKey="current"
-                  name={t('Current Range')}
-                  stroke={CHART_COLORS[2]}
-                  fill="url(#curRange)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            </PanelTitle>
+            {healthQuery.isLoading ? (
+              <Skeleton height={240} />
+            ) : healthQuery.error ? (
+              <QueryError error={healthQuery.error} />
+            ) : rangeData.length > 0 ? (
+              <div className="h-56 sm:h-64 xl:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={rangeData}>
+                    {chartGrid}
+                    <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend />
+                    {areaGradient('origRange', CHART_COLORS[0], 0.25)}
+                    {areaGradient('curRange', CHART_COLORS[2])}
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="original"
+                      name={t('Original Range')}
+                      stroke={CHART_COLORS[0]}
+                      fill="url(#origRange)"
+                    />
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="current"
+                      name={t('Current Range')}
+                      stroke={CHART_COLORS[2]}
+                      fill="url(#curRange)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+                icon={<Battery className="h-8 w-8" />}
+                message={t('battery.degradation.noRange', 'Range data will appear once history is available.')}
+              />
+            )}
           </GlassPanel>
-        </FadeIn>
-      ) : (
-        <FadeIn delay={0.2}>
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Battery className="h-12 w-12" />}
-            message={t('battery.degradation.noRange', 'Range data will appear once history is available.')}
-          />
-        </FadeIn>
-      )}
 
-      {/* ── Risk Factors (Scored Gauges) ────────────── */}
-      <FadeIn delay={0.25}>
-        <GlassPanel className="p-6">
-          <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-            <Shield className="h-4 w-4 text-neon-amber" />
-            {t('battery.degradation.riskFactors', 'Risk Factors')}
-          </div>
-          {(degradation?.risk_factors ?? []).length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {(degradation?.risk_factors ?? []).map((rf: RiskFactorData) => {
-                const Icon = riskFactorIcon(rf.name);
-                return (
-                  <GlassPanel key={rf.name} className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Icon className={cn('h-4 w-4', riskScoreColor(rf.score))} />
-                        <span className="text-xs font-medium capitalize">
-                          {t(`battery.degradation.risk.${rf.name}`, rf.name.replace(/_/g, ' '))}
-                        </span>
+          {/* Risk factors (scored bars) */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              {t('battery.degradation.riskFactors', 'Risk Factors')}
+            </PanelTitle>
+            {degQuery.isLoading ? (
+              <Skeleton height={200} />
+            ) : degQuery.error ? (
+              <QueryError error={degQuery.error} />
+            ) : riskFactors.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
+                {riskFactors.map((rf: RiskFactorData) => {
+                  const Icon = riskFactorIcon(rf.name);
+                  return (
+                    <GlassPanel key={rf.name} className="p-4">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Icon className={cn('h-4 w-4 shrink-0', riskScoreColor(rf.score))} aria-hidden="true" />
+                          <Text variant="bodySm" className="truncate capitalize">
+                            {t(`battery.degradation.risk.${rf.name}`, rf.name.replace(/_/g, ' '))}
+                          </Text>
+                        </div>
+                        <Badge variant={riskBadgeVariant(rf.score)} size="sm">
+                          {rf.label}
+                        </Badge>
                       </div>
-                      <Badge variant={riskBadgeVariant(rf.score)} size="sm">
-                        {rf.label}
-                      </Badge>
+                      <MetricBar
+                        label={t('battery.degradation.riskScore', 'Risk score')}
+                        value={rf.score}
+                        max={100}
+                        color={riskBarHex(rf.score)}
+                        sublabel={`${rf.score}/100`}
+                      />
+                      <Caption className="mt-2 block">{rf.detail}</Caption>
+                    </GlassPanel>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when charging history is missing */
+                icon={<Shield className="h-8 w-8" />}
+                message={t('battery.degradation.noRiskData', 'Risk data will appear once charging history is available.')}
+              />
+            )}
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* ── 5 · Guidance: Recommendations + Health factors ─ */}
+      <FadeIn delay={0.2}>
+        <section className="grid grid-cols-1 gap-3 sm:gap-4 2xl:grid-cols-2">
+          {/* Recommendations */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              {t('battery.degradation.recommendations', 'Recommendations')}
+            </PanelTitle>
+            {degQuery.isLoading ? (
+              <Skeleton height={120} />
+            ) : degQuery.error ? (
+              <QueryError error={degQuery.error} />
+            ) : recommendations.length > 0 ? (
+              <ul className="space-y-3">
+                {recommendations.map((rec, i) => (
+                  <li key={i} className="flex items-start gap-3 rounded-xl border border-neon-amber/10 bg-neon-amber/[0.05] p-3">
+                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                    <Text as="p" variant="body">{rec}</Text>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces once usage patterns exist */
+                icon={<AlertTriangle className="h-8 w-8" />}
+                message={t('battery.degradation.noRecommendations', 'Recommendations will appear based on your usage patterns.')}
+              />
+            )}
+          </GlassPanel>
+
+          {/* Battery health factors */}
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              {t('battery.degradation.healthFactors', 'Battery Health Factors')}
+            </PanelTitle>
+            {healthQuery.isLoading ? (
+              <Skeleton height={140} />
+            ) : healthQuery.error ? (
+              <QueryError error={healthQuery.error} />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
+                {/* Charge habits */}
+                <GlassPanel className="p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <Text variant="bodySm" className="font-medium">{t('Charge Habits')}</Text>
+                    <Badge variant={scoreVariant(data?.charge_habits_score ?? 0)} size="sm">
+                      {fmtNumber(data?.charge_habits_score ?? 0)}/100
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between gap-2">
+                      <Caption>{t('Fast Charge')}</Caption>
+                      <Caption className="font-medium">{fmtNumber(data?.fast_charge_pct ?? 0)}%</Caption>
                     </div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex-1 relative h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                        <div
-                          className={cn('h-full rounded-full transition-all', riskBarColor(rf.score))}
-                          style={{ width: `${rf.score}%` }}
-                        />
-                      </div>
-                      <span className={cn('text-sm font-bold tabular-nums', riskScoreColor(rf.score))}>
-                        {rf.score}
-                      </span>
+                    <div className="flex justify-between gap-2">
+                      <Caption>{t('Full Charge')}</Caption>
+                      <Caption className="font-medium">{fmtNumber(data?.full_charge_pct ?? 0)}%</Caption>
                     </div>
-                    <p className="text-[10px] text-[var(--text-secondary)]">{rf.detail}</p>
-                  </GlassPanel>
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Shield className="h-8 w-8" />}
-              message={t('battery.degradation.noRiskData', 'Risk data will appear once charging history is available.')}
-            />
-          )}
-        </GlassPanel>
+                  </div>
+                </GlassPanel>
+
+                {/* Temperature exposure */}
+                <GlassPanel className="p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <Text variant="bodySm" className="font-medium">{t('Temperature Exposure')}</Text>
+                    <Badge variant={scoreVariant(data?.temp_exposure_score ?? 0)} size="sm">
+                      {fmtNumber(data?.temp_exposure_score ?? 0)}/100
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Thermometer className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
+                    <Caption>{t('Lower is better for longevity')}</Caption>
+                  </div>
+                </GlassPanel>
+
+                {/* Cycle depth */}
+                <GlassPanel className="p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <Text variant="bodySm" className="font-medium">{t('Cycle Depth')}</Text>
+                    <Badge variant={scoreVariant(cycleDepthScore)} size="sm">
+                      {fmtNumber(cycleDepthScore)}/100
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between gap-2">
+                      <Caption>{t('Avg DoD')}</Caption>
+                      <Caption className="font-medium">
+                        {fmtNumber(data?.avg_depth_of_discharge ?? 0)}%
+                      </Caption>
+                    </div>
+                  </div>
+                </GlassPanel>
+              </div>
+            )}
+          </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* ── Recommendations ────────────────────────────── */}
-      <FadeIn delay={0.27}>
-        <GlassPanel className="p-6">
-          <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-            <AlertTriangle className="h-4 w-4 text-neon-amber" />
-            {t('battery.degradation.recommendations', 'Recommendations')}
-          </div>
-          {(degradation?.recommendations ?? []).length > 0 ? (
-            <div className="space-y-3">
-              {(degradation?.recommendations ?? []).map((rec, i) => (
-                <div key={i} className="flex items-start gap-3 rounded-xl p-3 bg-neon-amber/[0.05] border border-neon-amber/10">
-                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-neon-amber" />
-                  <p className="text-sm text-[var(--text-primary)]">{rec}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<AlertTriangle className="h-8 w-8" />}
-              message={t('battery.degradation.noRecommendations', 'Recommendations will appear based on your usage patterns.')}
-            />
-          )}
-        </GlassPanel>
-      </FadeIn>
-
-      {/* ── Charging Habits Impact ─────────────────────── */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="p-6">
-          <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-            <Zap className="h-4 w-4 text-neon-green" />
-            {t('battery.degradation.chargingImpact', 'Charging Habits Impact')}
-          </div>
-          <AlertBanner
-            variant={
-              degradation?.stress_level === 'Low' ? 'success' :
-              degradation?.stress_level === 'Medium' ? 'warning' : 'danger'
-            }
-            icon={<Thermometer className="h-5 w-5" />}
-            title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${habits?.deep_discharge_count ?? 0} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${degradation?.stress_level ?? 'Unknown'} ${t('battery.degradation.stressLabel', 'stress')}`}
-          >
-            {degradation?.stress_level === 'Low'
-              ? t('battery.degradation.stressLow', 'Your charging habits are optimal for battery longevity.')
-              : degradation?.stress_level === 'Medium'
-              ? t('battery.degradation.stressMedium', 'Consider reducing fast charging frequency and avoiding full charges when possible.')
-              : t('battery.degradation.stressHigh', 'High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.')}
-          </AlertBanner>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* ── Battery Health Factors ────────────────────── */}
+      {/* ── 6 · Detail: Degradation history table ────────── */}
       <FadeIn delay={0.25}>
-        <GlassPanel className="p-6">
-          <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-            <Shield className="h-4 w-4 text-neon-amber" />
-            {t('Battery Health Factors')}
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {/* Charge habits */}
-            <GlassPanel className="p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium">
-                  {t('Charge Habits')}
-                </span>
-                <Badge variant={scoreVariant(data?.charge_habits_score ?? 0)} size="sm">
-                  {fmtNumber(data?.charge_habits_score ?? 0)}/100
-                </Badge>
-              </div>
-              <div className="space-y-1 text-xs text-[var(--text-muted)]">
-                <div className="flex justify-between">
-                  <span>{t('Fast Charge')}</span>
-                  <span className="font-medium">{fmtNumber(data?.fast_charge_pct ?? 0)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('Full Charge')}</span>
-                  <span className="font-medium">{fmtNumber(data?.full_charge_pct ?? 0)}%</span>
-                </div>
-              </div>
-            </GlassPanel>
-
-            {/* Temperature exposure */}
-            <GlassPanel className="p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium">
-                  {t('Temperature Exposure')}
-                </span>
-                <Badge variant={scoreVariant(data?.temp_exposure_score ?? 0)} size="sm">
-                  {fmtNumber(data?.temp_exposure_score ?? 0)}/100
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                <Thermometer className="h-3 w-3" />
-                {t('Lower is better for longevity')}
-              </div>
-            </GlassPanel>
-
-            {/* Cycle depth */}
-            <GlassPanel className="p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium">
-                  {t('Cycle Depth')}
-                </span>
-                <Badge variant={scoreVariant(cycleDepthScore)} size="sm">
-                  {fmtNumber(cycleDepthScore)}/100
-                </Badge>
-              </div>
-              <div className="space-y-1 text-xs text-[var(--text-muted)]">
-                <div className="flex justify-between">
-                  <span>{t('Avg DoD')}</span>
-                  <span className="font-medium">
-                    {fmtNumber(data?.avg_depth_of_discharge ?? 0)}%
-                  </span>
-                </div>
-              </div>
-            </GlassPanel>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* ── Degradation History Table ─────────────────── */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="p-6">
-          <div className="mb-4 text-sm font-semibold">
-            {t('Degradation History')}
-          </div>
-          {data?.history && data.history.length > 0 ? (
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('battery.degradation.history', 'Degradation History')}
+          </PanelTitle>
+          {healthQuery.isLoading ? (
+            <Skeleton height={240} />
+          ) : healthQuery.error ? (
+            <QueryError error={healthQuery.error} />
+          ) : (data?.history?.length ?? 0) > 0 ? (
             <DataTable
               tableId="battery:degradation-history"
               columns={columns}
-              data={data.history}
+              data={data?.history ?? []}
               keyExtractor={(row: DegradationEntry) =>
                 `${row.date}-${row.odometer}`
               }
@@ -711,7 +775,7 @@ export default function BatteryDegradationPage() {
               pagination
             />
           ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            <EmptyState /* no-action: transient empty state — surfaces when no snapshots exist yet */
               icon={<Activity className="h-8 w-8" />}
               message={t('battery.degradation.noHistory', 'No degradation records found.')}
               className="py-8"

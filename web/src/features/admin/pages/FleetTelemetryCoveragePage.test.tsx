@@ -19,6 +19,10 @@ import type { ReactNode } from 'react'
 
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
+  // The page's error state renders the shared <QueryError>, which imports
+  // isApiError from the client. Stub it so the mock module is complete and
+  // QueryError falls to its generic network-error branch.
+  isApiError: () => false,
 }))
 
 vi.mock('react-i18next', async () => {

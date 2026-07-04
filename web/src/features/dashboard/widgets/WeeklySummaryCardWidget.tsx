@@ -78,7 +78,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
             <span className="text-2xl font-bold text-[var(--text-primary)]">
               {fmtNumber(metrics.distance, 0)}
             </span>
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit} {t('widget.weeklySummary.thisWeek', 'this week')}
             </span>
           </div>
@@ -142,7 +142,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
           </div>
 
           {!isWide && !isTall && (
-            <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] px-1">
+            <div className="flex items-center justify-between text-2xs text-[var(--text-muted)] px-1">
               <InlineMetric
                 icon={<DollarSign className="h-3 w-3" />}
                 value={formatCurrency(metrics.cost)}

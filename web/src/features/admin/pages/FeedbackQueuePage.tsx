@@ -1,29 +1,44 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Badge, Button, DataTable, GlassPanel, Input, MaskedValue, Select, type Column } from '@/components/ui'
+import {
+  Button,
+  Caption,
+  Code,
+  DataTable,
+  GlassPanel,
+  PanelTitle,
+  Select,
+  Text,
+  type Column,
+} from '@/components/ui'
 import { PageContainer } from '@/components/layout'
-import { EmptyState, QueryError, Spinner } from '@/components/feedback'
+import { EmptyState, QueryError, Skeleton, Spinner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { UserCell } from '@/components/data-display'
 import { Icons } from '@/lib/icons'
+import { type NeonColor } from '@/lib/tokens'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { useFeedbackList, useUpdateFeedback } from '@/api/hooks/useFeedback'
 import { useDateFormat } from '@/hooks/useDateFormat'
-import { AIFeedbackQueueTriage } from '@/components/ai/AIFeedbackQueueTriage'
-import type {
-  FeedbackCategory,
-  FeedbackEntry,
-  FeedbackStatus,
-} from '@/api/types'
+import { useFeedbackList, useUpdateFeedback } from '@/api/hooks/useFeedback'
+import type { FeedbackCategory, FeedbackEntry, FeedbackStatus } from '@/api/types'
+import {
+  BridgeStatus,
+  CategoryBadge,
+  CategoryMix,
+  FeedbackExpansion,
+  FeedbackStatTile,
+  StatusBadge,
+  StatusDistribution,
+} from '../components/feedback-queue'
 
-// admin feedback queue page.
+// Admin feedback queue — modern-ui full-width redesign.
 //
-// Lists user_feedback rows with filter (status, category) + paged.
-// Row click expands to show body + recent_errors JSON. Inline actions:
-// - Change status (new → triaged → closed)
-// - Paste GitHub issue URL manually (or use Forward to GitHub when
-//   the server-side bridge is configured).
+// A KPI overview band, a triage-progress / category-mix insights bento, and a
+// full-width filterable + paged table whose rows expand to the report body,
+// redacted metadata, captured errors, and the deterministic triage controls.
+// Overview counts come from lightweight filtered list calls (limit:1) so the
+// KPIs reflect the whole queue, independent of the table's active filter.
 
 const PAGE_SIZE = 25
 
@@ -36,17 +51,56 @@ export default function FeedbackQueuePage() {
   const [categoryFilter, setCategoryFilter] = useState<'' | FeedbackCategory>('')
   const [page, setPage] = useState(0)
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useFeedbackList({
+  const listQuery = useFeedbackList({
     status: statusFilter || undefined,
     category: categoryFilter || undefined,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   })
+  const { data, isLoading, isError, error, refetch, isFetching } = listQuery
   const update = useUpdateFeedback()
+
+  // Whole-queue counts (independent of the table filter). Each call is a cheap
+  // limit:1 read whose `.total` is the count for that facet.
+  const newQ = useFeedbackList({ status: 'new', limit: 1 })
+  const triagedQ = useFeedbackList({ status: 'triaged', limit: 1 })
+  const closedQ = useFeedbackList({ status: 'closed', limit: 1 })
+  const bugQ = useFeedbackList({ category: 'bug', limit: 1 })
+  const featureQ = useFeedbackList({ category: 'feature', limit: 1 })
+  const otherQ = useFeedbackList({ category: 'other', limit: 1 })
+
+  const counts = {
+    new: newQ.data?.total,
+    triaged: triagedQ.data?.total,
+    closed: closedQ.data?.total,
+    bug: bugQ.data?.total,
+    feature: featureQ.data?.total,
+    other: otherQ.data?.total,
+  }
+  const statusTotal = (counts.new ?? 0) + (counts.triaged ?? 0) + (counts.closed ?? 0)
+  const categoryTotal = (counts.bug ?? 0) + (counts.feature ?? 0) + (counts.other ?? 0)
+  const statusLoading = newQ.isLoading || triagedQ.isLoading || closedQ.isLoading
+  const statusError = newQ.error || triagedQ.error || closedQ.error
+  const categoryLoading = bugQ.isLoading || featureQ.isLoading || otherQ.isLoading
+  const categoryError = bugQ.error || featureQ.error || otherQ.error
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
   const bridgeEnabled = Boolean(data?.github_bridge_enabled)
+  const bridgeRepo = data?.github_repo ?? ''
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const statTiles = useMemo(
+    () => [
+      { key: 'total', label: t('feedback.queue.kpi.total', 'Total feedback'), icon: <Icons.fileText className="h-5 w-5" />, color: 'cyan' as NeonColor, value: statusTotal, loading: statusLoading },
+      { key: 'new', label: t('feedback.queue.status.new', 'New'), icon: <Icons.sparkles className="h-5 w-5" />, color: 'amber' as NeonColor, value: counts.new, loading: newQ.isLoading },
+      { key: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), icon: <Icons.success className="h-5 w-5" />, color: 'green' as NeonColor, value: counts.triaged, loading: triagedQ.isLoading },
+      { key: 'closed', label: t('feedback.queue.status.closed', 'Closed'), icon: <Icons.archive className="h-5 w-5" />, color: 'blue' as NeonColor, value: counts.closed, loading: closedQ.isLoading },
+      { key: 'bug', label: t('feedback.category.bug', 'Bug report'), icon: <Icons.bug className="h-5 w-5" />, color: 'red' as NeonColor, value: counts.bug, loading: bugQ.isLoading },
+      { key: 'feature', label: t('feedback.category.feature', 'Feature request'), icon: <Icons.lightbulb className="h-5 w-5" />, color: 'purple' as NeonColor, value: counts.feature, loading: featureQ.isLoading },
+    ],
+    [t, statusTotal, statusLoading, counts.new, counts.triaged, counts.closed, counts.bug, counts.feature, newQ.isLoading, triagedQ.isLoading, closedQ.isLoading, bugQ.isLoading, featureQ.isLoading],
+  )
 
   const statusOptions = useMemo(
     () => [
@@ -72,84 +126,153 @@ export default function FeedbackQueuePage() {
       {
         key: 'created_at',
         header: t('feedback.queue.col.created', 'Created'),
-        render: (row: FeedbackEntry) => formatDateTime(row.created_at),
+        render: (row) => (
+          <Text variant="body" className="whitespace-nowrap">{formatDateTime(row.created_at)}</Text>
+        ),
         sortable: true,
       },
       {
         key: 'category',
         header: t('feedback.queue.col.category', 'Category'),
-        render: (row: FeedbackEntry) => <CategoryBadge category={row.category} />,
+        render: (row) => <CategoryBadge category={row.category} />,
         sortable: true,
       },
       {
         key: 'title',
         header: t('feedback.queue.col.title', 'Title'),
-        render: (row: FeedbackEntry) => (
-          <span className="text-[var(--text-primary)]">{row.title || '—'}</span>
-        ),
+        render: (row) => <Text variant="body">{row.title || '—'}</Text>,
         sortable: true,
       },
       {
         key: 'page_route',
         header: t('feedback.queue.col.pageRoute', 'Page'),
-        render: (row: FeedbackEntry) =>
-          row.page_route ? (
-            <code className="text-xs text-[var(--text-secondary)]">{row.page_route}</code>
-          ) : (
-            <span className="text-xs text-[var(--text-muted)]">—</span>
-          ),
+        render: (row) => (row.page_route ? <Code>{row.page_route}</Code> : <Caption>—</Caption>),
       },
       {
         key: 'reporter',
         header: t('feedback.queue.col.reporter', 'Reporter'),
-        render: (row: FeedbackEntry) => (
-          <UserCell
-            user={{
-              id: row.submitter_subject || null,
-              email: row.user_email || null,
-            }}
-          />
+        render: (row) => (
+          <UserCell user={{ id: row.submitter_subject || null, email: row.user_email || null }} />
         ),
       },
       {
         key: 'status',
         header: t('feedback.queue.col.status', 'Status'),
-        render: (row: FeedbackEntry) => <StatusBadge status={row.status} />,
+        render: (row) => <StatusBadge status={row.status} />,
         sortable: true,
       },
       {
         key: 'github_issue_url',
         header: t('feedback.queue.col.github', 'GitHub'),
-        render: (row: FeedbackEntry) =>
+        render: (row) =>
           row.github_issue_url ? (
             <a
               href={row.github_issue_url}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-xs text-cyan-300 underline hover:text-cyan-200"
+              className="inline-flex items-center gap-1 text-xs text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
             >
+              <Icons.externalLink className="h-3 w-3" aria-hidden="true" />
               {t('feedback.queue.openIssue', 'Open issue')}
             </a>
           ) : (
-            <span className="text-xs text-[var(--text-muted)]">—</span>
+            <Caption>—</Caption>
           ),
       },
     ],
     [t, formatDateTime],
   )
 
-  const renderExpanded = (row: FeedbackEntry) => (
-    <FeedbackExpansion row={row} bridgeEnabled={bridgeEnabled} onUpdate={update.mutate} updating={update.isPending} />
+  const actions = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => refetch()}
+      disabled={isFetching}
+      aria-label={t('common.refresh', 'Refresh')}
+    >
+      {isFetching ? <Spinner size="sm" /> : <Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+      <span className="ml-1">{t('common.refresh', 'Refresh')}</span>
+    </Button>
   )
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-
   return (
-    <PageContainer title={t('feedback.queue.title', 'Feedback queue')}>
+    <PageContainer
+      title={t('feedback.queue.title', 'Feedback queue')}
+      subtitle={t('feedback.queue.subtitle', 'Triage user-submitted bug reports and feature requests')}
+      actions={actions}
+    >
+      {/* 1 — KPI band: whole-queue counts, reflows 2 → 3 → 6 columns */}
       <FadeIn>
-        <GlassPanel>
-          <div className="flex flex-wrap items-end gap-3 mb-4">
-            <div className="min-w-[180px] flex-1">
+        <section
+          aria-label={t('feedback.queue.kpis', 'Queue overview')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
+        >
+          {statTiles.map((tile) => (
+            <FeedbackStatTile
+              key={tile.key}
+              label={tile.label}
+              icon={tile.icon}
+              color={tile.color}
+              value={tile.value}
+              loading={tile.loading}
+            />
+          ))}
+        </section>
+      </FadeIn>
+
+      {/* 2 — Insights bento: triage progress (hero) + category mix / bridge */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Icons.workflow className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('feedback.queue.triageProgress', 'Triage progress')}
+            </PanelTitle>
+            {statusLoading ? (
+              <Skeleton height={140} />
+            ) : statusError ? (
+              <QueryError error={statusError} onRetry={() => refetch()} />
+            ) : statusTotal === 0 ? (
+              <EmptyState
+                icon={<Icons.workflow className="h-8 w-8" aria-hidden="true" />}
+                message={t('feedback.queue.noStatusData', 'No feedback to triage yet.')}
+              />
+            ) : (
+              <StatusDistribution counts={counts} total={statusTotal} />
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Icons.pieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('feedback.queue.categoryMix', 'Category mix')}
+            </PanelTitle>
+            {categoryLoading ? (
+              <Skeleton height={120} />
+            ) : categoryError ? (
+              <QueryError error={categoryError} onRetry={() => refetch()} />
+            ) : categoryTotal === 0 ? (
+              <EmptyState
+                icon={<Icons.pieChart className="h-8 w-8" aria-hidden="true" />}
+                message={t('feedback.queue.noCategoryData', 'No categories to show yet.')}
+              />
+            ) : (
+              <CategoryMix counts={counts} />
+            )}
+            <BridgeStatus enabled={bridgeEnabled} repo={bridgeRepo} loading={isLoading} />
+          </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 3 — Detail band: filterable + paged queue table (full width) */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <PanelTitle className="mr-auto self-center">
+              {t('feedback.queue.tableTitle', 'Queue')}
+            </PanelTitle>
+            <div className="min-w-[160px] flex-1 sm:max-w-[220px]">
               <Select
                 label={t('feedback.queue.filter.status', 'Status')}
                 value={statusFilter}
@@ -160,7 +283,7 @@ export default function FeedbackQueuePage() {
                 options={statusOptions}
               />
             </div>
-            <div className="min-w-[180px] flex-1">
+            <div className="min-w-[160px] flex-1 sm:max-w-[220px]">
               <Select
                 label={t('feedback.queue.filter.category', 'Category')}
                 value={categoryFilter}
@@ -171,36 +294,16 @@ export default function FeedbackQueuePage() {
                 options={categoryOptions}
               />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => refetch()}
-              disabled={isFetching}
-              aria-label={t('common.refresh', 'Refresh')}
-            >
-              {isFetching ? <Spinner size="sm" /> : <Icons.refresh className="h-4 w-4" />}
-              <span className="ml-1">{t('common.refresh', 'Refresh')}</span>
-            </Button>
-            {!bridgeEnabled && (
-              <p className="basis-full text-xs text-[var(--text-muted)]">
-                {t(
-                  'feedback.queue.bridgeDisabled',
-                  'GitHub Issues bridge is not configured on this server (set TESLASYNC_GITHUB_REPO + TESLASYNC_GITHUB_TOKEN to enable forwarding).',
-                )}
-              </p>
-            )}
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Spinner />
-            </div>
+            <Skeleton height={44} lines={6} />
           ) : isError ? (
             <QueryError error={error} onRetry={() => refetch()} />
           ) : items.length === 0 ? (
             // no-action: feedback arrives by user submission, no admin CTA possible
             <EmptyState
-              icon={<Icons.bug className="h-10 w-10 text-[var(--text-muted)]" />}
+              icon={<Icons.bug className="h-10 w-10" aria-hidden="true" />}
               title={t('feedback.queue.empty', 'No feedback yet')}
               message={t('feedback.queue.emptyMessage', 'User-submitted bug reports and feature requests will appear here.')}
             />
@@ -213,17 +316,24 @@ export default function FeedbackQueuePage() {
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('feedback.queue.empty', 'No feedback yet')}
                 expandable
-                renderExpanded={renderExpanded}
+                renderExpanded={(row) => (
+                  <FeedbackExpansion
+                    row={row}
+                    bridgeEnabled={bridgeEnabled}
+                    onUpdate={update.mutate}
+                    updating={update.isPending}
+                  />
+                )}
                 compact
               />
-              <div className="flex items-center justify-between mt-3 text-xs text-[var(--text-secondary)]">
-                <span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <Caption>
                   {t('feedback.queue.pageOf', 'Page {{page}} of {{total}} ({{count}} entries)', {
                     page: page + 1,
                     total: totalPages,
                     count: total,
                   })}
-                </span>
+                </Caption>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
@@ -248,162 +358,5 @@ export default function FeedbackQueuePage() {
         </GlassPanel>
       </FadeIn>
     </PageContainer>
-  )
-}
-
-function CategoryBadge({ category }: { category: FeedbackCategory }) {
-  const { t } = useTranslation()
-  const variant: Record<FeedbackCategory, 'danger' | 'info' | 'neutral'> = {
-    bug: 'danger',
-    feature: 'info',
-    other: 'neutral',
-  }
-  const label: Record<FeedbackCategory, string> = {
-    bug: t('feedback.category.bug', 'Bug report'),
-    feature: t('feedback.category.feature', 'Feature request'),
-    other: t('feedback.category.other', 'Other / question'),
-  }
-  return <Badge variant={variant[category]}>{label[category]}</Badge>
-}
-
-function StatusBadge({ status }: { status: FeedbackStatus }) {
-  const { t } = useTranslation()
-  const variant: Record<FeedbackStatus, 'success' | 'warning' | 'neutral'> = {
-    new: 'warning',
-    triaged: 'success',
-    closed: 'neutral',
-  }
-  const label: Record<FeedbackStatus, string> = {
-    new: t('feedback.queue.status.new', 'New'),
-    triaged: t('feedback.queue.status.triaged', 'Triaged'),
-    closed: t('feedback.queue.status.closed', 'Closed'),
-  }
-  return <Badge variant={variant[status]}>{label[status]}</Badge>
-}
-
-interface FeedbackExpansionProps {
-  row: FeedbackEntry
-  bridgeEnabled: boolean
-  onUpdate: ReturnType<typeof useUpdateFeedback>['mutate']
-  updating: boolean
-}
-
-function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: FeedbackExpansionProps) {
-  const { t } = useTranslation()
-  const [issueUrl, setIssueUrl] = useState(row.github_issue_url ?? '')
-
-  const statusOptions = [
-    { value: 'new', label: t('feedback.queue.status.new', 'New') },
-    { value: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged') },
-    { value: 'closed', label: t('feedback.queue.status.closed', 'Closed') },
-  ]
-
-  return (
-    <div className="space-y-4 p-4 bg-[var(--surface-1)]/40">
-      <div>
-        <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
-          {t('feedback.queue.expand.body', 'Report body')}
-        </h4>
-        <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">{row.body || '—'}</p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 text-xs text-[var(--text-secondary)]">
-        <div>
-          <span className="font-semibold">{t('feedback.queue.expand.appVersion', 'App version')}: </span>
-          <code className="text-[var(--text-primary)]">{row.app_version || '—'}</code>
-        </div>
-        <div>
-          <span className="font-semibold">{t('feedback.queue.expand.userAgent', 'User agent')}: </span>
-          <span className="text-[var(--text-primary)]">{row.user_agent || '—'}</span>
-        </div>
-        <div>
-          <span className="font-semibold">{t('feedback.queue.expand.submitter', 'Submitter')}: </span>
-          <code className="text-[var(--text-primary)]">{row.submitter_subject || row.submitter_ip || '—'}</code>
-        </div>
-        <div>
-          <span className="font-semibold">{t('feedback.queue.expand.userEmail', 'Email')}: </span>
-          {row.user_email ? (
-            <MaskedValue
-              value={row.user_email}
-              variant="email"
-              ariaLabel={t('feedback.queue.maskedEmail', 'Reporter email, click to reveal')}
-              copyable
-              auditOnReveal
-            />
-          ) : (
-            <span className="text-[var(--text-primary)]">—</span>
-          )}
-        </div>
-      </div>
-
-      {row.recent_errors !== null && row.recent_errors !== undefined ? (
-        <details>
-          <summary className="cursor-pointer text-xs text-[var(--text-secondary)]">
-            {t('feedback.queue.expand.recentErrors', 'Recent frontend errors')}
-          </summary>
-          <pre className="mt-2 max-h-64 overflow-auto rounded bg-[var(--surface-2)] p-2 text-xs text-[var(--text-primary)]">
-            {JSON.stringify(row.recent_errors, null, 2)}
-          </pre>
-        </details>
-      ) : null}
-
-      {row.console_tail ? (
-        <details>
-          <summary className="cursor-pointer text-xs text-[var(--text-secondary)]">
-            {t('feedback.queue.expand.consoleTail', 'Console tail')}
-          </summary>
-          <pre className="mt-2 max-h-64 overflow-auto rounded bg-[var(--surface-2)] p-2 text-xs text-[var(--text-primary)] whitespace-pre-wrap">
-            {row.console_tail}
-          </pre>
-        </details>
-      ) : null}
-
-      <div className="flex flex-wrap items-end gap-3 border-t border-[var(--glass-border)] pt-3">
-        <div className="min-w-[160px]">
-          <Select
-            label={t('feedback.queue.action.changeStatus', 'Status')}
-            value={row.status}
-            onChange={(e) => onUpdate({ id: row.id, update: { status: e.target.value as FeedbackStatus } })}
-            options={statusOptions}
-            disabled={updating}
-          />
-        </div>
-        <div className="min-w-[260px] flex-1">
-          <Input
-            label={t('feedback.queue.action.githubUrl', 'GitHub issue URL')}
-            value={issueUrl}
-            onChange={(e) => setIssueUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo/issues/123"
-            disabled={updating}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onUpdate({ id: row.id, update: { github_issue_url: issueUrl } })}
-          disabled={updating || issueUrl === (row.github_issue_url ?? '')}
-        >
-          {t('feedback.queue.action.saveUrl', 'Save URL')}
-        </Button>
-        {bridgeEnabled && !row.github_issue_url && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => onUpdate({ id: row.id, update: { forward_to_github: true } })}
-            disabled={updating}
-          >
-            <Icons.bug className="h-4 w-4 mr-1" />
-            {t('feedback.queue.action.forward', 'Forward to GitHub')}
-          </Button>
-        )}
-      </div>
-
-      {/* Feedback queue triage AI advisor.
-          Renders only when ai_mode is on AND the feedback-queue-triage
-          toggle is enabled. Propose-only: never persists; the manual
-          controls above remain the sole write path (ADR-015 §I3 + §I8). */}
-      <AIFeedbackQueueTriage feedbackId={row.id} />
-    </div>
   )
 }

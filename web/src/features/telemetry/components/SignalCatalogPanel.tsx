@@ -15,7 +15,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ArrowUpDown, Filter, Plus, RefreshCw, X } from 'lucide-react';
 
-import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, SectionTitle, type Column } from '@/components/ui';
 import { StatCard, TimeStamp } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -172,18 +172,18 @@ export function SignalCatalogPanel({
       {
         key: 'signal',
         header: t('signalGap.signal', 'Signal'),
-        render: (signal) => <span className="font-mono text-xs text-[var(--text-primary)]">{signal.name}</span>,
+        render: (signal) => <Code>{signal.name}</Code>,
         visibleOnMobile: true,
       },
       {
         key: 'value',
         header: t('signalGap.lastValue', 'Last Value'),
-        render: (signal) => <span className="font-mono text-xs text-[var(--text-secondary)] max-w-[200px] truncate block">{signal.value}</span>,
+        render: (signal) => <Text mono size="xs" color="secondary" className="block max-w-[200px] truncate">{signal.value}</Text>,
       },
       {
         key: 'lastUpdated',
         header: t('signalGap.lastUpdated', 'Last Updated'),
-        render: (signal) => <span className="text-xs text-[var(--text-secondary)] whitespace-nowrap">{signal.timestamp ? formatDateTime(signal.timestamp) : '—'}</span>,
+        render: (signal) => <Text variant="bodySm" className="whitespace-nowrap">{signal.timestamp ? formatDateTime(signal.timestamp) : '—'}</Text>,
       },
       {
         key: 'timeSince',
@@ -191,7 +191,7 @@ export function SignalCatalogPanel({
         className: 'text-right',
         render: (signal) => {
           const style = getCatalogStalenessStyle(signal.staleness, !!signal.timestamp);
-          return <span className={cn('font-mono text-xs whitespace-nowrap', style.text)}>{signal.timestamp ? formatStaleness(signal.staleness) : '—'}</span>;
+          return <Text mono size="xs" className={cn('whitespace-nowrap', style.text)}>{signal.timestamp ? formatStaleness(signal.staleness) : '—'}</Text>;
         },
       },
     );
@@ -213,12 +213,12 @@ export function SignalCatalogPanel({
 
       <GlassPanel className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          {title ? <span className="section-title">{title}</span> : null}
-          <span className="ml-auto flex items-center gap-2 text-[10px] text-[var(--text-muted)]">
+          {title ? <SectionTitle>{title}</SectionTitle> : null}
+          <Text as="span" size="2xs" color="muted" className="ml-auto flex items-center gap-2">
             {headerExtra}
             <RefreshCw className="inline h-3 w-3" />
             {t('signalGap.refreshInterval', 'Refreshes every 5s')}
-          </span>
+          </Text>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -288,17 +288,17 @@ export function SignalCatalogPanel({
               />
             </div>
           ) : (
-            <p className="text-center py-12 text-[var(--text-muted)]">
+            <Text as="p" color="muted" className="py-12 text-center">
               {signals.length === 0
                 ? t('signalGap.noData', 'No signal data available')
                 : t('signalGap.noMatch', 'No signals match current filters')}
-            </p>
+            </Text>
           )}
 
           {dataUpdatedAt > 0 && (
-            <p className="mt-3 text-[10px] text-[var(--text-muted)] text-right">
+            <Text as="p" size="2xs" color="muted" className="mt-3 text-right">
               {t('signalGap.lastRefreshed', 'Last refreshed')}: <TimeStamp value={new Date(dataUpdatedAt)} format="relative" />
-            </p>
+            </Text>
           )}
         </div>
       </GlassPanel>

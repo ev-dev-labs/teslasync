@@ -2,9 +2,11 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, ty
 import { getApiBase } from '@/lib/resilience'
 import { request } from '@/api/client'
 import { broadcast, subscribe } from '@/lib/broadcast'
+import { themePresets, themeCategories } from './themePresets'
 
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
-export type ModeId = 'dark' | 'light' | 'oled' | 'midnight' | 'auto' | 'sunset' | 'nord'
+// Core modes are always present; `string` allows the 130+ generated display-mode presets.
+export type ModeId = 'dark' | 'light' | 'oled' | 'midnight' | 'auto' | 'sunset' | 'nord' | (string & {})
 
 export interface ColorTheme {
   id: ThemeId
@@ -28,6 +30,8 @@ export interface ModeTheme {
   textSecondary: string
   textMuted: string
   colorScheme: 'dark' | 'light'
+  /** Grouping label for the display-mode picker (e.g. 'Editor', 'Core'). */
+  category?: string
 }
 
 function hexToRGB(hex: string): string {
@@ -35,6 +39,20 @@ function hexToRGB(hex: string): string {
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   return `${r}, ${g}, ${b}`
+}
+
+/**
+ * High-contrast foreground (near-black or white) for text/icons sitting on a
+ * solid accent fill. Bright accents (neon cyan, matrix green, solar amber) get
+ * dark text; dark accents (tesla red, royal purple) get white — so primary
+ * buttons stay readable whichever accent the user picks.
+ */
+function readableForeground(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return luminance > 0.6 ? '#0a0a0f' : '#ffffff'
 }
 
 const defaultCustomPrimary = '#00b4d8'
@@ -101,7 +119,7 @@ const themes: Record<ThemeId, ColorTheme> = {
   'custom': buildCustomTheme(loadCustomColors().primary, loadCustomColors().accent),
 }
 
-const modes: Record<ModeId, ModeTheme> = {
+const builtinModes: Record<string, ModeTheme> = {
   dark: {
     id: 'dark',
     name: 'Dark',
@@ -202,6 +220,17 @@ const modes: Record<ModeId, ModeTheme> = {
   },
 }
 
+// Merge the 130+ generated presets with the core built-ins. Built-ins win any id
+// collision (they carry hand-tuned palettes); every core mode is tagged 'Core'.
+for (const m of Object.values(builtinModes)) m.category = 'Core'
+const presetModes: Record<string, ModeTheme> = Object.fromEntries(
+  themePresets.map(p => [p.id, p]),
+)
+const modes: Record<string, ModeTheme> = { ...presetModes, ...builtinModes }
+
+/** Category display order for the picker: Core first, then generated families. */
+export const modeCategoryOrder: string[] = ['Core', ...themeCategories]
+
 interface ThemeContextValue {
   themeId: ThemeId
   modeId: ModeId
@@ -228,6 +257,10 @@ function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
   root.style.setProperty('--theme-primary-rgb', theme.primaryRGB)
   root.style.setProperty('--theme-accent', theme.accent)
   root.style.setProperty('--theme-accent-rgb', theme.accentRGB)
+  // Contrasting foreground for solid accent fills (primary buttons, FAB, etc.)
+  // so text/icons stay legible whichever accent the user picks.
+  root.style.setProperty('--theme-on-primary', readableForeground(theme.primary))
+  root.style.setProperty('--theme-on-accent', readableForeground(theme.accent))
   root.style.setProperty('--bg', mode.bg)
   root.style.setProperty('--surface-1', mode.surface1)
   root.style.setProperty('--surface-2', mode.surface2)
@@ -296,7 +329,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const resolvedMode = modeId === 'auto' ? (systemDark ? modes.dark : modes.light) : modes[modeId]
+  const resolvedMode = modeId === 'auto' ? (systemDark ? modes.dark : modes.light) : (modes[modeId] ?? modes.dark)
   const mode = resolvedMode
 
   useEffect(() => {

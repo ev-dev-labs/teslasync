@@ -1,17 +1,20 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import { GlassPanel, DataTable, type Column } from '@/components/ui';
+import { DataTable, Text, type Column } from '@/components/ui';
 import { Currency } from '@/components/data-display';
 import { fmtInt, fmtWithUnit } from '@/lib/numberFormat';
-import { cn } from '@/lib/cn';
+import { CostSection } from './CostSection';
 import type { MonthlyBucket } from './types';
 
 interface MonthlyCostTableProps {
   data: MonthlyBucket[];
+  isLoading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
-export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
+export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCostTableProps) {
   const { t } = useTranslation();
   const [tableSortKey, setTableSortKey] = useState('month');
   const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
@@ -23,7 +26,7 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
         header: t('costAnalysis.table.month', 'Month'),
         sortable: true,
         render: (row) => (
-          <span className="font-medium text-white">{row.month}</span>
+          <Text weight="medium" color="primary">{row.month}</Text>
         ),
       },
       {
@@ -43,7 +46,7 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
         header: t('costAnalysis.table.cost', 'Cost'),
         sortable: true,
         render: (row) => (
-          <Currency value={row.cost} className="text-cyan-400" />
+          <Currency value={row.cost} className="text-cyan-300" />
         ),
       },
       {
@@ -57,7 +60,7 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
         header: t('costAnalysis.table.gasEquiv', 'Gas Equiv'),
         sortable: true,
         render: (row) => (
-          <Currency value={row.gasEquiv} className="text-red-400" />
+          <Currency value={row.gasEquiv} className="text-rose-300" />
         ),
       },
       {
@@ -65,14 +68,12 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
         header: t('costAnalysis.table.savings', 'Savings'),
         sortable: true,
         render: (row) => (
-          <span
-            className={cn(
-              'font-medium',
-              row.savings >= 0 ? 'text-green-400' : 'text-red-400',
-            )}
+          <Text
+            weight="medium"
+            className={row.savings >= 0 ? 'text-emerald-300' : 'text-rose-300'}
           >
             {row.savings >= 0 ? '+' : ''}<Currency value={row.savings} />
-          </span>
+          </Text>
         ),
       },
     ],
@@ -102,30 +103,29 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
   };
 
   return (
-    <GlassPanel className="p-4">
-      <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-        <BarChart3 className="h-4 w-4 text-cyan-400" />
-        {t('costAnalysis.table.title', 'Monthly Cost Breakdown')}
-      </h3>
-      {sortedData.length > 0 ? (
-        <DataTable<MonthlyBucket>
-          tableId="charging:cost-monthly"
-          columns={columns}
-          data={sortedData}
-          keyExtractor={(row) => row.month}
-          sortKey={tableSortKey}
-          sortDir={tableSortDir}
-          onSort={handleSort}
-          compact
-          pagination
-          columnVisibility
-          columnReorder
-        />
-      ) : (
-        <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
-          {t('costAnalysis.table.noData', 'No monthly data available')}
-        </div>
-      )}
-    </GlassPanel>
+    <CostSection
+      title={t('costAnalysis.table.title', 'Monthly Cost Breakdown')}
+      icon={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      isLoading={isLoading}
+      error={error}
+      onRetry={onRetry}
+      isEmpty={sortedData.length === 0}
+      emptyMessage={t('costAnalysis.table.noData', 'No monthly data available')}
+      skeletonHeight={200}
+    >
+      <DataTable<MonthlyBucket>
+        tableId="charging:cost-monthly"
+        columns={columns}
+        data={sortedData}
+        keyExtractor={(row) => row.month}
+        sortKey={tableSortKey}
+        sortDir={tableSortDir}
+        onSort={handleSort}
+        compact
+        pagination
+        columnVisibility
+        columnReorder
+      />
+    </CostSection>
   );
 }

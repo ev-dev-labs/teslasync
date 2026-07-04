@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Button as UiButton, Badge } from '@/components/ui';
+import { GlassPanel, Button as UiButton, Badge, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -59,14 +59,14 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
           <Icon className="h-5 w-5 text-cyan-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] truncate">
+          <Text as="h3" size="sm" weight="semibold" color="primary" className="truncate">
             {preset.name}
-          </h3>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+          </Text>
+          <Text as="p" variant="bodySm" className="mt-0.5">
             {triggerLabel
               ? t(triggerLabel.key, triggerLabel.fallback)
               : t('automations.builder.noTrigger', 'No trigger configured')}
-          </p>
+          </Text>
         </div>
         <Badge variant="neutral" size="sm">
           {t('automations.presets.actionCount', '{{count}} actions', {
@@ -75,9 +75,9 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
         </Badge>
       </div>
 
-      <p className="text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-2">
+      <Text as="p" variant="bodySm" className="leading-relaxed line-clamp-2">
         {preset.description}
-      </p>
+      </Text>
 
       <UiButton
         size="sm"

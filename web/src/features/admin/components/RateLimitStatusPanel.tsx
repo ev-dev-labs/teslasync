@@ -189,7 +189,7 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
           data-testid="rate-limit-error"
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
-          <Text variant="bodySm" className="text-rose-200">
+          <Text variant="error">
             {t(
               'rateLimitStatus.error',
               'Could not load rate-limit status. Check API logs and try again.',

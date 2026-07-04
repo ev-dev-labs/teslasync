@@ -66,17 +66,17 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
   const feedItems = useMemo<EventFeedItem[]>(
     () =>
       list.map((item) => {
-        const trackTitle = item.title ?? '—';
-        const artist = item.artist ?? '—';
-        const source = item.source ?? '';
-        const isPlaying = (item.playbackStatus ?? '').toLowerCase() === 'playing';
+        const trackTitle = item.now_playing_title ?? '—';
+        const artist = item.now_playing_artist ?? '—';
+        const source = item.playback_source ?? '';
+        const isPlaying = (item.playback_status ?? '').toLowerCase() === 'playing';
 
         return {
           id: item.id,
           icon: <Music className="h-3.5 w-3.5" />,
           title: `🎵 ${trackTitle} — ${artist}`,
           subtitle: source ? sourceLabel(source) : undefined,
-          timestamp: item.timestamp ?? new Date(0).toISOString(),
+          timestamp: item.created_at ?? new Date(0).toISOString(),
           color: isPlaying ? '#22c55e' : '#6b7280',
           severity: 'info' as const,
         };
@@ -100,8 +100,8 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
       {isCompact ? (
         lastTrack ? (
           <CompactView
-            title={lastTrack.title ?? '—'}
-            artist={lastTrack.artist ?? '—'}
+            title={lastTrack.now_playing_title ?? '—'}
+            artist={lastTrack.now_playing_artist ?? '—'}
             t={t}
           />
         ) : (

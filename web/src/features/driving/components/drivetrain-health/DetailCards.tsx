@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { KVList } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -11,11 +12,12 @@ import type { DrivetrainHealthData, DrivingStats } from '@/types/driving';
 import { displayTemp } from './helpers';
 
 interface DetailCardsProps {
-  health: DrivetrainHealthData;
+  health: DrivetrainHealthData | null | undefined;
   peakPower: number;
   avgPowerMax: number;
   minRegenPower: number;
   stats: DrivingStats | undefined;
+  loading?: boolean;
 }
 
 export function DetailCards({
@@ -24,6 +26,7 @@ export function DetailCards({
   avgPowerMax,
   minRegenPower,
   stats,
+  loading = false,
 }: DetailCardsProps) {
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit, formatEnergy } = useUnits();
@@ -34,14 +37,22 @@ export function DetailCards({
       <Grid cols={{ default: 1, md: 2 }} gap={4}>
         <Card>
           <CardHeader title={t('drivetrain.temperatures', 'Temperature Details')} />
-          <KVList
-            items={[
-              { label: t('drivetrain.frontMotorTemp', 'Front Motor Temp'), value: displayTemp(health.frontMotorTempC, formatTemperature) },
-              { label: t('drivetrain.rearMotorTemp', 'Rear Motor Temp'), value: displayTemp(health.rearMotorTempC, formatTemperature) },
-              { label: t('drivetrain.inverterTemp', 'Inverter Temp'), value: displayTemp(health.inverterTempC, formatTemperature) },
-              { label: t('drivetrain.batteryTemp', 'Battery Temp'), value: displayTemp(health.batteryTempC, formatTemperature) },
-            ]}
-          />
+          {loading ? (
+            <Skeleton lines={4} />
+          ) : !health ? (
+            <EmptyState /* no-action: transient — awaiting first health telemetry */
+              message={t('drivetrain.noHealth', 'No drivetrain health data available yet')}
+            />
+          ) : (
+            <KVList
+              items={[
+                { label: t('drivetrain.frontMotorTemp', 'Front Motor Temp'), value: displayTemp(health.frontMotorTempC, formatTemperature) },
+                { label: t('drivetrain.rearMotorTemp', 'Rear Motor Temp'), value: displayTemp(health.rearMotorTempC, formatTemperature) },
+                { label: t('drivetrain.inverterTemp', 'Inverter Temp'), value: displayTemp(health.inverterTempC, formatTemperature) },
+                { label: t('drivetrain.batteryTemp', 'Battery Temp'), value: displayTemp(health.batteryTempC, formatTemperature) },
+              ]}
+            />
+          )}
         </Card>
 
         <Card>

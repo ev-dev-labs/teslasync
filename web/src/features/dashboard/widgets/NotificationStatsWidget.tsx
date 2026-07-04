@@ -166,11 +166,11 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
         {stats ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(deliveryRate, 1)}%</span>
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.notificationStats.deliveryRate', 'Delivery Rate')}
             </span>
             {failed > 0 && (
-              <span className="text-[10px] text-red-400 mt-0.5">
+              <span className="text-2xs text-red-400 mt-0.5">
                 {fmtInt(failed)} {t('widget.notificationStats.failedLabel', 'failed')}
               </span>
             )}

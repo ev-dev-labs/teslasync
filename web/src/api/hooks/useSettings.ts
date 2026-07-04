@@ -4,13 +4,14 @@ import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-import type { AppSettings, GasPriceStatus } from '@/api/types';
+import type { AppSettings, GasPriceStatus, GasPriceHistory } from '@/api/types';
 
 export const settingsKeys = {
   settings: ['settings'] as const,
   authStatus: ['auth-status'] as const,
   vehicles: ['vehicles'] as const,
   gasPriceStatus: ['gas-price-status'] as const,
+  gasPriceHistory: ['gas-price-history'] as const,
   carPrefs: (vehicleId: number | null) => ['car-prefs', vehicleId] as const,
   dashboardLayouts: ['dashboard-layouts'] as const,
 };
@@ -148,11 +149,25 @@ export function useGasPriceStatus(enabled = true) {
   });
 }
 
+export function useGasPriceHistory(enabled = true) {
+  return useQuery({
+    queryKey: settingsKeys.gasPriceHistory,
+    queryFn: ({ signal }) => request<GasPriceHistory[]>('/gas-price/history', { signal }),
+    enabled,
+    retry: false,
+    staleTime: STALE_TIMES.STANDARD,
+    select: (rows) => safeArray(rows),
+  });
+}
+
 export function usePollGasPrice() {
+  const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<{ status: string }>('/gas-price/poll', { method: 'POST' }),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: settingsKeys.gasPriceStatus });
+      qc.invalidateQueries({ queryKey: settingsKeys.gasPriceHistory });
       success('toast.settings.gasPrice.poll.success', 'Gas prices updated');
     },
     onError: (e) => error(e, 'toast.settings.gasPrice.poll.error', 'Failed to poll gas prices'),

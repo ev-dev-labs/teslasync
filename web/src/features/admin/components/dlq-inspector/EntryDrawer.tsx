@@ -20,10 +20,12 @@ import { Send } from 'lucide-react';
 
 import {
   Button,
+  Caption,
   CopyButton,
   Drawer,
   GlassPanel,
   Tabs,
+  Text,
   type TabItem,
 } from '@/components/ui';
 import { KVList, TimeStamp } from '@/components/data-display';
@@ -132,7 +134,7 @@ export function EntryDrawer({
               items={[
                 {
                   label: t('admin.dlq.drawer.id', 'ID'),
-                  value: <span className="font-mono">{head.id}</span>,
+                  value: <Text mono>{head.id}</Text>,
                 },
                 {
                   label: t('admin.dlq.drawer.arrivedAt', 'Arrived'),
@@ -140,22 +142,22 @@ export function EntryDrawer({
                 },
                 {
                   label: t('admin.dlq.drawer.dlqTopic', 'DLQ topic'),
-                  value: <span className="font-mono text-xs">{head.dlq_topic || '—'}</span>,
+                  value: <Text mono size="xs">{head.dlq_topic || '—'}</Text>,
                 },
                 {
                   label: t('admin.dlq.drawer.reason', 'Reason'),
-                  value: <span className="font-mono text-xs">{head.parsed_reason || '—'}</span>,
+                  value: <Text mono size="xs">{head.parsed_reason || '—'}</Text>,
                 },
                 {
                   label: t('admin.dlq.drawer.vin', 'VIN'),
-                  value: <span className="font-mono text-xs">{head.parsed_vin ?? '—'}</span>,
+                  value: <Text mono size="xs">{head.parsed_vin ?? '—'}</Text>,
                 },
                 {
                   label: t('admin.dlq.drawer.sourceTopic', 'Source topic'),
                   value: (
-                    <span className="font-mono text-xs">
+                    <Text mono size="xs">
                       {head.parsed_source_topic ?? '—'}
-                    </span>
+                    </Text>
                   ),
                 },
                 {
@@ -167,11 +169,7 @@ export function EntryDrawer({
                 },
                 {
                   label: t('admin.dlq.drawer.parseError', 'Parse error'),
-                  value: (
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {head.parse_error || '—'}
-                    </span>
-                  ),
+                  value: <Caption>{head.parse_error || '—'}</Caption>,
                 },
               ]}
             />
@@ -189,7 +187,11 @@ export function EntryDrawer({
                   }
                 />
               </div>
-              <pre className="max-h-80 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] p-3 text-xs text-[var(--text-primary)]">
+              <Text
+                as="pre"
+                variant="code"
+                className="max-h-80 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] p-3"
+              >
                 {activeTab === 'inner'
                   ? innerText ||
                     t(
@@ -203,7 +205,7 @@ export function EntryDrawer({
                       '(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)',
                       { n: head.raw_payload_size },
                     )}
-              </pre>
+              </Text>
             </div>
           </GlassPanel>
         </div>

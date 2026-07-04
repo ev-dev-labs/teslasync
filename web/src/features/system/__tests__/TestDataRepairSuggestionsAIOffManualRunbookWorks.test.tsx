@@ -24,7 +24,9 @@
 //   - The page title (Data Repair).
 //   - The four MetricCards (Total Stale, Stale Charging, Stale
 //     Drives, Status).
-//   - The two tab buttons (Charging Sessions, Drives).
+//   - Both worklist panels (Charging Sessions, Drives) rendered
+//     side-by-side (the redesign replaced the tab switcher with a
+//     full-width two-column bento).
 //   - The deterministic empty-state when the inventory is empty.
 //
 // The HTTP POST /api/v1/ai/system/data-repair/draft 404-in-off-
@@ -174,7 +176,7 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
   it('TestDataRepairSuggestionsAIOffManualRunbookWorks: DataRepairPage in off mode shows the deterministic stale-session manual-runbook surface (baseline intact, ADR-015 §I3)', async () => {
     // Baseline-coexistence proof: with ai_mode='off', DataRepairPage MUST
     // continue to render every deterministic surface — page title, metric
-    // cards, tab buttons — exactly as it would without the AI feature. The AI
+    // cards, both worklist panels — exactly as it would without the AI feature. The AI
     // suggestions section MUST be
     // absent from the DOM (ADR-015 §I5 + §I6).
     mockUseSettings.mockReturnValue(
@@ -209,12 +211,16 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     expect(screen.getAllByText(/Stale Charging/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Stale Drives/i).length).toBeGreaterThan(0);
 
-    // 3) Tab buttons — both present.
+    // 3) Both deterministic worklist panels — Charging Sessions +
+    // Drives — render as section headings. The redesign shows both
+    // lists side-by-side instead of behind a tab switcher, so we assert
+    // the panel headings (exact accessible names avoid matching the
+    // "All charging sessions are complete" empty-state heading).
     expect(
-      screen.getByRole('button', { name: /Charging Sessions/i }),
+      screen.getByRole('heading', { name: 'Charging Sessions' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /^Drives$/i }),
+      screen.getByRole('heading', { name: 'Drives' }),
     ).toBeInTheDocument();
 
     // 4) The AI suggestions surface MUST be absent from the DOM

@@ -148,7 +148,7 @@ export function RecentlyViewedWidget({
                 <span className="flex-1 min-w-0 truncate font-medium">
                   {entry.title}
                 </span>
-                <span className="flex-shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">
+                <span className="flex-shrink-0 text-2xs tabular-nums text-[var(--text-muted)]">
                   {formatRelative(entry.visited_at, now, t)}
                 </span>
               </Link>

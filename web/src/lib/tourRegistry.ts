@@ -106,6 +106,29 @@ export function markTourSkipped(id: string, version: number): void {
   }
 }
 
+/** Canonical server token for a completed/skipped tour: `"{id}:{version}"`. */
+export function completedTourToken(id: string, version: number): string {
+  return `${id}:${version}`
+}
+
+/**
+ * Seed the local per-tour completion flags from the server-persisted list
+ * (`AppSettings.completed_tours`). Lets a browser that cleared localStorage —
+ * but is still the same signed-in install — avoid re-triggering a tour the
+ * user already finished. Idempotent; never downgrades an existing local flag.
+ */
+export function seedCompletedFromServer(tokens: readonly string[]): void {
+  if (typeof window === 'undefined' || !Array.isArray(tokens)) return
+  for (const token of tokens) {
+    const sep = token.lastIndexOf(':')
+    if (sep <= 0) continue
+    const id = token.slice(0, sep)
+    const version = Number(token.slice(sep + 1))
+    if (!id || !Number.isFinite(version)) continue
+    if (getTourStatus(id, version) === null) markTourCompleted(id, version)
+  }
+}
+
 /** Clears the completion flag for a single tour (any version). */
 export function resetTour(id: string): void {
   if (typeof window === 'undefined') return

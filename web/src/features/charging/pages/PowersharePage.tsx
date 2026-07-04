@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, Power, Clock, Home, AlertCircle, Info } from 'lucide-react';
+import { Zap, Home, Power, Clock, RefreshCw } from 'lucide-react';
 
-import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import { PageContainer } from '@/components/layout';
+import { Button } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
@@ -11,35 +12,20 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { latestNumeric, latestText } from '@/lib/signalObservation';
-
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
-import type { BadgeVariant } from '@/types/fsm';
 
-/** Map status string → Badge variant. */
-function statusVariant(status: string | null): BadgeVariant {
-  if (!status) return 'neutral';
-  const s = status.toLowerCase();
-  if (s.includes('active') || s.includes('on')) return 'success';
-  if (s.includes('error') || s.includes('fail')) return 'danger';
-  if (s.includes('inactive') || s.includes('off')) return 'neutral';
-  return 'warning';
-}
-
-/** Map stop reason → Badge variant. */
-function stopReasonVariant(reason: string | null): BadgeVariant {
-  if (!reason) return 'neutral';
-  const r = reason.toLowerCase();
-  if (r === 'none' || r === '') return 'neutral';
-  if (r.includes('user')) return 'warning';
-  if (r.includes('error') || r.includes('fault') || r.includes('low')) return 'danger';
-  return 'warning';
-}
+import {
+  PowerTrendPanel, RuntimePanel, HoursTrendPanel, StopReasonPanel, SignalSnapshotPanel,
+  POWERSHARE_SIGNALS, SERIES_LIMIT, buildSeries, humanizeEnum, seriesPeak, statusNeon,
+  type SnapshotRow,
+} from '../components/powershare';
 
 /**
- * Powershare telemetry comes from 5 cold signals in signal_observations per
- * ADR-005 (typed-only hot schema; everything else → signal_observations):
- *   PowershareStatus, PowershareType, PowershareStopReason,
- *   PowershareHoursLeft, PowershareInstantaneousPowerKW.
+ * Powershare — bidirectional power-sharing cockpit. Five cold signals
+ * (PowershareStatus/Type/StopReason/HoursLeft/InstantaneousPowerKW) are read
+ * from `/signals/observations` (router.go:4170); the numeric pair is pulled as
+ * a short series to drive the trend charts. All display formatting happens at
+ * this render boundary — the API returns raw values.
  */
 export default function PowersharePage() {
   const { t } = useTranslation();
@@ -48,134 +34,181 @@ export default function PowersharePage() {
   const { vehicleId: selectedId } = useSelectedVehicle();
   const vehicleId = selectedId ?? undefined;
 
-  const { data: statusObs } = useSignalObservations(vehicleId, {
-    signal_name: 'PowershareStatus',
-    limit: 1,
-  });
-  const { data: typeObs } = useSignalObservations(vehicleId, {
-    signal_name: 'PowershareType',
-    limit: 1,
-  });
-  const { data: stopObs } = useSignalObservations(vehicleId, {
-    signal_name: 'PowershareStopReason',
-    limit: 1,
-  });
-  const { data: hoursObs } = useSignalObservations(vehicleId, {
-    signal_name: 'PowershareHoursLeft',
-    limit: 1,
-  });
-  const { data: powerObs } = useSignalObservations(vehicleId, {
-    signal_name: 'PowershareInstantaneousPowerKW',
-    limit: 1,
-  });
+  const statusQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.status, limit: 1 });
+  const typeQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.type, limit: 1 });
+  const stopQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.stopReason, limit: 1 });
+  const hoursQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.hoursLeft, limit: SERIES_LIMIT });
+  const powerQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.power, limit: SERIES_LIMIT });
 
-  const status = latestText(statusObs);
-  const shareType = latestText(typeObs);
-  const stopReason = latestText(stopObs);
-  const hoursLeft = latestNumeric(hoursObs);
-  const powerKw = latestNumeric(powerObs);
+  const status = latestText(statusQ.data);
+  const shareType = latestText(typeQ.data);
+  const stopReason = latestText(stopQ.data);
+  const hoursLeft = latestNumeric(hoursQ.data);
+  const powerKw = latestNumeric(powerQ.data);
 
-  const hasData =
-    status != null ||
-    shareType != null ||
-    stopReason != null ||
-    hoursLeft != null ||
-    powerKw != null;
+  const powerSeries = useMemo(() => buildSeries(powerQ.data), [powerQ.data]);
+  const hoursSeries = useMemo(() => buildSeries(hoursQ.data), [hoursQ.data]);
+  const powerPeak = seriesPeak(powerSeries);
+  const hoursPeak = seriesPeak(hoursSeries);
+
+  const refetchAll = () => {
+    statusQ.refetch();
+    typeQ.refetch();
+    stopQ.refetch();
+    hoursQ.refetch();
+    powerQ.refetch();
+  };
+
+  const snapshotRows = useMemo<SnapshotRow[]>(
+    () => [
+      { key: 'status', label: t('powershare.kpi.status', 'Status'),
+        value: humanizeEnum(status, POWERSHARE_SIGNALS.status) ?? '—',
+        ts: statusQ.data?.[0]?.ts ?? null },
+      { key: 'type', label: t('powershare.kpi.type', 'Type'),
+        value: humanizeEnum(shareType, POWERSHARE_SIGNALS.type) ?? '—',
+        ts: typeQ.data?.[0]?.ts ?? null },
+      { key: 'power', label: t('powershare.kpi.outputPower', 'Output Power'),
+        value: powerKw != null ? `${fmtNumber(powerKw, 2)} kW` : '—',
+        ts: powerQ.data?.[0]?.ts ?? null },
+      { key: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),
+        value: hoursLeft != null ? `${fmtNumber(hoursLeft, 1)} h` : '—',
+        ts: hoursQ.data?.[0]?.ts ?? null },
+      { key: 'stop', label: t('powershare.stopReason.title', 'Stop Reason'),
+        value: humanizeEnum(stopReason, POWERSHARE_SIGNALS.stopReason) ?? '—',
+        ts: stopQ.data?.[0]?.ts ?? null },
+    ],
+    [t, status, shareType, powerKw, hoursLeft, stopReason,
+      statusQ.data, typeQ.data, powerQ.data, hoursQ.data, stopQ.data],
+  );
+
+  const snapshotLoading = [statusQ, typeQ, stopQ, hoursQ, powerQ].every((q) => q.isLoading);
+  const snapshotError = [statusQ, typeQ, stopQ, hoursQ, powerQ].map((q) => q.error).find(Boolean);
+  const runtimeError = statusQ.error ?? typeQ.error ?? powerQ.error ?? hoursQ.error;
+  const runtimeLoading = statusQ.isLoading || typeQ.isLoading || powerQ.isLoading || hoursQ.isLoading;
+
+  const actions = (
+    <div className="flex items-center gap-2">
+      <VehicleSelect />
+      <Button
+        variant="ghost"
+        onClick={refetchAll}
+        aria-label={t('powershare.refresh', 'Refresh Powershare data')}
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+
+  const title = t('powershare.title', 'Powershare');
+  const subtitle = t(
+    'powershare.subtitle',
+    'Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions.',
+  );
+
+  if (vehicleId == null) {
+    return (
+      <PageContainer title={title} subtitle={subtitle} actions={<VehicleSelect />}>
+        <EmptyState /* no-action: page precondition — no vehicle in scope yet */
+          icon={<Zap className="h-8 w-8" />}
+          message={t('powershare.noVehicle', 'Select a vehicle to view its Powershare telemetry.')}
+        />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer
-      title={t('powershare.title', 'Powershare')}
-      subtitle={t(
-        'powershare.subtitle',
-        'Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions.',
-      )}
-      actions={<VehicleSelect />}
+      title={title}
+      subtitle={subtitle}
+      actions={actions}
+      query={[statusQ, typeQ, stopQ, hoursQ, powerQ]}
     >
-      {/* Status row */}
+      {/* 1 — KPI band */}
       <FadeIn>
-        <GlassPanel className="p-6">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-amber-400" />
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                {t('powershare.statusSection', 'Powershare Status')}
-              </h2>
-            </div>
-            {status ? (
-              <Badge variant={statusVariant(status)}>{status}</Badge>
-            ) : (
-              <Badge variant="neutral">{t('common.noData', '—')}</Badge>
-            )}
-          </div>
-
-          {hasData ? (
-            <Grid cols={{ default: 1, sm: 2, md: 3 }} gap={4}>
-              <StatCard
-                label={t('powershare.type', 'Type')}
-                value={shareType ?? '—'}
-                icon={<Home className="h-4 w-4" />}
-                sublabel={t('powershare.typeSub', 'Powershare destination')}
-              />
-              <StatCard
-                label={t('powershare.outputPower', 'Output Power')}
-                value={powerKw != null ? fmtNumber(powerKw, 2) : '—'}
-                unit={powerKw != null ? 'kW' : undefined}
-                icon={<Power className="h-4 w-4" />}
-                sublabel={t('powershare.outputPowerSub', 'Instantaneous power draw')}
-              />
-              <StatCard
-                label={t('powershare.hoursLeft', 'Hours Remaining')}
-                value={hoursLeft != null ? fmtNumber(hoursLeft, 1) : '—'}
-                unit={hoursLeft != null ? 'h' : undefined}
-                icon={<Clock className="h-4 w-4" />}
-                sublabel={t(
-                  'powershare.hoursLeftSub',
-                  'Estimated runtime at current output',
-                )}
-              />
-            </Grid>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Info className="h-8 w-8" />}
-              message={t(
-                'powershare.noData',
-                'No Powershare data received yet. Values appear once your vehicle reports Powershare telemetry.',
-              )}
-            />
-          )}
-        </GlassPanel>
+        <section
+          aria-label={t('powershare.kpi.sectionLabel', 'Powershare metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          <MetricCard
+            label={t('powershare.kpi.status', 'Status')}
+            value={humanizeEnum(status, POWERSHARE_SIGNALS.status) ?? '—'}
+            icon={<Zap className="h-5 w-5" />}
+            color={statusNeon(status)}
+            subtitle={t('powershare.kpi.statusSub', 'Current sharing state')}
+          />
+          <MetricCard
+            label={t('powershare.kpi.type', 'Type')}
+            value={humanizeEnum(shareType, POWERSHARE_SIGNALS.type) ?? '—'}
+            icon={<Home className="h-5 w-5" />}
+            color="blue"
+            subtitle={t('powershare.kpi.typeSub', 'Powershare destination')}
+          />
+          <MetricCard
+            label={t('powershare.kpi.outputPower', 'Output Power')}
+            value={powerKw != null ? `${fmtNumber(powerKw, 2)} kW` : '—'}
+            icon={<Power className="h-5 w-5" />}
+            color="amber"
+            subtitle={t('powershare.kpi.outputPowerSub', 'Instantaneous power draw')}
+          />
+          <MetricCard
+            label={t('powershare.kpi.hoursRemaining', 'Hours Remaining')}
+            value={hoursLeft != null ? `${fmtNumber(hoursLeft, 1)} h` : '—'}
+            icon={<Clock className="h-5 w-5" />}
+            color="cyan"
+            subtitle={t('powershare.kpi.hoursRemainingSub', 'Runtime at current output')}
+          />
+        </section>
       </FadeIn>
 
-      {/* Stop reason */}
-      <FadeIn delay={0.05}>
-        <GlassPanel className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="h-5 w-5 text-rose-400" />
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-              {t('powershare.stopReasonSection', 'Stop Reason')}
-            </h2>
-          </div>
+      {/* 2 — Hero output-power trend + live-session side panel */}
+      <FadeIn delay={0.1}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+          <PowerTrendPanel
+            points={powerSeries}
+            isLoading={powerQ.isLoading}
+            error={powerQ.error}
+            onRetry={() => powerQ.refetch()}
+          />
+          <RuntimePanel
+            status={status}
+            shareType={shareType}
+            powerKw={powerKw}
+            hoursLeft={hoursLeft}
+            powerPeak={powerPeak}
+            hoursPeak={hoursPeak}
+            isLoading={runtimeLoading}
+            error={runtimeError}
+            onRetry={refetchAll}
+          />
+        </section>
+      </FadeIn>
 
-          {stopReason ? (
-            <div className="flex items-center gap-3">
-              <Badge variant={stopReasonVariant(stopReason)}>{stopReason}</Badge>
-              <span className="text-sm text-[var(--text-secondary)]">
-                {t(
-                  'powershare.stopReasonHelp',
-                  'Last recorded reason Powershare was halted.',
-                )}
-              </span>
-            </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Info className="h-8 w-8" />}
-              message={t(
-                'powershare.noStopReason',
-                'No stop reason recorded. Powershare has not been halted, or the signal has not yet been reported.',
-              )}
-            />
-          )}
-        </GlassPanel>
+      {/* 3 — Runtime trend + stop reason */}
+      <FadeIn delay={0.2}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+          <HoursTrendPanel
+            points={hoursSeries}
+            isLoading={hoursQ.isLoading}
+            error={hoursQ.error}
+            onRetry={() => hoursQ.refetch()}
+          />
+          <StopReasonPanel
+            reason={stopReason}
+            isLoading={stopQ.isLoading}
+            error={stopQ.error}
+            onRetry={() => stopQ.refetch()}
+          />
+        </section>
+      </FadeIn>
+
+      {/* 4 — Raw signal snapshot */}
+      <FadeIn delay={0.3}>
+        <SignalSnapshotPanel
+          rows={snapshotRows}
+          isLoading={snapshotLoading}
+          error={snapshotError}
+          onRetry={refetchAll}
+        />
       </FadeIn>
     </PageContainer>
   );

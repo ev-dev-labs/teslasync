@@ -38,12 +38,13 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion } from '@/components/ui';
+import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption } from '@/components/ui';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
 import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
 import { EmptyState, AlertBanner, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { cn } from '@/lib/cn';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -396,30 +397,33 @@ export default function SignalsWorkspacePage() {
         />
       ) : null}
 
-      {/* ── Headline strip ─────────────────────────────────────── */}
+      {/* ── KPI headline strip ─────────────────────────────────── */}
       <FadeIn>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
+        <section
+          aria-label={t('signalsWorkspace.kpis', 'Workspace summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
           <StatCard
             label={t('signalsWorkspace.selected', 'Selected')}
             value={fmtInt(selectedSignals.length)}
-            icon={<ArrowUpDown className="h-4 w-4" />}
+            icon={<ArrowUpDown className="h-4 w-4" aria-hidden="true" />}
           />
           <StatCard
             label={t('signalsWorkspace.mode', 'Mode')}
             value={isCompare ? t('signalsWorkspace.compare', 'Compare') : isLive ? t('signalsWorkspace.live', 'Live') : t('signalsWorkspace.historical', 'Historical')}
-            icon={isCompare ? <GitCompare className="h-4 w-4" /> : isLive ? <Radio className="h-4 w-4" /> : <Database className="h-4 w-4" />}
+            icon={isCompare ? <GitCompare className="h-4 w-4" aria-hidden="true" /> : isLive ? <Radio className="h-4 w-4" aria-hidden="true" /> : <Database className="h-4 w-4" aria-hidden="true" />}
           />
           <StatCard
             label={t('signalsWorkspace.liveRate', 'Live rate')}
             value={isLive ? `${fmtInt(live.tailRate)} /s` : '—'}
-            icon={<Radio className="h-4 w-4" />}
+            icon={<Radio className="h-4 w-4" aria-hidden="true" />}
           />
           <StatCard
             label={t('signalsWorkspace.pinned', 'Pinned signals')}
             value={fmtInt(pinnedSignals.size)}
-            icon={<Pin className="h-4 w-4" />}
+            icon={<Pin className="h-4 w-4" aria-hidden="true" />}
           />
-        </div>
+        </section>
       </FadeIn>
 
       {/* ── Master / detail layout ─────────────────────────────── */}
@@ -459,10 +463,8 @@ export default function SignalsWorkspacePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex flex-wrap items-end gap-2">
                 {!isCompare ? (
-                  <label className="space-y-1">
-                    <span className="block text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                      {t('Time Range')}
-                    </span>
+                  <div className="flex flex-col gap-1">
+                    <Label>{t('signalsWorkspace.timeRange', 'Time Range')}</Label>
                     <RangePicker
                       value={{ start, end }}
                       onChange={setRange}
@@ -470,13 +472,13 @@ export default function SignalsWorkspacePage() {
                       align="start"
                       triggerTestId="signals-workspace-range"
                     />
-                  </label>
+                  </div>
                 ) : null}
               </div>
               <div className="flex flex-wrap items-end gap-2">
                 {!isLive && !isCompare ? (
                   <Select
-                    label={t('Per Page')}
+                    label={t('signalsWorkspace.perPage', 'Per Page')}
                     value={String(perPage)}
                     onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
                     options={PER_PAGE_OPTIONS}
@@ -566,12 +568,10 @@ export default function SignalsWorkspacePage() {
                       {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
                     </div>
                   ) : diffAllRows.length === 0 && !diffFilterActive && atAIso && atBIso ? (
-                    <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-                      <GitCompare className="h-10 w-10 text-[var(--text-muted)] opacity-30" />
-                      <p className="text-sm text-[var(--text-muted)]">
-                        {t('signalDiff.noChanges', 'No signals changed between the two snapshots')}
-                      </p>
-                    </div>
+                    <EmptyState
+                      icon={<GitCompare className="h-8 w-8" aria-hidden="true" />}
+                      message={t('signalDiff.noChanges', 'No signals changed between the two snapshots')}
+                    />
                   ) : (
                     <SignalDiffTable
                       rows={diffFilteredRows}
@@ -585,9 +585,9 @@ export default function SignalsWorkspacePage() {
                   )}
                   {pinnedSignals.size > 0 ? (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
-                      <span className="text-xs text-[var(--text-muted)]">
+                      <Caption>
                         {t('signalDiff.pinnedLabel', 'Pinned:')}
-                      </span>
+                      </Caption>
                       {Array.from(pinnedSignals).sort().map((s) => (
                         <Badge key={s} variant="neutral">{s}</Badge>
                       ))}
@@ -598,25 +598,26 @@ export default function SignalsWorkspacePage() {
             </>
           ) : null}
 
-          {/* LIVE / HISTORICAL — chart + stats + tail or history */}
+          {/* LIVE / HISTORICAL — chart hero + stats rail, detail band below */}
           {!isCompare ? (
             <>
-              {(hasHistorical || isLive) && selectedSignals.length > 0 ? (
-                <SignalStatsPanel
-                  stats={activeStats}
-                  selectedSignals={selectedSignals}
-                  loading={historicalLoading && !isLive}
-                />
-              ) : null}
-
               {hasHistorical || isLive ? (
-                <>
-                  {selectedSignals.length >= 2 ? (
-                    <div className="flex items-center justify-end">
-                      <div className="inline-flex items-center gap-2">
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                          {t('signalsWorkspace.chartMode', 'Chart layout')}
-                        </span>
+                <section
+                  aria-label={t('signalsWorkspace.explorer', 'Signal explorer')}
+                  className="grid grid-cols-1 gap-4 xl:grid-cols-3 3xl:grid-cols-4"
+                >
+                  {/* Hero chart — spans most of the width on wide screens */}
+                  <div
+                    className={cn(
+                      'space-y-3',
+                      selectedSignals.length > 0
+                        ? 'xl:col-span-2 3xl:col-span-3'
+                        : 'xl:col-span-3 3xl:col-span-4',
+                    )}
+                  >
+                    {selectedSignals.length >= 2 ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <Label>{t('signalsWorkspace.chartMode', 'Chart layout')}</Label>
                         <TabNav
                           tabs={[
                             { key: 'auto', label: t('signalsWorkspace.chartAuto', 'Auto') },
@@ -627,21 +628,33 @@ export default function SignalsWorkspacePage() {
                           onChange={(k) => setChartMode(k as SignalChartMode)}
                         />
                       </div>
+                    ) : null}
+                    <SignalChartPanel
+                      selectedSignals={selectedSignals}
+                      data={activeChart}
+                      stats={activeStats}
+                      isLive={isLive}
+                      loading={historicalLoading && !isLive}
+                      pointsLoaded={historicalRows?.length}
+                      liveEventCount={live.chartPointCount}
+                      chartMode={chartMode}
+                    />
+                  </div>
+
+                  {/* Stats rail — sits beside the chart on wide screens */}
+                  {selectedSignals.length > 0 ? (
+                    <div className="xl:col-span-1">
+                      <SignalStatsPanel
+                        stats={activeStats}
+                        selectedSignals={selectedSignals}
+                        loading={historicalLoading && !isLive}
+                      />
                     </div>
                   ) : null}
-                  <SignalChartPanel
-                    selectedSignals={selectedSignals}
-                    data={activeChart}
-                    stats={activeStats}
-                    isLive={isLive}
-                    loading={historicalLoading && !isLive}
-                    pointsLoaded={historicalRows?.length}
-                    liveEventCount={live.chartPointCount}
-                    chartMode={chartMode}
-                  />
-                </>
+                </section>
               ) : null}
 
+              {/* Detail band — full-width live tail / history table / prompt */}
               {isLive ? (
                 <LiveSignalTail
                   entries={live.tailEntries}
@@ -669,7 +682,7 @@ export default function SignalsWorkspacePage() {
                   <GlassPanel className="p-4 sm:p-5">
                     {/* no-action: signal-catalog picker, range, and Run/Live controls are in the panel above this state. */}
                     <EmptyState
-                      icon={<Database className="h-8 w-8" />}
+                      icon={<Database className="h-8 w-8" aria-hidden="true" />}
                       title={t('signalsWorkspace.emptyTitle', 'Pick signals and run a query')}
                       message={t(
                         'signalsWorkspace.emptyDesc',
@@ -683,9 +696,9 @@ export default function SignalsWorkspacePage() {
           ) : null}
 
           {/* Helper footer for catalog refresh tip */}
-          <div className="text-[10px] text-[var(--text-muted)] text-right">
-            <RefreshCw className="inline h-3 w-3 mr-1" />
-            {t('signalGap.refreshInterval', 'Catalog refreshes every 5s')}
+          <div className="flex items-center justify-end gap-1">
+            <RefreshCw className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
+            <Caption>{t('signalGap.refreshInterval', 'Catalog refreshes every 5s')}</Caption>
           </div>
       </div>
     </PageContainer>

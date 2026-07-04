@@ -2,7 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
-import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot, MediaSnapshot } from '@/types/vehicle-systems';
+import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot } from '@/types/vehicle-systems';
+// MediaSnapshot must be the canonical snake_case shape that matches the Go
+// media handler JSON tags (now_playing_title, playback_source, audio_volume,
+// created_at, …). The camelCase MediaSnapshot in @/types/vehicle-systems does
+// NOT match the wire shape, so the API-layer type is authoritative here.
+import type { MediaSnapshot } from '@/api/types';
 
 export const vehicleSystemsKeys = {
   climate: (vehicleId: string) => ['climate', vehicleId] as const,
@@ -110,10 +115,20 @@ export function useMedia(vehicleId: string) {
   });
 }
 
-export function useMediaHistory(vehicleId: string) {
+export function useMediaHistory(
+  vehicleId: string,
+  range?: { start?: string; end?: string },
+) {
+  const start = range?.start ?? '';
+  const end = range?.end ?? '';
   return useQuery({
-    queryKey: vehicleSystemsKeys.mediaHistory(vehicleId),
-    queryFn: ({ signal }) => request<MediaSnapshot[]>(`/media?vehicle_id=${vehicleId}`, { signal }),
+    queryKey: [...vehicleSystemsKeys.mediaHistory(vehicleId), start, end] as const,
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<MediaSnapshot[]>(`/media?${params.toString()}`, { signal });
+    },
     enabled: !!vehicleId,
     select: safeArray,
   });

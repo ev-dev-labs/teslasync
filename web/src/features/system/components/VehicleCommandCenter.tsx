@@ -3,8 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
-import { GlassPanel } from '@/components/ui';
-import { Badge } from '@/components/ui';
+import { GlassPanel, Badge, Text, Caption } from '@/components/ui';
 import { useToast } from '@/components/feedback/Toast';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
@@ -251,28 +250,28 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <span className="text-lg font-semibold text-[var(--text-primary)]">{name}</span>
+            <Text size="lg" weight="semibold" color="primary">{name}</Text>
             <Badge variant={isAsleep ? 'neutral' : 'success'} size="sm">{vehicle.state}</Badge>
             <FreshnessIndicator timestamp={vehicle.updated_at} />
           </div>
-          <span className="text-xs text-[var(--text-muted)]">{vehicle.model} · {vehicle.vin}</span>
+          <Caption>{vehicle.model} · {vehicle.vin}</Caption>
         </div>
         {state && (
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1">
               <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <span className={cn('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-emerald-300' : 'text-amber-300')}>
+              <Text weight="semibold" className={(state.battery_level ?? 0) > 50 ? 'text-emerald-300' : 'text-amber-300'}>
                 {state.battery_level}%
-              </span>
+              </Text>
             </span>
             <span className="flex items-center gap-1">
               <Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <span className="text-[var(--text-secondary)]">{fmtNumber(convertDistanceFromSI(state.rated_range, unitPrefs.distance), 0)} {unitPrefs.distance}</span>
+              <Text color="secondary">{fmtNumber(convertDistanceFromSI(state.rated_range, unitPrefs.distance), 0)} {unitPrefs.distance}</Text>
             </span>
             {state.inside_temp != null && (
               <span className="flex items-center gap-1">
                 <Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-secondary)]">{fmtNumber(convertTempFromSI(state.inside_temp, unitPrefs.temperature), 0)}{unitPrefs.temperature}</span>
+                <Text color="secondary">{fmtNumber(convertTempFromSI(state.inside_temp, unitPrefs.temperature), 0)}{unitPrefs.temperature}</Text>
               </span>
             )}
           </div>
@@ -288,18 +287,18 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
             ? <CheckCircle className="h-4 w-4 text-neon-green" />
             : <AlertTriangle className="h-4 w-4 text-neon-red" />
           }
-          <span className={cn('text-xs', lastResult.success ? 'text-emerald-300' : 'text-rose-300')}>
+          <Text size="xs" className={lastResult.success ? 'text-emerald-300' : 'text-rose-300'}>
             {lastResult.message}
-          </span>
+          </Text>
         </GlassPanel>
       )}
 
       {isAsleep && (
         <GlassPanel className="p-3 mb-4 flex items-center gap-2 bg-neon-amber/5 border-neon-amber/20">
           <Power className="h-4 w-4 text-neon-amber" />
-          <span className="text-xs text-amber-300">
+          <Text size="xs" className="text-amber-300">
             {t('Vehicle is')} {vehicle.state}. {t('Wake it up first to send commands.')}
-          </span>
+          </Text>
         </GlassPanel>
       )}
 
@@ -332,8 +331,8 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
               {filteredCommands.map(cmd => renderTile(cmd))}
             </div>
           ) : (
-            <div className="text-center py-8 text-[var(--text-muted)] text-sm">
-              {t('commands.search.noResults', 'No commands match your search')}
+            <div className="text-center py-8">
+              <Text size="sm" color="muted">{t('commands.search.noResults', 'No commands match your search')}</Text>
             </div>
           )
         ) : (

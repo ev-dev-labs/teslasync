@@ -379,7 +379,7 @@ export function RoutePlayback({
 
         {/* Inline metric chip — top-right. */}
         {cp && (
-          <div className="pointer-events-none absolute right-2 top-2 z-[1000] flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-1.5 text-[11px] font-mono text-[var(--text-primary)] backdrop-blur-md shadow-lg">
+          <div className="pointer-events-none absolute right-2 top-2 z-[1000] flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-1.5 text-xs font-mono text-[var(--text-primary)] backdrop-blur-md shadow-lg">
             <Flag className="h-3 w-3 text-cyan-300" />
             <span>
               {currentIndex + 1}/{points.length}

@@ -29,7 +29,7 @@ export function RegionSettings() {
           </div>
           <div className="flex items-center gap-3">
             {regionConfig?.fetched_at && (
-              <span className="text-[11px] text-[var(--text-muted)]">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('region.lastSynced', 'Synced')} {formatDateTime(regionConfig.fetched_at)}
               </span>
             )}

@@ -109,7 +109,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
               {grouped.map(([category, signals]) => (
                 <div key={category}>
-                  <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1 sticky top-0 bg-white/[0.03] backdrop-blur-sm py-1 px-1 -mx-1 rounded">
+                  <h4 className="text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1 sticky top-0 bg-white/[0.03] backdrop-blur-sm py-1 px-1 -mx-1 rounded">
                     {category}
                     <span className="ml-1 text-[var(--text-muted)]">({signals.length})</span>
                   </h4>
@@ -123,11 +123,11 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                           {sig.name}
                         </span>
                         {sig.unit && (
-                          <Badge variant="neutral" className="text-[10px] shrink-0">
+                          <Badge variant="neutral" className="text-2xs shrink-0">
                             {sig.unit}
                           </Badge>
                         )}
-                        <span className="text-[10px] text-[var(--text-muted)] tabular-nums shrink-0 min-w-[36px] text-right">
+                        <span className="text-2xs text-[var(--text-muted)] tabular-nums shrink-0 min-w-[36px] text-right">
                           {fmtInt(observationCounts.get(sig.name) ?? 0)}
                         </span>
                       </div>

@@ -5,6 +5,7 @@ import {
   Select as UiSelect,
   Button as UiButton,
   GlassPanel,
+  Text,
 } from '@/components/ui';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
@@ -386,9 +387,9 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             className="w-44"
           />
           <div>
-            <span className="text-sm font-medium text-gray-700 dark:text-[var(--text-secondary)]">
+            <Text as="span" variant="subhead">
               {t('automations.builder.days', 'Days')}
-            </span>
+            </Text>
             <div className="mt-1 flex gap-1">
               {DAYS.map((label, day) => {
                 const active = condition.days_of_week.includes(day);

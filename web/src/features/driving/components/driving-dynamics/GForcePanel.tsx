@@ -2,10 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 
 import { Grid } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { FadeIn } from '@/components/motion';
 import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -43,38 +42,37 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
       : null;
 
   return (
-    <FadeIn delay={0.05}>
-      <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
-          {t('dynamics.gForce', 'Acceleration G-Force')}
-        </h2>
-        {hasAny ? (
-          <Grid cols={{ default: 1, sm: 3 }} gap={4}>
-            <StatCard
-              icon={<Gauge className="h-5 w-5" />}
-              label={t('dynamics.lateral', 'Lateral')}
-              value={lateral != null ? fmtNumber(lateral, 2) : '—'}
-              unit="g"
-            />
-            <StatCard
-              icon={<Gauge className="h-5 w-5" />}
-              label={t('dynamics.longitudinal', 'Longitudinal')}
-              value={longitudinal != null ? fmtNumber(longitudinal, 2) : '—'}
-              unit="g"
-            />
-            <StatCard
-              icon={<Gauge className="h-5 w-5" />}
-              label={t('dynamics.combined', 'Combined')}
-              value={magnitude != null ? fmtNumber(magnitude, 2) : '—'}
-              unit="g"
-            />
-          </Grid>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            message={t('dynamics.gForceNoData', 'No G-force telemetry received yet')}
+    <GlassPanel className="h-full p-4 sm:p-5">
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Gauge className="h-4 w-4 text-purple-300" aria-hidden="true" />
+        {t('dynamics.gForce', 'Acceleration G-Force')}
+      </PanelTitle>
+      {hasAny ? (
+        <Grid cols={{ default: 1, sm: 3 }} gap={4}>
+          <StatCard
+            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+            label={t('dynamics.lateral', 'Lateral')}
+            value={lateral != null ? fmtNumber(lateral, 2) : '—'}
+            unit="g"
           />
-        )}
-      </GlassPanel>
-    </FadeIn>
+          <StatCard
+            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+            label={t('dynamics.longitudinal', 'Longitudinal')}
+            value={longitudinal != null ? fmtNumber(longitudinal, 2) : '—'}
+            unit="g"
+          />
+          <StatCard
+            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+            label={t('dynamics.combined', 'Combined')}
+            value={magnitude != null ? fmtNumber(magnitude, 2) : '—'}
+            unit="g"
+          />
+        </Grid>
+      ) : (
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          message={t('dynamics.gForceNoData', 'No G-force telemetry received yet')}
+        />
+      )}
+    </GlassPanel>
   );
 }

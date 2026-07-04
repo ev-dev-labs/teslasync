@@ -72,7 +72,7 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
         // anything about its parent.
         'fixed left-0 right-0 z-[55] flex items-center justify-between gap-2',
         'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
-        'px-3 lg:px-4 text-[11px] text-[var(--text-secondary)]',
+        'px-3 lg:px-4 text-xs text-[var(--text-secondary)]',
         // Stack above the BottomTabBar on mobile (which is `bottom-0 h-14`),
         // on desktop go all the way to the bottom.
         'bottom-14 lg:bottom-0',

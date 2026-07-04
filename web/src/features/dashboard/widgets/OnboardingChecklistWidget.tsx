@@ -226,7 +226,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
               variant="ghost"
               size="sm"
               onClick={dismiss}
-              className="flex-shrink-0 text-[var(--text-secondary)] hover:text-white"
+              className="flex-shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               icon={<RotateCcw className="h-3.5 w-3.5" />}
             >
               {t('checklist.dismiss', 'Dismiss')}

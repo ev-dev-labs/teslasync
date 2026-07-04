@@ -56,7 +56,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
           <div className="flex flex-col items-center justify-center h-full gap-1 text-center px-1">
             <Music className="h-5 w-5 text-neon-cyan shrink-0" />
             <p className="text-xs font-semibold text-[var(--text-primary)] truncate w-full">{title}</p>
-            <p className="text-[10px] text-[var(--text-secondary)] truncate w-full">{artist}</p>
+            <p className="text-2xs text-[var(--text-secondary)] truncate w-full">{artist}</p>
           </div>
         ) : (
           /* ── Standard / Tall ── */
@@ -69,11 +69,11 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
                 <p className="text-sm font-bold text-[var(--text-primary)] truncate">{title}</p>
                 <p className="text-xs text-[var(--text-secondary)] truncate">{artist}</p>
                 {isTall && album && (
-                  <p className="text-[11px] text-[var(--text-muted)] truncate">{album}</p>
+                  <p className="text-xs text-[var(--text-muted)] truncate">{album}</p>
                 )}
               </div>
               {isPlaying && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400 shrink-0">
+                <span className="text-2xs px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400 shrink-0">
                   {t('widget.playing', 'Playing')}
                 </span>
               )}
@@ -82,7 +82,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
             {duration > 0 && (
               <div className="space-y-1">
                 <ProgressBar elapsed={elapsed} duration={duration} />
-                <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
                   <span>{formatDurationClock(elapsed)}</span>
                   <span>{formatDurationClock(duration)}</span>
                 </div>
@@ -106,14 +106,14 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
                         style={{ width: `${Math.min((volume / volumeMax) * 100, 100)}%` }}
                       />
                     </div>
-                    <span className="text-[10px] tabular-nums">{volume}</span>
+                    <span className="text-2xs tabular-nums">{volume}</span>
                   </div>
                 )}
               </div>
             )}
 
             {!isTall && source && (
-              <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] mt-auto">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mt-auto">
                 <Radio className="h-3 w-3 shrink-0" />
                 <span className="truncate">{source}</span>
               </div>

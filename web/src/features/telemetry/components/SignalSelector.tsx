@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 
 import { ComboboxMulti } from '@/components/forms';
-import { HelpTooltip } from '@/components/ui';
+import { HelpTooltip, Label } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 export interface SignalSelectorProps {
@@ -41,7 +41,7 @@ export function SignalSelector({
 
   return (
     <div className={cn('w-full', className)}>
-      <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+      <Label className="flex items-center gap-1 mb-2">
         {labelOverride ?? (
           max != null
             ? `${t('Signals')} (${value.length} / ${max})`
@@ -55,7 +55,7 @@ export function SignalSelector({
             placement="bottom"
           />
         ) : null}
-      </span>
+      </Label>
       <ComboboxMulti<string>
         label={t('Signals')}
         hideLabel

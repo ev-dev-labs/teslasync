@@ -47,7 +47,7 @@ export function Spinner({ size = 'md', label, className }: SpinnerProps) {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
-          className="overflow-visible text-white spinner-bolt-glow"
+          className="overflow-visible text-[var(--text-primary)] spinner-bolt-glow"
         >
           <path
             d="M112 30L62 108h34L78 170l58-82h-34z"

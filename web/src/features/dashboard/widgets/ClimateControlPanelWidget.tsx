@@ -164,23 +164,23 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
           seatHeaters.map((s) => (
             <span
               key={s.label}
-              className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400"
+              className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400"
             >
               <Armchair className="h-2.5 w-2.5" /> {s.label} {s.level}/3
             </span>
           ))
         ) : (
-          <span className="text-[10px] text-[var(--text-muted)]">
+          <span className="text-2xs text-[var(--text-muted)]">
             {t('widget.climatePanel.noSeatHeat', 'No seat heaters active')}
           </span>
         )}
         {climateData.defrost_mode && climateData.defrost_mode !== 'Off' && (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+          <span className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
             <Snowflake className="h-2.5 w-2.5" /> {t('widget.climatePanel.defrost', 'Defrost')}
           </span>
         )}
         {climateData.battery_heater_on && (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
+          <span className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
             <Zap className="h-2.5 w-2.5" /> {t('widget.climatePanel.batHeater', 'Bat Heater')}
           </span>
         )}
@@ -195,7 +195,7 @@ function MetricCell({ icon, label, value }: { icon: React.ReactNode; label: stri
     <div className="flex items-start gap-1.5 min-w-0">
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[10px] text-[var(--text-muted)] truncate">{label}</p>
+        <p className="text-2xs text-[var(--text-muted)] truncate">{label}</p>
         <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{value}</p>
       </div>
     </div>

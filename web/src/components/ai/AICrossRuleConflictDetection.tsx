@@ -241,22 +241,22 @@ function InnerSection({
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {c.subsumes && (
-                      <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+                      <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-amber-300">
                         subsumes
                       </span>
                     )}
                     {c.severity_mismatch && (
-                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-rose-300">
+                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
                         severity mismatch
                       </span>
                     )}
                     {c.cooldown_mismatch && (
-                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-rose-300">
+                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
                         cooldown mismatch
                       </span>
                     )}
                     {c.trigger_mode_mismatch && (
-                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-rose-300">
+                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
                         trigger mode mismatch
                       </span>
                     )}

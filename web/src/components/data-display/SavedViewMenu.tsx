@@ -193,7 +193,7 @@ export function SavedViewMenu({
             )}
           >
             <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              <span className="text-2xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
                 {t('savedViews.title', 'Saved views')}
               </span>
               {views.length > 0 && (
@@ -203,7 +203,7 @@ export function SavedViewMenu({
                     setOpen(false);
                     setManageOpen(true);
                   }}
-                  className="text-[10px] font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
+                  className="text-2xs font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
                 >
                   {t('savedViews.manage', 'Manage views')}
                 </button>

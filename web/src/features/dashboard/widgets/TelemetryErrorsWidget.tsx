@@ -101,7 +101,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
           <span className="text-lg font-bold text-[var(--text-primary)]">
             {fmtInt(activeVINCount)}
           </span>
-          <span className="text-[10px] text-[var(--text-secondary)]">
+          <span className="text-2xs text-[var(--text-secondary)]">
             {t('widget.telemetryErrors.errorVINs', 'error VINs')}
           </span>
           <Badge variant={statusBadge} className="text-xs min-h-[28px]">
@@ -116,7 +116,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
             <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.telemetryErrors.activeVINs', '{{count}} VINs with errors', { count: activeVINCount })}
             </span>
-            <Badge variant={statusBadge} className="text-[10px]">
+            <Badge variant={statusBadge} className="text-2xs">
               {statusLabel}
             </Badge>
           </div>
@@ -148,7 +148,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                           </Badge>
                         )}
                       </div>
-                      <span className="text-[10px] text-[var(--text-muted)] truncate block">
+                      <span className="text-2xs text-[var(--text-muted)] truncate block">
                         {entry.error_code}
                       </span>
                     </div>
@@ -156,7 +156,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                       <span className="text-xs font-medium text-[var(--text-secondary)]">
                         ×{fmtInt(entry.count)}
                       </span>
-                      <TimeStamp value={entry.last_seen || null} className="text-[10px] text-[var(--text-muted)]" />
+                      <TimeStamp value={entry.last_seen || null} className="text-2xs text-[var(--text-muted)]" />
                     </div>
                   </div>
                 );

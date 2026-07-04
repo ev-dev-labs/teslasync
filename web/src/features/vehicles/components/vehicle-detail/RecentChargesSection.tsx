@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BatteryCharging, ChevronRight } from 'lucide-react'
 
-import { GlassPanel, DataTable, type Column } from '@/components/ui'
+import { GlassPanel, DataTable, PanelTitle, type Column } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
 import { fmtNumber } from '@/lib/numberFormat'
@@ -57,18 +57,16 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
 
   return (
     <GlassPanel className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <BatteryCharging className="h-4 w-4 text-[var(--neon-green)]" />
-          <span className="text-lg font-bold text-[var(--text-primary)]">
-            {t('common.recentCharges', 'Recent Charges')}
-          </span>
-        </div>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <PanelTitle className="flex items-center gap-2">
+          <BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+          {t('common.recentCharges', 'Recent Charges')}
+        </PanelTitle>
         <Link
           to="/charging"
-          className="text-xs text-[var(--text-muted)] hover:text-[var(--neon-green)] transition-colors flex items-center gap-1"
+          className="flex items-center gap-1 text-xs text-[var(--text-muted)] transition-colors hover:text-emerald-300"
         >
-          {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" />
+          {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
         </Link>
       </div>
       {sessions && sessions.length > 0 ? (

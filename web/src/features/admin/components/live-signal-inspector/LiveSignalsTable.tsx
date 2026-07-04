@@ -1,14 +1,11 @@
 /**
- * Live Signal Inspector — table.
+ * Live Signal Inspector — snapshot table.
  *
- * Renders the current Redis-cached live snapshot for a single vehicle as
- * a sortable + filterable table. Refresh cadence is owned by the page
- * (1 s polling); this component just renders whatever rows are passed.
- *
- * Values arrive from the backend as `{ value: unknown; timestamp?: string }`
- * with `value` being string | number | boolean | object. The renderer
- * coerces objects to JSON for display so we never crash on a typed
- * compound value (e.g. location triple).
+ * Renders the flattened live snapshot as a filterable + sortable table. The
+ * page owns the no-vehicle / loading / error / empty affordances (via
+ * `LiveSectionState`) and passes an already-normalised, non-empty `rows`
+ * array; this component only handles the name filter, sort, and per-row
+ * rendering (typed value colours, kind badge, source-layer badge, freshness).
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,63 +14,62 @@ import { Search } from 'lucide-react';
 import {
   DataTable,
   Input,
+  Badge,
+  Text,
+  Caption,
   useSortToggle,
   type Column,
 } from '@/components/ui';
-import { TimeStamp } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
-import type {
-  VehicleLiveSignal,
-  VehicleLiveSignalsResponse,
-} from '@/api/hooks/useTelemetry';
+import { TimeStamp, SourceLayerBadge } from '@/components/data-display';
+
+import {
+  classifyKind,
+  formatAge,
+  KIND_LABELS,
+  type KindCategory,
+  type LiveSignalRow,
+} from './liveSignalStats';
 
 interface LiveSignalsTableProps {
-  data: VehicleLiveSignalsResponse | undefined;
-  loading: boolean;
+  rows: LiveSignalRow[];
 }
 
-interface LiveSignalRow {
-  name: string;
-  value: unknown;
-  timestamp?: string;
-}
+const KIND_BADGE: Record<
+  KindCategory,
+  'success' | 'info' | 'warning' | 'neutral' | 'danger'
+> = {
+  numeric: 'info',
+  boolean: 'warning',
+  text: 'neutral',
+  enum: 'success',
+  time: 'neutral',
+  compound: 'danger',
+  other: 'neutral',
+};
 
 /**
- * Normalises a single entry of `data.signals` into a flat row. The
- * backend may return either `{ value, timestamp }` envelopes OR a bare
- * scalar (`true`, `42`, "Drive"), depending on which signal repo
- * shipped the row. Both shapes flow through unchanged into the table.
+ * Coerce a signal value to a display string plus a toned-down syntax-highlight
+ * colour (number → cyan, string → amber, boolean → purple). Objects are
+ * JSON-stringified so a compound value never crashes the cell.
  */
-function rowFromEntry(name: string, raw: unknown): LiveSignalRow {
-  if (raw && typeof raw === 'object' && 'value' in (raw as VehicleLiveSignal)) {
-    const env = raw as VehicleLiveSignal;
-    return { name, value: env.value, timestamp: env.timestamp };
-  }
-  return { name, value: raw };
-}
-
-function renderValue(v: unknown): string {
-  if (v === null) return 'null';
-  if (v === undefined) return '—';
+function renderValue(v: unknown): { text: string; cls: string } {
+  if (v === null) return { text: 'null', cls: 'text-[var(--text-muted)]' };
+  if (v === undefined) return { text: '—', cls: 'text-[var(--text-muted)]' };
   const tx = typeof v;
-  if (tx === 'string') return v as string;
-  if (tx === 'number' || tx === 'boolean') return String(v);
+  if (tx === 'number') return { text: String(v), cls: 'text-cyan-300' };
+  if (tx === 'boolean') return { text: String(v), cls: 'text-purple-300' };
+  if (tx === 'string') return { text: v as string, cls: 'text-amber-300' };
   try {
-    return JSON.stringify(v);
+    return { text: JSON.stringify(v), cls: 'text-[var(--text-secondary)]' };
   } catch {
-    return '—';
+    return { text: '—', cls: 'text-[var(--text-muted)]' };
   }
 }
 
-export function LiveSignalsTable({ data, loading }: LiveSignalsTableProps) {
+export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('');
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc');
-
-  const rows = useMemo<LiveSignalRow[]>(() => {
-    const signals = data?.signals ?? {};
-    return Object.keys(signals).map((name) => rowFromEntry(name, signals[name]));
-  }, [data]);
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -86,11 +82,9 @@ export function LiveSignalsTable({ data, loading }: LiveSignalsTableProps) {
     return [...filtered].sort((a, b) => {
       if (sortKey === 'name') return a.name.localeCompare(b.name) * dir;
       if (sortKey === 'timestamp') {
-        return (
-          ((a.timestamp ? Date.parse(a.timestamp) : 0) -
-            (b.timestamp ? Date.parse(b.timestamp) : 0)) *
-          dir
-        );
+        const at = a.timestamp ? Date.parse(a.timestamp) : 0;
+        const bt = b.timestamp ? Date.parse(b.timestamp) : 0;
+        return (at - bt) * dir;
       }
       return 0;
     });
@@ -103,20 +97,45 @@ export function LiveSignalsTable({ data, loading }: LiveSignalsTableProps) {
       sortable: true,
       visibleOnMobile: true,
       render: (row) => (
-        <span className="font-mono text-sm text-[var(--text-primary)]">
+        <Text mono size="sm" color="primary">
           {row.name}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'value',
       header: t('admin.liveSignals.cols.value', 'Value'),
       visibleOnMobile: true,
-      render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
-          {renderValue(row.value)}
-        </span>
-      ),
+      render: (row) => {
+        const { text, cls } = renderValue(row.value);
+        return (
+          <Text mono size="xs" className={cls} title={text}>
+            {text}
+          </Text>
+        );
+      },
+    },
+    {
+      key: 'kind',
+      header: t('admin.liveSignals.cols.kind', 'Kind'),
+      render: (row) => {
+        const category = classifyKind(row.kind, row.value);
+        return (
+          <Badge variant={KIND_BADGE[category]} size="sm">
+            {t(KIND_LABELS[category].key, KIND_LABELS[category].fallback)}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: 'source',
+      header: t('admin.liveSignals.cols.source', 'Source'),
+      render: (row) =>
+        row.source ? (
+          <SourceLayerBadge source={row.source} ageMs={row.ageMs} showLabel />
+        ) : (
+          <Caption>—</Caption>
+        ),
     },
     {
       key: 'timestamp',
@@ -126,7 +145,7 @@ export function LiveSignalsTable({ data, loading }: LiveSignalsTableProps) {
         row.timestamp ? (
           <TimeStamp value={row.timestamp} format="relative" />
         ) : (
-          <span className="text-xs text-[var(--text-muted)]">—</span>
+          <Caption className="tabular-nums">{formatAge(row.ageMs)}</Caption>
         ),
     },
   ];
@@ -134,47 +153,38 @@ export function LiveSignalsTable({ data, loading }: LiveSignalsTableProps) {
   return (
     <div className="space-y-4">
       <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
+          aria-hidden="true"
+        />
         <Input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder={t('admin.liveSignals.filterPlaceholder', 'Filter signal names…')}
+          placeholder={t(
+            'admin.liveSignals.filterPlaceholder',
+            'Filter signal names…',
+          )}
           className="pl-9"
           aria-label={t('admin.liveSignals.filterAria', 'Filter signals')}
         />
       </div>
 
-      {!loading && rows.length === 0 ? (
-        <EmptyState
-          title={t('admin.liveSignals.empty.title', 'No live signals cached')}
-          message={t(
-            'admin.liveSignals.empty.message',
-            'Redis has no live snapshot for this vehicle yet. Confirm the vehicle is online and publishing.',
-          )}
-          // no-action: the vehicle picker above is the only meaningful CTA.
-        />
-      ) : (
-        <DataTable<LiveSignalRow>
-          tableId="admin:live-signals"
-          name="live-signals"
-          columns={columns}
-          data={sorted}
-          keyExtractor={(row) => row.name}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSort={onSort}
-          emptyMessage={
-            loading
-              ? t('admin.liveSignals.table.loading', 'Loading…')
-              : t(
-                  'admin.liveSignals.table.filtered',
-                  'No signals match this filter.',
-                )
-          }
-          pagination={{ defaultPageSize: 50, pageSizeOptions: [25, 50, 100] }}
-          mobileColumns={['name', 'value']}
-        />
-      )}
+      <DataTable<LiveSignalRow>
+        tableId="admin:live-signals"
+        name="live-signals"
+        columns={columns}
+        data={sorted}
+        keyExtractor={(row) => row.name}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={onSort}
+        emptyMessage={t(
+          'admin.liveSignals.table.filtered',
+          'No signals match this filter.',
+        )}
+        pagination={{ defaultPageSize: 50, pageSizeOptions: [25, 50, 100] }}
+        mobileColumns={['name', 'value']}
+      />
     </div>
   );
 }

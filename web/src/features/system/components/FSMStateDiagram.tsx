@@ -85,7 +85,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                 <span className={cn('h-2 w-2 rounded-full mb-1', color.dot)} />
                 <span className={cn('text-xs font-medium', color.text)}>{state}</span>
                 {count > 0 && (
-                  <span className="text-[10px] text-[var(--text-muted)] mt-0.5">{count}</span>
+                  <span className="text-2xs text-[var(--text-muted)] mt-0.5">{count}</span>
                 )}
                 {isCurrent && (
                   <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-400 animate-pulse" />
@@ -101,7 +101,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                     const edgeKey = `${state}->${states[i + 1]}`;
                     const edgeCount = edgeCounts.get(edgeKey);
                     return edgeCount ? (
-                      <span className="text-[9px] text-[var(--text-muted)] absolute -mt-4 ml-1">{edgeCount}</span>
+                      <span className="text-2xs text-[var(--text-muted)] absolute -mt-4 ml-1">{edgeCount}</span>
                     ) : null;
                   })()}
                 </div>
@@ -122,7 +122,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
               return (
                 <span
                   key={edge}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] text-[10px] text-[var(--text-secondary)]"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] text-2xs text-[var(--text-secondary)]"
                 >
                   <span className={getStateColor(fsmType, from).text}>{from}</span>
                   <span className="text-[var(--text-muted)]">→</span>

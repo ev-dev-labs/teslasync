@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Select as UiSelect, Input as UiInput, GlassPanel } from '@/components/ui'
+import { Select as UiSelect, Input as UiInput, GlassPanel, Text } from '@/components/ui'
 import type { ComputedMetricOp, ComputedMetricSummary } from '@/api/types'
 import { usePreviewComputedMetric } from '@/api/hooks/useNotifications'
 import { fmtNumber } from '@/lib/numberFormat'
@@ -126,9 +126,9 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+          <Text as="label" variant="metricLabel" className="mb-1 block">
             {t('notifications.alertStudio.computedMetric.metric', 'Metric')}
-          </label>
+          </Text>
           <UiSelect
             className="w-full"
             value={value.metric_id}
@@ -143,9 +143,9 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
           />
         </div>
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+          <Text as="label" variant="metricLabel" className="mb-1 block">
             {t('notifications.alertStudio.computedMetric.window', 'Window')}
-          </label>
+          </Text>
           <UiSelect
             className="w-full"
             value={value.metric_window}
@@ -156,9 +156,9 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
           />
         </div>
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+          <Text as="label" variant="metricLabel" className="mb-1 block">
             {t('notifications.alertStudio.computedMetric.op', 'Operator')}
-          </label>
+          </Text>
           <UiSelect
             className="w-full"
             value={value.metric_op}
@@ -170,9 +170,9 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
       </div>
 
       <div>
-        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+        <Text as="label" variant="metricLabel" className="mb-1 block">
           {t('notifications.alertStudio.computedMetric.threshold', 'Threshold')}
-        </label>
+        </Text>
         <UiInput
           type="number"
           className="w-full"
@@ -184,9 +184,9 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
       </div>
 
       <GlassPanel className="p-3">
-        <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+        <Text as="p" variant="metricLabel" className="mb-1">
           {t('notifications.alertStudio.computedMetric.preview', 'Live preview')}
-        </p>
+        </Text>
         {!ready && (
           <p className="text-xs text-[var(--text-muted)]">
             {t(

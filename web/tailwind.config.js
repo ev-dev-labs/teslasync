@@ -7,6 +7,12 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        // Ultra-wide breakpoint for the modern-ui full-width redesign.
+        // Pages use `3xl:` grid columns so dashboards fill wide monitors
+        // (2K/ultrawide) instead of leaving dead space at the edges.
+        '3xl': '1920px',
+      },
       colors: {
         tesla: {
           red: '#e31937',
@@ -115,14 +121,44 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        // Driven by the --font-* CSS variables (see index.css :root and
+        // components/ui/FontProvider.tsx). The user's chosen UI/monospace
+        // font flows through every `font-sans` / `font-mono` utility.
+        sans: ['var(--font-sans)'],
+        mono: ['var(--font-mono)'],
+      },
+      fontWeight: {
+        // Mapped to the --font-weight-* vars so a user "heading weight"
+        // preference (which rewrites --font-weight-bold) flows through
+        // `font-bold` etc. app-wide.
+        normal: 'var(--font-weight-normal)',
+        medium: 'var(--font-weight-medium)',
+        semibold: 'var(--font-weight-semibold)',
+        bold: 'var(--font-weight-bold)',
       },
       fontSize: {
-        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
-        // Density-aware body text size.
-        // Tracks `--density-text` set by `body[data-density="..."]`.
-        'd-base': ['var(--density-text)', { lineHeight: '1.5' }],
+        // Every size multiplies by --font-scale so text scales but layout
+        // spacing does not. Body sizes derive their line-height from
+        // --leading (`calc(var(--leading) * 1em)`) so the line-height
+        // control is real and scales with the text; larger display sizes
+        // keep a tighter unitless leading for headline balance.
+        '2xs': ['calc(var(--font-scale) * 0.625rem)', { lineHeight: 'calc(var(--leading) * 1em)' }],
+        xs: ['calc(var(--font-scale) * 0.75rem)', { lineHeight: 'calc(var(--leading) * 1em)' }],
+        sm: ['calc(var(--font-scale) * 0.875rem)', { lineHeight: 'calc(var(--leading) * 1em)' }],
+        base: ['calc(var(--font-scale) * 1rem)', { lineHeight: 'calc(var(--leading) * 1em)' }],
+        lg: ['calc(var(--font-scale) * 1.125rem)', { lineHeight: 'calc(var(--leading) * 1em)' }],
+        xl: ['calc(var(--font-scale) * 1.25rem)', { lineHeight: '1.4' }],
+        '2xl': ['calc(var(--font-scale) * 1.5rem)', { lineHeight: '1.3' }],
+        '3xl': ['calc(var(--font-scale) * 1.875rem)', { lineHeight: '1.2' }],
+        '4xl': ['calc(var(--font-scale) * 2.25rem)', { lineHeight: '1.15' }],
+        '5xl': ['calc(var(--font-scale) * 3rem)', { lineHeight: '1.1' }],
+        '6xl': ['calc(var(--font-scale) * 3.75rem)', { lineHeight: '1.05' }],
+        '7xl': ['calc(var(--font-scale) * 4.5rem)', { lineHeight: '1' }],
+        '8xl': ['calc(var(--font-scale) * 6rem)', { lineHeight: '1' }],
+        '9xl': ['calc(var(--font-scale) * 8rem)', { lineHeight: '1' }],
+        // Density-aware body text size. Tracks `--density-text` set by
+        // `body[data-density="..."]`, additionally scaled by --font-scale.
+        'd-base': ['calc(var(--font-scale) * var(--density-text))', { lineHeight: 'calc(var(--leading) * 1em)' }],
       },
       spacing: {
         // Density-aware padding/gap tokens.

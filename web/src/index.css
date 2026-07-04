@@ -3,9 +3,31 @@
 @tailwind utilities;
 
 :root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /*
+   * Typography variables (Phase / Typography Unit 0).
+   *
+   * The whole app's font family, size, line-height, letter-spacing, and
+   * heading weight are driven by these variables. FontProvider
+   * (components/ui/FontProvider.tsx) rewrites them at runtime from the
+   * user's saved preferences; the inline bootstrap in index.html + the
+   * belt in main.tsx apply the cached values before first paint. Tailwind
+   * (tailwind.config.js) references them so every `text-*`, `font-*`, and
+   * `leading-*` utility scales/re-fonts/re-weights at once. Never hardcode
+   * a font family, pixel size, or numeric weight anywhere else.
+   */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-scale: 1;
+  --leading: 1.5;
+  --tracking: 0em;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  font-family: var(--font-sans);
+  line-height: var(--leading);
+  letter-spacing: var(--tracking);
+  font-weight: var(--font-weight-normal);
   color-scheme: dark;
   --neon-cyan: #00f0ff;
   --neon-blue: #4f46e5;
@@ -23,6 +45,14 @@
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --text-muted: #8a95a6;
+  /* Text on an inverted surface (flipped tooltip / accent fill). Dark in
+   * dark themes, overridden light under :root.light-mode below. */
+  --text-inverse: #0f172a;
+  /* Foreground for text/icons sitting on a solid accent fill (blue-600 /
+   * --accent). The accent stays a dark blue in every theme, so white always
+   * meets AA on it — constant across modes (no light-mode override needed;
+   * dark text on blue-600 would fail contrast). */
+  --text-on-accent: #ffffff;
   /*
    * Chart / surface tokens consumed by chartTokens in lib/tokens.ts.
    * Defaults below are dark-mode values; :root.light-mode (further down in
@@ -37,6 +67,11 @@
   --theme-primary-rgb: 0, 240, 255;
   --theme-accent: #4f46e5;
   --theme-accent-rgb: 79, 70, 229;
+  /* Contrasting foreground for solid accent fills (primary buttons, FAB…).
+     Recomputed per-accent in ThemeProvider.applyThemeCSS; these are the
+     defaults for the neon-cyan/indigo starting palette. */
+  --theme-on-primary: #0a0a0f;
+  --theme-on-accent: #ffffff;
   /*
    * Density tokens (Phase 40 / Prompt 44).
    *
@@ -100,6 +135,7 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text-primary);
+  font-family: var(--font-sans);
   overflow: hidden;
 }
 
@@ -393,6 +429,8 @@ select option:checked {
 :root.light-mode {
   /* Ensure Tailwind text-white becomes dark text */
   --tw-text-opacity: 1;
+  /* Inverted-surface text flips to light on light themes. */
+  --text-inverse: #f8fafc;
   /* Chart / surface token overrides for light theme (paired with :root defaults). */
   --surface-elevated: rgba(255, 255, 255, 0.95);
   --border-subtle: rgba(0, 0, 0, 0.06);

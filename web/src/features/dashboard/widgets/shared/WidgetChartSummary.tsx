@@ -44,11 +44,11 @@ export function WidgetChartSummary({
         >
           {stats.map((stat) => (
             <div key={stat.label} className="flex min-w-0 flex-col">
-              <span className="truncate text-[10px] text-[var(--text-muted)]">{stat.label}</span>
+              <span className="truncate text-2xs text-[var(--text-muted)]">{stat.label}</span>
               <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
                 {stat.value}
                 {stat.unit && (
-                  <span className="ml-0.5 text-[10px] font-normal text-[var(--text-muted)]">
+                  <span className="ml-0.5 text-2xs font-normal text-[var(--text-muted)]">
                     {stat.unit}
                   </span>
                 )}

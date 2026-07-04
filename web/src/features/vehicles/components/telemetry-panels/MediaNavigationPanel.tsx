@@ -25,7 +25,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
       <div className="space-y-5">
         {/* Now Playing */}
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2">
+          <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-2">
             {t('telemetry.nowPlaying', 'Now Playing')}
           </p>
           {mediaData ? (
@@ -38,7 +38,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
               </p>
               <div className="flex items-center gap-2">
                 {cleanNil(mediaData.playback_source) && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-muted)]">
+                  <span className="text-2xs px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-muted)]">
                     {cleanNil(mediaData.playback_source)}
                   </span>
                 )}
@@ -64,7 +64,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
 
         {/* Navigation destination */}
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center gap-1">
+          <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center gap-1">
             <Navigation2 className="h-3 w-3" /> {t('telemetry.navigation', 'Navigation')}
           </p>
           {locationData ? (
@@ -92,17 +92,17 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
               )}
               <div className="flex items-center gap-2 flex-wrap">
                 {locationData.located_at_home && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+                  <span className="inline-flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
                     🏠 {t('telemetry.placeHome', 'Home')}
                   </span>
                 )}
                 {locationData.located_at_work && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <span className="inline-flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
                     🏢 {t('telemetry.placeWork', 'Work')}
                   </span>
                 )}
                 {locationData.located_at_favorite && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <span className="inline-flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
                     ⭐ {t('telemetry.placeFavorite', 'Favorite')}
                   </span>
                 )}

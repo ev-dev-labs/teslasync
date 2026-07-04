@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Database, ServerCrash, Radio, Zap } from 'lucide-react'
 
-import { GlassPanel, Badge, Button } from '@/components/ui'
+import { GlassPanel, Badge, Button, Heading, Text, Code } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
+import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import { type ApiError } from '@/lib/resilience'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import {
@@ -276,8 +278,8 @@ function DiagnosticBanner({
       <div className="flex items-start gap-4">
         <div className="text-[var(--text-secondary)]">{icon}</div>
         <div className="flex-1 space-y-3">
-          <h3 className="text-base font-semibold text-[var(--text-primary)]">{title}</h3>
-          <p className="text-sm text-[var(--text-secondary)]">{body}</p>
+          <Heading level="panel">{title}</Heading>
+          <Text as="p" size="sm" color="secondary">{body}</Text>
           {meta && <DiagnosticMetaList meta={meta} />}
           {cta && ctaHref && (
             <a href={ctaHref} target="_blank" rel="noreferrer">
@@ -286,9 +288,9 @@ function DiagnosticBanner({
           )}
           {otherKeys && otherKeys.length > 0 && (
             <div className="space-y-2 pt-2" data-testid="redis-diagnostic-other-vehicles">
-              <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
+              <Text as="p" size="xs" color="muted" className="uppercase tracking-wide">
                 {t('redis.diagnostic.otherVehicles', 'Other vehicles with cached signals')}
-              </p>
+              </Text>
               <div className="flex flex-wrap gap-2">
                 {otherKeys.slice(0, 6).map((k) => (
                   <button
@@ -296,10 +298,14 @@ function DiagnosticBanner({
                     type="button"
                     onClick={() => onSelectVehicle?.(k.vehicle_id)}
                     data-testid={`redis-diagnostic-other-${k.vehicle_id}`}
-                    className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
+                    className={cn(
+                      'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-1 hover:bg-[var(--surface-2)]',
+                      typography.size.xs,
+                      typography.color.secondary,
+                    )}
                   >
                     {k.display_name || k.vehicle_vin || `Vehicle ${k.vehicle_id}`}{' '}
-                    <span className="text-[var(--text-muted)]">· {k.field_count}</span>
+                    <Text color="muted">· {k.field_count}</Text>
                   </button>
                 ))}
               </div>
@@ -315,14 +321,14 @@ function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
   return (
-    <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
+    <dl className={cn('grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2', typography.size.xs, typography.color.secondary)}>
       <Row label={t('redis.diagnostic.meta.mode', 'Live store mode')}>
         <Badge size="sm" variant={meta.live_signal_store_mode === 'hybrid' ? 'success' : 'danger'}>
           {meta.live_signal_store_mode}
         </Badge>
       </Row>
       <Row label={t('redis.diagnostic.meta.key', 'Redis key')}>
-        <code className="font-mono text-[var(--text-primary)]">{meta.redis_key}</code>
+        <Code>{meta.redis_key}</Code>
       </Row>
       <Row label={t('redis.diagnostic.meta.l1Count', 'L1 signals')}>{meta.l1_signal_count}</Row>
       <Row label={t('redis.diagnostic.meta.l2Count', 'L2 fields (raw)')}>{meta.redis_field_count}</Row>
@@ -334,7 +340,7 @@ function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
       </Row>
       {meta.vehicle_vin && (
         <Row label={t('redis.diagnostic.meta.vin', 'VIN')}>
-          <code className="font-mono text-[var(--text-primary)]">{meta.vehicle_vin}</code>
+          <Code>{meta.vehicle_vin}</Code>
         </Row>
       )}
     </dl>
@@ -344,8 +350,8 @@ function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <>
-      <dt className="text-[var(--text-muted)]">{label}</dt>
-      <dd className="text-[var(--text-secondary)]">{children}</dd>
+      <dt className={typography.color.muted}>{label}</dt>
+      <dd className={typography.color.secondary}>{children}</dd>
     </>
   )
 }

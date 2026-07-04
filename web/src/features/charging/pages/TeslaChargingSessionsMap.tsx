@@ -62,8 +62,8 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
             lat: s.latitude as number,
             lng: s.longitude as number,
             popupHtml: `
-              <div style="font-size:12px;line-height:1.3">
-                <p style="font-weight:600;margin-bottom:2px">${siteName}</p>
+              <div class="text-xs" style="line-height:1.3">
+                <p class="font-semibold" style="margin-bottom:2px">${siteName}</p>
                 <p>${escapeHtml(formatDateTime(s.charge_start_datetime))}</p>
                 ${energy}${cost}${charger}
               </div>

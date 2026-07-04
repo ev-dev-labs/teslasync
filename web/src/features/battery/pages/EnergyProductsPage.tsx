@@ -1,16 +1,16 @@
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
 import {
   Sun, Battery, Zap, Grid3x3, RefreshCw, Shield,
-  CloudLightning, Gauge, Activity, Settings, Cpu, Info, Clock,
+  CloudLightning, Gauge, Activity, Settings, Cpu, Info, Clock, Layers,
 } from 'lucide-react';
 
-import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, SectionTitle, PanelTitle, Text, Label } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -30,13 +30,13 @@ import { TOUSettingsModal } from '../components/TOUSettingsModal';
 
 function fmtEnergy(wh: number | null | undefined): string {
   if (wh == null) return '—';
-  if (wh >= 1000) return `${fmtNumber(wh / 1000, 1)} kWh`;
+  if (Math.abs(wh) >= 1000) return `${fmtNumber(wh / 1000, 1)} kWh`;
   return `${fmtNumber(wh, 0)} Wh`;
 }
 
 function fmtPower(w: number | null | undefined): string {
   if (w == null) return '—';
-  if (w >= 1000) return `${fmtNumber(w / 1000, 1)} kW`;
+  if (Math.abs(w) >= 1000) return `${fmtNumber(w / 1000, 1)} kW`;
   return `${fmtNumber(w, 0)} W`;
 }
 
@@ -59,7 +59,17 @@ function operationModeLabel(mode: string | undefined): string {
   return mode ?? '—';
 }
 
-/* ───────── Capability Badge ───────── */
+/* ───────── Small surfaces ───────── */
+
+/** Labeled inner surface used for single key/value facts inside a card. */
+function InfoTile({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+      <Text as="p" variant="caption" className="mb-1">{label}</Text>
+      {children}
+    </div>
+  );
+}
 
 interface CapBadgeProps {
   active: boolean;
@@ -67,10 +77,15 @@ interface CapBadgeProps {
   icon: React.ElementType;
 }
 
+/** Capability chip — colour AND text/aria convey the on/off state (a11y). */
 function CapBadge({ active, label, icon: Icon }: CapBadgeProps) {
+  const { t } = useTranslation();
+  const state = active
+    ? t('energy.products.capAvailable', 'available')
+    : t('energy.products.capUnavailable', 'unavailable');
   return (
-    <Badge variant={active ? 'success' : 'neutral'}>
-      <Icon className="h-3 w-3 mr-1" />
+    <Badge variant={active ? 'success' : 'neutral'} aria-label={`${label}: ${state}`}>
+      <Icon className="h-3 w-3" aria-hidden="true" />
       {label}
     </Badge>
   );
@@ -80,30 +95,29 @@ function CapBadge({ active, label, icon: Icon }: CapBadgeProps) {
 
 function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: boolean }) {
   const { t } = useTranslation();
-  const { data: response, isLoading } = useTeslaEnergySiteInfo(siteId);
+  const infoQuery = useTeslaEnergySiteInfo(siteId);
+  const { data: response, isLoading, isError, error } = infoQuery;
   const refreshMutation = useRefreshTeslaEnergySiteInfo();
   const [touModalOpen, setTouModalOpen] = useState(false);
 
   const info: TeslaEnergySiteInfo | null = response?.data ?? null;
 
-  // Extract current tariff name from site_info if available
+  // Tariff name may live at the top level or nested under tou_settings.
+  const touContent = info?.tariff_content_v2 as Record<string, unknown> | undefined;
+  const touSettings = info?.tou_settings as Record<string, unknown> | undefined;
+  const nestedTariff = touSettings?.tariff_content_v2 as Record<string, unknown> | undefined;
   const tariffName =
-    (info?.tariff_content_v2 as Record<string, unknown> | undefined)?.name as string | undefined ??
-    (info?.tou_settings as Record<string, unknown> | undefined)?.tariff_content_v2 != null
-      ? ((info?.tou_settings as Record<string, unknown>)?.tariff_content_v2 as Record<string, unknown>)?.name as string | undefined
-      : undefined;
+    (touContent?.name as string | undefined) ?? (nestedTariff?.name as string | undefined);
 
-  if (isLoading) {
-    return <Skeleton className="h-32 mt-4" />;
-  }
+  const showTou = touCapable || Boolean(info?.components?.tou_capable);
 
   return (
-    <div className="mt-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-[var(--text-secondary)] flex items-center gap-1.5">
-          <Settings className="h-3.5 w-3.5" />
+    <div className="space-y-4 border-t border-white/[0.06] pt-4">
+      <div className="flex items-center justify-between gap-2">
+        <PanelTitle className="flex items-center gap-1.5">
+          <Settings className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('energy.siteInfo.title', 'Site Configuration')}
-        </h4>
+        </PanelTitle>
         <Button
           variant="ghost"
           size="sm"
@@ -112,87 +126,86 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
           disabled={refreshMutation.isPending}
           aria-label={t('energy.siteInfo.refresh', 'Refresh site info')}
         >
-          <RefreshCw className="h-3 w-3" />
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
       </div>
 
-      {info ? (
+      {isLoading ? (
+        <Skeleton className="h-40 rounded-xl" />
+      ) : isError ? (
+        <QueryError error={error} onRetry={() => refreshMutation.mutate(siteId)} />
+      ) : info ? (
         <div className="space-y-3">
           {/* Operation mode + backup reserve */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-              <p className="text-xs text-[var(--text-muted)] mb-1">
-                {t('energy.siteInfo.operationMode', 'Operation Mode')}
-              </p>
-              <p className="text-sm font-medium text-[var(--text-primary)]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <InfoTile label={t('energy.siteInfo.operationMode', 'Operation Mode')}>
+              <Text variant="body" className="font-medium">
                 {operationModeLabel(info.default_real_mode)}
-              </p>
-            </div>
-            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-              <p className="text-xs text-[var(--text-muted)] mb-1">
-                {t('energy.siteInfo.backupReserve', 'Backup Reserve')}
-              </p>
+              </Text>
+            </InfoTile>
+            <InfoTile label={t('energy.siteInfo.backupReserve', 'Backup Reserve')}>
               {info.backup_reserve_percent != null ? (
                 <div className="flex items-center gap-2">
                   <RadialGauge
                     value={info.backup_reserve_percent}
                     max={100}
-                    size={32}
+                    size={36}
                     label=""
+                    color="#06b6d4"
                   />
-                  <span className="text-sm font-medium text-[var(--text-primary)]">
+                  <Text variant="body" className="font-medium">
                     {fmtNumber(info.backup_reserve_percent, 0)}%
-                  </span>
+                  </Text>
                 </div>
               ) : (
-                <p className="text-sm text-[var(--text-muted)]">—</p>
+                <Text size="sm" color="muted">—</Text>
               )}
-            </div>
+            </InfoTile>
           </div>
 
-          {/* Battery count + capacity */}
-          <Grid cols={{ default: 2, md: 3 }} gap={3}>
-            {info.battery_count != null && (
-              <StatCard
-                label={t('energy.siteInfo.batteryCount', 'Powerwalls')}
-                value={info.battery_count}
-                icon={<Battery className="h-4 w-4" />}
-              />
-            )}
-            {info.nameplate_power != null && (
-              <StatCard
-                label={t('energy.siteInfo.ratedPower', 'Rated Power')}
-                value={fmtPower(info.nameplate_power)}
-                icon={<Zap className="h-4 w-4" />}
-              />
-            )}
-            {info.nameplate_energy != null && (
-              <StatCard
-                label={t('energy.siteInfo.ratedEnergy', 'Rated Energy')}
-                value={fmtEnergy(info.nameplate_energy)}
-                icon={<Gauge className="h-4 w-4" />}
-              />
-            )}
-          </Grid>
+          {/* Battery count + rated power/energy — always shown with placeholders */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <MetricCard
+              label={t('energy.siteInfo.batteryCount', 'Powerwalls')}
+              value={info.battery_count ?? '—'}
+              icon={<Battery className="h-4 w-4" />}
+              color="green"
+            />
+            <MetricCard
+              label={t('energy.siteInfo.ratedPower', 'Rated Power')}
+              value={info.nameplate_power != null ? fmtPower(info.nameplate_power) : '—'}
+              icon={<Zap className="h-4 w-4" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('energy.siteInfo.ratedEnergy', 'Rated Energy')}
+              value={info.nameplate_energy != null ? fmtEnergy(info.nameplate_energy) : '—'}
+              icon={<Gauge className="h-4 w-4" />}
+              color="cyan"
+            />
+          </div>
 
           {/* Firmware + timezone */}
-          <div className="flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
-            {info.version && (
-              <span className="flex items-center gap-1">
-                <Cpu className="h-3 w-3" /> {t('energy.siteInfo.firmware', 'Firmware')}: {info.version}
-              </span>
-            )}
-            {info.installation_time_zone && (
-              <span>· {info.installation_time_zone}</span>
-            )}
-          </div>
+          {(info.version || info.installation_time_zone) && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {info.version && (
+                <Text variant="caption" className="inline-flex items-center gap-1">
+                  <Cpu className="h-3 w-3" aria-hidden="true" />
+                  {t('energy.siteInfo.firmware', 'Firmware')}: {info.version}
+                </Text>
+              )}
+              {info.installation_time_zone && (
+                <Text variant="caption">· {info.installation_time_zone}</Text>
+              )}
+            </div>
+          )}
 
-          {/* Component badges from site_info (may differ from /products) */}
+          {/* Component badges reported by site_info (may differ from /products) */}
           {info.components && (
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(info.components).map(([key, val]) =>
                 typeof val === 'boolean' ? (
-                  <Badge key={key} variant={val ? 'success' : 'neutral'} className="text-xs">
+                  <Badge key={key} variant={val ? 'success' : 'neutral'} size="sm">
                     {key.replace(/_/g, ' ')}
                   </Badge>
                 ) : null,
@@ -200,18 +213,18 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
             </div>
           )}
 
-          {/* Time-of-Use Rate Plan */}
-          {(touCapable || info.components?.tou_capable) && (
-            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[var(--text-muted)] mb-0.5 flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+          {/* Time-of-Use rate plan */}
+          {showTou && (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <Text as="p" variant="caption" className="mb-0.5 inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" aria-hidden="true" />
                     {t('energy.tou.sectionTitle', 'Rate Plan')}
-                  </p>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                  </Text>
+                  <Text as="p" variant="body" className="truncate font-medium">
                     {tariffName ?? t('energy.tou.noPlan', 'No rate plan configured')}
-                  </p>
+                  </Text>
                 </div>
                 <Button
                   variant="ghost"
@@ -227,28 +240,24 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
 
           {/* Fetched timestamp */}
           {response?.fetched_at && (
-            <p className="text-xs text-[var(--text-muted)]">
+            <Text as="p" variant="caption">
               {t('energy.siteInfo.lastFetched', 'Site info fetched')}: {formatDateTime(response.fetched_at)}
-            </p>
+            </Text>
           )}
         </div>
       ) : (
-        <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-4">
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
+          <EmptyState /* no-action: transient empty state — site config is fetched on demand; the section refresh button above is the recovery affordance */
             icon={<Info className="h-5 w-5" />}
             message={t(
               'energy.siteInfo.empty',
-              'No site configuration loaded yet. Click refresh to fetch from Tesla.',
+              'No site configuration loaded yet. Use refresh to fetch from Tesla.',
             )}
           />
         </div>
       )}
 
-      <TOUSettingsModal
-        open={touModalOpen}
-        onClose={() => setTouModalOpen(false)}
-        siteId={siteId}
-      />
+      <TOUSettingsModal open={touModalOpen} onClose={() => setTouModalOpen(false)} siteId={siteId} />
     </div>
   );
 }
@@ -260,69 +269,114 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
   const Icon = resourceIcon(site.resource_type);
 
   return (
-    <GlassPanel className="p-6 space-y-5">
+    <GlassPanel className="space-y-4 p-4 sm:space-y-5 sm:p-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500/10">
-            <Icon className="h-5 w-5 text-cyan-400" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neon-cyan/10 ring-1 ring-neon-cyan/20">
+            <Icon className="h-5 w-5 text-cyan-300" aria-hidden="true" />
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+          <div className="min-w-0">
+            <SectionTitle className="truncate">
               {site.site_name || t('energy.products.unnamed', 'Unnamed Site')}
-            </h3>
-            <p className="text-sm text-[var(--text-muted)]">
-              {resourceLabel(site.resource_type)} · ID {site.energy_site_id}
-            </p>
+            </SectionTitle>
+            <Text variant="caption" className="block truncate">
+              {resourceLabel(site.resource_type)} · {t('energy.products.siteId', 'ID')} {site.energy_site_id}
+            </Text>
           </div>
         </div>
-        {site.battery_type && (
-          <Badge variant="info">{site.battery_type}</Badge>
-        )}
+        {site.battery_type && <Badge variant="info">{site.battery_type}</Badge>}
       </div>
 
       {/* Stats row */}
-      <Grid cols={{ default: 2, md: 3 }} gap={3}>
-        <StatCard
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <MetricCard
           label={t('energy.products.charge', 'Charge')}
           value={site.percentage_charged != null ? `${fmtNumber(site.percentage_charged, 1)}%` : '—'}
           icon={<Gauge className="h-4 w-4" />}
+          color="cyan"
         />
-        <StatCard
+        <MetricCard
           label={t('energy.products.capacity', 'Capacity')}
           value={fmtEnergy(site.total_pack_energy)}
           icon={<Battery className="h-4 w-4" />}
+          color="green"
         />
-        <StatCard
+        <MetricCard
           label={t('energy.products.type', 'Type')}
           value={resourceLabel(site.resource_type)}
           icon={<Activity className="h-4 w-4" />}
+          color="blue"
         />
-      </Grid>
-
-      {/* Capability badges */}
-      <div className="flex flex-wrap gap-2">
-        <CapBadge active={site.has_solar} label={t('energy.products.solar', 'Solar')} icon={Sun} />
-        <CapBadge active={site.has_battery} label={t('energy.products.battery', 'Battery')} icon={Battery} />
-        <CapBadge active={site.has_grid} label={t('energy.products.grid', 'Grid')} icon={Grid3x3} />
-        <CapBadge active={site.backup_capable} label={t('energy.products.backup', 'Backup')} icon={Shield} />
-        <CapBadge active={site.storm_mode_capable} label={t('energy.products.stormWatch', 'Storm Watch')} icon={CloudLightning} />
-        {site.storm_mode_enabled && (
-          <Badge variant="warning">
-            <CloudLightning className="h-3 w-3 mr-1" />
-            {t('energy.products.stormActive', 'Storm Mode Active')}
-          </Badge>
-        )}
       </div>
 
-      {/* Site Info section */}
+      {/* Capability badges */}
+      <div>
+        <Label className="mb-2 block">{t('energy.products.capabilities', 'Capabilities')}</Label>
+        <div className="flex flex-wrap gap-2">
+          <CapBadge active={site.has_solar} label={t('energy.products.solar', 'Solar')} icon={Sun} />
+          <CapBadge active={site.has_battery} label={t('energy.products.battery', 'Battery')} icon={Battery} />
+          <CapBadge active={site.has_grid} label={t('energy.products.grid', 'Grid')} icon={Grid3x3} />
+          <CapBadge active={site.backup_capable} label={t('energy.products.backup', 'Backup')} icon={Shield} />
+          <CapBadge active={site.storm_mode_capable} label={t('energy.products.stormWatch', 'Storm Watch')} icon={CloudLightning} />
+          {site.storm_mode_enabled && (
+            <Badge variant="warning">
+              <CloudLightning className="h-3 w-3" aria-hidden="true" />
+              {t('energy.products.stormActive', 'Storm Mode Active')}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Site configuration (own loading / empty / error) */}
       <SiteInfoSection siteId={site.energy_site_id} touCapable={site.tou_capable} />
 
       {/* Footer */}
-      <p className="text-xs text-[var(--text-muted)]">
+      <Text as="p" variant="caption">
         {t('energy.products.lastFetched', 'Last fetched')}: {formatDateTime(site.fetched_at)}
-      </p>
+      </Text>
     </GlassPanel>
+  );
+}
+
+/* ───────── KPI band ───────── */
+
+interface SummaryKpi {
+  key: string;
+  label: string;
+  value: string | number;
+  icon: ReactNode;
+  color: 'cyan' | 'amber' | 'green' | 'blue' | 'purple';
+}
+
+function SummaryBand({ sites, isLoading }: { sites: TeslaEnergySite[]; isLoading: boolean }) {
+  const { t } = useTranslation();
+
+  const kpis = useMemo<SummaryKpi[]>(() => {
+    const totalCapacity = sites.reduce((sum, s) => sum + (s.total_pack_energy ?? 0), 0);
+    return [
+      { key: 'sites', label: t('energy.products.totalSites', 'Energy Sites'), value: sites.length, icon: <Zap className="h-5 w-5" />, color: 'cyan' },
+      { key: 'solar', label: t('energy.products.withSolar', 'With Solar'), value: sites.filter((s) => s.has_solar).length, icon: <Sun className="h-5 w-5" />, color: 'amber' },
+      { key: 'battery', label: t('energy.products.withBattery', 'With Battery'), value: sites.filter((s) => s.has_battery).length, icon: <Battery className="h-5 w-5" />, color: 'green' },
+      { key: 'backup', label: t('energy.products.backupCapable', 'Backup Capable'), value: sites.filter((s) => s.backup_capable).length, icon: <Shield className="h-5 w-5" />, color: 'blue' },
+      { key: 'storm', label: t('energy.products.stormReady', 'Storm-Ready'), value: sites.filter((s) => s.storm_mode_capable).length, icon: <CloudLightning className="h-5 w-5" />, color: 'purple' },
+      { key: 'capacity', label: t('energy.products.totalCapacity', 'Total Capacity'), value: fmtEnergy(totalCapacity), icon: <Layers className="h-5 w-5" />, color: 'cyan' },
+    ];
+  }, [sites, t]);
+
+  return (
+    <section
+      aria-label={t('energy.products.summary', 'Energy summary')}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-6"
+    >
+      {isLoading && sites.length === 0
+        ? Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-[92px] rounded-xl" />
+          ))
+        : kpis.map((k) => (
+            <MetricCard key={k.key} label={k.label} value={k.value} icon={k.icon} color={k.color} />
+          ))}
+    </section>
   );
 }
 
@@ -332,7 +386,8 @@ export default function EnergyProductsPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.products.title', 'Energy Products'));
 
-  const { data, isLoading, error } = useTeslaEnergySites();
+  const sitesQuery = useTeslaEnergySites();
+  const { data, isLoading, isError, error, refetch } = sitesQuery;
   const refreshMutation = useRefreshTeslaEnergySites();
 
   const sites = data ?? [];
@@ -341,8 +396,7 @@ export default function EnergyProductsPage() {
     <PageContainer
       title={t('energy.products.title', 'Energy Products')}
       subtitle={t('energy.products.subtitle', 'Powerwalls, Solar Panels & Wall Connectors discovered from Tesla')}
-      loading={isLoading}
-      error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+      query={sitesQuery}
       actions={
         <Button
           onClick={() => refreshMutation.mutate()}
@@ -350,69 +404,58 @@ export default function EnergyProductsPage() {
           disabled={refreshMutation.isPending}
           aria-label={t('energy.products.refresh', 'Refresh from Tesla')}
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
           {t('energy.products.refresh', 'Refresh from Tesla')}
         </Button>
       }
     >
-      {/* Summary stats */}
-      <FadeIn>
-        <Grid cols={{ default: 2, md: 4 }} gap={4}>
-          <StatCard
-            label={t('energy.products.totalSites', 'Energy Sites')}
-            value={sites.length}
-            icon={<Zap className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('energy.products.withSolar', 'With Solar')}
-            value={sites.filter(s => s.has_solar).length}
-            icon={<Sun className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('energy.products.withBattery', 'With Battery')}
-            value={sites.filter(s => s.has_battery).length}
-            icon={<Battery className="h-4 w-4" />}
-          />
-          <StatCard
-            label={t('energy.products.backupCapable', 'Backup Capable')}
-            value={sites.filter(s => s.backup_capable).length}
-            icon={<Shield className="h-4 w-4" />}
-          />
-        </Grid>
-      </FadeIn>
-
-      {/* Site cards */}
-      <FadeIn delay={0.05}>
-        {isLoading ? (
-          <Grid cols={{ default: 1, lg: 2 }} gap={4}>
-            {[1, 2].map(i => (
-              <GlassPanel key={i} className="p-6">
-                <Skeleton className="h-48" />
-              </GlassPanel>
-            ))}
-          </Grid>
-        ) : sites.length > 0 ? (
-          <StaggerContainer>
-            <Grid cols={{ default: 1, lg: 2 }} gap={4}>
-              {sites.map(site => (
-                <StaggerItem key={site.id}>
-                  <EnergySiteCard site={site} />
-                </StaggerItem>
-              ))}
-            </Grid>
-          </StaggerContainer>
-        ) : (
-          <GlassPanel className="p-6">
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Zap className="h-8 w-8" />}
-              message={t(
-                'energy.products.empty',
-                'No energy products found. Click "Refresh from Tesla" to discover your Powerwalls and Solar installations.',
-              )}
-            />
+      {isError ? (
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-5">
+            <QueryError error={error} onRetry={() => refetch()} />
           </GlassPanel>
-        )}
-      </FadeIn>
+        </FadeIn>
+      ) : (
+        <>
+          {/* KPI band — full-width responsive metric grid */}
+          <FadeIn>
+            <SummaryBand sites={sites} isLoading={isLoading} />
+          </FadeIn>
+
+          {/* Site cards — bento grid that adds columns on wide screens */}
+          <FadeIn delay={0.05}>
+            {isLoading && sites.length === 0 ? (
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 3xl:grid-cols-3">
+                {[0, 1].map((i) => (
+                  <GlassPanel key={i} className="p-4 sm:p-5">
+                    <Skeleton className="h-72 rounded-xl" />
+                  </GlassPanel>
+                ))}
+              </div>
+            ) : sites.length > 0 ? (
+              <StaggerContainer>
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 3xl:grid-cols-3">
+                  {sites.map((site) => (
+                    <StaggerItem key={site.id}>
+                      <EnergySiteCard site={site} />
+                    </StaggerItem>
+                  ))}
+                </div>
+              </StaggerContainer>
+            ) : (
+              <GlassPanel className="p-6">
+                <EmptyState /* no-action: transient empty state — discovery is triggered by the header "Refresh from Tesla" action */
+                  icon={<Zap className="h-8 w-8" />}
+                  message={t(
+                    'energy.products.empty',
+                    'No energy products found. Use "Refresh from Tesla" to discover your Powerwalls and Solar installations.',
+                  )}
+                />
+              </GlassPanel>
+            )}
+          </FadeIn>
+        </>
+      )}
     </PageContainer>
   );
 }

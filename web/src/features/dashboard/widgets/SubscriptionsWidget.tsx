@@ -178,7 +178,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
               <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {activeCount}
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.subscriptions.activeCount', 'active')}
               </span>
               {nextExpiry && (

@@ -147,7 +147,7 @@ export function ImportPreviewModal({
         onClose={handleClose}
         title={t('import.preview', 'Import Preview')}
         size="lg"
-        className="bg-[#0f1218] border border-white/[0.08] text-white max-h-[80vh] overflow-y-auto"
+        className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)] max-h-[80vh] overflow-y-auto"
       >
         <ImportPreview
           validation={validation}
@@ -164,7 +164,7 @@ export function ImportPreviewModal({
       onClose={handleClose}
       title={t('import.title', 'Import Dashboard')}
       size="lg"
-      className="bg-[#0f1218] border border-white/[0.08] text-white"
+      className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)]"
     >
       <div className="space-y-4">
         <Tabs

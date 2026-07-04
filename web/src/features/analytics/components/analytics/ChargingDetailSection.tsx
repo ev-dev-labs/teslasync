@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
-import { DollarSign } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { Building2, Plug, DollarSign, TrendingUp } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
+import { Text } from '@/components/ui';
 import {
   ChartTooltip,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
@@ -11,14 +11,21 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
 import { fmtInt } from '@/lib/numberFormat';
-import type { FleetAnalytics } from '@/api/types';
-import { SectionTitle } from './helpers';
+import { AnalyticsPanel } from './AnalyticsPanel';
+import type { FleetAnalyticsQuery } from './constants';
 
-export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefined }) {
+/**
+ * Charging deep-dive panels (Charger Brands, Cost by Type, Cost Analysis,
+ * Monthly Trend). Rendered as bare grid items so they flow into the Charging
+ * tab's bento; the Monthly Trend spans a full-width hero band.
+ */
+export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+
+  const { data, isLoading, isError, error, refetch } = query;
+  const err = isError ? error : undefined;
 
   const ca = data?.charging_analytics;
   const brands = ca?.charger_brands ?? [];
@@ -31,42 +38,127 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
     return brands.map((b) => ({ ...b, pct: (safe(b.count) / maxCount) * 100 }));
   }, [brands]);
 
+  const typeTotal = chargerTypes.reduce((s, x) => s + safe(x.count), 0);
+
   return (
     <>
       {/* Charger Brands */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.charging.chargerBrands', 'Charger Brands')}</SectionTitle>
-        {brandLeaderboard.length > 0 ? (
-          <div className="mt-3 space-y-3">
-            {brandLeaderboard.map((b, idx) => (
-              <div key={b.brand}>
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-[var(--text-primary)] font-medium">
-                    #{idx + 1} {b.brand}
-                  </span>
-                  <span className="text-[var(--text-muted)]">
-                    {fmtInt(b.count)} {t('analytics.charging.sessions', 'sessions')}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+      <AnalyticsPanel
+        title={t('analytics.charging.chargerBrands', 'Charger Brands')}
+        icon={<Building2 className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={brandLeaderboard.length === 0}
+        emptyMessage={t('analytics.charging.noBrands', 'No charger brand data')}
+      >
+        <div className="space-y-3">
+          {brandLeaderboard.map((b, idx) => (
+            <div key={b.brand}>
+              <div className="mb-1 flex items-center justify-between">
+                <Text size="xs" weight="medium" color="primary">
+                  #{idx + 1} {b.brand}
+                </Text>
+                <Text size="xs" color="muted">
+                  {fmtInt(b.count)} {t('analytics.charging.sessions', 'sessions')}
+                </Text>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className="h-full rounded-full bg-neon-green transition-all duration-slow"
+                  style={{ width: `${b.pct}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </AnalyticsPanel>
+
+      {/* Cost by Charger Type */}
+      <AnalyticsPanel
+        title={t('analytics.charging.costByType', 'Cost by Charger Type')}
+        icon={<Plug className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={chargerTypes.length === 0}
+        emptyMessage={t('analytics.charging.noCostByType', 'No charger type data')}
+      >
+        <div className="space-y-3">
+          {chargerTypes.map((ct, i) => {
+            const pct = typeTotal > 0 ? (safe(ct.count) / typeTotal) * 100 : 0;
+            return (
+              <div key={i} className="flex items-center gap-3">
+                <Text size="xs" weight="medium" color="secondary" className="w-28 truncate text-right">
+                  {ct.type}
+                </Text>
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                   <div
-                    className="h-full rounded-full bg-neon-green transition-all duration-slow"
-                    style={{ width: `${b.pct}%` }}
+                    className="h-full rounded-full transition-all duration-slow"
+                    style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                   />
                 </div>
+                <Text size="xs" color="primary" mono className="w-20 text-right">
+                  {safe(ct.count)} ({fmtInt(pct)}%)
+                </Text>
               </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noBrands', 'No charger brand data')} />
-        )}
-      </GlassPanel>
+            );
+          })}
+        </div>
+      </AnalyticsPanel>
 
-      {/* Monthly Charging Trend */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.charging.monthlyTrend', 'Monthly Charging Trend')}</SectionTitle>
-        {monthlyTrend.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
+      {/* Cost Analysis Cards */}
+      <AnalyticsPanel
+        title={t('analytics.charging.costAnalysis', 'Cost Analysis')}
+        icon={<DollarSign className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={!costStats}
+        emptyMessage={t('analytics.charging.noCostStats', 'No cost statistics')}
+        skeletonHeight={140}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <MetricCard
+            label={t('analytics.charging.minCost', 'Min Cost')}
+            value={formatCurrency(safe(costStats?.min), 2)}
+            icon={<DollarSign className="h-4 w-4" />}
+            color="green"
+          />
+          <MetricCard
+            label={t('analytics.charging.avgCost', 'Avg Cost')}
+            value={formatCurrency(safe(costStats?.avg), 2)}
+            icon={<DollarSign className="h-4 w-4" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('analytics.charging.medianCost', 'Median Cost')}
+            value={formatCurrency(safe(costStats?.median), 2)}
+            icon={<DollarSign className="h-4 w-4" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('analytics.charging.maxCost', 'Max Cost')}
+            value={formatCurrency(safe(costStats?.max), 2)}
+            icon={<DollarSign className="h-4 w-4" />}
+            color="amber"
+          />
+        </div>
+      </AnalyticsPanel>
+
+      {/* Monthly Charging Trend — hero band */}
+      <AnalyticsPanel
+        className="md:col-span-2 2xl:col-span-3"
+        title={t('analytics.charging.monthlyTrend', 'Monthly Charging Trend')}
+        icon={<TrendingUp className="h-4 w-4" />}
+        loading={isLoading}
+        error={err}
+        onRetry={refetch}
+        isEmpty={monthlyTrend.length === 0}
+        emptyMessage={t('analytics.charging.noMonthly', 'No monthly data')}
+      >
+        <div className="h-72 sm:h-80">
+          <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={monthlyTrend} margin={chartMarginLabeled} {...chartAnimation}>
               {chartGrid}
               <XAxis dataKey="month" tick={axisTickSm} />
@@ -80,74 +172,8 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
               <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} opacity={0.6} />
             </ComposedChart>
           </ResponsiveContainer>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noMonthly', 'No monthly data')} />
-        )}
-      </GlassPanel>
-
-      {/* Cost Analysis Cards */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.charging.costAnalysis', 'Cost Analysis')}</SectionTitle>
-        {costStats ? (
-          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <MetricCard
-              label={t('analytics.charging.minCost', 'Min Cost')}
-              value={formatCurrency(safe(costStats.min), 2)}
-              icon={<DollarSign className="h-4 w-4" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('analytics.charging.avgCost', 'Avg Cost')}
-              value={formatCurrency(safe(costStats.avg), 2)}
-              icon={<DollarSign className="h-4 w-4" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('analytics.charging.medianCost', 'Median Cost')}
-              value={formatCurrency(safe(costStats.median), 2)}
-              icon={<DollarSign className="h-4 w-4" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('analytics.charging.maxCost', 'Max Cost')}
-              value={formatCurrency(safe(costStats.max), 2)}
-              icon={<DollarSign className="h-4 w-4" />}
-              color="amber"
-            />
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noCostStats', 'No cost statistics')} />
-        )}
-      </GlassPanel>
-
-      {/* Cost by Charger Type */}
-      <GlassPanel className="p-4">
-        <SectionTitle>{t('analytics.charging.costByType', 'Cost by Charger Type')}</SectionTitle>
-        {chargerTypes.length > 0 ? (
-          <div className="mt-3 space-y-3">
-            {chargerTypes.map((ct, i) => {
-              const totalSessions = chargerTypes.reduce((s, x) => s + safe(x.count), 0);
-              const pct = totalSessions > 0 ? (safe(ct.count) / totalSessions) * 100 : 0;
-              return (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="w-28 text-xs text-right font-medium text-[var(--text-secondary)]">{ct.type}</span>
-                  <div className="flex-1 h-3 rounded-full bg-white/[0.06] overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-slow"
-                      style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-                    />
-                  </div>
-                  <span className="w-20 text-xs font-mono text-right text-[var(--text-primary)]">
-                    {safe(ct.count)} ({fmtInt(pct)}%)
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noCostByType', 'No charger type data')} />
-        )}
-      </GlassPanel>
+        </div>
+      </AnalyticsPanel>
     </>
   );
 }

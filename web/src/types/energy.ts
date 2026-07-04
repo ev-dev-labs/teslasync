@@ -1,6 +1,10 @@
 /** Types for battery & energy domain */
 
 export interface EnergyStats {
+  /** Echoed by the backend energy handler; optional for callers that don't need it. */
+  vehicle_id?: number;
+  /** Inclusive day count of the requested trailing window. */
+  period_days?: number;
   total_energy_used_wh: number;
   total_energy_charged_wh: number;
   total_wh: number;

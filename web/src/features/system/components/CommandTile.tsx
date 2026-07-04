@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Button as ControlButton, GlassPanel } from '@/components/ui';
+import { Button as ControlButton, GlassPanel, Text } from '@/components/ui';
 import { Loader2, Star, AlertTriangle } from 'lucide-react';
 import type { CommandDef } from '../commands';
 
@@ -67,16 +67,16 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStat
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
       </div>
       <div>
-        <span className="text-xs font-medium text-[var(--text-primary)] block">{t(def.labelKey, def.labelFallback)}</span>
+        <Text size="xs" weight="medium" color="primary" className="block">{t(def.labelKey, def.labelFallback)}</Text>
         {def.sublabelFallback && (
-          <span className="text-[10px] mt-0.5 font-medium block text-[var(--text-muted)]">
+          <Text size="2xs" weight="medium" color="muted" className="mt-0.5 block">
             {t(def.sublabelKey ?? '', def.sublabelFallback)}
-          </span>
+          </Text>
         )}
         {lastStatus && (
-          <span className={cn('text-[9px] mt-0.5 block',
-            lastStatus.startsWith('✓') ? 'text-neon-green/60' : 'text-neon-red/60',
-          )}>{lastStatus}</span>
+          <Text size="2xs" className={cn('mt-0.5 block',
+            lastStatus.startsWith('✓') ? 'text-emerald-300' : 'text-rose-300',
+          )}>{lastStatus}</Text>
         )}
       </div>
     </GlassPanel>

@@ -26,7 +26,7 @@ export function WidgetBigNumber({
   label,
   subtitle,
   badge,
-  valueColor = 'text-white',
+  valueColor = 'text-[var(--text-primary)]',
   nullDisplay = '—',
   animated = true,
 }: WidgetBigNumberProps) {
@@ -46,7 +46,7 @@ export function WidgetBigNumber({
       </div>
 
       {label && (
-        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{label}</span>
+        <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">{label}</span>
       )}
 
       {subtitle && <span className="text-xs text-[var(--text-secondary)]">{subtitle}</span>}

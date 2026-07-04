@@ -1,9 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { Activity } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui'
 import { LiveIndicator } from '@/components/data-display'
 import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
@@ -175,6 +176,11 @@ export default function VehicleDetailPage() {
   const state = stateData?.state
   const status: VehicleStatus = vehicle ? deriveStatus(state) : 'offline'
 
+  // Model + trim badge shown under the (nickname) title for quick identification.
+  const subtitle = vehicle
+    ? [vehicle.model, vehicle.trim_badging].filter(Boolean).join(' ') || undefined
+    : undefined
+
   /* ─── Loading short-circuit ─────────── */
   if (vehicleLoading) {
     return <VehicleDetailSkeleton />
@@ -185,22 +191,25 @@ export default function VehicleDetailPage() {
   return (
     <PageContainer
       title={effectiveName ?? t('vehicles.detail.title', 'Vehicle Detail')}
+      subtitle={subtitle}
       error={vehicleError as Error | null}
       breadcrumbLabels={{
-        '/vehicles/:id': effectiveName ?? `Vehicle #${id}`,
+        '/vehicles/:id': effectiveName ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id }),
       }}
       actions={<LiveIndicator variant="compact" />}
     >
       <LiveStaleDataBanner />
+
+      {/* Hero header — full-width band */}
       <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
         <FadeIn>
           <div data-tour="vehicle-detail-tabs">
-          <VehicleHeader
-            vehicle={vehicle}
-            status={status}
-            onWake={() => wakeMutation.mutate()}
-            waking={wakeMutation.isPending}
-          />
+            <VehicleHeader
+              vehicle={vehicle}
+              status={status}
+              onWake={() => wakeMutation.mutate()}
+              waking={wakeMutation.isPending}
+            />
           </div>
         </FadeIn>
       </SectionErrorBoundary>
@@ -213,54 +222,120 @@ export default function VehicleDetailPage() {
         </FadeIn>
       ) : (
         <>
-          <SectionErrorBoundary name="vehicle-detail:battery-range" fallbackTitle={t('vehicles.detail.section.batteryRangeFailed', 'Battery & range section failed to load')}>
-            <FadeIn delay={0.04}><BatteryRangePanel state={state} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:live-state" fallbackTitle={t('vehicles.detail.section.liveStateFailed', 'Live state indicators failed to load')}>
-            <FadeIn delay={0.06}><LiveStateIndicators state={state} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:quick-stats" fallbackTitle={t('vehicles.detail.section.quickStatsFailed', 'Quick stats failed to load')}>
-            <FadeIn delay={0.08}><QuickStatsGrid state={state} status={status} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:motor" fallbackTitle={t('vehicles.detail.section.motorFailed', 'Motor section failed to load')}>
-            <FadeIn delay={0.10}><MotorSection motorData={motorData} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:climate" fallbackTitle={t('vehicles.detail.section.climateFailed', 'Climate section failed to load')}>
-            <FadeIn delay={0.12}><ClimateSection climateData={climateData} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:security" fallbackTitle={t('vehicles.detail.section.securityFailed', 'Security section failed to load')}>
-            <FadeIn delay={0.14}><SecuritySection securityData={securityData} state={state} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:tire-pressure" fallbackTitle={t('vehicles.detail.section.tireFailed', 'Tire pressure section failed to load')}>
-            <FadeIn delay={0.16}><TirePressureSection tireData={tireData} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:charging-telemetry" fallbackTitle={t('vehicles.detail.section.chargingTelemetryFailed', 'Charging telemetry failed to load')}>
-            <FadeIn delay={0.18}><ChargingTelemetrySection chargingTelemetry={chargingTelemetry} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:battery-charts" fallbackTitle={t('vehicles.detail.section.batteryChartsFailed', 'Battery & range charts failed to load')}>
-            <FadeIn delay={0.20}><BatteryRangeCharts state={state} drives={drives} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:recent-drives" fallbackTitle={t('vehicles.detail.section.recentDrivesFailed', 'Recent drives failed to load')}>
-            <FadeIn delay={0.22}><RecentDrivesSection drives={drives} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:recent-charges" fallbackTitle={t('vehicles.detail.section.recentChargesFailed', 'Recent charges failed to load')}>
-            <FadeIn delay={0.24}><RecentChargesSection sessions={sessions} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:vehicle-config" fallbackTitle={t('vehicles.detail.section.vehicleConfigFailed', 'Vehicle config section failed to load')}>
-            <FadeIn delay={0.26}><VehicleConfigSection vehicleConfig={vehicleConfig} softwareVersion={state.software_version} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:ai-paint-preview" fallbackTitle={t('vehicles.detail.section.aiPaintPreviewFailed', 'Helix paint preview failed to load')}>
-            <FadeIn delay={0.27}><AIVehiclePaintPreview vehicleId={vehicleId} /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="vehicle-detail:quick-links" fallbackTitle={t('vehicles.detail.section.quickLinksFailed', 'Quick links failed to load')}>
-            <FadeIn delay={0.28}><QuickLinksSection /></FadeIn>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary
-            name="vehicle-detail:settings"
-            fallbackTitle={t('vehicles.detail.section.settingsFailed', 'Per-vehicle settings failed to load')}
-          >
-            <FadeIn delay={0.30}><VehicleSettingsTab vehicleId={vehicleId} /></FadeIn>
-          </SectionErrorBoundary>
+          {/* Live overview — battery hero spans 2 cols, live-state side panel fills the third */}
+          <FadeIn delay={0.03}>
+            <section className="space-y-4">
+              <SectionTitle>{t('vehicles.detail.overview', 'Live Overview')}</SectionTitle>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                <div className="xl:col-span-2">
+                  <SectionErrorBoundary name="vehicle-detail:battery-range" fallbackTitle={t('vehicles.detail.section.batteryRangeFailed', 'Battery & range section failed to load')}>
+                    <BatteryRangePanel state={state} />
+                  </SectionErrorBoundary>
+                </div>
+                <SectionErrorBoundary name="vehicle-detail:live-state" fallbackTitle={t('vehicles.detail.section.liveStateFailed', 'Live state indicators failed to load')}>
+                  <GlassPanel className="h-full p-6">
+                    <PanelTitle className="mb-4 flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                      {t('vehicles.detail.liveState', 'Live State')}
+                    </PanelTitle>
+                    <LiveStateIndicators state={state} />
+                  </GlassPanel>
+                </SectionErrorBoundary>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* Quick stats — full-width KPI band */}
+          <FadeIn delay={0.08}>
+            <section className="space-y-3" aria-label={t('vehicles.detail.quickStats', 'Quick Stats')}>
+              <SectionTitle>{t('vehicles.detail.quickStats', 'Quick Stats')}</SectionTitle>
+              <SectionErrorBoundary name="vehicle-detail:quick-stats" fallbackTitle={t('vehicles.detail.section.quickStatsFailed', 'Quick stats failed to load')}>
+                <QuickStatsGrid state={state} status={status} />
+              </SectionErrorBoundary>
+            </section>
+          </FadeIn>
+
+          {/* Vehicle systems — telemetry bento: paired panels on wide screens */}
+          <FadeIn delay={0.10}>
+            <section className="space-y-4">
+              <SectionTitle>{t('vehicles.detail.systems', 'Vehicle Systems')}</SectionTitle>
+              <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+                <SectionErrorBoundary name="vehicle-detail:motor" fallbackTitle={t('vehicles.detail.section.motorFailed', 'Motor section failed to load')}>
+                  <MotorSection motorData={motorData} />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary name="vehicle-detail:climate" fallbackTitle={t('vehicles.detail.section.climateFailed', 'Climate section failed to load')}>
+                  <ClimateSection climateData={climateData} />
+                </SectionErrorBoundary>
+              </div>
+              <SectionErrorBoundary name="vehicle-detail:charging-telemetry" fallbackTitle={t('vehicles.detail.section.chargingTelemetryFailed', 'Charging telemetry failed to load')}>
+                <ChargingTelemetrySection chargingTelemetry={chargingTelemetry} />
+              </SectionErrorBoundary>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <SectionErrorBoundary name="vehicle-detail:security" fallbackTitle={t('vehicles.detail.section.securityFailed', 'Security section failed to load')}>
+                  <SecuritySection securityData={securityData} state={state} />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary name="vehicle-detail:tire-pressure" fallbackTitle={t('vehicles.detail.section.tireFailed', 'Tire pressure section failed to load')}>
+                  <TirePressureSection tireData={tireData} />
+                </SectionErrorBoundary>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* Battery & range charts — full-width, internal 2-col grid */}
+          <FadeIn delay={0.12}>
+            <section className="space-y-4">
+              <SectionTitle>{t('vehicles.detail.batteryRange', 'Battery & Range')}</SectionTitle>
+              <SectionErrorBoundary name="vehicle-detail:battery-charts" fallbackTitle={t('vehicles.detail.section.batteryChartsFailed', 'Battery & range charts failed to load')}>
+                <BatteryRangeCharts state={state} drives={drives} />
+              </SectionErrorBoundary>
+            </section>
+          </FadeIn>
+
+          {/* Recent activity — drives + charges side by side on wide screens */}
+          <FadeIn delay={0.14}>
+            <section className="space-y-4">
+              <SectionTitle>{t('vehicles.detail.recentActivity', 'Recent Activity')}</SectionTitle>
+              <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+                <SectionErrorBoundary name="vehicle-detail:recent-drives" fallbackTitle={t('vehicles.detail.section.recentDrivesFailed', 'Recent drives failed to load')}>
+                  <RecentDrivesSection drives={drives} />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary name="vehicle-detail:recent-charges" fallbackTitle={t('vehicles.detail.section.recentChargesFailed', 'Recent charges failed to load')}>
+                  <RecentChargesSection sessions={sessions} />
+                </SectionErrorBoundary>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* Configuration + Helix paint preview — auto-fit so the AI card
+              (which self-hides when the feature is off) gracefully collapses
+              the row to a single full-width configuration panel. */}
+          <FadeIn delay={0.16}>
+            <section className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(22rem,1fr))]">
+              <SectionErrorBoundary name="vehicle-detail:vehicle-config" fallbackTitle={t('vehicles.detail.section.vehicleConfigFailed', 'Vehicle config section failed to load')}>
+                <VehicleConfigSection vehicleConfig={vehicleConfig} softwareVersion={state.software_version} />
+              </SectionErrorBoundary>
+              <SectionErrorBoundary name="vehicle-detail:ai-paint-preview" fallbackTitle={t('vehicles.detail.section.aiPaintPreviewFailed', 'Helix paint preview failed to load')}>
+                <AIVehiclePaintPreview vehicleId={vehicleId} />
+              </SectionErrorBoundary>
+            </section>
+          </FadeIn>
+
+          {/* Quick links — full-width */}
+          <FadeIn delay={0.18}>
+            <SectionErrorBoundary name="vehicle-detail:quick-links" fallbackTitle={t('vehicles.detail.section.quickLinksFailed', 'Quick links failed to load')}>
+              <QuickLinksSection />
+            </SectionErrorBoundary>
+          </FadeIn>
+
+          {/* Per-vehicle settings — full-width */}
+          <FadeIn delay={0.20}>
+            <SectionErrorBoundary
+              name="vehicle-detail:settings"
+              fallbackTitle={t('vehicles.detail.section.settingsFailed', 'Per-vehicle settings failed to load')}
+            >
+              <VehicleSettingsTab vehicleId={vehicleId} />
+            </SectionErrorBoundary>
+          </FadeIn>
         </>
       )}
     </PageContainer>

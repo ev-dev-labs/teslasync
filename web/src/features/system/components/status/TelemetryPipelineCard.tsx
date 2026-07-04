@@ -335,7 +335,7 @@ export function TelemetryPipelineCard({
                     >
                       {v.display_name || `Vehicle ${v.id}`}
                     </Link>
-                    <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                       <span className="font-mono">VIN ···{vinTail(v.vin)}</span>
                       <span aria-hidden>·</span>
                       <span>{stateLabel}</span>
@@ -372,14 +372,14 @@ export function TelemetryPipelineCard({
 
                 {/* Liveness chip + last/next poll */}
                 <div className="flex shrink-0 flex-col items-start gap-0.5 sm:w-52 sm:items-end">
-                  <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${cls.chip}`}>
+                  <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${cls.chip}`}>
                     {source === 'stream' ? <Radio className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
                     {cls.label}
                     {sourceLabel && (
-                      <span className="ml-1 text-[10px] uppercase tracking-wide opacity-70">{sourceLabel}</span>
+                      <span className="ml-1 text-2xs uppercase tracking-wide opacity-70">{sourceLabel}</span>
                     )}
                   </span>
-                  <div className="text-[11px] tabular-nums text-[var(--text-muted)]">
+                  <div className="text-xs tabular-nums text-[var(--text-muted)]">
                     last: {relativeTime(lastSeenIso, now)}
                     {ps?.next_poll_after && (
                       <>

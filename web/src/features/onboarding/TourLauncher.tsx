@@ -128,7 +128,7 @@ export function TourLauncher() {
                     </h3>
                     {recommended && (
                       <span
-                        className="inline-flex items-center gap-1 rounded-md bg-[rgba(var(--theme-primary-rgb),0.12)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--theme-primary)]"
+                        className="inline-flex items-center gap-1 rounded-md bg-[rgba(var(--theme-primary-rgb),0.12)] px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wider text-[var(--theme-primary)]"
                         title={t('tour.launcher.recommendedHere', 'Recommended for this page')}
                       >
                         <Sparkles className="h-3 w-3" aria-hidden />
@@ -136,7 +136,7 @@ export function TourLauncher() {
                       </span>
                     )}
                     {completed && (
-                      <span className="rounded-md bg-emerald-300/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                      <span className="rounded-md bg-emerald-300/10 px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wider text-emerald-300">
                         {t('tour.launcher.completed', 'Completed')}
                       </span>
                     )}

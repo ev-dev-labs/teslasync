@@ -20,7 +20,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { Caption, Subhead } from '@/components/ui'
+import { GlassPanel, PanelTitle, Caption, Text } from '@/components/ui'
 import { useAiUsageToday } from '@/api/hooks/useAiUsage'
 import { useFormatting } from '@/hooks/useFormatting'
 import { fmtInt } from '@/lib/numberFormat'
@@ -48,13 +48,13 @@ export function AIUsageCard() {
     !data || isError ? PLACEHOLDER : formatCurrency(microCentsToDollars(data.cost_micro_cents))
 
   return (
-    <section
-      className="rounded-md border border-[var(--border-subtle)] p-4 space-y-1"
+    <GlassPanel
+      className="space-y-2 p-4 sm:p-5"
       aria-label={t('ai.settings.usage.title', 'Usage today')}
       data-testid="ai-usage-card"
     >
-      <Subhead>{t('ai.settings.usage.title', 'Usage today')}</Subhead>
-      <div className="grid grid-cols-3 gap-3 text-xs text-[var(--text-secondary)]">
+      <PanelTitle>{t('ai.settings.usage.title', 'Usage today')}</PanelTitle>
+      <div className="grid grid-cols-3 gap-3">
         <UsageCell
           label={t('ai.settings.usage.tokensIn', 'Tokens in')}
           value={tokensIn}
@@ -79,7 +79,7 @@ export function AIUsageCard() {
               'Usage populates as features run. Live numbers arrive in a follow-up update.',
             )}
       </Caption>
-    </section>
+    </GlassPanel>
   )
 }
 
@@ -93,15 +93,19 @@ function UsageCell({
   isLoading: boolean
 }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-[var(--text-muted)]">{label}</span>
-      <span
-        className="text-sm font-medium text-[var(--text-primary)]"
+    <div className="flex min-w-0 flex-col">
+      <Caption className="truncate">{label}</Caption>
+      <Text
+        as="span"
+        size="sm"
+        weight="medium"
+        color="primary"
+        className="tabular-nums"
         data-testid="ai-usage-value"
         aria-busy={isLoading || undefined}
       >
         {value}
-      </span>
+      </Text>
     </div>
   )
 }

@@ -1,10 +1,16 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
+import {
+  Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity, Gauge,
+  DollarSign, Route, BatteryCharging, CalendarDays, TrendingUp,
+} from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, DataTable, type Column } from '@/components/ui';
+import {
+  GlassPanel, DataTable, Badge, PanelTitle, Text, Caption,
+  MetricLabel, HelperText, type Column,
+} from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
@@ -15,7 +21,7 @@ import {
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
-import { Currency, SavedViewMenu } from '@/components/data-display';
+import { Currency, SavedViewMenu, MetricCard } from '@/components/data-display';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
@@ -31,7 +37,8 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, neonColorMap, type NeonColor } from '@/lib/tokens';
+import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 
@@ -40,45 +47,65 @@ import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '
 function CostComparisonCard({
   label, evCost, gasCost, icon,
 }: {
-  label: string; evCost: number; gasCost: number; icon: React.ReactNode;
+  label: string; evCost: number; gasCost: number; icon: ReactNode;
 }) {
   const { t } = useTranslation();
   const savings = (gasCost ?? 0) - (evCost ?? 0);
   const savingsPct = gasCost > 0 ? (savings / gasCost) * 100 : 0;
+  const green = neonColorMap.green;
   return (
-    <GlassPanel className="p-5">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon-green/10 text-neon-green">
-          {icon}
+    <GlassPanel className="p-4 sm:p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1', green.bg, green.ring)}>
+          <span className={green.text} aria-hidden="true">{icon}</span>
         </div>
-        <p className="text-sm font-medium text-[var(--text-secondary)]">{label}</p>
+        <Text variant="subhead">{label}</Text>
       </div>
-      <div className="flex items-center gap-4 mb-3">
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-            {t('energy.cost_decimal.evCost', 'EV Cost')}
-          </p>
-          <p className="text-lg font-bold text-cyan-300"><Currency value={evCost ?? 0} /></p>
+      <div className="mb-3 flex items-center gap-4">
+        <div className="min-w-0">
+          <MetricLabel>{t('energy.cost_decimal.evCost', 'EV Cost')}</MetricLabel>
+          <Text as="p" size="lg" weight="bold" className="mt-0.5 text-cyan-300">
+            <Currency value={evCost ?? 0} />
+          </Text>
         </div>
-        <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-            {t('energy.cost_decimal.gasEquivalent', 'Gas Equivalent')}
-          </p>
-          <p className="text-lg font-bold text-[var(--text-secondary)]">
+        <ArrowRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+        <div className="min-w-0">
+          <MetricLabel>{t('energy.cost_decimal.gasEquivalent', 'Gas Equivalent')}</MetricLabel>
+          <Text as="p" size="lg" weight="bold" color="secondary" className="mt-0.5">
             <Currency value={gasCost ?? 0} />
-          </p>
+          </Text>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-emerald-300">
+      <div className="flex flex-wrap items-center gap-2">
+        <Text size="sm" weight="bold" className="text-emerald-300">
           {t('energy.cost_decimal.saving', 'Saving')} <Currency value={savings ?? 0} />
-        </span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">
+        </Text>
+        <Text as="span" size="2xs" weight="semibold" className={cn('rounded-full px-2 py-0.5 ring-1', green.bg, green.text, green.ring)}>
           {fmtPercent(savingsPct ?? 0)} {t('energy.cost_decimal.less', 'less')}
-        </span>
+        </Text>
       </div>
     </GlassPanel>
+  );
+}
+
+/* ── Local: Lifetime metric box ─────────────────────────────────── */
+
+function LifetimeStat({
+  label, value, unit, desc, accent,
+}: {
+  label: string; value: string; unit?: string; desc: string; accent?: string;
+}) {
+  return (
+    <div className="rounded-lg bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
+      <MetricLabel>{label}</MetricLabel>
+      <p className="mt-1 flex items-baseline gap-1">
+        <Text size="2xl" weight="bold" className={cn('tabular-nums tracking-tight', accent ?? 'text-[var(--text-primary)]')}>
+          {value}
+        </Text>
+        {unit && <Caption>{unit}</Caption>}
+      </p>
+      <HelperText className="mt-1">{desc}</HelperText>
+    </div>
   );
 }
 
@@ -105,22 +132,28 @@ function EnergyChartSync({
 /* ── Loading skeleton ────────────────────────────────────────────── */
 
 /**
- * Mirrors the EnergyPage layout while data loads:
- * page header → 4 hero radial gauges → 6-card metric strip →
- * lifetime metrics panel → 2 cost-comparison cards → 2 chart panels.
+ * Mirrors the EnergyPage bento while data loads:
+ * page header → 6-card KPI band → hero-gauge + lifetime bento →
+ * 2 cost-comparison cards → 2 daily charts → 2 pattern charts → sessions table.
  */
 function EnergyPageSkeleton() {
   return (
     <div className="space-y-6" data-testid="energy-page-skeleton">
       <PageHeaderSkeleton />
-      <Skeleton className="h-44 sm:h-56 rounded-xl" />
-      <StatGridSkeleton cards={6} className="sm:grid-cols-4 lg:grid-cols-6" />
-      <Skeleton className="h-40 rounded-xl" />
+      <StatGridSkeleton cards={6} className="sm:grid-cols-3 lg:grid-cols-6" />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+        <Skeleton className="h-56 rounded-xl xl:col-span-2" />
+        <Skeleton className="h-56 rounded-xl" />
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Skeleton className="h-32 rounded-xl" />
         <Skeleton className="h-32 rounded-xl" />
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ChartBlockSkeleton height={280} />
+        <ChartBlockSkeleton height={280} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartBlockSkeleton height={280} />
         <ChartBlockSkeleton height={280} />
       </div>
@@ -231,21 +264,28 @@ export default function EnergyPage() {
   const chargerBreakdown = useMemo(() => {
     if (!sessions || sessions.length === 0) return [];
     const types: Record<string, { count: number; energy: number; cost: number }> = {};
+    // Stable internal grouping keys (also used for CHARGER_COLORS lookup + React keys).
     sessions.forEach((s) => {
-      const label = s.charger_type?.toLowerCase().includes('tesla')
+      const key = s.charger_type?.toLowerCase().includes('tesla')
         ? 'Supercharger'
         : s.charger_type ? 'DC Fast' : 'Home/AC';
-      if (!types[label]) types[label] = { count: 0, energy: 0, cost: 0 };
-      types[label].count++;
-      types[label].energy += s.total_energy_added_wh;
-      types[label].cost += s.cost_decimal ?? 0;
+      if (!types[key]) types[key] = { count: 0, energy: 0, cost: 0 };
+      types[key].count++;
+      types[key].energy += s.total_energy_added_wh;
+      types[key].cost += s.cost_decimal ?? 0;
     });
+    const chargerLabels: Record<string, string> = {
+      Supercharger: t('energy.chargerType.supercharger', 'Supercharger'),
+      'DC Fast': t('energy.chargerType.dcFast', 'DC Fast'),
+      'Home/AC': t('energy.chargerType.homeAc', 'Home/AC'),
+    };
     return Object.entries(types).map(([name, data]) => ({
       name,
+      label: chargerLabels[name] ?? name,
       ...data,
       fill: CHARGER_COLORS[name] ?? '#00f0ff',
     }));
-  }, [sessions]);
+  }, [sessions, t]);
 
   /* ── Table columns ────────────────────────────────────────────── */
   const sessionColumns: Column<ChargingSession>[] = useMemo(() => [
@@ -253,7 +293,7 @@ export default function EnergyPage() {
       key: 'date',
       header: t('energy.table.date', 'Date'),
       render: (s) => (
-        <Link to={`/charging/${s.id}`} className="hover:text-cyan-300 transition-colors">
+        <Link to={`/charging/${s.id}`} className="text-[var(--text-secondary)] transition-colors hover:text-cyan-300">
           {formatDateShort(s.started_at)}
         </Link>
       ),
@@ -262,9 +302,9 @@ export default function EnergyPage() {
       key: 'energy',
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
-        <span className="text-cyan-300 font-medium">
+        <Text weight="medium" className="text-cyan-300">
           {formatEnergy(s.total_energy_added_wh ?? 0)}
-        </span>
+        </Text>
       ),
     },
     {
@@ -272,9 +312,9 @@ export default function EnergyPage() {
       header: t('energy.table.battery', 'Battery'),
       render: (s) => (
         <>
-          <span className="text-[var(--text-muted)]">{s.start_soc_pct}%</span>
-          <span className="text-gray-700 mx-1">→</span>
-          <span className="text-emerald-300">{s.end_soc_pct ?? '—'}%</span>
+          <Text color="muted">{s.start_soc_pct}%</Text>
+          <Text color="muted" className="mx-1">→</Text>
+          <Text className="text-emerald-300">{s.end_soc_pct ?? '—'}%</Text>
         </>
       ),
     },
@@ -288,18 +328,11 @@ export default function EnergyPage() {
       header: t('energy.table.type', 'Type'),
       render: (s) => {
         const isTesla = s.charger_type?.toLowerCase().includes('tesla');
-        const isFast = !!s.charger_type;
-        const cls = isTesla
-          ? 'bg-neon-red/10 text-neon-red ring-neon-red/20'
-          : isFast
-            ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20'
-            : 'bg-neon-green/10 text-neon-green ring-neon-green/20';
-        const label = isTesla ? 'Supercharger' : s.charger_type || 'AC';
-        return (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${cls}`}>
-            {label}
-          </span>
-        );
+        const variant = isTesla ? 'danger' : s.charger_type ? 'warning' : 'success';
+        const label = isTesla
+          ? t('energy.chargerType.supercharger', 'Supercharger')
+          : s.charger_type || t('energy.chargerType.ac', 'AC');
+        return <Badge variant={variant} size="sm">{label}</Badge>;
       },
     },
     {
@@ -311,14 +344,54 @@ export default function EnergyPage() {
       key: 'perKwh',
       header: t('energy.table.perKwh', '$/kWh'),
       render: (s) => (
-        <span className="text-[var(--text-muted)]">
+        <Text color="muted">
           {typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
             ? formatCurrency(s.cost_decimal / convertEnergyFromSI(s.total_energy_added_wh, 'kWh'))
             : '—'}
-        </span>
+        </Text>
       ),
     },
-  ], [t, formatCurrency]);
+  ], [t, formatCurrency, formatEnergy]);
+
+  /* ── KPI band definition ──────────────────────────────────────── */
+  const kpis: { key: string; label: string; value: string; icon: ReactNode; color: NeonColor }[] = [
+    {
+      key: 'costPerDist',
+      label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }),
+      value: formatCurrency(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0),
+      icon: <DollarSign className="h-4 w-4" />, color: 'cyan',
+    },
+    {
+      key: 'costPerKwh',
+      label: t('energy.metric.costPerKwh', 'Cost per kWh'),
+      value: formatCurrency(costPerKwh ?? 0),
+      icon: <Zap className="h-4 w-4" />, color: 'green',
+    },
+    {
+      key: 'totalDistance',
+      label: t('energy.metric.totalDistance', 'Total Distance'),
+      value: `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`,
+      icon: <Route className="h-4 w-4" />, color: 'blue',
+    },
+    {
+      key: 'sessions',
+      label: t('energy.metric.sessions', 'Sessions'),
+      value: `${sessions?.length ?? 0}`,
+      icon: <BatteryCharging className="h-4 w-4" />, color: 'purple',
+    },
+    {
+      key: 'monthlyEst',
+      label: t('energy.metric.monthlyEst', 'Monthly Est.'),
+      value: formatCurrency(monthlyProjectedCost ?? 0),
+      icon: <CalendarDays className="h-4 w-4" />, color: 'amber',
+    },
+    {
+      key: 'yearlyEst',
+      label: t('energy.metric.yearlyEst', 'Yearly Est.'),
+      value: formatCurrency(yearlyProjectedCost ?? 0),
+      icon: <TrendingUp className="h-4 w-4" />, color: 'red',
+    },
+  ];
 
   /* ── Loading short-circuit ────────────────────────────────────── */
   if (isLoading) {
@@ -330,9 +403,8 @@ export default function EnergyPage() {
     <PageContainer
       title={t('energy.pageTitle', 'Energy Intelligence')}
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
-      error={statsError as Error | null}
       actions={
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
@@ -350,271 +422,177 @@ export default function EnergyPage() {
     >
       {statsError && <QueryError error={statsError} onRetry={refetch} />}
 
-      {/* ── Hero Gauges ─────────────────────────────────────────── */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-6">
-          {hasNoEnergyData ? (
-            <EmptyState /* no-action: surfaces when no energy data exists yet — user must drive/charge to populate */
-              icon={<Zap className="h-10 w-10" />}
-              message={t('energy.empty.hero', 'No energy data yet — connect your vehicle and complete a drive or charging session to see efficiency, cost, and CO₂ savings.')}
-            />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
-              <RadialGauge
-                value={toEnergyDisplay(totalEnergy)}
-                max={Math.max(toEnergyDisplay(totalEnergy) * 1.3, 100)}
-                label={t('energy.gauge.energyUsed', 'Energy Used')}
-                unit={energyUnit}
-                color="#00f0ff"
-              />
-              <RadialGauge
-                value={toEfficiencyDisplay(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000) / totalDistance : 0))}
-                max={toEfficiencyDisplay(300)}
-                label={t('energy.gauge.efficiency', 'Efficiency')}
-                unit={efficiencyUnit}
-                color="#10b981"
-              />
-              <RadialGauge
-                value={co2Saved}
-                max={Math.max(co2Saved * 1.5, 50)}
-                label={t('energy.gauge.co2Saved', 'CO₂ Saved')}
-                unit="kg"
-                color="#a855f7"
-              />
-              <RadialGauge
-                value={totalCost}
-                max={Math.max(totalCost * 1.5, 50)}
-                label={t('energy.gauge.totalCost', 'Total Cost')}
-                unit="$"
-                color="#f59e0b"
-              />
-            </div>
-          )}
-        </GlassPanel>
-      </FadeIn>
+      {/* ── KPI band ────────────────────────────────────────────── */}
+      <section aria-label={t('energy.kpis', 'Key energy metrics')}>
+        <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+          {kpis.map((m) => (
+            <StaggerItem key={m.key}>
+              <MetricCard label={m.label} value={m.value} icon={m.icon} color={m.color} />
+            </StaggerItem>
+          ))}
+        </StaggerContainer>
+      </section>
 
-      {/* ── Quick Metrics Strip ─────────────────────────────────── */}
-      <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        {[
-          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: formatCurrency(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0), color: 'text-neon-cyan' },
-          { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: formatCurrency(costPerKwh ?? 0), color: 'text-neon-green' },
-          { label: t('energy.metric.totalDistance', 'Total Distance'), value: `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
-          { label: t('energy.metric.sessions', 'Sessions'), value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
-          { label: t('energy.metric.monthlyEst', 'Monthly Est.'), value: formatCurrency(monthlyProjectedCost ?? 0), color: 'text-neon-amber' },
-          { label: t('energy.metric.yearlyEst', 'Yearly Est.'), value: formatCurrency(yearlyProjectedCost ?? 0), color: 'text-neon-red' },
-        ].map((m) => (
-          <StaggerItem key={m.label}>
-            <GlassPanel className="p-3 text-center">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{m.label}</p>
-              <p className={`text-lg font-bold ${m.color}`}>{m.value}</p>
-            </GlassPanel>
-          </StaggerItem>
-        ))}
-      </StaggerContainer>
-
-      {/* ── Lifetime Metrics ─────────────────────────────────────── */}
+      {/* ── Hero bento: gauges (primary) + lifetime (context) ───── */}
       <FadeIn delay={0.05}>
-        <GlassPanel className="p-4 sm:p-6">
-          <h3 className="section-title mb-3 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-neon-cyan" />
-            {t('energy.lifetime.title', 'Lifetime Metrics')}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                {t('energy.lifetime.energyUsed', 'Lifetime Energy Used')}
-              </p>
-              {liveCharging?.lifetime_energy_used != null ? (
-                <>
-                  <p className="text-2xl font-bold text-cyan-300">
-                    {fmtNumber(liveCharging.lifetime_energy_used)}
-                    <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
-                  </p>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    {t('energy.lifetime.energyUsedDesc', 'Total energy consumed since vehicle delivery')}
-                  </p>
-                </>
-              ) : (
-                <p className="text-lg font-semibold text-[var(--text-muted)]">—</p>
-              )}
+        <section
+          aria-label={t('energy.overview', 'Energy overview')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+        >
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('energy.hero.title', 'Efficiency & Cost Overview')}
+            </PanelTitle>
+            {hasNoEnergyData ? (
+              <EmptyState /* no-action: surfaces when no energy data exists yet — user must drive/charge to populate */
+                icon={<Zap className="h-10 w-10" />}
+                message={t('energy.empty.hero', 'No energy data yet — connect your vehicle and complete a drive or charging session to see efficiency, cost, and CO₂ savings.')}
+              />
+            ) : (
+              <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-4 sm:gap-6">
+                <RadialGauge
+                  value={toEnergyDisplay(totalEnergy)}
+                  max={Math.max(toEnergyDisplay(totalEnergy) * 1.3, 100)}
+                  label={t('energy.gauge.energyUsed', 'Energy Used')}
+                  unit={energyUnit}
+                  color="#00f0ff"
+                />
+                <RadialGauge
+                  value={toEfficiencyDisplay(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000) / totalDistance : 0))}
+                  max={toEfficiencyDisplay(300)}
+                  label={t('energy.gauge.efficiency', 'Efficiency')}
+                  unit={efficiencyUnit}
+                  color="#10b981"
+                />
+                <RadialGauge
+                  value={co2Saved}
+                  max={Math.max(co2Saved * 1.5, 50)}
+                  label={t('energy.gauge.co2Saved', 'CO₂ Saved')}
+                  unit="kg"
+                  color="#a855f7"
+                />
+                <RadialGauge
+                  value={totalCost}
+                  max={Math.max(totalCost * 1.5, 50)}
+                  label={t('energy.gauge.totalCost', 'Total Cost')}
+                  unit="$"
+                  color="#f59e0b"
+                />
+              </div>
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('energy.lifetime.title', 'Lifetime Metrics')}
+            </PanelTitle>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <LifetimeStat
+                label={t('energy.lifetime.energyUsed', 'Lifetime Energy Used')}
+                value={liveCharging?.lifetime_energy_used != null ? fmtNumber(liveCharging.lifetime_energy_used) : '—'}
+                unit={liveCharging?.lifetime_energy_used != null ? 'kWh' : undefined}
+                desc={t('energy.lifetime.energyUsedDesc', 'Total energy consumed since vehicle delivery')}
+                accent={liveCharging?.lifetime_energy_used != null ? 'text-cyan-300' : 'text-[var(--text-muted)]'}
+              />
+              <LifetimeStat
+                label={t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
+                value={fmtNumber(toEnergyDisplay(totalEnergy))}
+                unit={energyUnit}
+                desc={t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
+                accent="text-emerald-300"
+              />
             </div>
-            <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
-              </p>
-              <p className="text-2xl font-bold text-emerald-300">
-                {fmtNumber(toEnergyDisplay(totalEnergy))}
-                <span className="text-sm font-normal text-[var(--text-muted)] ml-1">{energyUnit}</span>
-              </p>
-              <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                {t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
-              </p>
-            </div>
-          </div>
-        </GlassPanel>
+          </GlassPanel>
+        </section>
       </FadeIn>
 
-      {/* ── Cost vs Gas Savings ───────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FadeIn>
+      {/* ── Cost vs Gas Savings ─────────────────────────────────── */}
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('energy.savings', 'Cost savings versus gas')}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
           <CostComparisonCard
             label={t('energy.cost_decimal.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
             evCost={totalCost}
             gasCost={gasEquivalent}
             icon={<Fuel className="h-4 w-4" />}
           />
-        </FadeIn>
-        <FadeIn delay={0.05}>
           <CostComparisonCard
             label={t('energy.cost_decimal.projectedAnnual', 'Projected Annual')}
             evCost={yearlyProjectedCost}
             gasCost={(gasEquivalent / periodDays) * 365}
             icon={<Leaf className="h-4 w-4" />}
           />
-        </FadeIn>
-      </div>
+        </section>
+      </FadeIn>
 
       {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ────
           Both panels share the same `daily_breakdown` dataset (matching
           `date` axis), so they're wrapped in a single `<ChartTimeRangeProvider>`
           to mirror hover cursors and draw a persistent reference line on both
           at the last hovered date. */}
-      <ChartTimeRangeProvider syncId="energy.daily">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <FadeIn delay={0.1}>
-              {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
-              <ChartContainer
-                title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}
-                ariaLabel={t('energy.chart.energyCostDaily.aria', 'Daily energy and efficiency composed chart with bars and a line')}
-                exportable
-                exportFilename="energy-cost-daily"
-                chartKey="energy-cost-daily"
-                annotations={{ vehicleId, scope: 'energy', chartId: 'energy-cost-daily' }}
-              >
-                {({ annotations: chartAnnotations }) => (
-                  <div className="h-48 sm:h-64">
-                    {dailyEnergy.length > 0 ? (
-                      <EnergyChartSync>
-                        {({ sync, syncedX }) => (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart
-                              data={dailyEnergy}
-                              syncId={sync.syncId}
-                              syncMethod={sync.syncMethod}
-                              onMouseMove={sync.onMouseMove}
-                            >
-                              <defs>
-                                <ChartGradient id="energyBarGrad" color="#00f0ff" opacity={0.8} />
-                              </defs>
-                              {chartGrid}
-                              <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
-                              <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
-                              <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
-                              <Tooltip content={<ChartTooltip />} />
-                              <ChartLegend state={energyCostHidden} />
-                              {renderAnnotationLines(chartAnnotations, (ts) => ts)}
-                              <Bar
-                                yAxisId="left"
-                                dataKey="energy_wh"
-                                name={t('energy.chart.energy', 'Energy')}
-                                fill="url(#energyBarGrad)"
-                                fillOpacity={0.6}
-                                radius={[3, 3, 0, 0]}
-                                animationDuration={800}
-                                hide={energyCostHidden.isHidden('energy_wh')}
-                              />
-                              <Line
-                                {...AREA_DEFAULTS}
-                                yAxisId="right"
-                                dataKey="efficiency_wh_per_m"
-                                name={efficiencyUnit}
-                                stroke="#10b981"
-                                animationDuration={800}
-                                hide={energyCostHidden.isHidden('efficiency_wh_per_m')}
-                              />
-                              {syncedX != null && (
-                                <ReferenceLine
-                                  yAxisId="left"
-                                  x={syncedX}
-                                  stroke={chartTokens.cursor.stroke}
-                                  strokeWidth={chartTokens.cursor.strokeWidth}
-                                  strokeDasharray={chartTokens.cursor.strokeDasharray}
-                                  ifOverflow="hidden"
-                                  isFront
-                                />
-                              )}
-                              {dailyEnergy.length > 14 && (
-                                <Brush
-                                  dataKey="date"
-                                  height={20}
-                                  stroke="#6b7280"
-                                  fill="rgba(255,255,255,0.02)"
-                                  travellerWidth={8}
-                                />
-                              )}
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                        )}
-                      </EnergyChartSync>
-                    ) : (
-                      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                        icon={<Zap className="h-8 w-8" />}
-                        message={t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
-                        className="py-8"
-                      />
-                    )}
-                  </div>
-                )}
-              </ChartContainer>
-            </FadeIn>
-
-            <FadeIn delay={0.15}>
-              {/* chart-a11y:no-table efficiency + distance two-area trend; same daily breakdown is exportable as CSV via the chart menu */}
-              <ChartContainer
-                title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')}
-                ariaLabel={t('energy.chart.efficiencyTrend.aria', 'Daily efficiency and distance area chart')}
-                exportable
-                exportFilename="efficiency-trend"
-              >
-                <div className="h-48 sm:h-64">
+      <FadeIn delay={0.15}>
+        <ChartTimeRangeProvider syncId="energy.daily">
+          <section
+            aria-label={t('energy.dailyCharts', 'Daily energy trends')}
+            className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+          >
+            {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
+            <ChartContainer
+              title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}
+              ariaLabel={t('energy.chart.energyCostDaily.aria', 'Daily energy and efficiency composed chart with bars and a line')}
+              exportable
+              exportFilename="energy-cost-daily"
+              chartKey="energy-cost-daily"
+              annotations={{ vehicleId, scope: 'energy', chartId: 'energy-cost-daily' }}
+            >
+              {({ annotations: chartAnnotations }) => (
+                <div className="h-56 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <EnergyChartSync>
                       {({ sync, syncedX }) => (
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart
+                          <ComposedChart
                             data={dailyEnergy}
                             syncId={sync.syncId}
                             syncMethod={sync.syncMethod}
                             onMouseMove={sync.onMouseMove}
                           >
                             <defs>
-                              <ChartGradient id="effGrad" color="#10b981" opacity={0.3} />
-                              <ChartGradient id="distGrad2" color="#00f0ff" opacity={0.15} />
+                              <ChartGradient id="energyBarGrad" color="#00f0ff" opacity={0.8} />
                             </defs>
                             {chartGrid}
                             <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
-                            <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                            <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
+                            <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
                             <Tooltip content={<ChartTooltip />} />
-                            <Area
+                            <ChartLegend state={energyCostHidden} />
+                            {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                            <Bar
+                              yAxisId="left"
+                              dataKey="energy_wh"
+                              name={t('energy.chart.energy', 'Energy')}
+                              fill="url(#energyBarGrad)"
+                              fillOpacity={0.6}
+                              radius={[3, 3, 0, 0]}
+                              animationDuration={800}
+                              hide={energyCostHidden.isHidden('energy_wh')}
+                            />
+                            <Line
                               {...AREA_DEFAULTS}
+                              yAxisId="right"
                               dataKey="efficiency_wh_per_m"
                               name={efficiencyUnit}
                               stroke="#10b981"
-                              fill="url(#effGrad)"
                               animationDuration={800}
-                            />
-                            <Area
-                              {...AREA_DEFAULTS}
-                              dataKey="distance_m"
-                              name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' })}
-                              stroke="#00f0ff"
-                              fill="url(#distGrad2)"
-                              strokeWidth={1}
-                              strokeDasharray="4 4"
-                              animationDuration={800}
+                              hide={energyCostHidden.isHidden('efficiency_wh_per_m')}
                             />
                             {syncedX != null && (
                               <ReferenceLine
+                                yAxisId="left"
                                 x={syncedX}
                                 stroke={chartTokens.cursor.stroke}
                                 strokeWidth={chartTokens.cursor.strokeWidth}
@@ -623,168 +601,248 @@ export default function EnergyPage() {
                                 isFront
                               />
                             )}
-                          </AreaChart>
+                            {dailyEnergy.length > 14 && (
+                              <Brush
+                                dataKey="date"
+                                height={20}
+                                stroke="#6b7280"
+                                fill="rgba(255,255,255,0.02)"
+                                travellerWidth={8}
+                              />
+                            )}
+                          </ComposedChart>
                         </ResponsiveContainer>
                       )}
                     </EnergyChartSync>
                   ) : (
                     <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                      icon={<Activity className="h-8 w-8" />}
-                      message={t('energy.chart.noEfficiencyData', 'No efficiency data yet')}
+                      icon={<Zap className="h-8 w-8" />}
+                      message={t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
                       className="py-8"
                     />
                   )}
                 </div>
-              </ChartContainer>
-            </FadeIn>
-          </div>
-          </ChartTimeRangeProvider>
+              )}
+            </ChartContainer>
 
-          {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <FadeIn delay={0.2}>
-              {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
-              <ChartContainer
-                title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}
-                ariaLabel={t('energy.chart.chargingByTime.aria', 'Charging energy and session count by time of day bar chart')}
-                exportable
-                exportFilename="charging-by-time"
-              >
-                {timeOfDayData.length > 0 ? (
-                  <>
-                    <div className="h-44 sm:h-60">
+            {/* chart-a11y:no-table efficiency + distance two-area trend; same daily breakdown is exportable as CSV via the chart menu */}
+            <ChartContainer
+              title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')}
+              ariaLabel={t('energy.chart.efficiencyTrend.aria', 'Daily efficiency and distance area chart')}
+              exportable
+              exportFilename="efficiency-trend"
+            >
+              <div className="h-56 sm:h-64">
+                {dailyEnergy.length > 0 ? (
+                  <EnergyChartSync>
+                    {({ sync, syncedX }) => (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={timeOfDayData}>
+                        <AreaChart
+                          data={dailyEnergy}
+                          syncId={sync.syncId}
+                          syncMethod={sync.syncMethod}
+                          onMouseMove={sync.onMouseMove}
+                        >
+                          <defs>
+                            <ChartGradient id="effGrad" color="#10b981" opacity={0.3} />
+                            <ChartGradient id="distGrad2" color="#00f0ff" opacity={0.15} />
+                          </defs>
                           {chartGrid}
-                          <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
                           <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                           <Tooltip content={<ChartTooltip />} />
-                          <Bar
-                            dataKey="energy"
-                            name={t('energy.chart.energyKwh', 'Energy (kWh)')}
-                            fill="#f59e0b"
-                            fillOpacity={0.7}
-                            radius={[3, 3, 0, 0]}
+                          <Area
+                            {...AREA_DEFAULTS}
+                            dataKey="efficiency_wh_per_m"
+                            name={efficiencyUnit}
+                            stroke="#10b981"
+                            fill="url(#effGrad)"
                             animationDuration={800}
                           />
-                          <Bar
-                            dataKey="count"
-                            name={t('energy.chart.sessions', 'Sessions')}
-                            fill="#a855f7"
-                            fillOpacity={0.5}
-                            radius={[3, 3, 0, 0]}
+                          <Area
+                            {...AREA_DEFAULTS}
+                            dataKey="distance_m"
+                            name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' })}
+                            stroke="#00f0ff"
+                            fill="url(#distGrad2)"
+                            strokeWidth={1}
+                            strokeDasharray="4 4"
                             animationDuration={800}
                           />
-                        </BarChart>
+                          {syncedX != null && (
+                            <ReferenceLine
+                              x={syncedX}
+                              stroke={chartTokens.cursor.stroke}
+                              strokeWidth={chartTokens.cursor.strokeWidth}
+                              strokeDasharray={chartTokens.cursor.strokeDasharray}
+                              ifOverflow="hidden"
+                              isFront
+                            />
+                          )}
+                        </AreaChart>
                       </ResponsiveContainer>
-                    </div>
-                    <div className="mt-3 flex items-center gap-4 text-[10px] text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1">
-                        <Moon className="h-3 w-3" /> {t('energy.tip.offPeak', 'Off-peak charging saves money')}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Sun className="h-3 w-3" /> {t('energy.tip.solar', 'Solar-optimal: 10am–3pm')}
-                      </span>
-                    </div>
-                  </>
+                    )}
+                  </EnergyChartSync>
                 ) : (
                   <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Activity className="h-8 w-8" />}
-                    message={t('common.noData', 'No data available')}
+                    message={t('energy.chart.noEfficiencyData', 'No efficiency data yet')}
                     className="py-8"
                   />
                 )}
-              </ChartContainer>
-            </FadeIn>
+              </div>
+            </ChartContainer>
+          </section>
+        </ChartTimeRangeProvider>
+      </FadeIn>
 
-            <FadeIn delay={0.25}>
-              {/* chart-a11y:no-table charger-type pie-chart aggregation; CSV download available */}
-              <ChartContainer
-                title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}
-                ariaLabel={t('energy.chart.chargerBreakdown.aria', 'Charger type share pie chart')}
-                exportable
-                exportFilename="charger-breakdown"
-              >
-                {chargerBreakdown.length > 0 ? (
-                  <div className="flex items-center gap-6">
-                    <div className="h-48 w-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={chargerBreakdown}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={40}
-                            outerRadius={70}
-                            paddingAngle={3}
-                            dataKey="energy"
-                          >
-                            {chargerBreakdown.map((entry, i) => (
-                              <Cell key={i} fill={entry.fill} stroke="transparent" />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<ChartTooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex-1 space-y-3">
-                      {chargerBreakdown.map((b) => (
-                        <div key={b.name}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="flex items-center gap-2 text-sm">
-                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.fill }} />
-                              <span className="text-[var(--text-secondary)]">{b.name}</span>
-                            </span>
-                            <span className="text-xs text-[var(--text-muted)]">
-                              {b.count} {t('energy.breakdown.sessions', 'sessions')}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-cyan-300">{fmtNumber(toEnergyDisplay(b.energy ?? 0))} {energyUnit}</span>
-                            <span className="text-emerald-300"><Currency value={b.cost ?? 0} /></span>
-                            <span className="text-[var(--text-muted)]">
-                              <Currency value={b.energy > 0 ? b.cost / (b.energy / 1000) : 0} precision={3} />/kWh
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                    icon={<Activity className="h-8 w-8" />}
-                    message={t('common.noData', 'No data available')}
-                    className="py-8"
-                  />
-                )}
-              </ChartContainer>
-            </FadeIn>
-          </div>
+      {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
+      <FadeIn delay={0.2}>
+        <section
+          aria-label={t('energy.patternCharts', 'Charging patterns')}
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+        >
+          {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
+          <ChartContainer
+            title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}
+            ariaLabel={t('energy.chart.chargingByTime.aria', 'Charging energy and session count by time of day bar chart')}
+            exportable
+            exportFilename="charging-by-time"
+          >
+            {timeOfDayData.length > 0 ? (
+              <>
+                <div className="h-44 sm:h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={timeOfDayData}>
+                      {chartGrid}
+                      <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
+                      <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Bar
+                        dataKey="energy"
+                        name={t('energy.chart.energyKwh', 'Energy (kWh)')}
+                        fill="#f59e0b"
+                        fillOpacity={0.7}
+                        radius={[3, 3, 0, 0]}
+                        animationDuration={800}
+                      />
+                      <Bar
+                        dataKey="count"
+                        name={t('energy.chart.sessions', 'Sessions')}
+                        fill="#a855f7"
+                        fillOpacity={0.5}
+                        radius={[3, 3, 0, 0]}
+                        animationDuration={800}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <Caption className="flex items-center gap-1">
+                    <Moon className="h-3 w-3" aria-hidden="true" /> {t('energy.tip.offPeak', 'Off-peak charging saves money')}
+                  </Caption>
+                  <Caption className="flex items-center gap-1">
+                    <Sun className="h-3 w-3" aria-hidden="true" /> {t('energy.tip.solar', 'Solar-optimal: 10am–3pm')}
+                  </Caption>
+                </div>
+              </>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                icon={<Activity className="h-8 w-8" />}
+                message={t('common.noData', 'No data available')}
+                className="py-8"
+              />
+            )}
+          </ChartContainer>
 
-          {/* ── Recent Charging Sessions ─────────────────────────── */}
-          <FadeIn delay={0.3}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title mb-4 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-neon-amber" />
-                {t('energy.sessions.title', 'Recent Charging Sessions')}
-              </h3>
-              {sessions && sessions.length > 0 ? (
-                <DataTable
-                  tableId="battery:energy-sessions"
-                  columns={sessionColumns}
-                  data={sessions.slice(0, 15)}
-                  keyExtractor={(s) => s.id}
-                  pagination
-                />
-              ) : (
-                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                  icon={<Activity className="h-8 w-8" />}
-                  message={t('energy.sessions.empty', 'No charging sessions recorded')}
-                  className="py-8"
-                />
-              )}
-            </GlassPanel>
-          </FadeIn>
+          {/* chart-a11y:no-table charger-type pie-chart aggregation; CSV download available */}
+          <ChartContainer
+            title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}
+            ariaLabel={t('energy.chart.chargerBreakdown.aria', 'Charger type share pie chart')}
+            exportable
+            exportFilename="charger-breakdown"
+          >
+            {chargerBreakdown.length > 0 ? (
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+                <div className="h-40 w-40 shrink-0 sm:h-48 sm:w-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chargerBreakdown}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={3}
+                        dataKey="energy"
+                        nameKey="label"
+                      >
+                        {chargerBreakdown.map((entry, i) => (
+                          <Cell key={i} fill={entry.fill} stroke="transparent" />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-full flex-1 space-y-3">
+                  {chargerBreakdown.map((b) => (
+                    <div key={b.name}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.fill }} aria-hidden="true" />
+                          <Text size="sm" color="secondary">{b.label}</Text>
+                        </span>
+                        <Caption>
+                          {b.count} {t('energy.breakdown.sessions', 'sessions')}
+                        </Caption>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Text size="xs" className="text-cyan-300">{fmtNumber(toEnergyDisplay(b.energy ?? 0))} {energyUnit}</Text>
+                        <Text size="xs" className="text-emerald-300"><Currency value={b.cost ?? 0} /></Text>
+                        <Caption>
+                          <Currency value={b.energy > 0 ? b.cost / (b.energy / 1000) : 0} precision={3} />/kWh
+                        </Caption>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                icon={<Activity className="h-8 w-8" />}
+                message={t('common.noData', 'No data available')}
+                className="py-8"
+              />
+            )}
+          </ChartContainer>
+        </section>
+      </FadeIn>
+
+      {/* ── Recent Charging Sessions ─────────────────────────── */}
+      <FadeIn delay={0.25}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
+            {t('energy.sessions.title', 'Recent Charging Sessions')}
+          </PanelTitle>
+          {sessions && sessions.length > 0 ? (
+            <DataTable
+              tableId="battery:energy-sessions"
+              columns={sessionColumns}
+              data={sessions.slice(0, 15)}
+              keyExtractor={(s) => s.id}
+              pagination
+            />
+          ) : (
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+              icon={<Activity className="h-8 w-8" />}
+              message={t('energy.sessions.empty', 'No charging sessions recorded')}
+              className="py-8"
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

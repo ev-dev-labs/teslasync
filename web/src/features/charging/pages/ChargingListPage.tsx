@@ -2,12 +2,11 @@ import { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'rea
 import { useTranslation } from 'react-i18next';
 import {
   Zap, AlertTriangle, Star, Plug, Sun, Tag, List as ListIcon,
-  Trash2, Battery, Activity, Home, Bolt,
+  Trash2, Battery, Home, Bolt,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Pagination } from '@/components/ui/Pagination';
+import { GlassPanel, Pagination, SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -479,9 +478,9 @@ export default function ChargingListPage() {
           <span className="opacity-50">·</span>
           <span>
             {t('charging.batteryScore', 'Battery score')}{' '}
-            <span style={{ color: currentStats.batteryFriendlyGrade.color }} className="font-semibold">
+            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
               {currentStats.batteryFriendlyGrade.label}
-            </span>
+            </Text>
           </span>
         </>
       )}
@@ -515,22 +514,22 @@ export default function ChargingListPage() {
   /* ── Sticky summary ──────────────────────────────────────────── */
   const stickySummary = (
     <>
-      <span className="text-[var(--text-secondary)] truncate">
+      <Text as="span" color="secondary" className="truncate">
         {t('charging.list.title', 'Charging Sessions')}
-      </span>
+      </Text>
       <span className="opacity-50">·</span>
       <span className="truncate">{periodLabel}</span>
       <span className="opacity-50">·</span>
-      <span className="text-[var(--text-primary)] font-medium">{collectionLabel}</span>
+      <Text as="span" color="primary" weight="medium">{collectionLabel}</Text>
       <span className="opacity-50">·</span>
       <span>{fmtCompact(filteredSessions.length)} {t('charging.results', 'results')}</span>
       {currentStats.batteryFriendlyGrade.label !== '—' && (
         <>
           <span className="opacity-50">·</span>
           <span>{t('charging.avgScore', 'avg')}{' '}
-            <span style={{ color: currentStats.batteryFriendlyGrade.color }} className="font-semibold">
+            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
               {currentStats.batteryFriendlyGrade.label}
-            </span>
+            </Text>
           </span>
         </>
       )}
@@ -595,6 +594,7 @@ export default function ChargingListPage() {
 
         {/* Search + active filter chips */}
         <FadeIn>
+          <section aria-label={t('charging.section.filters', 'Search and filters')}>
           <FilterBar>
             <div className="relative w-full sm:w-[28rem]">
               <SearchInput
@@ -636,10 +636,12 @@ export default function ChargingListPage() {
               setUrlBatch({ q: null, coll: null, page: null });
             }}
           />
+          </section>
         </FadeIn>
 
         {/* Overview KPI card */}
         <FadeIn>
+          <section aria-label={t('charging.section.overview', 'Overview')}>
           {currentStats.count > 0 ? (
             <KpiOverviewCard
               id="charging-overview"
@@ -730,11 +732,13 @@ export default function ChargingListPage() {
               />
             </GlassPanel>
           )}
+          </section>
         </FadeIn>
 
         {/* Trend chart */}
         {currentStats.count > 0 && (
           <FadeIn>
+            <section aria-label={t('charging.section.trend', 'Charging over time')}>
             <MetricSwitcherChart
               title={t('charging.overTime', 'Charging over time')}
               ariaLabel={t('charging.overTime.aria', 'Charging over time chart with metric switcher')}
@@ -746,11 +750,13 @@ export default function ChargingListPage() {
               emptyMessage={t('charging.overTime.empty', 'No data for this metric in the selected range')}
               testId="charging-trend-chart"
             />
+            </section>
           </FadeIn>
         )}
 
         {/* Collections */}
         <FadeIn>
+          <section aria-label={t('charging.section.collections', 'Collections')}>
           <PillFilterBar
             items={collectionPills}
             activeKey={collection}
@@ -758,55 +764,71 @@ export default function ChargingListPage() {
             ariaLabel={t('charging.collections.aria', 'Filter charging sessions by collection')}
             testId="charging-collections"
           />
+          </section>
         </FadeIn>
 
-        {/* Conditional analytical sections, each gated by a threshold */}
+        {/* Charging insights — analytical bento that reflows into columns on wide screens */}
         {sessions && (
-          <>
-            {/* AC vs DC overview — even small datasets benefit */}
-            {acDcBreakdown && (acDcBreakdown.ac.count + acDcBreakdown.dc.count >= THRESHOLD_AC_DC) ? (
-              <FadeIn delay={0.05}><AcDcStatsPanel breakdown={acDcBreakdown} /></FadeIn>
-            ) : null}
+          <FadeIn delay={0.15}>
+            <section
+              aria-label={t('charging.section.insights', 'Charging insights')}
+              className="space-y-4 xl:space-y-5"
+            >
+              <SectionTitle>{t('charging.insights.title', 'Charging Insights')}</SectionTitle>
 
-            {/* Battery start-level distribution — needs ≥ 5 sessions to be meaningful */}
-            {startLevelDist.length > 0 && sessions.length >= THRESHOLD_BATTERY_DIST ? (
-              <FadeIn delay={0.07}><BatteryLevelChart data={startLevelDist} /></FadeIn>
-            ) : sessions.length > 0 && sessions.length < THRESHOLD_BATTERY_DIST ? (
-              <FadeIn delay={0.07}>
-                <EmptyStateThreshold
-                  currentCount={sessions.length}
-                  threshold={THRESHOLD_BATTERY_DIST}
-                  itemNoun={t('charging.itemNoun', 'sessions')}
-                  sectionLabel={t('charging.section.batteryDist', 'Battery start-level distribution')}
-                  description={t('charging.section.batteryDistDesc', 'See where you typically start charging.')}
-                />
-              </FadeIn>
-            ) : null}
+              <div className="grid grid-cols-1 gap-4 xl:gap-5 2xl:grid-cols-6">
+                {/* AC vs DC — wide table, spans the majority of the row on wide screens */}
+                {acDcBreakdown && (acDcBreakdown.ac.count + acDcBreakdown.dc.count >= THRESHOLD_AC_DC) ? (
+                  <div className="min-w-0 2xl:col-span-4">
+                    <AcDcStatsPanel breakdown={acDcBreakdown} />
+                  </div>
+                ) : null}
 
-            {/* Efficiency panel — always renders when present (lifetime stats) */}
-            {efficiencyStats && (
-              <FadeIn delay={0.09}><EfficiencyPanel stats={efficiencyStats} /></FadeIn>
-            )}
+                {/* Battery start-level distribution — needs ≥ 5 sessions to be meaningful */}
+                {startLevelDist.length > 0 && sessions.length >= THRESHOLD_BATTERY_DIST ? (
+                  <div className="min-w-0 2xl:col-span-2">
+                    <BatteryLevelChart data={startLevelDist} />
+                  </div>
+                ) : sessions.length > 0 && sessions.length < THRESHOLD_BATTERY_DIST ? (
+                  <div className="min-w-0 2xl:col-span-2">
+                    <EmptyStateThreshold
+                      currentCount={sessions.length}
+                      threshold={THRESHOLD_BATTERY_DIST}
+                      itemNoun={t('charging.itemNoun', 'sessions')}
+                      sectionLabel={t('charging.section.batteryDist', 'Battery start-level distribution')}
+                      description={t('charging.section.batteryDistDesc', 'See where you typically start charging.')}
+                    />
+                  </div>
+                ) : null}
 
-            {/* Charger specs — needs ≥ 5 to compare */}
-            {chargerSpecs && sessions.length >= THRESHOLD_SPECS ? (
-              <FadeIn delay={0.11}><ChargerSpecsPanel specs={chargerSpecs} /></FadeIn>
-            ) : sessions.length > 0 && sessions.length < THRESHOLD_SPECS ? (
-              <FadeIn delay={0.11}>
-                <EmptyStateThreshold
-                  currentCount={sessions.length}
-                  threshold={THRESHOLD_SPECS}
-                  itemNoun={t('charging.itemNoun', 'sessions')}
-                  sectionLabel={t('charging.section.specs', 'Charger specs breakdown')}
-                />
-              </FadeIn>
-            ) : null}
+                {/* Efficiency panel — always renders when present (lifetime stats) */}
+                {efficiencyStats ? (
+                  <div className="min-w-0 2xl:col-span-3">
+                    <EfficiencyPanel stats={efficiencyStats} />
+                  </div>
+                ) : null}
 
-            {/* Optimizer + heatmap — needs ≥ 10 sessions for patterns */}
-            {optimizer && sessions.length >= THRESHOLD_OPTIMIZER ? (
-              <OptimizerSection optimizer={optimizer} />
-            ) : sessions.length > 0 && sessions.length < THRESHOLD_OPTIMIZER ? (
-              <FadeIn delay={0.13}>
+                {/* Charger specs — needs ≥ 5 to compare */}
+                {chargerSpecs && sessions.length >= THRESHOLD_SPECS ? (
+                  <div className="min-w-0 2xl:col-span-3">
+                    <ChargerSpecsPanel specs={chargerSpecs} />
+                  </div>
+                ) : sessions.length > 0 && sessions.length < THRESHOLD_SPECS ? (
+                  <div className="min-w-0 2xl:col-span-3">
+                    <EmptyStateThreshold
+                      currentCount={sessions.length}
+                      threshold={THRESHOLD_SPECS}
+                      itemNoun={t('charging.itemNoun', 'sessions')}
+                      sectionLabel={t('charging.section.specs', 'Charger specs breakdown')}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Optimizer + heatmap — full-width band (has its own internal grid) */}
+              {optimizer && sessions.length >= THRESHOLD_OPTIMIZER ? (
+                <OptimizerSection optimizer={optimizer} />
+              ) : sessions.length > 0 && sessions.length < THRESHOLD_OPTIMIZER ? (
                 <EmptyStateThreshold
                   currentCount={sessions.length}
                   threshold={THRESHOLD_OPTIMIZER}
@@ -814,120 +836,121 @@ export default function ChargingListPage() {
                   sectionLabel={t('charging.section.optimizer', 'Cost optimizer & heatmap')}
                   description={t('charging.section.optimizerDesc', 'Smart scheduling recommendations require pattern recognition.')}
                 />
-              </FadeIn>
-            ) : null}
-          </>
+              ) : null}
+            </section>
+          </FadeIn>
         )}
 
-        {/* List controls bar */}
-        {sortedSessions.length > 0 ? (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3" data-tour="charging-list">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
-              <Plug className="h-4 w-4 text-emerald-400" />
-              {t('charging.allSessions', 'All sessions')}
-              <span className="text-xs font-normal text-[var(--text-muted)]">
-                ({fmtCompact(sortedSessions.length)})
-              </span>
-            </h3>
-            <div className="flex items-center gap-2 flex-wrap">
-              <SortControl<SortField>
-                field={sortBy}
-                direction={sortDesc ? 'desc' : 'asc'}
-                options={sortOptions}
-                onFieldChange={setSortBy}
-                onDirectionChange={(d: SortDirection) => setSortDesc(d === 'desc')}
-                testId="charging-sort"
-              />
-              <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" />
-              <DensityToggle
-                value={density}
-                onChange={setDensity}
-                options={['compact', 'comfortable']}
-                testId="charging-density"
-              />
-              <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" />
-              <ListExportMenu
-                onExportCsv={handleExportCsv}
-                onExportJson={handleExportJson}
-                selectedCount={bulkSelected.size}
-                visibleCount={sortedSessions.length}
-                testId="charging-export"
-              />
-            </div>
-          </div>
-        ) : !isLoading && (
-          <EmptyState /* no-action: transient empty state — no specific recovery available */
-            icon={<Activity className="h-8 w-8 opacity-20" />}
-            message={t('common.noData', 'No data available')}
-            className="py-8"
-          />
-        )}
+        {/* Session list — full-width detail band */}
+        <FadeIn delay={0.2}>
+          <section
+            aria-label={t('charging.section.sessions', 'All charging sessions')}
+            className="space-y-3"
+            data-tour="charging-list"
+          >
+            {sortedSessions.length > 0 && (
+              <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+                <SectionTitle className="flex items-center gap-2">
+                  <Plug className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                  {t('charging.allSessions', 'All sessions')}
+                  <Text as="span" size="xs" weight="regular" color="muted">
+                    ({fmtCompact(sortedSessions.length)})
+                  </Text>
+                </SectionTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SortControl<SortField>
+                    field={sortBy}
+                    direction={sortDesc ? 'desc' : 'asc'}
+                    options={sortOptions}
+                    onFieldChange={setSortBy}
+                    onDirectionChange={(d: SortDirection) => setSortDesc(d === 'desc')}
+                    testId="charging-sort"
+                  />
+                  <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
+                  <DensityToggle
+                    value={density}
+                    onChange={setDensity}
+                    options={['compact', 'comfortable']}
+                    testId="charging-density"
+                  />
+                  <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
+                  <ListExportMenu
+                    onExportCsv={handleExportCsv}
+                    onExportJson={handleExportJson}
+                    selectedCount={bulkSelected.size}
+                    visibleCount={sortedSessions.length}
+                    testId="charging-export"
+                  />
+                </div>
+              </div>
+            )}
 
-        {/* Session list */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
-          </div>
-        ) : paginatedSessions.length > 0 ? (
-          <>
-            <BulkActionsToolbar
-              selectedIds={Array.from(bulkSelected)}
-              total={filteredSessions.length}
-              onClear={clearBulk}
-              actions={bulkActions}
-              itemNoun={{
-                one: t('bulk.noun.session_one', 'session'),
-                other: t('bulk.noun.session_other', 'sessions'),
-              }}
-            />
-            <StaggerContainer>
-              <DateGroupedList
-                groups={groupedSessions}
-                itemKey={(s) => s.id}
-                renderItem={(s) => (
-                  <StaggerItem>
-                    <ChargingSessionCard
-                      session={s}
-                      toDistanceDisplay={toDistanceDisplay}
-                      distanceUnit={distanceUnit}
-                      selected={bulkSelected.has(s.id)}
-                      onToggleSelect={toggleSessionSelected}
-                      anomaly={anomalyById.get(s.id)}
-                      density={density === 'compact' ? 'compact' : 'comfortable'}
-                    />
-                  </StaggerItem>
-                )}
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
+              </div>
+            ) : paginatedSessions.length > 0 ? (
+              <>
+                <BulkActionsToolbar
+                  selectedIds={Array.from(bulkSelected)}
+                  total={filteredSessions.length}
+                  onClear={clearBulk}
+                  actions={bulkActions}
+                  itemNoun={{
+                    one: t('bulk.noun.session_one', 'session'),
+                    other: t('bulk.noun.session_other', 'sessions'),
+                  }}
+                />
+                <StaggerContainer>
+                  <DateGroupedList
+                    groups={groupedSessions}
+                    itemKey={(s) => s.id}
+                    renderItem={(s) => (
+                      <StaggerItem>
+                        <ChargingSessionCard
+                          session={s}
+                          toDistanceDisplay={toDistanceDisplay}
+                          distanceUnit={distanceUnit}
+                          selected={bulkSelected.has(s.id)}
+                          onToggleSelect={toggleSessionSelected}
+                          anomaly={anomalyById.get(s.id)}
+                          density={density === 'compact' ? 'compact' : 'comfortable'}
+                        />
+                      </StaggerItem>
+                    )}
+                  />
+                </StaggerContainer>
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={sortedSessions.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}
+                />
+              </>
+            ) : !isLoading && (
+              <EmptyState
+                icon={<Battery className="h-8 w-8" />}
+                title={
+                  collection !== 'all'
+                    ? t('charging.emptyForCollection', 'No charging sessions in this view')
+                    : t('charging.emptyTitle', 'No charging sessions yet')
+                }
+                message={
+                  collection !== 'all'
+                    ? t('charging.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
+                    : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
+                }
+                action={{
+                  label: t('charging.empty.cta', 'Reset filters'),
+                  onClick: () => {
+                    setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
+                  },
+                }}
               />
-            </StaggerContainer>
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              total={sortedSessions.length}
-              onPageChange={setPage}
-              onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}
-            />
-          </>
-        ) : !isLoading && (
-          <EmptyState
-            icon={<Battery className="h-8 w-8" />}
-            title={
-              collection !== 'all'
-                ? t('charging.emptyForCollection', 'No charging sessions in this view')
-                : t('charging.emptyTitle', 'No charging sessions yet')
-            }
-            message={
-              collection !== 'all'
-                ? t('charging.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
-                : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
-            }
-            action={{
-              label: t('charging.empty.cta', 'Reset filters'),
-              onClick: () => {
-                setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
-              },
-            }}
-          />
-        )}
+            )}
+          </section>
+        </FadeIn>
 
       </PullToRefresh>
     </PageContainer>

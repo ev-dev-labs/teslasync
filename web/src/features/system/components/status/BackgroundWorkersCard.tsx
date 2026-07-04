@@ -194,11 +194,11 @@ export function BackgroundWorkersCard({ health }: BackgroundWorkersCardProps) {
                 <Boxes className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
                 <span className="font-medium text-[var(--text-primary)]">{g.name}</span>
                 <span
-                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${groupCls.chip}`}
+                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${groupCls.chip}`}
                 >
                   {g.healthy} / {g.total} healthy
                 </span>
-                <span className="ml-auto text-[11px] text-[var(--text-muted)]">
+                <span className="ml-auto text-xs text-[var(--text-muted)]">
                   {isMulti ? `${g.total} instances` : '1 instance'}
                 </span>
               </div>
@@ -229,18 +229,18 @@ export function BackgroundWorkersCard({ health }: BackgroundWorkersCardProps) {
 
                       <div className="flex shrink-0 items-center gap-2 sm:justify-end">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${cls.chip}`}
+                          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${cls.chip}`}
                         >
                           {cls.label}
                         </span>
-                        <span className="w-16 text-right text-[11px] tabular-nums text-[var(--text-muted)]">
+                        <span className="w-16 text-right text-xs tabular-nums text-[var(--text-muted)]">
                           {fmtLatency(inst.latency_ms)}
                         </span>
                       </div>
 
                       {inst.error && (
                         <div className="basis-full sm:basis-full">
-                          <div className="mt-1 flex items-start gap-1.5 rounded-md bg-red-500/10 px-2 py-1 text-[11px] text-red-300 ring-1 ring-red-500/25">
+                          <div className="mt-1 flex items-start gap-1.5 rounded-md bg-red-500/10 px-2 py-1 text-xs text-red-300 ring-1 ring-red-500/25">
                             <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
                             <span className="break-all">{inst.error}</span>
                           </div>
@@ -258,7 +258,7 @@ export function BackgroundWorkersCard({ health }: BackgroundWorkersCardProps) {
       {/* Footer guidance: explain how to scale, since most operators won't
           know the *_HOSTS env contract until the panel tells them. */}
       {multiInstanceGroups === 0 && (
-        <div className="rounded-md bg-white/[0.02] p-2.5 text-[11px] text-[var(--text-muted)] ring-1 ring-white/[0.05]">
+        <div className="rounded-md bg-white/[0.02] p-2.5 text-xs text-[var(--text-muted)] ring-1 ring-white/[0.05]">
           Running multiple instances of a worker? Set{' '}
           <code className="font-mono text-[var(--text-primary)]">NOTIFICATION_WORKER_HOSTS</code>,{' '}
           <code className="font-mono text-[var(--text-primary)]">EXPORT_WORKER_HOSTS</code>, or{' '}

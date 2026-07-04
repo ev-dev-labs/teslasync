@@ -149,7 +149,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
             <span className="text-2xl font-bold text-[var(--text-primary)]">
               {schedule.chargeLimit != null ? `${schedule.chargeLimit}%` : '—'}
             </span>
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.chargingSchedule.limit', 'Charge Limit')}
             </span>
           </div>
@@ -202,7 +202,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
           {isTall && state && (
             <div className="mt-auto pt-2 border-t border-white/[0.06] grid grid-cols-2 gap-2">
               <div>
-                <p className="text-[10px] text-[var(--text-muted)]">
+                <p className="text-2xs text-[var(--text-muted)]">
                   {t('widget.chargingSchedule.currentLevel', 'Current Level')}
                 </p>
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -210,7 +210,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--text-muted)]">
+                <p className="text-2xs text-[var(--text-muted)]">
                   {t('widget.chargingSchedule.status', 'Status')}
                 </p>
                 <p className="text-sm font-semibold text-[var(--text-primary)]">

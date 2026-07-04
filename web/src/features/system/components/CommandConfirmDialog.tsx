@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Modal, Input, Button } from '@/components/ui';
+import { Modal, Input, Button, Heading, Text, HelperText } from '@/components/ui';
 import { AlertTriangle } from 'lucide-react';
 import type { CommandDef } from '../commands';
 
@@ -81,27 +81,27 @@ export function CommandConfirmDialog({
           <div className="rounded-xl p-2.5 bg-red-500/10 text-red-400">
             <AlertTriangle className="h-5 w-5" />
           </div>
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+          <Heading level="panel" as="h2">
             {t(def.labelKey, def.labelFallback)}
-          </h2>
+          </Heading>
         </div>
 
-        <p className="text-sm text-[var(--text-secondary)] mb-4">
+        <Text as="p" size="sm" color="secondary" className="mb-4">
           {t(def.confirmKey ?? '', def.confirmFallback ?? 'Are you sure?')}
-        </p>
+        </Text>
 
         {confirmInput && (
           <div className="mb-4">
-            <p className="text-xs text-[var(--text-muted)] mb-2">
+            <HelperText className="mb-2">
               {t('commands.confirm.typeToConfirm', { word: confirmInput, defaultValue: 'Type "{{word}}" to confirm:' })}
-            </p>
+            </HelperText>
             <Input
               ref={inputRef}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               placeholder={confirmInput}
               autoComplete="off"
-              className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)]"
+              className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
           </div>
         )}

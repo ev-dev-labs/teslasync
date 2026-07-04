@@ -171,7 +171,7 @@ function SavingsCard({ savings }: { savings: CostSnapshot }) {
         </div>
       )}
       {total > 0 && (
-        <div className="col-span-full flex gap-4 justify-center text-[10px] text-[var(--text-muted)]">
+        <div className="col-span-full flex gap-4 justify-center text-2xs text-[var(--text-muted)]">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />{t('polling.fleetTelemetry', 'Fleet Telemetry')}</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />{t('polling.idleDetection', 'Idle Detection')}</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500" />{t('polling.prediction', 'Prediction')}</span>

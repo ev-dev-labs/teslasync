@@ -107,7 +107,7 @@ export default function InstallPrompt() {
             className="flex w-full items-start gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-primary)] shadow-xl backdrop-blur-xl sm:items-center sm:px-4"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#10b981]">
-              <Download className="h-5 w-5 text-white" />
+              <Download className="h-5 w-5 text-[var(--text-inverse)]" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">
@@ -121,7 +121,7 @@ export default function InstallPrompt() {
               type="button"
               onClick={handleInstall}
               size="sm"
-              className="h-8 shrink-0 rounded-lg bg-gradient-to-br from-[#00f0ff] to-[#10b981] px-3 text-xs font-semibold text-white hover:opacity-90"
+              className="h-8 shrink-0 rounded-lg bg-gradient-to-br from-[#00f0ff] to-[#10b981] px-3 text-xs font-semibold text-[var(--text-inverse)] hover:opacity-90"
             >
               {t('installPrompt.install', 'Install')}
             </Button>

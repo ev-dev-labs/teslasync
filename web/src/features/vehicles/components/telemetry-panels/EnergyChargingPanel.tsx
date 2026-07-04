@@ -74,7 +74,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
             </span>
             <span
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',
                 chargingTelemetry.charging_state === 'Charging'
                   ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
                   : chargingTelemetry.charging_state === 'Complete'

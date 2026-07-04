@@ -96,7 +96,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                   <Icon className={`h-4 w-4 ${cmd.color}`} />
                 )}
                 {!isCompact && (
-                  <span className="text-[10px] text-[var(--text-secondary)] truncate w-full text-center">
+                  <span className="text-2xs text-[var(--text-secondary)] truncate w-full text-center">
                     {t(cmd.labelKey, cmd.labelFallback)}
                   </span>
                 )}

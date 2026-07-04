@@ -52,7 +52,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       actions={
         <Link
           to="/drives"
-          className="text-[10px] text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
+          className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.viewAll', 'View all')} <ArrowUpRight className="h-3 w-3" />
         </Link>
@@ -77,7 +77,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                     </p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Clock className="h-2.5 w-2.5 text-[var(--text-muted)]" />
-                      <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                      <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                         {formatDurationMinutes((d.duration_s ?? 0) / 60, { subMinuteLabel: '<1m' })}
                       </span>
                     </div>
@@ -88,13 +88,13 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
                         <MapPin className="h-2.5 w-2.5 text-emerald-400/60 flex-shrink-0" />
-                        <span className="text-[10px] text-[var(--text-secondary)] truncate">
+                        <span className="text-2xs text-[var(--text-secondary)] truncate">
                           {truncateAddress(d.start_address, 30)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
                         <MapPin className="h-2.5 w-2.5 text-red-400/60 flex-shrink-0" />
-                        <span className="text-[10px] text-[var(--text-secondary)] truncate">
+                        <span className="text-2xs text-[var(--text-secondary)] truncate">
                           {truncateAddress(d.end_address, 30)}
                         </span>
                       </div>
@@ -105,17 +105,17 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                   <div className="flex-shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Battery className="h-2.5 w-2.5 text-[var(--text-muted)]" />
-                      <span className="text-[10px] text-[var(--text-secondary)] tabular-nums">
+                      <span className="text-2xs text-[var(--text-secondary)] tabular-nums">
                         {d.start_soc_pct ?? '?'}% → {d.end_soc_pct ?? '?'}%
                       </span>
                     </div>
                     <div className="flex items-center justify-end gap-1 mt-0.5">
                       {batteryUsed != null && dist > 0 && (
-                        <span className="text-[10px] text-neon-cyan/60 tabular-nums">
+                        <span className="text-2xs text-neon-cyan/60 tabular-nums">
                           {fmtInt(batteryUsed)}%
                         </span>
                       )}
-                      <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                      <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                         {formatDateShort(d.start_ts)}
                       </span>
                     </div>
