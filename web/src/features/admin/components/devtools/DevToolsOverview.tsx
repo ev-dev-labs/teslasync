@@ -41,6 +41,10 @@ export function DevToolsOverview({ errorVinCount, vehicleCount, loading = false,
   // Live metrics are unknown while loading or when the source errored with
   // no cached value — show the placeholder instead of a misleading count.
   const liveUnknown = loading || errored
+  // While the error count is unknown, health-coding the icon green ("0 errors,
+  // healthy") or red would contradict the "—" placeholder and imply a fleet
+  // status we can't vouch for — fall back to a neutral tone until it resolves.
+  const telemetryTone = liveUnknown ? 'cyan' : errors > 0 ? 'red' : 'green'
 
   return (
     <section
@@ -52,7 +56,7 @@ export function DevToolsOverview({ errorVinCount, vehicleCount, loading = false,
         value={liveUnknown ? placeholder : errors}
         subtitle={t('devtools.overview.affectedVins', 'affected VINs')}
         icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-        color={errors > 0 ? 'red' : 'green'}
+        color={telemetryTone}
       />
       <MetricCard
         label={t('devtools.overview.vehicles', 'Vehicles')}
