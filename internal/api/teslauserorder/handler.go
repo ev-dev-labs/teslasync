@@ -1,6 +1,7 @@
 package teslauserorder
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -14,10 +15,33 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// teslaUserOrderAPI is the consumer-side port for the Tesla Fleet API calls the
+// order handler makes. Declaring the narrow interface here (rather than
+// depending on the concrete *tesla.Client) keeps the handler unit-testable with
+// a fake; the concrete client satisfies it unchanged.
+type teslaUserOrderAPI interface {
+	GetUserOrders(ctx context.Context) ([]byte, int, error)
+	HasValidToken() bool
+}
+
+// teslaUserOrderStore is the consumer-side port for the persistence the handler
+// needs. *tesladb.TeslaUserOrderRepo satisfies it unchanged.
+type teslaUserOrderStore interface {
+	GetAll(ctx context.Context) ([]*teslamodel.TeslaUserOrder, error)
+	ReplaceAll(ctx context.Context, orders []*teslamodel.TeslaUserOrder) error
+}
+
+// Compile-time proof the concrete production dependencies still satisfy the
+// ports above, so a signature drift is caught at build time, not runtime.
+var (
+	_ teslaUserOrderAPI   = (*tesla.Client)(nil)
+	_ teslaUserOrderStore = (*tesladb.TeslaUserOrderRepo)(nil)
+)
+
 // Handler serves stored Tesla account order data and refreshes it from Tesla.
 type Handler struct {
-	teslaClient *tesla.Client
-	orderRepo   *tesladb.TeslaUserOrderRepo
+	teslaClient teslaUserOrderAPI
+	orderRepo   teslaUserOrderStore
 }
 
 // NewHandler wires Tesla order refresh dependencies.
@@ -26,6 +50,12 @@ func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
 		teslaClient: tc,
 		orderRepo:   tesladb.NewTeslaUserOrderRepo(db),
 	}
+}
+
+// newHandler builds a handler from explicit ports. Tests use it to inject
+// fakes; production code uses NewHandler.
+func newHandler(api teslaUserOrderAPI, store teslaUserOrderStore) *Handler {
+	return &Handler{teslaClient: api, orderRepo: store}
 }
 
 // ordersEnvelope wraps the order list with sync metadata for the frontend.
@@ -50,7 +80,10 @@ func (h *Handler) Orders(w http.ResponseWriter, r *http.Request) {
 	if env.Orders == nil {
 		env.Orders = []*teslamodel.TeslaUserOrder{}
 	}
-	if len(orders) > 0 {
+	// orders is sorted updated_at DESC by the repo, so the first row carries
+	// the most recent sync timestamp. Guard against a nil element so a future
+	// repo change can never turn this metadata read into a nil-deref panic.
+	if len(orders) > 0 && orders[0] != nil {
 		ts := orders[0].FetchedAt.UTC().Format(time.RFC3339)
 		env.FetchedAt = &ts
 	}
@@ -88,8 +121,28 @@ func (h *Handler) RefreshOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var orders []*teslamodel.TeslaUserOrder
-	for _, raw := range envelope.Response {
+	orders := parseUserOrders(envelope.Response)
+
+	if err := h.orderRepo.ReplaceAll(r.Context(), orders); err != nil {
+		log.Error().Err(err).Msg("failed to save tesla user orders")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save orders")
+		return
+	}
+
+	log.Info().Int("orders", len(orders)).Msg("tesla user orders refreshed")
+
+	// Reuse the read path so refresh and list responses stay identical.
+	h.Orders(w, r)
+}
+
+// parseUserOrders converts the raw Tesla `response` array into order models.
+// Entries that fail to unmarshal are logged and skipped so a single malformed
+// row cannot fail the whole sync. Delivery dates use Tesla's date-only
+// ("2006-01-02") wire format; an empty or unparseable date leaves
+// DeliveryDate nil rather than rejecting the order.
+func parseUserOrders(raws []json.RawMessage) []*teslamodel.TeslaUserOrder {
+	orders := make([]*teslamodel.TeslaUserOrder, 0, len(raws))
+	for _, raw := range raws {
 		var o struct {
 			OrderID      string  `json:"order_id"`
 			Model        string  `json:"model"`
@@ -118,13 +171,5 @@ func (h *Handler) RefreshOrders(w http.ResponseWriter, r *http.Request) {
 		}
 		orders = append(orders, order)
 	}
-
-	if err := h.orderRepo.ReplaceAll(r.Context(), orders); err != nil {
-		log.Error().Err(err).Msg("failed to save tesla user orders")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to save orders")
-		return
-	}
-
-	// Reuse the read path so refresh and list responses stay identical.
-	h.Orders(w, r)
+	return orders
 }
