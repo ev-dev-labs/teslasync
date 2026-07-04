@@ -11,12 +11,12 @@ import (
 
 // TeslaVehicleDriverRepo provides data access for vehicle drivers and share invitations.
 type TeslaVehicleDriverRepo struct {
-	db *database.DB
+	pool teslaPool
 }
 
 // NewTeslaVehicleDriverRepo creates a new repository.
 func NewTeslaVehicleDriverRepo(db *database.DB) *TeslaVehicleDriverRepo {
-	return &TeslaVehicleDriverRepo{db: db}
+	return &TeslaVehicleDriverRepo{pool: db.Pool}
 }
 
 // GetDriversByVehicleID returns all drivers for a given vehicle.
@@ -24,7 +24,7 @@ func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehi
 	query := `SELECT id, vehicle_id, vin, share_user_id, driver_email, driver_name, role, fetched_at
 		FROM tesla_vehicle_drivers WHERE vehicle_id = $1 ORDER BY id ASC`
 
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID)
+	rows, err := r.pool.Query(ctx, query, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("query vehicle drivers: %w", err)
 	}
@@ -46,7 +46,7 @@ func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehi
 
 // ReplaceDriversForVehicle replaces all drivers for a vehicle with the given set.
 func (r *TeslaVehicleDriverRepo) ReplaceDriversForVehicle(ctx context.Context, vehicleID int64, drivers []*teslamodel.TeslaVehicleDriver) error {
-	tx, err := r.db.Pool.Begin(ctx)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -58,7 +58,10 @@ func (r *TeslaVehicleDriverRepo) ReplaceDriversForVehicle(ctx context.Context, v
 		return fmt.Errorf("delete old drivers: %w", err)
 	}
 
-	for _, d := range drivers {
+	for i, d := range drivers {
+		if d == nil {
+			return fmt.Errorf("insert driver: nil driver at index %d", i)
+		}
 		_, err := tx.Exec(ctx, `INSERT INTO tesla_vehicle_drivers
 			(vehicle_id, vin, share_user_id, driver_email, driver_name, role, fetched_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -77,7 +80,7 @@ func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, 
 	query := `SELECT id, vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at
 		FROM tesla_vehicle_invitations WHERE vehicle_id = $1 ORDER BY created_at DESC`
 
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID)
+	rows, err := r.pool.Query(ctx, query, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("query vehicle invitations: %w", err)
 	}
@@ -100,7 +103,7 @@ func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, 
 
 // ReplaceInvitationsForVehicle replaces all invitations for a vehicle with the given set.
 func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Context, vehicleID int64, invitations []*teslamodel.TeslaVehicleInvitation) error {
-	tx, err := r.db.Pool.Begin(ctx)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -112,7 +115,10 @@ func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Contex
 		return fmt.Errorf("delete old invitations: %w", err)
 	}
 
-	for _, inv := range invitations {
+	for i, inv := range invitations {
+		if inv == nil {
+			return fmt.Errorf("insert invitation: nil invitation at index %d", i)
+		}
 		_, err := tx.Exec(ctx, `INSERT INTO tesla_vehicle_invitations
 			(vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -130,7 +136,7 @@ func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Contex
 // InsertInvitation inserts a single invitation record.
 func (r *TeslaVehicleDriverRepo) InsertInvitation(ctx context.Context, inv *teslamodel.TeslaVehicleInvitation) error {
 	now := time.Now().UTC()
-	err := r.db.Pool.QueryRow(ctx, `INSERT INTO tesla_vehicle_invitations
+	err := r.pool.QueryRow(ctx, `INSERT INTO tesla_vehicle_invitations
 		(vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (vehicle_id, invitation_id) DO UPDATE SET

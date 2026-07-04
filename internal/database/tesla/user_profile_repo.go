@@ -2,6 +2,7 @@ package tesla
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,12 +14,12 @@ import (
 
 // TeslaUserProfileRepo provides data access for the Tesla account owner's profile.
 type TeslaUserProfileRepo struct {
-	db *database.DB
+	pool teslaPool
 }
 
 // NewTeslaUserProfileRepo creates a new repository.
 func NewTeslaUserProfileRepo(db *database.DB) *TeslaUserProfileRepo {
-	return &TeslaUserProfileRepo{db: db}
+	return &TeslaUserProfileRepo{pool: db.Pool}
 }
 
 // Get returns the stored Tesla user profile (single-row table).
@@ -26,11 +27,11 @@ func (r *TeslaUserProfileRepo) Get(ctx context.Context) (*teslamodel.TeslaUserPr
 	p := &teslamodel.TeslaUserProfile{}
 	query := `SELECT id, email, full_name, profile_image_url, fetched_at, created_at, updated_at
 		FROM tesla_user_profiles ORDER BY updated_at DESC LIMIT 1`
-	err := r.db.Pool.QueryRow(ctx, query).Scan(
+	err := r.pool.QueryRow(ctx, query).Scan(
 		&p.ID, &p.Email, &p.FullName, &p.ProfileImageURL,
 		&p.FetchedAt, &p.CreatedAt, &p.UpdatedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -43,11 +44,11 @@ func (r *TeslaUserProfileRepo) Get(ctx context.Context) (*teslamodel.TeslaUserPr
 func (r *TeslaUserProfileRepo) Upsert(ctx context.Context, p *teslamodel.TeslaUserProfile) error {
 	now := time.Now().UTC()
 
-	tx, err := r.db.Pool.Begin(ctx)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback(ctx) //nolint:errcheck
 
 	if _, err := tx.Exec(ctx, `DELETE FROM tesla_user_profiles`); err != nil {
 		return fmt.Errorf("delete old profile: %w", err)

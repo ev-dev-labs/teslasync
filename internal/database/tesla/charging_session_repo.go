@@ -2,6 +2,7 @@ package tesla
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,11 +14,11 @@ import (
 
 // TeslaChargingSessionRepo provides data access for Tesla fleet charging sessions (business accounts).
 type TeslaChargingSessionRepo struct {
-	db *database.DB
+	pool teslaPool
 }
 
 func NewTeslaChargingSessionRepo(db *database.DB) *TeslaChargingSessionRepo {
-	return &TeslaChargingSessionRepo{db: db}
+	return &TeslaChargingSessionRepo{pool: db.Pool}
 }
 
 // GetAll returns paginated fleet charging sessions, optionally filtered by VIN.
@@ -40,7 +41,7 @@ func (r *TeslaChargingSessionRepo) GetAll(ctx context.Context, vin string, limit
 	query += fmt.Sprintf(" ORDER BY charge_start_datetime DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
-	rows, err := r.db.Pool.Query(ctx, query, args...)
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query tesla charging sessions: %w", err)
 	}
@@ -73,7 +74,7 @@ func (r *TeslaChargingSessionRepo) GetBySessionID(ctx context.Context, sessionID
 		latitude, longitude, fetched_at, created_at
 		FROM tesla_charging_sessions WHERE session_id = $1`
 	s := &teslamodel.TeslaChargingSession{}
-	err := r.db.Pool.QueryRow(ctx, query, sessionID).Scan(
+	err := r.pool.QueryRow(ctx, query, sessionID).Scan(
 		&s.ID, &s.SessionID, &s.VIN, &s.ChargerID, &s.SiteLocationName,
 		&s.ChargeStartDatetime, &s.ChargeStopDatetime,
 		&s.EnergyAddedKWh, &s.PeakPowerKW, &s.MaxChargeRateKW, &s.ChargeDurationS,
@@ -81,7 +82,7 @@ func (r *TeslaChargingSessionRepo) GetBySessionID(ctx context.Context, sessionID
 		&s.Latitude, &s.Longitude,
 		&s.FetchedAt, &s.CreatedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -103,7 +104,7 @@ func (r *TeslaChargingSessionRepo) GetSummary(ctx context.Context, vin string) (
 	}
 
 	s := &teslamodel.TeslaChargingSessionSummary{}
-	err := r.db.Pool.QueryRow(ctx, query, args...).Scan(
+	err := r.pool.QueryRow(ctx, query, args...).Scan(
 		&s.TotalSessions, &s.TotalWh, &s.TotalCost, &s.AvgCostPerKWh, &s.PeakPowerKW,
 	)
 	if err != nil {
@@ -147,8 +148,11 @@ func (r *TeslaChargingSessionRepo) UpsertBatch(ctx context.Context, sessions []*
 
 	now := time.Now().UTC()
 	upserted := 0
-	for _, s := range sessions {
-		_, err := r.db.Pool.Exec(ctx, query,
+	for i, s := range sessions {
+		if s == nil {
+			return upserted, fmt.Errorf("upsert tesla charging session: nil entry at index %d", i)
+		}
+		_, err := r.pool.Exec(ctx, query,
 			s.SessionID, s.VIN, s.ChargerID, s.SiteLocationName,
 			s.ChargeStartDatetime, s.ChargeStopDatetime,
 			s.EnergyAddedKWh, s.PeakPowerKW, s.MaxChargeRateKW, s.ChargeDurationS,
