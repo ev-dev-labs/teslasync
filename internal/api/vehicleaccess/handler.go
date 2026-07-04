@@ -1,6 +1,7 @@
 package vehicleaccess
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,11 +20,54 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// teslaFetchTimeout bounds a single outbound Tesla Fleet API call made while
+// serving a share-access request. Without it a hung Tesla edge could pin a
+// request goroutine indefinitely; 30s matches the Tesla API timeout budget
+// used elsewhere in the codebase (see internal/api/teslauserconfig).
+const teslaFetchTimeout = 30 * time.Second
+
+// driverClient is the subset of *tesla.Client this handler needs. Depending on
+// the port rather than the concrete client keeps the handler unit-testable
+// without a live Fleet API or OAuth token.
+type driverClient interface {
+	HasValidToken() bool
+	GetVehicleDrivers(ctx context.Context, vin string) ([]byte, int, error)
+	RemoveVehicleDriver(ctx context.Context, vin string, shareUserID int64) ([]byte, int, error)
+	GetVehicleInvitations(ctx context.Context, vin string) ([]byte, int, error)
+	CreateVehicleInvitation(ctx context.Context, vin string) ([]byte, int, error)
+	RevokeVehicleInvitation(ctx context.Context, vin, invitationID string) ([]byte, int, error)
+}
+
+// driverStore is the subset of *tesladb.TeslaVehicleDriverRepo this handler
+// needs — the persistence port for stored drivers and invitations.
+type driverStore interface {
+	GetDriversByVehicleID(ctx context.Context, vehicleID int64) ([]*teslamodel.TeslaVehicleDriver, error)
+	ReplaceDriversForVehicle(ctx context.Context, vehicleID int64, drivers []*teslamodel.TeslaVehicleDriver) error
+	GetInvitationsByVehicleID(ctx context.Context, vehicleID int64) ([]*teslamodel.TeslaVehicleInvitation, error)
+	ReplaceInvitationsForVehicle(ctx context.Context, vehicleID int64, invitations []*teslamodel.TeslaVehicleInvitation) error
+	InsertInvitation(ctx context.Context, inv *teslamodel.TeslaVehicleInvitation) error
+}
+
+// vehicleStore is the subset of *vehicledb.VehicleRepo this handler needs to
+// resolve the {vehicleID} URL param to a VIN.
+type vehicleStore interface {
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+}
+
+// Compile-time guarantees that the production dependencies still satisfy the
+// ports the handler is written against, so an upstream signature drift fails
+// the build here rather than at wiring time in router.go.
+var (
+	_ driverClient = (*tesla.Client)(nil)
+	_ driverStore  = (*tesladb.TeslaVehicleDriverRepo)(nil)
+	_ vehicleStore = (*vehicledb.VehicleRepo)(nil)
+)
+
 // Handler serves vehicle driver and share invitation data.
 type Handler struct {
-	teslaClient *tesla.Client
-	repo        *tesladb.TeslaVehicleDriverRepo
-	vehicleRepo *vehicledb.VehicleRepo
+	teslaClient driverClient
+	repo        driverStore
+	vehicleRepo vehicleStore
 }
 
 // NewHandler wires Tesla share-access dependencies.
@@ -35,20 +79,36 @@ func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
 	}
 }
 
-// resolveVehicle looks up the vehicle record from the vehicleID URL param.
-func (h *Handler) resolveVehicle(r *http.Request) (*vehiclemodel.Vehicle, error) {
+// resolveVehicle looks up the vehicle for the {vehicleID} URL param. On any
+// failure it writes the appropriate error response and returns ok=false so the
+// caller can return immediately:
+//
+//   - malformed / missing {vehicleID}   → 400 Bad Request
+//   - repository lookup error           → 500 Internal Server Error (logged;
+//     the internal cause is never leaked to the client)
+//   - no such vehicle                   → 404 Not Found
+//
+// Previously every failure — including a transient DB error — collapsed to a
+// 400 that echoed the raw wrapped error string back to the caller, both
+// mis-classifying server faults as client faults and disclosing internal
+// detail. This restores the REST semantics documented in the Go backend guide.
+func (h *Handler) resolveVehicle(w http.ResponseWriter, r *http.Request) (*vehiclemodel.Vehicle, bool) {
 	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		return nil, fmt.Errorf("invalid vehicle ID: %w", err)
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
+		return nil, false
 	}
 	vehicle, err := h.vehicleRepo.GetByID(r.Context(), vehicleID)
 	if err != nil {
-		return nil, fmt.Errorf("fetch vehicle: %w", err)
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to fetch vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch vehicle")
+		return nil, false
 	}
 	if vehicle == nil {
-		return nil, fmt.Errorf("vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
+		return nil, false
 	}
-	return vehicle, nil
+	return vehicle, true
 }
 
 // ListDrivers returns stored drivers for a vehicle.
@@ -80,15 +140,17 @@ func (h *Handler) RefreshDrivers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vehicle, err := h.resolveVehicle(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vehicle, ok := h.resolveVehicle(w, r)
+	if !ok {
 		return
 	}
 
 	log.Info().Int64("vehicle_id", vehicle.ID).Msg("refreshing vehicle drivers from Tesla")
 
-	body, status, err := h.teslaClient.GetVehicleDrivers(r.Context(), vehicle.VIN)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaFetchTimeout)
+	defer cancel()
+
+	body, status, err := h.teslaClient.GetVehicleDrivers(ctx, vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla vehicle drivers API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch drivers from Tesla")
@@ -135,9 +197,8 @@ func (h *Handler) RemoveDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vehicle, err := h.resolveVehicle(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vehicle, ok := h.resolveVehicle(w, r)
+	if !ok {
 		return
 	}
 
@@ -155,7 +216,10 @@ func (h *Handler) RemoveDriver(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Int64("vehicle_id", vehicle.ID).Int64("share_user_id", req.ShareUserID).Msg("removing vehicle driver via Tesla")
 
-	_, status, err := h.teslaClient.RemoveVehicleDriver(r.Context(), vehicle.VIN, req.ShareUserID)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaFetchTimeout)
+	defer cancel()
+
+	_, status, err := h.teslaClient.RemoveVehicleDriver(ctx, vehicle.VIN, req.ShareUserID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla remove driver API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to remove driver via Tesla")
@@ -199,15 +263,17 @@ func (h *Handler) RefreshInvitations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vehicle, err := h.resolveVehicle(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vehicle, ok := h.resolveVehicle(w, r)
+	if !ok {
 		return
 	}
 
 	log.Info().Int64("vehicle_id", vehicle.ID).Msg("refreshing vehicle invitations from Tesla")
 
-	body, status, err := h.teslaClient.GetVehicleInvitations(r.Context(), vehicle.VIN)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaFetchTimeout)
+	defer cancel()
+
+	body, status, err := h.teslaClient.GetVehicleInvitations(ctx, vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla vehicle invitations API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch invitations from Tesla")
@@ -254,15 +320,17 @@ func (h *Handler) CreateInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vehicle, err := h.resolveVehicle(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vehicle, ok := h.resolveVehicle(w, r)
+	if !ok {
 		return
 	}
 
 	log.Info().Int64("vehicle_id", vehicle.ID).Msg("creating vehicle invitation via Tesla")
 
-	body, status, err := h.teslaClient.CreateVehicleInvitation(r.Context(), vehicle.VIN)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaFetchTimeout)
+	defer cancel()
+
+	body, status, err := h.teslaClient.CreateVehicleInvitation(ctx, vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla create invitation API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to create invitation via Tesla")
@@ -299,9 +367,8 @@ func (h *Handler) RevokeInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vehicle, err := h.resolveVehicle(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	vehicle, ok := h.resolveVehicle(w, r)
+	if !ok {
 		return
 	}
 
@@ -313,7 +380,10 @@ func (h *Handler) RevokeInvitation(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Int64("vehicle_id", vehicle.ID).Str("invitation_id", invitationID).Msg("revoking vehicle invitation via Tesla")
 
-	_, status, err := h.teslaClient.RevokeVehicleInvitation(r.Context(), vehicle.VIN, invitationID)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaFetchTimeout)
+	defer cancel()
+
+	_, status, err := h.teslaClient.RevokeVehicleInvitation(ctx, vehicle.VIN, invitationID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla revoke invitation API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to revoke invitation via Tesla")
