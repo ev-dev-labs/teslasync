@@ -94,10 +94,10 @@ export function getNextCronRuns(parts: string[], count: number): Date[] {
     }
     return parseInt(field, 10) === value
   }
+  const [min, hr, dom, mon, dow] = parts
   let safety = 0
   while (results.length < count && safety < 525960) {
     safety++
-    const [min, hr, dom, mon, dow] = parts
     if (
       matchField(min ?? '*', check.getMinutes()) &&
       matchField(hr ?? '*', check.getHours()) &&
@@ -171,8 +171,11 @@ export function pickString(row: Record<string, unknown>, keys: string[]): string
 /* ─── relative time ───────────────────────────────────────────────────── */
 
 export function getRelativeTime(date: Date): string {
-  const now = Date.now()
-  const diff = Math.abs(now - date.getTime())
+  const ms = date.getTime()
+  // Guard against an invalid Date (getTime() === NaN); the arithmetic below
+  // otherwise cascades NaN through every branch and renders "NaNd ago".
+  if (!Number.isFinite(ms)) return '—'
+  const diff = Math.abs(Date.now() - ms)
   const s = Math.floor(diff / 1000)
   if (s < 60) return `${s}s ago`
   const m = Math.floor(s / 60)
