@@ -2,6 +2,13 @@
 # See api/proto/tesla/SOURCE.md.
 api/proto/tesla/vehicle_data.proto binary
 
+# i18n catalogue — additive key-union merge so parallel workers that each
+# add different translation keys never hard-conflict. The `jsonunion` driver
+# (git config merge.jsonunion.driver) runs merge-json-union.mjs, which unions
+# keys from both sides instead of taking one wholesale. Without this wiring a
+# single en.json key collision would stall a whole shard in the elevation loop.
+web/src/i18n/en.json merge=jsonunion
+
 # Generated Go files emitted by cmd/protogen-tesla — written with LF.
 # Without this, autocrlf=true on Windows rewrites them to CRLF on
 # checkout, which makes `git status` report them as modified after
