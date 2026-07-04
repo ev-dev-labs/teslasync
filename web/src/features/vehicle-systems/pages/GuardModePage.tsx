@@ -136,11 +136,18 @@ export default function GuardModePage() {
   const [panicDialogOpen, setPanicDialogOpen] = useState(false);
   const [sensitivity, setSensitivity] = useState<string>('');
   const [homeGeofenceId, setHomeGeofenceId] = useState<string>('');
-  const [autoPanic, setAutoPanic] = useState(false);
+  // `null` = "untouched, follow the persisted config"; a boolean = an explicit
+  // user choice. A plain `false` default made the toggle diverge from what got
+  // saved: the checkbox showed `draft || persisted` but the mutation sent the
+  // draft alone, so a persisted `auto_panic: true` silently reset to `false` on
+  // Save and the switch could never be turned back off. Mirror the sensitivity/
+  // geofence "effective draft" pattern instead.
+  const [autoPanic, setAutoPanic] = useState<boolean | null>(null);
 
   const effectiveSensitivity = sensitivity || guardConfig?.sensitivity || 'medium';
   const effectiveHomeGeofenceId =
     homeGeofenceId || (guardConfig?.home_geofence_id != null ? String(guardConfig.home_geofence_id) : '');
+  const effectiveAutoPanic = autoPanic ?? guardConfig?.auto_panic ?? false;
 
   // Derived data
   const isArmed = guardConfig?.enabled ?? false;
@@ -200,7 +207,7 @@ export default function GuardModePage() {
       enabled: !isArmed,
       home_geofence_id: effectiveHomeGeofenceId ? Number(effectiveHomeGeofenceId) : null,
       sensitivity: effectiveSensitivity,
-      auto_panic: autoPanic,
+      auto_panic: effectiveAutoPanic,
     });
   };
 
@@ -211,7 +218,7 @@ export default function GuardModePage() {
       enabled: isArmed,
       home_geofence_id: effectiveHomeGeofenceId ? Number(effectiveHomeGeofenceId) : null,
       sensitivity: effectiveSensitivity,
-      auto_panic: autoPanic,
+      auto_panic: effectiveAutoPanic,
     });
   };
 
@@ -459,7 +466,7 @@ export default function GuardModePage() {
                 <div className="space-y-1">
                   <Toggle
                     label={t('guard.autoPanic', 'Auto-Panic on Trigger')}
-                    checked={autoPanic || guardConfig?.auto_panic || false}
+                    checked={effectiveAutoPanic}
                     onChange={setAutoPanic}
                   />
                   <HelperText>
