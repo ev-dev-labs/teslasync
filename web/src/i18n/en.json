@@ -7872,7 +7872,8 @@
     "playbackLabel": "Recent route playback map",
     "subtitle": "Live vehicle location and recent history",
     "kpis": "Vehicle status",
-    "noPlayback": "Not enough GPS points to replay a route yet."
+    "noPlayback": "Not enough GPS points to replay a route yet.",
+    "mapRegion": "Live location map"
   },
   "maps": {
     "routePlayback": {
