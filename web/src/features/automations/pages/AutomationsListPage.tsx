@@ -64,7 +64,7 @@ interface AutomationStats {
   autoDisabled: number;
 }
 
-function computeStats(automations: Automation[]): AutomationStats {
+export function computeStats(automations: Automation[]): AutomationStats {
   let active = 0;
   let disabled = 0;
   let autoDisabled = 0;
@@ -84,7 +84,7 @@ function computeStats(automations: Automation[]): AutomationStats {
 
 // ─── Vehicle lookup helper ────────────────────────────────────────────────────
 
-function buildVehicleLookup(vehicles: { id: number; display_name: string }[]): Map<number, string> {
+export function buildVehicleLookup(vehicles: { id: number; display_name: string }[]): Map<number, string> {
   const map = new Map<number, string>();
   for (const v of vehicles) {
     map.set(v.id, v.display_name);
@@ -92,11 +92,11 @@ function buildVehicleLookup(vehicles: { id: number; display_name: string }[]): M
   return map;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isAutomationImportEnvelope(value: unknown): value is AutomationImportEnvelope {
+export function isAutomationImportEnvelope(value: unknown): value is AutomationImportEnvelope {
   if (!isRecord(value)) {
     return false;
   }
@@ -204,8 +204,9 @@ export default function AutomationsListPage() {
       });
     }
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    const query = search.trim();
+    if (query) {
+      const q = query.toLowerCase();
       result = result.filter(
         (a) =>
           (a.name ?? '').toLowerCase().includes(q) ||
