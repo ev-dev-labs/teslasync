@@ -29,7 +29,7 @@ import {
   type TabItem,
 } from '@/components/ui';
 import { KVList, TimeStamp } from '@/components/data-display';
-import { Spinner } from '@/components/feedback';
+import { EmptyState, Spinner } from '@/components/feedback';
 import { fmtInt } from '@/lib/numberFormat';
 import type { DLQEntryFull, DLQEntrySummary } from '@/types/admin-diagnostics';
 
@@ -89,10 +89,103 @@ export function EntryDrawer({
   // from the summary row that was already in cache.
   const head: DLQEntryFull | DLQEntrySummary | null = full ?? summary;
 
-  const tabs: TabItem[] = [
-    { key: 'inner', label: t('admin.dlq.drawer.tabs.inner', 'Inner payload') },
-    { key: 'raw', label: t('admin.dlq.drawer.tabs.raw', 'Raw envelope') },
-  ];
+  const tabs = useMemo<TabItem[]>(
+    () => [
+      { key: 'inner', label: t('admin.dlq.drawer.tabs.inner', 'Inner payload') },
+      { key: 'raw', label: t('admin.dlq.drawer.tabs.raw', 'Raw envelope') },
+    ],
+    [t],
+  );
+
+  // Metadata rows above the payload viewer. Memoised so the KVList prop
+  // keeps a stable reference across re-renders (e.g. tab switches) instead
+  // of receiving a fresh array literal in a hot path.
+  const summaryItems = useMemo(
+    () =>
+      head
+        ? [
+            {
+              label: t('admin.dlq.drawer.id', 'ID'),
+              value: <Text mono>{head.id}</Text>,
+            },
+            {
+              label: t('admin.dlq.drawer.arrivedAt', 'Arrived'),
+              value: <TimeStamp value={head.arrived_at} format="absolute" />,
+            },
+            {
+              label: t('admin.dlq.drawer.dlqTopic', 'DLQ topic'),
+              value: <Text mono size="xs">{head.dlq_topic || '—'}</Text>,
+            },
+            {
+              label: t('admin.dlq.drawer.reason', 'Reason'),
+              value: <Text mono size="xs">{head.parsed_reason || '—'}</Text>,
+            },
+            {
+              label: t('admin.dlq.drawer.vin', 'VIN'),
+              value: <Text mono size="xs">{head.parsed_vin ?? '—'}</Text>,
+            },
+            {
+              label: t('admin.dlq.drawer.sourceTopic', 'Source topic'),
+              value: (
+                <Text mono size="xs">
+                  {head.parsed_source_topic ?? '—'}
+                </Text>
+              ),
+            },
+            {
+              label: t('admin.dlq.drawer.redeliveries', 'Redeliveries'),
+              value:
+                head.parsed_redeliveries != null
+                  ? fmtInt(head.parsed_redeliveries)
+                  : '—',
+            },
+            {
+              label: t('admin.dlq.drawer.parseError', 'Parse error'),
+              value: <Caption>{head.parse_error || '—'}</Caption>,
+            },
+          ]
+        : [],
+    [head, t],
+  );
+
+  // Active payload panel: its accessible label (mirrors the selected tab)
+  // plus the body text. Falls back to a "(non-UTF-8 …)" marker with the
+  // byte size when the blob isn't valid UTF-8 so a binary protobuf body
+  // never blanks the viewer.
+  const panel = useMemo(() => {
+    if (activeTab === 'inner') {
+      return {
+        label: t('admin.dlq.drawer.tabs.inner', 'Inner payload'),
+        body:
+          innerText ||
+          t(
+            'admin.dlq.drawer.binaryPayload',
+            '(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)',
+            { n: head?.inner_payload_size ?? 0 },
+          ),
+      };
+    }
+    return {
+      label: t('admin.dlq.drawer.tabs.raw', 'Raw envelope'),
+      body:
+        rawText ||
+        t(
+          'admin.dlq.drawer.binaryEnvelope',
+          '(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)',
+          { n: head?.raw_payload_size ?? 0 },
+        ),
+    };
+  }, [activeTab, head, innerText, rawText, t]);
+
+  // Text handed to the CopyButton: prefer decoded UTF-8, fall back to the
+  // raw base64 so operators can still copy an opaque binary body.
+  const copyText = useMemo(
+    () =>
+      activeTab === 'inner'
+        ? innerText || full?.inner_payload_b64 || ''
+        : rawText || full?.raw_payload_b64 || '',
+    [activeTab, innerText, rawText, full],
+  );
 
   const replayDisabled =
     !replayEnabled || !head?.replayable || replayInFlight || loading;
@@ -130,86 +223,32 @@ export function EntryDrawer({
       ) : head ? (
         <div className="space-y-4">
           <GlassPanel className="p-4">
-            <KVList
-              items={[
-                {
-                  label: t('admin.dlq.drawer.id', 'ID'),
-                  value: <Text mono>{head.id}</Text>,
-                },
-                {
-                  label: t('admin.dlq.drawer.arrivedAt', 'Arrived'),
-                  value: <TimeStamp value={head.arrived_at} format="absolute" />,
-                },
-                {
-                  label: t('admin.dlq.drawer.dlqTopic', 'DLQ topic'),
-                  value: <Text mono size="xs">{head.dlq_topic || '—'}</Text>,
-                },
-                {
-                  label: t('admin.dlq.drawer.reason', 'Reason'),
-                  value: <Text mono size="xs">{head.parsed_reason || '—'}</Text>,
-                },
-                {
-                  label: t('admin.dlq.drawer.vin', 'VIN'),
-                  value: <Text mono size="xs">{head.parsed_vin ?? '—'}</Text>,
-                },
-                {
-                  label: t('admin.dlq.drawer.sourceTopic', 'Source topic'),
-                  value: (
-                    <Text mono size="xs">
-                      {head.parsed_source_topic ?? '—'}
-                    </Text>
-                  ),
-                },
-                {
-                  label: t('admin.dlq.drawer.redeliveries', 'Redeliveries'),
-                  value:
-                    head.parsed_redeliveries != null
-                      ? fmtInt(head.parsed_redeliveries)
-                      : '—',
-                },
-                {
-                  label: t('admin.dlq.drawer.parseError', 'Parse error'),
-                  value: <Caption>{head.parse_error || '—'}</Caption>,
-                },
-              ]}
-            />
+            <KVList items={summaryItems} />
           </GlassPanel>
 
           <GlassPanel className="p-4">
             <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
             <div className="mt-3">
               <div className="mb-2 flex items-center justify-end gap-2">
-                <CopyButton
-                  text={
-                    activeTab === 'inner'
-                      ? innerText || full?.inner_payload_b64 || ''
-                      : rawText || full?.raw_payload_b64 || ''
-                  }
-                />
+                <CopyButton text={copyText} />
               </div>
               <Text
                 as="pre"
                 variant="code"
+                role="tabpanel"
+                aria-label={panel.label}
                 className="max-h-80 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] p-3"
               >
-                {activeTab === 'inner'
-                  ? innerText ||
-                    t(
-                      'admin.dlq.drawer.binaryPayload',
-                      '(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)',
-                      { n: head.inner_payload_size },
-                    )
-                  : rawText ||
-                    t(
-                      'admin.dlq.drawer.binaryEnvelope',
-                      '(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)',
-                      { n: head.raw_payload_size },
-                    )}
+                {panel.body}
               </Text>
             </div>
           </GlassPanel>
         </div>
-      ) : null}
+      ) : (
+        <EmptyState
+          message={t('admin.dlq.drawer.empty', 'No DLQ entry selected.')}
+        />
+      )}
     </Drawer>
   );
 }
