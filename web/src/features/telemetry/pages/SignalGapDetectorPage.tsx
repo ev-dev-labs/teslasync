@@ -56,7 +56,7 @@ export default function SignalGapDetectorPage() {
 
   return (
     <PageContainer
-      title={t('signalGap.title', 'Signal Gap Detector')}
+      title={t('signalGap.title', 'Signal Gaps')}
       subtitle={t('signalGap.subtitle', 'Identify signals that have stopped arriving or have gaps')}
       actions={actions}
       query={hasVehicle ? query : undefined}
