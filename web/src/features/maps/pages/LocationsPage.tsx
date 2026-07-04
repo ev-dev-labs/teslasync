@@ -55,7 +55,7 @@ interface VisitedLocation {
 // the geocoder emits when reverse-geocode fails. The AI is
 // propose-only and only worth offering when the existing label
 // is unhelpful.
-function isUnnamedLocation(addressName: string): boolean {
+export function isUnnamedLocation(addressName: string): boolean {
   const trimmed = (addressName ?? '').trim();
   if (trimmed === '') return true;
   if (trimmed.toLowerCase() === 'unknown') return true;
@@ -68,7 +68,7 @@ function isUnnamedLocation(addressName: string): boolean {
 
 // truncateLabel keeps chart Y-axis labels legible by clipping long
 // addresses to a fixed width with an ellipsis.
-function truncateLabel(name: string, max = 22): string {
+export function truncateLabel(name: string, max = 22): string {
   const value = name ?? '';
   return value.length > max + 3 ? `${value.slice(0, max)}…` : value;
 }
@@ -76,7 +76,7 @@ function truncateLabel(name: string, max = 22): string {
 // rankChipClass tones the leaderboard rank badge by position: gold for
 // #1, cyan for the podium, muted for the rest. Toned 300-level accents
 // paired with a matching tint + border — never neon body text.
-function rankChipClass(index: number): string {
+export function rankChipClass(index: number): string {
   if (index === 0) return 'border-amber-400/30 bg-amber-500/15 text-amber-300';
   if (index < 3) return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300';
   return 'border-[var(--glass-border)] bg-[var(--surface-2)] text-[var(--text-muted)]';
@@ -147,6 +147,9 @@ export default function LocationsPage() {
     if (!locations?.length) return 0;
     const cities = new Set<string>();
     for (const loc of locations) {
+      // Skip unnamed / "Unknown" / coordinate-fallback rows — a raw lat,long
+      // pair is not a city and would otherwise inflate the unique-city count.
+      if (isUnnamedLocation(loc.address_name)) continue;
       const parts = (loc.address_name ?? '').split(',').map((s) => s.trim());
       const city = parts.length > 1 ? parts[parts.length - 1] : parts[0];
       if (city && city !== 'Unknown') {
@@ -165,12 +168,19 @@ export default function LocationsPage() {
     [locations],
   );
 
+  // "Top Locations by Time Spent" must rank by time, not inherit the backend's
+  // visit-count ordering — otherwise the chart plotted the most-VISITED places'
+  // durations, contradicting its own title. Sort a copy so `locations` (which
+  // the KPIs and detail-list ranks depend on) is never mutated.
   const timeChartData = useMemo<LeaderboardDatum[]>(
     () =>
-      (locations ?? []).slice(0, 10).map((l) => ({
-        name: truncateLabel(l.address_name ?? ''),
-        value: +fmtNumber((l.total_duration_s ?? 0) / 3600, 1),
-      })),
+      [...(locations ?? [])]
+        .sort((a, b) => (b.total_duration_s ?? 0) - (a.total_duration_s ?? 0))
+        .slice(0, 10)
+        .map((l) => ({
+          name: truncateLabel(l.address_name ?? ''),
+          value: +fmtNumber((l.total_duration_s ?? 0) / 3600, 1),
+        })),
     [locations],
   );
 
@@ -181,6 +191,7 @@ export default function LocationsPage() {
     <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
       {vehicles.length > 0 && (
         <Select
+          aria-label={t('locations.selectVehicle', 'Select vehicle')}
           value={String(vehicleId ?? '')}
           onChange={(e) => onPickVehicle(Number(e.target.value))}
           options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
