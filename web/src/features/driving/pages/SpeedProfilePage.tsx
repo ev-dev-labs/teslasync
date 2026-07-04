@@ -31,28 +31,28 @@ import type { Drive } from '@/types/driving';
 /* ------------------------------------------------------------------ */
 
 /** Map a speed-bucket label to a semantic accent (chip neon + chart fill). */
-function bucketAccent(range: string): { neon: NeonColor; fill: string } {
+export function bucketAccent(range: string): { neon: NeonColor; fill: string } {
   if (range.startsWith('0') || range.includes('15')) return { neon: 'green', fill: '#10b981' };
   if (range.startsWith('30') || range.includes('45')) return { neon: 'cyan', fill: '#00f0ff' };
   if (range.startsWith('60') || range.includes('75')) return { neon: 'amber', fill: '#f59e0b' };
   return { neon: 'red', fill: '#ef4444' };
 }
 
-function bucketIcon(range: string) {
+export function bucketIcon(range: string) {
   if (range.includes('30') || range.startsWith('0')) return <Car className="h-4 w-4" aria-hidden="true" />;
   if (range.includes('60') || range.includes('90')) return <TrendingUp className="h-4 w-4" aria-hidden="true" />;
   return <Gauge className="h-4 w-4" aria-hidden="true" />;
 }
 
 /** Toned 300-level accent for an efficiency figure (lower Wh = better). */
-function efficiencyClass(eff: number): string {
+export function efficiencyClass(eff: number): string {
   if (eff < 160) return 'text-emerald-300';
   if (eff < 220) return 'text-amber-300';
   return 'text-rose-300';
 }
 
 /** Wh per km for a drive, from measured energy or a battery-delta estimate. */
-function getEfficiency(drive: Drive): number | null {
+export function getEfficiency(drive: Drive): number | null {
   if (!(drive.distanceM > 0)) return null;
   if (drive.energyUsedWh != null && drive.energyUsedWh > 0) {
     return drive.energyUsedWh / (drive.distanceM / 1000);
