@@ -39,8 +39,26 @@ const thumbTranslate = {
  *   toggles via the wrapper's onClick (delegating to the button).
  */
 export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
-  ({ label, checked, onChange, size = 'md', className, ...props }, ref) => {
+  (
+    {
+      label,
+      checked,
+      onChange,
+      size = 'md',
+      className,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+      ...props
+    },
+    ref,
+  ) => {
     const labelId = useId();
+    // A visible `label` owns the accessible name via `aria-labelledby`.
+    // Otherwise honour an explicit `aria-labelledby` / `aria-label` from the
+    // caller so icon-only switches (e.g. a card's enable toggle) expose an
+    // accessible name ON the switch button — a spread `aria-label` would
+    // otherwise land on the wrapper div and be ignored by assistive tech.
+    const buttonLabelledBy = label ? labelId : ariaLabelledby;
     return (
       <div
         ref={ref}
@@ -57,7 +75,8 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           type="button"
           role="switch"
           aria-checked={checked}
-          aria-labelledby={label ? labelId : undefined}
+          aria-labelledby={buttonLabelledBy}
+          aria-label={buttonLabelledBy ? undefined : ariaLabel}
           onClick={() => onChange(!checked)}
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
