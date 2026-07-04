@@ -64,6 +64,23 @@ export const PERMISSION_ORDER: ApiKeyPermission[] = ['read', 'read-write', 'admi
 /** Icon for the key card + empty state — kept here so the barrel stays lean. */
 export const KEY_ICON: LucideIcon = Key;
 
+/**
+ * Resolve an API-supplied permission string to its presentation metadata,
+ * falling back to {@link FALLBACK_PERMISSION_META} for anything unrecognised.
+ *
+ * `PERMISSION_META` is a plain object literal, so it inherits every
+ * `Object.prototype` member (`constructor`, `toString`, `hasOwnProperty`,
+ * `valueOf`, `__proto__`, …). A bare `PERMISSION_META[perm] ?? FALLBACK`
+ * would resolve those inherited functions for a permission that happens to
+ * share one of those names — returning e.g. the `Object` constructor
+ * masquerading as a `PermissionMeta`, whose `.icon`/`.color` are `undefined`
+ * and crash `<ApiKeyPermissionBadge>` (React renders `<undefined />` and
+ * `neonColorMap[undefined]` throws). Restricting the lookup to the record's
+ * OWN keys makes such strings fall through to the safe fallback like any
+ * other unrecognised value, honouring this function's documented contract.
+ */
 export function permissionMeta(perm: string): PermissionMeta {
-  return PERMISSION_META[perm as ApiKeyPermission] ?? FALLBACK_PERMISSION_META;
+  return Object.prototype.hasOwnProperty.call(PERMISSION_META, perm)
+    ? PERMISSION_META[perm as ApiKeyPermission]
+    : FALLBACK_PERMISSION_META;
 }
