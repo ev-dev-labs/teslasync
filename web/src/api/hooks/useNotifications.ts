@@ -485,6 +485,23 @@ export function useTestAlertRule() {
 }
 
 /**
+ * A snooze request CLEARS an existing snooze — rather than extending one —
+ * when the caller passes a non-positive `minutes` OR an `until` timestamp at
+ * or before now. This mirrors the backend's unsnooze semantics and the
+ * AlertRuleSnoozeRequest doc comment. The previous inline check only looked at
+ * `minutes`, so a past-`until` clear was mis-announced to the user as
+ * "Rule snoozed" instead of "Snooze cleared".
+ */
+function snoozeRequestClears(req: AlertRuleSnoozeRequest): boolean {
+  if (req.minutes != null && req.minutes <= 0) return true;
+  if (typeof req.until === 'string' && req.until.trim() !== '') {
+    const untilMs = Date.parse(req.until);
+    return !Number.isNaN(untilMs) && untilMs <= Date.now();
+  }
+  return false;
+}
+
+/**
  * useSnoozeAlertRule mutes a single rule for a fixed duration.
  * Pass minutes=0 (or a past `until`) to clear an existing snooze.
  * Snooze is layered on top of cooldown / trigger_mode and auto-expires.
@@ -501,7 +518,7 @@ export function useSnoozeAlertRule() {
       }),
     onSuccess: (_data, vars) => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
-      const cleared = vars.minutes != null && vars.minutes <= 0;
+      const cleared = snoozeRequestClears(vars);
       success(
         cleared ? 'toast.alerts.snooze.cleared' : 'toast.alerts.snooze.success',
         cleared ? 'Snooze cleared' : 'Rule snoozed',
