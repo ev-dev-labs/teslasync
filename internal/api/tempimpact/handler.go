@@ -1,9 +1,12 @@
 package tempimpact
 
 import (
+	"context"
+	"errors"
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -13,19 +16,32 @@ import (
 const (
 	driveStatsMetersPerMile  = 1609.344
 	driveStatsTwoMilesMeters = 2.0 * driveStatsMetersPerMile
+
+	// queryTimeout bounds the three analytics queries so a stalled pool
+	// connection can never wedge the request goroutine indefinitely. The
+	// pool also sets a per-connection statement_timeout; this is the
+	// request-scoped upper bound layered on top.
+	queryTimeout = 15 * time.Second
 )
 
 // Handler serves temperature-impact analytics.
+//
+// The data surface is reached through tempImpactRepository so the handler
+// can be exercised without a live database, mirroring the sleep handler
+// precedent. NewHandler wires the production pgx-backed repo.
 type Handler struct {
-	db *database.DB
+	repo tempImpactRepository
 }
 
+// NewHandler binds the handler to the production pgx-backed repo.
 func NewHandler(db *database.DB) *Handler {
-	return &Handler{db: db}
+	return &Handler{repo: newDBTempImpactRepo(db)}
 }
 
-func parseInt64(s string) (int64, error) {
-	return strconv.ParseInt(s, 10, 64)
+// newHandler is the test seam: it injects an arbitrary repository so the
+// HTTP surface can be exercised with an in-memory fake.
+func newHandler(repo tempImpactRepository) *Handler {
+	return &Handler{repo: repo}
 }
 
 type tempEfficiencyBucket struct {
@@ -51,194 +67,117 @@ type monthlyTempTrend struct {
 	TotalDistance float64 `json:"total_distance"`
 }
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	vehicleIDStr := r.URL.Query().Get("vehicle_id")
-	if vehicleIDStr == "" {
-		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
-		return
+type drivePoint struct {
+	OutsideTemp    float64 `json:"outside_temp"`
+	EfficiencyWhKm float64 `json:"efficiency_wh_km"`
+	DistanceKm     float64 `json:"distance_km"`
+	DriveDate      string  `json:"drive_date"`
+}
+
+// round1 / round2 apply the display rounding the pre-refactor endpoint
+// used: one decimal for temperatures/distances, two for the derived
+// per-100 and duration figures.
+func round1(v float64) float64 { return math.Round(v*10) / 10 }
+func round2(v float64) float64 { return math.Round(v*100) / 100 }
+
+// roundEfficiency copies the raw buckets applying display rounding and
+// guarantees a non-nil slice so the JSON contract stays `[]`, never null.
+func roundEfficiency(in []tempEfficiencyBucket) []tempEfficiencyBucket {
+	out := make([]tempEfficiencyBucket, 0, len(in))
+	for _, b := range in {
+		b.AvgDistanceKm = round2(b.AvgDistanceKm)
+		b.AvgDurationS = round2(b.AvgDurationS)
+		b.AvgBatteryPer100km = round2(b.AvgBatteryPer100km)
+		b.AvgTemp = round1(b.AvgTemp)
+		out = append(out, b)
 	}
-	vehicleID, err := parseInt64(vehicleIDStr)
+	return out
+}
+
+// roundTrend copies the raw monthly trend applying display rounding and
+// guarantees a non-nil slice.
+func roundTrend(in []monthlyTempTrend) []monthlyTempTrend {
+	out := make([]monthlyTempTrend, 0, len(in))
+	for _, t := range in {
+		t.AvgTemp = round1(t.AvgTemp)
+		t.AvgEfficiency = round2(t.AvgEfficiency)
+		t.TotalDistance = round1(t.TotalDistance)
+		out = append(out, t)
+	}
+	return out
+}
+
+// roundPoints copies the raw scatter series applying display rounding and
+// guarantees a non-nil slice.
+func roundPoints(in []drivePoint) []drivePoint {
+	out := make([]drivePoint, 0, len(in))
+	for _, p := range in {
+		p.OutsideTemp = round1(p.OutsideTemp)
+		p.EfficiencyWhKm = round1(p.EfficiencyWhKm)
+		p.DistanceKm = round1(p.DistanceKm)
+		out = append(out, p)
+	}
+	return out
+}
+
+// parseVehicleID validates the required vehicle_id query parameter. An
+// empty value and a non-numeric or non-positive value are distinct 400
+// causes; a zero or negative id is rejected outright because filtering
+// `WHERE vehicle_id = 0` is never a legitimate request (see the
+// apiparams.URLParamInt64 "security footgun" note).
+func parseVehicleID(raw string) (int64, error) {
+	if raw == "" {
+		return 0, errors.New("vehicle_id query parameter required")
+	}
+	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return 0, errors.New("invalid vehicle_id")
+	}
+	if id <= 0 {
+		return 0, errors.New("invalid vehicle_id")
+	}
+	return id, nil
+}
+
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := parseVehicleID(r.URL.Query().Get("vehicle_id"))
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	ctx := r.Context()
+	ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
+	defer cancel()
 
-	// Drives are stored in SI; SQL converts only the legacy km response fields.
-	effRows, err := h.db.Pool.Query(ctx, `
-		SELECT
-		  CASE
-		    WHEN ambient_temp_c_avg < 0 THEN 'Below 0°C'
-		    WHEN ambient_temp_c_avg < 10 THEN '0-10°C'
-		    WHEN ambient_temp_c_avg < 20 THEN '10-20°C'
-		    WHEN ambient_temp_c_avg < 30 THEN '20-30°C'
-		    ELSE 'Above 30°C'
-		  END as temp_bucket,
-		  COUNT(*) as drive_count,
-		  AVG(distance_m / 1000.0) as avg_distance_km,
-		  AVG(duration_s) as avg_duration_s,
-		  AVG(CASE WHEN distance_m > 0
-		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
-		           ELSE 0 END) as avg_battery_pct_per_100km,
-		  AVG(ambient_temp_c_avg) as avg_temp
-		FROM drives
-		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
-		GROUP BY temp_bucket
-		ORDER BY MIN(ambient_temp_c_avg)`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
+	efficiency, err := h.repo.EfficiencyBuckets(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query efficiency buckets")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query temperature efficiency")
 		return
 	}
-	defer effRows.Close()
 
-	var efficiency []tempEfficiencyBucket
-	for effRows.Next() {
-		var b tempEfficiencyBucket
-		var avgDist, avgDur, avgBat, avgTemp *float64
-		if err := effRows.Scan(&b.TempBucket, &b.DriveCount, &avgDist, &avgDur, &avgBat, &avgTemp); err != nil {
-			log.Error().Err(err).Msg("temp impact: scan efficiency row")
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan temperature efficiency")
-			return
-		}
-		if avgDist != nil {
-			b.AvgDistanceKm = math.Round(*avgDist*100) / 100
-		}
-		if avgDur != nil {
-			b.AvgDurationS = math.Round(*avgDur*100) / 100
-		}
-		if avgBat != nil {
-			b.AvgBatteryPer100km = math.Round(*avgBat*100) / 100
-		}
-		if avgTemp != nil {
-			b.AvgTemp = math.Round(*avgTemp*10) / 10
-		}
-		efficiency = append(efficiency, b)
-	}
-	if err := effRows.Err(); err != nil {
-		log.Error().Err(err).Msg("temp impact: efficiency rows iteration")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to read temperature efficiency")
-		return
-	}
-
-	// vampire_drain_events no longer exists; keep the response key empty until signal_log reconstruction exists.
-	vampireDrain := make([]vampireDrainBucket, 0)
-
-	// SQL returns distance in km to preserve the legacy total_distance response semantics.
-	trendRows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', started_at) as month,
-		       AVG(ambient_temp_c_avg) as avg_temp,
-		       AVG(CASE WHEN distance_m > 0
-		                THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
-		                ELSE 0 END) as avg_efficiency,
-		       COUNT(*) as drive_count,
-		       SUM(distance_m / 1000.0) as total_distance
-		FROM drives
-		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
-		  AND started_at > NOW() - interval '12 months'
-		GROUP BY month
-		ORDER BY month`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
+	monthlyTrend, err := h.repo.MonthlyTrend(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query monthly trend")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query monthly trend")
 		return
 	}
-	defer trendRows.Close()
 
-	var monthlyTrend []monthlyTempTrend
-	for trendRows.Next() {
-		var t monthlyTempTrend
-		var monthTime interface{}
-		var avgTemp, avgEff, totalDist *float64
-		if err := trendRows.Scan(&monthTime, &avgTemp, &avgEff, &t.DriveCount, &totalDist); err != nil {
-			log.Error().Err(err).Msg("temp impact: scan monthly trend row")
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan monthly trend")
-			return
-		}
-		if mt, ok := monthTime.(interface{ Format(string) string }); ok {
-			t.Month = mt.Format("2006-01")
-		}
-		if avgTemp != nil {
-			t.AvgTemp = math.Round(*avgTemp*10) / 10
-		}
-		if avgEff != nil {
-			t.AvgEfficiency = math.Round(*avgEff*100) / 100
-		}
-		if totalDist != nil {
-			t.TotalDistance = math.Round(*totalDist*10) / 10
-		}
-		monthlyTrend = append(monthlyTrend, t)
-	}
-	if err := trendRows.Err(); err != nil {
-		log.Error().Err(err).Msg("temp impact: monthly trend rows iteration")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to read monthly trend")
-		return
-	}
-
-	if efficiency == nil {
-		efficiency = []tempEfficiencyBucket{}
-	}
-	if monthlyTrend == nil {
-		monthlyTrend = []monthlyTempTrend{}
-	}
-
-	type drivePoint struct {
-		OutsideTemp    float64 `json:"outside_temp"`
-		EfficiencyWhKm float64 `json:"efficiency_wh_km"`
-		DistanceKm     float64 `json:"distance_km"`
-		DriveDate      string  `json:"drive_date"`
-	}
-
-	// distance_km is derived in SQL from SI distance_m.
-	pointRows, err := h.db.Pool.Query(ctx, `
-		SELECT ambient_temp_c_avg,
-		       CASE WHEN distance_m > 0
-		            THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100 * 0.75
-		            ELSE 0 END as efficiency_wh_km,
-		       distance_m / 1000.0 as distance_km,
-		       started_at::date
-		FROM drives
-		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
-		ORDER BY started_at DESC
-		LIMIT 500`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
+	// Drive points power a best-effort scatter plot; a failure here must
+	// not sink the whole response (pre-refactor behaviour), so it is logged
+	// and the series degrades to empty while the primary payload is served.
+	points, err := h.repo.DrivePoints(ctx, vehicleID)
 	if err != nil {
-		log.Error().Err(err).Msg("temp impact: failed to query drive points")
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query drive points; serving empty series")
+		points = nil
 	}
 
-	var points []drivePoint
-	if pointRows != nil {
-		defer pointRows.Close()
-		for pointRows.Next() {
-			var p drivePoint
-			var temp, eff, dist *float64
-			var driveDate interface{}
-			if err := pointRows.Scan(&temp, &eff, &dist, &driveDate); err != nil {
-				continue
-			}
-			if temp != nil {
-				p.OutsideTemp = math.Round(*temp*10) / 10
-			}
-			if eff != nil {
-				p.EfficiencyWhKm = math.Round(*eff*10) / 10
-			}
-			if dist != nil {
-				p.DistanceKm = math.Round(*dist*10) / 10
-			}
-			if dt, ok := driveDate.(interface{ Format(string) string }); ok {
-				p.DriveDate = dt.Format("2006-01-02")
-			}
-			points = append(points, p)
-		}
-	}
-	if points == nil {
-		points = []drivePoint{}
-	}
-
+	// vampire_drain_events no longer exists; keep the response key as an
+	// empty (non-nil) array until signal_log reconstruction lands.
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"points":        points,
-		"efficiency":    efficiency,
-		"vampire_drain": vampireDrain,
-		"monthly_trend": monthlyTrend,
+		"points":        roundPoints(points),
+		"efficiency":    roundEfficiency(efficiency),
+		"vampire_drain": make([]vampireDrainBucket, 0),
+		"monthly_trend": roundTrend(monthlyTrend),
 	})
 }
