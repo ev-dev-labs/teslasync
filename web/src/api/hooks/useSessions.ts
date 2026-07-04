@@ -63,7 +63,7 @@ export function useSessions(options?: { enabled?: boolean }) {
     queryFn: async ({ signal }) => {
       try {
         const payload = await request<SessionListPayload>('/auth/sessions', { signal })
-        return { mode: 'session', sessions: payload.sessions ?? [] }
+        return { mode: 'session', sessions: payload?.sessions ?? [] }
       } catch (err) {
         if (isApiError(err) && err.code === AUTH_MODE_OPEN_CODE) {
           return { mode: 'open' }
@@ -118,9 +118,10 @@ export function useRevokeAllOtherSessions() {
       request<RevokeAllOthersResponse>('/auth/sessions/all-others', { method: 'DELETE' }),
     onSuccess: (result) => {
       invalidateAndBroadcast(qc, { queryKey: sessionKeys.list })
+      const revoked = result?.revoked ?? 0
       toast.success(
         'settings.sessions.toasts.revokedAllOthers',
-        `Signed out ${result.revoked} other device${result.revoked === 1 ? '' : 's'}.`,
+        `Signed out ${revoked} other device${revoked === 1 ? '' : 's'}.`,
       )
     },
     onError: (err) =>
