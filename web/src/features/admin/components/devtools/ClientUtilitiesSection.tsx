@@ -49,7 +49,7 @@ function useToolList(): ToolEntry[] {
     { id: 'bytes', name: t('Byte Size'), desc: t('Byte Size Desc'), icon: HardDrive, color: 'cyan', Component: ByteSizeConverterTool },
     { id: 'color', name: t('Color Converter'), desc: t('Color Converter Desc'), icon: Palette, color: 'purple', Component: ColorConverterTool },
     { id: 'cron', name: t('Cron Parser'), desc: t('Cron Parser Desc'), icon: Timer, color: 'green', Component: CronParserTool },
-    { id: 'http', name: t('Http Status'), desc: t('Http Status Desc'), icon: Network, color: 'amber', Component: HttpStatusTool },
+    { id: 'http', name: t('devtools.utils.httpStatus', 'HTTP Status'), desc: t('devtools.utils.httpStatusDesc', 'Reference for HTTP response status codes'), icon: Network, color: 'amber', Component: HttpStatusTool },
     { id: 'tesla-api', name: t('Tesla Api Ref'), desc: t('Tesla Api Ref Desc'), icon: BookOpen, color: 'cyan', Component: TeslaApiRefTool },
     { id: 'regex', name: t('Regex Tester'), desc: t('Regex Tester Desc'), icon: Regex, color: 'red', Component: RegexTesterTool },
     { id: 'unix-perm', name: t('Unix Perm'), desc: t('Unix Perm Desc'), icon: Lock, color: 'green', Component: UnixPermissionTool },
