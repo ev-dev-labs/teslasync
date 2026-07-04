@@ -3190,7 +3190,8 @@
         "redeliveries": "Redeliveries",
         "parseError": "Parse error",
         "binaryPayload": "(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)",
-        "binaryEnvelope": "(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)"
+        "binaryEnvelope": "(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)",
+        "empty": "No DLQ entry selected."
       },
       "stats": {
         "total": "Total entries",
