@@ -40,7 +40,7 @@ function useToolList(): ToolEntry[] {
   return useMemo(() => [
     { id: 'vin', name: t('Vin Decoder'), desc: t('Vin Decoder Desc'), icon: Car, color: 'cyan', Component: VinDecoderTool },
     { id: 'jwt', name: t('Jwt Decoder'), desc: t('Jwt Decoder Desc'), icon: Key, color: 'purple', Component: JwtDecoderTool },
-    { id: 'timestamp', name: t('Timestamp'), desc: t('Timestamp Desc'), icon: Clock, color: 'green', Component: TimestampTool },
+    { id: 'timestamp', name: t('devtools.utils.timestamp', 'Timestamp'), desc: t('devtools.utils.timestampDesc', 'Convert between Unix and ISO 8601 timestamps'), icon: Clock, color: 'green', Component: TimestampTool },
     { id: 'base64', name: t('devtools.utils.base64', 'Base64'), desc: t('devtools.utils.base64Desc', 'Base64Desc'), icon: Braces, color: 'amber', Component: Base64Tool },
     { id: 'url', name: t('Url Encoder'), desc: t('Url Encoder Desc'), icon: Link, color: 'cyan', Component: UrlEncoderTool },
     { id: 'json', name: t('Json Formatter'), desc: t('Json Formatter Desc'), icon: Braces, color: 'green', Component: JsonFormatterTool },
