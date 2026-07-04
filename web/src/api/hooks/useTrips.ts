@@ -16,10 +16,20 @@ export interface UseTripParams {
   end?: string;
 }
 
+/**
+ * Fetch the trip list from `GET /trips` (registered in
+ * `internal/api/router.go`). Optional {@link UseTripParams} become
+ * snake_case query params — the backend convention. Only meaningful values
+ * are serialised: a zero/negative `limit` or a non-positive `offset` is
+ * omitted so the URL never carries a nonsensical page window, and a falsy
+ * `vehicle_id` (0 is never a valid primary key) is dropped. The response is
+ * run through {@link safeArray} so a Go `nil` slice — which marshals to JSON
+ * `null` — becomes `[]` instead of crashing a downstream `.map`.
+ */
 export function useTrips(params?: UseTripParams) {
   const sp = new URLSearchParams();
   if (params?.vehicle_id) sp.set('vehicle_id', String(params.vehicle_id));
-  if (params?.limit) sp.set('limit', String(params.limit));
+  if (params?.limit != null && params.limit > 0) sp.set('limit', String(params.limit));
   if (params?.offset != null && params.offset > 0) sp.set('offset', String(params.offset));
   if (params?.start) sp.set('start', params.start);
   if (params?.end) sp.set('end', params.end);
@@ -43,7 +53,10 @@ export function useTrips(params?: UseTripParams) {
 export function useTrip(id: string) {
   return useQuery({
     queryKey: tripKeys.detail(id),
-    queryFn: ({ signal }) => request<TripDetail>(`/trips/${id}`, { signal }),
+    // encodeURIComponent keeps a stray slash / special char in the id from
+    // escaping the `/trips/{trip_id}` route segment. Numeric ids pass through
+    // unchanged, so existing callers are unaffected.
+    queryFn: ({ signal }) => request<TripDetail>(`/trips/${encodeURIComponent(id)}`, { signal }),
     enabled: !!id,
   });
 }
