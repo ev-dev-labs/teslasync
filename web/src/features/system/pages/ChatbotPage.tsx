@@ -105,7 +105,12 @@ export default function ChatbotPage() {
   //     small viewport); flipping back to desktop restores the stored
   //     preference.
   const [showSessions, setShowSessionsState] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+    // `window.matchMedia` is absent under SSR and in some test/jsdom
+    // environments — guard it the same way useMediaQuery does so the
+    // initializer never throws before the effect below can sync.
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
     const isMobileView = window.matchMedia('(max-width: 640px)').matches;
     if (isMobileView) return false;
     return readStoredHistoryVisible();
@@ -344,6 +349,44 @@ export default function ChatbotPage() {
       setPendingAiRequest(null);
     }
   }, [aiEnabled, streamingMsgId, aiStream]);
+
+  // Transport-level SSE failure (non-2xx response, dropped connection)
+  // flips useAiStream to state='error' WITHOUT emitting an 'error' event
+  // to onEvent — so handleAiEvent never runs. Without this effect the
+  // optimistic assistant placeholder would stay pinned as "streaming"
+  // forever and pendingAiRequest would never clear, permanently blocking
+  // every subsequent send (the submit guard bails while pendingAiRequest
+  // is non-null). Finalize the row with a user-visible error marker and
+  // reset the in-flight state so the user can retry. SSE 'error' *frames*
+  // are handled earlier by handleAiEvent, which clears streamingMsgId /
+  // pendingAiRequest first — so this effect is a no-op for that path.
+  useEffect(() => {
+    if (aiStream.state !== 'error') return;
+    const id = streamingMsgIdRef.current;
+    if (id === null && pendingAiRequest === null) return;
+    if (id !== null) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === id
+            ? {
+                ...m,
+                isStreaming: false,
+                content:
+                  (m.streamedText && m.streamedText.length > 0
+                    ? m.streamedText + '\n\n'
+                    : '') +
+                  t('chatbot.aiError', '(AI error: {{message}})', {
+                    message: aiStream.error ?? 'stream failed',
+                  }),
+                streamedText: undefined,
+              }
+            : m,
+        ),
+      );
+    }
+    setStreamingMsgId(null);
+    setPendingAiRequest(null);
+  }, [aiStream.state, aiStream.error, pendingAiRequest, t]);
 
   // Auto-scroll on every new message AND while a reveal is in progress
   // (so the user sees the text grow rather than having it appear below
