@@ -8,16 +8,43 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiauthctx"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
+
+// vehicleReader is the narrow slice of the vehicle repository the watch
+// handlers depend on. Defined as an interface so handlers can be exercised with
+// in-memory fakes; *vehicledb.VehicleRepo satisfies it in production.
+type vehicleReader interface {
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
+}
+
+// settingsReader exposes only the API-suspension check the command path needs.
+type settingsReader interface {
+	IsAPISuspended(ctx context.Context) (bool, error)
+}
+
+// teslaCommander is the subset of *tesla.Client used to authenticate and
+// dispatch watch commands.
+type teslaCommander interface {
+	HasValidToken() bool
+	SendCommand(ctx context.Context, vin, command string, params map[string]interface{}) error
+}
+
+// signalReader reads a vehicle's live signal snapshot from the Redis cache.
+type signalReader interface {
+	GetAll(ctx context.Context, vehicleID int64) (map[string]interface{}, error)
+}
 
 // WatchSummary is the minimal data needed for a watch face display.
 type WatchSummary struct {
@@ -47,10 +74,10 @@ type WatchComplication struct {
 // Handler handles lightweight watch-optimized endpoints.
 type Handler struct {
 	db           *database.DB
-	vehicleRepo  *vehicledb.VehicleRepo
-	settingsRepo *settingsdb.SettingsRepo
-	teslaClient  *tesla.Client
-	redisCache   *signal.RedisSignalCache
+	vehicleRepo  vehicleReader
+	settingsRepo settingsReader
+	teslaClient  teslaCommander
+	redisCache   signalReader
 }
 
 // NewHandler wires watch endpoints to vehicle/settings repos and Tesla commands.
@@ -64,8 +91,13 @@ func NewHandler(db *database.DB, tc *tesla.Client) *Handler {
 }
 
 // WithRedisCache sets the Redis signal cache for reading live vehicle state.
+// A nil cache is ignored so the handler keeps its graceful degrade path
+// (queryWatchSummary reports the cache as unavailable rather than panicking on
+// an interface that wraps a typed-nil pointer).
 func (h *Handler) WithRedisCache(cache *signal.RedisSignalCache) *Handler {
-	h.redisCache = cache
+	if cache != nil {
+		h.redisCache = cache
+	}
 	return h
 }
 
@@ -148,7 +180,7 @@ func (h *Handler) Complication(w http.ResponseWriter, r *http.Request) {
 
 // Command executes a simplified vehicle command from a watch.
 func (h *Handler) Command(w http.ResponseWriter, r *http.Request) {
-	perms, _ := r.Context().Value(apiKeyPermCtxKey{}).(string)
+	perms, _ := apiauthctx.PermissionsFromContext(r.Context())
 	if perms != "read-write" && perms != "admin" {
 		httpx.WriteError(w, http.StatusForbidden, "API key requires read-write or admin permissions for commands")
 		return
@@ -310,7 +342,7 @@ func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*Watc
 
 // resolveWatchVehicleID extracts vehicle_id from query params, falling back
 // to the first vehicle if not specified.
-func resolveWatchVehicleID(r *http.Request, repo *vehicledb.VehicleRepo) (int64, error) {
+func resolveWatchVehicleID(r *http.Request, repo vehicleReader) (int64, error) {
 	if vidStr := r.URL.Query().Get("vehicle_id"); vidStr != "" {
 		vid, err := strconv.ParseInt(vidStr, 10, 64)
 		if err != nil || vid <= 0 {
@@ -340,9 +372,6 @@ func stateEmoji(state string) string {
 		return "⚫"
 	}
 }
-
-// apiKeyPermCtxKey mirrors the API key permission context key used by the parent API middleware.
-type apiKeyPermCtxKey struct{}
 
 func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool) {
 	for _, key := range keys {
