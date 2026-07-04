@@ -15,7 +15,10 @@ export function ToolCard({ icon: Icon, color, title, description, children }: To
   return (
     <GlassPanel className="p-5">
       <div className="mb-4 flex items-start gap-3">
-        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', ICON_COLOR_MAP[color] ?? ICON_COLOR_MAP.cyan)}>
+        <div
+          aria-hidden="true"
+          className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', ICON_COLOR_MAP[color] ?? ICON_COLOR_MAP.cyan)}
+        >
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
