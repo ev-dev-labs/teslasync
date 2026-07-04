@@ -2857,6 +2857,9 @@
     },
     "keypairIdle": "Generate or delete a keypair to see results",
     "uploadIdle": "Upload a public key to see results",
+    "resultPanel": {
+      "noResult": "No result yet"
+    },
     "fleet": {
       "pairingStep1": "Pairing Step1",
       "pairingStep2": "Pairing Step2",
