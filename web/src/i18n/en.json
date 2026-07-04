@@ -11321,6 +11321,17 @@
       "startFailed": "Failed to start impersonation",
       "ended": "Impersonation ended",
       "endFailed": "Failed to end impersonation"
+    },
+    "status": {
+      "title": "Session Status",
+      "loading": "Loading session status…",
+      "error": "Session status is unavailable right now. Use the refresh control above to try again.",
+      "open": "Forward-auth is disabled, so impersonation is unavailable on this install.",
+      "activeCallout": "Impersonation is active. End it from the banner at the top of the screen.",
+      "originalAdmin": "Original admin",
+      "target": "Target subject",
+      "expires": "Expires",
+      "inactive": "You are not impersonating anyone. Pick a subject from the table to start a support session."
     }
   },
   "privacy": {

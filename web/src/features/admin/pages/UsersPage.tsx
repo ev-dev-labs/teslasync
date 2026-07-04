@@ -159,7 +159,11 @@ export default function UsersPage() {
             />
           </div>
           <div className="xl:col-span-1">
-            <ImpersonationStatusPanel status={status.data} isLoading={status.isLoading} />
+            <ImpersonationStatusPanel
+              status={status.data}
+              isLoading={status.isLoading}
+              isError={status.isError}
+            />
           </div>
         </section>
       </FadeIn>
