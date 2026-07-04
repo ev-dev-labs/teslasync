@@ -46,6 +46,31 @@ function statusToneClass(status: string): string {
   return STATUS_TONE[status] ?? 'text-[var(--text-primary)]'
 }
 
+/**
+ * Resolve a job's runtime in milliseconds.
+ *
+ * Prefers the server-provided `duration_ms`, falling back to the
+ * finished/started delta. Returns `null` when neither yields a positive,
+ * finite value — a non-positive or `NaN` `duration_ms`, a missing
+ * `finished_at`, or an unparseable timestamp — so the row can omit the
+ * duration segment entirely instead of rendering a meaningless
+ * "Took —" placeholder.
+ */
+function computeDurationMs(job: QueueJobView): number | null {
+  const explicit = job.duration_ms
+  if (typeof explicit === 'number' && Number.isFinite(explicit) && explicit > 0) {
+    return explicit
+  }
+  if (job.finished_at) {
+    const finished = new Date(job.finished_at).getTime()
+    const started = new Date(job.started_at).getTime()
+    if (Number.isFinite(finished) && Number.isFinite(started) && finished > started) {
+      return finished - started
+    }
+  }
+  return null
+}
+
 interface QueueJobRowProps {
   job: QueueJobView
 }
@@ -53,15 +78,9 @@ interface QueueJobRowProps {
 function QueueJobRow({ job }: QueueJobRowProps) {
   const { t } = useTranslation()
 
+  const durationMs = computeDurationMs(job)
   const durationLabel =
-    typeof job.duration_ms === 'number'
-      ? formatDurationMsLong(job.duration_ms)
-      : job.finished_at
-        ? formatDurationMsLong(
-            new Date(job.finished_at).getTime() -
-              new Date(job.started_at).getTime(),
-          )
-        : null
+    durationMs != null ? formatDurationMsLong(durationMs) : null
 
   return (
     <li
@@ -70,7 +89,7 @@ function QueueJobRow({ job }: QueueJobRowProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <Text variant="bodySm" className="font-medium truncate">
-          {job.title || job.id}
+          {job.title || job.id || '—'}
         </Text>
         <Text
           variant="caption"
