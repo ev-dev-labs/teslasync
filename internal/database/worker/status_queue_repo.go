@@ -85,14 +85,26 @@ type QueueJob struct {
 
 // WorkerQueueRepo is the read-side aggregator. Constructed once at
 // router init time and shared across requests.
+//
+// It holds a database.DBTX execution seam (satisfied by *pgxpool.Pool
+// in production) rather than the concrete *database.DB so the per-worker
+// queries can be exercised against an in-package fake without a live
+// PostgreSQL — the same approach used by internal/database/observability
+// and internal/database/audit.
 type WorkerQueueRepo struct {
-	db *database.DB
+	exec database.DBTX
 }
 
-// NewWorkerQueueRepo constructs the aggregator. The caller is
-// responsible for keeping db non-nil.
+// NewWorkerQueueRepo constructs the aggregator from the shared pool. A
+// nil db (or nil pool) yields a repo whose query methods will fail fast
+// on first use rather than at construction, mirroring the other adapter
+// repos in this layer.
 func NewWorkerQueueRepo(db *database.DB) *WorkerQueueRepo {
-	return &WorkerQueueRepo{db: db}
+	var exec database.DBTX
+	if db != nil && db.Pool != nil {
+		exec = db.Pool
+	}
+	return &WorkerQueueRepo{exec: exec}
 }
 
 // Counters dispatches to the per-worker query. Returns
@@ -145,7 +157,7 @@ SELECT
   COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(CASE WHEN status = 'pending' THEN created_at END)))::BIGINT, 0) AS oldest_pending_age
 FROM notification_logs`
 	var c QueueCounters
-	if err := r.db.Pool.QueryRow(ctx, q).Scan(
+	if err := r.exec.QueryRow(ctx, q).Scan(
 		&c.Pending, &c.InProgress, &c.Succeeded24h, &c.Failed24h, &c.OldestPendingAgeSecond,
 	); err != nil {
 		return QueueCounters{}, fmt.Errorf("worker_queue notification counters: %w", err)
@@ -159,7 +171,7 @@ SELECT id::TEXT, status, COALESCE(title, ''), created_at, sent_at, COALESCE(erro
 FROM notification_logs
 ORDER BY created_at DESC
 LIMIT $1`
-	rows, err := r.db.Pool.Query(ctx, q, limit)
+	rows, err := r.exec.Query(ctx, q, limit)
 	if err != nil {
 		return nil, fmt.Errorf("worker_queue notification recent: %w", err)
 	}
@@ -197,7 +209,7 @@ SELECT
   COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(CASE WHEN status = 'queued' THEN created_at END)))::BIGINT, 0) AS oldest_pending_age
 FROM export_jobs`
 	var c QueueCounters
-	if err := r.db.Pool.QueryRow(ctx, q).Scan(
+	if err := r.exec.QueryRow(ctx, q).Scan(
 		&c.Pending, &c.InProgress, &c.Succeeded24h, &c.Failed24h, &c.OldestPendingAgeSecond,
 	); err != nil {
 		return QueueCounters{}, fmt.Errorf("worker_queue export counters: %w", err)
@@ -211,7 +223,7 @@ SELECT id, status, COALESCE(type, ''), created_at, completed_at, COALESCE(error_
 FROM export_jobs
 ORDER BY created_at DESC
 LIMIT $1`
-	rows, err := r.db.Pool.Query(ctx, q, limit)
+	rows, err := r.exec.Query(ctx, q, limit)
 	if err != nil {
 		return nil, fmt.Errorf("worker_queue export recent: %w", err)
 	}
@@ -248,7 +260,7 @@ SELECT
   COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(CASE WHEN status = 'running' THEN triggered_at END)))::BIGINT, 0) AS oldest_running_age
 FROM automation_history`
 	var c QueueCounters
-	if err := r.db.Pool.QueryRow(ctx, q).Scan(
+	if err := r.exec.QueryRow(ctx, q).Scan(
 		&c.InProgress, &c.Succeeded24h, &c.Failed24h, &c.OldestPendingAgeSecond,
 	); err != nil {
 		return QueueCounters{}, fmt.Errorf("worker_queue automation counters: %w", err)
@@ -264,7 +276,7 @@ SELECT id::TEXT, status, COALESCE(automation_name, ''), triggered_at, completed_
 FROM automation_history
 ORDER BY triggered_at DESC
 LIMIT $1`
-	rows, err := r.db.Pool.Query(ctx, q, limit)
+	rows, err := r.exec.Query(ctx, q, limit)
 	if err != nil {
 		return nil, fmt.Errorf("worker_queue automation recent: %w", err)
 	}
