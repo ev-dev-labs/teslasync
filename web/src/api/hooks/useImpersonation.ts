@@ -77,7 +77,10 @@ export function useImpersonationStatus(options?: { enabled?: boolean }) {
     queryFn: async ({ signal }) => {
       try {
         const payload = await request<ImpersonationStatePayload>('/admin/impersonate', { signal })
-        if (payload.mode === 'active') {
+        // Defensive: a 204/empty body (payload == null) is treated as
+        // "not impersonating" rather than dereferencing a nullish value,
+        // which would surface as a spurious query error in the banner.
+        if (payload?.mode === 'active') {
           return {
             mode: 'active',
             original_admin: payload.original_admin ?? '',
@@ -141,7 +144,9 @@ export function useImpersonationCandidates(options?: { enabled?: boolean }) {
         }>('/admin/impersonate/candidates', { signal })
         return {
           mode: 'session',
-          candidates: payload.candidates ?? [],
+          // Null-safe: a 204/empty body yields an empty candidate list
+          // instead of throwing on a nullish `payload`.
+          candidates: payload?.candidates ?? [],
         }
       } catch (err) {
         if (isApiError(err) && err.code === AUTH_MODE_OPEN_CODE) {
