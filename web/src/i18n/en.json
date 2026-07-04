@@ -11725,5 +11725,17 @@
       "action": "Open an issue",
       "note": "Need an additional endpoint or field? Open an issue on the project repo — the API surface is intentionally small, but additive changes are welcome."
     }
+  },
+  "watch": {
+    "noVehicle": "No vehicle found",
+    "timeToFull": "{{minutes}}m to full",
+    "sentryOn": "Sentry mode on",
+    "sentryOff": "Sentry mode off",
+    "action": {
+      "lock": "Lock vehicle",
+      "unlock": "Unlock vehicle",
+      "climateOn": "Turn climate on",
+      "climateOff": "Turn climate off"
+    }
   }
 }
