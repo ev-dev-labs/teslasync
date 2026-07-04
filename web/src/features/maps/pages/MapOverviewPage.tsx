@@ -243,8 +243,12 @@ export default function MapOverviewPage() {
     [t, formatSpeed],
   );
 
-  // Defensive guard: no vehicle selected.
-  if (vehicleId == null) {
+  // Defensive guard: only surface the "no vehicle" empty state once the fleet
+  // has actually loaded and is genuinely empty. While vehicles are still
+  // loading — or if the fleet request failed — fall through to PageContainer so
+  // the user sees a proper loading spinner / error banner instead of a
+  // misleading "set up TeslaSync" prompt.
+  if (vehicleId == null && !vehiclesLoading && !vehiclesError) {
     return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map Overview')} />;
   }
 
@@ -320,7 +324,11 @@ export default function MapOverviewPage() {
       <FadeIn delay={0.05}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           {/* Live map — the hero visual. */}
-          <GlassPanel className="relative h-[380px] overflow-hidden sm:h-[460px] xl:col-span-2 xl:h-[600px]">
+          <GlassPanel
+            role="region"
+            aria-label={t('mapOverview.mapRegion', 'Live location map')}
+            className="relative h-[380px] overflow-hidden sm:h-[460px] xl:col-span-2 xl:h-[600px]"
+          >
             {latestLoading && !latest ? (
               <Skeleton height="100%" className="h-full w-full rounded-none" />
             ) : latestError ? (
