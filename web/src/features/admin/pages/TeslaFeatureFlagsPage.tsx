@@ -75,7 +75,7 @@ export default function TeslaFeatureFlagsPage() {
     >
       <FadeIn>
         <section aria-label={t('featureConfig.kpi.bandLabel', 'Feature summary metrics')}>
-          <FeatureConfigKpis summary={summary} isLoading={isLoading} />
+          <FeatureConfigKpis summary={summary} isLoading={isLoading} error={sectionError} />
         </section>
       </FadeIn>
 
