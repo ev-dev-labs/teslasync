@@ -11,7 +11,7 @@
  *
  * See internal/handler/v1/gdpr_export_handler.go.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -58,16 +58,19 @@ export default function GDPRExportPage() {
   usePageTitle(t('admin.gdprExport.pageTitle', 'GDPR Export'));
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialId = searchParams.get('id') ?? '';
-  const [idInput, setIdInput] = useState(initialId);
-  const [activeId, setActiveId] = useState(initialId);
+  // The URL `?id=` param is the single source of truth for which artifact is
+  // shown. Deriving `activeId` from it — rather than mirroring it into a second
+  // piece of state — means a shared/bookmarked link, or a back/forward
+  // navigation that swaps `?id=` while the page stays mounted, always drives
+  // the active lookup instead of stranding the view on the id read at mount.
+  const activeId = (searchParams.get('id') ?? '').trim();
+  const [idInput, setIdInput] = useState(activeId);
 
-  // Keep URL in sync when activeId changes so refresh + share works.
+  // Re-sync the editable draft whenever the URL id changes (deep link, history
+  // navigation) so the input field mirrors the artifact currently on screen.
   useEffect(() => {
-    if (activeId && searchParams.get('id') !== activeId) {
-      setSearchParams({ id: activeId }, { replace: true });
-    }
-  }, [activeId, searchParams, setSearchParams]);
+    setIdInput(activeId);
+  }, [activeId]);
 
   const query = useGDPRExport(activeId);
   const subsystemMissing = isApiError(query.error) && query.error.status === 503;
@@ -75,9 +78,13 @@ export default function GDPRExportPage() {
   const otherError = query.isError && !subsystemMissing && !notFound;
   const artifact = query.data;
 
-  const handleLookup = () => {
-    setActiveId(idInput.trim());
-  };
+  const { refetch } = query;
+  const handleRefresh = useCallback(() => refetch(), [refetch]);
+
+  const handleLookup = useCallback(() => {
+    const next = idInput.trim();
+    setSearchParams(next ? { id: next } : {}, { replace: true });
+  }, [idInput, setSearchParams]);
 
   // Direct browser-owned download URL — apiUrl() adds the fully qualified
   // origin + version prefix (the `request()` client does that for XHR, but a
@@ -96,7 +103,7 @@ export default function GDPRExportPage() {
   const actions = (
     <Button
       variant="ghost"
-      onClick={() => query.refetch()}
+      onClick={handleRefresh}
       disabled={!activeId}
       aria-label={t('admin.gdprExport.refresh', 'Refresh artifact status')}
       className="min-h-11"
@@ -160,7 +167,7 @@ export default function GDPRExportPage() {
           <GlassPanel className="p-4 sm:p-5">
             <QueryError
               error={query.error}
-              onRetry={() => query.refetch()}
+              onRetry={handleRefresh}
               resourceName={t('admin.gdprExport.resourceName', 'Export artifact')}
             />
           </GlassPanel>
