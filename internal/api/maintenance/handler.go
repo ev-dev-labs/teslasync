@@ -1,28 +1,63 @@
 package maintenance
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
-	"github.com/rs/zerolog/log"
 )
+
+// maintenanceReadTimeout bounds the first-vehicle lookup and the live-signal
+// read so a stalled TimescaleDB or Redis connection cannot hold a maintenance
+// request open indefinitely.
+const maintenanceReadTimeout = 5 * time.Second
+
+// vehicleRowReader is the read port for the single "first vehicle" lookup. It
+// is satisfied by *pgxpool.Pool (and pgx.Tx) — the same QueryRow shape as
+// database.DBTX — so tests can inject a fake row without a live database.
+type vehicleRowReader interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// liveSignalReader is the read port for current vehicle signals (odometer). It
+// is satisfied by *signal.RedisSignalCache; tests inject a fake to exercise the
+// odometer projection without Redis.
+type liveSignalReader interface {
+	GetAll(ctx context.Context, vehicleID int64) (map[string]interface{}, error)
+}
 
 // Handler serves maintenance schedule and service record endpoints.
 type Handler struct {
-	db         *database.DB
-	redisCache *signal.RedisSignalCache
+	db         vehicleRowReader
+	redisCache liveSignalReader
 }
 
+// NewHandler builds a maintenance Handler backed by the given database pool. A
+// nil db (or nil pool) yields a handler that degrades to an empty schedule
+// rather than panicking, keeping the endpoint safe if it is wired before the
+// pool is ready.
 func NewHandler(db *database.DB) *Handler {
-	return &Handler{db: db}
+	var reader vehicleRowReader
+	if db != nil && db.Pool != nil {
+		reader = db.Pool
+	}
+	return &Handler{db: reader}
 }
 
-// WithRedisCache sets the Redis signal cache for reading live vehicle state.
+// WithRedisCache sets the Redis signal cache used to read live vehicle state. A
+// nil cache is ignored so a mis-wired caller cannot install a typed-nil that
+// would later panic on GetAll.
 func (h *Handler) WithRedisCache(cache *signal.RedisSignalCache) *Handler {
-	h.redisCache = cache
+	if cache != nil {
+		h.redisCache = cache
+	}
 	return h
 }
 
@@ -90,34 +125,69 @@ func (h *Handler) defaultItems(vehicleID int64, currentOdometer float64) []map[s
 	return items
 }
 
-// List returns maintenance items for the first vehicle (or all).
+// List returns the maintenance schedule for the first vehicle. When no vehicle
+// exists, the datastore is unreachable, or the handler has no database wired,
+// it degrades to an empty schedule with 200 OK so the frontend renders an empty
+// state instead of an error page.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	ctx, cancel := context.WithTimeout(r.Context(), maintenanceReadTimeout)
+	defer cancel()
 
-	var vehicleID int64
-	err := h.db.Pool.QueryRow(ctx,
-		`SELECT id FROM vehicles ORDER BY id LIMIT 1`,
-	).Scan(&vehicleID)
-	if err != nil {
-		log.Debug().Err(err).Msg("maintenance: no vehicle found")
+	vehicleID, ok := h.firstVehicleID(ctx)
+	if !ok {
 		httpx.WriteJSON(w, http.StatusOK, []interface{}{})
 		return
 	}
 
-	// Read odometer from Redis signal cache
-	var odometer float64
-	if h.redisCache != nil {
-		signals, rErr := h.redisCache.GetAll(ctx, vehicleID)
-		if rErr == nil && signals != nil {
-			if v, ok := signals["Odometer"]; ok {
-				if f, ok := v.(float64); ok {
-					odometer = f
-				}
-			}
-		}
-	}
-
+	odometer := h.readOdometer(ctx, vehicleID)
 	httpx.WriteJSON(w, http.StatusOK, h.defaultItems(vehicleID, odometer))
+}
+
+// firstVehicleID returns the lowest vehicle id. ok is false when no reader is
+// configured, there is no vehicle, or the lookup fails. A genuine "no rows"
+// result logs at debug (expected on a fresh install); any other error logs at
+// warn so an outage is visible without failing the request.
+func (h *Handler) firstVehicleID(ctx context.Context) (int64, bool) {
+	if h.db == nil {
+		log.Debug().Msg("maintenance: no database reader configured — empty schedule")
+		return 0, false
+	}
+	var vehicleID int64
+	if err := h.db.QueryRow(ctx, `SELECT id FROM vehicles ORDER BY id LIMIT 1`).Scan(&vehicleID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			log.Debug().Msg("maintenance: no vehicle found — empty schedule")
+		} else {
+			log.Warn().Err(err).Msg("maintenance: vehicle lookup failed — empty schedule")
+		}
+		return 0, false
+	}
+	return vehicleID, true
+}
+
+// readOdometer returns the vehicle's current odometer reading in SI metres from
+// the live signal cache, or 0 when the cache is unset, unreachable, or the
+// Odometer signal is absent / non-numeric. Coercion goes through signal.Float64
+// on purpose: the codec stores Odometer as a float32, so a bare v.(float64)
+// assertion silently drops every real reading (see internal/signal/coerce.go).
+func (h *Handler) readOdometer(ctx context.Context, vehicleID int64) float64 {
+	if h.redisCache == nil {
+		return 0
+	}
+	signals, err := h.redisCache.GetAll(ctx, vehicleID)
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).
+			Msg("maintenance: live signal read failed — odometer defaulting to 0")
+		return 0
+	}
+	raw, ok := signals["Odometer"]
+	if !ok {
+		return 0
+	}
+	odometer, ok := signal.Float64(raw)
+	if !ok {
+		return 0
+	}
+	return odometer
 }
 
 // Records returns service history records (empty for now — user-entered data).
