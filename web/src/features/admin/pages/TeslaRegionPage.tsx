@@ -64,6 +64,7 @@ export default function TeslaRegionPage() {
       }
       onClick={refresh}
       disabled={regionRefresh.isPending}
+      aria-busy={regionRefresh.isPending || undefined}
     >
       {t('region.refresh', 'Refresh')}
     </Button>
