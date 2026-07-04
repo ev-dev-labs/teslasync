@@ -209,9 +209,7 @@ export default function SettingsPage() {
         <section id="general">
           <GeneralSettings />
         </section>
-        <section id="appearance">
-          <AppearanceSettings />
-        </section>
+        <AppearanceSettings />
         <section id="typography">
           <TypographySettings />
         </section>

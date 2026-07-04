@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon, Heading, Text, HelperText, Label } from '@/components/ui'
-import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
 import { useStatusBarPrefs, setStatusBarPrefs } from '@/components/layout'
@@ -143,8 +142,8 @@ export function AppearanceSettings() {
   ]
 
   return (
-    <FadeIn delay={0.15}>
-      <GlassPanel className="p-6 space-y-6" data-tour="settings-appearance">
+    <>
+      <GlassPanel id="appearance" className="p-6 space-y-6" data-tour="settings-appearance">
         <div className="flex items-center gap-3">
           <IconBox color="purple">
             <Palette className="h-5 w-5" />
@@ -158,7 +157,9 @@ export function AppearanceSettings() {
         {/* Shared <ThemePicker>: the settings page renders the full UI, while
             the top-bar quick-switcher renders a compact variant. */}
         <ThemePicker showMode showCustom />
+      </GlassPanel>
 
+      <GlassPanel className="p-6 space-y-6">
         {/* Density (information density) */}
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -346,7 +347,9 @@ export function AppearanceSettings() {
             {t('theme.timeFormat.help', 'Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed.')}
           </HelperText>
         </div>
+      </GlassPanel>
 
+      <GlassPanel className="p-6 space-y-6">
         {/* Chart palette */}
         <div data-tour="settings-chart-palette">
           <div className="flex items-center gap-2 mb-3">
@@ -456,7 +459,9 @@ export function AppearanceSettings() {
             </div>
           </div>
         </div>
+      </GlassPanel>
 
+      <GlassPanel className="p-6 space-y-6">
         {/* Achievement celebrations */}
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -584,7 +589,7 @@ export function AppearanceSettings() {
           </div>
         </div>
       </GlassPanel>
-    </FadeIn>
+    </>
   )
 }
 
