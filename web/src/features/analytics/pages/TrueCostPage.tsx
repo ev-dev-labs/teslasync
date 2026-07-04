@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign, Fuel, Zap, TrendingUp, Leaf, Wrench, PiggyBank } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
@@ -26,6 +27,16 @@ const COLOR_EV = '#00f0ff';
 const COLOR_ICE = '#ef4444';
 const COLOR_SAVINGS = '#10b981';
 
+/**
+ * Render a date string, falling back to an em dash for missing values.
+ * The API models `first_date` / `last_date` as non-nullable strings but
+ * returns `""` when a vehicle has no charging history yet, so a plain
+ * `?? '—'` (nullish only) would leak an empty gap into the date range.
+ */
+function dateOrDash(value: string | null | undefined): string {
+  return typeof value === 'string' && value.trim() ? value : '—';
+}
+
 /* ── Component ── */
 
 export default function TrueCostPage() {
@@ -46,10 +57,21 @@ export default function TrueCostPage() {
 
   const tcoQuery = useCostBreakdown(vehicleIdStr);
   const { data: tco, isLoading, isError, error, refetch } = tcoQuery;
-  const onRetry = () => { void refetch(); };
+  const onRetry = useCallback(() => { void refetch(); }, [refetch]);
 
-  const fmtCurrency = (v: number) => formatCurrency(v);
+  const fmtCurrency = useCallback((v: number) => formatCurrency(v), [formatCurrency]);
   const monthlyBreakdown = tco?.monthly_breakdown ?? [];
+
+  // Stable, memoised two-bar comparison so the cost-per-km chart doesn't
+  // receive a freshly-allocated data array (and re-run its layout) on every
+  // unrelated re-render of the page.
+  const costPerKmData = useMemo(
+    () => [
+      { name: t('tco.evElectric', 'EV (Electric)'), cost: tco?.cost_per_km_ev ?? 0, fill: COLOR_EV },
+      { name: t('tco.iceGas', 'ICE (Gas)'), cost: tco?.cost_per_km_ice ?? 0, fill: COLOR_ICE },
+    ],
+    [t, tco?.cost_per_km_ev, tco?.cost_per_km_ice],
+  );
 
   return (
     <PageContainer
@@ -203,7 +225,7 @@ export default function TrueCostPage() {
                   </Text>
                   <Text as="p" size="xl" weight="bold" className="tabular-nums text-emerald-300">{fmtCurrency((tco.total_savings ?? 0) + (tco.maintenance_savings_estimate ?? 0))}</Text>
                   <Text as="p" variant="caption" className="mt-1">
-                    {fmtInt(convertDistanceFromSI((tco.total_km ?? 0) * 1000, distanceUnit))} {distanceUnit} · {tco.first_date ?? '—'} → {tco.last_date ?? '—'}
+                    {fmtInt(convertDistanceFromSI((tco.total_km ?? 0) * 1000, distanceUnit))} {distanceUnit} · {dateOrDash(tco.first_date)} → {dateOrDash(tco.last_date)}
                   </Text>
                 </div>
               </div>
@@ -235,10 +257,7 @@ export default function TrueCostPage() {
                 <Skeleton height="100%" className="rounded-xl" />
               ) : tco ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[
-                    { name: t('tco.evElectric', 'EV (Electric)'), cost: tco.cost_per_km_ev ?? 0, fill: COLOR_EV },
-                    { name: t('tco.iceGas', 'ICE (Gas)'), cost: tco.cost_per_km_ice ?? 0, fill: COLOR_ICE },
-                  ]}>
+                  <BarChart data={costPerKmData}>
                     {chartGrid}
                     <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
                     <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v, 3)} />
