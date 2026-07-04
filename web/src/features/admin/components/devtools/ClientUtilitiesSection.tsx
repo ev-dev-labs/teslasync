@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Car, Key, Clock, Braces, Link, Fingerprint, Hash, HardDrive,
@@ -58,34 +58,48 @@ function useToolList(): ToolEntry[] {
 
 /* ─── expandable tool card ────────────────────────────────────────────── */
 
-function ExpandableToolCard({ tool, expanded, onToggle }: { tool: ToolEntry; expanded: boolean; onToggle: () => void }) {
+const ExpandableToolCard = memo(function ExpandableToolCard({
+  tool,
+  expanded,
+  onToggle,
+}: {
+  tool: ToolEntry
+  expanded: boolean
+  onToggle: (id: string) => void
+}) {
   const Icon = tool.icon
+  const panelId = `devtools-tool-panel-${tool.id}`
   return (
     <GlassPanel hover className="overflow-hidden transition-all duration-normal">
       <UiButton
         type="button"
         variant="ghost"
-        onClick={onToggle}
+        onClick={() => onToggle(tool.id)}
         aria-expanded={expanded}
+        aria-controls={panelId}
         className="!h-auto !w-full !justify-start !rounded-none !p-4 text-left hover:!bg-transparent"
       >
-        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', ICON_COLOR_MAP[tool.color] ?? ICON_COLOR_MAP.cyan)}>
+        <div
+          aria-hidden="true"
+          className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', ICON_COLOR_MAP[tool.color] ?? ICON_COLOR_MAP.cyan)}
+        >
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tool.name}</h3>
           <p className="text-xs text-[var(--text-secondary)]">{tool.desc}</p>
         </div>
-        <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal', expanded && 'rotate-180')} />
+        <ChevronDown aria-hidden="true" className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal', expanded && 'rotate-180')} />
       </UiButton>
       {expanded && (
-        <div className="border-t border-white/[0.04] p-4">
+        <div id={panelId} role="region" aria-label={tool.name} className="border-t border-white/[0.04] p-4">
           <tool.Component />
         </div>
       )}
     </GlassPanel>
   )
-}
+})
+ExpandableToolCard.displayName = 'ExpandableToolCard'
 
 /* ═══════════════════════════════════════════════════════════════════════
    Client Utilities Section — searchable grid
@@ -99,35 +113,44 @@ export function ClientUtilitiesSection() {
   const tools = useToolList()
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return tools
-    const q = search.toLowerCase()
+    const q = search.trim().toLowerCase()
+    if (!q) return tools
     return tools.filter(
       (tool) =>
-        tool.name.toLowerCase().includes(q) ||
-        tool.desc.toLowerCase().includes(q),
+        (tool.name ?? '').toLowerCase().includes(q) ||
+        (tool.desc ?? '').toLowerCase().includes(q),
     )
   }, [tools, search])
+
+  const handleToggle = useCallback((id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id))
+  }, [])
+
+  const searchLabel = t('devtools.searchTools', 'Search tools...')
 
   return (
     <div className="space-y-4">
       <UiInput
-        placeholder={t('devtools.searchTools', 'Search tools...')}
+        type="search"
+        aria-label={searchLabel}
+        placeholder={searchLabel}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="max-w-md"
       />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
-        {filtered.map((tool) => (
-          <ExpandableToolCard
-            key={tool.id}
-            tool={tool}
-            expanded={expandedId === tool.id}
-            onToggle={() => setExpandedId((prev) => (prev === tool.id ? null : tool.id))}
-          />
-        ))}
-      </div>
-      {filtered.length === 0 && (
-        <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+      {filtered.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
+          {filtered.map((tool) => (
+            <ExpandableToolCard
+              key={tool.id}
+              tool={tool}
+              expanded={expandedId === tool.id}
+              onToggle={handleToggle}
+            />
+          ))}
+        </div>
+      ) : (
+        <p role="status" className="py-8 text-center text-sm text-[var(--text-muted)]">
           {t('devtools.noToolsFound', 'No tools match your search')}
         </p>
       )}
