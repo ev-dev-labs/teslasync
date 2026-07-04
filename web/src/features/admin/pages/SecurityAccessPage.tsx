@@ -60,7 +60,7 @@ export default function SecurityAccessPage() {
   /* ---- Latest security state (polled) ---- */
   const latestQuery = useQuery({
     queryKey: ['security-latest', activeId],
-    queryFn: () => request<SecurityEvent>(`/security/latest?vehicle_id=${activeId}`),
+    queryFn: ({ signal }) => request<SecurityEvent>(`/security/latest?vehicle_id=${activeId}`, { signal }),
     enabled: !!activeId,
     refetchInterval: 5000,
   });
