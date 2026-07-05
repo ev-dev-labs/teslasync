@@ -4020,6 +4020,7 @@
       }
     },
     "weeklyDigest": {
+      "loading": "Loading weekly digest",
       "alertsSection": "Alerts",
       "alertsBySeverity": "Alerts by Severity",
       "alertDistribution": "Alert Distribution",
