@@ -175,6 +175,13 @@ function InnerSection(): JSX.Element {
   const [transcript, setTranscript] = useState<string>(() =>
     readTranscriptDraft(),
   )
+  // Live, un-committed preview of the current utterance. With
+  // interimResults enabled the engine re-fires the SAME result index
+  // with a progressively refined transcript until it is marked final,
+  // so interim text must NOT be folded into `transcript` (that double-
+  // counts every word as it is revised). We hold it separately, render
+  // it as a muted preview, and commit only FINAL results.
+  const [interimTranscript, setInterimTranscript] = useState<string>('')
   const [listening, setListening] = useState<boolean>(false)
   const [ttsEnabled, setTtsEnabled] = useState<boolean>(true)
   const [sttError, setSttError] = useState<string | null>(null)
@@ -257,6 +264,7 @@ function InnerSection(): JSX.Element {
     if (stream.state === 'done') {
       persistTranscriptDraft('')
       setTranscript('')
+      setInterimTranscript('')
       lastSpokenLenRef.current = 0
     }
   }, [stream.state])
@@ -316,21 +324,35 @@ function InnerSection(): JSX.Element {
       recognitionRef.current = null
     }
     setSttError(null)
+    setInterimTranscript('')
     const rec = new sttCtor()
     rec.lang = ttsLang
     rec.continuous = false
     rec.interimResults = true
     rec.onresult = (ev: SpeechRecognitionEventShim) => {
-      let acc = ''
+      // Partition the batch into finalized vs still-interim results.
+      // Only final results are committed to `transcript`; interim text
+      // is surfaced as an ephemeral preview so refinements never
+      // duplicate words already spoken.
+      let finalChunk = ''
+      let interimChunk = ''
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const r = ev.results[i]
-        acc += r[0]?.transcript ?? ''
+        const text = r[0]?.transcript ?? ''
+        if (r.isFinal) {
+          finalChunk += text
+        } else {
+          interimChunk += text
+        }
       }
-      setTranscript((prev) => {
-        const trimmedPrev = prev.replace(/\s+$/, '')
-        const next = trimmedPrev ? `${trimmedPrev} ${acc}` : acc
-        return next
-      })
+      const committed = finalChunk.trim()
+      if (committed) {
+        setTranscript((prev) => {
+          const trimmedPrev = prev.replace(/\s+$/, '')
+          return trimmedPrev ? `${trimmedPrev} ${committed}` : committed
+        })
+      }
+      setInterimTranscript(interimChunk.trim())
     }
     rec.onerror = (ev: SpeechRecognitionErrorEventShim) => {
       setSttError(
@@ -339,9 +361,13 @@ function InnerSection(): JSX.Element {
         }),
       )
       setListening(false)
+      setInterimTranscript('')
     }
     rec.onend = () => {
       setListening(false)
+      // Drop any lingering interim preview; a well-behaved engine has
+      // already emitted the corresponding final result by now.
+      setInterimTranscript('')
     }
     try {
       rec.start()
@@ -366,6 +392,7 @@ function InnerSection(): JSX.Element {
       }
     }
     setListening(false)
+    setInterimTranscript('')
   }, [])
 
   const handleStopAll = useCallback(() => {
@@ -415,8 +442,16 @@ function InnerSection(): JSX.Element {
         aria-label={t('voiceMode.transcriptLabel', 'Voice transcript')}
         data-testid="ai-feature-voice-mode-transcript"
       >
-        {transcript.trim().length > 0 ? (
-          transcript
+        {transcript.trim().length > 0 || interimTranscript.length > 0 ? (
+          <>
+            {transcript}
+            {interimTranscript && (
+              <span className="text-[var(--text-muted)]">
+                {transcript ? ' ' : ''}
+                {interimTranscript}
+              </span>
+            )}
+          </>
         ) : (
           <span className="text-[var(--text-muted)]">
             {listening
