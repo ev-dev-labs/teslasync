@@ -209,6 +209,7 @@ export function useWeeklyDigest() {
     const bins = DAY_LABELS.map((label) => ({ day: label, distance: 0 }));
     for (const d of weekDrives) {
       const idx = dayOfWeekIndex(d.start_date);
+      if (idx < 0) continue; // unparseable start_date — skip rather than crash
       bins[idx].distance += d.distance;
     }
     return bins;
@@ -219,6 +220,7 @@ export function useWeeklyDigest() {
     const bins = DAY_LABELS.map((label) => ({ day: label, energy: 0 }));
     for (const c of weekCharging) {
       const idx = dayOfWeekIndex(c.start_ts);
+      if (idx < 0) continue; // unparseable start_ts — skip rather than crash
       bins[idx].energy += c.total_energy_added_wh;
     }
     return bins;
