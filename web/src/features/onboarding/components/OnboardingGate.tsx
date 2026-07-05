@@ -11,8 +11,8 @@ import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
  * they're not dropped into a dashboard that can only render empty
  * states.
  * Allow-listed paths bypass the gate so the user can reach the
- * Tesla account setup page, public share links, the watch face,
- * and onboarding itself.
+ * Tesla account setup page, settings, public share links, the
+ * watch face, the login/auth screen, and onboarding itself.
  * The user can also click "Skip for now" on the onboarding page,
  * which sets a localStorage flag (see useOnboardingSkip) that the
  * gate honours across reloads and tabs.
@@ -24,7 +24,7 @@ import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
 
 // Paths that bypass the gate. Match by prefix so nested routes
 // (e.g. /vehicles/:id/access) work without listing every variant.
-const ALLOW_PREFIXES = [
+export const ALLOW_PREFIXES = [
   '/onboarding',
   '/tesla-account',
   '/settings',
@@ -33,7 +33,8 @@ const ALLOW_PREFIXES = [
   '/login',
 ];
 
-function isAllowed(pathname: string): boolean {
+// Exported for direct unit testing of the prefix-matching branches.
+export function isAllowed(pathname: string): boolean {
   return ALLOW_PREFIXES.some((prefix) =>
     prefix.endsWith('/') ? pathname.startsWith(prefix) : pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
