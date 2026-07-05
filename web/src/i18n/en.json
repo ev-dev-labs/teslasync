@@ -7083,7 +7083,8 @@
       "title": "Helix explanation",
       "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
       "generateButton": "Generate explanation",
-      "badge": "Helix"
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle above to explain its anomalies."
     },
     "aiBaseline": {
       "title": "Learn per-vehicle baseline",

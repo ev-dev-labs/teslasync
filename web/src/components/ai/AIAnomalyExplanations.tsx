@@ -26,6 +26,12 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     body,
     onEvent: () => {},
   })
+  // The handler-side parser (internal/api/aianomaly/handler.go) rejects
+  // vehicle_id <= 0 with a 400 before the LLM is ever invoked, so we
+  // mirror that > 0 contract here. An unresolved active vehicle
+  // (undefined) OR a placeholder 0/negative id keeps the button
+  // disabled instead of firing a request that is guaranteed to fail.
+  const haveInputs = vehicleId != null && vehicleId > 0
     return (
     <AIFeatureCard
       title={t('anomaly.aiExplanation.title', 'Helix explanation')}
@@ -35,7 +41,15 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
               )}
       buttonLabel={t('anomaly.aiExplanation.generateButton', 'Generate explanation')}
       badgeLabel={t('anomaly.aiExplanation.badge', 'Helix')}
-      canStart={vehicleId != null}
+      emptyHint={
+        haveInputs
+          ? undefined
+          : t(
+              'anomaly.aiExplanation.emptyHint',
+              'Select a vehicle above to explain its anomalies.',
+            )
+      }
+      canStart={haveInputs}
       stream={stream}
     />
   )
