@@ -13,7 +13,7 @@
  * Server validates `window` ∈ {30s, 60s, 5m, 15m} and rejects anything
  * else with 400.
  */
-import { useState } from 'react';
+import { useCallback, useId, useMemo, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, GitBranch, Radio } from 'lucide-react';
 
@@ -41,52 +41,107 @@ interface WhyEndedPanelProps {
 
 const WINDOWS: DriveDiagnosticWindow[] = ['30s', '60s', '5m', '15m'];
 
+// Keyed signal rows for DataTable — `ts+field` is not guaranteed unique
+// (the same field can re-emit at the same second on busy vehicles) so we
+// splice the array index in to keep React reconciliation stable.
+type KeyedSignal = DriveDiagnosticSignal & { __idx: number };
+
+/**
+ * Formats an FSM-transition timestamp for the timeline's time slot.
+ *
+ * The diagnostic feed is append-only server-side, but a partially-written
+ * or clock-skewed row can still surface an empty / unparseable `ts`. Guard
+ * it so the slot renders the universal "—" placeholder instead of the
+ * literal "Invalid Date" that `new Date(x).toLocaleString()` would print.
+ */
+export function formatTransitionTime(ts: string | null | undefined): string {
+  if (!ts) return '—';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString();
+}
+
 export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [windowSel, setWindowSel] = useState<DriveDiagnosticWindow>('60s');
+  // Ties the disclosure toggle to the region it expands so assistive tech
+  // announces the relationship (aria-controls ⇄ id).
+  const regionId = useId();
 
   const why = useDriveWhyEnded(driveId, windowSel, expanded);
 
-  const windowOptions: SelectOption[] = WINDOWS.map((w) => ({
-    value: w,
-    label: t(`driveDetail.whyEnded.windowOption.${w}`, w),
-  }));
+  const toggle = useCallback(() => setExpanded((p) => !p), []);
+  const handleWindowChange = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) =>
+      setWindowSel(e.target.value as DriveDiagnosticWindow),
+    [],
+  );
 
-  const signalColumns: Column<KeyedSignal>[] = [
-    {
-      key: 'ts',
-      header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'),
-      visibleOnMobile: true,
-      render: (row) => <TimeStamp value={row.ts} format="absolute" />,
-    },
-    {
-      key: 'field',
-      header: t('driveDetail.whyEnded.signal.cols.field', 'Field'),
-      visibleOnMobile: true,
-      render: (row) => (
-        <span className="font-mono text-xs">{row.field}</span>
-      ),
-    },
-    {
-      key: 'value',
-      header: t('driveDetail.whyEnded.signal.cols.value', 'Value'),
-      visibleOnMobile: true,
-      render: (row) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
-          {row.value}
-        </span>
-      ),
-    },
-  ];
+  const windowOptions: SelectOption[] = useMemo(
+    () =>
+      WINDOWS.map((w) => ({
+        value: w,
+        label: t(`driveDetail.whyEnded.windowOption.${w}`, w),
+      })),
+    [t],
+  );
+
+  const signalColumns: Column<KeyedSignal>[] = useMemo(
+    () => [
+      {
+        key: 'ts',
+        header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'),
+        visibleOnMobile: true,
+        render: (row) => <TimeStamp value={row.ts} format="absolute" />,
+      },
+      {
+        key: 'field',
+        header: t('driveDetail.whyEnded.signal.cols.field', 'Field'),
+        visibleOnMobile: true,
+        render: (row) => <span className="font-mono text-xs">{row.field}</span>,
+      },
+      {
+        key: 'value',
+        header: t('driveDetail.whyEnded.signal.cols.value', 'Value'),
+        visibleOnMobile: true,
+        render: (row) => (
+          <span className="font-mono text-xs text-[var(--text-muted)]">
+            {row.value}
+          </span>
+        ),
+      },
+    ],
+    [t],
+  );
 
   const transitions: DriveDiagnosticTransition[] = why.data?.fsm_transitions ?? [];
   const signals: DriveDiagnosticSignal[] = why.data?.signal_window ?? [];
-  // Keyed signal rows for DataTable — `ts+field` is not guaranteed unique
-  // (same field can re-emit at the same second on busy vehicles) so we
-  // splice the array index in to keep React reconciliation stable.
-  type KeyedSignal = DriveDiagnosticSignal & { __idx: number };
-  const keyedSignals: KeyedSignal[] = signals.map((s, idx) => ({ ...s, __idx: idx }));
+  const keyedSignals: KeyedSignal[] = useMemo(
+    () => signals.map((s, idx) => ({ ...s, __idx: idx })),
+    [signals],
+  );
+
+  const timelineItems = useMemo(
+    () =>
+      transitions.map((tx) => ({
+        title: (
+          <span className="font-mono text-sm">
+            {tx.fsm_name}: {tx.from_state} → {tx.to_state}
+          </span>
+        ),
+        subtitle: (
+          <span className="text-xs text-[var(--text-muted)]">
+            {t('driveDetail.whyEnded.trigger', 'trigger: {{trigger}}', {
+              trigger: tx.trigger || '—',
+            })}
+          </span>
+        ),
+        time: formatTransitionTime(tx.ts),
+        color: 'var(--accent-primary)',
+      })),
+    [transitions, t],
+  );
 
   return (
     <GlassPanel className="p-6">
@@ -96,13 +151,14 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
           size="sm"
           icon={
             expanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             )
           }
-          onClick={() => setExpanded((p) => !p)}
+          onClick={toggle}
           aria-expanded={expanded}
+          aria-controls={regionId}
         >
           <PanelTitle>
             {t('driveDetail.whyEnded.title', 'Why did this drive end?')}
@@ -113,9 +169,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
           <div className="w-40">
             <Select
               value={windowSel}
-              onChange={(e) =>
-                setWindowSel(e.target.value as DriveDiagnosticWindow)
-              }
+              onChange={handleWindowChange}
               options={windowOptions}
               aria-label={t(
                 'driveDetail.whyEnded.windowAria',
@@ -127,7 +181,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
       </div>
 
       {expanded && (
-        <div className="mt-4 space-y-6">
+        <div id={regionId} className="mt-4 space-y-6">
           {why.isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Spinner />
@@ -155,7 +209,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
             <>
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-[var(--text-muted)]" />
+                  <GitBranch className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
                   <PanelTitle>
                     {t(
                       'driveDetail.whyEnded.fsmTitle',
@@ -176,32 +230,13 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
                     // no-action: window selector above is the CTA.
                   />
                 ) : (
-                  <Timeline
-                    items={transitions.map((tx) => ({
-                      title: (
-                        <span className="font-mono text-sm">
-                          {tx.fsm_name}: {tx.from_state} → {tx.to_state}
-                        </span>
-                      ),
-                      subtitle: (
-                        <span className="text-xs text-[var(--text-muted)]">
-                          {t(
-                            'driveDetail.whyEnded.trigger',
-                            'trigger: {{trigger}}',
-                            { trigger: tx.trigger || '—' },
-                          )}
-                        </span>
-                      ),
-                      time: new Date(tx.ts).toLocaleString(),
-                      color: 'var(--accent-primary)',
-                    }))}
-                  />
+                  <Timeline items={timelineItems} />
                 )}
               </div>
 
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <Radio className="h-4 w-4 text-[var(--text-muted)]" />
+                  <Radio className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
                   <PanelTitle>
                     {t(
                       'driveDetail.whyEnded.signalTitle',
