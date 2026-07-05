@@ -13,13 +13,14 @@
  * this yet, and "personal" means truly personal.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Target, Info } from 'lucide-react'
 import { GlassPanel, Button, Input } from '@/components/ui'
 import { request } from '@/api/client'
 import { cn } from '@/lib/cn'
-import { fmtPercent } from '@/lib/numberFormat'
+import { fmtPercent, isFiniteNumber } from '@/lib/numberFormat'
 
 type Window = '24h' | '7d' | '30d' | '90d' | '1y'
 
@@ -51,6 +52,7 @@ function loadTarget(): number {
 }
 
 export function SLOTrackingCard() {
+  const { t } = useTranslation()
   const [win, setWin] = useState<Window>('30d')
   const [target, setTargetState] = useState<number>(() => loadTarget())
   const [editing, setEditing] = useState(false)
@@ -68,7 +70,17 @@ export function SLOTrackingCard() {
     }
   }, [target])
 
-  const pct = data?.uptime_percent ?? null
+  // Uptime is only meaningful when the API returns a finite percentage. A
+  // missing / null / NaN value must read as "unknown" (—), never a misleading
+  // 0.00% painted in the failure tone (which is what an unguarded `?? null`
+  // that lets NaN through would produce, since `NaN == null` is false).
+  const rawPct = data?.uptime_percent
+  const pct = isFiniteNumber(rawPct) ? rawPct : null
+  const rawHealthy = data?.healthy_count
+  const healthy = isFiniteNumber(rawHealthy) ? rawHealthy : null
+  const rawTotal = data?.total_count
+  const totalComponents = isFiniteNumber(rawTotal) ? rawTotal : null
+
   const tone = useMemo(() => {
     if (pct == null) return 'text-[var(--text-muted)]'
     if (pct >= target) return 'text-green-300'
@@ -76,7 +88,7 @@ export function SLOTrackingCard() {
     return 'text-red-300'
   }, [pct, target])
 
-  const handleSaveTarget = () => {
+  const handleSaveTarget = useCallback(() => {
     const n = Number(draftTarget)
     if (!Number.isFinite(n) || n <= 0 || n > 100) {
       setDraftTarget(String(target))
@@ -85,37 +97,63 @@ export function SLOTrackingCard() {
     }
     setTargetState(n)
     setEditing(false)
-  }
+  }, [draftTarget, target])
+
+  const handleCancelEdit = useCallback(() => {
+    setEditing(false)
+    setDraftTarget(String(target))
+  }, [target])
+
+  // Always seed the draft from the current target so the input never opens on
+  // a stale value, regardless of how `target` last changed.
+  const handleStartEdit = useCallback(() => {
+    setDraftTarget(String(target))
+    setEditing(true)
+  }, [target])
+
+  const handleTargetKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleSaveTarget()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        handleCancelEdit()
+      }
+    },
+    [handleSaveTarget, handleCancelEdit],
+  )
 
   return (
     <GlassPanel className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden />
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Uptime &amp; SLO</h3>
+          <Target className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('Uptime & SLO')}</h3>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
           {editing ? (
             <>
-              <span>Target</span>
+              <span>{t('Target')}</span>
               <Input
                 value={draftTarget}
                 onChange={(e) => setDraftTarget(e.target.value)}
+                onKeyDown={handleTargetKeyDown}
                 type="number"
                 min={1}
                 max={100}
                 step={0.1}
                 className="w-20"
-                aria-label="Target uptime percentage"
+                aria-label={t('Target uptime percentage')}
               />
               <span>%</span>
-              <Button type="button" size="sm" variant="primary" onClick={handleSaveTarget}>Save</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => { setEditing(false); setDraftTarget(String(target)) }}>Cancel</Button>
+              <Button type="button" size="sm" variant="primary" onClick={handleSaveTarget}>{t('Save')}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={handleCancelEdit}>{t('Cancel')}</Button>
             </>
           ) : (
             <>
-              <span>Target {target}%</span>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(true)} className="text-xs">Edit</Button>
+              <span>{t('Target {{target}}%', { target })}</span>
+              <Button type="button" size="sm" variant="ghost" onClick={handleStartEdit} className="text-xs">{t('Edit')}</Button>
             </>
           )}
         </div>
@@ -126,17 +164,23 @@ export function SLOTrackingCard() {
           {pct == null ? '—' : fmtPercent(pct, 2)}
         </div>
         <div className="text-xs text-[var(--text-muted)]">
-          {WINDOW_LABEL[win]} · {data?.healthy_count ?? '—'} / {data?.total_count ?? '—'} components healthy
+          {t(WINDOW_LABEL[win])}
+          {' · '}
+          {t('{{healthy}} / {{total}} components healthy', {
+            healthy: healthy ?? '—',
+            total: totalComponents ?? '—',
+          })}
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label="Uptime window selector">
+      <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={t('Uptime window selector')}>
         {(Object.keys(WINDOW_LABEL) as Window[]).map((w) => (
           <button
             key={w}
             type="button"
             role="tab"
             aria-selected={win === w}
+            title={t(WINDOW_LABEL[w])}
             onClick={() => setWin(w)}
             className={cn(
               'rounded-full px-3 py-1 text-xs font-medium transition-colors',
@@ -151,16 +195,16 @@ export function SLOTrackingCard() {
       </div>
 
       {data?.historical_source && data.historical_source !== 'series' && (
-        <p className="mt-3 inline-flex items-start gap-1.5 text-xs text-amber-200/80">
-          <Info className="h-3 w-3 mt-0.5 shrink-0" />
+        <p role="note" className="mt-3 inline-flex items-start gap-1.5 text-xs text-amber-200/80">
+          <Info aria-hidden="true" className="h-3 w-3 mt-0.5 shrink-0" />
           <span>
-            {data.note ?? 'Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.'}
+            {data.note ?? t('Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.')}
           </span>
         </p>
       )}
 
-      {isLoading && <p className="mt-3 text-xs text-[var(--text-muted)]">Loading uptime…</p>}
-      {error && <p className="mt-3 text-xs text-red-300">Failed to load uptime data.</p>}
+      {isLoading && <p role="status" className="mt-3 text-xs text-[var(--text-muted)]">{t('Loading uptime…')}</p>}
+      {error && <p role="alert" className="mt-3 text-xs text-red-300">{t('Failed to load uptime data.')}</p>}
     </GlassPanel>
   )
 }
