@@ -11697,6 +11697,8 @@
     "copyPath": "Copy endpoint path",
     "query": "Query",
     "exampleResponse": "Example response",
+    "exampleEmpty": "No example response available.",
+    "exampleUnavailable": "Example response is unavailable.",
     "kpi": {
       "label": "API surface summary",
       "endpoints": "Endpoints",
