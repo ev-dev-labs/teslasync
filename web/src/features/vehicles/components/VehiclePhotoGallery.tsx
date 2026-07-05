@@ -1,12 +1,18 @@
 /**
- * Thin wrapper around the shared Lightbox component while upload support is
- * pending. Fleet image records (`image_url`, `angle`) are normalized here for
- * the shared lightbox.
+ * Display-only vehicle photo grid backed by the shared {@link Lightbox}.
+ *
+ * Renders a responsive grid of focusable thumbnails; activating one opens the
+ * lightbox at that image's index. Callers pass already-normalized
+ * `LightboxImage` records (`src` + `alt`) — upload and normalization concerns
+ * stay out of this component.
  *
  * Contract:
- *   - Empty photos render a placeholder card, not a blank box.
- *   - Existing photos render a hero image, angle labels, and open the lightbox.
- *   - Upload mutations stay out of this display-only component.
+ *   - No photos → an accessible placeholder card, never a blank box.
+ *   - Photos present → a labelled grid of thumbnails that open the lightbox at
+ *     the clicked index.
+ *   - `vehicleName`, when provided, is woven into the grid label and every
+ *     per-thumbnail label (e.g. "Open photo 3 of 7 — Model 3 Performance") so
+ *     screen-reader users can tell one vehicle's gallery from another.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -86,11 +92,19 @@ export function VehiclePhotoGallery({
               type="button"
               data-testid={`vehicle-photo-thumb-${i}`}
               onClick={() => handleOpen(i)}
-              aria-label={t(
-                'vehicles.photos.openAt',
-                'Open photo {{index}} of {{total}}',
-                { index: i + 1, total: photos.length },
-              )}
+              aria-label={
+                vehicleName
+                  ? t(
+                      'vehicles.photos.openAtNamed',
+                      'Open photo {{index}} of {{total}} — {{name}}',
+                      { index: i + 1, total: photos.length, name: vehicleName },
+                    )
+                  : t(
+                      'vehicles.photos.openAt',
+                      'Open photo {{index}} of {{total}}',
+                      { index: i + 1, total: photos.length },
+                    )
+              }
               className={cn(
                 'group relative block h-full w-full overflow-hidden rounded-lg',
                 'border border-[var(--glass-border)] bg-[var(--surface-1)]',
