@@ -1223,7 +1223,8 @@
         "title": "Charging diagnosis",
         "badge": "Helix",
         "description": "Get a 2-4 paragraph plain-language explanation of any flags raised on this charging session — trickle, expensive, low-power, or interrupted — generated from the same deterministic aggregation metrics shown above.",
-        "generateButton": "Generate diagnosis"
+        "generateButton": "Generate diagnosis",
+        "emptyHint": "Waiting for a charging session…"
       }
     },
     "heatmap": {
