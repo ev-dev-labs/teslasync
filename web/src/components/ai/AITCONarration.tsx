@@ -67,6 +67,14 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// This feature renders its narrative purely through useAiStream's
+// built-in delta-text accumulator (surfaced by AiOutputPanel), so it
+// has no per-event work to do. A module-level no-op keeps the onEvent
+// callback identity stable across renders instead of allocating a
+// fresh closure in the render path (which would re-run useAiStream's
+// onEvent-ref effect on every render).
+const noop = (): void => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent TrueCostPage. Optional
@@ -118,7 +126,7 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/analytics/tco/narrate',
     body,
-    onEvent: () => {},
+    onEvent: noop,
   })
   const haveInputs = numericVehicleId > 0
   return (
