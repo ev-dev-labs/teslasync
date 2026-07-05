@@ -37,7 +37,7 @@ export function OrderStatusBreakdown({
   emptyIcon,
 }: OrderStatusBreakdownProps) {
   const { t } = useTranslation();
-  const total = stats.total;
+  const total = stats.total ?? 0;
 
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
@@ -66,13 +66,14 @@ export function OrderStatusBreakdown({
               'Order status distribution',
             )}
           >
-            {stats.buckets.map(({ bucket, count }) => {
+            {(stats.buckets ?? []).map(({ bucket, count }) => {
+              const meta = ORDER_BUCKET_META[bucket];
               const pct = total > 0 ? (count / total) * 100 : 0;
-              if (pct <= 0) return null;
+              if (!meta || pct <= 0) return null;
               return (
                 <div
                   key={bucket}
-                  className={cn('h-full', ORDER_BUCKET_META[bucket].bar)}
+                  className={cn('h-full', meta.bar)}
                   style={{ width: `${pct}%` }}
                 />
               );
@@ -81,7 +82,7 @@ export function OrderStatusBreakdown({
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
             {ORDER_BUCKET_ORDER.map((bucket) => {
-              const count = stats.byBucket[bucket] ?? 0;
+              const count = stats.byBucket?.[bucket] ?? 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               const meta = ORDER_BUCKET_META[bucket];
               return (
