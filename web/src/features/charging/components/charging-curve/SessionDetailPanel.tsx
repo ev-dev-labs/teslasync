@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useId, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChargingSession } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -12,9 +12,19 @@ interface SessionDetailPanelProps {
   session: ChargingSession;
 }
 
+/**
+ * Render a state-of-charge percentage, guarding against a missing reading.
+ * A `null`/non-finite SOC is shown as the universal "—" placeholder rather
+ * than a misleading "0%" (0 is a valid charge level, not "unknown").
+ */
+function fmtSoc(pct: number | null | undefined): string {
+  return typeof pct === 'number' && Number.isFinite(pct) ? `${pct}%` : '—';
+}
+
 export default function SessionDetailPanel({ session }: SessionDetailPanelProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+  const headingId = useId();
 
   const items = useMemo<{ label: string; value: ReactNode }[]>(() => {
     const rows: { label: string; value: ReactNode }[] = [
@@ -22,7 +32,7 @@ export default function SessionDetailPanel({ session }: SessionDetailPanelProps)
       { label: t('charging.curve.col.charger', 'Charger Type'), value: getChargerLabel(session) },
       {
         label: t('charging.curve.socRange', 'SOC Range'),
-        value: `${session.start_soc_pct ?? 0}% → ${session.end_soc_pct ?? '?'}%`,
+        value: `${fmtSoc(session.start_soc_pct)} → ${fmtSoc(session.end_soc_pct)}`,
       },
       {
         label: t('charging.curve.energyAdded', 'Energy Added'),
@@ -41,7 +51,9 @@ export default function SessionDetailPanel({ session }: SessionDetailPanelProps)
     }
     rows.push({
       label: t('charging.curve.duration', 'Duration'),
-      value: fmtWithUnit(durationMinutes(session.started_at, session.ended_at), 'min'),
+      value: session.ended_at
+        ? fmtWithUnit(durationMinutes(session.started_at, session.ended_at), 'min')
+        : '—',
     });
     if (session.cost_decimal != null) {
       rows.push({
@@ -56,8 +68,10 @@ export default function SessionDetailPanel({ session }: SessionDetailPanelProps)
   }, [t, session, formatCurrency]);
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('charging.curve.sessionDetails', 'Session Details')}</PanelTitle>
+    <GlassPanel className="p-4 sm:p-5" role="region" aria-labelledby={headingId}>
+      <PanelTitle id={headingId} className="mb-3">
+        {t('charging.curve.sessionDetails', 'Session Details')}
+      </PanelTitle>
       <KVList items={items} />
     </GlassPanel>
   );
