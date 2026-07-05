@@ -49,10 +49,17 @@ export const HelixMark: LucideIcon = forwardRef<SVGSVGElement, LucideProps>(
     ref,
   ) {
     // Match Lucide's absoluteStrokeWidth semantics: when set, strokes are
-    // rendered at a constant pixel width regardless of `size`.
-    const effectiveStroke = absoluteStrokeWidth
-      ? (Number(strokeWidth) * 24) / Number(size)
-      : strokeWidth
+    // rendered at a constant pixel width regardless of `size` by scaling
+    // relative to the 24px viewBox. Guard the divisor: a non-positive or
+    // non-numeric `size` (e.g. `0` or `'2em'`) would otherwise divide by
+    // zero/NaN and leak `Infinity`/`NaN` into the DOM `stroke-width`. Fall
+    // back to the raw `strokeWidth` in that case — behaviour is identical
+    // for every valid (size > 0) input.
+    const numericSize = Number(size)
+    const effectiveStroke =
+      absoluteStrokeWidth && Number.isFinite(numericSize) && numericSize > 0
+        ? (Number(strokeWidth) * 24) / numericSize
+        : strokeWidth
 
     return (
       <svg
