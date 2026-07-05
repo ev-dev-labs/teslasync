@@ -73,12 +73,20 @@ export function TotpEnrollModal({
             pattern="[0-9]*"
             value={code}
             onChange={(e) => onCodeChange(e.target.value)}
+            // Enter submits the code so keyboard users don't have to tab to
+            // the Verify button. Suppressed while a verify is in flight.
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !verifying) {
+                e.preventDefault()
+                onVerify()
+              }
+            }}
             label={t('totp.modal.codeLabel', 'Enter the 6-digit code from your app')}
             autoFocus
             data-testid="totp-verify-input"
             disabled={verifying}
           />
-          {error != null ? <ErrorText data-testid="totp-verify-error">{error}</ErrorText> : null}
+          {error ? <ErrorText data-testid="totp-verify-error">{error}</ErrorText> : null}
           <div className="flex items-center justify-end gap-2">
             <Button type="button" variant="ghost" onClick={onClose} disabled={verifying}>
               {t('totp.modal.cancel', 'Cancel')}
