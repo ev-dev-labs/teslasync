@@ -15,6 +15,7 @@
  * unless the archive was cleared by an explicit save).
  */
 
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import { Button, Caption, PanelTitle, Text } from '@/components/ui'
@@ -26,33 +27,49 @@ interface Props {
   onDecline: () => void
 }
 
+interface PreviewItem {
+  /** Archived feature id — stable, unique React key. */
+  id: string
+  /** Human-facing label: the translated feature name, or the raw id. */
+  label: string
+}
+
 /**
- * Renders a comma-separated preview of the archived feature names
- * so the user can decide WITHOUT having to mentally diff against
- * the current toggle list. Unknown IDs (a feature was removed
- * between archive and restore) fall back to the raw ID so the
- * listing is never blank.
+ * Builds the archived-feature preview list rendered under the prompt
+ * so the user can decide WITHOUT having to mentally diff against the
+ * current toggle list.
+ *
+ * Each entry keeps its originating feature `id` so the rendered list
+ * can key on a guaranteed-unique value rather than the display label
+ * (two features can resolve to the same translated name, which would
+ * otherwise collide as React keys). Unknown IDs (a feature was removed
+ * between archive and restore) fall back to the raw ID so the listing
+ * is never blank. A null/undefined map is tolerated and yields an
+ * empty list instead of throwing.
  */
 function previewLabels(
-  archived: Record<string, boolean>,
+  archived: Record<string, boolean> | null | undefined,
   translate: (id: string, fallback: string) => string,
-): string[] {
-  const out: string[] = []
-  for (const [id, value] of Object.entries(archived)) {
+): PreviewItem[] {
+  const out: PreviewItem[] = []
+  for (const [id, value] of Object.entries(archived ?? {})) {
     if (!value) continue
-    if (isKnownAiFeature(id)) {
-      out.push(translate(id, AI_FEATURES[id].name))
-    } else {
-      out.push(id)
-    }
+    out.push({
+      id,
+      label: isKnownAiFeature(id) ? translate(id, AI_FEATURES[id].name) : id,
+    })
   }
   return out
 }
 
 export function AIRestorePanel({ archived, onConfirm, onDecline }: Props) {
   const { t } = useTranslation('settings')
-  const labels = previewLabels(archived, (id, fallback) =>
-    t(`ai.settings.feature.${id}.label`, fallback),
+  const items = useMemo(
+    () =>
+      previewLabels(archived, (id, fallback) =>
+        t(`ai.settings.feature.${id}.label`, fallback),
+      ),
+    [archived, t],
   )
 
   return (
@@ -77,11 +94,11 @@ export function AIRestorePanel({ archived, onConfirm, onDecline }: Props) {
               'You previously had these features enabled. Re-enable them now?',
             )}
           </Caption>
-          {labels.length > 0 && (
+          {items.length > 0 && (
             <ul className="mt-2 list-inside list-disc space-y-0.5">
-              {labels.map((label) => (
-                <Text as="li" key={label} variant="bodySm">
-                  {label}
+              {items.map((item) => (
+                <Text as="li" key={item.id} variant="bodySm">
+                  {item.label}
                 </Text>
               ))}
             </ul>
