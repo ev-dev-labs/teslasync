@@ -20,15 +20,22 @@ export interface MotorStats {
 /* ---- Helper functions ---- */
 
 export function getThrottleStyle(avgPower: number): ThrottleStyle {
-  if (avgPower < 20) return 'conservative';
+  // Non-finite avg power (e.g. NaN from a degraded sample) is treated as the
+  // calmest style rather than silently falling through to 'aggressive'.
+  if (!Number.isFinite(avgPower) || avgPower < 20) return 'conservative';
   if (avgPower < 80) return 'moderate';
   return 'aggressive';
 }
 
 export function gForceColor(g: number): string {
-  if (g < 0.2) return '#22c55e';
-  if (g < 0.4) return '#3b82f6';
-  if (g < 0.6) return '#eab308';
+  // Colour by g-force *intensity*: braking / left-turn readings arrive as
+  // negative longitudinal/lateral g (see DriveDynamicsSnapshot), so ramp on the
+  // magnitude instead of collapsing every negative value into the calm green
+  // band. Non-finite telemetry falls back to the neutral band.
+  const mag = Number.isFinite(g) ? Math.abs(g) : 0;
+  if (mag < 0.2) return '#22c55e';
+  if (mag < 0.4) return '#3b82f6';
+  if (mag < 0.6) return '#eab308';
   return '#ef4444';
 }
 
