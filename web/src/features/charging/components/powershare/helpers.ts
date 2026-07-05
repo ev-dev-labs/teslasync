@@ -8,9 +8,15 @@ import type { TrendPoint } from './constants';
 export function statusVariant(status: string | null): BadgeVariant {
   if (!status) return 'neutral';
   const s = status.toLowerCase();
-  if (s.includes('active') || s.includes('on')) return 'success';
   if (s.includes('error') || s.includes('fail')) return 'danger';
+  // Negative states are matched before the positive ones: the substring
+  // "active" is contained inside "inactive" (Tesla's real off-state is
+  // `PowershareStateInactive`), so an active-first check would paint an
+  // inactive/off session as a green "success".
   if (s.includes('inactive') || s.includes('off')) return 'neutral';
+  // `Enabled` / `EnabledReconnectingSoon` are Tesla's canonical active states —
+  // match them alongside the generic active/on synonyms.
+  if (s.includes('active') || s.includes('enabled') || s.includes('on')) return 'success';
   return 'warning';
 }
 
@@ -47,7 +53,9 @@ export function statusDotClass(status: string | null): string {
 export function stopReasonVariant(reason: string | null): BadgeVariant {
   if (!reason) return 'neutral';
   const r = reason.toLowerCase();
-  if (r === 'none' || r === '') return 'neutral';
+  // "None" — with or without its `PowershareStopReasonStatus` proto prefix —
+  // is a non-problem state, so it stays neutral rather than amber.
+  if (r.includes('none')) return 'neutral';
   if (r.includes('user')) return 'warning';
   if (r.includes('error') || r.includes('fault') || r.includes('low')) return 'danger';
   return 'warning';
@@ -75,7 +83,8 @@ export function humanizeEnum(raw: string | null, prefix?: string): string | null
 /**
  * Build a chronological trend from a signal-observations result. The backend
  * returns newest-first, so we walk it in reverse and drop any rows whose
- * numeric value is null (text/bool/compound kinds coerce to null).
+ * numeric value is null or non-finite (text/bool/compound kinds coerce to
+ * null; a stray NaN/Infinity would poison the chart's axis and peak scale).
  */
 export function buildSeries(data: SignalObservation[] | undefined): TrendPoint[] {
   const rows = data ?? [];
@@ -83,13 +92,14 @@ export function buildSeries(data: SignalObservation[] | undefined): TrendPoint[]
   for (let i = rows.length - 1; i >= 0; i--) {
     const row = rows[i];
     const value = row?.value_numeric;
-    if (value == null) continue;
+    if (value == null || !Number.isFinite(value)) continue;
     points.push({ ts: row.ts, label: formatTime(row.ts), value });
   }
   return points;
 }
 
-/** Largest value in a trend (used as the MetricBar/relative-scale ceiling). */
+/** Largest value in a trend (used as the MetricBar/relative-scale ceiling).
+ *  Floors at 0 and is null-safe so a missing/undefined series can't throw. */
 export function seriesPeak(points: TrendPoint[]): number {
-  return points.reduce((max, p) => (p.value > max ? p.value : max), 0);
+  return (points ?? []).reduce((max, p) => (p.value > max ? p.value : max), 0);
 }
