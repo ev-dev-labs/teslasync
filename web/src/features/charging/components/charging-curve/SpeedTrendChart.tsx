@@ -30,9 +30,10 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
   const palette = useChartPalette();
 
   const monthlyTrend = useMemo((): MonthlySpeed[] => {
-    if (!sessions.length) return [];
+    const rows = sessions ?? [];
+    if (rows.length === 0) return [];
     const byMonth = new Map<string, { dc: number[]; ac: number[] }>();
-    sessions.forEach((s) => {
+    rows.forEach((s) => {
       const month = (s.started_at ?? '').slice(0, 7);
       if (!byMonth.has(month)) byMonth.set(month, { dc: [], ac: [] });
       const group = byMonth.get(month)!;
@@ -49,6 +50,25 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
       }));
   }, [sessions]);
 
+  const tableData = useMemo(
+    () =>
+      monthlyTrend.map((m) => ({
+        month: m.month,
+        dcAvgKw: m.dcAvgKw,
+        acAvgKw: m.acAvgKw,
+      })),
+    [monthlyTrend],
+  );
+
+  const dataColumns = useMemo(
+    () => [
+      { key: 'month', label: t('charging.curve.col.month', 'Month') },
+      { key: 'dcAvgKw', label: t('charging.curve.col.dcAvgKw', 'DC Avg kW') },
+      { key: 'acAvgKw', label: t('charging.curve.col.acAvgKw', 'AC Avg kW') },
+    ],
+    [t],
+  );
+
   return (
     <ChartContainer
       title={t('charging.curve.speedTrend', 'Charging Speed Trend')}
@@ -60,12 +80,9 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
         'charging.curve.speedTrend.aria',
         'Monthly average DC and AC charging speed line chart',
       )}
-      data={monthlyTrend.map((m) => ({ month: m.month, dcAvgKw: m.dcAvgKw, acAvgKw: m.acAvgKw }))}
-      dataColumns={[
-        { key: 'month', label: t('charging.curve.col.month', 'Month') },
-        { key: 'dcAvgKw', label: t('charging.curve.col.dcAvgKw', 'DC Avg kW') },
-        { key: 'acAvgKw', label: t('charging.curve.col.acAvgKw', 'AC Avg kW') },
-      ]}
+      data={tableData}
+      dataColumns={dataColumns}
+      empty={monthlyTrend.length === 0}
       height={280}
       exportable
       exportFilename="charging-speed-trend"
@@ -107,11 +124,19 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
       </ResponsiveContainer>
       <div className="mt-3 flex gap-4 px-2">
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
+          <span
+            className="inline-block h-2 w-3 rounded-sm"
+            style={{ backgroundColor: palette[0] }}
+            aria-hidden="true"
+          />
           <Text variant="bodySm">{t('charging.curve.dcFast', 'DC Fast')}</Text>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-3 rounded-sm bg-emerald-500" />
+          <span
+            className="inline-block h-2 w-3 rounded-sm"
+            style={{ backgroundColor: palette[1] }}
+            aria-hidden="true"
+          />
           <Text variant="bodySm">{t('charging.curve.acHome', 'AC / Home')}</Text>
         </div>
       </div>
