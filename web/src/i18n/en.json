@@ -4518,7 +4518,11 @@
         "title": "Draft from natural language",
         "description": "Describe the automation you want and get a typed graph draft you can review and save below.",
         "badge": "Helix",
-        "draftButton": "Draft automation"
+        "draftButton": "Draft automation",
+        "placeholder": "e.g. precondition the cabin to 22°C when I leave work on weekdays",
+        "inputLabel": "Automation description",
+        "noVehicle": "Pick a vehicle above to let Helix draft an automation for it.",
+        "noPrompt": "Describe the automation you want Helix to draft."
       },
       "aiGeofenceAware": {
         "title": "Suggest a geofence-aware automation",
