@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { GlassPanel } from '@/components/ui';
-import { Skeleton, QueryError } from '@/components/feedback';
+import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
@@ -58,6 +58,24 @@ export function CostSummaryCards({
     );
   }
 
+  // Loaded, no error, but no sessions in range → show a real empty state
+  // instead of six misleading "$0.00" tiles (which read as real zero-cost
+  // data rather than "nothing to summarise yet").
+  if (!coreStats) {
+    return (
+      <GlassPanel className="p-4 sm:p-5">
+        <EmptyState
+          icon={<DollarSign className="h-6 w-6" aria-hidden="true" />}
+          title={t('costAnalysis.stats.emptyTitle', 'No cost data yet')}
+          message={t(
+            'costAnalysis.stats.emptyMessage',
+            'No charging sessions in the selected range. Charge your vehicle or widen the date range to see cost metrics.',
+          )}
+        />
+      </GlassPanel>
+    );
+  }
+
   return (
     <div className={GRID}>
       <MetricCard
@@ -86,7 +104,7 @@ export function CostSummaryCards({
         icon={<Zap className="h-5 w-5" aria-hidden="true" />}
         label={t('costAnalysis.stats.totalEnergy', 'Total Energy')}
         value={fmtWithUnit(coreStats?.totalEnergy ?? 0, 'kWh', 1)}
-        subtitle={fmtWithUnit(coreStats?.gallonsEquiv ?? 0, 'gal equiv', 1)}
+        subtitle={`${fmtNumber(coreStats?.gallonsEquiv ?? 0, 1)} ${t('costAnalysis.stats.galEquiv', 'gal equiv')}`}
       />
       <MetricCard
         color="green"
