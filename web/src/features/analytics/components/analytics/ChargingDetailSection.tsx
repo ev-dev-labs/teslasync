@@ -15,6 +15,9 @@ import { fmtInt } from '@/lib/numberFormat';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import type { FleetAnalyticsQuery } from './constants';
 
+/** Stable bar corner-radius — hoisted so the hot chart JSX never allocates a fresh array per render. */
+const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
+
 /**
  * Charging deep-dive panels (Charger Brands, Cost by Type, Cost Analysis,
  * Monthly Trend). Rendered as bare grid items so they flow into the Charging
@@ -54,10 +57,10 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
       >
         <div className="space-y-3">
           {brandLeaderboard.map((b, idx) => (
-            <div key={b.brand}>
+            <div key={`${idx}-${b.brand ?? 'unknown'}`}>
               <div className="mb-1 flex items-center justify-between">
                 <Text size="xs" weight="medium" color="primary">
-                  #{idx + 1} {b.brand}
+                  #{idx + 1} {b.brand ?? '—'}
                 </Text>
                 <Text size="xs" color="muted">
                   {fmtInt(b.count)} {t('analytics.charging.sessions', 'sessions')}
@@ -90,7 +93,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
             return (
               <div key={i} className="flex items-center gap-3">
                 <Text size="xs" weight="medium" color="secondary" className="w-28 truncate text-right">
-                  {ct.type}
+                  {ct.type ?? '—'}
                 </Text>
                 <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                   <div
@@ -99,7 +102,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
                   />
                 </div>
                 <Text size="xs" color="primary" mono className="w-20 text-right">
-                  {safe(ct.count)} ({fmtInt(pct)}%)
+                  {fmtInt(ct.count)} ({fmtInt(pct)}%)
                 </Text>
               </div>
             );
@@ -169,7 +172,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
               {areaGradient('monthlyEnergyGrad', CHART_COLORS[1])}
               <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[1]} fill="url(#monthlyEnergyGrad)" />
               <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg Power (kW)')} stroke={CHART_COLORS[3]} />
-              <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} opacity={0.6} />
+              <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={BAR_RADIUS} opacity={0.6} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
