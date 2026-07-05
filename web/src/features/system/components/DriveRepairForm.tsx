@@ -18,9 +18,18 @@ export interface DriveRepairFormProps {
   onClose: () => void;
 }
 
-/** Non-empty string → keep; otherwise drop from the patch. */
+/**
+ * Non-empty, finite numeric string → keep; otherwise drop from the patch.
+ *
+ * The `Number.isFinite` guard is load-bearing: `Number('abc')` is `NaN` and
+ * `Number('1e999')` is `Infinity`, both of which are `!= null`. Without the
+ * guard they leak into the patch and `JSON.stringify` serialises them to
+ * `null`, silently nulling the SI column the operator meant to repair.
+ */
 function num(value: string): number | undefined {
-  return value.trim() === '' ? undefined : Number(value);
+  if (value.trim() === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 /**
@@ -68,10 +77,18 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
     update.mutate({ id: drive.id, patch }, { onSuccess: onClose });
   };
 
-  const distanceHint = form.distance_m.trim() ? formatDistance(Number(form.distance_m)) : undefined;
-  const durationHint = form.duration_s.trim() ? formatDuration(Number(form.duration_s)) : undefined;
-  const maxSpeedHint = form.max_speed_mps.trim() ? formatSpeed(Number(form.max_speed_mps)) : undefined;
-  const avgSpeedHint = form.avg_speed_mps.trim() ? formatSpeed(Number(form.avg_speed_mps)) : undefined;
+  // Derive the live display-unit hint from the SAME `num()` predicate the save
+  // path uses, so the hint and the patch agree on what counts as a valid entry:
+  // an empty or non-finite field shows no hint rather than a bare em dash.
+  const unitHint = (value: string, formatter: (n: number) => string): string | undefined => {
+    const parsed = num(value);
+    return parsed != null ? formatter(parsed) : undefined;
+  };
+
+  const distanceHint = unitHint(form.distance_m, formatDistance);
+  const durationHint = unitHint(form.duration_s, formatDuration);
+  const maxSpeedHint = unitHint(form.max_speed_mps, formatSpeed);
+  const avgSpeedHint = unitHint(form.avg_speed_mps, formatSpeed);
 
   return (
     <div
