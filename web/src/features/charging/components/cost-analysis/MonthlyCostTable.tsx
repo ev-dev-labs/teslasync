@@ -81,14 +81,15 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
   );
 
   const sortedData = useMemo(() => {
-    if (data.length === 0) return [];
-    return [...data].sort((a, b) => {
+    const rows = data ?? [];
+    if (rows.length === 0) return [];
+    return [...rows].sort((a, b) => {
       const aVal = a[tableSortKey as keyof MonthlyBucket];
       const bVal = b[tableSortKey as keyof MonthlyBucket];
       const cmp =
         typeof aVal === 'number' && typeof bVal === 'number'
           ? aVal - bVal
-          : String(aVal).localeCompare(String(bVal));
+          : String(aVal ?? '').localeCompare(String(bVal ?? ''));
       return tableSortDir === 'asc' ? cmp : -cmp;
     });
   }, [data, tableSortKey, tableSortDir]);
