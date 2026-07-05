@@ -39,8 +39,13 @@ export function sessionLabel(s: ChargingSession): string {
 /** Simulate a power-vs-SOC curve based on session metadata. */
 export function generateChargingCurve(session: ChargingSession): CurvePoint[] {
   const points: CurvePoint[] = [];
-  const startSoc = session.start_soc_pct ?? 0;
-  const endSoc = session.end_soc_pct ?? 100;
+  // Coerce non-finite SOC bounds (NaN / ±Infinity from corrupt telemetry) to the
+  // sane 0–100 defaults. Without this an Infinity end (or -Infinity start) makes
+  // the sampling loop below non-terminating and hangs the UI thread.
+  const rawStart = session.start_soc_pct ?? 0;
+  const rawEnd = session.end_soc_pct ?? 100;
+  const startSoc = Number.isFinite(rawStart) ? rawStart : 0;
+  const endSoc = Number.isFinite(rawEnd) ? rawEnd : 100;
   const peakPower = (session.peak_power_w ?? 11_000) / 1000;
   const dc = isDcSession(session);
 
@@ -65,5 +70,6 @@ export function generateChargingCurve(session: ChargingSession): CurvePoint[] {
 }
 
 export function avg(nums: number[]): number {
-  return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+  if (!Array.isArray(nums) || nums.length === 0) return 0;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
