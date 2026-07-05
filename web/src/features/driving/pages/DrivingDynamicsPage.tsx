@@ -174,7 +174,7 @@ export default function DrivingDynamicsPage() {
         {/* 8 — Driving style recommendations */}
         <FadeIn delay={0.15}>
           <section aria-label={t('dynamics.recommendations', 'Driving Style Recommendations')}>
-            <DrivingTips motorStats={motorStats} throttleStyle={throttleStyle} />
+            <DrivingTips motorStats={motorStats} />
           </section>
         </FadeIn>
       </div>
