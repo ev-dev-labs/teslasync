@@ -103,18 +103,35 @@ export interface AISignalExplorerNlFilterProps {
   onApply: (draft: SignalFilterDraft) => void
 }
 
-function parseSignalFilterDraft(data: unknown): SignalFilterDraft | null {
+/**
+ * parseSignalFilterDraft narrows the untyped `tool_result.data`
+ * payload emitted by the `draft_signal_filter` tool into a typed
+ * {@link SignalFilterDraft}, or returns `null` when the envelope is
+ * malformed. It is intentionally strict: only a `status: 'ok'`
+ * envelope (the backend marks a shape/scope-rejected draft as
+ * `status: 'invalid'`) with every top-level field present and
+ * correctly typed yields a draft — a single missing or wrong-typed
+ * field collapses the whole parse to `null` so a partial or invalid
+ * filter never reaches the page's form state. The two numeric fields
+ * (`vehicle_id`, `per_page`) must be finite (`NaN`/`Infinity` are
+ * rejected) so a nonsensical value can never be copied into the
+ * deterministic filter form via `onApply`.
+ *
+ * Exported for direct unit testing — production code reaches it only
+ * through {@link AISignalExplorerNlFilter}'s stream `onEvent` handler.
+ */
+export function parseSignalFilterDraft(data: unknown): SignalFilterDraft | null {
   if (!data || typeof data !== 'object') return null
   const obj = data as Record<string, unknown>
   if (obj.status !== 'ok') return null
   const draft = obj.draft
   if (!draft || typeof draft !== 'object') return null
   const d = draft as Record<string, unknown>
-  if (typeof d.vehicle_id !== 'number') return null
+  if (typeof d.vehicle_id !== 'number' || !Number.isFinite(d.vehicle_id)) return null
   if (!Array.isArray(d.signals)) return null
   if (!d.signals.every((s) => typeof s === 'string')) return null
   if (typeof d.range_preset !== 'string') return null
-  if (typeof d.per_page !== 'number') return null
+  if (typeof d.per_page !== 'number' || !Number.isFinite(d.per_page)) return null
   return {
     vehicle_id: d.vehicle_id,
     signals: d.signals as string[],
@@ -140,7 +157,11 @@ function InnerSection(props: AISignalExplorerNlFilterProps) {
   )
 
   const onEvent = useCallback((ev: AiStreamEvent) => {
-    if (ev.type === 'tool_result' && ev.name === 'draft_signal_filter') {
+    // Only a SUCCESSFUL draft_signal_filter tool call can produce a
+    // draft. A failed call (ok === false) may still carry a data
+    // payload (the tool's error envelope); parsing it must never be
+    // mistaken for a valid draft, so gate on `ev.ok` before parsing.
+    if (ev.type === 'tool_result' && ev.ok && ev.name === 'draft_signal_filter') {
       const parsed = parseSignalFilterDraft(ev.data)
       if (parsed) setDraft(parsed)
     }
