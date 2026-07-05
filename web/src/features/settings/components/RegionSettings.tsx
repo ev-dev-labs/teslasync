@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
 import { GlassPanel, Button, IconBox } from '@/components/ui'
-import { EmptyState } from '@/components/feedback'
+import { EmptyState, Spinner, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
@@ -11,8 +11,10 @@ import { Globe, RefreshCw, Info } from 'lucide-react'
 export function RegionSettings() {
   const { t } = useTranslation('settings')
   const toast = useToast()
-  const { data: regionConfig } = useTeslaUserRegion()
+  const { data: regionConfig, isLoading, isError, error, refetch } = useTeslaUserRegion()
   const regionRefresh = useRefreshTeslaRegion()
+
+  const region = regionConfig?.data?.region
 
   return (
     <FadeIn delay={0.04}>
@@ -20,7 +22,7 @@ export function RegionSettings() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <IconBox color="green">
-              <Globe className="h-5 w-5" />
+              <Globe className="h-5 w-5" aria-hidden="true" />
             </IconBox>
             <div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('region.title', 'Region & API')}</h2>
@@ -36,7 +38,7 @@ export function RegionSettings() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} />}
+              icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} aria-hidden="true" />}
               onClick={() => regionRefresh.mutate(undefined, {
                 onSuccess: () => toast.success(t('toast.regionRefreshed', 'Region info refreshed')),
                 onError: (err: Error) => toast.error(t('toast.regionFailed', 'Failed to refresh region'), err.message),
@@ -48,19 +50,33 @@ export function RegionSettings() {
           </div>
         </div>
 
-        {regionConfig?.data?.region ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Spinner size="md" label={t('region.loading', 'Loading region…')} />
+          </div>
+        ) : isError && !region ? (
+          <QueryError
+            error={error}
+            onRetry={() => { void refetch() }}
+            resourceName={t('region.resourceName', 'Region')}
+          />
+        ) : region ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
               <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.regionCode', 'Region')}</p>
-              <p className="text-lg font-semibold text-[var(--text-primary)]">{regionConfig.data.region}</p>
+              <p className="text-lg font-semibold text-[var(--text-primary)]">{region}</p>
             </div>
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
               <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.fleetApiUrl', 'Fleet API Base URL')}</p>
-              <p className="text-sm font-mono text-[var(--text-primary)] break-all">{regionConfig.data.fleet_api_base_url ?? '—'}</p>
+              <p className="text-sm font-mono text-[var(--text-primary)] break-all">{regionConfig?.data?.fleet_api_base_url ?? '—'}</p>
             </div>
           </div>
         ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" />} message={t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" aria-hidden="true" />} message={
+            regionConfig?.fetched_at
+              ? t('region.noRegion', 'Tesla did not return a region for this account.')
+              : t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')
+          } />
         )}
       </GlassPanel>
     </FadeIn>
