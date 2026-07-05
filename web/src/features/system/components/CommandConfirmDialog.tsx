@@ -50,13 +50,21 @@ export function CommandConfirmDialog({
 
   useEffect(() => {
     if (open && confirmInput) {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const id = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(id);
     }
+    return undefined;
   }, [open, confirmInput]);
 
   const canConfirm =
     remaining === 0 &&
     (!confirmInput || inputValue.trim().toUpperCase() === confirmInput.toUpperCase());
+
+  // Only translate a real key. Calling `t('')` (empty key) is an i18next
+  // anti-pattern that can swallow the fallback, so branch on `confirmKey`.
+  const confirmMessage = def.confirmKey
+    ? t(def.confirmKey, def.confirmFallback ?? 'Are you sure?')
+    : def.confirmFallback ?? t('commands.confirm.default', 'Are you sure?');
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -74,6 +82,7 @@ export function CommandConfirmDialog({
       open={open}
       onClose={onClose}
       size="sm"
+      ariaLabel={t(def.labelKey, def.labelFallback)}
       className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-red-500/20"
     >
       <div onKeyDown={handleKeyDown}>
@@ -87,7 +96,7 @@ export function CommandConfirmDialog({
         </div>
 
         <Text as="p" size="sm" color="secondary" className="mb-4">
-          {t(def.confirmKey ?? '', def.confirmFallback ?? 'Are you sure?')}
+          {confirmMessage}
         </Text>
 
         {confirmInput && (
@@ -126,7 +135,10 @@ export function CommandConfirmDialog({
             className={cn(remaining > 0 && 'opacity-50')}
           >
             {remaining > 0
-              ? `${t('common.confirm', 'Confirm')} (${remaining}s)`
+              ? t('commands.confirm.countdown', {
+                  seconds: remaining,
+                  defaultValue: 'Confirm ({{seconds}}s)',
+                })
               : t('common.confirm', 'Confirm')}
           </Button>
         </div>
