@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
+import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
 import { fmtInt, formatBytes } from '@/lib/numberFormat';
 
@@ -26,7 +27,15 @@ export function ExportKpiBand({ stats, isLoading }: ExportKpiBandProps) {
         className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-5"
       >
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
+          <Skeleton
+            key={i}
+            className={cn(
+              'h-[76px] w-full rounded-xl',
+              // Mirror the storage card's responsive span (last cell) so the
+              // placeholder previews the final layout without a reflow on load.
+              i === 4 && 'col-span-2 lg:col-span-1',
+            )}
+          />
         ))}
       </section>
     );
