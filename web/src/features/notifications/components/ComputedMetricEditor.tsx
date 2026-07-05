@@ -35,7 +35,7 @@ interface Props {
 
 const ALL_OPS: ComputedMetricOp[] = ['>', '>=', '<', '<=', '=', '!=', '%_change_>', '%_change_<']
 
-export function ComputedMetricEditor({ value, onChange, metrics, loading }: Props) {
+export function ComputedMetricEditor({ value, onChange, metrics = [], loading }: Props) {
   const { t } = useTranslation()
   const previewMut = usePreviewComputedMetric()
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -72,11 +72,14 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
 
   const handleMetric = (id: string) => {
     const def = metrics.find(m => m.id === id)
+    // Defensive optional chaining: a malformed registry entry may omit the
+    // `windows`/`ops` arrays entirely. Fall back to an empty window and the
+    // caller's current operator so selecting the metric never throws.
     onChange({
       ...value,
       metric_id: id,
-      metric_window: def && def.windows.length > 0 ? def.windows[0] : '',
-      metric_op: def && def.ops.length > 0 ? def.ops[0] : value.metric_op,
+      metric_window: def?.windows?.[0] ?? '',
+      metric_op: def?.ops?.[0] ?? value.metric_op,
     })
     setPreviewError(null)
   }
@@ -131,6 +134,7 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
           </Text>
           <UiSelect
             className="w-full"
+            aria-label={t('notifications.alertStudio.computedMetric.metric', 'Metric')}
             value={value.metric_id}
             onChange={e => handleMetric(e.target.value)}
             options={metricOptions}
@@ -148,6 +152,7 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
           </Text>
           <UiSelect
             className="w-full"
+            aria-label={t('notifications.alertStudio.computedMetric.window', 'Window')}
             value={value.metric_window}
             onChange={e => onChange({ ...value, metric_window: e.target.value })}
             options={windowOptions}
@@ -161,6 +166,7 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
           </Text>
           <UiSelect
             className="w-full"
+            aria-label={t('notifications.alertStudio.computedMetric.op', 'Operator')}
             value={value.metric_op}
             onChange={e => onChange({ ...value, metric_op: e.target.value as ComputedMetricOp })}
             options={opOptions}
@@ -176,6 +182,7 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
         <UiInput
           type="number"
           className="w-full"
+          aria-label={t('notifications.alertStudio.computedMetric.threshold', 'Threshold')}
           value={value.metric_threshold}
           onChange={e => onChange({ ...value, metric_threshold: e.target.value })}
           placeholder={t('notifications.alertStudio.computedMetric.thresholdPlaceholder', 'e.g. 200')}
@@ -201,7 +208,12 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
           </p>
         )}
         {ready && previewError && (
-          <p className="text-xs text-rose-300">{previewError}</p>
+          <p role="alert" className="text-xs text-rose-300">{previewError}</p>
+        )}
+        {ready && !previewMut.isPending && !previewError && !previewData && (
+          <p className="text-xs text-[var(--text-muted)]">
+            {t('notifications.alertStudio.computedMetric.previewEmpty', 'No preview available yet.')}
+          </p>
         )}
         {ready && !previewMut.isPending && !previewError && previewData && (
           <p className="text-xs text-[var(--text-primary)]">
