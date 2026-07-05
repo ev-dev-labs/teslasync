@@ -78,8 +78,14 @@ export default function SummaryStatsGrid({ stats, loading }: SummaryStatsGridPro
 
   if (loading) {
     return (
-      <div className={GRID}>
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div
+        className={GRID}
+        role="status"
+        aria-busy="true"
+        aria-label={t('charging.curve.summaryLoading', 'Loading summary metrics')}
+        data-testid="charging-summary-skeleton"
+      >
+        {Array.from({ length: cards.length }).map((_, i) => (
           <GlassPanel key={i} className="p-4">
             <Skeleton className="h-3 w-16" />
             <Skeleton className="mt-2 h-7 w-20" />
