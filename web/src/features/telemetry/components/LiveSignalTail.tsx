@@ -62,14 +62,21 @@ export function LiveSignalTail({
   const [filter, setFilter] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
 
+  // Null-safe: a caller may hand us an undefined buffer before the SSE stream
+  // has produced its first entry — never iterate a possibly-undefined list.
+  const items = useMemo(() => entries ?? [], [entries]);
+
   const filtered = useMemo(
-    () => (filter ? entries.filter((e) => e.name.toLowerCase().includes(filter.toLowerCase())) : entries),
-    [entries, filter],
+    () =>
+      filter
+        ? items.filter((e) => (e.name ?? '').toLowerCase().includes(filter.toLowerCase()))
+        : items,
+    [items, filter],
   );
 
   useEffect(() => {
     if (autoScroll && tableRef.current) tableRef.current.scrollTop = 0;
-  }, [entries, autoScroll]);
+  }, [items, autoScroll]);
 
   const columns: Column<SignalEntry>[] = useMemo(() => [
     {
@@ -111,7 +118,7 @@ export function LiveSignalTail({
     },
   ], [t]);
 
-  const uniqueSignals = useMemo(() => new Set(entries.map((e) => e.name)).size, [entries]);
+  const uniqueSignals = useMemo(() => new Set(items.map((e) => e.name)).size, [items]);
 
   return (
     <FadeIn>
@@ -145,6 +152,7 @@ export function LiveSignalTail({
               onClick={() => setAutoScroll((a) => !a)}
               variant="secondary"
               size="sm"
+              aria-pressed={autoScroll}
               icon={<ArrowDown className="h-3.5 w-3.5" />}
               className={autoScroll ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : ''}
             >
@@ -165,13 +173,13 @@ export function LiveSignalTail({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatCard
               label={t('liveMonitor.sigPerSec', 'Signals / sec')}
-              value={rate}
+              value={rate ?? 0}
               icon={<Activity className="h-4 w-4" />}
             />
             <StatCard
               label={t('liveMonitor.bufferSize', 'Buffer Size')}
-              value={entries.length}
-              unit={`/ ${bufferMax}`}
+              value={items.length}
+              unit={`/ ${bufferMax ?? 0}`}
               icon={<ArrowUpDown className="h-4 w-4" />}
             />
             <StatCard
@@ -196,7 +204,7 @@ export function LiveSignalTail({
             compact
             pagination={{ defaultPageSize: 50 }}
             emptyMessage={
-              entries.length === 0
+              items.length === 0
                 ? t('liveMonitor.waiting', 'Waiting for signals…')
                 : t('liveMonitor.noMatch', 'No signals match filter')
             }
