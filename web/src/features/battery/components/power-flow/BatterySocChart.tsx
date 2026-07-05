@@ -22,6 +22,24 @@ interface BatterySocChartProps {
 
 const CHART_HEIGHT = 260;
 
+/**
+ * Format an X-axis time tick as a short local date. Accepts the SI epoch-ms
+ * `time` value (and, defensively, ISO strings / `Date`s). Delegates to the
+ * shared {@link formatDateShort}, which yields the "—" placeholder for
+ * unrenderable input — so a malformed timestamp degrades to a dash instead of
+ * throwing `RangeError: Invalid time value`, which the previous
+ * `new Date(v).toISOString()` pre-conversion did on any non-finite value.
+ */
+export function formatSocTimeTick(value: number | string | Date | null | undefined): string {
+  if (value == null) return '—';
+  return formatDateShort(value instanceof Date ? value : new Date(value));
+}
+
+/** Format a Y-axis state-of-charge tick as a percentage label, null-safe. */
+export function formatSocPercentTick(value: number | null | undefined): string {
+  return `${value ?? 0}%`;
+}
+
 /** Battery state-of-charge percentage over the selected history window. */
 export function BatterySocChart({ data, loading, error, onRetry, className }: BatterySocChartProps) {
   const { t } = useTranslation();
@@ -35,6 +53,8 @@ export function BatterySocChart({ data, loading, error, onRetry, className }: Ba
     );
   }
 
+  const points = data ?? [];
+
   return (
     // chart-a11y:no-table dense per-sample SOC trace; current SOC is shown on the battery gauge tile
     <ChartContainer
@@ -43,18 +63,18 @@ export function BatterySocChart({ data, loading, error, onRetry, className }: Ba
       subtitle={t('powerFlow.socOverTimeDesc', 'Battery percentage over time')}
       ariaLabel={t('powerFlow.socOverTimeAria', 'Battery state of charge percentage over time line chart')}
       loading={loading}
-      empty={data.length === 0}
+      empty={points.length === 0}
       height={CHART_HEIGHT}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <LineChart data={data} margin={chartMarginLabeled}>
+        <LineChart data={points} margin={chartMarginLabeled}>
           {chartGrid}
           <XAxis
             dataKey="time"
-            tickFormatter={(v) => formatDateShort(new Date(v).toISOString())}
+            tickFormatter={(v) => formatSocTimeTick(v)}
             {...axisTick}
           />
-          <YAxis domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} {...axisTick} />
+          <YAxis domain={[0, 100]} tickFormatter={(v: number) => formatSocPercentTick(v)} {...axisTick} />
           <Tooltip content={<ChartTooltip />} />
           <Line
             {...AREA_DEFAULTS}
