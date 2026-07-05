@@ -10185,7 +10185,8 @@
         "aiPaintPreviewFailed": "Helix paint preview failed to load",
         "quickLinksFailed": "Quick links failed to load",
         "settingsFailed": "Per-vehicle settings failed to load"
-      }
+      },
+      "noVehicleConfig": "No configuration data available"
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",
