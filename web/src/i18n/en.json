@@ -3978,6 +3978,13 @@
       "co2Saved": "CO₂ Saved",
       "kpis": "Fleet summary metrics"
     },
+    "links": {
+      "statistics": "Statistics",
+      "compare": "Period Compare",
+      "weeklyDigest": "Weekly Digest",
+      "mileage": "Mileage",
+      "timeline": "Timeline"
+    },
     "overview": {
       "distByVehicle": "Distance by Vehicle",
       "noVehicles": "No vehicle data",
