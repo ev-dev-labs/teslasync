@@ -35,7 +35,7 @@ export { RecentActivityFeed, type RecentActivityFeedProps } from './RecentActivi
 export { MetricCard } from './MetricCard';
 export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
-export { TimelineItem } from './TimelineItem';
+export { TimelineItem, type TimelineItemProps } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow, type TransitionArrowProps } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
