@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn'
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat'
+import { fmtNumber } from '@/lib/numberFormat'
 import { useUnits } from '@/hooks/useUnits'
 import type { ChargingTelemetry } from '@/api/types'
 
@@ -14,12 +14,12 @@ interface EnergyChargingPanelProps {
 
 export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelProps) {
   const { t } = useTranslation()
-  const { formatSpeed } = useUnits()
+  const { formatSpeed, formatPower, formatEnergy } = useUnits()
 
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <BatteryCharging className="h-4 w-4 text-cyan-300" />{' '}
+        <BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
         {t('telemetry.energyCharging', 'Energy & Charging')}
       </h3>
       {chargingTelemetry ? (
@@ -51,7 +51,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.charger_power_w != null
-                ? `${fmtWithUnit(chargingTelemetry.charger_power_w, 'kW')}`
+                ? formatPower(chargingTelemetry.charger_power_w)
                 : '—'}
             </span>
           </div>
@@ -62,7 +62,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.charge_energy_added_wh != null
-                ? `${fmtWithUnit(chargingTelemetry.charge_energy_added_wh, 'kWh')}`
+                ? formatEnergy(chargingTelemetry.charge_energy_added_wh)
                 : '—'}
             </span>
           </div>
@@ -101,7 +101,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
           {/* Charge rate */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-              <Zap className="h-3 w-3" /> {t('telemetry.chargeRate', 'Charge Rate')}
+              <Zap className="h-3 w-3" aria-hidden="true" /> {t('telemetry.chargeRate', 'Charge Rate')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.range_added_meters_per_hour != null
