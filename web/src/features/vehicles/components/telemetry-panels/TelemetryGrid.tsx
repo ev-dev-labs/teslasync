@@ -24,9 +24,9 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           label={t('common.battery', 'Battery')}
           value={`${fmtInt(state.battery_level)}%`}
           color={
-            (state.battery_level ?? 0) > 50
+            state.battery_level > 50
               ? 'text-emerald-300'
-              : (state.battery_level ?? 0) > 20
+              : state.battery_level > 20
                 ? 'text-amber-300'
                 : 'text-rose-300'
           }
@@ -38,7 +38,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           icon={Gauge}
           label={t('common.speed', 'Speed')}
           value={formatSpeed(state.speed)}
-          sub={(state.speed ?? 0) > 0 ? t('common.driving', 'Driving') : t('common.parked', 'Parked')}
+          sub={state.speed > 0 ? t('telemetry.driving', 'Driving') : t('telemetry.parked', 'Parked')}
         />
       </StaggerItem>
       <StaggerItem>
@@ -63,12 +63,14 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           value={
             state.is_charging
               ? `${fmtInt(state.charger_power)} kW`
-              : t('common.notCharging', 'Not Charging')
+              : t('telemetry.notCharging', 'Not charging')
           }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}
           sub={
-            state.is_charging && (state.time_to_full_charge ?? 0) > 0
-              ? `${t('vehicles.detail.fullIn', 'Full in')} ${fmtNumber(state.time_to_full_charge, 1)}h`
+            state.is_charging && state.time_to_full_charge != null
+              ? t('telemetry.fullInHours', 'Full in {{hours}}h', {
+                  hours: fmtNumber(state.time_to_full_charge),
+                })
               : undefined
           }
         />
