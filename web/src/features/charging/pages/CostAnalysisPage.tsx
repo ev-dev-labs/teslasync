@@ -81,7 +81,7 @@ export default function CostAnalysisPage() {
     coreStats, monthlyData, costPerKwhTrend, chargerTypeData,
     hourlyData, touInsights, gasComparison, lifetimeMetrics,
   } = useCostAnalysisData({
-    sessions, gasPrice, mpg, electricityRate, toDistanceDisplay,
+    sessions, gasPrice, mpg, electricityRate, toDistanceDisplay, isMiles,
   });
 
   const actions = (
