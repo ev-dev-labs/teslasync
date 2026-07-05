@@ -959,7 +959,8 @@
       "title": "Explain the charging-curve cluster fingerprints",
       "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "badge": "Helix",
-      "generateButton": "Explain clusters"
+      "generateButton": "Explain clusters",
+      "emptyHint": "Select a vehicle to explain its charging-curve clusters."
     },
     "aiMlClustering": {
       "title": "Learn per-vehicle charging-curve clusters",
