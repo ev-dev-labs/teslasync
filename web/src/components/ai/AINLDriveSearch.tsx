@@ -13,7 +13,11 @@ import { useAiStream } from '@/hooks/useAiStream'
 function InnerSection() {
   const { t } = useTranslation()
   const [prompt, setPrompt] = useState('')
-  const body = useMemo(() => ({ prompt }), [prompt])
+  // Trim once so the enable-gate (canStart) and the POST body agree:
+  // the button only fires on a non-empty query, and the query we send
+  // never carries the leading/trailing padding the user happened to type.
+  const trimmedPrompt = prompt.trim()
+  const body = useMemo(() => ({ prompt: trimmedPrompt }), [trimmedPrompt])
   const stream = useAiStream({
     url: '/ai/drives/search',
     body,
@@ -28,7 +32,7 @@ function InnerSection() {
       )}
       buttonLabel={t('drives.aiSearch.searchButton', 'Search with Helix')}
       badgeLabel={t('drives.aiSearch.badge', 'Helix')}
-      canStart={prompt.trim().length > 0}
+      canStart={trimmedPrompt.length > 0}
       stream={stream}
       inputSlot={
         <Textarea
@@ -37,6 +41,10 @@ function InnerSection() {
           placeholder={t(
             'drives.aiSearch.placeholder',
             'e.g. last Friday\'s trip to the coast',
+          )}
+          aria-label={t(
+            'drives.aiSearch.inputLabel',
+            'Describe the drive to find',
           )}
           rows={3}
         />
