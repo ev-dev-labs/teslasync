@@ -8,9 +8,10 @@ import 'react-resizable/css/styles.css';
 import {
   GripHorizontal, X, Settings, Maximize2, Minimize2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { GlassPanel, Button as UiButton } from '@/components/ui';
-import { Skeleton, SectionErrorBoundary } from '@/components/feedback';
+import { EmptyState, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
@@ -35,6 +36,13 @@ interface DashboardGridProps {
   kioskWidgetOpacity?: number;
 }
 
+/* Stable empty fallbacks so a malformed dashboard (undefined widgets/layouts —
+   e.g. from corrupt localStorage or a partial API response) renders an empty
+   state instead of throwing on `.map` / breakpoint indexing. Module-scoped so
+   the reference stays stable across renders (memo/effect deps don't churn). */
+const EMPTY_WIDGETS: WidgetInstance[] = [];
+const EMPTY_LAYOUTS: RGLLayouts = {};
+
 /* ─── Widget Chrome (edit mode overlay) ─── */
 function WidgetChrome({
   def,
@@ -46,6 +54,7 @@ function WidgetChrome({
   onRemove: () => void;
   onSettings: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="absolute inset-0 z-10 pointer-events-none group-hover:pointer-events-auto">
       {/* Drag handle at top */}
@@ -67,7 +76,7 @@ function WidgetChrome({
             onClick={(e) => { e.stopPropagation(); onSettings(); }}
             onMouseDown={(e) => e.stopPropagation()}
             className="h-auto p-1 rounded text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
-            aria-label={`Settings for ${def.name}`}
+            aria-label={t('dashboard.grid.settingsLabel', 'Settings for {{name}}', { name: def.name })}
           >
             <Settings className="h-3.5 w-3.5" />
           </UiButton>
@@ -78,7 +87,7 @@ function WidgetChrome({
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
             onMouseDown={(e) => e.stopPropagation()}
             className="h-auto p-1 rounded text-[var(--text-muted)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
-            aria-label={`Remove ${def.name}`}
+            aria-label={t('dashboard.grid.removeLabel', 'Remove {{name}}', { name: def.name })}
           >
             <X className="h-3.5 w-3.5" />
           </UiButton>
@@ -108,13 +117,14 @@ interface FullscreenOverlayProps {
 function FullscreenOverlay({ widget, def, onClose, getWidgetSize }: FullscreenOverlayProps) {
   const Component = def.component;
   const size = getWidgetSize(widget.id);
+  const { t } = useTranslation();
 
   return (
     <div className="fixed inset-0 z-50 bg-[var(--surface-overlay)] backdrop-blur-xl p-6 flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">{def.name}</h2>
         <UiButton variant="ghost" size="sm" onClick={onClose}>
-          <Minimize2 className="h-4 w-4 mr-1" /> Exit Fullscreen
+          <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit Fullscreen')}
         </UiButton>
       </div>
       <GlassPanel className="flex-1 overflow-hidden">
@@ -142,14 +152,19 @@ export function DashboardGrid({
   showWidgetBorders,
   kioskWidgetOpacity,
 }: DashboardGridProps) {
+  const { t } = useTranslation();
+  // Null-safety: a malformed dashboard (corrupt localStorage, partial API
+  // response) can arrive without widgets/layouts. Fall back to stable empty
+  // references so we never call `.map` / index a breakpoint on undefined.
+  const widgets = dashboard.widgets ?? EMPTY_WIDGETS;
   const [fullscreenWidget, setFullscreenWidget] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   // Local layout state breaks the controlled-component feedback loop:
   // RGL renders from liveLayouts (always up-to-date), while dashboard.layouts
   // is only read when syncing from external changes.
-  const [liveLayouts, setLiveLayouts] = useState<RGLLayouts>(dashboard.layouts);
-  const layoutRef = useRef<RGLLayouts>(dashboard.layouts);
+  const [liveLayouts, setLiveLayouts] = useState<RGLLayouts>(dashboard.layouts ?? EMPTY_LAYOUTS);
+  const layoutRef = useRef<RGLLayouts>(dashboard.layouts ?? EMPTY_LAYOUTS);
   const interactingRef = useRef(false);
 
   // Track persist cycles to avoid syncing our own changes back
@@ -166,8 +181,8 @@ export function DashboardGrid({
       syncedCountRef.current = persistCountRef.current;
       return;
     }
-    setLiveLayouts(dashboard.layouts);
-    layoutRef.current = dashboard.layouts;
+    setLiveLayouts(dashboard.layouts ?? EMPTY_LAYOUTS);
+    layoutRef.current = dashboard.layouts ?? EMPTY_LAYOUTS;
   }, [dashboard.layouts]);
 
   // react-grid-layout v2: hook provides containerRef + measured width.
@@ -251,10 +266,10 @@ export function DashboardGrid({
     const layout = (liveLayouts[activeBreakpoint] ?? liveLayouts.lg ?? []) as RGLLayout[];
     const item = layout.find((l) => l.i === instanceId);
     if (item) return { cols: item.w, rows: item.h };
-    const widget = dashboard.widgets.find((w) => w.id === instanceId);
+    const widget = widgets.find((w) => w.id === instanceId);
     const def = widget ? getWidgetDef(widget.widgetId) : undefined;
     return def?.defaultSize ?? { cols: 1, rows: 1 };
-  }, [liveLayouts, dashboard.widgets, activeBreakpoint]);
+  }, [liveLayouts, widgets, activeBreakpoint]);
 
   // ── Mobile (xs) stack mode ────────────────────────────────────────────
   //
@@ -278,16 +293,16 @@ export function DashboardGrid({
   // mobile (xs layout y/x); otherwise fall back to widget insertion
   // order so freshly-added widgets keep showing up at the bottom.
   const orderedWidgets = useMemo(() => {
-    if (!isMobileStack) return dashboard.widgets;
+    if (!isMobileStack) return widgets;
     const xsLayout = (liveLayouts.xs ?? []) as RGLLayout[];
-    if (xsLayout.length === 0) return dashboard.widgets;
+    if (xsLayout.length === 0) return widgets;
     const orderMap = new Map<string, number>();
     xsLayout.forEach((l, i) => {
       // Encode (y, x, index) into a single sortable scalar so equal y/x
       // values fall back to layout-array order for determinism.
       orderMap.set(l.i, l.y * 10000 + l.x * 100 + i / 1000);
     });
-    return [...dashboard.widgets].sort((a, b) => {
+    return [...widgets].sort((a, b) => {
       const aOrder = orderMap.get(a.id);
       const bOrder = orderMap.get(b.id);
       if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
@@ -295,7 +310,7 @@ export function DashboardGrid({
       if (bOrder !== undefined) return 1;
       return 0;
     });
-  }, [isMobileStack, dashboard.widgets, liveLayouts.xs]);
+  }, [isMobileStack, widgets, liveLayouts.xs]);
 
   // Kiosk panel background boost: increases GlassPanel bg from default 5% white
   const kioskPanelStyle = useMemo(() => {
@@ -310,7 +325,7 @@ export function DashboardGrid({
   }, [kioskWidgetOpacity]);
 
   const fullscreenInstance = fullscreenWidget
-    ? dashboard.widgets.find((w) => w.id === fullscreenWidget)
+    ? widgets.find((w) => w.id === fullscreenWidget)
     : null;
   const fullscreenDef = fullscreenInstance
     ? getWidgetDef(fullscreenInstance.widgetId)
@@ -358,7 +373,7 @@ export function DashboardGrid({
             className="absolute top-2 right-2 z-10 h-auto p-1.5 rounded-lg bg-[var(--surface-overlay)]
               text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
               opacity-0 group-hover:opacity-100 transition-all"
-            aria-label={`Expand ${def.name}`}
+            aria-label={t('dashboard.grid.expandLabel', 'Expand {{name}}', { name: def.name })}
           >
             <Maximize2 className="h-3.5 w-3.5" />
           </UiButton>
@@ -382,7 +397,7 @@ export function DashboardGrid({
         >
           <SectionErrorBoundary
             name={`widget:${def.id}:${widget.id}`}
-            fallbackTitle={`${def.name} failed to load`}
+            fallbackTitle={t('dashboard.grid.widgetFailed', '{{name}} failed to load', { name: def.name })}
           >
             <Suspense
               fallback={
@@ -402,7 +417,7 @@ export function DashboardGrid({
       </div>
     );
   }, [
-    editMode, getWidgetSizeLive, dashboardVehicleId, kioskPanelStyle,
+    t, editMode, getWidgetSizeLive, dashboardVehicleId, kioskPanelStyle,
     showWidgetBorders, onRemoveWidget, onOpenSettings,
   ]);
 
@@ -414,7 +429,7 @@ export function DashboardGrid({
       >
       {/* Edit mode grid dot pattern — only meaningful for the absolute-
           positioned RGL path; on the mobile stack widgets flow naturally. */}
-      {editMode && !isMobileStack && (
+      {editMode && !isMobileStack && widgets.length > 0 && (
         <div
           className="absolute inset-0 pointer-events-none z-0 rounded-xl"
           style={{
@@ -423,7 +438,12 @@ export function DashboardGrid({
           }}
         />
       )}
-      {isMobileStack ? (
+      {widgets.length === 0 ? (
+        <EmptyState
+          title={t('dashboard.grid.emptyTitle', 'No widgets yet')}
+          message={t('dashboard.grid.emptyMessage', 'Add widgets to start building your dashboard.')}
+        />
+      ) : isMobileStack ? (
         <div
           className="flex flex-col gap-3"
           data-testid="dashboard-mobile-stack"
@@ -448,7 +468,7 @@ export function DashboardGrid({
           margin={compactMode ? [8, 8] as [number, number] : GRID_MARGIN}
           containerPadding={[0, 0]}
         >
-          {dashboard.widgets.map((widget) => renderWidgetBody(widget, false))}
+          {widgets.map((widget) => renderWidgetBody(widget, false))}
         </ResponsiveGridLayout>
       )}
       </div>
