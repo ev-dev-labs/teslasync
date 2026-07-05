@@ -18,7 +18,15 @@ export function YearExtremes({ data }: Props) {
   const { formatSpeed, formatTemperature } = useUnits();
 
   // fastest_speed_kmh is km/h → SI m/s for the display-boundary formatter.
-  const topSpeedMps = ((data.fastest_speed_kmh ?? 0) * METERS_PER_KM) / SECONDS_PER_HOUR;
+  // Guard on finiteness: JS arithmetic coerces `null` to 0, so a year with
+  // no recorded top speed would otherwise surface a fabricated "0". Passing
+  // `null` lets formatSpeed emit its "—" placeholder, matching how the
+  // temperature extremes below defer to the formatter for missing data.
+  const rawSpeedKmh = data.fastest_speed_kmh;
+  const topSpeedMps =
+    typeof rawSpeedKmh === 'number' && Number.isFinite(rawSpeedKmh)
+      ? (rawSpeedKmh * METERS_PER_KM) / SECONDS_PER_HOUR
+      : null;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -30,13 +38,13 @@ export function YearExtremes({ data }: Props) {
       />
       <MetricCard
         label={t('yearReview.hottestDrive', 'Hottest drive')}
-        value={formatTemperature(data.hottest_drive_temp_c ?? 0)}
+        value={formatTemperature(data.hottest_drive_temp_c)}
         icon={<Flame className="h-4 w-4" aria-hidden="true" />}
         color="amber"
       />
       <MetricCard
         label={t('yearReview.coldestDrive', 'Coldest drive')}
-        value={formatTemperature(data.coldest_drive_temp_c ?? 0)}
+        value={formatTemperature(data.coldest_drive_temp_c)}
         icon={<Snowflake className="h-4 w-4" aria-hidden="true" />}
         color="cyan"
       />
