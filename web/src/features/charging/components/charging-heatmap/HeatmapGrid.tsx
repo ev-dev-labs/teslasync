@@ -20,7 +20,8 @@ interface HeatmapGridProps {
  */
 export function HeatmapGrid({ model, formatEnergy }: HeatmapGridProps) {
   const { t } = useTranslation();
-  const { grid, maxCount } = model;
+  const grid = model?.grid ?? [];
+  const maxCount = model?.maxCount ?? 0;
   const [hovered, setHovered] = useState<{ day: number; hour: number } | null>(null);
   const sessionsWord = t('charging.heatmap.sessionsWord', 'sessions');
 
@@ -64,7 +65,7 @@ export function HeatmapGrid({ model, formatEnergy }: HeatmapGridProps) {
                           {dayLabel} {formatHourLabel(hour)}
                         </Text>
                         <Text variant="caption" as="div">
-                          {cell.count} {sessionsWord} · {formatEnergy(cell.totalEnergyWh)}
+                          {cell.count} {sessionsWord} · {formatEnergy(cell.totalEnergyWh ?? 0)}
                         </Text>
                       </div>
                     )}
