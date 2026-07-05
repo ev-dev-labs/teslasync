@@ -11,16 +11,13 @@ import type {
   TouInsights, GasComparison, LifetimeMetrics,
 } from './types';
 
-/** 1 mile = 1609.344 m exactly (international yard, NIST). */
-const METERS_PER_MILE = 1609.344;
-
 interface UseCostAnalysisDataParams {
   sessions: ChargingSession[] | undefined;
   gasPrice: number;
   mpg: number;
   electricityRate: number;
-  /** Convert an SI distance in metres to the user's display unit (mi/km). */
-  toDistanceDisplay: (meters: number) => number;
+  toDistanceDisplay: (km: number) => number;
+  isMiles: boolean;
 }
 
 interface UseCostAnalysisDataResult {
@@ -40,11 +37,12 @@ export function useCostAnalysisData({
   mpg,
   electricityRate,
   toDistanceDisplay,
+  isMiles,
 }: UseCostAnalysisDataParams): UseCostAnalysisDataResult {
   const coreStats = useMemo(() => {
     if (!sessions || sessions.length === 0) return null;
     const totalCost = sessions.reduce((s, c) => s + (c.cost_decimal ?? 0), 0);
-    const totalEnergy = convertEnergyFromSI(sessions.reduce((s, c) => s + (c.total_energy_added_wh ?? 0), 0), 'kWh');
+    const totalEnergy = convertEnergyFromSI(sessions.reduce((s, c) => s + c.total_energy_added_wh, 0), 'kWh');
     const avgCostPerKwh = totalEnergy > 0 ? totalCost / totalEnergy : 0;
     const totalDuration = sessions.reduce((s, c) => s + durationMinutes(c.started_at, c.ended_at), 0);
 
@@ -53,7 +51,7 @@ export function useCostAnalysisData({
       totalDistanceM += (distanceAddedM(s) ?? 0);
     });
 
-    const distVal = toDistanceDisplay(totalDistanceM);
+    const distVal = toDistanceDisplay(totalDistanceM / 1609.344);
     const costPerDist = distVal > 0 ? totalCost / distVal : 0;
 
     const gallonsEquiv = totalEnergy / KWH_PER_GALLON;
@@ -79,14 +77,14 @@ export function useCostAnalysisData({
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!buckets[key]) buckets[key] = { cost: 0, energy: 0, sessions: 0 };
       buckets[key].cost += s.cost_decimal ?? 0;
-      buckets[key].energy += s.total_energy_added_wh ?? 0;
+      buckets[key].energy += s.total_energy_added_wh;
       buckets[key].sessions++;
     });
     return Object.entries(buckets)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, v]) => {
         const energyKwh = convertEnergyFromSI(v.energy, 'kWh');
-        const ge = mpg > 0 ? gasEquivalentCost(energyKwh, mpg, gasPrice) : 0;
+        const ge = gasEquivalentCost(energyKwh, mpg, gasPrice);
         return {
           month,
           cost: v.cost,
@@ -120,7 +118,7 @@ export function useCostAnalysisData({
       const cat = categorizeCharger(s);
       if (!groups[cat]) groups[cat] = { cost: 0, energy: 0, sessions: 0 };
       groups[cat].cost += s.cost_decimal ?? 0;
-      groups[cat].energy += s.total_energy_added_wh ?? 0;
+      groups[cat].energy += s.total_energy_added_wh;
       groups[cat].sessions++;
     });
     return Object.entries(groups)
@@ -142,13 +140,9 @@ export function useCostAnalysisData({
     }
     sessions.forEach((s) => {
       const hour = new Date(s.started_at).getHours();
-      // Skip rows whose timestamp can't be parsed: getHours() yields NaN and
-      // buckets[NaN] is undefined, which would throw on the increment below.
-      if (!Number.isInteger(hour) || hour < 0 || hour > 23) return;
-      const bucket = buckets[hour];
-      bucket.sessions++;
-      bucket.totalCost += s.cost_decimal ?? 0;
-      bucket.totalEnergy += s.total_energy_added_wh ?? 0;
+      buckets[hour].sessions++;
+      buckets[hour].totalCost += s.cost_decimal ?? 0;
+      buckets[hour].totalEnergy += s.total_energy_added_wh;
     });
     return Object.entries(buckets)
       .map(([h, v]) => ({
@@ -181,18 +175,15 @@ export function useCostAnalysisData({
   const gasComparison = useMemo<GasComparison | null>(() => {
     if (!coreStats) return null;
     const { totalEnergy, totalCost, totalDistanceM } = coreStats;
-    // Distance in the user's display unit (mi or km) for the per-distance cost
-    // figures the SavingsCalculator renders as "…/mi" or "…/km".
-    const distDisplay = toDistanceDisplay(totalDistanceM);
-    // A comparable gas car's fuel use derives from the real miles driven — mpg
-    // is always miles-per-gallon, independent of the user's display unit.
-    const milesDriven = totalDistanceM / METERS_PER_MILE;
-    const gallonsNeeded = mpg > 0 ? milesDriven / mpg : 0;
+    const distMiles = toDistanceDisplay(totalDistanceM / 1609.344);
+    const gallonsNeeded = isMiles
+      ? distMiles / mpg
+      : toDistanceDisplay(totalDistanceM / 1609.344) / mpg;
     const gasCostCalc = gallonsNeeded * gasPrice;
     const evCostCalc = totalEnergy * electricityRate;
     const monthlySavings =
       monthlyData.length > 0
-        ? (gasCostCalc - evCostCalc) / monthlyData.length
+        ? (gasCostCalc - evCostCalc) / Math.max(monthlyData.length, 1)
         : 0;
     const yearlySavings = monthlySavings * 12;
 
@@ -203,10 +194,10 @@ export function useCostAnalysisData({
       savings: gasCostCalc - totalCost,
       monthlySavings,
       yearlySavings,
-      costPerMileGas: distDisplay > 0 ? gasCostCalc / distDisplay : 0,
-      costPerMileEV: distDisplay > 0 ? totalCost / distDisplay : 0,
+      costPerMileGas: distMiles > 0 ? gasCostCalc / distMiles : 0,
+      costPerMileEV: distMiles > 0 ? totalCost / distMiles : 0,
     };
-  }, [coreStats, gasPrice, mpg, electricityRate, toDistanceDisplay, monthlyData.length]);
+  }, [coreStats, gasPrice, mpg, electricityRate, isMiles, toDistanceDisplay, monthlyData.length]);
 
   const lifetimeMetrics = useMemo<LifetimeMetrics | null>(() => {
     if (!sessions || sessions.length === 0 || !coreStats) return null;
@@ -216,22 +207,21 @@ export function useCostAnalysisData({
       coreStats.count > 0 ? coreStats.totalEnergy / coreStats.count : 0;
     const avgDuration =
       coreStats.count > 0 ? coreStats.totalDuration / coreStats.count : 0;
-    const isFree = (s: ChargingSession) => !s.cost_decimal || s.cost_decimal === 0;
-    const freeCount = sessions.filter(isFree).length;
-    // Free-session energy is summed in SI Wh then converted to kWh so it
-    // matches the kWh unit LifetimeSummary renders it with (previously this
-    // leaked raw Wh, overstating the figure 1000×).
-    const freeEnergy = convertEnergyFromSI(
-      sessions.filter(isFree).reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0),
-      'kWh',
+    const freeCount = sessions.filter(
+      (s) => !s.cost_decimal || s.cost_decimal === 0,
+    ).length;
+    const freeEnergyWh = sessions
+      .filter((s) => !s.cost_decimal || s.cost_decimal === 0)
+      .reduce((sum, s) => sum + s.total_energy_added_wh, 0);
+    // freeEnergy is rendered as kWh by LifetimeSummary (fmtWithUnit(_, 'kWh')),
+    // so it must be converted from the SI Wh sum like every other energy
+    // aggregate in this hook — otherwise the tile shows a 1000× value.
+    const freeEnergy = convertEnergyFromSI(freeEnergyWh, 'kWh');
+    const maxSessionCost = Math.max(...sessions.map((s) => s.cost_decimal ?? 0));
+    const minSessionCost = Math.min(
+      ...sessions.filter((s) => (s.cost_decimal ?? 0) > 0).map((s) => s.cost_decimal!),
+      0,
     );
-    const costs = sessions.map((s) => s.cost_decimal ?? 0);
-    const maxSessionCost = costs.length > 0 ? Math.max(...costs) : 0;
-    // Cheapest *paid* session. Guard the empty case explicitly instead of
-    // folding a 0 into Math.min (which pinned the result to 0 whenever any
-    // paid session existed).
-    const paidCosts = costs.filter((c) => c > 0);
-    const minSessionCost = paidCosts.length > 0 ? Math.min(...paidCosts) : 0;
 
     return {
       avgSessionCost, avgSessionEnergy, avgDuration,
