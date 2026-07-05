@@ -4121,7 +4121,8 @@
       "activity": "Driving & charging activity",
       "batteryAndAlerts": "Battery health & alerts",
       "alertDistributionChartLabel": "Pie chart of alerts by severity",
-      "noAlertBreakdown": "No severity breakdown to chart."
+      "noAlertBreakdown": "No severity breakdown to chart.",
+      "loading": "Loading weekly digest"
     },
     "title": "Fleet Analytics",
     "tabs": {
