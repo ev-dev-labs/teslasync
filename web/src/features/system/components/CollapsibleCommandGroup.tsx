@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { ChevronDown } from 'lucide-react';
+import { Icons } from '@/lib/icons';
 import { FadeIn } from '@/components/motion';
 import { Button as ControlButton, Text } from '@/components/ui';
 import { CATEGORY_META, type CommandCategory } from '../commands';
@@ -23,6 +23,7 @@ export function CollapsibleCommandGroup({
 }: CollapsibleCommandGroupProps) {
   const { t } = useTranslation();
   const storageKey = `teslasync-cat-${vehicleId}-${category}`;
+  const panelId = `teslasync-cmdgroup-${vehicleId}-${category}`;
 
   const [open, setOpen] = useState(() => {
     try {
@@ -40,7 +41,12 @@ export function CollapsibleCommandGroup({
   };
 
   const meta = CATEGORY_META[category];
+  // Guard against an unknown category reaching this component at runtime
+  // (e.g. an API-driven command list) — render nothing instead of crashing
+  // the whole command center on `meta.icon`.
+  if (!meta) return null;
   const Icon = meta.icon;
+  const ChevronDown = Icons.expand;
 
   return (
     <div>
@@ -50,21 +56,22 @@ export function CollapsibleCommandGroup({
         size="sm"
         onClick={toggle}
         aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
         className="group h-auto w-full justify-start py-2 text-left font-normal hover:bg-transparent"
       >
-        <Icon className="h-4 w-4 text-[var(--text-muted)]" />
+        <Icon aria-hidden="true" className="h-4 w-4 text-[var(--text-muted)]" />
         <Text size="xs" weight="medium" className="uppercase tracking-wider text-[var(--text-secondary)]">
           {t(meta.labelKey, meta.fallback)}
         </Text>
-        <Text size="2xs" color="muted" className="ml-1">({count})</Text>
-        <ChevronDown className={cn(
+        <Text size="2xs" color="muted" className="ml-1">({count ?? 0})</Text>
+        <ChevronDown aria-hidden="true" className={cn(
           'h-3.5 w-3.5 text-[var(--text-muted)] ml-auto transition-transform duration-normal',
           open && 'rotate-180',
         )} />
       </ControlButton>
       {open && (
         <FadeIn>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
+          <div id={panelId} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
             {children}
           </div>
         </FadeIn>
