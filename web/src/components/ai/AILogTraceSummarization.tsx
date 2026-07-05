@@ -90,7 +90,9 @@ interface InnerSectionProps {
  *     registered backend route. The body carries the in-scope
  *     window so the LLM cannot widen it.
  *   - Summarize button is disabled while a stream is open OR
- *     when the parent has not yet supplied a valid window.
+ *     when the parent has not yet supplied a valid window. When
+ *     disabled for a missing/invalid window an inline empty-state
+ *     hint explains why, so the control is never silently dead.
  *   - Title attribute carries the long-form explanation so a
  *     user hovering for a tooltip understands the privacy
  *     contract — the LLM never sees raw log lines, only the
@@ -139,16 +141,20 @@ function InnerSection({ fromUnix, toUnix, vehicleId }: InnerSectionProps) {
     onEvent: () => {},
   })
 
-  
   return (
     <AIFeatureCard
       title={t('liveLogs.aiSummary.title', 'Helix log/trace summary')}
       description={t(
-                'liveLogs.aiSummary.description',
-                'Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.',
-              )}
+        'liveLogs.aiSummary.description',
+        'Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.',
+      )}
       buttonLabel={t('liveLogs.aiSummary.button', 'Summarize')}
       badgeLabel={t('liveLogs.aiSummary.badge', 'Helix')}
+      emptyHint={
+        windowAcceptable
+          ? undefined
+          : t('liveLogs.aiSummary.emptyHint', 'Waiting for a valid log window…')
+      }
       canStart={windowAcceptable}
       stream={stream}
     />
