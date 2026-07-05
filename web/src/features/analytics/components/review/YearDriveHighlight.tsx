@@ -24,6 +24,19 @@ export function YearDriveHighlight({ drive, label, icon: Icon }: Props) {
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
+  // Derived display strings. The API types these fields as non-null, but a
+  // partial Year-in-Review payload can surface null/NaN at runtime, so every
+  // read is null-safe. They are only rendered in the populated branch below.
+  const distanceDisplay = fmtInt(
+    convertDistanceFromSI((drive?.distance_km ?? 0) * 1000, distanceUnit),
+  );
+  const durationDisplay = formatDuration(drive?.duration_min ?? 0);
+  const efficiencyWhKm = drive?.efficiency_wh_km ?? 0;
+  const efficiencyDisplay =
+    efficiencyWhKm > 0
+      ? fmtInt(distanceUnit === 'mi' ? efficiencyWhKm * KM_PER_MILE : efficiencyWhKm)
+      : '—';
+
   return (
     <GlassPanel className="flex h-full flex-col gap-3 p-4 sm:p-5">
       <div className="flex items-center gap-2">
@@ -46,41 +59,45 @@ export function YearDriveHighlight({ drive, label, icon: Icon }: Props) {
 
           <div className="mt-auto grid grid-cols-3 gap-2">
             <div>
-              <MetricValue className="text-xl sm:text-2xl">
-                {fmtInt(convertDistanceFromSI((drive.distance_km ?? 0) * 1000, distanceUnit))}
-              </MetricValue>
+              <MetricValue className="text-xl sm:text-2xl">{distanceDisplay}</MetricValue>
               <Caption>{distanceUnit}</Caption>
             </div>
             <div>
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
-                <MetricValue className="text-xl sm:text-2xl">{formatDuration(drive.duration_min ?? 0)}</MetricValue>
+                <MetricValue className="text-xl sm:text-2xl">{durationDisplay}</MetricValue>
               </div>
               <Caption>{t('yearReview.duration', 'duration')}</Caption>
             </div>
             <div>
               <div className="flex items-center gap-1">
                 <Zap className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
-                <MetricValue className="text-xl sm:text-2xl">
-                  {(drive.efficiency_wh_km ?? 0) > 0
-                    ? fmtInt(distanceUnit === 'mi' ? drive.efficiency_wh_km * KM_PER_MILE : drive.efficiency_wh_km)
-                    : '—'}
-                </MetricValue>
+                <MetricValue className="text-xl sm:text-2xl">{efficiencyDisplay}</MetricValue>
               </div>
               <Caption>{efficiencyUnit}</Caption>
             </div>
           </div>
 
-          <Caption>{drive.date}</Caption>
+          <Caption>{drive.date || '—'}</Caption>
         </>
       )}
     </GlassPanel>
   );
 }
 
-/** Format a whole-minute duration as `1h 24m` / `24m`. */
+/**
+ * Format a duration in minutes as `1h 24m` / `24m`.
+ *
+ * The total is rounded to whole minutes *before* splitting into hours/minutes
+ * so a value that rounds up onto an hour boundary rolls over correctly — e.g.
+ * `119.7 → "2h 0m"` and `59.6 → "1h 0m"`, never the broken `"1h 60m"` / `"60m"`
+ * that a split-then-round produced. Non-finite or negative inputs degrade to
+ * `"0m"` rather than rendering `"NaNm"`.
+ */
 function formatDuration(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const mins = Math.round(totalMinutes % 60);
+  const safeMinutes = Number.isFinite(totalMinutes) && totalMinutes > 0 ? totalMinutes : 0;
+  const rounded = Math.round(safeMinutes);
+  const hours = Math.floor(rounded / 60);
+  const mins = rounded % 60;
   return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 }
