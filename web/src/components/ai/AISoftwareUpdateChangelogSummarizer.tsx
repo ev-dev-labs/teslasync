@@ -63,6 +63,15 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+/**
+ * Stable no-op event handler. The update summary is accumulated by
+ * useAiStream's built-in `text` field, so this feature needs no
+ * per-event handling. A module-level reference keeps useAiStream's
+ * onEvent effect from re-running on every render (a fresh inline
+ * `() => {}` would).
+ */
+const noop = (): void => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent SoftwareUpdatesPage. Optional
@@ -101,13 +110,23 @@ interface InnerSectionProps {
  */
 function InnerSection({ vehicleId }: InnerSectionProps) {
   const { t } = useTranslation()
-  // The handler-side parser validates vehicle_id > 0; we mirror
-  // that here to keep the button disabled when the parent has not
-  // yet resolved the active vehicle. The hook is called
-  // unconditionally with the current body so the dependency graph
-  // stays stable regardless of vehicleId resolution.
+  // The handler-side parser decodes vehicle_id into an int64 and
+  // rejects anything <= 0 (HTTP 400 "vehicle_id must be > 0"); a
+  // fractional value additionally fails json.Decode into int64
+  // ("cannot unmarshal number 42.5 into … int64"). We mirror that
+  // positive-integer contract client-side so the button stays
+  // disabled — and never POSTs a body the backend would 400 —
+  // whenever the parent has not yet resolved a real active vehicle.
+  // Number.isInteger also rejects NaN / ±Infinity, so an unresolved
+  // (undefined) prop collapses to 0 in the same predicate. The hook
+  // is still called unconditionally with the current body so the
+  // dependency graph stays stable regardless of vehicleId resolution.
   const numericVehicleId =
-    typeof vehicleId === 'number' && Number.isFinite(vehicleId) ? vehicleId : 0
+    typeof vehicleId === 'number' &&
+    Number.isInteger(vehicleId) &&
+    vehicleId > 0
+      ? vehicleId
+      : 0
   const body = useMemo(
     () => ({ vehicle_id: numericVehicleId }),
     [numericVehicleId],
@@ -115,7 +134,7 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/software-updates/summarize',
     body,
-    onEvent: () => {},
+    onEvent: noop,
   })
   const haveInputs = numericVehicleId > 0
   return (
