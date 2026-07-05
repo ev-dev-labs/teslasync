@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Input, Button, Heading, HelperText } from '@/components/ui';
 import type { CommandDef } from '../commands';
@@ -12,30 +12,49 @@ interface CommandInputDialogProps {
   loading?: boolean;
 }
 
-function validateField(
+/**
+ * A validation failure expressed as a translation instruction rather than a
+ * baked English string, so the message renders through i18n at the display
+ * boundary. `values` feeds i18next interpolation (e.g. `{{min}}`).
+ */
+export interface FieldValidationError {
+  key: string;
+  fallback: string;
+  values?: Record<string, number>;
+}
+
+export function validateField(
   value: string,
   validation?: string,
   min?: number,
   max?: number,
-): string | null {
+): FieldValidationError | null {
   const trimmed = value.trim();
-  if (!trimmed) return 'Required';
+  if (!trimmed) return { key: 'commands.input.required', fallback: 'Required' };
 
   switch (validation) {
     case 'pin':
-      return /^\d{4}$/.test(trimmed) ? null : 'Enter a 4-digit PIN';
+      return /^\d{4}$/.test(trimmed)
+        ? null
+        : { key: 'commands.input.pin', fallback: 'Enter a 4-digit PIN' };
     case 'number': {
       const num = parseInt(trimmed, 10);
-      if (isNaN(num) || String(num) !== trimmed) return 'Enter a whole number';
-      if (min != null && num < min) return `Minimum: ${min}`;
-      if (max != null && num > max) return `Maximum: ${max}`;
+      if (isNaN(num) || String(num) !== trimmed)
+        return { key: 'commands.input.wholeNumber', fallback: 'Enter a whole number' };
+      if (min != null && num < min)
+        return { key: 'commands.input.min', fallback: 'Minimum: {{min}}', values: { min } };
+      if (max != null && num > max)
+        return { key: 'commands.input.max', fallback: 'Maximum: {{max}}', values: { max } };
       return null;
     }
     case 'decimal': {
       const num = parseFloat(trimmed);
-      if (isNaN(num)) return 'Enter a valid number';
-      if (min != null && num < min) return `Minimum: ${min}`;
-      if (max != null && num > max) return `Maximum: ${max}`;
+      if (isNaN(num))
+        return { key: 'commands.input.decimal', fallback: 'Enter a valid number' };
+      if (min != null && num < min)
+        return { key: 'commands.input.min', fallback: 'Minimum: {{min}}', values: { min } };
+      if (max != null && num > max)
+        return { key: 'commands.input.max', fallback: 'Maximum: {{max}}', values: { max } };
       return null;
     }
     default:
@@ -69,7 +88,7 @@ export function CommandInputDialog({
   };
 
   const [values, setValues] = useState<Record<string, string>>(buildInitialValues);
-  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [errors, setErrors] = useState<Record<string, FieldValidationError | null>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -101,16 +120,16 @@ export function CommandInputDialog({
     setErrors(prev => ({ ...prev, [name]: validateField(values[name] ?? '', v, mn, mx) }));
   };
 
-  const isValid = (): boolean => {
+  const isFormValid = useMemo((): boolean => {
     if (fields) {
       return fields.every(f => validateField(values[f.name] ?? '', f.validation, f.min, f.max) === null);
     }
     return validateField(values[ic.paramName] ?? '', ic.validation, ic.min, ic.max) === null;
-  };
+  }, [values, fields, ic]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const newErrors: Record<string, string | null> = {};
+    const newErrors: Record<string, FieldValidationError | null> = {};
     const newTouched: Record<string, boolean> = {};
     let valid = true;
 
@@ -140,6 +159,11 @@ export function CommandInputDialog({
     }
   };
 
+  // Translate a validation descriptor at the render boundary so error copy
+  // respects the active language (and i18next interpolation for min/max).
+  const errorText = (err: FieldValidationError | null | undefined): string | undefined =>
+    err ? t(err.key, err.fallback, err.values) : undefined;
+
   const Icon = def.icon;
   const resolveInputType = (v?: string) =>
     v === 'pin' ? 'password' : 'text';
@@ -153,6 +177,7 @@ export function CommandInputDialog({
       open={open}
       onClose={onClose}
       size="sm"
+      ariaLabel={t(def.labelKey, def.labelFallback)}
       className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-[var(--border-subtle)]"
     >
       <div onKeyDown={handleKeyDown}>
@@ -183,7 +208,7 @@ export function CommandInputDialog({
                 value={values[field.name] ?? ''}
                 onChange={e => handleChange(field.name, e.target.value)}
                 onBlur={() => handleBlur(field.name)}
-                error={touched[field.name] ? (errors[field.name] ?? undefined) : undefined}
+                error={touched[field.name] ? errorText(errors[field.name]) : undefined}
                 autoComplete="off"
                 className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
@@ -198,7 +223,7 @@ export function CommandInputDialog({
               value={values[ic.paramName] ?? ''}
               onChange={e => handleChange(ic.paramName, e.target.value)}
               onBlur={() => handleBlur(ic.paramName)}
-              error={touched[ic.paramName] ? (errors[ic.paramName] ?? undefined) : undefined}
+              error={touched[ic.paramName] ? errorText(errors[ic.paramName]) : undefined}
               autoComplete="off"
               className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
@@ -219,7 +244,7 @@ export function CommandInputDialog({
               variant="primary"
               size="sm"
               loading={loading}
-              disabled={!isValid()}
+              disabled={!isFormValid}
               className="bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 border border-neon-cyan/30"
             >
               {t('common.send', 'Send')}
