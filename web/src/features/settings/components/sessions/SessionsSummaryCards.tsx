@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MonitorSmartphone, ShieldCheck, Globe, Clock } from 'lucide-react'
 
@@ -47,10 +48,21 @@ export function SessionsSummaryCards({
     ? formatRelativeTime(lastActive)
     : t('account.sessions.kpi.never', 'Never')
 
+  // QueryError renders `null` for a falsy error, so an `isError` flag paired
+  // with a nullish `error` would collapse to a blank panel. Fall back to a
+  // generic error so the error state always shows recovery copy + Retry.
+  const displayError = useMemo(
+    () => error ?? new Error('Session list unavailable'),
+    [error],
+  )
+
   return (
-    <section aria-label={t('account.sessions.summaryAria', 'Session summary')}>
+    <section
+      aria-label={t('account.sessions.summaryAria', 'Session summary')}
+      aria-busy={isLoading}
+    >
       {isError ? (
-        <QueryError error={error} onRetry={onRetry} />
+        <QueryError error={displayError} onRetry={onRetry} />
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {isLoading
