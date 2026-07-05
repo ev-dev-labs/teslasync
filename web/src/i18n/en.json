@@ -5368,7 +5368,8 @@
       "title": "Draft a schedule with Helix",
       "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically — review the proposed window and click Schedule below to apply it.",
       "badge": "Helix",
-      "generateButton": "Draft a schedule"
+      "generateButton": "Draft a schedule",
+      "emptyHint": "Select a vehicle and a rate plan to draft a schedule."
     },
     "noRateData": "No rate data available",
     "offPeak": "Off-Peak",
