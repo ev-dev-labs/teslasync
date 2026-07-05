@@ -40,12 +40,23 @@ export function PrivacyKpiCards({
   const { t } = useTranslation()
   const cp = describeConsent(consent, t)
 
+  // Even when the caller flags an error without supplying an error object,
+  // surface a retryable failure card so the band never collapses to a blank
+  // <section> — QueryError renders nothing for a falsy error.
+  const shownError =
+    isError && !error
+      ? new Error(t('account.privacy.kpi.loadError', 'Failed to load privacy policy'))
+      : error
+
   return (
     <section aria-label={t('account.privacy.kpi.aria', 'Privacy summary')}>
       {isError ? (
-        <QueryError error={error} onRetry={onRetry} />
+        <QueryError error={shownError} onRetry={onRetry} />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          aria-busy={isLoading}
+        >
           {isLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} height={76} className="rounded-xl" />
@@ -54,7 +65,7 @@ export function PrivacyKpiCards({
             <>
               <MetricCard
                 label={t('account.privacy.kpi.recent', 'Recent pages stored')}
-                value={recentCount}
+                value={recentCount ?? 0}
                 subtitle={t('account.privacy.kpi.recentMax', {
                   defaultValue: 'of {{max}} max',
                   max: RECENT_PAGES_MAX,
