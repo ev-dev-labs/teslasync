@@ -104,10 +104,10 @@ function DriveCardImpl({
 
   const metrics = (
     <>
-      <InlineMetric icon={<Gauge />} value={`${t('drives.avg', 'Avg')} ${avgSpeed} ${speedUnit}`} />
+      <InlineMetric icon={<Gauge aria-hidden />} value={`${t('drives.avg', 'Avg')} ${avgSpeed} ${speedUnit}`} />
       {drive.maxSpeedMps !== null && (
         <InlineMetric
-          icon={<TrendingUp />}
+          icon={<TrendingUp aria-hidden />}
           value={`${t('drives.max', 'Max')} ${fmtInt(toSpeedDisplay(drive.maxSpeedMps))} ${speedUnit}`}
         />
       )}
@@ -117,14 +117,14 @@ function DriveCardImpl({
           endPct={drive.endBatteryPct}
         />
       )}
-      {effConverted && (
+      {effConverted != null && (
         <span className="flex items-center gap-1" style={{ color: score.color }}>
-          <Zap className="h-3 w-3" /> {fmtInt(effConverted)} {efficiencyUnit}
+          <Zap className="h-3 w-3" aria-hidden /> {fmtInt(effConverted)} {efficiencyUnit}
         </span>
       )}
       {formatEnergyCost && hasBattery && drive.startBatteryPct != null && drive.endBatteryPct != null && drive.startBatteryPct > drive.endBatteryPct && (
         <span className="flex items-center gap-1 text-emerald-300">
-          <DollarSign className="h-3 w-3" />
+          <DollarSign className="h-3 w-3" aria-hidden />
           ~{formatEnergyCost((drive.startBatteryPct - drive.endBatteryPct) * 0.75)}
         </span>
       )}
