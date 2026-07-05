@@ -9857,6 +9857,8 @@
     "name": "Name",
     "namePlaceholder": "View name",
     "empty": "No saved views yet",
+    "loading": "Loading saved views…",
+    "error": "Unable to load saved views",
     "emptyQuery": "No filters",
     "appliedBadge": "View",
     "clearApplied": "Clear applied view",
