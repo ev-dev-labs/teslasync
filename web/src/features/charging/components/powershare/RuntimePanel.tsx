@@ -28,8 +28,16 @@ export function RuntimePanel({
 }: RuntimePanelProps) {
   const { t } = useTranslation();
   const destination = humanizeEnum(shareType, POWERSHARE_SIGNALS.type);
+
+  // A non-finite numeric signal (NaN / ±Infinity from a malformed observation)
+  // still satisfies `!= null`, so it would otherwise reach MetricBar and render
+  // `width: NaN%`. Narrow to a finite value here and treat everything else as
+  // "no reading" so the bar is simply omitted rather than painted broken.
+  const power = powerKw != null && Number.isFinite(powerKw) ? powerKw : null;
+  const hours = hoursLeft != null && Number.isFinite(hoursLeft) ? hoursLeft : null;
+
   const hasData =
-    status != null || shareType != null || powerKw != null || hoursLeft != null;
+    status != null || shareType != null || power != null || hours != null;
 
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -69,23 +77,23 @@ export function RuntimePanel({
             </div>
           )}
 
-          {powerKw != null && (
+          {power != null && (
             <MetricBar
               label={t('powershare.runtime.outputPower', 'Output Power')}
-              value={powerKw}
-              max={Math.max(powerPeak, powerKw, 1)}
+              value={power}
+              max={Math.max(Number.isFinite(powerPeak) ? powerPeak : 0, power, 1)}
               color={POWER_COLOR}
-              sublabel={`${fmtNumber(powerKw, 2)} kW`}
+              sublabel={`${fmtNumber(power, 2)} kW`}
             />
           )}
 
-          {hoursLeft != null && (
+          {hours != null && (
             <MetricBar
               label={t('powershare.runtime.hoursRemaining', 'Hours Remaining')}
-              value={hoursLeft}
-              max={Math.max(hoursPeak, hoursLeft, 1)}
+              value={hours}
+              max={Math.max(Number.isFinite(hoursPeak) ? hoursPeak : 0, hours, 1)}
               color={HOURS_COLOR}
-              sublabel={`${fmtNumber(hoursLeft, 1)} h`}
+              sublabel={`${fmtNumber(hours, 1)} h`}
             />
           )}
         </div>
