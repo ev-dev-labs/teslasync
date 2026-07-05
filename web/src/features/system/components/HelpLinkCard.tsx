@@ -56,7 +56,10 @@ export function HelpLinkCard({ link }: HelpLinkCardProps) {
       >
         <div className="flex items-start justify-between gap-3">
           <IconBox color={link.accent}>
-            <Icon className="h-5 w-5" aria-hidden="true" />
+            {/* Guard a missing icon reference: HelpLink data is config-driven,
+                and one undefined `Icon` would otherwise throw "Element type is
+                invalid" and blank the entire Help page rather than this one card. */}
+            {Icon ? <Icon className="h-5 w-5" aria-hidden="true" /> : null}
           </IconBox>
           <ArrowRight
             className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--text-primary)]"
