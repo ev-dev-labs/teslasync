@@ -49,11 +49,14 @@ export function AnimatedNumber({
   useEffect(() => {
     const from = displayRef.current;
     const to = target;
-    const durationMs = Math.max(0, duration) * 1000;
+    // Sanitise duration the same way as value: a NaN/Infinity duration would
+    // otherwise poison durationMs and freeze the counter on a non-finite frame
+    // (progress = elapsed / NaN → NaN, which never reaches 1 to complete).
+    const durationMs = Math.max(0, safeNumber(duration)) * 1000;
 
     // Skip the tween and land on the value when animating is pointless or
-    // unwanted: a non-positive duration, no delta to cover, or a user who has
-    // requested reduced motion.
+    // unwanted: a non-positive or non-finite duration, no delta to cover, or a
+    // user who has requested reduced motion.
     if (durationMs === 0 || from === to || prefersReducedMotion()) {
       displayRef.current = to;
       setDisplay(to);

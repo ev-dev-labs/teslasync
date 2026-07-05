@@ -186,6 +186,22 @@ describe('AnimatedNumber — edge cases', () => {
     expect(rafSpy).not.toHaveBeenCalled();
   });
 
+  it('treats a non-finite (NaN) duration as an instant jump instead of freezing on 0', () => {
+    // Regression: a NaN duration poisoned durationMs → progress = elapsed / NaN
+    // → NaN, which never satisfied `progress >= 1`, so the counter scheduled a
+    // frame, rendered NaN → "0", and never advanced to the target.
+    const { container } = render(<AnimatedNumber value={42} duration={NaN} />);
+    expect(container.textContent).toBe('42');
+    expect(container.textContent).not.toBe('0');
+    expect(rafSpy).not.toHaveBeenCalled();
+  });
+
+  it('treats an infinite duration as an instant jump', () => {
+    const { container } = render(<AnimatedNumber value={9} duration={Infinity} />);
+    expect(container.textContent).toBe('9');
+    expect(rafSpy).not.toHaveBeenCalled();
+  });
+
   it('renders 0 instead of NaN for a non-finite value', () => {
     const { container: nan } = render(<AnimatedNumber value={NaN} />);
     runToCompletion();
