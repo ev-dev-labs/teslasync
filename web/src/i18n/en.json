@@ -4023,6 +4023,8 @@
       "alertsSection": "Alerts",
       "alertsBySeverity": "Alerts by Severity",
       "alertDistribution": "Alert Distribution",
+      "alertDistributionChartLabel": "Pie chart of alerts by severity",
+      "noAlertBreakdown": "No severity breakdown to chart.",
       "batteryHealth": "Battery Health",
       "avgBatteryStart": "Avg Battery at Charge Start",
       "avgBatteryEnd": "Avg Battery at Charge End",
