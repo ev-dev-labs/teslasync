@@ -60,7 +60,22 @@ export interface AINLDashboardComposerProps {
   onApply: (draft: DashboardLayoutDraft) => void
 }
 
-function parseDashboardLayoutDraft(data: unknown): DashboardLayoutDraft | null {
+/**
+ * parseDashboardLayoutDraft narrows the untyped `tool_result.data`
+ * payload emitted by the `draft_dashboard_layout` tool into a typed
+ * {@link DashboardLayoutDraft}, or returns `null` when the envelope is
+ * malformed. It is intentionally strict: a single missing or
+ * wrong-typed top-level field collapses the whole parse to `null` so a
+ * partial draft never reaches the editor. Individual slots that fail
+ * validation are dropped (not the whole draft) so one bad panel from
+ * the LLM does not discard the rest of the layout, and grid
+ * coordinates must be finite numbers (`NaN`/`Infinity` are rejected)
+ * so a nonsensical position can never be copied into the composer.
+ *
+ * Exported for direct unit testing — production code reaches it only
+ * through {@link AINLDashboardComposer}'s stream `onEvent` handler.
+ */
+export function parseDashboardLayoutDraft(data: unknown): DashboardLayoutDraft | null {
   if (!data || typeof data !== 'object') return null
   const obj = data as Record<string, unknown>
   if (obj.status !== 'ok') return null
@@ -82,8 +97,10 @@ function parseDashboardLayoutDraft(data: unknown): DashboardLayoutDraft | null {
           const grid = sObj.grid_pos
           if (!grid || typeof grid !== 'object') return null
           const g = grid as Record<string, unknown>
-          if (typeof g.x !== 'number' || typeof g.y !== 'number') return null
-          if (typeof g.w !== 'number' || typeof g.h !== 'number') return null
+          if (typeof g.x !== 'number' || !Number.isFinite(g.x)) return null
+          if (typeof g.y !== 'number' || !Number.isFinite(g.y)) return null
+          if (typeof g.w !== 'number' || !Number.isFinite(g.w)) return null
+          if (typeof g.h !== 'number' || !Number.isFinite(g.h)) return null
           const slot: DashboardSlot = {
             panel_name: sObj.panel_name,
             grid_pos: { x: g.x, y: g.y, w: g.w, h: g.h },
@@ -119,7 +136,11 @@ function InnerSection(props: AINLDashboardComposerProps) {
   const body = useMemo(() => ({ prompt: trimmed }), [trimmed])
 
   const onEvent = useCallback((ev: AiStreamEvent) => {
-    if (ev.type === 'tool_result' && ev.name === 'draft_dashboard_layout') {
+    // Only a SUCCESSFUL draft_dashboard_layout tool call can produce a
+    // draft. A failed call (ok === false) may still carry a data
+    // payload (the tool's error envelope); parsing it must never be
+    // mistaken for a valid draft, so gate on `ev.ok` before parsing.
+    if (ev.type === 'tool_result' && ev.ok && ev.name === 'draft_dashboard_layout') {
       const parsed = parseDashboardLayoutDraft(ev.data)
       if (parsed) setDraft(parsed)
     }
