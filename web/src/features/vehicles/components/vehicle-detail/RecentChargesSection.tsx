@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BatteryCharging, ChevronRight } from 'lucide-react'
@@ -15,40 +16,78 @@ interface RecentChargesSectionProps {
   sessions: ChargingSession[] | undefined
 }
 
+/**
+ * Resolve a charging session's duration in minutes.
+ *
+ * The `/charging?vehicle_id=…` list endpoint that feeds this section serializes
+ * the raw `charging_sessions` row — `started_at` + `ended_at`, with NO
+ * precomputed `duration_min` (that field only exists on the dashboard-activity
+ * shape). Reading `s.duration_min` verbatim therefore rendered a permanent
+ * "0m" for every row. Prefer an explicit, positive `duration_min` when a caller
+ * does supply one, otherwise derive it from the start/end timestamps. An
+ * in-progress session (no `ended_at`), a reversed pair, or an unparseable
+ * timestamp collapses to 0 so `durationStr` renders "0m" instead of throwing or
+ * printing "NaN".
+ */
+export function chargeDurationMinutes(session: ChargingSession): number {
+  const explicit = session.duration_min
+  if (typeof explicit === 'number' && Number.isFinite(explicit) && explicit > 0) {
+    return explicit
+  }
+  const start = session.started_at ?? session.start_ts
+  const end = session.ended_at ?? session.end_ts
+  if (!start || !end) return 0
+  const ms = new Date(end).getTime() - new Date(start).getTime()
+  if (!Number.isFinite(ms) || ms <= 0) return 0
+  return ms / 60_000
+}
+
 function useChargeColumns(): Column<ChargingSession>[] {
   const { t } = useTranslation()
   const { formatCurrency } = useFormatting()
-  return [
-    {
-      key: 'date',
-      header: t('common.date', 'Date'),
-      render: (s) => formatDateTime(s.start_ts),
-    },
-    {
-      key: 'energy',
-      header: t('common.energy', 'Energy'),
-      render: (s) => `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`,
-      sortable: true,
-    },
-    {
-      key: 'duration',
-      header: t('common.duration', 'Duration'),
-      render: (s) => durationStr(s.duration_min),
-    },
-    {
-      key: 'cost',
-      header: t('common.cost', 'Cost'),
-      render: (s) => (s.cost != null ? formatCurrency(s.cost) : '—'),
-    },
-    {
-      key: 'battery',
-      header: t('common.battery', 'Battery'),
-      render: (s) =>
-        s.end_soc_pct != null
-          ? `${s.start_soc_pct}% → ${s.end_soc_pct}%`
-          : `${s.start_soc_pct}%`,
-    },
-  ]
+
+  return useMemo<Column<ChargingSession>[]>(
+    () => [
+      {
+        key: 'date',
+        header: t('common.date', 'Date'),
+        // The list endpoint sends `started_at`; `start_ts` is the dashboard /
+        // live-detail alias. Coalesce so the date never collapses to "—".
+        render: (s) => formatDateTime(s.started_at ?? s.start_ts),
+      },
+      {
+        key: 'energy',
+        header: t('common.energy', 'Energy'),
+        render: (s) => `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`,
+        sortable: true,
+      },
+      {
+        key: 'duration',
+        header: t('common.duration', 'Duration'),
+        render: (s) => durationStr(chargeDurationMinutes(s)),
+      },
+      {
+        key: 'cost',
+        header: t('common.cost', 'Cost'),
+        // `cost_decimal` is the SI-canonical column; `cost` is the legacy alias.
+        render: (s) => {
+          const cost = s.cost ?? s.cost_decimal
+          return cost != null ? formatCurrency(cost) : '—'
+        },
+      },
+      {
+        key: 'battery',
+        header: t('common.battery', 'Battery'),
+        render: (s) => {
+          if (s.start_soc_pct == null) return '—'
+          return s.end_soc_pct != null
+            ? `${s.start_soc_pct}% → ${s.end_soc_pct}%`
+            : `${s.start_soc_pct}%`
+        },
+      },
+    ],
+    [t, formatCurrency],
+  )
 }
 
 export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
