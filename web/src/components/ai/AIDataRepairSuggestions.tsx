@@ -55,6 +55,15 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// Stable no-op stream event handler. This feature renders the streamed
+// proposal through useAiStream's built-in delta accumulator (surfaced
+// by AiOutputPanel inside AIFeatureCard), so there is no per-event work
+// to do here. Declared at module scope so the reference is stable
+// across renders and does not re-arm useAiStream's onEvent effect on
+// every render (an inline `() => {}` would allocate a fresh handler
+// each render).
+const NOOP = (): void => {}
+
 /**
  * InnerSection is the always-rendered body of the AI data repair
  * suggestions card. The surrounding {@link withAiFeature} HOC
@@ -92,20 +101,16 @@ function InnerSection() {
   const stream = useAiStream({
     url: '/ai/system/data-repair/draft',
     body,
-    onEvent: () => {},
+    onEvent: NOOP,
   })
 
-  
   return (
     <AIFeatureCard
-      title={t(
-                  'dataRepair.aiSuggestions.title',
-                  'Helix repair suggestions',
-                )}
+      title={t('dataRepair.aiSuggestions.title', 'Helix repair suggestions')}
       description={t(
-                'dataRepair.aiSuggestions.description',
-                'Propose a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes — review the proposal here and click the canonical Save / Close / Discard button on the matching baseline form to apply it.',
-              )}
+        'dataRepair.aiSuggestions.description',
+        'Propose a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes — review the proposal here and click the canonical Save / Close / Discard button on the matching baseline form to apply it.',
+      )}
       buttonLabel={t('dataRepair.aiSuggestions.button', 'Draft repair plan')}
       badgeLabel={t('dataRepair.aiSuggestions.badge', 'Helix')}
       canStart={stream.state !== 'streaming'}
