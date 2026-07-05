@@ -1001,7 +1001,8 @@
       "average": "Average Efficiency",
       "best": "Best Session",
       "worst": "Worst Session",
-      "wallLoss": "Wall-to-Battery Loss"
+      "wallLoss": "Wall-to-Battery Loss",
+      "averageBar": "Average charging efficiency"
     },
     "specs": {
       "title": "Charger Specs Breakdown",
