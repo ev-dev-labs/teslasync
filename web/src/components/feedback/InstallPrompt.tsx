@@ -29,8 +29,18 @@ function wasDismissedRecently(): boolean {
 }
 
 function isStandaloneMode(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || (window.navigator as NavigatorWithStandalone).standalone === true
+  try {
+    if (
+      typeof window.matchMedia === 'function'
+      && window.matchMedia('(display-mode: standalone)').matches
+    ) {
+      return true
+    }
+  } catch {
+    // matchMedia can be absent (SSR / older embedded webviews) or throw on a
+    // malformed query — fall back to the iOS-only navigator.standalone signal.
+  }
+  return (window.navigator as NavigatorWithStandalone).standalone === true
 }
 
 export default function InstallPrompt() {
@@ -62,13 +72,22 @@ export default function InstallPrompt() {
   }, [])
 
   const handleInstall = useCallback(async () => {
-    if (!deferredPrompt) return
-    await deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
+    const promptEvent = deferredPrompt
+    if (!promptEvent) return
+    // `beforeinstallprompt` is single-use: once prompt() runs the browser will
+    // not let us replay the saved event. Retire the banner after the native
+    // dialog resolves regardless of the outcome — otherwise the Install button
+    // stays wired to a consumed (null) event and silently does nothing.
+    try {
+      await promptEvent.prompt()
+      await promptEvent.userChoice
+    } catch {
+      // prompt() rejects if the event was already consumed or the browser
+      // refused the request; nothing to recover — retire it below.
+    } finally {
       setVisible(false)
+      setDeferredPrompt(null)
     }
-    setDeferredPrompt(null)
   }, [deferredPrompt])
 
   const handleDismiss = useCallback(() => {
@@ -104,6 +123,9 @@ export default function InstallPrompt() {
           className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9998] mx-auto max-w-md lg:inset-x-auto lg:right-4 lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:w-[28rem]"
         >
           <div
+            role="status"
+            aria-live="polite"
+            data-testid="install-prompt"
             className="flex w-full items-start gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-primary)] shadow-xl backdrop-blur-xl sm:items-center sm:px-4"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#10b981]">
