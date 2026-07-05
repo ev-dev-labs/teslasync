@@ -1,3 +1,4 @@
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Type, RotateCcw, Sparkles } from 'lucide-react'
 
@@ -52,7 +53,7 @@ const MONO_LABELS: Record<MonoFamilyId, string> = {
 }
 
 /** Small block field label using the shared `label` typography role. */
-function FieldLabel({ children }: { children: React.ReactNode }) {
+function FieldLabel({ children }: { children: ReactNode }) {
   return (
     <Text as="div" variant="label" className="mb-2">
       {children}
@@ -70,13 +71,16 @@ function Segmented<T extends string | number>({
   options,
   value,
   onChange,
+  ariaLabel,
 }: {
   options: SegmentedOption<T>[]
   value: T
   onChange: (v: T) => void
+  /** Accessible group name so the mutually-exclusive toggles are announced together. */
+  ariaLabel?: string
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div role="group" aria-label={ariaLabel} className="grid grid-cols-3 gap-2">
       {options.map((opt) => {
         const active = opt.value === value
         return (
@@ -116,31 +120,57 @@ export function TypographySettings() {
     reset,
   } = useFont()
 
-  const sansOptions: SelectOption[] = SANS_FAMILY_IDS.map((id) => ({ value: id, label: SANS_LABELS[id] }))
-  const monoOptions: SelectOption[] = MONO_FAMILY_IDS.map((id) => ({ value: id, label: MONO_LABELS[id] }))
+  // Brand-name option lists are static; memoize so typing in a custom-font
+  // field (which re-renders on every keystroke) doesn't rebuild them.
+  const sansOptions = useMemo<SelectOption[]>(
+    () => SANS_FAMILY_IDS.map((id) => ({ value: id, label: SANS_LABELS[id] })),
+    [],
+  )
+  const monoOptions = useMemo<SelectOption[]>(
+    () => MONO_FAMILY_IDS.map((id) => ({ value: id, label: MONO_LABELS[id] })),
+    [],
+  )
 
-  const leadingOptions: SegmentedOption<number>[] = [
-    { value: LEADING_OPTIONS[0], label: t('typography.leading.tight', 'Tight') },
-    { value: LEADING_OPTIONS[1], label: t('typography.leading.normal', 'Normal') },
-    { value: LEADING_OPTIONS[2], label: t('typography.leading.relaxed', 'Relaxed') },
-  ]
-  const trackingOptions: SegmentedOption<string>[] = [
-    { value: TRACKING_OPTIONS[0], label: t('typography.tracking.tight', 'Tight') },
-    { value: TRACKING_OPTIONS[1], label: t('typography.tracking.normal', 'Normal') },
-    { value: TRACKING_OPTIONS[2], label: t('typography.tracking.wide', 'Wide') },
-  ]
-  const weightOptions: SegmentedOption<number>[] = [
-    { value: HEADING_WEIGHT_OPTIONS[0], label: t('typography.weight.medium', 'Medium') },
-    { value: HEADING_WEIGHT_OPTIONS[1], label: t('typography.weight.semibold', 'Semibold') },
-    { value: HEADING_WEIGHT_OPTIONS[2], label: t('typography.weight.bold', 'Bold') },
-  ]
+  // Each field label doubles as the accessible group name for its segmented
+  // control, so the toggle buttons are announced under a single named group.
+  const leadingLabel = t('typography.leading.label', 'Line height')
+  const trackingLabel = t('typography.tracking.label', 'Letter spacing')
+  const weightLabel = t('typography.weight.label', 'Heading weight')
 
-  const presets: { id: ReadingPresetId; label: string }[] = [
-    { id: 'default', label: t('typography.presets.default', 'Default') },
-    { id: 'comfortable', label: t('typography.presets.comfortable', 'Comfortable') },
-    { id: 'compact', label: t('typography.presets.compact', 'Compact') },
-    { id: 'legible', label: t('typography.presets.legible', 'High legibility') },
-  ]
+  const leadingOptions = useMemo<SegmentedOption<number>[]>(
+    () => [
+      { value: LEADING_OPTIONS[0], label: t('typography.leading.tight', 'Tight') },
+      { value: LEADING_OPTIONS[1], label: t('typography.leading.normal', 'Normal') },
+      { value: LEADING_OPTIONS[2], label: t('typography.leading.relaxed', 'Relaxed') },
+    ],
+    [t],
+  )
+  const trackingOptions = useMemo<SegmentedOption<string>[]>(
+    () => [
+      { value: TRACKING_OPTIONS[0], label: t('typography.tracking.tight', 'Tight') },
+      { value: TRACKING_OPTIONS[1], label: t('typography.tracking.normal', 'Normal') },
+      { value: TRACKING_OPTIONS[2], label: t('typography.tracking.wide', 'Wide') },
+    ],
+    [t],
+  )
+  const weightOptions = useMemo<SegmentedOption<number>[]>(
+    () => [
+      { value: HEADING_WEIGHT_OPTIONS[0], label: t('typography.weight.medium', 'Medium') },
+      { value: HEADING_WEIGHT_OPTIONS[1], label: t('typography.weight.semibold', 'Semibold') },
+      { value: HEADING_WEIGHT_OPTIONS[2], label: t('typography.weight.bold', 'Bold') },
+    ],
+    [t],
+  )
+
+  const presets = useMemo<{ id: ReadingPresetId; label: string }[]>(
+    () => [
+      { id: 'default', label: t('typography.presets.default', 'Default') },
+      { id: 'comfortable', label: t('typography.presets.comfortable', 'Comfortable') },
+      { id: 'compact', label: t('typography.presets.compact', 'Compact') },
+      { id: 'legible', label: t('typography.presets.legible', 'High legibility') },
+    ],
+    [t],
+  )
 
   return (
     <FadeIn delay={0.2}>
@@ -160,6 +190,7 @@ export function TypographySettings() {
         {/* Live preview — reflects the current font, scale, line-height,
             letter-spacing, and heading weight via the shared CSS vars. */}
         <div
+          role="group"
           className="space-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4"
           aria-label={t('typography.preview.aria', 'Typography preview')}
         >
@@ -251,20 +282,20 @@ export function TypographySettings() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           {/* Line height */}
           <div>
-            <FieldLabel>{t('typography.leading.label', 'Line height')}</FieldLabel>
-            <Segmented options={leadingOptions} value={prefs.leading} onChange={setLeading} />
+            <FieldLabel>{leadingLabel}</FieldLabel>
+            <Segmented options={leadingOptions} value={prefs.leading} onChange={setLeading} ariaLabel={leadingLabel} />
           </div>
 
           {/* Letter spacing */}
           <div>
-            <FieldLabel>{t('typography.tracking.label', 'Letter spacing')}</FieldLabel>
-            <Segmented options={trackingOptions} value={prefs.tracking} onChange={setTracking} />
+            <FieldLabel>{trackingLabel}</FieldLabel>
+            <Segmented options={trackingOptions} value={prefs.tracking} onChange={setTracking} ariaLabel={trackingLabel} />
           </div>
 
           {/* Heading weight */}
           <div>
-            <FieldLabel>{t('typography.weight.label', 'Heading weight')}</FieldLabel>
-            <Segmented options={weightOptions} value={prefs.headingWeight} onChange={setHeadingWeight} />
+            <FieldLabel>{weightLabel}</FieldLabel>
+            <Segmented options={weightOptions} value={prefs.headingWeight} onChange={setHeadingWeight} ariaLabel={weightLabel} />
           </div>
         </div>
 
