@@ -873,6 +873,15 @@
     "editHint": "Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.",
     "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",
     "customizeHintCta": "Add widgets",
+    "grid": {
+      "settingsLabel": "Settings for {{name}}",
+      "removeLabel": "Remove {{name}}",
+      "expandLabel": "Expand {{name}}",
+      "exitFullscreen": "Exit Fullscreen",
+      "widgetFailed": "{{name}} failed to load",
+      "emptyTitle": "No widgets yet",
+      "emptyMessage": "Add widgets to start building your dashboard."
+    },
     "catalogue": {
       "title": "Widget catalogue",
       "subtitle": "Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.",
