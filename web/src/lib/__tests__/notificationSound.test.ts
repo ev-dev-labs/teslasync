@@ -9,6 +9,7 @@ import {
   mapNotificationToCategory,
   playForNotification,
   playNotificationSound,
+  primeNotificationAudio,
   setNotificationSoundPrefs,
   type NotificationSoundCategory,
   type NotificationSoundPrefs,
@@ -465,5 +466,86 @@ describe('playForNotification', () => {
     const cat = playForNotification({ type: 'alert', severity: 'warn' })
     expect(cat).toBe('warning_alert')
     expect(audio.instance()).toBeNull()
+  })
+})
+
+describe('primeNotificationAudio', () => {
+  let audio: ReturnType<typeof withMockAudio>
+
+  beforeEach(() => {
+    resetState()
+    audio = withMockAudio()
+  })
+
+  afterEach(() => {
+    audio.restore()
+    __resetNotificationSoundForTests()
+  })
+
+  it('creates the shared AudioContext without playing any tone', () => {
+    // Unlike a volume-0 play (which short-circuits before constructing the
+    // context), priming must actually allocate a live AudioContext so a
+    // later autoplay-gated cue can sound.
+    expect(__getCachedAudioContextForTests()).toBeNull()
+    const ok = primeNotificationAudio()
+    expect(ok).toBe(true)
+    const ctx = audio.instance()
+    expect(ctx).not.toBeNull()
+    // Priming is silent — no oscillators/gains are ever scheduled.
+    expect(ctx!.oscillators.length).toBe(0)
+    expect(ctx!.gains.length).toBe(0)
+  })
+
+  it('reuses the cached context on repeat calls (only one ctor)', () => {
+    primeNotificationAudio()
+    primeNotificationAudio()
+    primeNotificationAudio()
+    expect(audio.count()).toBe(1)
+  })
+
+  it('returns false when no AudioContext constructor is available', () => {
+    audio.restore()
+    const w = window as unknown as Record<string, unknown>
+    const prevAC = w.AudioContext
+    const prevWebkit = w.webkitAudioContext
+    w.AudioContext = undefined
+    w.webkitAudioContext = undefined
+    try {
+      expect(primeNotificationAudio()).toBe(false)
+      expect(__getCachedAudioContextForTests()).toBeNull()
+    } finally {
+      w.AudioContext = prevAC
+      w.webkitAudioContext = prevWebkit
+    }
+  })
+
+  it('resumes a context that starts suspended (autoplay unlock)', () => {
+    audio.restore()
+    const resume = vi.fn(() => Promise.resolve())
+    const w = window as unknown as Record<string, unknown>
+    const prevAC = w.AudioContext
+    const prevWebkit = w.webkitAudioContext
+    class SuspendedCtx {
+      state = 'suspended'
+      resume = resume
+      currentTime = 0
+      destination = {}
+      createOscillator() {
+        return { connect: vi.fn(), start: vi.fn(), stop: vi.fn(), frequency: { value: 0 }, type: 'sine' }
+      }
+      createGain() {
+        return { gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }
+      }
+    }
+    w.AudioContext = SuspendedCtx as unknown as typeof AudioContext
+    w.webkitAudioContext = undefined
+    try {
+      const ok = primeNotificationAudio()
+      expect(ok).toBe(true)
+      expect(resume).toHaveBeenCalledTimes(1)
+    } finally {
+      w.AudioContext = prevAC
+      w.webkitAudioContext = prevWebkit
+    }
   })
 })

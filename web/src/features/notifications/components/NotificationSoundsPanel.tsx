@@ -6,6 +6,7 @@ import { InlineCallout } from '@/components/feedback';
 import {
   NOTIFICATION_SOUND_CATEGORIES,
   playNotificationSound,
+  primeNotificationAudio,
   setNotificationSoundPrefs,
   useNotificationSoundPrefs,
   type NotificationSoundCategory,
@@ -42,12 +43,18 @@ export function NotificationSoundsPanel({ className }: NotificationSoundsPanelPr
   const handleTestSound = (category: NotificationSoundCategory) => {
     // Force a play even if master is off — the Test button is itself a user
     // gesture and is the primary way to verify (and authorise) the cue.
+    const volume = soundPrefs.volume ?? 0;
     const result = playNotificationSound(category, {
       master: true,
       perCategory: { ...soundPrefs.perCategory, [category]: true },
-      volume: soundPrefs.volume <= 0 ? 0.5 : soundPrefs.volume,
+      volume: volume <= 0 ? 0.5 : volume,
     });
-    if (!result.played && result.reason === 'no_audio_context') {
+    if (result.played) {
+      // A cue that actually played proves the browser has authorised
+      // playback, so the one-time autoplay hint is no longer useful.
+      setAutoplayHintDismissed(true);
+    } else if (result.reason === 'no_audio_context') {
+      // Audio is still blocked — keep the hint visible so the user retries.
       setAutoplayHintDismissed(false);
     }
   };
@@ -55,13 +62,11 @@ export function NotificationSoundsPanel({ className }: NotificationSoundsPanelPr
   const handleMasterToggle = (next: boolean) => {
     setNotificationSoundPrefs({ master: next });
     if (next) {
-      // First master-on toggle counts as a user gesture; pre-create the
-      // AudioContext (volume 0) so the next SSE-driven cue may play.
-      playNotificationSound('info_alert', {
-        master: true,
-        perCategory: { ...soundPrefs.perCategory, info_alert: true },
-        volume: 0,
-      });
+      // Enabling sounds is a user gesture — prime (create + resume) the
+      // shared AudioContext now so a later SSE-driven cue isn't blocked by
+      // the browser autoplay policy. Priming is silent; the hint below still
+      // asks the user to click a Test button once to confirm playback.
+      primeNotificationAudio();
     }
   };
 
