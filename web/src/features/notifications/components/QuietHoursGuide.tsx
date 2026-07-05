@@ -6,7 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Info, Moon, ShieldCheck, Sparkles } from 'lucide-react';
 import { GlassPanel, IconBox, PanelTitle, Badge, Text } from '@/components/ui';
 import type { BadgeProps } from '@/components/ui';
@@ -26,6 +26,11 @@ interface SeverityRow {
 
 export function QuietHoursGuide() {
   const { t } = useTranslation();
+  // Stable ids so the panel exposes itself as a labelled region and the
+  // severity legend's list is programmatically tied to its (non-heading)
+  // caption — both improve screen-reader navigation of this static panel.
+  const titleId = useId();
+  const severityTitleId = useId();
 
   const steps: GuideStep[] = [
     {
@@ -76,13 +81,13 @@ export function QuietHoursGuide() {
   ];
 
   return (
-    <GlassPanel className="space-y-4 p-4 sm:p-5">
+    <GlassPanel role="region" aria-labelledby={titleId} className="space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
         <IconBox color="purple">
           <Info className="h-5 w-5" aria-hidden="true" />
         </IconBox>
         <div className="min-w-0">
-          <PanelTitle>{t('notifications.quietHours.guide.title', 'How quiet hours work')}</PanelTitle>
+          <PanelTitle id={titleId}>{t('notifications.quietHours.guide.title', 'How quiet hours work')}</PanelTitle>
           <Text as="p" variant="caption">
             {t('notifications.quietHours.guide.subtitle', 'Defer non-critical alerts on your own schedule.')}
           </Text>
@@ -101,10 +106,10 @@ export function QuietHoursGuide() {
       </ul>
 
       <div className="space-y-2 border-t border-[var(--border-subtle)] pt-4">
-        <Text as="p" variant="label">
+        <Text as="p" variant="label" id={severityTitleId}>
           {t('notifications.quietHours.guide.severityTitle', 'Severity levels')}
         </Text>
-        <ul className="space-y-2">
+        <ul className="space-y-2" aria-labelledby={severityTitleId}>
           {severities.map((row) => (
             <li key={row.key} className="flex items-center gap-2">
               <Badge variant={row.variant} size="sm" className="shrink-0">
