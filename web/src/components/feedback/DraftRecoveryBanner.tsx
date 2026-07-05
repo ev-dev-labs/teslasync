@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { AlertBanner } from './AlertBanner'
@@ -47,6 +47,15 @@ export function DraftRecoveryBanner({
   const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(false)
 
+  // When the underlying draft is cleared (discarded upstream or the form was
+  // saved), reset the local acknowledgement so a *subsequent* draft surfaces
+  // the banner again. Without this, an always-mounted host (e.g. the settings
+  // form, which never unmounts the banner) that dismisses once would suppress
+  // every future recovery banner for the page's lifetime.
+  useEffect(() => {
+    if (!hasDraft) setDismissed(false)
+  }, [hasDraft])
+
   if (!hasDraft || dismissed) return null
 
   const when = draftSavedAt
@@ -73,7 +82,10 @@ export function DraftRecoveryBanner({
   return (
     <AlertBanner
       variant="info"
-      icon={<Info className="h-4 w-4" />}
+      icon={<Info className="h-4 w-4" aria-hidden="true" />}
+      role="status"
+      aria-live="polite"
+      data-testid="draft-recovery-banner"
     >
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex-1 min-w-0">{message}</span>
@@ -82,6 +94,7 @@ export function DraftRecoveryBanner({
             variant="ghost"
             size="sm"
             onClick={handleRestore}
+            data-testid="draft-recovery-use"
           >
             {t('draft.useDraft', 'Use draft')}
           </Button>
@@ -89,6 +102,7 @@ export function DraftRecoveryBanner({
             variant="secondary"
             size="sm"
             onClick={handleDiscard}
+            data-testid="draft-recovery-discard"
           >
             {t('draft.discardDraft', 'Discard draft')}
           </Button>
