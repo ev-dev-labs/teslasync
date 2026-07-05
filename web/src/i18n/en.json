@@ -10050,6 +10050,7 @@
       "sunroofInstalled": "Sunroof",
       "softwareVersion": "Software",
       "vehicleConfig": "Vehicle Configuration",
+      "noVehicleConfig": "No configuration data available",
       "title": "Vehicle Detail",
       "wakeSuccess": "Wake command sent",
       "wakeFailed": "Failed to wake vehicle",
