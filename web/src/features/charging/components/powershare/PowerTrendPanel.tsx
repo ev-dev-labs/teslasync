@@ -20,6 +20,10 @@ interface PowerTrendPanelProps {
 /** Hero panel — instantaneous Powershare output (kW) over recent readings. */
 export function PowerTrendPanel({ points, isLoading, error, onRetry }: PowerTrendPanelProps) {
   const { t } = useTranslation();
+  // Null-safety: the prop is typed `TrendPoint[]`, but an in-flight/errored
+  // upstream query can hand us `undefined`. Guard before `.length`/`.map` so a
+  // transient nullish payload routes to the empty state instead of throwing.
+  const data = points ?? [];
 
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
@@ -31,7 +35,7 @@ export function PowerTrendPanel({ points, isLoading, error, onRetry }: PowerTren
         <Skeleton height={240} />
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : points.length === 0 ? (
+      ) : data.length === 0 ? (
         <EmptyState /* no-action: transient — chart fills once telemetry streams */
           icon={<Power className="h-8 w-8" />}
           message={t(
@@ -40,9 +44,13 @@ export function PowerTrendPanel({ points, isLoading, error, onRetry }: PowerTren
           )}
         />
       ) : (
-        <div className="h-56 sm:h-64 xl:h-72">
+        <div
+          className="h-56 sm:h-64 xl:h-72"
+          role="img"
+          aria-label={t('powershare.powerTrend.ariaLabel', 'Output power trend chart')}
+        >
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={points}>
+            <AreaChart data={data}>
               <defs>
                 <ChartGradient id="powershare-power" color={POWER_COLOR} />
               </defs>
