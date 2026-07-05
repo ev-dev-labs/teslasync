@@ -4,6 +4,7 @@ import { Shield, AlertTriangle, TrendingUp } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { VisuallyHidden } from '@/components/a11y';
 import { cn } from '@/lib/cn';
 
 import type { HealthStatus, Recommendation } from './constants';
@@ -108,29 +109,41 @@ export function HealthRecommendations({ overallHealth }: HealthRecommendationsPr
           {t('drivetrain.recommendations', 'Health Recommendations')}
         </PanelTitle>
         <StaggerContainer className="space-y-3">
-          {recommendations.map((tip) => (
-            <StaggerItem key={tip.key}>
-              <div
-                className={cn(
-                  'flex items-start gap-3 rounded-lg border px-4 py-3',
-                  tip.priority === 'high'
-                    ? 'border-neon-red/20 bg-neon-red/5'
-                    : tip.priority === 'medium'
-                      ? 'border-neon-amber/20 bg-neon-amber/5'
-                      : 'border-[var(--border-subtle)] bg-white/[0.02]',
-                )}
-              >
-                {tip.priority === 'high' ? (
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
-                ) : tip.priority === 'medium' ? (
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
-                ) : (
-                  <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
-                )}
-                <Text as="p" size="sm" color="secondary">{tip.text}</Text>
-              </div>
-            </StaggerItem>
-          ))}
+          {recommendations.map((tip) => {
+            // Priority is otherwise signalled only through the row's colour and
+            // an aria-hidden icon (WCAG 1.4.1 — Use of Color). Surface an
+            // equivalent text cue so assistive-tech users perceive urgency.
+            const srPriority =
+              tip.priority === 'high'
+                ? t('drivetrain.priority.urgent', 'Urgent recommendation:')
+                : tip.priority === 'medium'
+                  ? t('drivetrain.priority.important', 'Important recommendation:')
+                  : null;
+            return (
+              <StaggerItem key={tip.key}>
+                <div
+                  className={cn(
+                    'flex items-start gap-3 rounded-lg border px-4 py-3',
+                    tip.priority === 'high'
+                      ? 'border-neon-red/20 bg-neon-red/5'
+                      : tip.priority === 'medium'
+                        ? 'border-neon-amber/20 bg-neon-amber/5'
+                        : 'border-[var(--border-subtle)] bg-white/[0.02]',
+                  )}
+                >
+                  {tip.priority === 'high' ? (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
+                  ) : tip.priority === 'medium' ? (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                  ) : (
+                    <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                  )}
+                  {srPriority ? <VisuallyHidden>{`${srPriority} `}</VisuallyHidden> : null}
+                  <Text as="p" size="sm" color="secondary">{tip.text}</Text>
+                </div>
+              </StaggerItem>
+            );
+          })}
         </StaggerContainer>
       </GlassPanel>
     </FadeIn>
