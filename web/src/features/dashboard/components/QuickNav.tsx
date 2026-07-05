@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Route, BatteryCharging, Gauge, Activity, ChevronRight } from 'lucide-react';
@@ -10,27 +11,36 @@ const NAV_ITEMS = [
   { to: '/battery', icon: Activity, labelKey: 'nav.battery', label: 'Battery', descKey: 'nav.batteryDesc', desc: 'Health & degradation', color: '#f59e0b' },
 ] as const;
 
-export function QuickNav() {
+function QuickNavComponent() {
   const { t } = useTranslation('dashboard');
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {NAV_ITEMS.map((nav) => (
-        <Link key={nav.to} to={nav.to} className="group">
+    <nav
+      aria-label={t('quickNav.label', 'Quick navigation')}
+      className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+    >
+      {NAV_ITEMS.map((item) => (
+        <Link key={item.to} to={item.to} className="group">
           <GlassPanel hover className="p-4 transition-all group-hover:border-white/[0.12]">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg p-2" style={{ backgroundColor: `${nav.color}10` }}>
-                <nav.icon className="h-5 w-5" style={{ color: nav.color }} />
+              <div className="rounded-lg p-2" style={{ backgroundColor: `${item.color}10` }}>
+                <item.icon aria-hidden="true" className="h-5 w-5" style={{ color: item.color }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{t(nav.labelKey, nav.label)}</p>
-                <p className="text-2xs text-[var(--text-muted)]">{t(nav.descKey, nav.desc)}</p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">{t(item.labelKey, item.label)}</p>
+                <p className="text-2xs text-[var(--text-muted)]">{t(item.descKey, item.desc)}</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors" />
+              <ChevronRight aria-hidden="true" className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors" />
             </div>
           </GlassPanel>
         </Link>
       ))}
-    </div>
+    </nav>
   );
 }
+
+// Prop-less, static shortcut grid rendered on the live dashboard (a hot
+// re-render surface). Memoising keeps it from re-rendering on every parent
+// telemetry tick.
+export const QuickNav = memo(QuickNavComponent);
+QuickNav.displayName = 'QuickNav';
