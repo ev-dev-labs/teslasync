@@ -26,19 +26,19 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
           <MetricCard
             label={t('common.insideTemp', 'Inside Temp')}
             value={formatTemperature(climateData.inside_temp ?? climateData.inside_temp_c)}
-            icon={<Thermometer className="h-4 w-4" />}
+            icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
             label={t('common.outsideTemp', 'Outside Temp')}
             value={formatTemperature(climateData.outside_temp ?? climateData.outside_temp_c)}
-            icon={<Thermometer className="h-4 w-4" />}
+            icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
             label={t('vehicles.detail.driverSetpoint', 'Driver Setpoint')}
             value={formatTemperature(climateData.driver_temp_setting ?? climateData.driver_setpoint_c)}
-            icon={<Thermometer className="h-4 w-4" />}
+            icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
@@ -50,7 +50,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
                   ? String(climateData.fan_status)
                   : '—'
             }
-            icon={<Wind className="h-4 w-4" />}
+            icon={<Wind className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
@@ -60,7 +60,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
                 ? `${t('common.level', 'Level')} ${climateData.seat_heater_left}`
                 : '—'
             }
-            icon={<CircleDot className="h-4 w-4" />}
+            icon={<CircleDot className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
@@ -70,7 +70,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
                 ? `${t('common.level', 'Level')} ${climateData.seat_heater_right}`
                 : '—'
             }
-            icon={<CircleDot className="h-4 w-4" />}
+            icon={<CircleDot className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
@@ -80,7 +80,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
                 ? climateData.defrost_mode
                 : t('common.off', 'Off')
             }
-            icon={<Snowflake className="h-4 w-4" />}
+            icon={<Snowflake className="h-4 w-4" aria-hidden="true" />}
             color={climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? 'green' : 'cyan'}
           />
           <MetricCard
@@ -90,7 +90,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
                 ? t('common.on', 'On')
                 : t('common.off', 'Off')
             }
-            icon={<Flame className="h-4 w-4" />}
+            icon={<Flame className="h-4 w-4" aria-hidden="true" />}
             color={(climateData.is_ac_on ?? climateData.is_climate_on) ? 'green' : 'cyan'}
           />
         </div>
