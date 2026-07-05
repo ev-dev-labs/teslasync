@@ -1,7 +1,7 @@
 // Static curated catalog for the SQL Playground (/power/sql).
 //
-// Mirrors the Go-side AINLSQLSchemaCatalogEntry shape declared in
-// internal/api/ai_nl_sql_playground_handler.go's nlSqlPlaygroundCuratedCatalog.
+// Mirrors the Go-side SchemaCatalogEntry shape declared in
+// internal/api/ainlsql/handler.go's nlSqlPlaygroundCuratedCatalog.
 // The catalog is duplicated on the client (instead of fetched via an API hook)
 // because it is install-wide-static — it does not vary per user / per vehicle /
 // per tenant, so a round-trip would add latency without any dynamism. A future
@@ -9,18 +9,33 @@
 // the page's render tree.
 
 export interface CuratedColumn {
-  name: string;
-  type: string;
-  description: string;
+  readonly name: string;
+  readonly type: string;
+  readonly description: string;
 }
 
 export interface CuratedTable {
-  name: string;
-  description: string;
-  columns: CuratedColumn[];
+  readonly name: string;
+  readonly description: string;
+  readonly columns: readonly CuratedColumn[];
 }
 
-export const CURATED_CATALOG: CuratedTable[] = [
+// Recursively freeze the curated catalog so this shared, module-level constant
+// cannot be mutated in place. Consumers derive views by copying first (e.g.
+// `[...CURATED_CATALOG].sort(...)`); freezing turns any accidental in-place
+// mutation of the shared instance into a loud TypeError instead of a silent,
+// cross-page state-corruption bug.
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object') {
+    for (const key of Object.keys(value as Record<string, unknown>)) {
+      deepFreeze((value as Record<string, unknown>)[key]);
+    }
+    Object.freeze(value);
+  }
+  return value;
+}
+
+export const CURATED_CATALOG: readonly CuratedTable[] = deepFreeze([
   {
     name: 'drives',
     description: 'Per-trip aggregates for completed drives',
@@ -84,4 +99,4 @@ export const CURATED_CATALOG: CuratedTable[] = [
       { name: 'str_value', type: 'text', description: 'string value, null if numeric' },
     ],
   },
-];
+] satisfies CuratedTable[]);
