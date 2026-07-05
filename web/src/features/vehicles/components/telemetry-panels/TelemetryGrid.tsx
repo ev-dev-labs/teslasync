@@ -24,9 +24,9 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           label={t('common.battery', 'Battery')}
           value={`${fmtInt(state.battery_level)}%`}
           color={
-            state.battery_level > 50
+            (state.battery_level ?? 0) > 50
               ? 'text-emerald-300'
-              : state.battery_level > 20
+              : (state.battery_level ?? 0) > 20
                 ? 'text-amber-300'
                 : 'text-rose-300'
           }
@@ -38,7 +38,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           icon={Gauge}
           label={t('common.speed', 'Speed')}
           value={formatSpeed(state.speed)}
-          sub={state.speed > 0 ? 'Driving' : 'Parked'}
+          sub={(state.speed ?? 0) > 0 ? t('common.driving', 'Driving') : t('common.parked', 'Parked')}
         />
       </StaggerItem>
       <StaggerItem>
@@ -60,11 +60,15 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={BatteryCharging}
           label={t('common.charger', 'Charger')}
-          value={state.is_charging ? `${fmtInt(state.charger_power)} kW` : 'Not charging'}
+          value={
+            state.is_charging
+              ? `${fmtInt(state.charger_power)} kW`
+              : t('common.notCharging', 'Not Charging')
+          }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}
           sub={
-            state.is_charging && state.time_to_full_charge != null
-              ? `Full in ${fmtNumber(state.time_to_full_charge)}h`
+            state.is_charging && (state.time_to_full_charge ?? 0) > 0
+              ? `${t('vehicles.detail.fullIn', 'Full in')} ${fmtNumber(state.time_to_full_charge, 1)}h`
               : undefined
           }
         />
@@ -73,7 +77,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Eye}
           label={t('common.sentry', 'Sentry')}
-          value={state.sentry_mode ? 'Active' : 'Off'}
+          value={state.sentry_mode ? t('common.active', 'Active') : t('common.off', 'Off')}
           color={state.sentry_mode ? 'text-rose-300' : 'text-[var(--text-muted)]'}
         />
       </StaggerItem>
