@@ -13,6 +13,13 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// Stable no-op event sink. This narrator only renders the accumulated
+// `delta.text` that useAiStream already exposes as `stream.text`, so it
+// has no need for per-event callbacks. Hoisting the handler to module
+// scope keeps its identity stable across renders so useAiStream's
+// onEvent-tracking effect does not re-subscribe on every render.
+const noopEvent = () => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent BatteryHealthPage. Optional
@@ -62,16 +69,17 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/battery/health/narrate',
     body,
-    onEvent: () => {},
+    onEvent: noopEvent,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-    return (
+
+  return (
     <AIFeatureCard
       title={t('battery.aiNarrative.title', 'Explain the battery health forecast')}
       description={t(
-                'battery.aiNarrative.description',
-                'Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast \u2014 it grounds every sentence in the same numbers the chart below renders.',
-              )}
+        'battery.aiNarrative.description',
+        'Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast \u2014 it grounds every sentence in the same numbers the chart below renders.',
+      )}
       buttonLabel={t('battery.aiNarrative.generateButton', 'Narrate forecast')}
       badgeLabel={t('battery.aiNarrative.badge', 'Helix')}
       canStart={haveInputs}
