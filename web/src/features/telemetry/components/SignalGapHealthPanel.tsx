@@ -50,10 +50,10 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
 
   const segments = useMemo<BucketSegment[]>(
     () => [
-      { key: 'active', label: t('signalGap.active', 'Active (<30s)'), count: buckets.active, fill: GAP_BUCKET_COLORS.active },
-      { key: 'aging', label: t('signalGap.aging', 'Aging (<5min)'), count: buckets.aging, fill: GAP_BUCKET_COLORS.aging },
-      { key: 'stale', label: t('signalGap.stale', 'Stale (>5min)'), count: buckets.stale, fill: GAP_BUCKET_COLORS.stale },
-      { key: 'never', label: t('signalGap.neverReceived', 'Never Received'), count: buckets.never, fill: GAP_BUCKET_COLORS.never },
+      { key: 'active', label: t('signalGap.active', 'Active (<30s)'), count: buckets.active ?? 0, fill: GAP_BUCKET_COLORS.active },
+      { key: 'aging', label: t('signalGap.aging', 'Aging (<5min)'), count: buckets.aging ?? 0, fill: GAP_BUCKET_COLORS.aging },
+      { key: 'stale', label: t('signalGap.stale', 'Stale (>5min)'), count: buckets.stale ?? 0, fill: GAP_BUCKET_COLORS.stale },
+      { key: 'never', label: t('signalGap.neverReceived', 'Never Received'), count: buckets.never ?? 0, fill: GAP_BUCKET_COLORS.never },
     ],
     [buckets, t],
   );
@@ -74,7 +74,7 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
         <Skeleton height={260} />
       ) : query.isError ? (
         <QueryError error={query.error} onRetry={() => query.refetch()} />
-      ) : buckets.total === 0 ? (
+      ) : (buckets.total ?? 0) === 0 ? (
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           message={t('signalGap.noData', 'No signal data available')}
@@ -96,7 +96,7 @@ function DistributionBody({ segments, buckets }: { segments: BucketSegment[]; bu
         className="flex h-3 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
         role="img"
         aria-label={t('signalGap.stripLabel', 'Staleness distribution across {{total}} signals', {
-          total: buckets.total,
+          total: buckets.total ?? 0,
         })}
       >
         {segments.map((seg) =>
