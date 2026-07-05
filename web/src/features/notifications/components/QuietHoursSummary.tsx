@@ -81,7 +81,13 @@ export function QuietHoursSummary({ query }: QuietHoursSummaryProps) {
   const gridClass = 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4';
   const sectionLabel = t('notifications.quietHours.summary.label', 'Quiet hours summary');
 
-  if (query.isLoading) {
+  // Only the genuine first load (no cached windows yet) shows the skeleton.
+  // A background refetch keeps its previously-fetched windows, so we keep the
+  // KPIs on screen instead of flashing an empty skeleton grid over them —
+  // mirrors the firstLoad guard in the sibling InboxSummary.
+  const firstLoad = query.isLoading && windows.length === 0;
+
+  if (firstLoad) {
     return (
       <section aria-label={sectionLabel}>
         <StatGridSkeleton cards={4} />
