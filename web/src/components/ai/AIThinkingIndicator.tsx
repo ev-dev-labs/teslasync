@@ -5,7 +5,7 @@
 //
 // AIThinkingIndicator renders three shimmering skeleton lines
 // (decreasing widths to mimic prose) underneath an animated
-// "AI is thinking" label with bouncing dots. Both halves use
+// "Helix is thinking" label with bouncing dots. Both halves use
 // existing tailwind animation tokens (`shimmer`, `pulse`,
 // `pulse-slow`) so no new keyframes are introduced. The cyan tint
 // matches the AI badge so the visual language is consistent across
@@ -24,9 +24,11 @@ import { HelixMark } from '@/components/branding/HelixMark'
 export interface AIThinkingIndicatorProps {
   /**
    * Optional override for the leading label (default
-   * `t('ai.common.thinking', 'AI is thinking')`). Pass a translated
+   * `t('helix.thinking', 'Helix is thinking')`). Pass a translated
    * string when the surrounding feature wants a domain-specific
-   * verb (e.g. "AI is summarising" for a summary card).
+   * verb (e.g. "Helix is summarising" for a summary card). An empty
+   * or whitespace-only value falls back to the default so the status
+   * live region is never announced blank.
    */
   label?: string
 }
@@ -42,7 +44,10 @@ export function AIThinkingIndicator({
   label,
 }: AIThinkingIndicatorProps): JSX.Element {
   const { t } = useTranslation()
-  const text = label ?? t('helix.thinking', 'Helix is thinking')
+  // Fall back to the default when no override is given OR the override is
+  // empty/whitespace — a role="status" live region must never announce a
+  // blank string, and an empty label would render a caption-less indicator.
+  const text = label?.trim() ? label : t('helix.thinking', 'Helix is thinking')
   return (
     <div
       className="flex flex-col gap-3"
