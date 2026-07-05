@@ -12,7 +12,7 @@ import { Wallet } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
-import { fmtNumber, formatBytes } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt, formatBytes } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
 import { vehicleName, type SectionState } from './helpers';
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
@@ -24,6 +24,11 @@ interface VehicleCostTableProps extends SectionState {
 export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleCostTableProps) {
   const { t } = useTranslation();
 
+  // Defensive: the page passes `data?.vehicles ?? []`, but guard here too so a
+  // partial payload (or a future caller) can never crash the render on
+  // `.length` — this section owns its own empty/loading states below.
+  const vehicleRows = vehicles ?? [];
+
   const columns = useMemo<Column<VehicleCostRow>[]>(
     () => [
       {
@@ -34,7 +39,9 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
             <Text weight="medium" color="primary">
               {vehicleName(r, t('admin.vehicleCost.unnamed', 'Vehicle #{{id}}', { id: r.vehicle_id }))}
             </Text>
-            <Caption>ID {fmtNumber(r.vehicle_id)}</Caption>
+            <Caption>
+              {t('admin.vehicleCost.rowId', 'ID {{id}}', { id: fmtInt(r.vehicle_id) })}
+            </Caption>
           </div>
         ),
       },
@@ -90,9 +97,9 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
       <SectionErrorBoundary name="vehicle-cost-table">
         {error ? (
           <QueryError error={error} onRetry={onRetry} />
-        ) : loading && vehicles.length === 0 ? (
+        ) : loading && vehicleRows.length === 0 ? (
           <Skeleton height={240} />
-        ) : vehicles.length === 0 ? (
+        ) : vehicleRows.length === 0 ? (
           // no-action: vehicles populate this view by ingesting telemetry; not a user-actionable surface
           <EmptyState
             icon={<Wallet className="h-8 w-8" />}
@@ -106,7 +113,7 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
           <DataTable
             tableId="admin:vehicle-cost"
             columns={columns}
-            data={vehicles}
+            data={vehicleRows}
             keyExtractor={(r) => r.vehicle_id}
             emptyMessage={t('admin.vehicleCost.emptyTable', 'No vehicle cost data')}
           />
