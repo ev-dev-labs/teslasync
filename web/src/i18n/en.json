@@ -9803,7 +9803,8 @@
     "topStaleTitle": "Top stale signals",
     "allFresh": "All signals are arriving on time.",
     "catalogTitle": "Signal Catalog",
-    "refresh": "Refresh signals"
+    "refresh": "Refresh signals",
+    "neverReported": "{{never}} signals have never reported."
   },
   "savedViews": {
     "title": "Saved views",
