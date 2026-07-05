@@ -3700,7 +3700,9 @@
       "badge": "Helix",
       "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
       "askButton": "Ask",
-      "inputLabel": "Your question"
+      "inputLabel": "Your question",
+      "noVehicle": "Select a vehicle to ask about its lifetime stats.",
+      "noQuestion": "Type a question to ask Helix about your lifetime stats."
     },
     "heroSubtitle": "driven across {{drives}} drives",
     "earthCompare": "That's {{x}}x around the Earth!",

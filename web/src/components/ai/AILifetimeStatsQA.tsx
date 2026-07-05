@@ -94,6 +94,26 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   const haveQuestion =
     trimmedQuestion.length > 0 && trimmedQuestion.length <= MaxQuestionChars
 
+  // Empty-state affordance: when the Ask button is disabled, tell the
+  // user WHICH precondition is missing rather than leaving a bare,
+  // unexplained disabled control (never a blank panel). The vehicle
+  // gate is reported first because it is the coarser precondition —
+  // without a vehicle in scope, no question can be answered — so a
+  // parent that has not yet resolved the active vehicle gets the most
+  // actionable hint. AIFeatureCard only renders the hint while
+  // `canStart` is false, so it disappears the moment both gates pass.
+  const emptyHint = !haveVehicle
+    ? t(
+        'lifetime.aiQA.noVehicle',
+        'Select a vehicle to ask about its lifetime stats.',
+      )
+    : !haveQuestion
+      ? t(
+          'lifetime.aiQA.noQuestion',
+          'Type a question to ask Helix about your lifetime stats.',
+        )
+      : undefined
+
   return (
     <AIFeatureCard
       title={t('lifetime.aiQA.title', 'Ask about your lifetime stats')}
@@ -103,6 +123,7 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
       )}
       buttonLabel={t('lifetime.aiQA.askButton', 'Ask')}
       badgeLabel={t('lifetime.aiQA.badge', 'Helix')}
+      emptyHint={emptyHint}
       canStart={haveVehicle && haveQuestion}
       stream={stream}
       inputSlot={
