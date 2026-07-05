@@ -9012,7 +9012,8 @@
   "commands": {
     "search": {
       "placeholder": "Search commands...",
-      "noResults": "No commands match your search"
+      "noResults": "No commands match your search",
+      "aria": "Search commands"
     },
     "toggleFavorite": "Toggle favorite",
     "cat": {
