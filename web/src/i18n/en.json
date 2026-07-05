@@ -3894,7 +3894,12 @@
     "resolveFailed": "Failed to resolve",
     "confirmTitle": "Resolve incident?",
     "confirmBody": "This will close the incident and stamp resolved_at. You can still view the timeline.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "severity": {
+      "minor": "Minor",
+      "major": "Major",
+      "critical": "Critical"
+    }
   },
   "dataRepair": {
     "title": "Data Repair",
