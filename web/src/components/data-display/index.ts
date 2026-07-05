@@ -36,7 +36,7 @@ export { MetricCard } from './MetricCard';
 export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
 export { TimelineItem } from './TimelineItem';
-export { FSMBadge } from './FSMBadge';
+export { FSMBadge, type FSMBadgeProps } from './FSMBadge';
 export { TransitionArrow } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
 export {

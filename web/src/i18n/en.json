@@ -9153,6 +9153,17 @@
     "col": {
       "state": "State",
       "count": "Count"
+    },
+    "typeLabel": {
+      "vehicle": "Vehicle",
+      "driveSession": "Drive",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "notification": "Notify",
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—"
     }
   },
   "changelog": {
