@@ -10689,7 +10689,12 @@
       "remove": "Remove this device",
       "thisDevice": "(this device)",
       "unknownAgent": "Unknown browser"
-    }
+    },
+    "checking": "Checking browser push availability…",
+    "error": {
+      "load": "Couldn't check browser push availability."
+    },
+    "retry": "Retry"
   },
   "avatar": {
     "unknown": "Unknown user",
