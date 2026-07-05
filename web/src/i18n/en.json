@@ -3905,7 +3905,11 @@
       "range": "Range",
       "degradationCycles": "Degradation & Cycles",
       "degradPct": "Degradation %",
-      "cycleCount": "Cycle Count"
+      "cycleCount": "Cycle Count",
+      "healthChartAria": "Battery health score trend over time",
+      "capacityChartAria": "Battery capacity trend over time",
+      "rangeChartAria": "Battery range trend over time",
+      "degradationChartAria": "Battery degradation and charge cycle count over time"
     },
     "charging": {
       "chargerBrands": "Charger Brands",
