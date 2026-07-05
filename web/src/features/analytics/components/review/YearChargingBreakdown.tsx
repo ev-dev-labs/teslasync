@@ -11,18 +11,19 @@ interface Props {
   data: YearReview;
 }
 
-const SLICE_COLORS = ['#f59e0b', '#6366f1', '#94a3b8'];
-
 /** How the year's charging split across Supercharger / DC fast / AC. */
 export function YearChargingBreakdown({ data }: Props) {
   const { t } = useTranslation();
 
+  // Colour travels with each slice (keyed to the connector, not to the
+  // post-filter index) so a zero-share connector being dropped never shifts
+  // the remaining connectors onto a different colour.
   const slices = useMemo(
     () =>
       [
-        { name: t('yearReview.supercharger', 'Supercharger'), value: data.supercharger_pct ?? 0 },
-        { name: t('yearReview.dcFast', 'DC Fast'), value: data.dc_fast_pct ?? 0 },
-        { name: t('yearReview.acOther', 'AC / Other'), value: data.ac_other_pct ?? 0 },
+        { name: t('yearReview.supercharger', 'Supercharger'), value: data.supercharger_pct ?? 0, color: '#f59e0b' },
+        { name: t('yearReview.dcFast', 'DC Fast'), value: data.dc_fast_pct ?? 0, color: '#6366f1' },
+        { name: t('yearReview.acOther', 'AC / Other'), value: data.ac_other_pct ?? 0, color: '#94a3b8' },
       ].filter((s) => s.value > 0),
     [data.supercharger_pct, data.dc_fast_pct, data.ac_other_pct, t],
   );
@@ -48,8 +49,8 @@ export function YearChargingBreakdown({ data }: Props) {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={slices} cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={3} dataKey="value" strokeWidth={0}>
-              {slices.map((s, i) => (
-                <Cell key={s.name} fill={SLICE_COLORS[i % SLICE_COLORS.length]} />
+              {slices.map((s) => (
+                <Cell key={s.name} fill={s.color} />
               ))}
             </Pie>
             <Tooltip content={<ChartTooltip />} />
@@ -58,11 +59,11 @@ export function YearChargingBreakdown({ data }: Props) {
       </div>
 
       <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
-        {slices.map((s, i) => (
+        {slices.map((s) => (
           <li key={s.name} className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: SLICE_COLORS[i % SLICE_COLORS.length] }}
+              style={{ backgroundColor: s.color }}
               aria-hidden="true"
             />
             <Text variant="bodySm">{s.name}</Text>
