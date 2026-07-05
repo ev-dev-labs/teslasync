@@ -32,6 +32,14 @@ export function ActivityFeedPanel({
   const { t } = useTranslation();
   const rows = entries ?? [];
 
+  // TanStack Query always populates `error` when `isError` is set, but a
+  // consumer could pass `isError` without an error object. Guard against it so
+  // the failure branch never collapses to a blank body below the title —
+  // QueryError renders `null` for a falsy error.
+  const feedError = isError
+    ? error ?? new Error(t('activity.myActivity.feed.error', 'Failed to load activity feed'))
+    : error;
+
   return (
     <GlassPanel className={className}>
       <div className="p-4 sm:p-5">
@@ -40,13 +48,18 @@ export function ActivityFeedPanel({
           {t('activity.myActivity.feed.title', 'Activity feed')}
         </PanelTitle>
         {isLoading ? (
-          <div className="space-y-4">
+          <div
+            className="space-y-4"
+            role="status"
+            aria-busy="true"
+            aria-label={t('activity.myActivity.feed.loading', 'Loading activity feed')}
+          >
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} height={40} />
             ))}
           </div>
         ) : isError ? (
-          <QueryError error={error} onRetry={onRetry} />
+          <QueryError error={feedError} onRetry={onRetry} />
         ) : (
           <RecentActivityFeed
             entries={rows}
