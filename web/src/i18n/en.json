@@ -11438,7 +11438,8 @@
     "breakdown": {
       "title": "Status Breakdown",
       "storage": "Storage Used",
-      "empty": "No export activity to summarize yet."
+      "empty": "No export activity to summarize yet.",
+      "loading": "Loading status breakdown…"
     },
     "selectExport": "Select export {{id}}",
     "downloadAria": "Download export {{id}}",
