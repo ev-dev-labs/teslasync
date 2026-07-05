@@ -20,9 +20,21 @@ interface SignalGapKpisProps {
   hasVehicle: boolean;
 }
 
+/** All-zero buckets — the render-safe fallback before an analysis exists. */
+const EMPTY_BUCKETS: GapBuckets = { total: 0, active: 0, aging: 0, stale: 0, never: 0 };
+
 export function SignalGapKpis({ buckets, freshnessPct, hasVehicle }: SignalGapKpisProps) {
   const { t } = useTranslation();
-  const num = (n: number): string | number => (hasVehicle ? n : '—');
+
+  // Null-safe reads: the page always derives a real buckets object, but a
+  // caller mid-load (or a stubbed test) can hand us `undefined`. Collapse to a
+  // zeroed shape so the band renders '—'/0 instead of throwing on `.total`.
+  const b = buckets ?? EMPTY_BUCKETS;
+  const num = (n: number): string | number => (hasVehicle ? (n ?? 0) : '—');
+  // Guard NaN/undefined so the freshness chip never shows "NaN%".
+  const freshnessLabel = hasVehicle
+    ? `${Number.isFinite(freshnessPct) ? freshnessPct : 0}%`
+    : '—';
 
   return (
     <FadeIn>
@@ -32,35 +44,35 @@ export function SignalGapKpis({ buckets, freshnessPct, hasVehicle }: SignalGapKp
       >
         <MetricCard
           label={t('signalGap.totalSignals', 'Total Signals')}
-          value={num(buckets.total)}
+          value={num(b.total)}
           icon={<Activity className="h-5 w-5" aria-hidden="true" />}
         />
         <MetricCard
           label={t('signalGap.active', 'Active (<30s)')}
-          value={num(buckets.active)}
+          value={num(b.active)}
           color="green"
           icon={<Radio className="h-5 w-5" aria-hidden="true" />}
         />
         <MetricCard
           label={t('signalGap.aging', 'Aging (<5min)')}
-          value={num(buckets.aging)}
+          value={num(b.aging)}
           color="amber"
           icon={<Timer className="h-5 w-5" aria-hidden="true" />}
         />
         <MetricCard
           label={t('signalGap.stale', 'Stale (>5min)')}
-          value={num(buckets.stale)}
+          value={num(b.stale)}
           color="red"
           icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
         />
         <MetricCard
           label={t('signalGap.neverReceived', 'Never Received')}
-          value={num(buckets.never)}
+          value={num(b.never)}
           icon={<WifiOff className="h-5 w-5" aria-hidden="true" />}
         />
         <MetricCard
           label={t('signalGap.freshness', 'Freshness')}
-          value={hasVehicle ? `${freshnessPct}%` : '—'}
+          value={freshnessLabel}
           color="cyan"
           icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
         />
