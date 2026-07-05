@@ -7,6 +7,7 @@
  * it never blanks the bento column.
  */
 
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PieChart, Clock } from 'lucide-react';
 
@@ -41,12 +42,22 @@ export function SignalLogBreakdownPanel({
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
 
-  const total = summary.totalRecords;
-  const bars = [
-    { key: 'numeric', label: t('signalLog.type.numeric', 'Numeric'), value: summary.numericPoints, color: BAR_COLORS.numeric },
-    { key: 'text', label: t('signalLog.type.text', 'Text'), value: summary.textPoints, color: BAR_COLORS.text },
-    { key: 'boolean', label: t('signalLog.type.boolean', 'Boolean'), value: summary.boolPoints, color: BAR_COLORS.boolean },
-  ];
+  // Null-safe reads: the prop is typed non-null, but the page may thread
+  // through `data?.summary` before its query resolves. Defend so the panel
+  // renders an empty/loading state instead of throwing (mirrors the
+  // `rows ?? []` guard in SignalDiffTable).
+  const total = summary?.totalRecords ?? 0;
+  const earliest = summary?.earliest ?? null;
+  const latest = summary?.latest ?? null;
+
+  const bars = useMemo(
+    () => [
+      { key: 'numeric', label: t('signalLog.type.numeric', 'Numeric'), value: summary?.numericPoints ?? 0, color: BAR_COLORS.numeric },
+      { key: 'text', label: t('signalLog.type.text', 'Text'), value: summary?.textPoints ?? 0, color: BAR_COLORS.text },
+      { key: 'boolean', label: t('signalLog.type.boolean', 'Boolean'), value: summary?.boolPoints ?? 0, color: BAR_COLORS.boolean },
+    ],
+    [summary, t],
+  );
 
   return (
     <FadeIn delay={0.1}>
@@ -60,11 +71,17 @@ export function SignalLogBreakdownPanel({
           <div className="space-y-3">
             {[0, 1, 2].map((i) => <Skeleton key={i} className="h-9" />)}
           </div>
-        ) : !hasQueried || total === 0 ? (
+        ) : !hasQueried ? (
           <EmptyState
             /* no-action: results not yet requested — the query cockpit above drives this panel. */
             icon={<PieChart className="h-8 w-8" aria-hidden="true" />}
             message={t('signalLog.composition.empty', 'Run a query to see the value-type breakdown.')}
+          />
+        ) : total === 0 ? (
+          <EmptyState
+            /* no-action: the query returned no rows for this range — the cockpit above drives a re-query. */
+            icon={<PieChart className="h-8 w-8" aria-hidden="true" />}
+            message={t('signalLog.composition.noRecords', 'No records in the selected range.')}
           />
         ) : (
           <div className="space-y-4">
@@ -88,7 +105,7 @@ export function SignalLogBreakdownPanel({
                   {t('signalLog.earliest', 'Earliest')}
                 </Text>
                 <Text as="dd" mono size="xs" color="secondary" className="text-right">
-                  {summary.earliest ? formatDateTime(summary.earliest) : '—'}
+                  {earliest ? formatDateTime(earliest) : '—'}
                 </Text>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -97,7 +114,7 @@ export function SignalLogBreakdownPanel({
                   {t('signalLog.latest', 'Latest')}
                 </Text>
                 <Text as="dd" mono size="xs" color="secondary" className="text-right">
-                  {summary.latest ? formatDateTime(summary.latest) : '—'}
+                  {latest ? formatDateTime(latest) : '—'}
                 </Text>
               </div>
             </dl>
