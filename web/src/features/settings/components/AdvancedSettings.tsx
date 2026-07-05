@@ -11,7 +11,7 @@ import { listSilenced, unsilence, clearAllSilenced } from '@/lib/confirmSilence'
  * when an unknown id appears (forward-compat for new adopters that
  * haven't shipped a translation yet).
  */
-function useSilenceKeyLabel(): (key: string) => string {
+export function useSilenceKeyLabel(): (key: string) => string {
   const { t } = useTranslation();
   return useCallback(
     (key: string) => {
@@ -100,19 +100,27 @@ export function AdvancedSettings() {
           />
         ) : (
           <ul className="divide-y divide-white/[0.06] rounded-lg border border-white/[0.06] bg-white/[0.02]">
-            {silenced.map((key) => (
-              <li key={key} className="flex items-center justify-between gap-3 px-3 py-2">
-                <Text variant="body" className="truncate">{labelFor(key)}</Text>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRestore(key)}
-                  icon={<RotateCcw className="h-3.5 w-3.5" />}
-                >
-                  {t('advanced.restoreConfirms.restore', 'Restore')}
-                </Button>
-              </li>
-            ))}
+            {silenced.map((key) => {
+              const name = labelFor(key);
+              return (
+                <li key={key} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <Text variant="body" className="truncate">{name}</Text>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRestore(key)}
+                    icon={<RotateCcw className="h-3.5 w-3.5" />}
+                    // Every row's visible label is just "Restore"; name the
+                    // specific prompt so screen readers can disambiguate the
+                    // rows (WCAG 4.1.2 / 2.4.6) while keeping "Restore" in the
+                    // accessible name (WCAG 2.5.3 Label in Name).
+                    aria-label={t('advanced.restoreConfirms.restoreOne', 'Restore {{name}}', { name })}
+                  >
+                    {t('advanced.restoreConfirms.restore', 'Restore')}
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </GlassPanel>

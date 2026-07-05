@@ -8657,6 +8657,7 @@
         "description": "Re-enable “Don’t ask again” prompts you previously silenced.",
         "empty": "No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.",
         "restore": "Restore",
+        "restoreOne": "Restore {{name}}",
         "restoreAll": "Restore all",
         "keys": {
           "discardDraft": "Discard unsaved draft",
