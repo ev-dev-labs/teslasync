@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -27,7 +28,20 @@ interface TorqueHistoryChartProps {
 export function TorqueHistoryChart({ data, loading = false }: TorqueHistoryChartProps) {
   const { t } = useTranslation();
 
-  const empty = data.length <= 1 || !data.some((d) => d.torque !== null);
+  const rows = useMemo(() => data ?? [], [data]);
+
+  // Empty when there is nothing meaningful to trace: a single (or no) snapshot,
+  // or every snapshot's torque is null (a single flat null line would otherwise
+  // render as a blank panel). Mirrors the sibling StatorTempChart.
+  const empty = useMemo(
+    () => rows.length <= 1 || !rows.some((d) => d.torque !== null),
+    [rows],
+  );
+
+  const fallbackRows = useMemo(
+    () => rows.map((d) => ({ time: d.time, torque: d.torque })),
+    [rows],
+  );
 
   return (
     <FadeIn delay={0.24}>
@@ -37,7 +51,7 @@ export function TorqueHistoryChart({ data, loading = false }: TorqueHistoryChart
         ariaLabel={t('drivetrain.torqueHistory.aria', 'Motor inverter torque output history area chart')}
         loading={loading}
         empty={empty}
-        data={data.map((d) => ({ time: d.time, torque: d.torque }))}
+        data={fallbackRows}
         dataColumns={[
           { key: 'time', label: t('drivetrain.col.time', 'Time') },
           { key: 'torque', label: t('drivetrain.col.torque', 'Torque (Nm)') },
@@ -45,7 +59,7 @@ export function TorqueHistoryChart({ data, loading = false }: TorqueHistoryChart
         height={280}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={rows}>
             <defs>
               <ChartGradient id="dtTorqueGrad" color="#00f0ff" />
             </defs>
