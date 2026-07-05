@@ -160,7 +160,10 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 help={FIELD_HELP[f.key]}
                 type={f.type === 'password' ? 'password' : 'text'}
                 value={config[f.key] ?? ''}
-                onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
+                onChange={(e) => {
+                  const { value } = e.target;
+                  setConfig((prev) => ({ ...prev, [f.key]: value }));
+                }}
                 placeholder={f.placeholder}
               />
             ))}
