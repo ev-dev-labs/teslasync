@@ -50,6 +50,34 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
     [buckets],
   );
 
+  // Rows shared by the screen-reader / forced-colors fallback table AND the
+  // CSV export. Memoised so the container receives a stable array identity and
+  // doesn't redo its table/export bookkeeping on unrelated re-renders.
+  const tableData = useMemo(
+    () => series.map((s) => ({ bucket: s.bucket_start, count: s.count })),
+    [series],
+  );
+
+  // Fallback table mirrors the visible chart: the bucket column renders the
+  // SAME localized time the X axis shows (not the raw ISO string), and counts
+  // use the same thousands-separated integer format. A null count surfaces as
+  // an em dash so a sparse series never masks a gap.
+  const dataColumns = useMemo(
+    () => [
+      {
+        key: 'bucket',
+        label: t('admin.xray.chart.cols.bucket', 'Bucket'),
+        format: (v: unknown) => (typeof v === 'string' ? formatTime(v) : '—'),
+      },
+      {
+        key: 'count',
+        label: t('admin.xray.chart.cols.count', 'Samples'),
+        format: (v: unknown) => (typeof v === 'number' ? fmtInt(v) : '—'),
+      },
+    ],
+    [t, formatTime],
+  );
+
   const isEmpty = !loading && series.length === 0;
 
   return (
@@ -66,17 +94,12 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
       loading={loading}
       empty={isEmpty}
       height={300}
-      data={series.map((s) => ({ bucket: s.bucket_start, count: s.count }))}
-      dataColumns={[
-        { key: 'bucket', label: t('admin.xray.chart.cols.bucket', 'Bucket') },
-        {
-          key: 'count',
-          label: t('admin.xray.chart.cols.count', 'Samples'),
-          format: (v) => (typeof v === 'number' ? fmtInt(v) : '—'),
-        },
-      ]}
+      data={tableData}
+      dataColumns={dataColumns}
       exportable
+      exportData={tableData}
       exportFilename="ingest-xray-buckets"
+      fullscreen
     >
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={series} margin={chartMargin}>
@@ -86,12 +109,12 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
             type="number"
             scale="time"
             domain={['dataMin', 'dataMax']}
-            tickFormatter={(v: number) => formatTime(new Date(v))}
+            tickFormatter={(v: number) => (Number.isFinite(v) ? formatTime(new Date(v)) : '—')}
             tick={axisTick}
           />
           <YAxis tick={axisTick} allowDecimals={false} />
           <Tooltip
-            labelFormatter={(v: number) => formatTime(new Date(v))}
+            labelFormatter={(v: number) => (Number.isFinite(v) ? formatTime(new Date(v)) : '—')}
             formatter={(v: number) => [fmtInt(v), t('admin.xray.chart.tooltip', 'Samples')]}
           />
           <Bar dataKey="count" fill="var(--accent-primary)" />
