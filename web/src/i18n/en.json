@@ -5367,7 +5367,12 @@
     "runToSeeTimeline": "Run an optimization to see the 24-hour rate timeline and the cheapest charge window.",
     "runToSeeSchedule": "Optimize a schedule to see the recommended charge window and apply it to your vehicle.",
     "runToSeeAlternatives": "Optimize a schedule to compare alternative charge windows.",
-    "noAlternatives": "No alternative windows for this plan."
+    "noAlternatives": "No alternative windows for this plan.",
+    "superOffPeak": "Super Off-Peak",
+    "unknownTier": "Unknown",
+    "rateTimelineChart": "24-hour electricity rate timeline",
+    "rateBarLabel": "{{hour}}: {{rate}}¢ per kWh, {{tier}}",
+    "rateBarLabelInWindow": "{{hour}}: {{rate}}¢ per kWh, {{tier}}, in charge window"
   },
   "powershare": {
     "title": "Powershare",
