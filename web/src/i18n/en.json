@@ -8776,7 +8776,8 @@
         "keys": {
           "discardDraft": "Discard unsaved draft",
           "unsavedNavigation": "Leave page with unsaved changes"
-        }
+        },
+        "restoreOne": "Restore {{name}}"
       }
     },
     "totp": {
