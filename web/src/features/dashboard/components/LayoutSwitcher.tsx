@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, Edit3, MoreHorizontal, Pin, Plus, RotateCcw, Save } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -16,7 +16,13 @@ export interface LayoutSwitcherProps {
   editMode?: boolean;
   onSwitch: (id: string) => void;
   onCreate: (name: string) => string | undefined;
-  onDuplicate?: (id: string) => void;
+  /**
+   * Duplicate the layout `id`, optionally under a caller-supplied `name`.
+   * When `name` is omitted the implementation falls back to its own
+   * `"<source> (Copy)"` convention — this keeps the Save-As prompt's typed
+   * name from being silently dropped (see {@link handleSaveAs}).
+   */
+  onDuplicate?: (id: string, name?: string) => void;
   onReset: () => void;
   onToggleEdit?: () => void;
   onPinToVehicle?: (id: string, vehicleId: number | null | undefined) => void;
@@ -53,19 +59,28 @@ export function LayoutSwitcher({
   className,
 }: LayoutSwitcherProps) {
   const { t } = useTranslation('dashboard');
-  const { vehicleId, vehicle } = useSelectedVehicle();
+  const { vehicleId, vehicles } = useSelectedVehicle();
   const { confirm, dialogProps } = useConfirm();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const active = dashboards.find((d) => d.id === activeId) ?? dashboards[0];
+  const active = useMemo(
+    () => (dashboards ?? []).find((d) => d.id === activeId) ?? (dashboards ?? [])[0],
+    [dashboards, activeId],
+  );
 
-  // Filter the layouts dropdown by current vehicle scope.
-  const visible = dashboards.filter((d) => {
-    const scope = d.vehicleId;
-    if (scope == null) return true;
-    return vehicleId != null && scope === vehicleId;
-  });
+  // Filter the layouts dropdown by current vehicle scope: user-global layouts
+  // (vehicleId == null) are always visible; a vehicle-pinned layout only when
+  // that vehicle is the one currently selected.
+  const visible = useMemo(
+    () =>
+      (dashboards ?? []).filter((d) => {
+        const scope = d.vehicleId;
+        if (scope == null) return true;
+        return vehicleId != null && scope === vehicleId;
+      }),
+    [dashboards, vehicleId],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +98,7 @@ export function LayoutSwitcher({
     };
   }, [open]);
 
-  const handleSaveAs = () => {
+  const handleSaveAs = useCallback(() => {
     setOpen(false);
     const suggestion = active ? `${active.name} (Copy)` : t('layout.newLayoutDefault', 'New Layout');
     const name = window.prompt(
@@ -93,13 +108,16 @@ export function LayoutSwitcher({
     const trimmed = name?.trim();
     if (!trimmed) return;
     if (onDuplicate && active) {
-      onDuplicate(active.id);
+      // Honor the name the user just typed instead of discarding it — the
+      // duplicate path previously ignored `trimmed` and always produced
+      // "<source> (Copy)".
+      onDuplicate(active.id, trimmed);
     } else {
       onCreate(trimmed);
     }
-  };
+  }, [active, onDuplicate, onCreate, t]);
 
-  const handleReset = async () => {
+  const handleReset = useCallback(async () => {
     setOpen(false);
     const ok = await confirm({
       title: t('layout.resetTitle', 'Reset dashboard to default?'),
@@ -111,9 +129,9 @@ export function LayoutSwitcher({
       confirmLabel: t('layout.resetConfirm', 'Reset'),
     });
     if (ok) onReset();
-  };
+  }, [confirm, onReset, t]);
 
-  const handlePinToggle = () => {
+  const handlePinToggle = useCallback(() => {
     if (!onPinToVehicle || !active) return;
     setOpen(false);
     if (active.vehicleId != null) {
@@ -121,11 +139,22 @@ export function LayoutSwitcher({
     } else if (vehicleId != null) {
       onPinToVehicle(active.id, vehicleId);
     }
-  };
+  }, [onPinToVehicle, active, vehicleId]);
 
   const activeName = active?.name ?? t('layout.untitled', 'Untitled');
-  const pinnedLabel = active?.vehicleId != null && vehicle
-    ? vehicle.display_name ?? vehicle.vin ?? `#${active.vehicleId}`
+
+  // Resolve the vehicle the ACTIVE layout is pinned to from the fleet list —
+  // not the currently-selected vehicle, which can differ from the pin. Falls
+  // back to the raw id when the pinned vehicle isn't in the loaded list.
+  const pinnedVehicle = useMemo(
+    () =>
+      active?.vehicleId == null
+        ? null
+        : vehicles.find((v) => v.id === active.vehicleId) ?? null,
+    [active?.vehicleId, vehicles],
+  );
+  const pinnedLabel = active?.vehicleId != null
+    ? pinnedVehicle?.display_name ?? pinnedVehicle?.vin ?? `#${active.vehicleId}`
     : null;
 
   return (
@@ -167,7 +196,12 @@ export function LayoutSwitcher({
             size="sm"
             onClick={onToggleEdit}
             aria-pressed={editMode}
-            title={t('layout.editTitle', editMode ? 'Exit edit (E)' : 'Edit dashboard (E)')}
+            aria-label={editMode
+              ? t('layout.editExitLabel', 'Exit edit mode')
+              : t('layout.editEnterLabel', 'Edit dashboard')}
+            title={editMode
+              ? t('layout.editTitleExit', 'Exit edit (E)')
+              : t('layout.editTitleEnter', 'Edit dashboard (E)')}
           >
             <Edit3 className="h-3.5 w-3.5" />
             <span className="ml-1 hidden md:inline">
@@ -177,11 +211,23 @@ export function LayoutSwitcher({
             </span>
           </Button>
         )}
-        <Button variant="ghost" size="sm" onClick={handleSaveAs} title={t('layout.saveAs', 'Save as new layout')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleSaveAs}
+          aria-label={t('layout.saveAs', 'Save as new layout')}
+          title={t('layout.saveAs', 'Save as new layout')}
+        >
           <Save className="h-3.5 w-3.5" />
           <span className="ml-1 hidden md:inline">{t('layout.saveAsShort', 'Save as')}</span>
         </Button>
-        <Button variant="ghost" size="sm" onClick={handleReset} title={t('layout.reset', 'Reset to default')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReset}
+          aria-label={t('layout.reset', 'Reset to default')}
+          title={t('layout.reset', 'Reset to default')}
+        >
           <RotateCcw className="h-3.5 w-3.5" />
         </Button>
       </div>

@@ -700,7 +700,7 @@ export function useDashboardLayout() {
   );
 
   const duplicateDashboard = useCallback(
-    (id: string) => {
+    (id: string, name?: string) => {
       const source = dashboards.find((d) => d.id === id);
       if (!source) return;
 
@@ -729,7 +729,7 @@ export function useDashboardLayout() {
       const duplicate: SavedDashboard = {
         ...source,
         id: newId,
-        name: `${source.name} (Copy)`,
+        name: name?.trim() || `${source.name} (Copy)`,
         icon: source.icon,
         isDefault: false,
         widgets,
