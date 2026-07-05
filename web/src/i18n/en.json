@@ -8362,6 +8362,8 @@
     "subtitle": "Vehicle orders and delivery tracking from Tesla",
     "lastSynced": "Synced",
     "refresh": "Refresh",
+    "loading": "Loading orders…",
+    "resourceName": "Orders",
     "orderId": "Order ID",
     "vin": "VIN",
     "deliveryDate": "Delivery Date",
