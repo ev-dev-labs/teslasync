@@ -33,7 +33,12 @@ export interface SnapshotInspectorProps {
   snapshot?: SignalSnapshotResponse | null;
   /** Snapshot at the previous transition (for diff mode). */
   previousSnapshot?: SignalSnapshotResponse | null;
-  /** Optional loading hint forwarded to the panel. */
+  /**
+   * Optional loading hint. Drives the empty-state spinner when no transition
+   * is selected, and — once a transition IS selected — keeps the signals
+   * section in a loading state until its snapshot arrives, instead of flashing
+   * the definitive "no signals captured" message during the fetch.
+   */
   loading?: boolean;
   /** Most recent transition (in or outside the window). */
   lastTransition?: FSMTransition | null;
@@ -211,12 +216,25 @@ export function SnapshotInspector({
           />
         </div>
 
-        {rows.length === 0 ? (
-          <div className="rounded-md border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-6 text-center text-xs text-[var(--text-muted)]">
+        {loading && !snapshot ? (
+          <div
+            data-testid="snapshot-inspector-signals-loading"
+            className="rounded-md border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-6 text-center text-xs text-[var(--text-muted)]"
+          >
+            {t('debugger.inspector.loading', 'Loading…')}
+          </div>
+        ) : rows.length === 0 ? (
+          <div
+            data-testid="snapshot-inspector-no-signals"
+            className="rounded-md border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-6 text-center text-xs text-[var(--text-muted)]"
+          >
             {t('debugger.inspector.noSignals', 'No signals captured for this transition')}
           </div>
         ) : (
-          <ul className="max-h-[480px] space-y-1 overflow-y-auto pr-1">
+          <ul
+            aria-label={t('debugger.inspector.signalsTitle', 'Signals at transition')}
+            className="max-h-[480px] space-y-1 overflow-y-auto pr-1"
+          >
             {rows.map((row) => {
               const dim = diffMode && !row.changed;
               const highlight = diffMode && row.changed;
