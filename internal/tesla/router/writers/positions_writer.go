@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/ev-dev-labs/teslasync/internal/elevation"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
@@ -63,6 +64,15 @@ import (
 type positionsWriter struct {
 	db pgxPool
 
+	// elevation resolves altitude_m for a completed (lat, lng) pair.
+	// Tesla Fleet Telemetry never emits an Elevation signal (see
+	// internal/elevation's package doc), so this is the writer's only
+	// source for that column. Defaults to elevation.NoopProvider (see
+	// newPositionsWriter) so a writer built without an elevation
+	// service configured behaves exactly as it did before this field
+	// existed — altitude_m stays NULL.
+	elevation elevation.Provider
+
 	// now is injected to allow deterministic TTL-eviction tests.
 	// Production wiring uses time.Now.
 	now func() time.Time
@@ -115,6 +125,20 @@ type positionsPending struct {
 	headingDeg  *float64
 	gpsState    *string
 	firstSeenAt time.Time
+
+	// altitudeLookedUp and altitudeM cache a successful elevation
+	// lookup across re-flushes of the same key. Per-field MQTT
+	// typically delivers heading_deg/gps_state in payloads separate
+	// from the lat/lng pair (see the router package doc), so the same
+	// (vin, ts) row commonly re-flushes 1-3 times as those companions
+	// trickle in; without this cache each re-flush would repeat the
+	// elevation lookup for an identical (lat, lng). altitudeLookedUp
+	// is set ONLY on a successful lookup (ok=true) — a failed or
+	// no-data lookup leaves it false so a later re-flush retries
+	// rather than permanently caching "no elevation" for a transient
+	// failure.
+	altitudeLookedUp bool
+	altitudeM        *float64
 }
 
 // Compile-time assertion that *positionsWriter satisfies router.Writer.
@@ -131,11 +155,18 @@ const (
 // NewPositionsWriter constructs the production positions writer. A nil
 // pool is a wiring bug and panics at process start so the
 // failure is surfaced before any payload is processed.
-func NewPositionsWriter(pool *pgxpool.Pool) router.Writer {
+//
+// elevationProvider resolves altitude_m for each completed (lat, lng)
+// fix; pass elevation.NoopProvider{} when no elevation service is
+// configured (see internal/config.ElevationConfig) so altitude_m stays
+// NULL exactly as it did before elevation support existed. A nil
+// elevationProvider is also accepted defensively and treated the same
+// as NoopProvider.
+func NewPositionsWriter(pool *pgxpool.Pool, elevationProvider elevation.Provider) router.Writer {
 	if pool == nil {
 		panic("NewPositionsWriter: pool must be non-nil")
 	}
-	return newPositionsWriter(pool)
+	return newPositionsWriter(pool, elevationProvider)
 }
 
 // newPositionsWriter is the package-private constructor that takes the
@@ -143,9 +174,13 @@ func NewPositionsWriter(pool *pgxpool.Pool) router.Writer {
 // is also the seam that production wiring would use to override
 // pendingTTL / maxPending / now in the future without bumping the
 // public surface.
-func newPositionsWriter(db pgxPool) *positionsWriter {
+func newPositionsWriter(db pgxPool, elevationProvider elevation.Provider) *positionsWriter {
+	if elevationProvider == nil {
+		elevationProvider = elevation.NoopProvider{}
+	}
 	return &positionsWriter{
 		db:               db,
+		elevation:        elevationProvider,
 		now:              time.Now,
 		pendingTTL:       defaultPositionsPendingTTL,
 		maxPending:       defaultPositionsMaxPending,
@@ -164,14 +199,18 @@ func newPositionsWriter(db pgxPool) *positionsWriter {
 //
 // $1 = VIN (string), $2 = ts (time.Time), $3 = lat (float64),
 // $4 = lng (float64), $5 = heading_deg (float64 or nil),
-// $6 = gps_state (string or nil).
-const positionsUpsertSQL = `INSERT INTO positions (vehicle_id, ts, lat, lng, heading_deg, gps_state)
-SELECT v.id, $2, $3, $4, $5, $6 FROM vehicles v WHERE v.vin = $1
+// $6 = gps_state (string or nil), $7 = altitude_m (float64 or nil,
+// from the elevation provider — COALESCEd like heading_deg/gps_state
+// so a failed lookup on a re-flush never wipes a previously-cached
+// value).
+const positionsUpsertSQL = `INSERT INTO positions (vehicle_id, ts, lat, lng, heading_deg, gps_state, altitude_m)
+SELECT v.id, $2, $3, $4, $5, $6, $7 FROM vehicles v WHERE v.vin = $1
 ON CONFLICT (vehicle_id, ts) DO UPDATE SET
   lat = EXCLUDED.lat,
   lng = EXCLUDED.lng,
   heading_deg = COALESCE(EXCLUDED.heading_deg, positions.heading_deg),
-  gps_state = COALESCE(EXCLUDED.gps_state, positions.gps_state)`
+  gps_state = COALESCE(EXCLUDED.gps_state, positions.gps_state),
+  altitude_m = COALESCE(EXCLUDED.altitude_m, positions.altitude_m)`
 
 // Write implements router.Writer for the positions destination.
 //
@@ -197,11 +236,13 @@ ON CONFLICT (vehicle_id, ts) DO UPDATE SET
 //     IS at least temporarily stored; per ADR-004 #8 transient writer
 //     buffering does NOT trigger MQTT redelivery.
 //
-//  5. If the snapshot has both lat AND lng, issue the upsert. On
-//     success the entry is RETAINED in the buffer (TTL-bounded) so
-//     late-arriving GpsHeading/GpsState for the same (vin, ts) re-
-//     flush idempotently via ON CONFLICT DO UPDATE. On failure the
-//     entry is also retained so a future Write triggers a retry.
+//  5. If the snapshot has both lat AND lng, resolve altitude_m via
+//     w.elevation (cached per key across re-flushes — see
+//     positionsPending), then issue the upsert. On success the entry
+//     is RETAINED in the buffer (TTL-bounded) so late-arriving
+//     GpsHeading/GpsState for the same (vin, ts) re-flush idempotently
+//     via ON CONFLICT DO UPDATE. On failure the entry is also retained
+//     so a future Write triggers a retry.
 //
 // Failure modes (per ADR-004 #8 these are surfaced to the router
 // caller — they MUST NOT propagate to MQTT redelivery):
@@ -341,9 +382,40 @@ func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 	if p.gpsState != nil {
 		snapGpsState = *p.gpsState
 	}
+	hadAltitude := p.altitudeLookedUp
+	var snapAltitude any
+	if hadAltitude && p.altitudeM != nil {
+		snapAltitude = *p.altitudeM
+	}
 	w.mu.Unlock()
 
-	tag, err := w.db.Exec(ctx, positionsUpsertSQL, atom.VehicleID, ts, snapLat, snapLng, snapHeading, snapGpsState)
+	// 5a. Resolve altitude_m OUTSIDE the lock, same as the DB Exec
+	// below — elevation.Provider.Lookup is a network call to the
+	// (self-hosted) elevation service. Skipped entirely when a prior
+	// flush for this key already cached a value (see positionsPending
+	// doc comment): the elevation provider is only ever consulted
+	// once per (vin, ts) fix, not once per re-flush. A failed/no-data
+	// lookup leaves snapAltitude nil for THIS flush and is retried on
+	// the next re-flush (if any) rather than cached as permanent.
+	if !hadAltitude {
+		if meters, ok, lookupErr := w.elevation.Lookup(ctx, snapLat, snapLng); ok {
+			snapAltitude = meters
+			w.mu.Lock()
+			if cur, stillPending := w.pending[key]; stillPending {
+				v := meters
+				cur.altitudeM = &v
+				cur.altitudeLookedUp = true
+			}
+			w.mu.Unlock()
+		} else if lookupErr != nil {
+			log.Debug().
+				Err(lookupErr).
+				Str("field", atom.Field).
+				Msg("positionsWriter: elevation lookup failed; altitude_m omitted for this flush")
+		}
+	}
+
+	tag, err := w.db.Exec(ctx, positionsUpsertSQL, atom.VehicleID, ts, snapLat, snapLng, snapHeading, snapGpsState, snapAltitude)
 	if err != nil {
 		return fmt.Errorf("positionsWriter[positions]: %w", err)
 	}

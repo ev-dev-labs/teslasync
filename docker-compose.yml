@@ -82,6 +82,13 @@ services:
       - DLQ_RING_CAPACITY=${DLQ_RING_CAPACITY:-200}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
       - AZURE_MAPS_API_KEY=${AZURE_MAPS_API_KEY:-}
+      # Self-hosted terrain elevation (optional — enable with:
+      # docker compose --profile telemetry up, which also starts the
+      # `elevation` service below). Tesla Fleet Telemetry never emits
+      # an Elevation signal; without this set, positions.altitude_m
+      # simply stays NULL (same as before this feature existed).
+      - ELEVATION_SERVICE_URL=${ELEVATION_SERVICE_URL:-http://elevation:8080}
+      - ELEVATION_TIMEOUT=${ELEVATION_TIMEOUT:-2s}
       # Inbound api_call_logs middleware (Phase 38-10).
       # Body capture defaults to OFF; enable only for diagnostic windows.
       - API_LOGS_INBOUND_ENABLED=${API_LOGS_INBOUND_ENABLED:-true}
@@ -591,6 +598,46 @@ services:
           memory: 256M
         reservations:
           memory: 64M
+
+  # Self-hosted terrain elevation service (optional — starts alongside
+  # Fleet Telemetry via: docker compose --profile telemetry up).
+  # Tesla Fleet Telemetry's Location signal carries only latitude and
+  # longitude (see api/proto/tesla/vehicle_data.proto's LocationValue) —
+  # elevation is never on the wire. positionsWriter (see
+  # internal/tesla/router/writers/positions_writer.go) calls this
+  # service once per completed lat/lng fix to populate
+  # positions.altitude_m.
+  #
+  # Image is akhenakh/gedtm30api (MIT-licensed, free):
+  # https://github.com/akhenakh/gedtm30api. Default COG_SOURCE points
+  # at the publicly-hosted GEDTM30 dataset (Global Ensemble Digital
+  # Terrain Model, ~30m resolution, -65..85 degrees latitude — true
+  # worldwide coverage with no SRTM-style >60N gap) and fetches +
+  # caches only the tiles your fleet actually visits, so there is no
+  # multi-hundred-GB upfront download. For a fully offline / bandwidth-
+  # constrained deployment, download the COG yourself (see that repo's
+  # README) and mount it at COG_SOURCE=/data/<file>.tiff instead.
+  elevation:
+    image: ghcr.io/akhenakh/gedtm30api:latest
+    container_name: teslasync-elevation
+    restart: unless-stopped
+    profiles:
+      - telemetry
+    environment:
+      - HTTP_PORT=8080
+      - COG_SOURCE=${ELEVATION_COG_SOURCE:-https://s3.opengeohub.org/global/edtm/gedtm_rf_m_30m_s_20060101_20151231_go_epsg.4326.3855_v20250611.tif}
+      - CACHE_MAX_SIZE=${ELEVATION_CACHE_MAX_SIZE:-1024}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/getElevation/0/0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 128M
 
   # Vehicle Command Proxy (optional — enables signed vehicle commands)
   # Routes commands through Tesla's Vehicle Command SDK for end-to-end signing.

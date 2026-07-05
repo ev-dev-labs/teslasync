@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/ev-dev-labs/teslasync/internal/elevation"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
@@ -21,7 +22,7 @@ import (
 // package). The positions writer tests add only what is positions-
 // specific: an injected clock, helpers for asserting the buffered-vs-
 // flushed boundary, and a richer SQL-shape assertion that checks all
-// six positions columns rather than the snapshot helper's single-
+// seven positions columns rather than the snapshot helper's single-
 // column upsert clause.
 
 // posTestVIN is the canonical VIN used across positions writer tests.
@@ -30,10 +31,12 @@ const posTestVIN = "5YJ3E1EA0KF000099"
 // newPositionsTestWriter builds a positions writer with the supplied
 // recorder and a frozen clock so TTL-eviction tests are deterministic.
 // The returned advance function moves the clock forward; passing 0
-// keeps the current value.
+// keeps the current value. Uses elevation.NoopProvider{} — tests that
+// specifically exercise elevation behavior construct their own writer
+// via newPositionsWriter with a fake Provider instead of this helper.
 func newPositionsTestWriter(t *testing.T, rec *recorder) (*positionsWriter, func(time.Duration)) {
 	t.Helper()
-	w := newPositionsWriter(rec)
+	w := newPositionsWriter(rec, elevation.NoopProvider{})
 	clock := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
 	var mu sync.Mutex
 	w.now = func() time.Time {
@@ -52,18 +55,19 @@ func newPositionsTestWriter(t *testing.T, rec *recorder) (*positionsWriter, func
 // assertPositionsCallShape locks the SQL string the writer uses against
 // the LOCKED upsert in positions_writer.go. This is the equivalent of
 // snapshot_base_test.go's assertCallShape but tailored to the positions
-// helper's six-column INSERT.
+// helper's seven-column INSERT.
 func assertPositionsCallShape(t *testing.T, call recordedCall) {
 	t.Helper()
 	want := []string{
 		"INSERT INTO positions",
-		"(vehicle_id, ts, lat, lng, heading_deg, gps_state)",
+		"(vehicle_id, ts, lat, lng, heading_deg, gps_state, altitude_m)",
 		"FROM vehicles v WHERE v.vin = $1",
 		"ON CONFLICT (vehicle_id, ts) DO UPDATE SET",
 		"lat = EXCLUDED.lat",
 		"lng = EXCLUDED.lng",
 		"heading_deg = COALESCE(EXCLUDED.heading_deg, positions.heading_deg)",
 		"gps_state = COALESCE(EXCLUDED.gps_state, positions.gps_state)",
+		"altitude_m = COALESCE(EXCLUDED.altitude_m, positions.altitude_m)",
 	}
 	for _, sub := range want {
 		if !strings.Contains(call.SQL, sub) {
@@ -101,7 +105,7 @@ func TestNewPositionsWriter_PanicsOnNilPool(t *testing.T) {
 			t.Errorf("panic message does not mention nil pool: %q", msg)
 		}
 	}()
-	_ = NewPositionsWriter(nil)
+	_ = NewPositionsWriter(nil, elevation.NoopProvider{})
 }
 
 // TestPositionsWriter_RouterWriterInterface gives a compile-time AND
@@ -111,7 +115,7 @@ func TestNewPositionsWriter_PanicsOnNilPool(t *testing.T) {
 // the interface assertion is caught even if the build is run with
 // caching artefacts.
 func TestPositionsWriter_RouterWriterInterface(t *testing.T) {
-	var w router.Writer = newPositionsWriter(&recorder{rows: 1})
+	var w router.Writer = newPositionsWriter(&recorder{rows: 1}, elevation.NoopProvider{})
 	if w == nil {
 		t.Fatal("constructor returned nil, expected non-nil router.Writer")
 	}
@@ -177,7 +181,7 @@ func TestPositionsWrite_LatThenLng(t *testing.T) {
 	}
 	call := rec.calls[0]
 	assertPositionsCallShape(t, call)
-	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, nil}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, nil, nil}
 	if !reflect.DeepEqual(call.Args, wantArgs) {
 		t.Errorf("args=%v, want %v", call.Args, wantArgs)
 	}
@@ -203,7 +207,7 @@ func TestPositionsWrite_LngThenLat(t *testing.T) {
 	if got := len(rec.calls); got != 1 {
 		t.Fatalf("after lat Write expected 1 db call, got %d", got)
 	}
-	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, nil}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, nil, nil}
 	if !reflect.DeepEqual(rec.calls[0].Args, wantArgs) {
 		t.Errorf("args=%v, want %v", rec.calls[0].Args, wantArgs)
 	}
@@ -251,7 +255,7 @@ func TestPositionsWrite_AllFourFieldsSamePayload(t *testing.T) {
 		t.Fatalf("after final lng expected 1 db call, got %d", got)
 	}
 
-	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), float64(180), "valid"}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), float64(180), "valid", nil}
 	if !reflect.DeepEqual(rec.calls[0].Args, wantArgs) {
 		t.Errorf("args=%v, want %v", rec.calls[0].Args, wantArgs)
 	}
@@ -286,7 +290,7 @@ func TestPositionsWrite_LateHeadingAfterFlushReFlushes(t *testing.T) {
 	if got := len(rec.calls); got != 2 {
 		t.Fatalf("after late heading expected 2 db calls, got %d", got)
 	}
-	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), float64(45), nil}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), float64(45), nil, nil}
 	if !reflect.DeepEqual(rec.calls[1].Args, wantArgs) {
 		t.Errorf("late-heading args=%v, want %v", rec.calls[1].Args, wantArgs)
 	}
@@ -311,7 +315,7 @@ func TestPositionsWrite_LateGpsStateAfterFlushReFlushes(t *testing.T) {
 	if got := len(rec.calls); got != 2 {
 		t.Fatalf("expected 2 db calls, got %d", got)
 	}
-	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, "valid"}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, "valid", nil}
 	if !reflect.DeepEqual(rec.calls[1].Args, wantArgs) {
 		t.Errorf("late-gps args=%v, want %v", rec.calls[1].Args, wantArgs)
 	}
@@ -606,7 +610,7 @@ func TestPositionsWrite_TimestampNormalisationStripsLocation(t *testing.T) {
 // catches any unguarded access to the pending map.
 func TestPositionsWrite_ConcurrentWritesNoRace(t *testing.T) {
 	rec := newConcurrentRecorder()
-	w := newPositionsWriter(rec)
+	w := newPositionsWriter(rec, elevation.NoopProvider{})
 	w.now = time.Now // real clock is fine for concurrency stress
 
 	const goroutines = 16
@@ -655,4 +659,175 @@ func (r *concurrentRecorder) Exec(_ context.Context, _ string, _ ...any) (pgconn
 
 func (r *concurrentRecorder) count() int {
 	return int(atomic.LoadInt64(&r.calls))
+}
+
+// fakeElevationProvider is an in-file elevation.Provider test double
+// that records how many times Lookup was called (to assert the
+// per-key caching behavior in positionsPending) and returns a
+// scripted (meters, ok, err) result.
+type fakeElevationProvider struct {
+	mu      sync.Mutex
+	calls   int
+	meters  float64
+	ok      bool
+	err     error
+	lastLat float64
+	lastLng float64
+}
+
+func (f *fakeElevationProvider) Lookup(_ context.Context, lat, lng float64) (float64, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls++
+	f.lastLat, f.lastLng = lat, lng
+	return f.meters, f.ok, f.err
+}
+
+func (f *fakeElevationProvider) callCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.calls
+}
+
+// newPositionsTestWriterWithElevation is newPositionsTestWriter's
+// twin for the tests below that need to observe the elevation
+// Provider directly instead of the always-absent NoopProvider.
+func newPositionsTestWriterWithElevation(t *testing.T, rec *recorder, ep elevation.Provider) *positionsWriter {
+	t.Helper()
+	w := newPositionsWriter(rec, ep)
+	w.now = func() time.Time { return time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC) }
+	return w
+}
+
+// TestPositionsWrite_ElevationPopulatesAltitudeColumn verifies that
+// once lat+lng pair up, the writer calls the elevation Provider and
+// includes its result as altitude_m ($7) on the upsert.
+func TestPositionsWrite_ElevationPopulatesAltitudeColumn(t *testing.T) {
+	rec := &recorder{rows: 1}
+	ep := &fakeElevationProvider{meters: 123.45, ok: true}
+	w := newPositionsTestWriterWithElevation(t, rec, ep)
+	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
+
+	if err := w.Write(context.Background(), posAtom("LocationLatitude", float64(37.4), ts), dstFor("LocationLatitude", "lat")); err != nil {
+		t.Fatalf("Write lat: %v", err)
+	}
+	if err := w.Write(context.Background(), posAtom("LocationLongitude", float64(-122.1), ts), dstFor("LocationLongitude", "lng")); err != nil {
+		t.Fatalf("Write lng: %v", err)
+	}
+	if got := len(rec.calls); got != 1 {
+		t.Fatalf("expected 1 db call, got %d", got)
+	}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, nil, 123.45}
+	if !reflect.DeepEqual(rec.calls[0].Args, wantArgs) {
+		t.Errorf("args=%v, want %v", rec.calls[0].Args, wantArgs)
+	}
+	if ep.callCount() != 1 {
+		t.Errorf("elevation provider called %d times, want 1", ep.callCount())
+	}
+	if ep.lastLat != 37.4 || ep.lastLng != -122.1 {
+		t.Errorf("elevation provider called with (%v, %v), want (37.4, -122.1)", ep.lastLat, ep.lastLng)
+	}
+}
+
+// TestPositionsWrite_ElevationFailureOmitsAltitude verifies that a
+// failed/no-data lookup (ok=false) leaves altitude_m nil for the
+// flush rather than failing the whole write — elevation is best-
+// effort and must never block or fail a position write.
+func TestPositionsWrite_ElevationFailureOmitsAltitude(t *testing.T) {
+	rec := &recorder{rows: 1}
+	ep := &fakeElevationProvider{ok: false, err: errors.New("elevation: circuit breaker is open")}
+	w := newPositionsTestWriterWithElevation(t, rec, ep)
+	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
+
+	if err := w.Write(context.Background(), posAtom("LocationLatitude", float64(37.4), ts), dstFor("LocationLatitude", "lat")); err != nil {
+		t.Fatalf("Write lat: %v", err)
+	}
+	if err := w.Write(context.Background(), posAtom("LocationLongitude", float64(-122.1), ts), dstFor("LocationLongitude", "lng")); err != nil {
+		t.Fatalf("Write lng: %v", err)
+	}
+	if got := len(rec.calls); got != 1 {
+		t.Fatalf("expected 1 db call despite elevation failure, got %d", got)
+	}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), nil, nil, nil}
+	if !reflect.DeepEqual(rec.calls[0].Args, wantArgs) {
+		t.Errorf("args=%v, want %v (altitude_m nil on elevation failure)", rec.calls[0].Args, wantArgs)
+	}
+}
+
+// TestPositionsWrite_ElevationCachedAcrossReFlush verifies the
+// per-key caching documented on positionsPending: a late-arriving
+// GpsHeading that re-flushes an already-flushed (vin, ts) row must
+// NOT call the elevation provider again — the cached altitude from
+// the first flush is reused.
+func TestPositionsWrite_ElevationCachedAcrossReFlush(t *testing.T) {
+	rec := &recorder{rows: 1}
+	ep := &fakeElevationProvider{meters: 50, ok: true}
+	w := newPositionsTestWriterWithElevation(t, rec, ep)
+	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
+
+	if err := w.Write(context.Background(), posAtom("LocationLatitude", float64(37.4), ts), dstFor("LocationLatitude", "lat")); err != nil {
+		t.Fatalf("Write lat: %v", err)
+	}
+	if err := w.Write(context.Background(), posAtom("LocationLongitude", float64(-122.1), ts), dstFor("LocationLongitude", "lng")); err != nil {
+		t.Fatalf("Write lng: %v", err)
+	}
+	if got := len(rec.calls); got != 1 {
+		t.Fatalf("after pair expected 1 db call, got %d", got)
+	}
+	if ep.callCount() != 1 {
+		t.Fatalf("after initial flush, elevation provider called %d times, want 1", ep.callCount())
+	}
+
+	// Late heading triggers a re-flush of the SAME (vin, ts) key.
+	if err := w.Write(context.Background(), posAtom("GpsHeading", float32(90), ts), dstFor("GpsHeading", "heading_deg")); err != nil {
+		t.Fatalf("Write late heading: %v", err)
+	}
+	if got := len(rec.calls); got != 2 {
+		t.Fatalf("after late heading expected 2 db calls, got %d", got)
+	}
+	if ep.callCount() != 1 {
+		t.Errorf("elevation provider called %d times after re-flush, want still 1 (cached)", ep.callCount())
+	}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), float64(90), nil, float64(50)}
+	if !reflect.DeepEqual(rec.calls[1].Args, wantArgs) {
+		t.Errorf("re-flush args=%v, want %v (altitude_m reused from cache)", rec.calls[1].Args, wantArgs)
+	}
+}
+
+// TestPositionsWrite_ElevationRetriedAfterFailedReFlush verifies the
+// complementary case: when the FIRST lookup fails (ok=false), nothing
+// is cached, so a later re-flush retries the provider rather than
+// permanently locking in "no elevation" for a transient failure.
+func TestPositionsWrite_ElevationRetriedAfterFailedReFlush(t *testing.T) {
+	rec := &recorder{rows: 1}
+	ep := &fakeElevationProvider{ok: false}
+	w := newPositionsTestWriterWithElevation(t, rec, ep)
+	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
+
+	if err := w.Write(context.Background(), posAtom("LocationLatitude", float64(37.4), ts), dstFor("LocationLatitude", "lat")); err != nil {
+		t.Fatalf("Write lat: %v", err)
+	}
+	if err := w.Write(context.Background(), posAtom("LocationLongitude", float64(-122.1), ts), dstFor("LocationLongitude", "lng")); err != nil {
+		t.Fatalf("Write lng: %v", err)
+	}
+	if ep.callCount() != 1 {
+		t.Fatalf("after initial flush, elevation provider called %d times, want 1", ep.callCount())
+	}
+
+	// Elevation service "recovers" between flushes.
+	ep.mu.Lock()
+	ep.ok = true
+	ep.meters = 77
+	ep.mu.Unlock()
+
+	if err := w.Write(context.Background(), posAtom("GpsHeading", float32(90), ts), dstFor("GpsHeading", "heading_deg")); err != nil {
+		t.Fatalf("Write late heading: %v", err)
+	}
+	if ep.callCount() != 2 {
+		t.Errorf("elevation provider called %d times after re-flush, want 2 (retry after failed lookup)", ep.callCount())
+	}
+	wantArgs := []any{posTestVIN, ts, float64(37.4), float64(-122.1), float64(90), nil, float64(77)}
+	if !reflect.DeepEqual(rec.calls[1].Args, wantArgs) {
+		t.Errorf("re-flush args=%v, want %v (altitude_m from retried lookup)", rec.calls[1].Args, wantArgs)
+	}
 }

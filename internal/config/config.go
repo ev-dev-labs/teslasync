@@ -47,6 +47,7 @@ type Config struct {
 	HomeAssistant        HomeAssistantConfig
 	GoogleMaps           GoogleMapsConfig
 	AzureMaps            AzureMapsConfig
+	Elevation            ElevationConfig
 	APILogs              APILogsConfig
 	WebPush              WebPushConfig
 	System               SystemConfig
@@ -171,6 +172,20 @@ type GoogleMapsConfig struct {
 // AzureMapsConfig holds settings for the Azure Maps geocoding API.
 type AzureMapsConfig struct {
 	APIKey string
+}
+
+// ElevationConfig holds settings for the self-hosted terrain elevation
+// service (see internal/elevation). Tesla Fleet Telemetry never emits
+// an Elevation signal, so populating positions.altitude_m requires an
+// out-of-band lookup against a DEM-backed service such as
+// akhenakh/gedtm30api (free, MIT-licensed, worldwide coverage).
+//
+// ServiceURL empty means "not configured" — production wiring falls
+// back to elevation.NoopProvider so operators who have not deployed an
+// elevation service see no behavior change.
+type ElevationConfig struct {
+	ServiceURL string
+	Timeout    time.Duration
 }
 
 // OpenTelemetryConfig controls optional distributed tracing via OpenTelemetry.
@@ -548,6 +563,11 @@ func Load() (*Config, error) {
 
 		AzureMaps: AzureMapsConfig{
 			APIKey: envStr("AZURE_MAPS_API_KEY", ""),
+		},
+
+		Elevation: ElevationConfig{
+			ServiceURL: envStr("ELEVATION_SERVICE_URL", ""),
+			Timeout:    envDuration("ELEVATION_TIMEOUT", 2*time.Second),
 		},
 
 		APILogs: APILogsConfig{
