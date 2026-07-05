@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { Zap, Activity, Fuel } from 'lucide-react';
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
@@ -9,6 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { MiniStat } from './MiniStat';
 import { pctChange } from './helpers';
 import type { DigestMetrics, DailyEnergyEntry } from './types';
@@ -32,8 +35,21 @@ export function ChargingSection({
 }: ChargingSectionProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+  const { formatEnergy, formatPower, unitPrefs } = useUnits();
   const energyData = dailyEnergyData ?? [];
-  const hasChart = energyData.some((d) => (d.energy ?? 0) > 0);
+  const hasChart = energyData.some((d) => (d?.energy ?? 0) > 0);
+
+  // The API delivers charge energy in SI watt-hours; convert to the user's
+  // energy unit at the render boundary so the bars, axis, and tooltip agree
+  // with the section's "(kWh)" caption instead of plotting raw Wh magnitudes.
+  const energyChartData = useMemo(
+    () =>
+      energyData.map((d) => ({
+        day: d?.day ?? '',
+        energy: convertEnergyFromSI(d?.energy ?? 0, unitPrefs.energy),
+      })),
+    [energyData, unitPrefs.energy],
+  );
 
   return (
     <GlassPanel className="flex h-full flex-col gap-5 p-4 sm:p-5">
@@ -54,7 +70,7 @@ export function ChargingSection({
         ) : hasChart ? (
           <div className="h-56 sm:h-64 xl:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={energyData} margin={chartMarginLabeled}>
+              <BarChart data={energyChartData} margin={chartMarginLabeled}>
                 {chartGrid}
                 <XAxis dataKey="day" {...axisTickSm} />
                 <YAxis {...axisTickSm} tickFormatter={(v: number) => fmtNumber(v, 1)} />
@@ -86,12 +102,12 @@ export function ChargingSection({
         />
         <MiniStat
           label={t('analytics.weeklyDigest.totalEnergyAdded', 'Total Energy Added')}
-          value={`${fmtNumber(metrics.chargeEnergyAdded ?? 0, 1)} kWh`}
+          value={formatEnergy(metrics.chargeEnergyAdded ?? 0, { precision: 1 })}
           icon={<Zap className="h-4 w-4" />}
         />
         <MiniStat
           label={t('analytics.weeklyDigest.avgChargeRate', 'Avg Charge Rate')}
-          value={`${fmtNumber(metrics.avgChargeRate ?? 0, 1)} kW`}
+          value={formatPower(metrics.avgChargeRate ?? 0, { precision: 1 })}
           icon={<Activity className="h-4 w-4" />}
         />
         <MiniStat
