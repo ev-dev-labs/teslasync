@@ -20,16 +20,28 @@ export const HEALTH_ICONS: Record<string, LucideIcon> = {
 export const HEALTH_FALLBACK_ICON = Shield;
 
 /**
- * Map a raw health-summary status ('normal' | 'warning' | 'critical') onto the
- * canonical {@link Severity} union so status chips get color-independent
- * icon + tone from `severityTokens`. 'normal' surfaces as `success` (green +
- * check) rather than the neutral `info` that `normalizeSeverity('normal')`
- * would otherwise return.
+ * Map a raw health-summary status onto the canonical {@link Severity} union so
+ * status chips get a color-independent icon + tone from `severityTokens`.
+ *
+ * The backend seeds every category to `'normal'` and only ever upgrades it to
+ * one of the anomaly severities — `'info' | 'warning' | 'critical'` — as it
+ * folds detected anomalies into each category (see
+ * `internal/api/anomaly/handler.go`). So the real status domain is
+ * `'normal' | 'info' | 'warning' | 'critical'`:
+ *   - `'normal'`   → `success` (green + check): the ONLY "all healthy" state.
+ *   - `'warning'`  → `warn`.
+ *   - `'critical'` → `critical`.
+ *   - `'info'`     → `info`: an info-level anomaly is present, so the category
+ *     must NOT masquerade as a green success.
+ *
+ * Any unrecognized status falls back to the neutral `info` tone rather than a
+ * misleading green `success` — an unknown state is not a healthy one.
  */
 export function healthSeverity(status: string): Severity {
   if (status === 'critical') return 'critical';
   if (status === 'warning') return 'warn';
-  return 'success';
+  if (status === 'normal') return 'success';
+  return 'info';
 }
 
 /** Human-readable label for an anomaly detector type, i18n-aware. */
