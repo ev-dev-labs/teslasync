@@ -85,7 +85,19 @@ export const UPDATE_STATUS_ORDER: UpdateStatusKey[] = [
   'scheduled',
 ];
 
-/** Resolve a wire status string to its metadata, defaulting to `available`. */
+/**
+ * Resolve a wire status string to its metadata, defaulting to `available`.
+ *
+ * Uses an own-property check instead of a bare `UPDATE_STATUS[key] ?? …`:
+ * indexing walks the prototype chain, so a wire status of `constructor`,
+ * `toString`, `valueOf`, `hasOwnProperty`, … resolves to an inherited
+ * `Object.prototype` member (a truthy function) and slips past the `??`
+ * fallback — handing every consumer a `meta` whose icon/color/hex are
+ * `undefined` and crashing the timeline-card render.
+ */
 export function getUpdateStatus(status: string | null | undefined): UpdateStatusMeta {
-  return UPDATE_STATUS[(status ?? '') as UpdateStatusKey] ?? UPDATE_STATUS.available;
+  const key = status ?? '';
+  return Object.prototype.hasOwnProperty.call(UPDATE_STATUS, key)
+    ? UPDATE_STATUS[key as UpdateStatusKey]
+    : UPDATE_STATUS.available;
 }
