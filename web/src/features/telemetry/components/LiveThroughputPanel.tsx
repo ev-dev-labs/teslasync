@@ -13,6 +13,7 @@ import { Radio, WifiOff } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 import {
   AreaChart,
   Area,
@@ -31,6 +32,11 @@ import type { ThroughputPoint } from '../hooks/useThroughputHistory';
 
 const LINE_COLOR = chartTokens.series[5];
 const GRADIENT_ID = 'live-throughput-gradient';
+const CHART_MARGIN = { top: 8, right: 12, bottom: 4, left: 0 } as const;
+
+// Stable, module-level formatter so the memoised recharts axis + tooltip
+// children don't get a fresh function identity on every ~1 Hz sample tick.
+const formatTs = (v: unknown): string => formatTime(v as string);
 
 export interface LiveThroughputPanelProps {
   history: ThroughputPoint[];
@@ -65,16 +71,16 @@ export function LiveThroughputPanel({
           {t('liveMonitor.throughputNow', 'Now')}: {fmtInt(rate ?? 0)}/s ·{' '}
           {t('liveMonitor.throughputPeak', 'Peak')}: {fmtInt(peak ?? 0)}/s
         </Caption>
+        {/* Text alternative for the colour-only "live" dot so the stream state
+            is perceivable without relying on the icon colour. */}
+        <VisuallyHidden>
+          {connected
+            ? t('liveMonitor.streamConnected', 'Live throughput stream connected')
+            : t('liveMonitor.streamDisconnected', 'Live throughput stream disconnected')}
+        </VisuallyHidden>
       </div>
 
-      <div
-        className="h-56 sm:h-64 xl:h-72"
-        role="img"
-        aria-label={t(
-          'liveMonitor.throughputAria',
-          'Live signals per second over the recent window',
-        )}
-      >
+      <div className="h-56 sm:h-64 xl:h-72">
         {!hasData ? (
           <EmptyState
             icon={
@@ -91,38 +97,47 @@ export function LiveThroughputPanel({
             }
           />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={points} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
-              <defs>
-                <linearGradient id={GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={LINE_COLOR} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={LINE_COLOR} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.4} />
-              <XAxis
-                dataKey="ts"
-                tickFormatter={(v) => formatTime(v as string)}
-                tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                minTickGap={40}
-              />
-              <YAxis
-                width={32}
-                allowDecimals={false}
-                tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-              />
-              <Tooltip content={<ChartTooltip />} labelFormatter={(v) => formatTime(v as string)} />
-              <Area
-                type="monotone"
-                dataKey="rate"
-                name={t('liveMonitor.sigPerSec', 'Signals / sec')}
-                stroke={LINE_COLOR}
-                strokeWidth={2}
-                fill={`url(#${GRADIENT_ID})`}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div
+            className="h-full"
+            role="img"
+            aria-label={t(
+              'liveMonitor.throughputAria',
+              'Live signals per second over the recent window',
+            )}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={points} margin={CHART_MARGIN}>
+                <defs>
+                  <linearGradient id={GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={LINE_COLOR} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={LINE_COLOR} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.4} />
+                <XAxis
+                  dataKey="ts"
+                  tickFormatter={formatTs}
+                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  minTickGap={40}
+                />
+                <YAxis
+                  width={32}
+                  allowDecimals={false}
+                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                />
+                <Tooltip content={<ChartTooltip />} labelFormatter={formatTs} />
+                <Area
+                  type="monotone"
+                  dataKey="rate"
+                  name={t('liveMonitor.sigPerSec', 'Signals / sec')}
+                  stroke={LINE_COLOR}
+                  strokeWidth={2}
+                  fill={`url(#${GRADIENT_ID})`}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
     </GlassPanel>
