@@ -37,6 +37,10 @@ const thumbTranslate = {
  *   `role="switch"` control.
  * - `aria-checked` reflects the current state; clicking the label text also
  *   toggles via the wrapper's onClick (delegating to the button).
+ * - Icon-only switches (no visible `label`) can be named by passing
+ *   `aria-label`/`aria-labelledby`; these — along with `aria-describedby`
+ *   and `title` — are forwarded to the button so they name/describe the
+ *   actual control rather than the neutral wrapper `<div>`.
  */
 export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
   (
@@ -46,19 +50,20 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
       onChange,
       size = 'md',
       className,
+      // Naming/description attributes belong on the interactive
+      // `role="switch"` button, not the neutral wrapper `<div>`.
+      // Pulling them out of `...props` means a caller that passes
+      // `aria-label` (icon-only switch with no visible `label`) actually
+      // names the control instead of a generic div a screen reader skips.
       'aria-label': ariaLabel,
-      'aria-labelledby': ariaLabelledby,
+      'aria-labelledby': ariaLabelledBy,
+      'aria-describedby': ariaDescribedBy,
+      title,
       ...props
     },
     ref,
   ) => {
     const labelId = useId();
-    // A visible `label` owns the accessible name via `aria-labelledby`.
-    // Otherwise honour an explicit `aria-labelledby` / `aria-label` from the
-    // caller so icon-only switches (e.g. a card's enable toggle) expose an
-    // accessible name ON the switch button — a spread `aria-label` would
-    // otherwise land on the wrapper div and be ignored by assistive tech.
-    const buttonLabelledBy = label ? labelId : ariaLabelledby;
     return (
       <div
         ref={ref}
@@ -75,8 +80,12 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           type="button"
           role="switch"
           aria-checked={checked}
-          aria-labelledby={buttonLabelledBy}
-          aria-label={buttonLabelledBy ? undefined : ariaLabel}
+          // Visible `label` wins (points at the rendered span); otherwise
+          // fall back to a caller-supplied `aria-labelledby`/`aria-label`.
+          aria-label={ariaLabel}
+          aria-labelledby={label ? labelId : ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          title={title}
           onClick={() => onChange(!checked)}
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
