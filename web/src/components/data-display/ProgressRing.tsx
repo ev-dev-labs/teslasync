@@ -1,4 +1,5 @@
 import { forwardRef, type ReactNode, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 interface ProgressRingProps {
@@ -7,6 +8,11 @@ interface ProgressRingProps {
   size?: number;
   strokeWidth?: number;
   color?: string;
+  /** Accessible name announced to screen readers for the ring, which is
+   *  otherwise a silent SVG (its center text is `aria-hidden`). Pass a
+   *  domain-specific name for context (e.g. "Signal freshness"); when
+   *  omitted it falls back to a percentage-based label. */
+  ariaLabel?: string;
   /** Text rendered below the ring (legacy). Prefer `centerLabel` for the
    *  primary value — it sits inside the ring and reads like a real gauge. */
   label?: string;
@@ -32,22 +38,41 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
       centerLabel,
       centerSubLabel,
       className,
+      ariaLabel,
     },
     ref,
   ) {
-    const radius = (size - strokeWidth) / 2;
+    const { t } = useTranslation();
+
+    // Harden the geometry against the values that actually reach this ring:
+    // a `value`/`max` that is still `undefined`, `NaN` or `Infinity` while data
+    // loads, a `max` of `0` (division by zero), or a `strokeWidth` wider than
+    // `size` (negative radius → invalid SVG). Any of these used to produce a
+    // `NaN` stroke-dashoffset that collapses the arc.
+    const safeValue = Number.isFinite(value) ? value : 0;
+    const safeMax = Number.isFinite(max) && max > 0 ? max : 100;
+    const radius = Math.max(0, (size - strokeWidth) / 2);
     const center = size / 2;
     const circumference = 2 * Math.PI * radius;
-    const clamped = Math.max(0, Math.min(value, max));
-    const offset = circumference - (clamped / max) * circumference;
+    const clamped = Math.max(0, Math.min(safeValue, safeMax));
+    const fraction = clamped / safeMax; // safeMax > 0 → always finite in [0, 1]
+    const offset = circumference * (1 - fraction);
+    const percent = Math.round(fraction * 100);
     const hasCenter = centerLabel != null || centerSubLabel != null;
     const mainSize = Math.max(10, Math.round(size * 0.32));
     const subSize = Math.max(8, Math.round(size * 0.18));
+    const resolvedAriaLabel =
+      ariaLabel ?? t('progressRing.ariaLabel', 'Progress: {{percent}}%', { percent });
 
     return (
       <div ref={ref} className={cn('inline-flex flex-col items-center gap-1', className)}>
-        <div className="relative" style={{ width: size, height: size }}>
-          <svg width={size} height={size} className="-rotate-90">
+        <div
+          className="relative"
+          style={{ width: size, height: size }}
+          role="img"
+          aria-label={resolvedAriaLabel}
+        >
+          <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
             <circle
               cx={center}
               cy={center}
