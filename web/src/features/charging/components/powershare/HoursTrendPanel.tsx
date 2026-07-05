@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 
@@ -17,9 +18,26 @@ interface HoursTrendPanelProps {
   onRetry: () => void;
 }
 
+// Hoisted so the memoised recharts <Line> isn't handed a fresh object literal
+// on every poll-driven re-render.
+const ACTIVE_DOT = { r: 4 } as const;
+
 /** Estimated remaining runtime (hours) over recent readings. */
 export function HoursTrendPanel({ points, isLoading, error, onRetry }: HoursTrendPanelProps) {
   const { t } = useTranslation();
+
+  // Null-safe render rows: guard an undefined `points` prop (a crash guard for
+  // the `.length` check + chart `data`) and coerce any malformed point so a
+  // null value/label can't punch a gap in the line.
+  const rows = useMemo<TrendPoint[]>(
+    () =>
+      (points ?? []).map((p) => ({
+        ts: p?.ts ?? '',
+        label: p?.label ?? '',
+        value: p?.value ?? 0,
+      })),
+    [points],
+  );
 
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -31,7 +49,7 @@ export function HoursTrendPanel({ points, isLoading, error, onRetry }: HoursTren
         <Skeleton height={220} />
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : points.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState /* no-action: transient — runtime appears once telemetry streams */
           icon={<Clock className="h-8 w-8" />}
           message={t(
@@ -42,7 +60,7 @@ export function HoursTrendPanel({ points, isLoading, error, onRetry }: HoursTren
       ) : (
         <div className="h-56 sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={points}>
+            <LineChart data={rows}>
               {chartGrid}
               <XAxis dataKey="label" tick={axisTickSm} minTickGap={24} />
               <YAxis tick={axisTickSm} width={36} unit=" h" allowDecimals />
@@ -54,7 +72,7 @@ export function HoursTrendPanel({ points, isLoading, error, onRetry }: HoursTren
                 stroke={HOURS_COLOR}
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 4 }}
+                activeDot={ACTIVE_DOT}
                 isAnimationActive={false}
               />
             </LineChart>
