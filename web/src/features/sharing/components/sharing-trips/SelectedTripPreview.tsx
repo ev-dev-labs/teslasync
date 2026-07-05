@@ -3,6 +3,7 @@
 // distance, duration, energy, drives, charges, cost — never raw coordinates.
 // Renders an EmptyState (panel still visible) when no trip is picked.
 
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin, ShieldCheck } from 'lucide-react'
 
@@ -34,38 +35,47 @@ export function SelectedTripPreview({
 }: SelectedTripPreviewProps) {
   const { t } = useTranslation()
 
-  const items = trip
-    ? [
-        {
-          label: t('sharing.trips.preview.distance', 'Distance'),
-          value: formatDistance(trip.total_distance_m),
-        },
-        {
-          label: t('sharing.trips.preview.duration', 'Duration'),
-          value: formatTripDuration(tripDurationSeconds(trip)),
-        },
-        {
-          label: t('sharing.trips.preview.energy', 'Energy'),
-          value: formatEnergy(trip.total_energy_wh),
-        },
-        {
-          label: t('sharing.trips.preview.drives', 'Drives'),
-          value: fmtInt(trip.drive_count ?? 0),
-        },
-        {
-          label: t('sharing.trips.preview.charges', 'Charges'),
-          value: fmtInt(trip.charge_count ?? 0),
-        },
-        ...((trip.total_cost ?? 0) > 0
-          ? [
-              {
-                label: t('sharing.trips.preview.cost', 'Cost'),
-                value: <Currency value={trip.total_cost} />,
-              },
-            ]
-          : []),
-      ]
-    : []
+  // Derive the redacted KVList rows once per (trip, formatter, locale) change.
+  // The parent re-renders on every selection/vehicle toggle; the `useUnits()`
+  // formatters are referentially stable, so memoising keeps us from rebuilding
+  // the row array — including the nested <Currency> element — on unrelated
+  // re-renders.
+  const items = useMemo(
+    () =>
+      trip
+        ? [
+            {
+              label: t('sharing.trips.preview.distance', 'Distance'),
+              value: formatDistance(trip.total_distance_m),
+            },
+            {
+              label: t('sharing.trips.preview.duration', 'Duration'),
+              value: formatTripDuration(tripDurationSeconds(trip)),
+            },
+            {
+              label: t('sharing.trips.preview.energy', 'Energy'),
+              value: formatEnergy(trip.total_energy_wh),
+            },
+            {
+              label: t('sharing.trips.preview.drives', 'Drives'),
+              value: fmtInt(trip.drive_count ?? 0),
+            },
+            {
+              label: t('sharing.trips.preview.charges', 'Charges'),
+              value: fmtInt(trip.charge_count ?? 0),
+            },
+            ...((trip.total_cost ?? 0) > 0
+              ? [
+                  {
+                    label: t('sharing.trips.preview.cost', 'Cost'),
+                    value: <Currency value={trip.total_cost} />,
+                  },
+                ]
+              : []),
+          ]
+        : [],
+    [trip, formatDistance, formatEnergy, t],
+  )
 
   return (
     <GlassPanel className="p-4 sm:p-5">
