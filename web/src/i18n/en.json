@@ -5662,7 +5662,21 @@
     "placeHome": "Home",
     "placeWork": "Work",
     "placeFavorite": "Favorite",
-    "noLocationData": "No location data"
+    "noLocationData": "No location data",
+    "vehicleState": "Vehicle State",
+    "live": "Live",
+    "highBeams": "High Beams",
+    "turnSignal": "Turn Signal",
+    "hazards": "Hazards",
+    "driverSeat": "Driver Seat",
+    "seatOccupied": "Occupied",
+    "seatEmpty": "Empty",
+    "pairedKeys": "Paired Keys",
+    "valetMode": "Valet Mode",
+    "serviceMode": "Service Mode",
+    "speedLimit": "Speed Limit",
+    "centerDisplay": "Center Display",
+    "homelinkDevices": "HomeLink Devices"
   },
   "activity": {
     "drive": "drive",
