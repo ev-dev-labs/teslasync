@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, Button, Badge } from '@/components/ui'
+import { EmptyState } from './EmptyState'
 import {
   OPEN_CHANGELOG_MODAL_EVENT,
   useChangelog,
@@ -43,7 +44,7 @@ const AUTO_SHOW_DELAY_MS = 2_000
 
 export function ChangelogModal() {
   const { t } = useTranslation()
-  const { entries, newEntries, hasUnseen, canAutoShow, hasCompletedOnboarding, markSeen, stampShown } =
+  const { entries, newEntries, seenVersion, hasUnseen, canAutoShow, hasCompletedOnboarding, markSeen, stampShown } =
     useChangelog()
 
   const [open, setOpen] = useState(false)
@@ -108,10 +109,15 @@ export function ChangelogModal() {
   }
 
   // The list shown inside the modal is the unseen subset when there is one;
-  // first-time visitors (seenVersion === null) will see the entire history,
-  // which is also the right onboarding behaviour.
-  const visibleEntries: readonly ChangelogEntry[] = newEntries.length > 0 ? newEntries : entries
-  const isFirstVisit = newEntries.length === entries.length
+  // first-time visitors (and anyone who manually opens while caught up) see
+  // the entire history, which is also the right onboarding behaviour.
+  const hasNewEntries = newEntries.length > 0
+  const visibleEntries: readonly ChangelogEntry[] = hasNewEntries ? newEntries : entries
+  // First visit == the user has never acknowledged any version. Deriving this
+  // from `seenVersion` (rather than comparing list lengths) keeps the copy
+  // correct for a returning, caught-up user who opens the modal manually —
+  // they must NOT be told "N new release(s)" when nothing is actually new.
+  const isFirstVisit = seenVersion === null
 
   return (
     <Modal
@@ -128,20 +134,31 @@ export function ChangelogModal() {
               "Welcome! Here's a quick tour of what TeslaSync ships with right now.",
             )}
           </p>
-        ) : (
+        ) : hasNewEntries ? (
           <p className="text-[var(--text-muted)]">
             {t(
               'changelog.modal.subtitleSinceLastVisit',
               '{{count}} new release(s) since your last visit.',
-              { count: visibleEntries.length },
+              { count: newEntries.length },
+            )}
+          </p>
+        ) : (
+          <p className="text-[var(--text-muted)]">
+            {t(
+              'changelog.modal.subtitleCaughtUp',
+              "You're all caught up — here's the full release history.",
             )}
           </p>
         )}
 
         <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-          {visibleEntries.map((entry, idx) => (
-            <ChangelogModalEntry key={entry.version} entry={entry} defaultOpen={idx < 2} />
-          ))}
+          {visibleEntries.length > 0 ? (
+            visibleEntries.map((entry, idx) => (
+              <ChangelogModalEntry key={entry.version} entry={entry} defaultOpen={idx < 2} />
+            ))
+          ) : (
+            <EmptyState message={t('changelog.modal.empty', 'No release notes are available yet.')} />
+          )}
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--glass-border)] pt-3">
@@ -221,13 +238,20 @@ interface EntryProps {
 function ChangelogModalEntry({ entry, defaultOpen }: EntryProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(defaultOpen)
+  const panelId = useId()
 
   // Group changes by canonical type. The generator already emits them in
   // section order, but we re-group here so empty sections don't render.
-  const grouped = SECTION_ORDER.map((type) => ({
-    type,
-    items: entry.changes.filter((c) => c.type === type),
-  })).filter((g) => g.items.length > 0)
+  // Memoised so toggling `expanded` doesn't re-run the six filter passes,
+  // and null-guarded so a malformed generated entry can never throw.
+  const grouped = useMemo(
+    () =>
+      SECTION_ORDER.map((type) => ({
+        type,
+        items: (entry.changes ?? []).filter((c) => c.type === type),
+      })).filter((g) => g.items.length > 0),
+    [entry.changes],
+  )
 
   return (
     <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)]">
@@ -235,6 +259,7 @@ function ChangelogModalEntry({ entry, defaultOpen }: EntryProps) {
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
+        aria-controls={panelId}
         className={cn(
           'flex w-full items-center justify-between gap-3 px-4 py-3 text-left',
           'rounded-lg transition-colors hover:bg-white/[0.02]',
@@ -254,7 +279,7 @@ function ChangelogModalEntry({ entry, defaultOpen }: EntryProps) {
       </button>
 
       {expanded && (
-        <div className="space-y-3 border-t border-[var(--glass-border)] px-4 py-3">
+        <div id={panelId} className="space-y-3 border-t border-[var(--glass-border)] px-4 py-3">
           {grouped.map((group) => (
             <div key={group.type}>
               <p className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
