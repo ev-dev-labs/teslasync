@@ -51,6 +51,13 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// The advisor renders the accumulated delta text through AiOutputPanel
+// and never reacts to individual stream frames, so onEvent is a stable
+// module-scope no-op. Keeping the reference identical across renders
+// avoids re-running useAiStream's onEvent ref-sync effect every time the
+// parent per-row expansion re-renders.
+const noopStreamEvent = (): void => {}
+
 interface InnerSectionProps {
   /**
  * feedbackId is the user_feedback row this advisor proposes
@@ -80,6 +87,9 @@ interface InnerSectionProps {
  * in-scope feedback_id so the LLM cannot widen it.
  * - "Suggest triage" button is disabled while a stream is open
  * OR when the parent has not yet supplied a valid feedback id.
+ * When disabled for a missing id, an empty-state hint explains
+ * that the operator must select a feedback row first, so the
+ * control is never a bare, unexplained affordance.
  * - Title attribute carries the long-form explanation so a
  * user hovering for a tooltip understands the privacy
  * contract — the LLM never sees email/IP/console-tail/recent-
@@ -111,10 +121,9 @@ function InnerSection({ feedbackId }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/feedback/triage/draft',
     body,
-    onEvent: () => {},
+    onEvent: noopStreamEvent,
   })
 
-  
   return (
     <AIFeatureCard
       title={t('feedbackTriage.aiAdvisor.title', 'Helix triage advisor')}
@@ -124,6 +133,10 @@ function InnerSection({ feedbackId }: InnerSectionProps) {
               )}
       buttonLabel={t('feedbackTriage.aiAdvisor.button', 'Suggest triage')}
       badgeLabel={t('feedbackTriage.aiAdvisor.badge', 'Helix')}
+      emptyHint={t(
+        'feedbackTriage.aiAdvisor.emptyHint',
+        'Select a feedback row to suggest triage labels.',
+      )}
       canStart={haveFeedback}
       stream={stream}
     />
