@@ -2770,6 +2770,17 @@
       "view": "View"
     },
     "viewContext": "View context",
+    "time": {
+      "minutesAgo": "{{count}}m ago",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    },
     "searchPlaceholder": "Search by title or message…",
     "tabFlash": "(!) ALERT — ",
     "delete": {

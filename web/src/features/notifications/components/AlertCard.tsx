@@ -32,13 +32,23 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   system_tesla_api: Icons.radio, system_worker: Icons.efficiency,
 };
 
-function getTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function getTimeAgo(dateStr: string | null | undefined, t: TFunction): string {
+  // Guard absent / malformed timestamps up front. `new Date(null)` silently
+  // coerces to the Unix epoch (→ "20000d ago") and `new Date('nonsense')`
+  // yields an Invalid Date whose NaN cascades through every branch (→
+  // "NaNm ago"). Both are wrong; render an em-dash instead.
+  if (!dateStr) return '—';
+  const ms = new Date(dateStr).getTime();
+  if (!Number.isFinite(ms)) return '—';
+  const diff = Date.now() - ms;
+  // Future timestamps (clock skew between the vehicle/server and the browser)
+  // would otherwise render negative minutes ("-3m ago").
+  if (diff < 0) return '—';
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return t('alerts.time.minutesAgo', '{{count}}m ago', { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return t('alerts.time.hoursAgo', '{{count}}h ago', { count: hours });
+  return t('alerts.time.daysAgo', '{{count}}d ago', { count: Math.floor(hours / 24) });
 }
 
 export interface AlertCardProps {
@@ -54,7 +64,7 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
   const sev = normalizeSeverity(alert.severity);
   const tokens = severityTokens[sev];
   const Icon = TYPE_ICONS[alert.type] || Icons.notifications;
-  const timeAgo = getTimeAgo(alert.created_at);
+  const timeAgo = getTimeAgo(alert.created_at, t);
   const drillHref = getAlertDrillthroughHref(alert);
   const isAcked = Boolean(alert.acknowledged_at);
 
@@ -78,9 +88,9 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
             aria-label={t('alerts.viewContext', 'View context')}
           >
             <Text as="span" size="sm" weight="medium" color={alert.is_read ? 'secondary' : 'primary'} className="block">
-              {alert.title}
+              {alert.title ?? '—'}
             </Text>
-            <Caption className="mt-0.5 line-clamp-2 block">{alert.message}</Caption>
+            <Caption className="mt-0.5 line-clamp-2 block">{alert.message ?? ''}</Caption>
           </Link>
           {!alert.is_read && (
             <StatusDot
