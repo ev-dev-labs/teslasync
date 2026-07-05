@@ -8904,6 +8904,7 @@
   "commands": {
     "search": {
       "placeholder": "Search commands...",
+      "aria": "Search commands",
       "noResults": "No commands match your search"
     },
     "toggleFavorite": "Toggle favorite",
