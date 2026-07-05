@@ -48,7 +48,7 @@ export function AnalyticsPanel({
 }: AnalyticsPanelProps) {
   const { t } = useTranslation();
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+    <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading ? true : undefined}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         {icon && (
           <span className="inline-flex text-cyan-300" aria-hidden="true">
