@@ -114,6 +114,13 @@ export function PlaybackControls({
     }, 900);
   }, []);
 
+  // `progress` advances on every animation frame during playback. Reading it
+  // from a ref inside the keydown handler keeps the global listener attached
+  // exactly once (keyed off the stable, infrequently-changing inputs below)
+  // instead of tearing it down and re-adding it ~60×/second while playing.
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+
   /* ── Keyboard shortcuts ───────────────────────────────────────── */
   useEffect(() => {
     if (!enableKeyboardShortcuts) return;
@@ -139,7 +146,7 @@ export function PlaybackControls({
         if (onSeekBy) {
           onSeekBy(delta);
         } else if (durationMs && durationMs > 0) {
-          const next = Math.max(0, Math.min(1, progress + (delta * 1000) / durationMs));
+          const next = Math.max(0, Math.min(1, progressRef.current + (delta * 1000) / durationMs));
           onSeek(next);
         }
         showShortcutToast(label);
@@ -154,11 +161,17 @@ export function PlaybackControls({
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          seekBySeconds(e.shiftKey ? -30 : -5, e.shiftKey ? '⏪ −30s' : '⏪ −5s');
+          seekBySeconds(
+            e.shiftKey ? -30 : -5,
+            t('replay.shortcuts.seekBack', '⏪ −{{n}}s', { n: e.shiftKey ? 30 : 5 }),
+          );
           break;
         case 'ArrowRight':
           e.preventDefault();
-          seekBySeconds(e.shiftKey ? 30 : 5, e.shiftKey ? '⏩ +30s' : '⏩ +5s');
+          seekBySeconds(
+            e.shiftKey ? 30 : 5,
+            t('replay.shortcuts.seekForward', '⏩ +{{n}}s', { n: e.shiftKey ? 30 : 5 }),
+          );
           break;
         case ',':
           if (onStepFrame) {
@@ -203,7 +216,7 @@ export function PlaybackControls({
         case 'j':
         case 'J':
           e.preventDefault();
-          seekBySeconds(-10, '⏪ −10s');
+          seekBySeconds(-10, t('replay.shortcuts.seekBack', '⏪ −{{n}}s', { n: 10 }));
           break;
         case 'k':
         case 'K':
@@ -215,7 +228,7 @@ export function PlaybackControls({
         case 'l':
         case 'L':
           e.preventDefault();
-          seekBySeconds(10, '⏩ +10s');
+          seekBySeconds(10, t('replay.shortcuts.seekForward', '⏩ +{{n}}s', { n: 10 }));
           break;
         case '+':
         case '=':
@@ -251,7 +264,6 @@ export function PlaybackControls({
     onSpeedChange,
     onSpeedRelative,
     onStepFrame,
-    progress,
     showShortcutToast,
     speed,
     t,
@@ -397,7 +409,7 @@ export function PlaybackControls({
 
         {/* Time display */}
         <span className="min-w-[90px] text-right font-mono text-xs text-[var(--text-secondary)]">
-          {elapsed} / {total}
+          {elapsed ?? '—'} / {total ?? '—'}
         </span>
 
         {/* Keyboard help */}
