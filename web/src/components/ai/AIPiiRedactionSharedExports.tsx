@@ -62,7 +62,7 @@
 //     state='error' for the user, but the component is never
 //     rendered in off mode at all because of I5.
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
@@ -86,6 +86,14 @@ const SHARED_EXPORT_TYPES = [
 ] as const
 
 type SharedExportType = (typeof SHARED_EXPORT_TYPES)[number]
+
+// Stable no-op event sink. This card renders the SSE stream purely via
+// useAiStream's built-in delta-text accumulator (surfaced through
+// AiOutputPanel), so it has no per-event bookkeeping to do. Hoisting the
+// sink to module scope keeps its identity stable across renders — a fresh
+// inline `() => {}` on every keystroke would otherwise re-run
+// useAiStream's onEvent ref-sync effect for no benefit.
+const NO_EVENT_SINK: () => void = () => {}
 
 /**
  * InnerSection is the always-rendered body of the AI
@@ -121,9 +129,19 @@ function InnerSection() {
   const stream = useAiStream({
     url: '/ai/exports/redaction/draft',
     body,
-    onEvent: () => {},
+    onEvent: NO_EVENT_SINK,
   })
   const haveInputs = exportType !== ''
+
+  // Stable change handler so the inputSlot Select is not handed a fresh
+  // closure on every render. setExportType is referentially stable, so an
+  // empty dependency list is correct.
+  const handleExportTypeChange = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) => {
+      setExportType(e.target.value as SharedExportType | '')
+    },
+    [],
+  )
 
   // Translate the SHARED_EXPORT_TYPES list into the SelectOption
   // shape the shared <Select> consumes. The label uses an i18n
@@ -173,9 +191,7 @@ function InnerSection() {
           label={t('exports.aiRedaction.exportTypeLabel', 'Export type')}
           options={options}
           value={exportType}
-          onChange={(e) =>
-            setExportType(e.target.value as SharedExportType | '')
-          }
+          onChange={handleExportTypeChange}
           placeholder={t(
             'exports.aiRedaction.exportTypePlaceholder',
             'Select an export type…',
