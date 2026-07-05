@@ -38,13 +38,13 @@ export function MotorSection({ motorData }: MotorSectionProps) {
           <MetricCard
             label={t('vehicles.detail.shiftState', 'Shift State')}
             value={motorData.shift_state ?? '—'}
-            icon={<Settings className="h-4 w-4" />}
+            icon={<Settings className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
             label={t('vehicles.detail.packVoltage', 'Pack Voltage')}
             value={vbat != null ? `${fmtNumber(vbat)} V` : '—'}
-            icon={<Battery className="h-4 w-4" />}
+            icon={<Battery className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
@@ -54,7 +54,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
                 ? `${fmtNumber(motorData.motor_current_front)} A`
                 : '—'
             }
-            icon={<Zap className="h-4 w-4" />}
+            icon={<Zap className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
@@ -62,7 +62,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             value={
               motorData.torque_nm_front != null ? `${fmtNumber(motorData.torque_nm_front)} Nm` : '—'
             }
-            icon={<Activity className="h-4 w-4" />}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
@@ -70,19 +70,19 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             value={
               motorData.torque_nm_rear != null ? `${fmtNumber(motorData.torque_nm_rear)} Nm` : '—'
             }
-            icon={<Activity className="h-4 w-4" />}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
             label={t('vehicles.detail.rpmFront', 'Front RPM')}
             value={motorData.motor_rpm_front != null ? `${fmtInt(motorData.motor_rpm_front)}` : '—'}
-            icon={<Gauge className="h-4 w-4" />}
+            icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
             label={t('vehicles.detail.rpmRear', 'Rear RPM')}
             value={motorData.motor_rpm_rear != null ? `${fmtInt(motorData.motor_rpm_rear)}` : '—'}
-            icon={<Gauge className="h-4 w-4" />}
+            icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
@@ -92,7 +92,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
                 ? formatTemperature(maxMotorTemp)
                 : '—'
             }
-            icon={<Thermometer className="h-4 w-4" />}
+            icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
         </div>
