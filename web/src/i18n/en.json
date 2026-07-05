@@ -9654,6 +9654,7 @@
     "receivingSummary": "{{receiving}} of {{total}} signals arriving",
     "topStaleTitle": "Top stale signals",
     "allFresh": "All signals are arriving on time.",
+    "neverReported": "{{never}} signals have never reported.",
     "catalogTitle": "Signal Catalog",
     "refresh": "Refresh signals"
   },
