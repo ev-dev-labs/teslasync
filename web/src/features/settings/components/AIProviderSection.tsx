@@ -19,7 +19,10 @@ import {
   Text,
 } from '@/components/ui'
 import { Stack } from '@/components/layout'
-import { useValidateAiProvider } from '@/api/hooks/useAiSettings'
+import {
+  useValidateAiProvider,
+  type ValidateAiProviderRequest,
+} from '@/api/hooks/useAiSettings'
 
 /**
  * Local in-memory shape for the form. Mirrors the server's
@@ -92,49 +95,66 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
     // adapter and run a 1-token chat probe — empty fields fall back
     // to the saved per-provider entry server-side, so editing one
     // field doesn't force the user to re-state the rest.
-    const result = await validate.mutateAsync(
-      isCloud
-        ? {
-            mode: 'cloud',
-            provider: value.provider,
-            base_url: value.base_url,
-            // Only forward api_key when the user actually typed one;
-            // empty string lets the backend fall back to the saved
-            // (encrypted) value rather than clobbering it with "".
-            ...(value.api_key.trim() === ''
-              ? {}
-              : { api_key: value.api_key }),
-            model: value.model,
-            api_version: value.api_version,
-            flavor: value.flavor,
-            deployment: value.deployment,
-            embedding_model: value.embedding_model,
-            embedding_deployment: value.embedding_deployment,
-          }
-        : {
-            mode: 'local',
-            provider: value.provider,
-            base_url: value.base_url,
-          },
-    )
-    if (result.ok) {
-      const okMessage = result.pinned_ip
-        ? t(
-            'ai.settings.validate.successPinned',
-            'OK — pinned to {{ip}}',
-            { ip: result.pinned_ip },
-          )
-        : result.probed_model
+    const req: ValidateAiProviderRequest = isCloud
+      ? {
+          mode: 'cloud',
+          provider: value.provider,
+          base_url: value.base_url,
+          // Only forward api_key when the user actually typed one;
+          // empty string lets the backend fall back to the saved
+          // (encrypted) value rather than clobbering it with "".
+          ...(value.api_key.trim() === ''
+            ? {}
+            : { api_key: value.api_key }),
+          model: value.model,
+          api_version: value.api_version,
+          flavor: value.flavor,
+          deployment: value.deployment,
+          embedding_model: value.embedding_model,
+          embedding_deployment: value.embedding_deployment,
+        }
+      : {
+          mode: 'local',
+          provider: value.provider,
+          base_url: value.base_url,
+        }
+    try {
+      const result = await validate.mutateAsync(req)
+      if (result.ok) {
+        const okMessage = result.pinned_ip
           ? t(
-              'ai.settings.validate.successProbed',
-              'OK — {{model}} reachable',
-              { model: result.probed_model },
+              'ai.settings.validate.successPinned',
+              'OK — pinned to {{ip}}',
+              { ip: result.pinned_ip },
             )
-          : t('ai.settings.validate.success', 'OK — provider reachable')
-      setValidateBanner({ kind: 'ok', message: okMessage })
-      return
+          : result.probed_model
+            ? t(
+                'ai.settings.validate.successProbed',
+                'OK — {{model}} reachable',
+                { model: result.probed_model },
+              )
+            : t('ai.settings.validate.success', 'OK — provider reachable')
+        setValidateBanner({ kind: 'ok', message: okMessage })
+        return
+      }
+      setValidateBanner({ kind: 'fail', message: result.message })
+    } catch {
+      // The hook re-shapes only the backend's 422 rejection into the
+      // failure variant. A malformed request (400), a 5xx from the
+      // probe, or the network being unreachable rejects out of
+      // mutateAsync instead. Without this catch that rejection is
+      // swallowed as an unhandled promise and the user gets no
+      // feedback — the button just silently re-enables. Surface a
+      // generic, non-technical banner so validation always resolves
+      // to a visible outcome.
+      setValidateBanner({
+        kind: 'fail',
+        message: t(
+          'ai.settings.validate.networkError',
+          'Validation failed — could not reach the server. Check your connection and try again.',
+        ),
+      })
     }
-    setValidateBanner({ kind: 'fail', message: result.message })
   }
 
   return (

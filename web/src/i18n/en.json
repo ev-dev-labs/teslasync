@@ -2584,7 +2584,10 @@
         "running": "Validating…",
         "success": "OK — provider reachable",
         "successPinned": "OK — pinned to {{ip}}",
-        "failure": "Validation failed"
+        "failure": "Validation failed",
+        "cloudButton": "Validate connection",
+        "successProbed": "OK — {{model}} reachable",
+        "networkError": "Validation failed — could not reach the server. Check your connection and try again."
       },
       "feature": {
         "legend": "Per-feature opt-in (all default off)",
