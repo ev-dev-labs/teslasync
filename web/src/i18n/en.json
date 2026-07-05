@@ -1300,7 +1300,14 @@
     "kpis": "Comparison metrics",
     "selectVehicle": "Select vehicle",
     "vs": "vs",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "aiNarrative": {
+      "title": "Narrate the period comparison",
+      "description": "Ask Helix to explain the deterministic period-over-period analytics — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign. The numbers are the same the chart and table below show; the narrator only explains them and is honest about zero-baseline windows and best-effort cost figures.",
+      "generateButton": "Narrate comparison",
+      "badge": "Helix",
+      "noVehicleHint": "Pick a vehicle to enable Helix narration."
+    }
   },
   "live": {
     "connected": "Live",
