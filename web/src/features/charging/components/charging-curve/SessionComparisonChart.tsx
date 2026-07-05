@@ -28,7 +28,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
   const { t } = useTranslation();
   const palette = useChartPalette();
 
-  const comparisonSessions = useMemo(() => sessions.slice(0, 10), [sessions]);
+  const comparisonSessions = useMemo(() => (sessions ?? []).slice(0, 10), [sessions]);
 
   const comparisonData = useMemo(() => {
     if (!comparisonSessions.length) return [];
@@ -63,6 +63,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
           'Overlaid power-vs-SOC line chart comparing the last several charging sessions',
         )}
         height={300}
+        empty={comparisonSessions.length === 0}
         exportable
         exportFilename="session-comparison"
       >
@@ -102,17 +103,20 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
             ))}
           </LineChart>
         </ResponsiveContainer>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-2">
-          {comparisonSessions.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2 w-3 rounded-sm"
-                style={{ backgroundColor: palette[i % palette.length] }}
-              />
-              <Text variant="bodySm">{formatDateShort(s.started_at)}</Text>
-            </div>
-          ))}
-        </div>
+        {comparisonSessions.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-2">
+            {comparisonSessions.map((s, i) => (
+              <div key={s.id} className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2 w-3 rounded-sm"
+                  style={{ backgroundColor: palette[i % palette.length] }}
+                />
+                <Text variant="bodySm">{formatDateShort(s.started_at)}</Text>
+              </div>
+            ))}
+          </div>
+        )}
       </ChartContainer>
   );
 }
