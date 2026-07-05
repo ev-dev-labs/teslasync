@@ -10547,6 +10547,11 @@
     "enable": "Enable on this device",
     "disable": "Disable on this device",
     "iosNote": "iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.",
+    "checking": "Checking browser push availability…",
+    "error": {
+      "load": "Couldn't check browser push availability."
+    },
+    "retry": "Retry",
     "status": {
       "subscribed": "Active on this device",
       "notSubscribed": "Not subscribed",
