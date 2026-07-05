@@ -125,8 +125,12 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
 
   const positionClass = className ?? 'fixed bottom-4 right-4 z-40';
 
-  // Minimized: a small chip showing active count + click to expand.
-  if (state === 'minimized') {
+  // Collapsed chip: rendered while minimized, and also transitionally while a
+  // dismissed drawer is being auto-promoted back to minimized because a new
+  // active job just appeared (see the effect above). Guarding on `!== 'open'`
+  // rather than `=== 'minimized'` means that promotion shows the subtle chip
+  // immediately instead of flashing the full drawer open for one frame.
+  if (state !== 'open') {
     const activeCount = activeJobs.length;
     return (
       <div className={positionClass}>
@@ -255,6 +259,7 @@ function DrawerSection({
 function JobRow({ job }: { job: ExportJobSummary }) {
   const { t } = useTranslation();
   const bucket = bucketFor(job);
+  const typeLabel = prettyType(job.type, t);
   return (
     <li
       className={cn(
@@ -267,7 +272,7 @@ function JobRow({ job }: { job: ExportJobSummary }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-medium text-[var(--text-primary)] truncate">
-            {prettyType(job.type, t)}
+            {typeLabel}
           </span>
           <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
             {job.format}
@@ -295,6 +300,9 @@ function JobRow({ job }: { job: ExportJobSummary }) {
           href={exportDownloadUrl(job.id)}
           target="_blank"
           rel="noreferrer"
+          aria-label={t('export.jobDrawer.downloadLabel', 'Download {{type}} export', {
+            type: typeLabel,
+          })}
           className={cn(
             'shrink-0 inline-flex items-center gap-1 rounded px-2 py-1 text-2xs font-medium',
             'border border-white/[0.08] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
