@@ -9,21 +9,55 @@ import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
 interface InnerSectionProps {
-  /** Optional until the charging detail route resolves; disables Generate when absent. */
+  /**
+   * Charging session id from the detail route (`useParams` → string).
+   * Optional until the route resolves; the Generate button stays
+   * disabled unless it is a positive integer id (see
+   * {@link normalizeSessionId}).
+   */
   sessionId?: string
+}
+
+// The stream's onEvent argument is required, but this feature renders
+// its narrative purely through useAiStream's built-in delta-text
+// accumulator (surfaced by AiOutputPanel), so it has no per-event work
+// to do. A module-level no-op keeps the callback identity stable across
+// renders instead of allocating a fresh closure in the render path.
+const noop = (): void => {}
+
+/**
+ * normalizeSessionId mirrors the backend contract in
+ * internal/api/aichargdiag/handler.go (`parseChargingDiagnosisURL`),
+ * which accepts ONLY a positive integer sessionID and returns HTTP 400
+ * for empty, whitespace, non-numeric, zero, or negative values.
+ *
+ * Validating the same shape at the display boundary keeps the Generate
+ * button from firing a request the handler would immediately reject —
+ * the same guard the sibling AIFeedbackQueueTriage applies to its
+ * numeric feedback id. Returns the canonical id string when valid, or
+ * `null` (button disabled) otherwise.
+ */
+function normalizeSessionId(sessionId: string | undefined): string | null {
+  if (sessionId == null) return null
+  const trimmed = sessionId.trim()
+  if (!/^\d+$/.test(trimmed)) return null
+  const n = Number(trimmed)
+  if (!Number.isSafeInteger(n) || n <= 0) return null
+  return String(n)
 }
 
 function InnerSection({ sessionId }: InnerSectionProps) {
   const { t } = useTranslation()
+  const validSessionId = useMemo(() => normalizeSessionId(sessionId), [sessionId])
   const url = useMemo(
     () =>
-      sessionId
-        ? `/ai/charging/${encodeURIComponent(sessionId)}/diagnose`
+      validSessionId
+        ? `/ai/charging/${encodeURIComponent(validSessionId)}/diagnose`
         : '/ai/charging/0/diagnose',
-    [sessionId],
+    [validSessionId],
   )
   const body = useMemo(() => ({}), [])
-  const stream = useAiStream({ url, body, onEvent: () => {} })
+  const stream = useAiStream({ url, body, onEvent: noop })
   return (
     <AIFeatureCard
       title={t('charging.detail.aiDiagnosis.title', 'Charging diagnosis')}
@@ -36,7 +70,11 @@ function InnerSection({ sessionId }: InnerSectionProps) {
         'Generate diagnosis',
       )}
       badgeLabel={t('charging.detail.aiDiagnosis.badge', 'Helix')}
-      canStart={!!sessionId}
+      emptyHint={t(
+        'charging.detail.aiDiagnosis.emptyHint',
+        'Waiting for a charging session…',
+      )}
+      canStart={validSessionId !== null}
       stream={stream}
     />
   )
