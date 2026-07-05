@@ -50,7 +50,10 @@ export function SafetySettingCard({
   docsLabel,
   docsAriaLabel,
 }: SafetySettingCardProps) {
-  const c = neonColorMap[accent]
+  // Fall back to the cyan accent when an out-of-range value slips past the
+  // type system (e.g. from untyped/dynamic row config) so the tile degrades to
+  // a valid style instead of crashing on `c.bg`/`c.ring`/`c.text`.
+  const c = neonColorMap[accent] ?? neonColorMap.cyan
   return (
     <li
       data-testid={`safety-settings-row-${testKey}`}
@@ -77,7 +80,7 @@ export function SafetySettingCard({
             size="sm"
             data-testid={`safety-settings-value-${testKey}`}
           >
-            {value}
+            {value || '—'}
           </Badge>
         </div>
       </div>
