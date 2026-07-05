@@ -10292,7 +10292,8 @@
       "sleeping": "Sleeping",
       "parked": "Parked",
       "idle": "Idle"
-    }
+    },
+    "loadingSection": "Loading {{section}}"
   },
   "vehicleAccess": {
     "title": "Vehicle Access",
