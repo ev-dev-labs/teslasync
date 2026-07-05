@@ -1,5 +1,4 @@
 import { formatDateShort } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { getChargerCategory } from '../ChargingSessionCard';
 import type { ChargingSession } from '@/api/types';
@@ -77,9 +76,24 @@ export interface StartLevelBucket { range: string; count: number }
 
 // ── Computation Functions ──────────────────────────────────────────────
 
+/**
+ * Round to a fixed number of decimals without locale side effects.
+ *
+ * Chart series need real `number`s, not locale strings. The previous
+ * `parseFloat(fmtNumber(x, n))` idiom silently corrupted any value ≥ 1000
+ * because `fmtNumber` inserts a thousands separator ("1,234.5") that
+ * `parseFloat` then truncates to `1`. This helper is separator- and
+ * NaN-safe.
+ */
+function round(value: number, decimals: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
 export function computeStats(sessions: ChargingSession[]): ChargingStats | null {
   if (sessions.length === 0) return null;
-  const totalEnergy = convertEnergyFromSI(sessions.reduce((sum, s) => sum + s.total_energy_added_wh, 0), 'kWh');
+  const totalEnergy = convertEnergyFromSI(sessions.reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0), 'kWh');
   const totalCost = sessions.reduce((sum, s) => sum + (s.cost_decimal ?? 0), 0);
   const totalDuration = sessions.reduce((sum, s) => sum + durationMinutes(s.started_at, s.ended_at), 0);
   const withPower = sessions.filter((s) => s.peak_power_w);
@@ -108,7 +122,7 @@ export function computeEnergyTrend(sessions: ChargingSession[]): EnergyTrendPoin
     .reverse()
     .map((s) => ({
       date: formatDateShort(s.started_at),
-      energy: parseFloat(fmtNumber(s.total_energy_added_wh ?? 0, 1)),
+      energy: round(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'), 1),
       cost: s.cost_decimal ?? 0,
     }));
 }
@@ -121,16 +135,19 @@ export function computeCostByType(
   sessions.forEach((s) => {
     const cat = chargerLabels[getChargerCategory(s.charger_type)];
     if (!groups[cat]) groups[cat] = { energy: 0, cost: 0, count: 0 };
-    groups[cat].energy += s.total_energy_added_wh;
+    groups[cat].energy += s.total_energy_added_wh ?? 0;
     groups[cat].cost += s.cost_decimal ?? 0;
     groups[cat].count++;
   });
-  return Object.entries(groups).map(([name, v]) => ({
-    name,
-    energy: parseFloat(fmtNumber(v.energy, 1)),
-    cost: parseFloat(fmtNumber(v.cost, 2)),
-    perKwh: v.energy > 0 ? parseFloat(fmtNumber(v.cost / (v.energy / 1000), 3)) : 0,
-  }));
+  return Object.entries(groups).map(([name, v]) => {
+    const energyKwh = convertEnergyFromSI(v.energy, 'kWh');
+    return {
+      name,
+      energy: round(energyKwh, 1),
+      cost: round(v.cost, 2),
+      perKwh: energyKwh > 0 ? round(v.cost / energyKwh, 3) : 0,
+    };
+  });
 }
 
 export function computeStartLevelDist(sessions: ChargingSession[]): StartLevelBucket[] {
@@ -139,7 +156,8 @@ export function computeStartLevelDist(sessions: ChargingSession[]): StartLevelBu
     count: 0,
   }));
   sessions.forEach((s) => {
-    const idx = Math.min(Math.floor(s.start_soc_pct / 10), 9);
+    const pct = Number.isFinite(s.start_soc_pct) ? s.start_soc_pct : 0;
+    const idx = Math.min(Math.max(Math.floor(pct / 10), 0), 9);
     buckets[idx].count++;
   });
   return buckets;
@@ -151,14 +169,15 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
   sessions.forEach((s) => {
     const isDC = !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22_000));
     const bucket = isDC ? dc : ac;
-    bucket.energy += s.total_energy_added_wh;
-    bucket.energyUsed += s.total_energy_added_wh;
+    const energyKwh = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
+    bucket.energy += energyKwh;
+    bucket.energyUsed += energyKwh;
     bucket.cost += s.cost_decimal ?? 0;
     bucket.count++;
     bucket.totalDuration += durationMinutes(s.started_at, s.ended_at);
     if (!s.cost_decimal || s.cost_decimal === 0) {
       bucket.freeCount++;
-      bucket.freeEnergy += s.total_energy_added_wh;
+      bucket.freeEnergy += energyKwh;
     }
   });
   return {
@@ -186,7 +205,10 @@ export function computeEfficiencyStats(sessions: ChargingSession[]): EfficiencyS
     added: s.total_energy_added_wh,
     used: s.total_energy_added_wh,
   }));
-  const totalAdded = withData.reduce((sum, s) => sum + s.total_energy_added_wh, 0);
+  const totalAdded = convertEnergyFromSI(
+    withData.reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0),
+    'kWh',
+  );
   const totalUsed = totalAdded;
   const avgEfficiency = withData.length > 0
     ? withData.reduce((sum, s) => sum + (s.total_energy_added_wh / durationMinutes(s.started_at, s.ended_at)) * 60, 0) / withData.length
