@@ -16,10 +16,14 @@ export function FormattedNumber({ value, precision, unit, className }: Formatted
   if (value == null || !Number.isFinite(value)) {
     return <span className={className}>—</span>;
   }
+  const suffix = unit ? ` ${unit}` : '';
   const display = fmtNumber(value, precision);
+  // Hover title reveals the full-precision value with its unit so the exact
+  // figure stays unambiguous when the visible text is rounded — matching the
+  // sibling formatters (Distance/Energy/Percentage).
   return (
-    <span className={className} title={`${value}`}>
-      {display}{unit ? ` ${unit}` : ''}
+    <span className={className} title={`${value}${suffix}`}>
+      {display}{suffix}
     </span>
   );
 }
