@@ -2304,6 +2304,7 @@
     "openShortcuts": "Show keyboard shortcuts",
     "close": "Close modal / cancel",
     "goto": "Go to {{label}}",
+    "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "empty": "No shortcuts match your search.",
     "filter": {
