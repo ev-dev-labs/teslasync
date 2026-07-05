@@ -89,9 +89,9 @@ function InnerSection({
   // ruleIds list or vehicleId actually change. We send vehicle_id
   // only when non-null; rule_ids is always sent so the LLM sees
   // the SAME scope the SPA sees.
-  const ruleIdsKey = useMemo(() => ruleIds.join(','), [ruleIds])
+  const ruleIdsKey = useMemo(() => (ruleIds ?? []).join(','), [ruleIds])
   const body = useMemo(() => {
-    const out: Record<string, unknown> = { rule_ids: ruleIds }
+    const out: Record<string, unknown> = { rule_ids: ruleIds ?? [] }
     if (vehicleId != null) {
       out.vehicle_id = vehicleId
     }
@@ -154,7 +154,7 @@ function InnerSection({
   // gate on `paused-confirm` here because the original component
   // treated paused-confirm as "busy" too.
   const canStart =
-    ruleIds.length >= 2 && stream.state !== 'paused-confirm'
+    (ruleIds?.length ?? 0) >= 2 && stream.state !== 'paused-confirm'
 
   const handleDetect = useCallback(() => {
     if (stream.state === 'streaming' || stream.state === 'paused-confirm') {
@@ -187,6 +187,12 @@ function InnerSection({
     return kind
   }
 
+  // Localised noun for the rule-pair line ("Rule 12 ↔ Rule 34"). Kept as
+  // a single lookup instead of interpolating the two ids into one string
+  // so the optional name/signal suffixes can compose in JSX without a
+  // combinatorial explosion of translation keys.
+  const ruleWord = t('notifications.alertStudio.aiConflicts.ruleLabel', 'Rule')
+
   return (
     <AIFeatureCard
       title={t(
@@ -209,7 +215,10 @@ function InnerSection({
       buttonTestId="ai-feature-cross-rule-conflict-detection-detect"
     >
       {conflicts != null && conflicts.length === 0 && (
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-secondary)]">
+        <div
+          role="status"
+          className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-secondary)]"
+        >
           {t(
             'notifications.alertStudio.aiConflicts.emptyMessage',
             'No structural conflicts found in the current rule set.',
@@ -219,6 +228,10 @@ function InnerSection({
       {conflicts != null && conflicts.length > 0 && (
         <ul
           className="space-y-2"
+          aria-label={t(
+            'notifications.alertStudio.aiConflicts.listLabel',
+            'Detected rule conflicts',
+          )}
           data-testid="ai-feature-cross-rule-conflict-detection-conflicts"
         >
           {conflicts.map((c) => (
@@ -230,8 +243,9 @@ function InnerSection({
                 <div className="space-y-1">
                   <div className="font-medium">{labelForKind(c.kind)}</div>
                   <div className="text-xs text-[var(--text-secondary)]">
-                    Rule {c.rule_a_id}
-                    {c.rule_a_name ? ` (${c.rule_a_name})` : ''} ↔ Rule{' '}
+                    {ruleWord} {c.rule_a_id}
+                    {c.rule_a_name ? ` (${c.rule_a_name})` : ''} ↔ {ruleWord}
+                    {' '}
                     {c.rule_b_id}
                     {c.rule_b_name ? ` (${c.rule_b_name})` : ''}
                     {c.signal_name ? ` · ${c.signal_name}` : ''}
@@ -242,22 +256,34 @@ function InnerSection({
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {c.subsumes && (
                       <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-amber-300">
-                        subsumes
+                        {t(
+                          'notifications.alertStudio.aiConflicts.flag.subsumes',
+                          'subsumes',
+                        )}
                       </span>
                     )}
                     {c.severity_mismatch && (
                       <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
-                        severity mismatch
+                        {t(
+                          'notifications.alertStudio.aiConflicts.flag.severityMismatch',
+                          'severity mismatch',
+                        )}
                       </span>
                     )}
                     {c.cooldown_mismatch && (
                       <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
-                        cooldown mismatch
+                        {t(
+                          'notifications.alertStudio.aiConflicts.flag.cooldownMismatch',
+                          'cooldown mismatch',
+                        )}
                       </span>
                     )}
                     {c.trigger_mode_mismatch && (
                       <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
-                        trigger mode mismatch
+                        {t(
+                          'notifications.alertStudio.aiConflicts.flag.triggerModeMismatch',
+                          'trigger mode mismatch',
+                        )}
                       </span>
                     )}
                   </div>
