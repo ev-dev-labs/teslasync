@@ -1,6 +1,5 @@
 import { Car } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
@@ -34,13 +33,12 @@ export function NoVehicleSelected({
   description,
 }: NoVehicleSelectedProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   return (
     <PageContainer title={pageTitle}>
       <GlassPanel className="p-8">
         <EmptyState
-          icon={<Car className="h-12 w-12" />}
+          icon={<Car className="h-12 w-12" aria-hidden="true" />}
           title={title ?? t('common.noVehicleSelected.title', 'No vehicle selected')}
           message={
             description ??
@@ -49,9 +47,9 @@ export function NoVehicleSelected({
               'Add a vehicle to your fleet to see data on this page.',
             )
           }
-          action={{
+          actionTo={{
             label: t('common.noVehicleSelected.action', 'Set up TeslaSync'),
-            onClick: () => navigate('/onboarding'),
+            to: '/onboarding',
           }}
         />
       </GlassPanel>
