@@ -60,14 +60,19 @@ export function SuggestedPrompts({ onPick }: SuggestedPromptsProps) {
       aria-label={t('chatbot.aria.suggestions', 'Suggested prompts')}
     >
       {suggestions.map((s) => {
-        const text = t(s.i18nKey, s.defaultValue);
+        // Guarantee a non-empty accessible name: the sparkle icon is
+        // decorative (aria-hidden), so an empty/whitespace translation would
+        // otherwise leave the chip with no name. Fall back to the English
+        // default in that case for both the label and the picked value.
+        const translated = t(s.i18nKey, s.defaultValue);
+        const text = translated.trim() ? translated : s.defaultValue;
         return (
           <li key={s.i18nKey}>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onPick(text)}
-              icon={<Sparkles className="h-3.5 w-3.5" />}
+              icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
               className="rounded-full border border-[var(--border-subtle)] hover:border-purple-500/30 hover:text-purple-300"
             >
               {text}
