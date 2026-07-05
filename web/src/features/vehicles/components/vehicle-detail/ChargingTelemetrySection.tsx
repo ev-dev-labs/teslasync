@@ -14,7 +14,7 @@ interface ChargingTelemetrySectionProps {
 
 export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetrySectionProps) {
   const { t } = useTranslation()
-  const { formatDistance, formatSpeed } = useUnits()
+  const { formatDistance, formatSpeed, formatPower, formatEnergy } = useUnits()
 
   return (
     <GlassPanel className="p-6">
@@ -28,10 +28,10 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
             label={t('vehicles.detail.chargerPower', 'Charger Power')}
             value={
               chargingTelemetry.charger_power_w != null
-                ? `${fmtNumber(chargingTelemetry.charger_power_w)} kW`
+                ? formatPower(chargingTelemetry.charger_power_w)
                 : '—'
             }
-            icon={<Zap className="h-4 w-4" />}
+            icon={<Zap className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
@@ -41,7 +41,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
                 ? `${fmtNumber(chargingTelemetry.charger_voltage)} V`
                 : '—'
             }
-            icon={<Activity className="h-4 w-4" />}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
@@ -51,23 +51,23 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
                 ? `${fmtNumber(chargingTelemetry.charger_actual_current)} A`
                 : '—'
             }
-            icon={<Activity className="h-4 w-4" />}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
             label={t('vehicles.detail.energyAdded', 'Energy Added')}
             value={
               chargingTelemetry.charge_energy_added_wh != null
-                ? `${fmtNumber(chargingTelemetry.charge_energy_added_wh)} kWh`
+                ? formatEnergy(chargingTelemetry.charge_energy_added_wh)
                 : '—'
             }
-            icon={<BatteryCharging className="h-4 w-4" />}
+            icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
             label={t('vehicles.detail.chargingState', 'Charging State')}
             value={chargingTelemetry.charging_state ?? '—'}
-            icon={<Battery className="h-4 w-4" />}
+            icon={<Battery className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
@@ -77,7 +77,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
                 ? `${fmtNumber(chargingTelemetry.battery_level)}%`
                 : '—'
             }
-            icon={<Battery className="h-4 w-4" />}
+            icon={<Battery className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
@@ -87,7 +87,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
                 ? formatSpeed(chargingTelemetry.range_added_meters_per_hour / 3600)
                 : '—'
             }
-            icon={<Activity className="h-4 w-4" />}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
@@ -97,13 +97,13 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
                 ? formatDistance(chargingTelemetry.range_added_meters)
                 : '—'
             }
-            icon={<Zap className="h-4 w-4" />}
+            icon={<Zap className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Zap className="h-8 w-8" />}
+          icon={<Zap className="h-8 w-8" aria-hidden="true" />}
           message={t('vehicles.detail.noChargingTelemetry', 'No charging telemetry available')}
         />
       )}
