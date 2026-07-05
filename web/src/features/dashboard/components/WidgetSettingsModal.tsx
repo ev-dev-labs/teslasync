@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button as UiButton,
@@ -31,6 +31,27 @@ export function WidgetSettingsModal({
 
   const [config, setConfig] = useState<WidgetConfig>(widget.config ?? {});
 
+  // Local config is seeded from the widget once. When the modal is reused for a
+  // different widget (a new instance is passed without unmounting), reset the
+  // draft to that widget's saved config so edits never leak across widgets.
+  // See react.dev "adjusting state when a prop changes".
+  const [trackedWidgetId, setTrackedWidgetId] = useState(widget.id);
+  if (widget.id !== trackedWidgetId) {
+    setTrackedWidgetId(widget.id);
+    setConfig(widget.config ?? {});
+  }
+
+  const vehicleOptions = useMemo(
+    () => [
+      { value: 'all', label: t('dashboard.settings.allVehicles', 'All Vehicles (first)') },
+      ...vehicleList.map((v) => ({
+        value: v.id.toString(),
+        label: v.display_name || t('dashboard.settings.vehicleName', 'Vehicle {{id}}', { id: v.id }),
+      })),
+    ],
+    [vehicleList, t],
+  );
+
   const handleSave = () => {
     onSave(config);
     onClose();
@@ -41,20 +62,20 @@ export function WidgetSettingsModal({
     def.category === 'analytics' || def.category === 'battery';
 
   return (
-    <Modal open={open} onClose={onClose} title={`${def.name} Settings`} size="sm">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={t('dashboard.settings.title', '{{name}} Settings', { name: def.name })}
+      size="sm"
+    >
       <div className="space-y-4 p-4">
         {/* Vehicle selector */}
         {isVehicleWidget && (
           <FormSection title={t('dashboard.settings.vehicle', 'Vehicle')}>
             <UiSelect
+              aria-label={t('dashboard.settings.vehicle', 'Vehicle')}
               value={config.vehicleId?.toString() ?? 'all'}
-              options={[
-                { value: 'all', label: t('dashboard.settings.allVehicles', 'All Vehicles (first)') },
-                ...vehicleList.map((v) => ({
-                  value: v.id.toString(),
-                  label: v.display_name || `Vehicle ${v.id}`,
-                })),
-              ]}
+              options={vehicleOptions}
               onChange={(e) => {
                 const val = e.target.value;
                 setConfig((prev) => ({
@@ -69,6 +90,7 @@ export function WidgetSettingsModal({
         {/* Refresh rate */}
         <FormSection title={t('dashboard.settings.refreshInterval', 'Refresh Interval')}>
           <UiSelect
+            aria-label={t('dashboard.settings.refreshInterval', 'Refresh Interval')}
             value={config.refreshRate?.toString() ?? 'default'}
             options={[
               { value: 'default', label: t('dashboard.settings.default', 'Default') },
@@ -91,6 +113,7 @@ export function WidgetSettingsModal({
         {isChartWidget && (
           <FormSection title={t('dashboard.settings.timeRange', 'Time Range')}>
             <UiSelect
+              aria-label={t('dashboard.settings.timeRange', 'Time Range')}
               value={config.timeRange ?? '7d'}
               options={[
                 { value: '24h', label: t('dashboard.settings.24h', 'Last 24 hours') },
