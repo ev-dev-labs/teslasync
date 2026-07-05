@@ -52,18 +52,22 @@ export interface SignalCatalogPanelProps {
 }
 
 export function getCatalogStalenessStyle(seconds: number, hasTimestamp: boolean) {
-  if (!hasTimestamp) return { label: 'Never received', text: 'text-[var(--text-muted)]', variant: 'neutral' as const };
-  if (seconds < 30)  return { label: 'Active',         text: 'text-green-400',           variant: 'success' as const };
-  if (seconds < 300) return { label: 'Aging',          text: 'text-amber-400',           variant: 'warning' as const };
-  return                       { label: 'Stale',          text: 'text-red-400',             variant: 'danger'  as const };
+  if (!hasTimestamp) return { key: 'never'  as const, label: 'Never received', text: 'text-[var(--text-muted)]', variant: 'neutral' as const };
+  if (seconds < 30)  return { key: 'active' as const, label: 'Active',         text: 'text-green-400',           variant: 'success' as const };
+  if (seconds < 300) return { key: 'aging'  as const, label: 'Aging',          text: 'text-amber-400',           variant: 'warning' as const };
+  return                     { key: 'stale'  as const, label: 'Stale',          text: 'text-red-400',             variant: 'danger'  as const };
 }
 
 export function formatStaleness(seconds: number): string {
   if (!Number.isFinite(seconds)) return '—';
-  if (seconds < 60)   return `${fmtInt(seconds)}s ago`;
-  if (seconds < 3600) return `${fmtInt(seconds / 60)}m ago`;
-  const h = Math.floor(seconds / 3600);
-  const m = (seconds % 3600) / 60;
+  // Floor consistently and clamp clock-skew negatives so we never emit a
+  // rounding overflow like "60m ago" or "1h 60m ago" (fmtInt used to round
+  // 59.98 → 60), and never a nonsensical "-3s ago" for future timestamps.
+  const s = Math.max(0, Math.floor(seconds));
+  if (s < 60)   return `${fmtInt(s)}s ago`;
+  if (s < 3600) return `${fmtInt(Math.floor(s / 60))}m ago`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
   return `${h}h ${fmtInt(m)}m ago`;
 }
 
@@ -89,13 +93,18 @@ export function SignalCatalogPanel({
     return Object.entries(liveData).map(([name, entry]) => {
       const raw = entry && typeof entry === 'object' ? entry : { value: entry, timestamp: null };
       const ts = (raw as { timestamp?: string | null }).timestamp ?? null;
-      const staleness = ts ? (now - new Date(ts).getTime()) / 1000 : Infinity;
-      const category: SignalRow['category'] = !ts ? 'never' : staleness > 300 ? 'stale' : 'active';
+      // An unparseable timestamp string used to slip through as a bogus
+      // "active" row (NaN staleness). Treat it as "never received" so the
+      // badge, the KPI counts, and the "Last Updated" cell all stay consistent.
+      const parsedMs = ts ? new Date(ts).getTime() : NaN;
+      const hasValidTs = Number.isFinite(parsedMs);
+      const staleness = hasValidTs ? (now - parsedMs) / 1000 : Infinity;
+      const category: SignalRow['category'] = !hasValidTs ? 'never' : staleness > 300 ? 'stale' : 'active';
       const value = (raw as { value?: unknown }).value;
       return {
         name,
         value: value != null ? String(value) : '—',
-        timestamp: ts,
+        timestamp: hasValidTs ? ts : null,
         staleness,
         category,
       };
@@ -166,7 +175,7 @@ export function SignalCatalogPanel({
         className: 'w-24',
         render: (signal) => {
           const style = getCatalogStalenessStyle(signal.staleness, !!signal.timestamp);
-          return <Badge variant={style.variant} size="sm" dot>{style.label}</Badge>;
+          return <Badge variant={style.variant} size="sm" dot>{t(`signalCatalog.staleness.${style.key}`, style.label)}</Badge>;
         },
       },
       {
@@ -216,7 +225,7 @@ export function SignalCatalogPanel({
           {title ? <SectionTitle>{title}</SectionTitle> : null}
           <Text as="span" size="2xs" color="muted" className="ml-auto flex items-center gap-2">
             {headerExtra}
-            <RefreshCw className="inline h-3 w-3" />
+            <RefreshCw className="inline h-3 w-3" aria-hidden="true" />
             {t('signalGap.refreshInterval', 'Refreshes every 5s')}
           </Text>
         </div>
@@ -231,12 +240,13 @@ export function SignalCatalogPanel({
             className="w-full sm:w-64"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Filter className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+            <Filter className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
             {(['all', 'stale', 'active'] as CatalogFilterMode[]).map((mode) => (
               <Button
                 key={mode}
                 variant="ghost"
                 size="sm"
+                aria-pressed={filterMode === mode}
                 onClick={() => setFilterMode(mode)}
                 className={cn(
                   'border',
@@ -250,12 +260,13 @@ export function SignalCatalogPanel({
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-            <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+            <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
             {(['staleness', 'alpha', 'category'] as CatalogSortMode[]).map((mode) => (
               <Button
                 key={mode}
                 variant="ghost"
                 size="sm"
+                aria-pressed={sortMode === mode}
                 onClick={() => setSortMode(mode)}
                 className={cn(
                   'border',
