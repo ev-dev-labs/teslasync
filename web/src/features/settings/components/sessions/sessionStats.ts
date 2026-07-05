@@ -59,11 +59,20 @@ export function computeSessionStats(
   const current = list.find((session) => session.current) ?? null
   const otherCount = list.filter((session) => !session.current).length
 
+  // Track the running maximum as a parsed epoch so (a) an invalid timestamp
+  // earlier in the list can't poison the result — `validTime > NaN` is always
+  // false, which previously stuck `lastActive` on the first unparseable value
+  // and hid every later real timestamp — and (b) we don't re-parse the current
+  // winner on every iteration.
   let lastActive: string | null = null
+  let lastActiveMs = Number.NEGATIVE_INFINITY
   for (const session of list) {
     const ts = session.last_seen_at
     if (!ts) continue
-    if (!lastActive || new Date(ts).getTime() > new Date(lastActive).getTime()) {
+    const ms = new Date(ts).getTime()
+    if (Number.isNaN(ms)) continue
+    if (ms > lastActiveMs) {
+      lastActiveMs = ms
       lastActive = ts
     }
   }
