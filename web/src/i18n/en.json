@@ -5105,7 +5105,8 @@
       "title": "Suggest a preheat or precool schedule",
       "badge": "Helix",
       "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
-      "generateButton": "Draft schedule"
+      "generateButton": "Draft schedule",
+      "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule."
     }
   },
   "chargerTypes": {
