@@ -20,7 +20,12 @@ export interface ErrorStateProps {
   action?: ReactNode
   /** ARIA role; "status" for non-blocking offline/info states, "alert" otherwise. */
   role?: 'alert' | 'status'
-  /** Matches `role`: "polite" for status, "assertive" for alert. */
+  /**
+   * Live-region politeness. When omitted it is derived from `role`
+   * ("polite" for status, "assertive" for alert) so a non-blocking
+   * offline/info surface never announces assertively. Pass explicitly
+   * to override the derived default.
+   */
   ariaLive?: 'polite' | 'assertive'
   /** Compact variant — tighter padding for inline mutation errors. */
   compact?: boolean
@@ -33,14 +38,21 @@ export function ErrorState({
   message,
   action,
   role = 'alert',
-  ariaLive = 'assertive',
+  ariaLive,
   compact = false,
   className,
 }: ErrorStateProps) {
+  // Keep politeness in lockstep with `role` unless the caller pins it.
+  // An omitted `ariaLive` on a `status` surface previously fell through
+  // to an independent "assertive" default, contradicting the documented
+  // contract and interrupting screen-reader users for a non-blocking
+  // (offline / waiting) state.
+  const ariaLiveValue = ariaLive ?? (role === 'status' ? 'polite' : 'assertive')
+
   return (
     <div
       role={role}
-      aria-live={ariaLive}
+      aria-live={ariaLiveValue}
       className={cn(
         'rounded-xl border border-rose-500/20 bg-rose-500/5 backdrop-blur-sm',
         compact ? 'p-3 mb-3' : 'p-4 mb-6',
