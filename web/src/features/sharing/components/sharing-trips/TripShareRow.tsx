@@ -36,7 +36,14 @@ export function TripShareRow({
   formatEnergy,
 }: TripShareRowProps) {
   const { t } = useTranslation()
-  const name = trip.name ?? `${t('sharing.trips.row.trip', 'Trip')} #${trip.id}`
+  // Fall back to a stable "Trip #<id>" label when the trip has no usable name.
+  // A bare `??` would let an empty or whitespace-only `name` through, producing
+  // a blank visible title AND an empty `aria-label` on the option — so guard on
+  // trimmed content, not just null/undefined.
+  const name =
+    trip.name && trip.name.trim().length > 0
+      ? trip.name
+      : `${t('sharing.trips.row.trip', 'Trip')} #${trip.id}`
 
   return (
     <li>
@@ -59,13 +66,16 @@ export function TripShareRow({
                 {name}
               </Text>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <InlineMetric icon={<Calendar />} value={formatDate(trip.start_date)} />
                 <InlineMetric
-                  icon={<Clock />}
+                  icon={<Calendar aria-hidden="true" />}
+                  value={formatDate(trip.start_date)}
+                />
+                <InlineMetric
+                  icon={<Clock aria-hidden="true" />}
                   value={formatTripDuration(tripDurationSeconds(trip))}
                 />
                 <InlineMetric
-                  icon={<Car />}
+                  icon={<Car aria-hidden="true" />}
                   value={t('sharing.trips.row.drives', '{{count}} drives', {
                     count: trip.drive_count ?? 0,
                   })}
