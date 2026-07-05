@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -8,7 +9,7 @@ import { Grid } from '@/components/layout';
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard, StatCard } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import { getCompressionStats, getExportJobs as getDevtoolsExportJobs } from '@/api/devtools';
@@ -19,13 +20,23 @@ import { getStatusIcon, statusTextClass, formatBytes } from './helpers';
 export function DataPipelineSection() {
   const { t } = useTranslation();
 
-  const { data: compression, isLoading: compLoading } = useQuery({
+  const {
+    data: compression,
+    isLoading: compLoading,
+    error: compError,
+    refetch: refetchCompression,
+  } = useQuery({
     queryKey: ['system-status', 'compression'],
     queryFn: getCompressionStats,
     refetchInterval: 30_000,
   });
 
-  const { data: exportJobs, isLoading: exportLoading } = useQuery({
+  const {
+    data: exportJobs,
+    isLoading: exportLoading,
+    error: exportError,
+    refetch: refetchExportJobs,
+  } = useQuery({
     queryKey: ['system-status', 'export-jobs'],
     queryFn: () => getDevtoolsExportJobs(),
     refetchInterval: 15_000,
@@ -33,7 +44,7 @@ export function DataPipelineSection() {
 
   const isLoading = compLoading || exportLoading;
 
-  const exportColumns: Column<ExportJobSummary>[] = [
+  const exportColumns = useMemo<Column<ExportJobSummary>[]>(() => [
     {
       key: 'status', header: t('Status'),
       render: (row) => (
@@ -51,12 +62,19 @@ export function DataPipelineSection() {
     },
     { key: 'record_count', header: t('Records'), sortable: true, render: (row) => fmtInt(row.record_count) },
     { key: 'created_at', header: t('Created'), render: (row) => formatDateTime(row.created_at) },
-  ];
+  ], [t]);
 
-  const pendingJobs = exportJobs?.filter((j) => j.status === 'queued').length ?? 0;
-  const processingJobs = exportJobs?.filter((j) => j.status === 'processing').length ?? 0;
-  const completedJobs = exportJobs?.filter((j) => j.status === 'ready').length ?? 0;
-  const failedJobs = exportJobs?.filter((j) => j.status === 'failed').length ?? 0;
+  const { pendingJobs, processingJobs, completedJobs, failedJobs } = useMemo(() => {
+    const list = exportJobs ?? [];
+    return {
+      pendingJobs: list.filter((j) => j.status === 'queued').length,
+      processingJobs: list.filter((j) => j.status === 'processing').length,
+      completedJobs: list.filter((j) => j.status === 'ready').length,
+      failedJobs: list.filter((j) => j.status === 'failed').length,
+    };
+  }, [exportJobs]);
+
+  const hasJobs = (exportJobs?.length ?? 0) > 0;
 
   return (
     <AccordionSection
@@ -81,24 +99,32 @@ export function DataPipelineSection() {
         </div>
       ) : (
         <div className="space-y-6">
-          {compression && (
-            <div>
-              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Compression Statistics')}</h4>
-              <Grid cols={{ default: 2, md: 4 }} gap={3}>
-                <MetricCard label={t('Compression Ratio')} value={fmtPercent(compression.savings_percent)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
-                <MetricCard label={t('Estimated Savings')} value={formatBytes(compression.estimated_saved_bytes)} icon={<HardDrive className="h-4 w-4" />} color="cyan" />
-                <MetricCard label={t('Total Positions')} value={fmtInt(compression.total_positions)} icon={<BarChart3 className="h-4 w-4" />} color="purple" />
-                <MetricCard label={t('Compressed')} value={fmtInt(compression.compressed_positions)} icon={<Archive className="h-4 w-4" />} color="cyan" />
-              </Grid>
-              <div className="mt-4 flex justify-center">
-                <RadialGauge value={compression.savings_percent} max={100} label={t('Savings')} unit="%" color="#22c55e" size={140} />
-              </div>
-            </div>
-          )}
+          <div>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Compression Statistics')}</h4>
+            {compError ? (
+              <QueryError error={compError} onRetry={() => refetchCompression()} />
+            ) : compression ? (
+              <>
+                <Grid cols={{ default: 2, md: 4 }} gap={3}>
+                  <MetricCard label={t('Compression Ratio')} value={fmtPercent(compression.savings_percent)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
+                  <MetricCard label={t('Estimated Savings')} value={formatBytes(compression.estimated_saved_bytes)} icon={<HardDrive className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('Total Positions')} value={fmtInt(compression.total_positions)} icon={<BarChart3 className="h-4 w-4" />} color="purple" />
+                  <MetricCard label={t('Compressed')} value={fmtInt(compression.compressed_positions)} icon={<Archive className="h-4 w-4" />} color="cyan" />
+                </Grid>
+                <div className="mt-4 flex justify-center">
+                  <RadialGauge value={compression.savings_percent} max={100} label={t('Savings')} unit="%" color="#22c55e" size={140} />
+                </div>
+              </>
+            ) : (
+              <EmptyState /* no-action: transient empty state - surfaces when compression stats are unavailable; no specific recovery action applies */ message={t('No compression statistics available')} />
+            )}
+          </div>
 
           <div>
             <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Export Job Queue')}</h4>
-            {exportJobs && exportJobs.length > 0 ? (
+            {exportError ? (
+              <QueryError error={exportError} onRetry={() => refetchExportJobs()} />
+            ) : hasJobs ? (
               <>
                 <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">
                   <StatCard label={t('Pending')} value={pendingJobs} icon={<Clock className="h-4 w-4" />} />
@@ -109,7 +135,7 @@ export function DataPipelineSection() {
                 <DataTable
                   tableId="system:pipeline-export-jobs"
                   columns={exportColumns}
-                  data={exportJobs}
+                  data={exportJobs ?? []}
                   keyExtractor={(j) => j.id}
                   compact
                   pagination
@@ -117,7 +143,7 @@ export function DataPipelineSection() {
                 />
               </>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No export jobs in queue')} />
+              <EmptyState /* no-action: transient empty state - surfaces when source data is missing; no specific recovery action available */ message={t('No export jobs in queue')} />
             )}
           </div>
         </div>
