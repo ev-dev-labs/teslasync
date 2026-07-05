@@ -2339,6 +2339,7 @@
     "add": "Add Annotation",
     "listTitle": "Annotations",
     "remove": "Remove annotation",
+    "removeNamed": "Remove annotation: {{label}}",
     "toggle": "Toggle annotations",
     "clickChart": "Click on chart to annotate",
     "enable": "Enable annotations",
