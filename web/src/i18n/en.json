@@ -1144,7 +1144,10 @@
       "peakHours": "Peak hours",
       "offpeakHours": "Off-peak hours",
       "recommendations": "Optimization Recommendations",
-      "noRecs": "Recommendations will appear after more charging sessions."
+      "noRecs": "Recommendations will appear after more charging sessions.",
+      "sessionsWord": "sessions",
+      "heatmapAlt": "Average charging cost per kWh by weekday and hour of day",
+      "heatmapEmpty": "The charging cost heatmap will appear after more charging sessions."
     },
     "noStats": "No charging statistics available yet",
     "noMetrics": "No charging metrics available yet",
