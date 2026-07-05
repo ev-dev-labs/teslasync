@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
@@ -38,6 +39,21 @@ const CHART_HEIGHT = 320;
 export function PowerHistoryChart({ data, loading, error, onRetry, className }: PowerHistoryChartProps) {
   const { t } = useTranslation();
 
+  // The API layer is untyped at runtime and can transiently omit the series;
+  // guard so `.length` below (and recharts' own `.map`) never throw on a
+  // nullish/garbage `data` prop.
+  const rows = Array.isArray(data) ? data : [];
+
+  // Format the epoch X value through a Date object rather than
+  // `new Date(v).toISOString()`, which throws `RangeError: Invalid time value`
+  // for a NaN/undefined sample. `formatDateShort` already renders the "—"
+  // placeholder for unparseable input, so the axis stays crash-safe.
+  const formatTimeTick = useCallback(
+    (value: number) => formatDateShort(new Date(value)),
+    [],
+  );
+  const formatWattTick = useCallback((value: number) => fmtWatts(value), []);
+
   if (error) {
     return (
       <GlassPanel className={cn('p-4 sm:p-5', className)}>
@@ -55,11 +71,11 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
       subtitle={t('powerFlow.powerOverTimeDesc', 'Solar, battery, and grid power flow')}
       ariaLabel={t('powerFlow.powerOverTimeAria', 'Solar, battery, grid, and home power flow stacked area chart over time')}
       loading={loading}
-      empty={data.length === 0}
+      empty={rows.length === 0}
       height={CHART_HEIGHT}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <AreaChart data={data} margin={chartMarginLabeled}>
+        <AreaChart data={rows} margin={chartMarginLabeled}>
           <defs>
             <ChartGradient id="pfGradSolar" color={FLOW_COLORS.solar} />
             <ChartGradient id="pfGradBattery" color={FLOW_COLORS.battery} />
@@ -69,10 +85,10 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
           {chartGrid}
           <XAxis
             dataKey="time"
-            tickFormatter={(v) => formatDateShort(new Date(v).toISOString())}
+            tickFormatter={formatTimeTick}
             {...axisTick}
           />
-          <YAxis tickFormatter={(v: number) => fmtWatts(v)} {...axisTick} />
+          <YAxis tickFormatter={formatWattTick} {...axisTick} />
           <Tooltip content={<ChartTooltip />} />
           <Legend />
           <Area
