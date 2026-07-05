@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { GlassPanel, PanelTitle } from '@/components/ui'
 import { MetricBar } from '@/components/data-display'
@@ -40,9 +41,18 @@ export function SessionBreakdownPanel({
   emptyMessage,
   colorOffset = 0,
 }: SessionBreakdownPanelProps) {
+  const { t } = useTranslation()
   const series = chartTokens.series
   const rows = items ?? []
   const max = total > 0 ? total : 1
+
+  // Even when the caller flags an error without supplying an error object,
+  // surface a retryable failure card so the panel body never collapses to
+  // just its title — QueryError renders nothing for a falsy error.
+  const shownError =
+    isError && !error
+      ? new Error(t('account.sessions.breakdownError', 'Failed to load sessions'))
+      : error
 
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -55,7 +65,7 @@ export function SessionBreakdownPanel({
       {isLoading ? (
         <Skeleton height={168} />
       ) : isError ? (
-        <QueryError error={error} onRetry={onRetry} />
+        <QueryError error={shownError} onRetry={onRetry} />
       ) : rows.length === 0 ? (
         <EmptyState message={emptyMessage} />
       ) : (
