@@ -4119,7 +4119,9 @@
       "noDailyEnergy": "No charging energy data is available for this week.",
       "noBatteryData": "No battery data is available for this week.",
       "activity": "Driving & charging activity",
-      "batteryAndAlerts": "Battery health & alerts"
+      "batteryAndAlerts": "Battery health & alerts",
+      "alertDistributionChartLabel": "Pie chart of alerts by severity",
+      "noAlertBreakdown": "No severity breakdown to chart."
     },
     "title": "Fleet Analytics",
     "tabs": {
