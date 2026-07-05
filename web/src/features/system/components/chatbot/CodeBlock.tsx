@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CopyButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -28,9 +29,18 @@ interface CodeBlockProps {
  * short snippets the assistant emits.
  */
 export function CodeBlock({ language, text, children, className }: CodeBlockProps) {
+  const { t } = useTranslation();
   const langLabel = language?.trim() || 'text';
+  // Guard against a runtime-undefined `text`. The prop is typed `string`, but
+  // react-markdown can hand an empty fence through as `undefined`; without the
+  // fallback we would copy / render the literal string "undefined".
+  const rawText = text ?? '';
   return (
     <div
+      role="group"
+      aria-label={t('chatbot.aria.codeBlock', '{{language}} code snippet', {
+        language: langLabel,
+      })}
       className={cn(
         'relative rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] my-2 overflow-hidden',
         className,
@@ -38,10 +48,10 @@ export function CodeBlock({ language, text, children, className }: CodeBlockProp
     >
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-1.5 text-2xs uppercase tracking-wider text-[var(--text-secondary)]">
         <span className="font-mono">{langLabel}</span>
-        <CopyButton text={text} iconOnly variant="ghost" size="sm" />
+        <CopyButton text={rawText} iconOnly variant="ghost" size="sm" />
       </div>
       <pre className="overflow-x-auto p-3 text-xs leading-relaxed text-[var(--text-primary)] font-mono">
-        <code>{children ?? text}</code>
+        <code>{children ?? rawText}</code>
       </pre>
     </div>
   );
