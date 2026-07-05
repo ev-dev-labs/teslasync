@@ -54,6 +54,10 @@ export function NotificationRow({
   const isRead = !!log.read_at;
   const isArchived = !!log.archived_at;
   const severity = rule?.severity ?? 'info';
+  // A blank/absent title would otherwise render an empty primary line. Degrade
+  // to an em-dash so the row never collapses to a headless body (matches the
+  // sibling AlertCard behavior). `||` (not `??`) so empty strings degrade too.
+  const displayTitle = log.title || '—';
 
   const synthetic: Alert = {
     id: log.id,
@@ -134,7 +138,7 @@ export function NotificationRow({
             'truncate text-sm',
             isRead ? 'text-[var(--text-secondary)]' : 'font-medium text-[var(--text-primary)]',
           )}>
-            {log.title}
+            {displayTitle}
           </span>
         </div>
         {log.message && (
