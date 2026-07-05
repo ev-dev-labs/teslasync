@@ -14,6 +14,26 @@ interface TripKpiBandProps {
   isLoading: boolean;
 }
 
+const GRID_CLASS =
+  'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6';
+
+/**
+ * Clamp a KPI input to a safe, non-negative, finite number.
+ *
+ * The API types these totals as non-null `number`, but a malformed
+ * upstream payload — a `NaN` from a bad division, a negative from clock
+ * skew, an explicit `null` — must never leak "-5 km", "NaN", "-156 Wh/km"
+ * (via the derived efficiency), or "-3 drives" into the summary band.
+ * `?? 0` alone catches only null/undefined, so this guard is applied at
+ * the display boundary. Every metric in this band has a non-negative
+ * domain, so clamping is behaviour-preserving for all valid data.
+ */
+export function safeMetric(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : 0;
+}
+
 /**
  * Full-width KPI band for the Trip Detail page. Renders six null-safe
  * metrics that reflow from 2 columns on phones up to 6 on ultra-wide
@@ -25,12 +45,9 @@ export function TripKpiBand({ trip, isLoading }: TripKpiBandProps) {
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
 
-  const gridClass =
-    'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6';
-
   if (isLoading && !trip) {
     return (
-      <div className={gridClass} aria-hidden="true">
+      <div className={GRID_CLASS} aria-hidden="true">
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
@@ -38,12 +55,12 @@ export function TripKpiBand({ trip, isLoading }: TripKpiBandProps) {
     );
   }
 
-  const distanceM = trip?.total_distance_m ?? 0;
-  const energyWh = trip?.total_energy_wh ?? 0;
-  const durationS = trip?.total_duration_s ?? 0;
-  const driveCount = trip?.drive_count ?? 0;
-  const chargeCount = trip?.charge_count ?? 0;
-  const cost = trip?.total_cost ?? 0;
+  const distanceM = safeMetric(trip?.total_distance_m);
+  const energyWh = safeMetric(trip?.total_energy_wh);
+  const durationS = safeMetric(trip?.total_duration_s);
+  const driveCount = safeMetric(trip?.drive_count);
+  const chargeCount = safeMetric(trip?.charge_count);
+  const cost = safeMetric(trip?.total_cost);
 
   const distanceDisplay = convertDistanceFromSI(distanceM, unitPrefs.distance);
   const efficiencyUnit = `Wh/${unitPrefs.distance}`;
@@ -52,7 +69,7 @@ export function TripKpiBand({ trip, isLoading }: TripKpiBandProps) {
   return (
     <section
       aria-label={t('trips.detail.kpi.label', 'Trip summary metrics')}
-      className={gridClass}
+      className={GRID_CLASS}
     >
       <MetricCard
         label={t('trips.detail.distance', 'Distance')}
