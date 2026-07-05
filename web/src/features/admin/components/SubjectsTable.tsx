@@ -57,6 +57,13 @@ export function SubjectsTable({
     return subjects.filter((s) => (s.subject ?? '').toLowerCase().includes(term))
   }, [subjects, search])
 
+  const hasSubjects = subjects.length > 0
+  // The header count must describe the same surface the body renders. Only the
+  // list branch shows the table, so gate the count on exactly that condition —
+  // otherwise a stale "Showing 3 of 3" can sit above a QueryError or skeleton
+  // with no table beneath it (candidates.data survives a failed refetch).
+  const showSubjectList = !open && !isLoading && !isError && hasSubjects
+
   const columns = useMemo<Column<ImpersonationCandidate>[]>(
     () => [
       {
@@ -109,7 +116,7 @@ export function SubjectsTable({
           <Users className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('impersonation.users.tableTitle', 'Active Subjects')}
         </PanelTitle>
-        {!open && subjects.length > 0 && (
+        {showSubjectList && (
           <Caption>
             {t('impersonation.users.showing', 'Showing {{shown}} of {{total}}', {
               shown: fmtInt(filtered.length),
@@ -132,7 +139,7 @@ export function SubjectsTable({
         </div>
       ) : isError ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : subjects.length === 0 ? (
+      ) : !hasSubjects ? (
         <EmptyState
           /* no-action: there is no admin remediation for "no other subjects active" — the user must wait for someone else to sign in */
           icon={<Users className="h-10 w-10" aria-hidden="true" />}
