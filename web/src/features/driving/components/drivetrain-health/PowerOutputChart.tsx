@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -31,7 +32,24 @@ export function PowerOutputChart({ data, loading = false }: PowerOutputChartProp
   // URL-persisted hidden-series state lets users declutter to one trace.
   const hidden = useHiddenSeries('drivetrain-power-output');
 
-  const empty = data.length <= 1;
+  // `data` is typed non-null, but the drivetrain-health data hook can hand
+  // down `undefined` transiently while the drives query is still loading —
+  // guard before `.length` / `.map` so a mid-fetch render never throws.
+  const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  const empty = rows.length <= 1;
+
+  // Shape the screen-reader / forced-colors fallback table once per data
+  // change (keeps a stable array reference out of the ChartContainer prop on
+  // unrelated re-renders) and coerce nullish samples to 0 for the cells.
+  const tableData = useMemo(
+    () =>
+      rows.map((d) => ({
+        date: d.date ?? '—',
+        power_max_kw: d.powerMax ?? 0,
+        power_min_kw: d.powerMin ?? 0,
+      })),
+    [rows],
+  );
 
   return (
     <FadeIn delay={0.3}>
@@ -42,11 +60,7 @@ export function PowerOutputChart({ data, loading = false }: PowerOutputChartProp
         chartKey="drivetrain-power-output"
         loading={loading}
         empty={empty}
-        data={data.map((d) => ({
-          date: d.date,
-          power_max_kw: d.powerMax,
-          power_min_kw: d.powerMin,
-        }))}
+        data={tableData}
         dataColumns={[
           { key: 'date', label: t('drivetrain.col.date', 'Date') },
           { key: 'power_max_kw', label: t('drivetrain.col.powerMax', 'Peak (kW)') },
@@ -55,7 +69,7 @@ export function PowerOutputChart({ data, loading = false }: PowerOutputChartProp
         height={300}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={rows}>
             {areaGradient('dtPwrMaxGrad', '#8b5cf6')}
             {areaGradient('dtPwrMinGrad', '#ef4444')}
             <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
