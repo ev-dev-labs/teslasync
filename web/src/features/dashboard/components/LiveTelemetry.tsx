@@ -25,6 +25,15 @@ interface LiveTelemetryProps {
   pressureUnit: string;
 }
 
+/** Fan speed is reported on a fixed 0–6 scale in the Tesla climate signal set. */
+const FAN_SPEED_MAX = 6;
+
+/** Clamp a percentage into [0, 100] so progress fills never overflow their track. */
+function clampPct(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
 export function LiveTelemetry({
   motorData, climateData, securityData, tireData, mediaData, locationData,
   toTemperatureDisplay, toDistanceDisplay, toPressureDisplay, tempUnit, distanceUnit, pressureUnit,
@@ -104,6 +113,7 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
   data: ClimateData | undefined; toTemperatureDisplay: (c: number) => number; tempUnit: string;
 }) {
   const { t } = useTranslation('dashboard');
+  const fanSpeed = data?.hvac_fan_speed ?? 0;
   return (
     <GlassPanel hover glow="cyan" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
@@ -117,13 +127,20 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.fan', 'Fan')}</span>
-              <span className="text-2xs text-[var(--text-muted)]">{data.hvac_fan_speed ?? 0}/6</span>
+              <span className="text-2xs text-[var(--text-muted)]">{fanSpeed}/{FAN_SPEED_MAX}</span>
             </div>
-            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden"
+              role="progressbar"
+              aria-label={t('telemetry.fan', 'Fan')}
+              aria-valuenow={fanSpeed}
+              aria-valuemin={0}
+              aria-valuemax={FAN_SPEED_MAX}
+            >
               <div
                 className="h-full rounded-full transition-all duration-slow"
                 style={{
-                  width: `${((data.hvac_fan_speed ?? 0) / 6) * 100}%`,
+                  width: `${clampPct((fanSpeed / FAN_SPEED_MAX) * 100)}%`,
                   background: 'linear-gradient(90deg, #00f0ff, #a855f7)',
                 }}
               />
@@ -277,6 +294,9 @@ function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
 /* ———— Media Panel ———— */
 function MediaPanel({ data }: { data: MediaData | undefined }) {
   const { t } = useTranslation('dashboard');
+  const volume = data?.audio_volume;
+  const volumeMax = data?.audio_volume_max;
+  const volumePct = volume != null && volumeMax ? clampPct((volume / volumeMax) * 100) : 0;
   return (
     <GlassPanel hover glow="purple" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
@@ -306,11 +326,18 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
                 {data.audio_volume_max != null ? `/${data.audio_volume_max}` : ''}
               </span>
             </div>
-            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden"
+              role="progressbar"
+              aria-label={t('telemetry.volume', 'Volume')}
+              aria-valuenow={data.audio_volume ?? 0}
+              aria-valuemin={0}
+              aria-valuemax={data.audio_volume_max ?? 0}
+            >
               <div
                 className="h-full rounded-full transition-all duration-slow"
                 style={{
-                  width: `${data.audio_volume != null && data.audio_volume_max ? (data.audio_volume / data.audio_volume_max) * 100 : 0}%`,
+                  width: `${volumePct}%`,
                   background: 'linear-gradient(90deg, #a855f7, #00f0ff)',
                 }}
               />
