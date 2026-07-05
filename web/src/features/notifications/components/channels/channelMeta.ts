@@ -128,9 +128,17 @@ export const CHANNEL_TYPES: readonly ChannelTypeMeta[] = [
   ] },
 ];
 
+/**
+ * Stable fallback meta (the generic `webhook` provider) resolved by value so a
+ * future reorder of `CHANNEL_TYPES` can't silently change what `getChannelMeta`
+ * returns for an unknown kind.
+ */
+const FALLBACK_META: ChannelTypeMeta =
+  CHANNEL_TYPES.find((c) => c.value === 'webhook') ?? CHANNEL_TYPES[0];
+
 /** Resolve provider metadata by kind, falling back to the generic webhook meta. */
 export function getChannelMeta(kind: string): ChannelTypeMeta {
-  return CHANNEL_TYPES.find((c) => c.value === kind) ?? CHANNEL_TYPES[4];
+  return CHANNEL_TYPES.find((c) => c.value === kind) ?? FALLBACK_META;
 }
 
 /** Fields whose values must never be shown in plaintext previews. */
@@ -167,6 +175,15 @@ export function channelToFormConfig(ch: NotificationChannel): Record<string, str
       return { server_url: ch.server_url, topic: ch.topic };
     case 'pushover':
       return { user_key: ch.user_key, app_token: ch.app_token };
+    default: {
+      // Corrupt/unknown kind (e.g. a malformed API payload): yield an empty
+      // config so the card/modal renders a placeholder instead of returning
+      // `undefined` and crashing callers that iterate the result. The `never`
+      // binding keeps the switch exhaustive at compile time.
+      const _exhaustive: never = ch;
+      void _exhaustive;
+      return {};
+    }
   }
 }
 
@@ -187,11 +204,14 @@ export function buildChannelPayload(
     case 'telegram':
       return { ...idPart, kind: 'telegram', name, enabled, bot_token: config.bot_token ?? '', chat_id: config.chat_id ?? '' } as NotificationChannelInput;
     case 'email': {
-      const port = Number(config.smtp_port);
+      // `Number('')` is 0 (finite) and a blank/negative port is invalid SMTP,
+      // so require a positive number before trusting the parsed value.
+      const parsedPort = Number(config.smtp_port);
+      const port = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 587;
       return {
         ...idPart, kind: 'email', name, enabled,
         smtp_host: config.smtp_host ?? '',
-        smtp_port: Number.isFinite(port) ? port : 587,
+        smtp_port: port,
         smtp_username: config.smtp_username ?? '',
         smtp_password: config.smtp_password ?? '',
         from_address: config.from_address ?? '',
@@ -203,7 +223,7 @@ export function buildChannelPayload(
       let headers: Record<string, string> = {};
       try {
         const parsed = JSON.parse(config.headers || '{}');
-        if (parsed && typeof parsed === 'object') headers = parsed as Record<string, string>;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) headers = parsed as Record<string, string>;
       } catch { headers = {}; }
       const method = (config.method ?? 'POST').toUpperCase();
       const safeMethod: 'GET' | 'POST' | 'PUT' = method === 'GET' || method === 'PUT' ? method : 'POST';
