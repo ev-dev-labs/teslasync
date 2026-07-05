@@ -23,21 +23,23 @@ export function Pressure({ bar, psi, precision, className }: PressureProps) {
   const pressureUnit = unitPrefs.pressure;
   const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
 
-  let sourceBar: number | null = null;
+  // Normalise both accepted inputs to SI kilopascals — the unit
+  // `convertPressureFromSI` consumes (1 bar = 100 kPa, 1 psi = 6.894757 kPa).
+  let sourceKpa: number | null = null;
   let title: string | undefined;
   if (bar != null && Number.isFinite(bar)) {
-    sourceBar = bar * 100;
+    sourceKpa = bar * 100;
     title = `${bar.toFixed(2)} bar`;
   } else if (psi != null && Number.isFinite(psi)) {
-    sourceBar = psi * 6.894757;
+    sourceKpa = psi * 6.894757;
     title = `${psi.toFixed(2)} psi`;
   }
 
-  if (sourceBar == null) {
+  if (sourceKpa == null) {
     return <span className={className}>—</span>;
   }
 
-  const display = fmtNumber(toPressureDisplay(sourceBar), precision);
+  const display = fmtNumber(toPressureDisplay(sourceKpa), precision);
   return (
     <span className={className} title={title}>
       {display} {pressureUnit}
