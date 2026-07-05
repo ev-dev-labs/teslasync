@@ -20,7 +20,7 @@ export function InfoTile({
   return (
     <GlassPanel className="p-4 overflow-hidden">
       <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs mb-1.5 min-w-0">
-        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
       <p className={cn('text-lg font-semibold truncate', color)} title={String(display)}>
