@@ -1115,7 +1115,8 @@
         "avg10to80": "10→80% avg min",
         "avg20to80": "20→80% avg min",
         "dcSessions": "DC Sessions"
-      }
+      },
+      "noCurve": "No curve data for this session."
     },
     "optimizer": {
       "heatmap": "Charging Cost Heatmap",
