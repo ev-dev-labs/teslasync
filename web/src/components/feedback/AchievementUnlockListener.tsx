@@ -1,7 +1,14 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAchievementUnlocks } from '@/api/hooks/useAchievementUnlocks'
 import { useAchievementCelebrationPrefs } from '@/hooks/useAchievementCelebrationPrefs'
 import { AchievementUnlockedToastStack } from './AchievementUnlockedToast'
+
+type WindowWithLegacyAudio = Window & {
+  webkitAudioContext?: typeof AudioContext
+}
+
+// Two-note "ding" — perfect fifth (E5 → B5), staggered by 120ms.
+const CHIME_NOTE_FREQS = [659.25, 987.77] as const
 
 /**
  * AchievementUnlockListener — mounts at the app root, subscribes to the
@@ -22,28 +29,43 @@ export function AchievementUnlockListener() {
   const { recent, dismiss } = useAchievementUnlocks()
   const prefs = useAchievementCelebrationPrefs()
 
-  // Procedural chime via WebAudio. Cached per mount so we don't allocate
-  // an AudioContext until the user actually opts into sound.
-  const audio = useMemo<{ ctx: AudioContext | null }>(() => ({ ctx: null }), [])
+  // Lazily-created AudioContext, retained across renders. useRef (not useMemo)
+  // because React is free to discard a memoised value and recompute it — a
+  // dropped context would leak the underlying audio device and be re-created
+  // on the next unlock.
+  const audioCtxRef = useRef<AudioContext | null>(null)
+
+  // Achievement ids we've already chimed for. This is what lets us fire the
+  // sound only when the queue GROWS (a genuinely new unlock) and stay silent
+  // when it SHRINKS (the user dismissing one of several stacked toasts).
+  const chimedIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    if (!prefs.playSound) return
-    if (recent.length === 0) return
-    // Only play for the most recent unlock that hasn't been chimed; we treat
-    // every render of `recent[0]` as the trigger because dismiss() removes
-    // entries after they are acknowledged.
+    const currentIds = recent.map(e => e.achievement.id)
+    // A "new" unlock is any queued id we haven't chimed for yet.
+    const hasNewUnlock = currentIds.some(id => !chimedIdsRef.current.has(id))
+    // Re-key the seen-set to exactly the live queue. Marking ids seen even when
+    // sound is off means flipping the toggle on later won't retro-chime the
+    // existing backlog; pruning to `currentIds` keeps the set bounded (and lets
+    // a re-surfaced unlock chime again).
+    chimedIdsRef.current = new Set(currentIds)
+
+    if (!prefs.playSound || !hasNewUnlock) return
+
+    // Procedural chime via WebAudio — no audio asset required, keeps the bundle
+    // slim and works offline.
     try {
-      type WindowWithLegacyAudio = Window & {
-        webkitAudioContext?: typeof AudioContext
-      }
       const Ctor = window.AudioContext || (window as WindowWithLegacyAudio).webkitAudioContext
       if (!Ctor) return
-      if (!audio.ctx) audio.ctx = new Ctor()
-      const ctx = audio.ctx
+      if (!audioCtxRef.current) audioCtxRef.current = new Ctor()
+      const ctx = audioCtxRef.current
+      // Autoplay policy can leave a freshly-created context suspended until a
+      // user gesture; toggling the setting is one, so resume best-effort.
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
       const now = ctx.currentTime
-      // Two-note "ding" — perfect fifth (E5 → B5).
-      const noteFreqs = [659.25, 987.77]
-      noteFreqs.forEach((freq, i) => {
+      CHIME_NOTE_FREQS.forEach((freq, i) => {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
         osc.type = 'triangle'
@@ -61,9 +83,25 @@ export function AchievementUnlockListener() {
       // blocking before user gesture). Silently no-op — the visual
       // celebration is the primary affordance.
     }
-  // We intentionally key on `recent.length` (not the full array) so we only
-  // chime when a new event arrives, not on unrelated re-renders.
-  }, [recent.length, prefs.playSound, audio])
+  }, [recent, prefs.playSound])
+
+  // Close the AudioContext on unmount so we don't leak an audio device handle
+  // for a listener that lives at the app root for the whole session.
+  useEffect(() => {
+    return () => {
+      const ctx = audioCtxRef.current
+      audioCtxRef.current = null
+      if (!ctx || ctx.state === 'closed') return
+      try {
+        const result = ctx.close() as Promise<void> | undefined
+        if (result && typeof result.catch === 'function') {
+          result.catch(() => {})
+        }
+      } catch {
+        // Best-effort teardown — nothing actionable if close() throws.
+      }
+    }
+  }, [])
 
   // Skip rendering the visible stack when the user has opted out, but still
   // keep the hook subscription live so the SSE queue is drained.
