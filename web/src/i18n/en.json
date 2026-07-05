@@ -8693,7 +8693,8 @@
       "message": "A new version of TeslaSync is available.",
       "reload": "Reload",
       "later": "Later"
-    }
+    },
+    "decimalPrecisionPlaceholder": "e.g. 2"
   },
   "browserNotifications": {
     "title": "Browser Notifications",
