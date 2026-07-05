@@ -9883,7 +9883,9 @@
     "pin": "Pin",
     "unpin": "Unpin",
     "announceApplied": "View {{name}} applied",
-    "announceCleared": "Saved view cleared"
+    "announceCleared": "Saved view cleared",
+    "loading": "Loading saved views…",
+    "error": "Unable to load saved views"
   },
   "trips": {
     "detail": {
