@@ -53,7 +53,10 @@ export function SessionList({
 
   const startRename = (session: ChatSessionInfo) => {
     setRenamingId(session.id);
-    setRenameDraft(displayTitle(session, t));
+    // Seed with the *editable* current name (raw title or full first message),
+    // never the sidebar's truncated "…" preview or the localized "Untitled"
+    // placeholder — otherwise committing would persist that mangled text.
+    setRenameDraft(editableTitle(session));
   };
 
   const commitRename = () => {
@@ -139,6 +142,7 @@ export function SessionList({
                         onKeyDown={handleRenameKeyDown}
                         onBlur={commitRename}
                         size="sm"
+                        placeholder={t('chatbot.rename.placeholder', 'Conversation name')}
                         aria-label={t('chatbot.aria.renameSession', 'Rename conversation')}
                       />
                     </div>
@@ -237,4 +241,17 @@ function displayTitle(
     return first.length > 60 ? `${first.slice(0, 60)}…` : first;
   }
   return t('chatbot.session.untitled', 'Untitled conversation');
+}
+
+/**
+ * Seed value for the inline rename input. Unlike {@link displayTitle}, this
+ * returns the *editable* current name — the raw title or the full, untruncated
+ * first message — and never the sidebar's truncated "…" preview or the
+ * localized "Untitled" placeholder. That keeps a committed rename from
+ * persisting an ellipsis-mangled or placeholder title.
+ */
+function editableTitle(session: ChatSessionInfo): string {
+  if (session.title && session.title.trim()) return session.title.trim();
+  if (session.first_message && session.first_message.trim()) return session.first_message.trim();
+  return '';
 }
