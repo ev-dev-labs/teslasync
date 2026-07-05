@@ -170,12 +170,15 @@ export function LayoutManager({
   };
 
   /* ─── Context menu actions ─── */
-  const ctxDash = ctxMenu ? dashboards.find((d) => d.id === ctxMenu.dashId) : null;
+  // Defensive: a JS caller (or a hook mid-fetch) may hand us `undefined`
+  // despite the required prop type — coerce to [] before any iteration.
+  const dashboardList = dashboards ?? [];
+  const ctxDash = ctxMenu ? dashboardList.find((d) => d.id === ctxMenu.dashId) : null;
 
   return (
     <>
       <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-thin">
-        {dashboards.map((d, i) => (
+        {dashboardList.map((d, i) => (
           <div key={d.id} className="flex items-center shrink-0">
             {editingId === d.id ? (
               <div className="flex items-center gap-1">
@@ -215,16 +218,28 @@ export function LayoutManager({
               </div>
             ) : (
               <div
+                role="button"
+                tabIndex={0}
+                aria-current={d.id === activeId ? 'true' : undefined}
                 draggable
                 onDragStart={handleDragStart(i)}
                 onDragOver={handleDragOver(i)}
                 onDrop={handleDrop(i)}
                 onDragEnd={handleDragEnd}
                 onClick={() => onSwitch(d.id)}
+                onKeyDown={(e) => {
+                  // Keyboard parity for the click-to-switch affordance so the
+                  // switcher is operable without a pointer (WCAG 2.1.1).
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSwitch(d.id);
+                  }
+                }}
                 onContextMenu={handleContextMenu(d.id)}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                   'whitespace-nowrap transition-all select-none cursor-pointer',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]/50',
                   d.id === activeId
                     ? 'bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/20'
                     : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
@@ -233,7 +248,7 @@ export function LayoutManager({
                     'border-l-2 border-[var(--theme-primary)]',
                 )}
               >
-                <span className="text-sm leading-none">{d.icon ?? '📊'}</span>
+                <span aria-hidden="true" className="text-sm leading-none">{d.icon ?? '📊'}</span>
                 <span className="truncate max-w-[120px]">{d.name}</span>
                 {d.isDefault && (
                   <span className="text-2xs text-[var(--text-muted)]">
