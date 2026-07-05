@@ -7204,7 +7204,8 @@
       "mean": "Mean",
       "max": "Max",
       "min": "Min"
-    }
+    },
+    "loading": "Loading drive detail"
   },
   "drivetrain": {
     "temperatures": "Temperature Details",
