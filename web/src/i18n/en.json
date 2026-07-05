@@ -10204,7 +10204,40 @@
         "quickLinksFailed": "Quick links failed to load",
         "settingsFailed": "Per-vehicle settings failed to load"
       },
-      "noVehicleConfig": "No configuration data available"
+      "noVehicleConfig": "No configuration data available",
+      "locationMapLabel": "Vehicle location map",
+      "speedSeries": "Speed {{unit}}",
+      "config": {
+        "model": "Model",
+        "trim": "Trim",
+        "color": "Color",
+        "roof": "Roof",
+        "wheels": "Wheels",
+        "firmware": "Firmware",
+        "name": "Name",
+        "chargePort": "Charge Port",
+        "rearHeaters": "Rear Heaters",
+        "efficiency": "Efficiency",
+        "sunroof": "Sunroof",
+        "notInstalled": "Not Installed",
+        "remoteStart": "Remote Start",
+        "active": "Active",
+        "off": "Off",
+        "offroadLightbar": "Offroad Lightbar",
+        "present": "Present",
+        "swUpdate": "SW Update",
+        "none": "None",
+        "swDownload": "SW Download",
+        "swInstall": "SW Install"
+      },
+      "prefs": {
+        "intro": "These are your vehicle's display settings — you can sync your app to match them from the Settings page.",
+        "distance": "Distance",
+        "temperature": "Temperature",
+        "chargeUnit": "Charge Unit",
+        "tirePressure": "Tire Pressure",
+        "time24h": "24h Time"
+      }
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ChartTooltip,
@@ -16,11 +16,11 @@ import { FadeIn } from '@/components/motion/FadeIn'
 import { MetricCard } from '@/components/data-display/MetricCard'
 import { useUnits } from '@/hooks/useUnits'
 import { cleanNil } from '@/lib/cleanNil'
-import { fmtNumber } from '@/lib/numberFormat'
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat'
 import { formatTime } from '@/lib/dateFormat'
 import { parseSettingEnum } from '@/lib/parseSettingEnum'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
-import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertSpeedFromSI } from '@/lib/unitConversion'
 
 interface VehicleChartsProps {
   state: VehicleState
@@ -36,37 +36,58 @@ export function VehicleCharts({
   userPrefData,
 }: VehicleChartsProps) {
   const { t } = useTranslation()
-  const { unitPrefs } = useUnits();
-  const speedUnit = unitPrefs.speed;
-  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const { unitPrefs } = useUnits()
+  const speedUnit = unitPrefs.speed
+  const toSpeedDisplay = useCallback(
+    (value: number) => convertSpeedFromSI(value, speedUnit),
+    [speedUnit],
+  )
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
 
-  const trail: LatLngExpression[] =
-    positions
-      ?.filter((p) => p.latitude && p.longitude)
-      .map((p) => [p.latitude, p.longitude] as LatLngExpression) ?? []
+  // GPS trail for the polyline. `(0, 0)` is Tesla's "no fix yet" placeholder
+  // (and any nullish / NaN coord is unusable), so both axes must be truthy.
+  const trail = useMemo<LatLngExpression[]>(
+    () =>
+      (positions ?? [])
+        .filter((p) => p.latitude && p.longitude)
+        .map((p) => [p.latitude, p.longitude] as LatLngExpression),
+    [positions],
+  )
 
-  const batteryData =
-    positions
-      ?.map((p) => ({
-        time: formatTime(p.ts),
-        speed: p.speed_mph != null ? toSpeedDisplay(p.speed_mph) : null,
-      }))
-      .reverse() ?? []
+  // Speed series for the area chart, oldest → newest (left → right). A
+  // non-finite `speed_mph` (null, NaN, ±Infinity) becomes a gap rather than a
+  // `NaN` datum that would poison the axis domain.
+  const speedSeries = useMemo(
+    () =>
+      (positions ?? [])
+        .map((p) => ({
+          time: formatTime(p.ts),
+          speed: isFiniteNumber(p.speed_mph) ? toSpeedDisplay(p.speed_mph) : null,
+        }))
+        .reverse(),
+    [positions, toSpeedDisplay],
+  )
+
+  const hasSpeedData = useMemo(() => speedSeries.some((d) => d.speed != null), [speedSeries])
+  const hasLocation = Boolean(state.latitude && state.longitude)
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Live Map */}
-      {state.latitude && state.longitude && (
+      {hasLocation && (
         <FadeIn delay={0.15}>
           <GlassPanel className="overflow-hidden h-full">
             <div className="p-4 pb-0">
               <h3 className="section-title flex items-center gap-2 mb-3">
-                <Navigation className="h-4 w-4 text-cyan-300" />{' '}
+                <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
                 {t('common.location', 'Location')}
               </h3>
             </div>
-            <div className="h-72 relative">
+            <div
+              className="h-72 relative"
+              role="region"
+              aria-label={t('vehicles.detail.locationMapLabel', 'Vehicle location map')}
+            >
               <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
               <MapContainer
                 center={[state.latitude, state.longitude]}
@@ -99,30 +120,32 @@ export function VehicleCharts({
         <FadeIn delay={0.18}>
           <GlassPanel className="p-5">
             <h3 className="section-title mb-4 flex items-center gap-2">
-              <Car className="h-4 w-4 text-neon-purple" />
+              <Car className="h-4 w-4 text-purple-300" aria-hidden="true" />
               {t('common.vehicleConfig', 'Vehicle Configuration')}
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
-                { label: 'Model', value: cleanNil(vehicleConfigData.car_type) },
-                { label: 'Trim', value: cleanNil(vehicleConfigData.trim) },
-                { label: 'Color', value: cleanNil(vehicleConfigData.exterior_color) },
-                { label: 'Roof', value: cleanNil(vehicleConfigData.roof_color) },
-                { label: 'Wheels', value: cleanNil(vehicleConfigData.wheel_type) },
-                { label: 'Firmware', value: cleanNil(vehicleConfigData.version) },
-                { label: 'Name', value: cleanNil(vehicleConfigData.vehicle_name) },
-                { label: 'Charge Port', value: cleanNil(vehicleConfigData.charge_port) },
+                { label: t('vehicles.detail.config.model', 'Model'), value: cleanNil(vehicleConfigData.car_type) },
+                { label: t('vehicles.detail.config.trim', 'Trim'), value: cleanNil(vehicleConfigData.trim) },
+                { label: t('vehicles.detail.config.color', 'Color'), value: cleanNil(vehicleConfigData.exterior_color) },
+                { label: t('vehicles.detail.config.roof', 'Roof'), value: cleanNil(vehicleConfigData.roof_color) },
+                { label: t('vehicles.detail.config.wheels', 'Wheels'), value: cleanNil(vehicleConfigData.wheel_type) },
+                { label: t('vehicles.detail.config.firmware', 'Firmware'), value: cleanNil(vehicleConfigData.version) },
+                { label: t('vehicles.detail.config.name', 'Name'), value: cleanNil(vehicleConfigData.vehicle_name) },
+                { label: t('vehicles.detail.config.chargePort', 'Charge Port'), value: cleanNil(vehicleConfigData.charge_port) },
                 {
-                  label: 'Rear Heaters',
+                  label: t('vehicles.detail.config.rearHeaters', 'Rear Heaters'),
                   value: cleanNil(vehicleConfigData.rear_seat_heaters),
                 },
                 {
-                  label: 'Efficiency',
+                  label: t('vehicles.detail.config.efficiency', 'Efficiency'),
                   value: cleanNil(vehicleConfigData.efficiency_package),
                 },
                 {
-                  label: 'Sunroof',
-                  value: cleanNil(vehicleConfigData.sunroof_installed) || 'Not Installed',
+                  label: t('vehicles.detail.config.sunroof', 'Sunroof'),
+                  value:
+                    cleanNil(vehicleConfigData.sunroof_installed) ||
+                    t('vehicles.detail.config.notInstalled', 'Not Installed'),
                 },
                 {
                   label: t('vehicles.detail.europeVehicle', 'Europe Vehicle'),
@@ -143,36 +166,38 @@ export function VehicleCharts({
                       : '—',
                 },
                 {
-                  label: 'Remote Start',
+                  label: t('vehicles.detail.config.remoteStart', 'Remote Start'),
                   value:
                     vehicleConfigData.remote_start_enabled != null
                       ? vehicleConfigData.remote_start_enabled
-                        ? 'Active'
-                        : 'Off'
+                        ? t('vehicles.detail.config.active', 'Active')
+                        : t('vehicles.detail.config.off', 'Off')
                       : '—',
                 },
                 {
-                  label: 'Offroad Lightbar',
+                  label: t('vehicles.detail.config.offroadLightbar', 'Offroad Lightbar'),
                   value:
                     vehicleConfigData.offroad_lightbar_present != null
                       ? vehicleConfigData.offroad_lightbar_present
-                        ? 'Present'
-                        : 'No'
+                        ? t('vehicles.detail.config.present', 'Present')
+                        : t('common.no', 'No')
                       : '—',
                 },
                 {
-                  label: 'SW Update',
-                  value: cleanNil(vehicleConfigData.software_update_version) || 'None',
+                  label: t('vehicles.detail.config.swUpdate', 'SW Update'),
+                  value:
+                    cleanNil(vehicleConfigData.software_update_version) ||
+                    t('vehicles.detail.config.none', 'None'),
                 },
                 {
-                  label: 'SW Download',
+                  label: t('vehicles.detail.config.swDownload', 'SW Download'),
                   value:
                     vehicleConfigData.software_update_download_pct != null
                       ? `${vehicleConfigData.software_update_download_pct}%`
                       : '—',
                 },
                 {
-                  label: 'SW Install',
+                  label: t('vehicles.detail.config.swInstall', 'SW Install'),
                   value:
                     vehicleConfigData.software_update_install_pct != null
                       ? `${vehicleConfigData.software_update_install_pct}%`
@@ -191,44 +216,46 @@ export function VehicleCharts({
         <FadeIn delay={0.19}>
           <GlassPanel className="p-5">
             <h3 className="section-title mb-4 flex items-center gap-2">
-              <Settings className="h-4 w-4 text-neon-amber" />
+              <Settings className="h-4 w-4 text-amber-300" aria-hidden="true" />
               {t('common.carPreferences', 'Car Display Preferences')}
             </h3>
             <p className="text-2xs text-[var(--text-muted)] mb-3">
-              These are your vehicle&apos;s display settings — you can sync your app to match
-              them from the Settings page.
+              {t(
+                'vehicles.detail.prefs.intro',
+                "These are your vehicle's display settings — you can sync your app to match them from the Settings page.",
+              )}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 {
-                  label: 'Distance',
+                  label: t('vehicles.detail.prefs.distance', 'Distance'),
                   value: parseSettingEnum(userPrefData.setting_distance_unit, 'distance'),
                 },
                 {
-                  label: 'Temperature',
+                  label: t('vehicles.detail.prefs.temperature', 'Temperature'),
                   value: parseSettingEnum(
                     userPrefData.setting_temperature_unit,
                     'temperature',
                   ),
                 },
                 {
-                  label: 'Charge Unit',
+                  label: t('vehicles.detail.prefs.chargeUnit', 'Charge Unit'),
                   value: parseSettingEnum(userPrefData.setting_charge_unit, 'charge'),
                 },
                 {
-                  label: 'Tire Pressure',
+                  label: t('vehicles.detail.prefs.tirePressure', 'Tire Pressure'),
                   value: parseSettingEnum(
                     userPrefData.setting_tire_pressure_unit,
                     'pressure',
                   ),
                 },
                 {
-                  label: '24h Time',
+                  label: t('vehicles.detail.prefs.time24h', '24h Time'),
                   value:
                     userPrefData.setting_24hr_time != null
                       ? userPrefData.setting_24hr_time
-                        ? 'Yes'
-                        : 'No'
+                        ? t('common.yes', 'Yes')
+                        : t('common.no', 'No')
                       : '—',
                 },
               ].map((item) => (
@@ -243,13 +270,13 @@ export function VehicleCharts({
       <FadeIn delay={0.2}>
         <GlassPanel className="p-6 h-full">
           <h3 className="section-title mb-4 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-neon-cyan" />
+            <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('common.speedHistory', 'Speed History')}
           </h3>
-          {batteryData.length > 0 ? (
+          {hasSpeedData ? (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={batteryData}>
+                <AreaChart data={speedSeries}>
                   {areaGradient('vehicleSpeedGrad', '#00f0ff', 0.1)}
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -267,7 +294,7 @@ export function VehicleCharts({
                     dataKey="speed"
                     stroke="#00f0ff"
                     fill="url(#vehicleSpeedGrad)"
-                    name={`Speed ${speedUnit}`}
+                    name={t('vehicles.detail.speedSeries', 'Speed {{unit}}', { unit: speedUnit })}
                   />
                 </AreaChart>
               </ResponsiveContainer>
