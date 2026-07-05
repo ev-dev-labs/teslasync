@@ -3971,7 +3971,8 @@
       "noBatDist": "No battery distribution data",
       "hourlyPattern": "Hourly Charging Pattern",
       "charges": "Charges",
-      "noHourly": "No hourly data"
+      "noHourly": "No hourly data",
+      "summary": "Charging summary metrics"
     },
     "driving": {
       "topSpeed": "Top Speed",
