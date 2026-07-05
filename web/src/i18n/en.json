@@ -2326,7 +2326,8 @@
       "form": "Form editor",
       "chart": "Charts",
       "dashboard": "Dashboard"
-    }
+    },
+    "gotoPrompt": "Go to…"
   },
   "annotation": {
     "addTitle": "Add Annotation",
