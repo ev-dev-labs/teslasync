@@ -38,7 +38,7 @@ export function StopReasonPanel({ reason, isLoading, error, onRetry }: StopReaso
         </div>
       ) : (
         <EmptyState /* no-action: transient — no halt recorded or signal not yet reported */
-          icon={<Info className="h-8 w-8" />}
+          icon={<Info className="h-8 w-8" aria-hidden="true" />}
           message={t(
             'powershare.stopReason.noData',
             'No stop reason recorded. Powershare has not been halted, or the signal has not yet been reported.',
