@@ -117,6 +117,26 @@ export function WidgetPicker({
     setAnnouncement('');
   }, [open]);
 
+  // The Drawer dismisses on Escape via a native keydown listener on an ancestor
+  // element, which runs before React's delegated synthetic handler. To let
+  // Escape clear a non-empty search *before* it can close the whole picker,
+  // intercept the key at the input itself (target phase) and stop it from
+  // bubbling up to the Drawer. An empty search still bubbles through and closes
+  // the drawer, preserving the expected escape-to-dismiss behaviour.
+  useEffect(() => {
+    if (!open) return;
+    const input = inputRef.current;
+    if (!input) return;
+    const handleNativeEscape = (e: HTMLElementEventMap['keydown']) => {
+      if (e.key === 'Escape' && input.value) {
+        e.stopPropagation();
+        setSearch('');
+      }
+    };
+    input.addEventListener('keydown', handleNativeEscape);
+    return () => input.removeEventListener('keydown', handleNativeEscape);
+  }, [open]);
+
   const query = search.trim().toLowerCase();
 
   const activeWidgetIdSet = useMemo(() => new Set(activeWidgetIds), [activeWidgetIds]);
@@ -263,14 +283,9 @@ export function WidgetPicker({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Escape') {
-        if (search) {
-          e.stopPropagation();
-          setSearch('');
-        }
-        // If search is already empty, let the event bubble to close the drawer
-        return;
-      }
+      // Escape-to-clear is handled by the native listener above so it can
+      // pre-empt the Drawer's own Escape-to-close. Here we only handle Enter:
+      // when a search resolves to a single addable widget, Enter adds it.
       if (e.key === 'Enter' && query) {
         const addable = filteredWidgets.filter((w) => !activeWidgetIdSet.has(w.id));
         if (addable.length === 1) {
@@ -278,7 +293,7 @@ export function WidgetPicker({
         }
       }
     },
-    [search, query, filteredWidgets, activeWidgetIdSet, handleAdd],
+    [query, filteredWidgets, activeWidgetIdSet, handleAdd],
   );
 
   const handleWidgetKeyDown = useCallback(
@@ -374,6 +389,7 @@ export function WidgetPicker({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
+            aria-label={t('widgets.searchLabel', 'Search widgets')}
             placeholder={t('widgets.search', 'Search widgets... (e.g. battery, chart, map)')}
             icon={<Search className="h-4 w-4" />}
             className="w-full"
