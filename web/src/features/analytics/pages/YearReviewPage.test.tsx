@@ -198,8 +198,8 @@ const YEAR_REVIEW: YearReview = {
   coldest_drive_temp_c: -8,
   hottest_drive_temp_c: 39,
   monthly_stats: [
-    { month: 1, drives: 10, distance_km: 800, energy_wh: 120000, cost: 30 },
-    { month: 2, drives: 14, distance_km: 1100, energy_wh: 160000, cost: 41 },
+    { month: 1, drives: 10, distance_km: 800, energy_kwh: 120, cost: 30 },
+    { month: 2, drives: 14, distance_km: 1100, energy_kwh: 160, cost: 41 },
   ],
   most_active_day_of_week: 'Saturday',
   most_active_hour: 17,
