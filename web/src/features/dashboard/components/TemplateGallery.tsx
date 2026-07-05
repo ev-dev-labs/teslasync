@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutGrid, ArrowLeft, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -51,12 +51,12 @@ function TemplateDetail({
             </p>
           )}
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            {t('templates.widgetCount', '{{count}} widgets', { count: template.widgets.length })}
+            {t('templates.widgetCount', '{{count}} widgets', { count: (template.widgets ?? []).length })}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          {template.widgets.map((w) => {
+          {(template.widgets ?? []).map((w) => {
             const def = getWidgetDef(w.widgetId);
             if (!def) return null;
             const Icon = def.icon;
@@ -93,7 +93,7 @@ function useCategoryIcons(dashboard: SavedDashboard) {
   return useMemo(() => {
     const seen = new Set<string>();
     const icons: { Icon: React.ComponentType<{ className?: string }>; category: string }[] = [];
-    for (const w of dashboard.widgets) {
+    for (const w of dashboard.widgets ?? []) {
       const def = getWidgetDef(w.widgetId);
       if (def && !seen.has(def.category)) {
         seen.add(def.category);
@@ -141,7 +141,7 @@ function TemplateCard({
             {t(`templates.${template.id}.name`, template.name)}
           </h4>
           <Badge variant="neutral">
-            {template.widgets.length}
+            {(template.widgets ?? []).length}
           </Badge>
         </div>
 
@@ -179,6 +179,15 @@ interface TemplateGalleryProps {
 export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps) {
   const { t } = useTranslation('dashboard');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Reset the drill-down whenever the gallery is dismissed so a subsequent
+  // open always starts at the template grid — regardless of how it closed
+  // (parent-driven `open=false`, Esc, backdrop, or Apply). Without this the
+  // internal `selectedId` can desync from `open` and a reopened gallery would
+  // render a stale template-detail view instead of the grid.
+  useEffect(() => {
+    if (!open) setSelectedId(null);
+  }, [open]);
 
   const selectedTemplate = selectedId
     ? DASHBOARD_PRESETS.find((p) => p.id === selectedId) ?? null
