@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -29,11 +30,29 @@ interface TemperatureTrendChartProps {
 export function TemperatureTrendChart({ data, loading = false }: TemperatureTrendChartProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
   const tempUnit = unitPrefs.temperature;
 
-  const empty = data.length <= 1;
+  // The page hands us SI °C (`outsideTempAvgC`), but the Y-axis label, the
+  // freezing/warm reference bands, and the a11y fallback table all read in the
+  // user's display unit. Convert the plotted series to that same unit so every
+  // layer shares one scale (identity in °C; the °F path previously plotted raw
+  // Celsius under an "°F" axis with mis-scaled reference lines). A null reading
+  // stays null so Recharts renders a gap and the fallback table shows "—".
+  const chartData = useMemo(
+    () =>
+      (data ?? []).map((d) => ({
+        date: d.date,
+        outsideTemp: d.outsideTemp != null ? convertTempFromSI(d.outsideTemp, tempUnit) : null,
+      })),
+    [data, tempUnit],
+  );
+
+  // Reference bands are authored in SI °C; convert once to the display unit so
+  // they land on the same axis as the converted series above.
+  const warmZone = convertTempFromSI(35, tempUnit);
+  const freezing = convertTempFromSI(0, tempUnit);
+
+  const empty = chartData.length <= 1;
 
   return (
     <FadeIn delay={0.25}>
@@ -43,7 +62,7 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
         ariaLabel={t('drivetrain.tempHistory.aria', 'Outside temperature trend line chart per recent drive')}
         loading={loading}
         empty={empty}
-        data={data.map((d) => ({ date: d.date, outsideTemp: d.outsideTemp }))}
+        data={chartData}
         dataColumns={[
           { key: 'date', label: t('drivetrain.col.date', 'Date') },
           { key: 'outsideTemp', label: `${t('drivetrain.col.outside', 'Outside')} (${tempUnit})` },
@@ -51,7 +70,7 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
         height={300}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={chartData}>
             <defs>
               <ChartGradient id="dtTempGrad" color="#06b6d4" />
             </defs>
@@ -76,7 +95,7 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
               dot={{ r: 3, fill: '#06b6d4' }}
             />
             <ReferenceLine
-              y={toTemperatureDisplay(35)}
+              y={warmZone}
               stroke="#f59e0b"
               strokeDasharray="4 4"
               label={{
@@ -86,7 +105,7 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
               }}
             />
             <ReferenceLine
-              y={toTemperatureDisplay(0)}
+              y={freezing}
               stroke="#06b6d4"
               strokeDasharray="4 4"
               label={{
