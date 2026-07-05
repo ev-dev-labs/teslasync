@@ -7205,7 +7205,8 @@
       "max": "Max",
       "min": "Min"
     },
-    "loading": "Loading drive detail"
+    "loading": "Loading drive detail",
+    "max": "Max"
   },
   "drivetrain": {
     "temperatures": "Temperature Details",

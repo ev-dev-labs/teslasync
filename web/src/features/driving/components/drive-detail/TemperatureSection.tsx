@@ -1,3 +1,4 @@
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
@@ -20,6 +21,32 @@ interface TemperatureSectionProps {
   stats: DriveStats;
 }
 
+/** Arithmetic mean of a numeric series, or null when the series is empty.
+ *  Mirrors the averaging `useDriveDetailData` applies to the inside/outside
+ *  series so the driver/passenger tiles stay consistent with the rest. */
+function meanOrNull(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+interface TempTileProps {
+  label: string;
+  valueClassName: string;
+  children: ReactNode;
+}
+
+/** One metric tile in the temperature stat band. The value `<p>` is the
+ *  immediate sibling of the label `<p>` so assistive tech (and the co-located
+ *  tests) read the value straight back out of the labelled cell. */
+function TempTile({ label, valueClassName, children }: TempTileProps) {
+  return (
+    <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+      <p className="text-2xs text-[var(--text-muted)]">{label}</p>
+      <p className={`text-sm font-bold ${valueClassName}`}>{children}</p>
+    </div>
+  );
+}
+
 export function TemperatureSection({ chartData, stats }: TemperatureSectionProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
@@ -27,12 +54,16 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
-  const driverAvg = stats.driverTemps.length > 0
-    ? stats.driverTemps.reduce((a, b) => a + b, 0) / stats.driverTemps.length
-    : null;
-  const passengerAvg = stats.passengerTemps.length > 0
-    ? stats.passengerTemps.reduce((a, b) => a + b, 0) / stats.passengerTemps.length
-    : null;
+  const points = chartData ?? [];
+  const outsideTemps = stats.outsideTemps ?? [];
+  const insideTemps = stats.insideTemps ?? [];
+  const driverTemps = stats.driverTemps ?? [];
+  const passengerTemps = stats.passengerTemps ?? [];
+
+  const driverAvg = useMemo(() => meanOrNull(driverTemps), [driverTemps]);
+  const passengerAvg = useMemo(() => meanOrNull(passengerTemps), [passengerTemps]);
+
+  const hasChart = points.length > 1 && stats.hasAnyTemp;
 
   return (
     <FadeIn className="h-full">
@@ -43,49 +74,43 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
         height={310}
         className="h-full"
       >
-        {chartData.length > 1 && stats.hasAnyTemp ? (
+        {hasChart ? (
           <>
             <div className="grid grid-cols-3 gap-3 mb-3">
               {stats.avgOutsideTemp != null ? (
-                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.outsideTemp', 'Outside Temperature')}</p>
-                  <p className="text-sm font-bold text-blue-400">{fmtNumber(stats.avgOutsideTemp)}{tempUnit}</p>
-                </div>
+                <TempTile label={t('driveDetail.outsideTemp', 'Outside Temperature')} valueClassName="text-blue-400">
+                  {fmtNumber(stats.avgOutsideTemp)}{tempUnit}
+                </TempTile>
               ) : null}
               {stats.avgInsideTemp != null ? (
-                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.insideTemp', 'Inside Temperature')}</p>
-                  <p className="text-sm font-bold text-orange-400">{fmtNumber(stats.avgInsideTemp)}{tempUnit}</p>
-                </div>
+                <TempTile label={t('driveDetail.insideTemp', 'Inside Temperature')} valueClassName="text-orange-400">
+                  {fmtNumber(stats.avgInsideTemp)}{tempUnit}
+                </TempTile>
               ) : null}
               {driverAvg != null ? (
-                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.driverTemp', 'Driver Temperature')}</p>
-                  <p className="text-sm font-bold text-rose-400">{fmtNumber(driverAvg)}{tempUnit}</p>
-                </div>
+                <TempTile label={t('driveDetail.driverTemp', 'Driver Temperature')} valueClassName="text-rose-400">
+                  {fmtNumber(driverAvg)}{tempUnit}
+                </TempTile>
               ) : null}
               {passengerAvg != null ? (
-                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.passengerTemp', 'Passenger Temperature')}</p>
-                  <p className="text-sm font-bold text-purple-400">{fmtNumber(passengerAvg)}{tempUnit}</p>
-                </div>
+                <TempTile label={t('driveDetail.passengerTemp', 'Passenger Temperature')} valueClassName="text-purple-400">
+                  {fmtNumber(passengerAvg)}{tempUnit}
+                </TempTile>
               ) : null}
               {stats.climateStatus != null ? (
-                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.climate', 'Climate')}</p>
-                  <p className={`text-sm font-bold ${stats.climateStatus === 'On' ? 'text-green-400' : 'text-[var(--text-muted)]'}`}>{stats.climateStatus}</p>
-                </div>
+                <TempTile label={t('driveDetail.climate', 'Climate')} valueClassName={stats.climateStatus === 'On' ? 'text-green-400' : 'text-[var(--text-muted)]'}>
+                  {stats.climateStatus}
+                </TempTile>
               ) : null}
               {stats.maxFanSpeed != null ? (
-                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                  <p className="text-2xs text-[var(--text-muted)]">{t('driveDetail.fanStatus', 'Fan Status')}</p>
-                  <p className="text-sm font-bold text-cyan-400">{t('driveDetail.avg', 'Avg')} {fmtInt(stats.avgFanSpeed)} · Max {stats.maxFanSpeed}</p>
-                </div>
+                <TempTile label={t('driveDetail.fanStatus', 'Fan Status')} valueClassName="text-cyan-400">
+                  {t('driveDetail.avg', 'Avg')} {fmtInt(stats.avgFanSpeed)} · {t('driveDetail.max', 'Max')} {stats.maxFanSpeed}
+                </TempTile>
               ) : null}
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart
-                data={chartData}
+                data={points}
                 syncId={syncProps.syncId}
                 syncMethod={syncProps.syncMethod}
                 onMouseMove={syncProps.onMouseMove}
@@ -95,16 +120,16 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={LEGEND_STYLE} />
-                {stats.outsideTemps.length > 0 ? (
+                {outsideTemps.length > 0 ? (
                   <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke="#3b82f6" name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} />
                 ) : null}
-                {stats.insideTemps.length > 0 ? (
+                {insideTemps.length > 0 ? (
                   <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke="#f97316" name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} />
                 ) : null}
-                {stats.driverTemps.length > 0 ? (
+                {driverTemps.length > 0 ? (
                   <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke="#fb7185" name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} />
                 ) : null}
-                {stats.passengerTemps.length > 0 ? (
+                {passengerTemps.length > 0 ? (
                   <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke="#a855f7" name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} />
                 ) : null}
                 {syncedX != null && (
@@ -122,7 +147,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
           </>
         ) : (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
+            <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
             <p className="text-xs">{t('driveDetail.noTemperatureData', 'No temperature telemetry is available for this drive.')}</p>
           </div>
         )}
