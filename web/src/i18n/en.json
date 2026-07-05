@@ -1013,7 +1013,9 @@
       "noPhase": "No phase data",
       "noCable": "No cable data",
       "noBrand": "No brand data",
-      "noData": "No charger specification data available yet"
+      "noData": "No charger specification data available yet",
+      "sessionCount": "{{count}} sessions",
+      "kwAvg": "{{value}} kW avg"
     },
     "sessions": {
       "allSessions": "All Sessions",
