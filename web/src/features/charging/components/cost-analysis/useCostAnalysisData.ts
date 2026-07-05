@@ -210,9 +210,13 @@ export function useCostAnalysisData({
     const freeCount = sessions.filter(
       (s) => !s.cost_decimal || s.cost_decimal === 0,
     ).length;
-    const freeEnergy = sessions
+    const freeEnergyWh = sessions
       .filter((s) => !s.cost_decimal || s.cost_decimal === 0)
       .reduce((sum, s) => sum + s.total_energy_added_wh, 0);
+    // freeEnergy is rendered as kWh by LifetimeSummary (fmtWithUnit(_, 'kWh')),
+    // so it must be converted from the SI Wh sum like every other energy
+    // aggregate in this hook — otherwise the tile shows a 1000× value.
+    const freeEnergy = convertEnergyFromSI(freeEnergyWh, 'kWh');
     const maxSessionCost = Math.max(...sessions.map((s) => s.cost_decimal ?? 0));
     const minSessionCost = Math.min(
       ...sessions.filter((s) => (s.cost_decimal ?? 0) > 0).map((s) => s.cost_decimal!),
