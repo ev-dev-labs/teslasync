@@ -4,6 +4,7 @@ import { GlassPanel } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { Grid } from '@/components/layout';
+import { VisuallyHidden } from '@/components/a11y';
 import { StateBadge } from './StateBadge';
 import type { ActiveSubFSM } from '@/types/fsm';
 
@@ -54,12 +55,23 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
               className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
             >
               <div className={`p-2 rounded-lg ${isActive ? 'bg-green-500/10' : 'bg-white/[0.04]'}`}>
-                <Icon className={`h-4 w-4 ${isActive ? 'text-green-400' : 'text-[var(--text-muted)]'}`} />
+                <Icon
+                  aria-hidden="true"
+                  className={`h-4 w-4 ${isActive ? 'text-green-400' : 'text-[var(--text-muted)]'}`}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-[var(--text-primary)]">{label}</span>
-                  {isActive && <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />}
+                  {isActive && (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse"
+                      />
+                      <VisuallyHidden>{t('fsm.sessionLive', 'Live')}</VisuallyHidden>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <StateBadge state={sub.state} fsmType={sub.type === 'drive' ? 'drive_session' : 'charge_session'} />
