@@ -9079,6 +9079,17 @@
     }
   },
   "fsm": {
+    "typeLabel": {
+      "vehicle": "Vehicle",
+      "driveSession": "Drive",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "notification": "Notify",
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—"
+    },
     "health": {
       "flapping": "{{count}} transitions flagged as state flapping (>5 same-FSM transitions/min)",
       "stuck": "{{count}} session(s) stuck in pending/active for >4 hours",
