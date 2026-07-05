@@ -62,6 +62,7 @@ export function ConsentControlPanel({
               </Text>
               {onRetry && (
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={onRetry}
@@ -88,6 +89,7 @@ export function ConsentControlPanel({
       </div>
 
       <div
+        role="status"
         className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4"
         data-testid="privacy-consent-state"
         data-consent-state={consent}
@@ -100,6 +102,7 @@ export function ConsentControlPanel({
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
+          type="button"
           variant="primary"
           onClick={onAccept}
           disabled={consent === 'accepted'}
@@ -108,6 +111,7 @@ export function ConsentControlPanel({
           {t('consent.action.accept', 'Re-grant consent')}
         </Button>
         <Button
+          type="button"
           variant="secondary"
           onClick={onDecline}
           disabled={consent === 'declined'}
@@ -116,6 +120,7 @@ export function ConsentControlPanel({
           {t('consent.action.decline', 'Withdraw consent')}
         </Button>
         <Button
+          type="button"
           variant="ghost"
           onClick={onReset}
           disabled={consent === 'unknown'}
