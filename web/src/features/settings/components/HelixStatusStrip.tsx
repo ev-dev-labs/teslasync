@@ -70,10 +70,19 @@ export function HelixStatusStrip({ mode, enabledCount, providerName }: Props) {
     }
   }, [mode, t])
 
+  // Normalise the provider key at the display boundary: trimming stray
+  // whitespace lets a padded key still resolve against PROVIDER_LABELS and
+  // degrades a whitespace-only value to the em-dash instead of rendering an
+  // empty-looking tile.
+  const providerKey = providerName.trim()
   const providerValue =
-    mode === 'off' || providerName === ''
+    mode === 'off' || providerKey === ''
       ? PLACEHOLDER
-      : (PROVIDER_LABELS[providerName] ?? providerName)
+      : (PROVIDER_LABELS[providerKey] ?? providerKey)
+
+  // Guard the count so a non-finite value never reaches the tile as a
+  // literal "NaN".
+  const featureCount = Number.isFinite(enabledCount) ? enabledCount : 0
 
   const spendValue =
     mode === 'off' || data == null
@@ -94,7 +103,7 @@ export function HelixStatusStrip({ mode, enabledCount, providerName }: Props) {
       />
       <MetricCard
         label={t('helix.status.features', 'Features enabled')}
-        value={enabledCount}
+        value={featureCount}
         icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
         color="purple"
       />
