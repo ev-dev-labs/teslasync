@@ -11894,7 +11894,9 @@
     "footer": {
       "action": "Open an issue",
       "note": "Need an additional endpoint or field? Open an issue on the project repo — the API surface is intentionally small, but additive changes are welcome."
-    }
+    },
+    "exampleEmpty": "No example response available.",
+    "exampleUnavailable": "Example response is unavailable."
   },
   "watch": {
     "noVehicle": "No vehicle found",
