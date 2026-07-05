@@ -1863,7 +1863,8 @@
       "docs": {
         "title": "Documentation",
         "desc": "Guides, reference, and troubleshooting."
-      }
+      },
+      "newTab": "(opens in a new tab)"
     },
     "unlock": {
       "title": "What you'll unlock",
