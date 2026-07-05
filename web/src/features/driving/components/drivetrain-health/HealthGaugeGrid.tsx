@@ -91,12 +91,15 @@ export function HealthGaugeGrid({
                   { label: t('drivetrain.motorStatus', 'Motor Status'), value: motorStatus },
                   {
                     label: t('drivetrain.overallHealth', 'Overall Health'),
-                    value: overallHealth.charAt(0).toUpperCase() + overallHealth.slice(1),
+                    value: t(
+                      `drivetrain.health.${overallHealth}`,
+                      overallHealth.charAt(0).toUpperCase() + overallHealth.slice(1),
+                    ),
                   },
                   { label: t('drivetrain.healthScoreLabel', 'Health Score'), value: `${healthScore}%` },
                   {
                     label: t('drivetrain.sensorCount', 'Active Sensors'),
-                    value: String(sensors.filter((s) => s.value !== null).length),
+                    value: String((sensors ?? []).filter((s) => s.value !== null).length),
                   },
                 ]}
               />
@@ -118,18 +121,18 @@ export function HealthGaugeGrid({
           {stats ? (
             <KVList
               items={[
-                { label: t('drivetrain.totalDrives', 'Total Drives'), value: fmtInt(stats.totalDrives) },
+                { label: t('drivetrain.totalDrives', 'Total Drives'), value: fmtInt(stats.totalDrives ?? 0) },
                 {
                   label: t('drivetrain.totalDistance', 'Total Distance'),
-                  value: `${fmtInt(toDistanceDisplay(stats.totalDistanceKm))} ${distanceUnit}`,
+                  value: `${fmtInt(toDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`,
                 },
                 {
                   label: t('drivetrain.avgSpeed', 'Avg Speed'),
-                  value: `${fmtNumber(toSpeedDisplay(stats.avgSpeedKmh), 1)} ${speedUnit}`,
+                  value: `${fmtNumber(toSpeedDisplay(stats.avgSpeedKmh ?? 0), 1)} ${speedUnit}`,
                 },
                 {
                   label: t('drivetrain.topSpeed', 'Top Speed'),
-                  value: `${fmtNumber(toSpeedDisplay(stats.topSpeedKmh), 1)} ${speedUnit}`,
+                  value: `${fmtNumber(toSpeedDisplay(stats.topSpeedKmh ?? 0), 1)} ${speedUnit}`,
                 },
               ]}
             />
