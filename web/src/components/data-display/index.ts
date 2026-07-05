@@ -11,7 +11,7 @@ export {
   type UsageCardBanner,
   type UsageCardFooterLink,
 } from './UsageCard';
-export { KVList, type KVItem, type KVListProps } from './KVList';
+export { KVList } from './KVList';
 export {
   Avatar,
   avatarColorIndex,
@@ -36,8 +36,8 @@ export { MetricCard } from './MetricCard';
 export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
 export { TimelineItem } from './TimelineItem';
-export { FSMBadge, type FSMBadgeProps } from './FSMBadge';
-export { TransitionArrow } from './TransitionArrow';
+export { FSMBadge } from './FSMBadge';
+export { TransitionArrow, type TransitionArrowProps } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
 export {
   DataFreshness,
