@@ -7199,6 +7199,11 @@
       "trigger": "trigger: {{trigger}}",
       "signalTitle": "Signal window",
       "signalEmpty": "No signals in this window for the default whitelist."
+    },
+    "stat": {
+      "mean": "Mean",
+      "max": "Max",
+      "min": "Min"
     }
   },
   "drivetrain": {
