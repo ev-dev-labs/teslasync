@@ -3933,6 +3933,7 @@
       "peakRegen": "Peak Regen",
       "avgDriveDist": "Avg Drive Distance",
       "longestDrive": "Longest Drive",
+      "performanceBand": "Driving performance metrics",
       "speedDist": "Speed Distribution",
       "trips": "Trips",
       "noSpeed": "No speed data",
