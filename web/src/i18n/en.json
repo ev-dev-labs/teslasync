@@ -3901,6 +3901,7 @@
       "cycleCount": "Cycle Count"
     },
     "charging": {
+      "summary": "Charging summary metrics",
       "chargerBrands": "Charger Brands",
       "sessions": "sessions",
       "noBrands": "No charger brand data",
