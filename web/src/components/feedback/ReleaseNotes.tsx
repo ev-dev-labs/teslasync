@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useId, useMemo, useState } from 'react'
 import { Gift, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { GlassPanel } from '../ui/GlassPanel'
 import { Badge } from '../ui/Badge'
+import { EmptyState } from './EmptyState'
 import {
   CHANGELOG,
   type ChangelogBadge,
@@ -58,6 +59,27 @@ const DOT_TINT: Record<ChangelogChangeType, string> = {
   security: 'bg-rose-400/60',
 }
 
+// Screen-reader labels for the otherwise colour-only change-type dots, so the
+// "Added / Fixed / Security …" categorisation is not lost to non-sighted
+// users. Reuses the existing `changelog.sections.*` i18n bundle.
+const CHANGE_TYPE_KEY: Record<ChangelogChangeType, string> = {
+  added: 'changelog.sections.added',
+  changed: 'changelog.sections.changed',
+  fixed: 'changelog.sections.fixed',
+  removed: 'changelog.sections.removed',
+  deprecated: 'changelog.sections.deprecated',
+  security: 'changelog.sections.security',
+}
+
+const CHANGE_TYPE_FALLBACK: Record<ChangelogChangeType, string> = {
+  added: 'Added',
+  changed: 'Changed',
+  fixed: 'Fixed',
+  removed: 'Removed',
+  deprecated: 'Deprecated',
+  security: 'Security',
+}
+
 interface Props {
   /**
    * Cap the number of releases rendered (newest-first). Defaults to 3 to
@@ -69,19 +91,47 @@ interface Props {
 
 export default function ReleaseNotes({ limit = 3 }: Props) {
   const { t } = useTranslation()
-  const releases: readonly ChangelogEntry[] = CHANGELOG.slice(0, limit)
-  const [expanded, setExpanded] = useState<string | null>(releases[0]?.version ?? null)
+  // Clamp the cap. A raw `CHANGELOG.slice(0, limit)` mishandles non-positive
+  // callers: `slice(0, -1)` returns "everything but the last release" and
+  // `slice(0, 0)` yields a silently-blank panel. Floor + max(0, …) collapse
+  // both into a deterministic empty result that the empty-state branch owns.
+  const releases = useMemo<readonly ChangelogEntry[]>(
+    () => CHANGELOG.slice(0, Math.max(0, Math.floor(limit))),
+    [limit],
+  )
+  const baseId = useId()
+  const [expanded, setExpanded] = useState<string | null>(
+    () => releases[0]?.version ?? null,
+  )
+
+  const toggle = useCallback((version: string) => {
+    setExpanded((prev) => (prev === version ? null : version))
+  }, [])
+
+  if (releases.length === 0) {
+    return (
+      <EmptyState
+        icon={<Gift className="h-8 w-8" aria-hidden />}
+        message={t('changelog.releaseNotes.empty', 'No release notes available yet.')}
+      />
+    )
+  }
 
   return (
     <div className="space-y-3">
       {releases.map((release) => {
         const isExpanded = expanded === release.version
+        const triggerId = `${baseId}-trigger-${release.version}`
+        const panelId = `${baseId}-panel-${release.version}`
         return (
           <GlassPanel key={release.version} className="overflow-hidden">
             <button
-              onClick={() => setExpanded(isExpanded ? null : release.version)}
+              id={triggerId}
+              type="button"
+              onClick={() => toggle(release.version)}
               className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-white/[0.02]"
               aria-expanded={isExpanded}
+              aria-controls={panelId}
             >
               <div className="flex flex-wrap items-center gap-3">
                 <Gift className={cn('h-4 w-4', ICON_TINT[release.badge])} aria-hidden />
@@ -100,14 +150,24 @@ export default function ReleaseNotes({ limit = 3 }: Props) {
               )}
             </button>
             {isExpanded && (
-              <div className="border-t border-white/[0.06] px-4 pb-4 pt-3">
+              <div
+                id={panelId}
+                role="region"
+                aria-labelledby={triggerId}
+                className="border-t border-white/[0.06] px-4 pb-4 pt-3"
+              >
                 <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)] mb-2">
                   {t('changelog.releaseNotes.heading', "What's New")}
                 </p>
                 <ul className="space-y-1.5">
-                  {release.changes.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
+                  {(release.changes ?? []).map((item, i) => (
+                    <li
+                      key={`${release.version}-${i}`}
+                      className="flex items-start gap-2 text-sm text-[var(--text-secondary)]"
+                    >
                       <span
+                        role="img"
+                        aria-label={t(CHANGE_TYPE_KEY[item.type], CHANGE_TYPE_FALLBACK[item.type])}
                         className={cn('mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', DOT_TINT[item.type])}
                       />
                       <span className="break-words">{item.text}</span>

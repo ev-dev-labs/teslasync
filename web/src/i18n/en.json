@@ -9194,7 +9194,8 @@
       "security": "Security"
     },
     "releaseNotes": {
-      "heading": "What's New"
+      "heading": "What's New",
+      "empty": "No release notes available yet."
     }
   },
   "chatbot": {
