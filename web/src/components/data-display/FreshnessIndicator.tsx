@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 type FreshnessStatus = 'fresh' | 'stale' | 'offline' | 'unknown';
+
+/** Minimal i18n translate signature (a subset of react-i18next's `t`). */
+type TFunc = (key: string, fallback: string, opts?: Record<string, unknown>) => string;
 
 interface FreshnessIndicatorProps {
   /** ISO timestamp of last update */
@@ -15,26 +19,46 @@ interface FreshnessIndicatorProps {
   /** Size variant (default: 'sm') */
   size?: 'sm' | 'md';
 }
+// Freshness dots share the toned-down palette used by the sibling
+// `<DataFreshness>` (FRESHNESS_COLORS) and `<LiveIndicator>` so the app speaks
+// one visual language for "how fresh is this".
 const DOT_COLOR: Record<FreshnessStatus, string> = {
-  fresh: 'bg-neon-green',
-  stale: 'bg-neon-amber',
-  offline: 'bg-neon-red',
+  fresh: 'bg-emerald-400',
+  stale: 'bg-amber-400',
+  offline: 'bg-red-400',
   unknown: 'bg-[var(--surface-2)]',
 };
 
-const DOT_SIZE: Record<string, string> = {
+const DOT_SIZE: Record<'sm' | 'md', string> = {
   sm: 'h-1.5 w-1.5',
   md: 'h-2 w-2',
 };
 
-const LABEL_SIZE: Record<string, string> = {
+const LABEL_SIZE: Record<'sm' | 'md', string> = {
   sm: 'text-2xs',
   md: 'text-xs',
 };
 
+// Status word used for the accessible name (and, for colour-blind users, to
+// carry the meaning the dot colour alone would otherwise hide).
+const STATUS_LABEL: Record<FreshnessStatus, { key: string; fallback: string }> = {
+  fresh: { key: 'freshness.fresh', fallback: 'Up to date' },
+  stale: { key: 'freshness.stale', fallback: 'Stale' },
+  offline: { key: 'freshness.offline', fallback: 'Offline' },
+  unknown: { key: 'freshness.noData', fallback: 'No recent data' },
+};
+
+/**
+ * Age of a datum in whole seconds, or `null` when there is no usable
+ * timestamp. A missing OR unparseable timestamp both collapse to `null`
+ * (rendered as "unknown") — never `NaN`, which used to leak through as a
+ * bogus "offline" dot plus a literal "NaNh ago" label.
+ */
 function computeAge(timestamp: string | null | undefined): number | null {
   if (!timestamp) return null;
-  const ms = Date.now() - new Date(timestamp).getTime();
+  const parsed = new Date(timestamp).getTime();
+  if (!Number.isFinite(parsed)) return null;
+  const ms = Date.now() - parsed;
   return Math.max(0, Math.floor(ms / 1000));
 }
 
@@ -45,12 +69,26 @@ function getStatus(age: number | null, staleThreshold: number, offlineThreshold:
   return 'offline';
 }
 
-function formatAge(age: number | null): string {
+function formatAge(age: number | null, t: TFunc): string {
   if (age === null) return '—';
-  if (age < 10) return 'just now';
-  if (age < 60) return `${age}s ago`;
-  if (age < 3600) return `${Math.floor(age / 60)}m ago`;
-  return `${Math.floor(age / 3600)}h ago`;
+  if (age < 10) return t('freshness.justNow', 'just now');
+  if (age < 60) return t('freshness.seconds', '{{s}}s ago', { s: age });
+  if (age < 3600) return t('freshness.minutes', '{{m}}m ago', { m: Math.floor(age / 60) });
+  return t('freshness.hours', '{{h}}h ago', { h: Math.floor(age / 3600) });
+}
+
+/**
+ * Re-render on a fixed 10s cadence so the relative-time label stays honest.
+ * Only armed when `active` — a null/absent/unparseable timestamp can never
+ * change its label, so we skip the interval entirely and avoid a dead timer.
+ */
+function useAgeTick(active: boolean): void {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setTick((n) => n + 1), 10_000);
+    return () => clearInterval(id);
+  }, [active]);
 }
 
 /**
@@ -74,51 +112,64 @@ export function FreshnessIndicator({
   showLabel = true,
   size = 'sm',
 }: FreshnessIndicatorProps) {
-  const [, setTick] = useState(0);
-
-  // Re-render every 10 seconds to keep relative time fresh
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 10_000);
-    return () => clearInterval(id);
-  }, []);
-
+  const { t } = useTranslation();
   const age = computeAge(timestamp);
+  useAgeTick(age !== null);
+
   const status = getStatus(age, staleThreshold, offlineThreshold);
-  const label = formatAge(age);
+  const label = formatAge(age, t);
+  const statusWord = t(STATUS_LABEL[status].key, STATUS_LABEL[status].fallback);
+  // Expose one accessible name that carries BOTH the status word (colour-blind
+  // safe) and the age, so an icon-only (`showLabel={false}`) indicator is not a
+  // silent dot to assistive tech.
+  const ariaLabel =
+    age === null
+      ? statusWord
+      : t('freshness.ariaLabel', '{{status}} · {{age}}', { status: statusWord, age: label });
 
   return (
-    <span className="inline-flex items-center gap-1" title={timestamp ?? undefined}>
+    <span
+      role="img"
+      aria-label={ariaLabel}
+      title={timestamp ?? undefined}
+      className="inline-flex items-center gap-1"
+    >
       <span
+        aria-hidden="true"
         className={cn(
-          'rounded-full',
+          'rounded-full shrink-0',
           DOT_SIZE[size],
           DOT_COLOR[status],
           status === 'fresh' && 'animate-pulse',
         )}
       />
       {showLabel && (
-        <span className={cn('text-[var(--text-muted)]', LABEL_SIZE[size])}>{label}</span>
+        <span aria-hidden="true" className={cn('text-[var(--text-muted)]', LABEL_SIZE[size])}>
+          {label}
+        </span>
       )}
     </span>
   );
 }
 
-/** Hook to check if a timestamp is stale (useful for warning banners) */
+/**
+ * Hook to check if a timestamp is stale (useful for warning banners).
+ * Returns the boolean stale/offline flags plus a ready-to-render, i18n-aware
+ * relative-age label. A missing or unparseable timestamp is reported as
+ * neither stale nor offline, with an em-dash label (never `NaN`).
+ */
 export function useIsStale(
   timestamp: string | null | undefined,
   staleThreshold = 120,
+  offlineThreshold = 600,
 ): { isStale: boolean; isOffline: boolean; ageLabel: string } {
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 10_000);
-    return () => clearInterval(id);
-  }, []);
-
+  const { t } = useTranslation();
   const age = computeAge(timestamp);
+  useAgeTick(age !== null);
+
   const isStale = age !== null && age >= staleThreshold;
-  const isOffline = age !== null && age >= 600;
-  const ageLabel = formatAge(age);
+  const isOffline = age !== null && age >= offlineThreshold;
+  const ageLabel = formatAge(age, t);
 
   return { isStale, isOffline, ageLabel };
 }
