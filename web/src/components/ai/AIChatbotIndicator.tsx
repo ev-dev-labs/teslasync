@@ -31,12 +31,20 @@ import { withAiFeature } from '@/components/ai/withAiFeature'
  *   - Cyan accent (matches the chatbot brand colour).
  *   - Title attribute carries the long-form explanation so a user
  *     hovering for a tooltip understands what AI mode means.
+ *   - `role="img"` + `aria-label` present the icon-and-label chip as a
+ *     single labelled graphic (matching the CarAnimation / Avatar
+ *     convention). Without an explicit role, `aria-label` on a
+ *     roleless generic <span> is not reliably surfaced to the
+ *     accessibility tree, so the decorative {@link HelixMark} could be
+ *     the only thing an AT sees — and it is `aria-hidden`. The title
+ *     then acts as the accessible description.
  */
 function InnerIndicator() {
   const { t } = useTranslation()
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+      role="img"
       title={t(
         'helix.tooltip',
         'Helix is your AI assistant. It generates responses using your redacted fleet context.',
