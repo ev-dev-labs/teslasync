@@ -7438,8 +7438,12 @@
       "title": "Battery Along Route",
       "empty": "Plan a trip to see the SOC curve",
       "aria": "Planned route battery state-of-charge area chart",
+      "socAxis": "SOC %",
+      "socSeries": "SOC",
+      "minArrival": "Min {{soc}}%",
+      "stopLabel": "⚡ Stop {{n}}",
       "col": {
-        "distance": "Distance",
+        "distance": "Distance ({{unit}})",
         "soc": "SOC %"
       }
     },
