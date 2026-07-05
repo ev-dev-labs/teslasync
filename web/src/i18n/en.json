@@ -7472,7 +7472,10 @@
     "map": {
       "origin": "Origin",
       "destination": "Destination",
-      "empty": "Enter origin and destination to see the route"
+      "empty": "Enter origin and destination to see the route",
+      "regionLabel": "Trip route map",
+      "chargeStop": "Charge stop",
+      "chargeSummary": "{{from}}% → {{to}}% ({{min}} min)"
     },
     "title": "Trip Planner",
     "speed": {
