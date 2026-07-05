@@ -7066,6 +7066,7 @@
     "climate": "Climate",
     "fanStatus": "Fan Status",
     "avg": "Avg",
+    "max": "Max",
     "noTemperatureData": "No temperature telemetry is available for this drive.",
     "outside": "Outside",
     "inside": "Inside",
