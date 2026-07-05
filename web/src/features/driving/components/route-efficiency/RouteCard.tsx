@@ -40,8 +40,11 @@ export interface RouteCardProps {
 export function RouteCard({ route, unit }: RouteCardProps) {
   const { t } = useTranslation();
 
-  const start = route.startLocation ?? '—';
-  const end = route.endLocation ?? '—';
+  // `||` (not `??`) so an empty-string location degrades to the em-dash
+  // placeholder instead of rendering a blank cell — matches the sibling card
+  // convention (see OrderCard) and never leaves the heading visually empty.
+  const start = route.startLocation || '—';
+  const end = route.endLocation || '—';
   const trips = route.tripCount ?? 0;
   const avgDistance = unit.toDistance((route.avgDistanceKm ?? 0) * 1000);
 
@@ -49,9 +52,13 @@ export function RouteCard({ route, unit }: RouteCardProps) {
   const bestEff = unit.toEfficiency(route.bestEfficiency);
   const worstEff = unit.toEfficiency(route.worstEfficiency);
 
+  // Efficiency can dip below zero on net-regen (downhill) routes, and dirty
+  // data can invert best/worst; clamp both stops to [0, 100] so the gradient
+  // never emits an out-of-range CSS colour stop (e.g. "-15%").
   const denom = Math.max(worstEff, 1);
-  const bestPct = Math.min((bestEff / denom) * 100, 100);
-  const avgPct = Math.min((avgEff / denom) * 100, 100);
+  const clampPct = (n: number) => Math.max(0, Math.min(100, n));
+  const bestPct = clampPct((bestEff / denom) * 100);
+  const avgPct = clampPct((avgEff / denom) * 100);
   const rangeGradient =
     `linear-gradient(to right, ${ROUTE_EFF_COLORS.best} 0%, ${ROUTE_EFF_COLORS.best} ${bestPct}%,` +
     ` ${ROUTE_EFF_COLORS.avg} ${bestPct}%, ${ROUTE_EFF_COLORS.avg} ${avgPct}%,` +
@@ -72,9 +79,9 @@ export function RouteCard({ route, unit }: RouteCardProps) {
               color="primary"
               className="flex items-center gap-1"
             >
-              <span className="truncate">{start}</span>
+              <span className="truncate" title={route.startLocation || undefined}>{start}</span>
               <ArrowRight className="h-3 w-3 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-              <span className="truncate">{end}</span>
+              <span className="truncate" title={route.endLocation || undefined}>{end}</span>
             </Text>
             <Caption className="mt-0.5 block truncate">
               {fmtInt(trips)} {t('routeEfficiency.trips', 'trips')} · {fmtNumber(avgDistance)}{' '}
@@ -87,7 +94,10 @@ export function RouteCard({ route, unit }: RouteCardProps) {
         </Badge>
       </div>
 
-      <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[var(--surface-2)]">
+      <div
+        aria-hidden="true"
+        className="mt-4 h-2.5 overflow-hidden rounded-full bg-[var(--surface-2)]"
+      >
         <div className="h-full rounded-full" style={{ background: rangeGradient }} />
       </div>
 
