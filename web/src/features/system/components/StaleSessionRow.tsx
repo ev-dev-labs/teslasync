@@ -3,7 +3,7 @@ import { AlertTriangle, ChevronDown, Clock } from 'lucide-react';
 import { Badge, Button, Caption, Code, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, isFiniteNumber } from '@/lib/numberFormat';
 
 /** A single formatted, display-boundary metric chip shown on a stale row. */
 export interface StaleRowMetric {
@@ -32,9 +32,11 @@ export interface StaleSessionRowProps {
 function hoursOpen(startDate: string): string {
   const h = (Date.now() - new Date(startDate).getTime()) / 3_600_000;
   if (!Number.isFinite(h) || h < 0) return '—';
-  if (h < 24) return `${fmtInt(h)}h`;
+  // Floor each component: fmtInt rounds, which would render 23.9h as "24h"
+  // (still inside the <24h branch) and surface a day remainder as "…d 24h".
+  if (h < 24) return `${fmtInt(Math.floor(h))}h`;
   const d = Math.floor(h / 24);
-  return `${d}d ${fmtInt(h % 24)}h`;
+  return `${d}d ${fmtInt(Math.floor(h % 24))}h`;
 }
 
 /**
@@ -49,7 +51,7 @@ export function StaleSessionRow({
   timestamp,
   batteryPct,
   vehicleId,
-  metrics,
+  metrics = [],
   expanded,
   onToggle,
   controlsId,
@@ -77,7 +79,7 @@ export function StaleSessionRow({
           {formatDateTime(timestamp)}
         </Text>
         <Caption className="text-[var(--text-primary)]">
-          {batteryPct != null ? `${fmtInt(batteryPct)}%` : '—'}
+          {isFiniteNumber(batteryPct) ? `${fmtInt(batteryPct)}%` : '—'}
         </Caption>
         <Caption className="text-[var(--text-muted)]">
           {t('dataRepair.row.vehicle', 'Vehicle {{id}}', { id: vehicleId })}
