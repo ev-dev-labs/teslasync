@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Select, Tooltip } from '@/components/ui';
 import { Caption } from '@/components/ui';
@@ -44,12 +45,17 @@ export interface LiveControlsProps {
   className?: string;
 }
 
-const WINDOW_OPTIONS = [
-  { value: '5', label: '5 min' },
-  { value: '10', label: '10 min' },
-  { value: '30', label: '30 min' },
-  { value: '120', label: '2 h' },
-];
+/**
+ * Primary window presets exposed by the dropdown. The page can additionally
+ * *widen* the window to 6 h (360) or 24 h (1440) via `nextWiderPreset` when the
+ * most-recent transition sits outside every primary preset. Those wider values
+ * are injected into the option list on demand (see `windowOptions`) so the
+ * controlled <Select> always has an <option> whose value matches
+ * `windowMinutes`. Without that injection a widened window leaves the select
+ * visually stuck on the first preset (5 min) while the real window is far
+ * larger — the toolbar would silently misreport the active scope.
+ */
+const BASE_WINDOW_MINUTES = [5, 10, 30, 120];
 
 export function LiveControls({
   isLive,
@@ -67,6 +73,20 @@ export function LiveControls({
   className,
 }: LiveControlsProps) {
   const { t } = useTranslation();
+
+  const windowOptions = useMemo(() => {
+    const minutes =
+      Number.isFinite(windowMinutes) && !BASE_WINDOW_MINUTES.includes(windowMinutes)
+        ? [...BASE_WINDOW_MINUTES, windowMinutes].sort((a, b) => a - b)
+        : BASE_WINDOW_MINUTES;
+    return minutes.map((m) => ({
+      value: String(m),
+      label:
+        m >= 60 && m % 60 === 0
+          ? t('debugger.controls.windowHours', '{{n}} h', { n: m / 60 })
+          : t('debugger.controls.windowMinutes', '{{n}} min', { n: m }),
+    }));
+  }, [windowMinutes, t]);
 
   const inWindow = windowCount ?? bufferCount ?? 0;
   const total = totalCount ?? bufferCount ?? 0;
@@ -142,7 +162,7 @@ export function LiveControls({
         value={String(windowMinutes)}
         onChange={(e) => onWindowChange(Number(e.target.value))}
         aria-label={t('debugger.controls.window', 'Window')}
-        options={WINDOW_OPTIONS}
+        options={windowOptions}
       />
       <Button size="sm" variant="ghost" onClick={onClearBuffer}>
         {t('debugger.controls.clear', 'Clear buffer')}
