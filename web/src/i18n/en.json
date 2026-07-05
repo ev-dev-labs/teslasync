@@ -3812,6 +3812,11 @@
       "monitoring": "Monitoring",
       "resolved": "Resolved"
     },
+    "severity": {
+      "minor": "Minor",
+      "major": "Major",
+      "critical": "Critical"
+    },
     "updateRequired": "Update message is required.",
     "updateAdded": "Update added.",
     "updateFailed": "Failed to append update",
