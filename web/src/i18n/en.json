@@ -4011,7 +4011,8 @@
       "outsideMin": "Outside Min",
       "outsideAvg": "Outside Avg",
       "outsideMax": "Outside Max",
-      "noTempStats": "No temperature stats"
+      "noTempStats": "No temperature stats",
+      "performanceBand": "Driving performance metrics"
     },
     "hero": {
       "distance": "Distance",
