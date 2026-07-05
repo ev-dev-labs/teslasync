@@ -50,6 +50,14 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// This feature renders its narrative purely through useAiStream's
+// built-in delta-text accumulator (surfaced by AiOutputPanel), so it
+// has no per-event work to do. A module-level no-op keeps the onEvent
+// callback identity stable across renders instead of allocating a
+// fresh closure in the render path (which would re-run useAiStream's
+// onEvent-ref effect on every render).
+const noop = (): void => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent VampireDrainPage. Optional
@@ -114,21 +122,29 @@ function InnerSection({ vehicleId, lookbackDays }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/charging/vampire-drain/explain',
     body,
-    onEvent: () => {},
+    onEvent: noop,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-    return (
+  return (
     <AIFeatureCard
       title={t(
-                  'vampireDrain.aiNarrative.title',
-                  'Explain the recent vampire drain',
-                )}
+        'vampireDrain.aiNarrative.title',
+        'Explain the recent vampire drain',
+      )}
       description={t(
-                'vampireDrain.aiNarrative.description',
-                'Ask Helix to explain the deterministic vampire-drain signal \u2014 the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference\u2019s correlational nature honestly.',
-              )}
+        'vampireDrain.aiNarrative.description',
+        'Ask Helix to explain the deterministic vampire-drain signal \u2014 the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference\u2019s correlational nature honestly.',
+      )}
       buttonLabel={t('vampireDrain.aiNarrative.generateButton', 'Narrate drain')}
       badgeLabel={t('vampireDrain.aiNarrative.badge', 'Helix')}
+      emptyHint={
+        haveInputs
+          ? undefined
+          : t(
+              'vampireDrain.aiNarrative.noVehicleHint',
+              'Pick a vehicle above to enable Helix.',
+            )
+      }
       canStart={haveInputs}
       stream={stream}
     />
