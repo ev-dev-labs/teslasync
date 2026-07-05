@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button as UiButton } from '@/components/ui';
-import type { KioskConfig } from '../hooks/useKioskMode';
+import { DEFAULT_KIOSK_CONFIG, type KioskConfig } from '../hooks/useKioskMode';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 interface KioskOverlayProps {
@@ -27,6 +27,15 @@ export function KioskOverlay({
   const { formatTime, formatDateWithDay } = useDateFormat();
   const [now, setNow] = useState(new Date());
   const [showExit, setShowExit] = useState(false);
+
+  // Darkness of the black wallpaper when the screen is dimmed. `dimLevel` is
+  // the *remaining* brightness (0–1) chosen in kiosk settings ("Dimmed
+  // Brightness"), so the overlay darkens by `1 - dimLevel`. Guard against a
+  // missing / NaN / out-of-range value so we never emit invalid CSS opacity.
+  const safeDimLevel = Number.isFinite(config.dimLevel)
+    ? config.dimLevel
+    : DEFAULT_KIOSK_CONFIG.dimLevel;
+  const dimOpacity = Math.min(1, Math.max(0, 1 - safeDimLevel));
 
   // Clock tick
   useEffect(() => {
@@ -61,7 +70,9 @@ export function KioskOverlay({
           // Not a dialog; new interactive dialogs MUST use <Modal>.
           // eslint-disable-next-line no-restricted-syntax
           className="fixed inset-0 z-[9998] bg-black pointer-events-none transition-opacity duration-slow"
-          style={{ opacity: 1 - config.dimLevel }}
+          style={{ opacity: dimOpacity }}
+          data-testid="kiosk-dim-overlay"
+          aria-hidden="true"
         />
       )}
 
@@ -70,7 +81,11 @@ export function KioskOverlay({
         // Non-interactive kiosk wallpaper layer that injects cursor-hiding CSS.
         // Not a dialog; new interactive dialogs MUST use <Modal>.
         // eslint-disable-next-line no-restricted-syntax
-        <div className="fixed inset-0 z-[9997] pointer-events-none" aria-hidden="true">
+        <div
+          className="fixed inset-0 z-[9997] pointer-events-none"
+          aria-hidden="true"
+          data-testid="kiosk-cursor-style"
+        >
           <style>{`.kiosk-root, .kiosk-root * { cursor: none !important; }`}</style>
         </div>
       )}
@@ -78,6 +93,7 @@ export function KioskOverlay({
       {/* Clock overlay */}
       {config.showClock && (
         <div
+          data-testid="kiosk-clock"
           className={cn(
             'fixed z-[9999] font-mono pointer-events-none select-none',
             config.clockPosition === 'top-left' && 'top-4 left-4',
@@ -97,10 +113,19 @@ export function KioskOverlay({
 
       {/* Dashboard rotation indicator dots */}
       {dashboardCount > 1 && config.rotateInterval > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-1.5 pointer-events-none">
+        <div
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-1.5 pointer-events-none"
+          role="group"
+          aria-label={t('kiosk.rotationPosition', 'Dashboard {{current}} of {{total}}', {
+            current: (currentIndex ?? 0) + 1,
+            total: dashboardCount,
+          })}
+          data-testid="kiosk-rotation-dots"
+        >
           {Array.from({ length: dashboardCount }).map((_, i) => (
             <div
               key={i}
+              aria-hidden="true"
               className={cn(
                 'h-1.5 rounded-full transition-all duration-normal',
                 i === currentIndex
@@ -112,10 +137,10 @@ export function KioskOverlay({
         </div>
       )}
 
-      {/* Exit button — fades in on mouse movement, always accessible via touch */}
+      {/* Exit button — fades in on mouse movement or keyboard focus, always accessible via touch */}
       <div
         className={cn(
-          'fixed top-3 right-3 z-[9999] transition-opacity duration-slow',
+          'fixed top-3 right-3 z-[9999] transition-opacity duration-slow focus-within:opacity-100',
           showExit ? 'opacity-100' : 'opacity-0',
         )}
       >
