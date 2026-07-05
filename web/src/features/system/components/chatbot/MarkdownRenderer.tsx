@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, memo, type ReactNode } from 'react';
 import { Heading, Text } from '@/components/ui';
 import { CodeBlock } from './CodeBlock';
 
@@ -135,19 +135,31 @@ interface MarkdownRendererProps {
   children: string;
 }
 
-export function MarkdownRenderer({ children }: MarkdownRendererProps) {
+// Memoised: exactly one <MarkdownRenderer> is mounted per assistant message,
+// and the chat list re-renders on state changes unrelated to a given bubble
+// (hover, a sibling reply streaming). `children` is a primitive string, so the
+// default shallow prop compare skips a full react-markdown re-parse whenever the
+// text for this bubble is unchanged.
+export const MarkdownRenderer = memo(function MarkdownRenderer({
+  children,
+}: MarkdownRendererProps) {
+  // Normalise to a string before handing off to the fallback / react-markdown.
+  // The prop is typed `string`, but the chatbot feeds `streamedText ?? content`
+  // and a JS caller could still slip a null/undefined through — rendering that
+  // into react-markdown is a runtime foot-gun, so guard it at the boundary.
+  const source = children ?? '';
   return (
     <Suspense
       fallback={
         // While the lazy chunk loads, render the raw text with line
         // breaks preserved — keeps assistant replies readable even on
         // slow connections.
-        <p className="whitespace-pre-wrap">{children}</p>
+        <p className="whitespace-pre-wrap">{source}</p>
       }
     >
       <div className="prose-chat space-y-1">
-        <ReactMarkdownLazy>{children}</ReactMarkdownLazy>
+        <ReactMarkdownLazy>{source}</ReactMarkdownLazy>
       </div>
     </Suspense>
   );
-}
+});
