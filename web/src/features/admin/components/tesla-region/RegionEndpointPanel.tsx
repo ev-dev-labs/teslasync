@@ -93,7 +93,7 @@ export function RegionEndpointPanel({
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <Text size="base" weight="semibold" color="primary">
-              {regionLabel ?? region ?? t('region.kpi.regionUnknown', 'Not detected')}
+              {regionLabel || region || t('region.kpi.regionUnknown', 'Not detected')}
             </Text>
             {regionKey && (
               <Badge variant="info" size="sm">
@@ -105,7 +105,7 @@ export function RegionEndpointPanel({
           <div className="space-y-1.5">
             <Label>{t('region.fleetApiUrl', 'Fleet API base URL')}</Label>
             <div className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3">
-              <Code className="min-w-0 flex-1 break-all">{baseUrl ?? '—'}</Code>
+              <Code className="min-w-0 flex-1 break-all">{baseUrl || '—'}</Code>
               {baseUrl && (
                 <CopyButton
                   text={baseUrl}
@@ -118,7 +118,7 @@ export function RegionEndpointPanel({
 
           <KVList
             items={[
-              { label: t('region.regionName', 'Region'), value: region ?? '—' },
+              { label: t('region.regionName', 'Region'), value: region || '—' },
               {
                 label: t('region.regionCode', 'Region code'),
                 value: regionKey ? regionKey.toUpperCase() : '—',
