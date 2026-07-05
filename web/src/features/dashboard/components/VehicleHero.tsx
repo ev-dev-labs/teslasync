@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Thermometer, Lock, Unlock, Shield, Zap, Activity, Navigation,
   Gauge, Clock, Eye, MapPin, BatteryCharging, Monitor,
+  type LucideIcon,
 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
@@ -62,16 +63,16 @@ export function VehicleHero({
             {/* Context-aware radial gauges */}
             <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-6">
               <RadialGauge
-                value={state.battery_level} max={100} label={t('hero.battery', 'Battery')} unit="%"
-                color={state.battery_level > 50 ? '#10b981' : '#f59e0b'} size={70}
+                value={state.battery_level ?? 0} max={100} label={t('hero.battery', 'Battery')} unit="%"
+                color={(state.battery_level ?? 0) > 50 ? '#10b981' : '#f59e0b'} size={70}
               />
               <RadialGauge
-                value={Math.round(toDistanceDisplay(state.rated_range))} max={600}
+                value={Math.round(toDistanceDisplay(state.rated_range ?? 0))} max={600}
                 label={t('hero.range', 'Range')} unit={distanceUnit} color="#00f0ff" size={70}
               />
-              {(status === 'driving' || state.speed > 0) && (
+              {(status === 'driving' || (state.speed ?? 0) > 0) && (
                 <RadialGauge
-                  value={Math.round(toSpeedDisplay(state.speed))} max={250}
+                  value={Math.round(toSpeedDisplay(state.speed ?? 0))} max={250}
                   label={t('hero.speed', 'Speed')} unit={speedUnit} color="#a855f7" size={70}
                 />
               )}
@@ -82,11 +83,11 @@ export function VehicleHero({
                 />
               )}
               <RadialGauge
-                value={Math.round(toTemperatureDisplay(state.inside_temp))} max={isFahrenheit ? 122 : 50}
+                value={Math.round(toTemperatureDisplay(state.inside_temp ?? 0))} max={isFahrenheit ? 122 : 50}
                 label={t('hero.inside', 'Inside')} unit={tempUnit} color="#f97316" size={70}
               />
               <RadialGauge
-                value={Math.round(toTemperatureDisplay(state.outside_temp))} max={isFahrenheit ? 122 : 50}
+                value={Math.round(toTemperatureDisplay(state.outside_temp ?? 0))} max={isFahrenheit ? 122 : 50}
                 label={t('hero.outside', 'Outside')} unit={tempUnit} color="#3b82f6" size={70}
               />
             </div>
@@ -95,7 +96,7 @@ export function VehicleHero({
             {state.is_charging && (
               <div className="mb-4 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
                 <div className="flex items-center gap-2 mb-2">
-                  <BatteryCharging className="h-4 w-4 text-neon-green animate-pulse" />
+                  <BatteryCharging className="h-4 w-4 text-neon-green animate-pulse" aria-hidden />
                   <span className="text-sm font-medium text-emerald-300">{t('hero.charging', 'Charging')}</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center text-xs">
@@ -134,7 +135,7 @@ export function VehicleHero({
                   key={item.label}
                   className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]"
                 >
-                  <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
+                  <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} aria-hidden />
                   <div className="min-w-0">
                     <p className="text-2xs text-[var(--text-secondary)] uppercase tracking-wider">{item.label}</p>
                     <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.value}</p>
@@ -184,7 +185,6 @@ export function VehicleHero({
 }
 
 /* Build context-aware stat cards based on vehicle state */
-type LucideIcon = React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 interface StatItem { icon: LucideIcon; label: string; value: string; color: string }
 
 function buildStatCards(
@@ -193,40 +193,56 @@ function buildStatCards(
        distanceUnit: string; speedUnit: string; tempUnit: string },
   t: (key: string, fallback: string) => string,
 ): StatItem[] {
-  const isDriving = s.state === 'driving' || s.speed > 0;
+  // Null-safe SI reads — the API declares these non-optional, but a partial
+  // telemetry frame can leave a field null; defaulting here keeps every derived
+  // string finite instead of leaking "NaN" into a tile.
+  const speed = s.speed ?? 0;
+  const power = s.power ?? 0;
+  const odometer = s.odometer ?? 0;
+  const idealRange = s.ideal_range ?? 0;
+  const isDriving = s.state === 'driving' || speed > 0;
   const isCharging = s.is_charging;
   const cards: StatItem[] = [];
 
+  // Single source of truth for the Power tile so it can appear in the driving
+  // context OR the always-visible row, but never both (which previously pushed
+  // two tiles sharing the same React key in driving mode).
+  const powerColor = power > 0 ? '#f59e0b' : power < 0 ? '#10b981' : '#374151';
+  const powerCard: StatItem = {
+    icon: Zap, label: t('hero.power', 'Power'), value: `${fmtNumber(power)} kW`, color: powerColor,
+  };
+
   if (isDriving) {
     cards.push(
-      { icon: Gauge, label: 'Speed', value: `${fmtNumber(u.toSpeedDisplay(s.speed), 0)} ${u.speedUnit}`, color: '#a855f7' },
-      { icon: Zap, label: 'Power', value: `${fmtNumber(s.power)} kW`, color: s.power > 0 ? '#f59e0b' : s.power < 0 ? '#10b981' : '#374151' },
-      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.toDistanceDisplay(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
-      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.toDistanceDisplay(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Gauge, label: t('hero.speed', 'Speed'), value: `${fmtNumber(u.toSpeedDisplay(speed), 0)} ${u.speedUnit}`, color: '#a855f7' },
+      powerCard,
+      { icon: Navigation, label: t('hero.odometer', 'Odometer'), value: `${fmtInt(u.toDistanceDisplay(odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: t('hero.idealRange', 'Ideal Range'), value: `${fmtNumber(u.toDistanceDisplay(idealRange), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
     );
   } else if (isCharging) {
     cards.push(
-      { icon: Zap, label: 'Charge Rate', value: `${fmtInt(u.toDistanceDisplay(s.charge_rate ?? 0))} ${u.distanceUnit}/h`, color: '#10b981' },
-      { icon: Clock, label: 'Time to Full', value: s.time_to_full_charge > 0 ? `${fmtNumber(s.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
-      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.toDistanceDisplay(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
-      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.toDistanceDisplay(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Zap, label: t('hero.chargeRate', 'Charge Rate'), value: `${fmtInt(u.toDistanceDisplay(s.charge_rate ?? 0))} ${u.distanceUnit}/h`, color: '#10b981' },
+      { icon: Clock, label: t('hero.timeToFull', 'Time to Full'), value: (s.time_to_full_charge ?? 0) > 0 ? `${fmtNumber(s.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
+      { icon: Activity, label: t('hero.idealRange', 'Ideal Range'), value: `${fmtNumber(u.toDistanceDisplay(idealRange), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Navigation, label: t('hero.odometer', 'Odometer'), value: `${fmtInt(u.toDistanceDisplay(odometer))} ${u.distanceUnit}`, color: '#a855f7' },
     );
   } else {
     cards.push(
-      { icon: Thermometer, label: 'Inside', value: s.inside_temp != null ? `${fmtNumber(u.toTemperatureDisplay(s.inside_temp), 1)}${u.tempUnit}` : '—', color: '#f97316' },
-      { icon: Thermometer, label: 'Outside', value: s.outside_temp != null ? `${fmtNumber(u.toTemperatureDisplay(s.outside_temp), 1)}${u.tempUnit}` : '—', color: '#3b82f6' },
-      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.toDistanceDisplay(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
-      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.toDistanceDisplay(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Thermometer, label: t('hero.inside', 'Inside'), value: s.inside_temp != null ? `${fmtNumber(u.toTemperatureDisplay(s.inside_temp), 1)}${u.tempUnit}` : '—', color: '#f97316' },
+      { icon: Thermometer, label: t('hero.outside', 'Outside'), value: s.outside_temp != null ? `${fmtNumber(u.toTemperatureDisplay(s.outside_temp), 1)}${u.tempUnit}` : '—', color: '#3b82f6' },
+      { icon: Navigation, label: t('hero.odometer', 'Odometer'), value: `${fmtInt(u.toDistanceDisplay(odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: t('hero.idealRange', 'Ideal Range'), value: `${fmtNumber(u.toDistanceDisplay(idealRange), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
     );
   }
 
-  // Always-visible cards
+  // Always-visible cards. Power is appended here only when it is not already
+  // surfaced by the driving context above, so it renders exactly once.
   cards.push(
     { icon: s.is_locked ? Lock : Unlock, label: t('common.status', 'Status'), value: s.is_locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked'), color: s.is_locked ? '#10b981' : '#f59e0b' },
     { icon: Shield, label: t('common.sentry', 'Sentry'), value: s.sentry_mode ? t('common.active', 'Active') : t('common.off', 'Off'), color: s.sentry_mode ? '#ef4444' : '#374151' },
-    { icon: Gauge, label: 'Firmware', value: firmware, color: '#6366f1' },
-    { icon: Zap, label: 'Power', value: `${fmtNumber(s.power)} kW`, color: s.power > 0 ? '#f59e0b' : s.power < 0 ? '#10b981' : '#374151' },
+    { icon: Gauge, label: t('hero.firmware', 'Firmware'), value: firmware, color: '#6366f1' },
   );
+  if (!isDriving) cards.push(powerCard);
 
   return cards;
 }
