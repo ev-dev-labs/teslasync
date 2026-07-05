@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserOrders, useRefreshTeslaOrders } from '@/api/hooks/useUser'
 import { GlassPanel, Button, IconBox, Badge } from '@/components/ui'
-import { EmptyState } from '@/components/feedback'
+import { EmptyState, Spinner, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
@@ -31,8 +31,10 @@ export function ActiveOrdersSection() {
   const { t } = useTranslation('settings')
   const toast = useToast()
   const { formatDate: formatDeliveryDate } = useDateFormat()
-  const { data: ordersData } = useTeslaUserOrders()
+  const { data: ordersData, isLoading, isError, error, refetch } = useTeslaUserOrders()
   const ordersRefresh = useRefreshTeslaOrders()
+
+  const orders = ordersData?.orders ?? []
 
   return (
     <FadeIn delay={0.045}>
@@ -68,13 +70,23 @@ export function ActiveOrdersSection() {
           </div>
         </div>
 
-        {(ordersData?.orders ?? []).length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Spinner size="md" label={t('orders.loading', 'Loading orders…')} />
+          </div>
+        ) : isError && orders.length === 0 ? (
+          <QueryError
+            error={error}
+            onRetry={() => { void refetch() }}
+            resourceName={t('orders.resourceName', 'Orders')}
+          />
+        ) : orders.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {(ordersData?.orders ?? []).map((order) => (
-              <div key={order.order_id} className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4 space-y-3">
+            {orders.map((order) => (
+              <div key={order.id ?? order.order_id} className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-[var(--text-muted)]" />
+                    <Package className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
                     <span className="text-sm font-semibold text-[var(--text-primary)]">{order.model || '—'}</span>
                   </div>
                   <Badge variant={orderStatusVariant(order.status)}>
@@ -96,7 +108,7 @@ export function ActiveOrdersSection() {
                     <div className="flex justify-between">
                       <span className="text-[var(--text-muted)]">{t('orders.deliveryDate', 'Delivery Date')}</span>
                       <span className="flex items-center gap-1 text-[var(--text-primary)]">
-                        <Calendar className="h-3 w-3" />
+                        <Calendar className="h-3 w-3" aria-hidden="true" />
                         {formatDeliveryDate(order.delivery_date)}
                       </span>
                     </div>

@@ -8478,7 +8478,9 @@
     "deliveryDate": "Delivery Date",
     "upgradable": "Upgradable",
     "noOrders": "No active orders found.",
-    "noData": "No order data yet. Click Refresh to fetch from Tesla."
+    "noData": "No order data yet. Click Refresh to fetch from Tesla.",
+    "loading": "Loading orders…",
+    "resourceName": "Orders"
   },
   "theme": {
     "title": "Appearance",
