@@ -10,7 +10,7 @@ import {
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, safeNumber } from '@/lib/numberFormat';
 import type { TripDetail } from '@/api/types';
 
 interface TripDrivesChartProps {
@@ -37,9 +37,23 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
     () =>
       (trip?.drives ?? []).map((d, i) => ({
         name: t('trips.detail.chart.driveLabel', 'Drive {{n}}', { n: i + 1 }),
-        distance: convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance),
+        // safeNumber (not `?? 0`) also coerces NaN/Infinity to 0 so a corrupt
+        // reading never feeds a broken bar to Recharts at the display boundary.
+        distance: convertDistanceFromSI(safeNumber(d.distance_m), unitPrefs.distance),
       })),
     [trip?.drives, unitPrefs.distance, t],
+  );
+
+  const dataColumns = useMemo(
+    () => [
+      { key: 'name', label: t('trips.detail.chart.col.drive', 'Drive') },
+      {
+        key: 'distance',
+        label: distanceLabel,
+        format: (v: unknown) => fmtNumber(v as number, 1),
+      },
+    ],
+    [t, distanceLabel],
   );
 
   if (isError) {
@@ -72,10 +86,7 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
       height={chartHeight}
       exportFilename="teslasync-trip-drives"
       data={chartData}
-      dataColumns={[
-        { key: 'name', label: t('trips.detail.chart.col.drive', 'Drive') },
-        { key: 'distance', label: distanceLabel, format: (v) => fmtNumber(v as number, 1) },
-      ]}
+      dataColumns={dataColumns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} layout="vertical" {...chartAnimation}>
