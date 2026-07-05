@@ -7,7 +7,15 @@ export interface StateResponse {
   live: boolean
 }
 
+/**
+ * Map a battery state-of-charge percentage to a gauge stroke colour:
+ * green above 60 %, amber across 25–60 %, red at/below 25 %. An unknown
+ * level (NaN / ±Infinity / a field missing from a partial telemetry
+ * payload) resolves to the muted grey the rest of the app uses for
+ * "no data" instead of falling through to a misleading critical-red gauge.
+ */
 export function batteryColor(level: number): string {
+  if (!Number.isFinite(level)) return '#6b7280'
   if (level > 60) return '#10b981'
   if (level > 25) return '#f59e0b'
   return '#ef4444'
@@ -49,8 +57,17 @@ export function tirePressureVariant(pa: number | null | undefined): 'success' | 
   return 'success'
 }
 
+/**
+ * Render a minute count as a compact "Hh Mm" / "Mm" duration. Fractional
+ * minutes are rounded to the nearest whole minute *before* the hour/minute
+ * split so a value like 59.6 carries into "1h 0m" rather than the invalid
+ * "60m" (and 1439.6 → "24h 0m", never "23h 60m"). Non-finite or negative
+ * input — which a partial telemetry payload can yield — collapses to "0m".
+ */
 export function durationStr(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-  const m = fmtInt(minutes % 60)
+  if (!Number.isFinite(minutes) || minutes <= 0) return '0m'
+  const total = Math.round(minutes)
+  const h = Math.floor(total / 60)
+  const m = fmtInt(total % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
