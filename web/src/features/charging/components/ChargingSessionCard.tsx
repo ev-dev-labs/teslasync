@@ -70,6 +70,10 @@ export function ChargingSessionCard({
   };
 
   const durationMin = durationMinutes(session);
+  // `durationMinutes` returns 0 for in-progress / malformed sessions, which
+  // would otherwise render a misleading "0m". Show the universal placeholder
+  // instead so an open session reads as unknown rather than zero-length.
+  const durationLabel = durationMin > 0 ? formatDurationMinutes(durationMin) : '—';
   const avgRateKw = useMemo(() => {
     const w = avgPowerW(session);
     return w > 0 ? w / 1000 : null;
@@ -114,7 +118,7 @@ export function ChargingSessionCard({
       <TimeStamp value={session.started_at} className="text-sm font-semibold text-[var(--text-primary)]" />
       <span className="text-2xs text-[var(--text-muted)]">·</span>
       <span className="text-2xs text-[var(--text-muted)] tabular-nums">
-        {formatDurationMinutes(durationMin)}
+        {durationLabel}
       </span>
       <Badge variant={cat === 'supercharger' ? 'danger' : cat === 'dc' ? 'warning' : 'success'} size="sm">
         {chargerLabels[cat]}
@@ -153,25 +157,27 @@ export function ChargingSessionCard({
       <BatteryDelta startPct={session.start_soc_pct} endPct={session.end_soc_pct} />
       {session.peak_power_w != null && (
         <InlineMetric
-          icon={<TrendingUp className="h-3 w-3" />}
-          value={`${fmtNumber(session.peak_power_w / 1000)} kW peak`}
+          icon={<TrendingUp className="h-3 w-3" aria-hidden />}
+          value={t('metrics.peakPower', '{{value}} kW peak', {
+            value: fmtNumber((session.peak_power_w ?? 0) / 1000),
+          })}
         />
       )}
       {avgRateKw != null && (
         <InlineMetric
-          icon={<Plug className="h-3 w-3" />}
-          value={`~${fmtNumber(avgRateKw)} kW avg`}
+          icon={<Plug className="h-3 w-3" aria-hidden />}
+          value={t('metrics.avgPower', '~{{value}} kW avg', { value: fmtNumber(avgRateKw) })}
         />
       )}
       {durationMin > 0 && (
         <InlineMetric
-          icon={<Clock className="h-3 w-3" />}
+          icon={<Clock className="h-3 w-3" aria-hidden />}
           value={formatDurationMinutes(durationMin)}
         />
       )}
       {typeof session.cost_decimal === 'number' && session.cost_decimal > 0 && (
         <InlineMetric
-          icon={<DollarSign className="h-3 w-3" />}
+          icon={<DollarSign className="h-3 w-3" aria-hidden />}
           value={formatCurrency(session.cost_decimal)}
           className="text-emerald-300"
         />
@@ -181,7 +187,7 @@ export function ChargingSessionCard({
       )}
       {typeof milesGained === 'number' && milesGained > 0 && (
         <span className="flex items-center gap-1 text-purple-300">
-          <Zap className="h-3 w-3" /> +{fmtInt(milesGained)} {distanceUnit}
+          <Zap className="h-3 w-3" aria-hidden /> +{fmtInt(milesGained)} {distanceUnit}
         </span>
       )}
     </>
