@@ -37,7 +37,7 @@ export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
 export { TimelineItem } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
-export { TransitionArrow } from './TransitionArrow';
+export { TransitionArrow, type TransitionArrowProps } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
 export {
   DataFreshness,
