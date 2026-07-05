@@ -4012,7 +4012,14 @@
       "outsideAvg": "Outside Avg",
       "outsideMax": "Outside Max",
       "noTempStats": "No temperature stats",
-      "performanceBand": "Driving performance metrics"
+      "performanceBand": "Driving performance metrics",
+      "speedDistAria": "Trip count by speed range",
+      "distDistAria": "Trip count by distance range",
+      "hourlyPatternAria": "Drives and distance by hour of day",
+      "tempVsEffAria": "Efficiency versus outside temperature",
+      "dailyTrendAria": "Daily driving distance and drive count",
+      "durationDistAria": "Drive count by duration range",
+      "effTrendAria": "Daily efficiency trend"
     },
     "hero": {
       "distance": "Distance",
