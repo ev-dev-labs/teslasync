@@ -1829,6 +1829,7 @@
     },
     "resources": {
       "title": "Resources & help",
+      "newTab": "(opens in a new tab)",
       "privacy": "TeslaSync runs entirely on your hardware. No data ever leaves your install.",
       "account": {
         "title": "Tesla account",
