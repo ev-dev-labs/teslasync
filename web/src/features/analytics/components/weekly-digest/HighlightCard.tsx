@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { GlassPanel, Text, Caption } from '@/components/ui';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 
 interface HighlightCardProps {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   change?: { value: string; positive: boolean };
@@ -42,7 +43,7 @@ export function HighlightCard({
           {icon}
         </span>
         <Text size="sm" color="secondary" className="truncate">
-          {label}
+          {label || '—'}
         </Text>
       </div>
       <Text
@@ -52,7 +53,7 @@ export function HighlightCard({
         color="primary"
         className="truncate tracking-tight tabular-nums"
       >
-        {value}
+        {value || '—'}
       </Text>
       {change && (
         <Text
@@ -68,7 +69,7 @@ export function HighlightCard({
           ) : (
             <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          {change.value}
+          {change.value || '—'}
         </Text>
       )}
       {subtitle && <Caption>{subtitle}</Caption>}
