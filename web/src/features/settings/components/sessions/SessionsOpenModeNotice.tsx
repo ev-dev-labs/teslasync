@@ -13,11 +13,23 @@ import { EmptyState } from '@/components/feedback'
 export function SessionsOpenModeNotice() {
   const { t } = useTranslation('settings')
 
+  // Reused for both the visible EmptyState heading and the landmark region's
+  // accessible name so a screen-reader user navigating by region lands on a
+  // named notice rather than an anonymous "region". Mirrors the
+  // `role="region" aria-labelledby={heading}` pattern the drive/charging
+  // detail panels use; EmptyState owns the heading so we label by value.
+  const title = t('account.sessions.openMode.title', 'Session tracking unavailable')
+
   return (
-    <GlassPanel className="p-4 sm:p-5" data-testid="active-sessions-open-mode">
+    <GlassPanel
+      className="p-4 sm:p-5"
+      data-testid="active-sessions-open-mode"
+      role="region"
+      aria-label={title}
+    >
       <EmptyState
         icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
-        title={t('account.sessions.openMode.title', 'Session tracking unavailable')}
+        title={title}
         message={t(
           'account.sessions.openMode.message',
           'Active session tracking requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User, then reload.',
