@@ -13,6 +13,15 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// The paint-preview draft is surfaced entirely through `stream.text`
+// (rendered by AIFeatureCard's AiOutputPanel); there is no per-frame
+// side effect to run. A module-level no-op keeps the `onEvent`
+// identity stable so useAiStream does not re-run its callback-ref
+// effect on every parent re-render.
+const NO_OP = (): void => {
+  /* no per-frame side effect — the accumulated text is read from stream.text */
+}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent VehicleDetailPage (the
@@ -54,13 +63,16 @@ interface InnerSectionProps {
  */
 function InnerSection({ vehicleId, styleHint }: InnerSectionProps) {
   const { t } = useTranslation()
-  // The handler-side parser validates vehicleID > 0; we mirror
-  // that here to keep the button disabled when the parent has
-  // not yet resolved a vehicle selection. The hook is called
-  // unconditionally with the current body so the dependency
-  // graph stays stable regardless of vehicleId resolution.
+  // The handler-side parser validates vehicleID > 0 and parses it as
+  // an integer path param, so a fractional or non-finite value can
+  // never map to a persisted vehicle. Requiring a positive integer
+  // here keeps the button disabled — and stops a malformed
+  // /ai/vehicles/7.5/... request from ever firing — until the parent
+  // has resolved a real vehicle selection. The hook is called
+  // unconditionally with the current body so the dependency graph
+  // stays stable regardless of vehicleId resolution.
   const numericVehicleId =
-    typeof vehicleId === 'number' && Number.isFinite(vehicleId) ? vehicleId : 0
+    typeof vehicleId === 'number' && Number.isInteger(vehicleId) ? vehicleId : 0
   const body = useMemo(() => {
     const payload: { style_hint?: string } = {}
     if (typeof styleHint === 'string' && styleHint.trim() !== '') {
@@ -68,20 +80,24 @@ function InnerSection({ vehicleId, styleHint }: InnerSectionProps) {
     }
     return payload
   }, [styleHint])
+  const haveInputs = numericVehicleId > 0
   // useAiStream prefixes the URL with /api/v1; we pass the
   // post-prefix path. The vehicleID is embedded in the URL so the
   // handler can scope the prompt; the body carries only the
-  // optional style hint.
-  const urlPath =
-    numericVehicleId > 0
-      ? `/ai/vehicles/${numericVehicleId}/paint-preview/draft`
-      : '/ai/vehicles/0/paint-preview/draft'
+  // optional style hint. Memoised so the stream's inputs stay
+  // referentially stable across re-renders.
+  const urlPath = useMemo(
+    () =>
+      haveInputs
+        ? `/ai/vehicles/${numericVehicleId}/paint-preview/draft`
+        : '/ai/vehicles/0/paint-preview/draft',
+    [haveInputs, numericVehicleId],
+  )
   const stream = useAiStream({
     url: urlPath,
     body,
-    onEvent: () => {},
+    onEvent: NO_OP,
   })
-  const haveInputs = numericVehicleId > 0
   return (
     <AIFeatureCard
       title={t(
