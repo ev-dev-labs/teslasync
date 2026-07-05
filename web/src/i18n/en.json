@@ -994,6 +994,7 @@
       "hint": "Wall-to-battery energy conversion",
       "sessionsWithData": "sessions with data",
       "average": "Average Efficiency",
+      "averageBar": "Average charging efficiency",
       "best": "Best Session",
       "worst": "Worst Session",
       "wallLoss": "Wall-to-Battery Loss"
