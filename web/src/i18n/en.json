@@ -7581,7 +7581,10 @@
       "title": "Draft a plan with Helix",
       "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "badge": "Helix",
-      "generateButton": "Draft a plan"
+      "generateButton": "Draft a plan",
+      "noVehicle": "Select a vehicle to let Helix draft a trip plan.",
+      "noOrigin": "Set a starting point for Helix to plan the route from.",
+      "noDestination": "Set a destination for Helix to plan the route to."
     },
     "socChart": {
       "title": "Battery Along Route",
