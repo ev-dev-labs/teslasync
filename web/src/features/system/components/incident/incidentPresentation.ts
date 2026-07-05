@@ -3,6 +3,7 @@
  * Kept framework-light so the page orchestrator and its sub-components render
  * incident severity/status consistently (DRY — used in 3+ places).
  */
+import { useCallback, useMemo } from 'react'
 import { AlertCircle, AlertTriangle, AlertOctagon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { type NeonColor } from '@/lib/tokens'
@@ -43,14 +44,25 @@ export function fmtDuration(startIso: string, endIso?: string): string {
   return `${Math.floor(secs / 86400)}d ${Math.floor((secs % 86400) / 3600)}h`
 }
 
-/** i18n-aware status → label resolver. */
+/**
+ * i18n-aware status → label resolver.
+ *
+ * The label table is memoised on `t` (recomputed only when the active language
+ * changes) and the returned resolver is a stable reference across renders, so
+ * callers can safely use it inside `.map()` loops and pass it to memoised
+ * children without forcing re-renders. Unknown statuses fall back to the raw
+ * value so a future enum member never renders blank.
+ */
 export function useIncidentStatusLabel(): (s: IncidentStatus) => string {
   const { t } = useTranslation()
-  return (s: IncidentStatus): string =>
-    ({
+  const labels = useMemo<Record<IncidentStatus, string>>(
+    () => ({
       investigating: t('incidentTimeline.status.investigating', 'Investigating'),
       identified:    t('incidentTimeline.status.identified', 'Identified'),
       monitoring:    t('incidentTimeline.status.monitoring', 'Monitoring'),
       resolved:      t('incidentTimeline.status.resolved', 'Resolved'),
-    }[s] ?? s)
+    }),
+    [t],
+  )
+  return useCallback((s: IncidentStatus): string => labels[s] ?? s, [labels])
 }
