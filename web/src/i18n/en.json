@@ -4132,7 +4132,14 @@
       "battery": "Battery"
     },
     "tabsNav": "Analytics sections",
-    "subtitle": "Comprehensive fleet performance insights"
+    "subtitle": "Comprehensive fleet performance insights",
+    "links": {
+      "statistics": "Statistics",
+      "compare": "Period Compare",
+      "weeklyDigest": "Weekly Digest",
+      "mileage": "Mileage",
+      "timeline": "Timeline"
+    }
   },
   "yearReview": {
     "aiNarration": {
