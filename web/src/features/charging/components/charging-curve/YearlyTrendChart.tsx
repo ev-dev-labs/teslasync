@@ -18,9 +18,10 @@ import {
   ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
+import type { YearlyTrendPoint } from './types';
 
 interface YearlyTrendChartProps {
-  yearlyTrend: { year: string; avg10to80: number; avg20to80: number; count: number }[];
+  yearlyTrend: YearlyTrendPoint[];
 }
 
 export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps) {
