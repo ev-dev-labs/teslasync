@@ -35,6 +35,13 @@ export function TotpStatusHero({
   const { t } = useTranslation('settings')
   const { formatDateTime } = useDateFormat()
 
+  // Null-safe, range-sane count: a missing or negative value from an upstream
+  // data bug must never surface a blank or nonsensical "-1" cell.
+  const safeBackupRemaining = Math.max(0, backupRemaining ?? 0)
+  // A blank/whitespace timestamp is treated as "never used" rather than being
+  // formatted into an "Invalid Date" string.
+  const hasLastUsed = typeof lastUsedAt === 'string' && lastUsedAt.trim().length > 0
+
   return (
     <GlassPanel className="h-full space-y-5 p-4 sm:p-5" data-testid="totp-section">
       <div className="flex items-start justify-between gap-4">
@@ -65,7 +72,7 @@ export function TotpStatusHero({
             <div className="space-y-0.5">
               <Text variant="label">{t('totp.lastUsed.label', 'Last used')}</Text>
               <Text variant="bodySm" as="p">
-                {lastUsedAt ? formatDateTime(lastUsedAt) : t('totp.lastUsed.never', 'Never')}
+                {hasLastUsed ? formatDateTime(lastUsedAt) : t('totp.lastUsed.never', 'Never')}
               </Text>
             </div>
             <div className="space-y-0.5">
@@ -73,7 +80,7 @@ export function TotpStatusHero({
                 {t('totp.backupCodesRemaining.label', 'Backup codes remaining')}
               </Text>
               <Text variant="bodySm" as="p" data-testid="totp-backup-remaining">
-                {backupRemaining}
+                {safeBackupRemaining}
               </Text>
             </div>
           </div>
