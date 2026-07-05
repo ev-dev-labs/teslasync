@@ -8,7 +8,9 @@ import type { FSMTransition } from '@/types/fsm';
 
 interface FSMStateDiagramProps {
   fsmType: string;
-  transitions: FSMTransition[];
+  /** Transition history to overlay on the diagram. Tolerates `undefined`
+   *  during initial load — the component renders the static diagram either way. */
+  transitions?: FSMTransition[];
 }
 
 export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) {
@@ -23,15 +25,15 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
     let latest = '';
     let latestTime = 0;
 
-    for (const tr of transitions) {
+    for (const tr of transitions ?? []) {
       if (fsmType !== 'all' && tr.fsm_name !== fsmType) continue;
       sc.set(tr.to_state, (sc.get(tr.to_state) ?? 0) + 1);
       sc.set(tr.from_state, (sc.get(tr.from_state) ?? 0) + 1);
       const edgeKey = `${tr.from_state}->${tr.to_state}`;
       ec.set(edgeKey, (ec.get(edgeKey) ?? 0) + 1);
-      const t = new Date(tr.ts).getTime();
-      if (t > latestTime) {
-        latestTime = t;
+      const tMs = new Date(tr.ts).getTime();
+      if (Number.isFinite(tMs) && tMs > latestTime) {
+        latestTime = tMs;
         latest = tr.to_state;
       }
     }
@@ -47,14 +49,6 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.selectFsmType', 'Select a specific FSM type to view its state diagram')} />
       </GlassPanel>
     );
-  }
-
-  // Build adjacency: for each state, what states it transitions to
-  const outEdges = new Map<string, string[]>();
-  for (const [from, to] of edges) {
-    const list = outEdges.get(from) ?? [];
-    list.push(to);
-    outEdges.set(from, list);
   }
 
   return (
@@ -73,6 +67,8 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
           return (
             <div key={state} className="flex items-center gap-2 sm:gap-3">
               <div
+                data-testid={`fsm-node-${state}`}
+                aria-current={isCurrent ? 'true' : undefined}
                 className={cn(
                   'relative flex flex-col items-center rounded-lg border px-3 py-2 min-w-[70px] sm:min-w-[80px] transition-all',
                   isCurrent
@@ -82,18 +78,31 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                       : 'border-white/[0.05] bg-white/[0.02] opacity-50',
                 )}
               >
-                <span className={cn('h-2 w-2 rounded-full mb-1', color.dot)} />
+                <span aria-hidden="true" className={cn('h-2 w-2 rounded-full mb-1', color.dot)} />
                 <span className={cn('text-xs font-medium', color.text)}>{state}</span>
                 {count > 0 && (
                   <span className="text-2xs text-[var(--text-muted)] mt-0.5">{count}</span>
                 )}
                 {isCurrent && (
-                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-400 animate-pulse"
+                    />
+                    <span className="sr-only">{t('fsm.currentState', 'current state')}</span>
+                  </>
                 )}
               </div>
               {hasArrow && (
-                <div className="flex items-center text-[var(--text-muted)]">
-                  <svg width="20" height="12" viewBox="0 0 20 12" className="shrink-0">
+                <div className="relative flex items-center text-[var(--text-muted)]">
+                  <svg
+                    width="20"
+                    height="12"
+                    viewBox="0 0 20 12"
+                    className="shrink-0"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
                     <line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.5" />
                     <polygon points="14,2 20,6 14,10" fill="currentColor" />
                   </svg>
@@ -113,7 +122,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
 
       {/* Edge summary below */}
       {edgeCounts.size > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div data-testid="fsm-edge-summary" className="mt-4 flex flex-wrap gap-2">
           {Array.from(edgeCounts.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
