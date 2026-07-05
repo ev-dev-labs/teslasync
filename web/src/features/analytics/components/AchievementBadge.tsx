@@ -32,9 +32,20 @@ const sizeConfig: Record<
 
 export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeProps) {
   const { t } = useTranslation();
-  const cfg = sizeConfig[size];
-  const isNearComplete = !achievement.unlocked && achievement.progress >= 0.8;
-  const pct = Math.round(achievement.progress * 100);
+  const cfg = sizeConfig[size] ?? sizeConfig.md;
+
+  // Achievements arrive from a partial `stats?.achievements` payload, so the
+  // API's non-null typing isn't a runtime guarantee. Coalesce before the
+  // arithmetic so the ring and the percentage label never render `NaN`, and
+  // clamp into [0, 100] to survive an out-of-range backend value.
+  const progress = achievement.progress ?? 0;
+  const pct = Math.min(100, Math.max(0, Math.round(progress * 100)));
+  const isNearComplete = !achievement.unlocked && progress >= 0.8;
+
+  const displayName = achievement.name || '—';
+  const iconGlyph = achievement.icon || '🏆';
+  const iconLabel =
+    achievement.name || achievement.description || t('lifetime.achievementBadge', 'Achievement');
 
   return (
     <div
@@ -65,9 +76,9 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
             achievement.unlocked ? '' : 'absolute inset-0 flex items-center justify-center opacity-50 grayscale',
           )}
           role="img"
-          aria-label={achievement.name}
+          aria-label={iconLabel}
         >
-          {achievement.icon}
+          {iconGlyph}
         </span>
       </div>
 
@@ -81,12 +92,12 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
           achievement.unlocked ? 'text-yellow-400' : 'text-[var(--text-secondary)]',
         )}
       >
-        {achievement.name}
+        {displayName}
       </Text>
 
       {/* Description */}
       <Text as="span" size="xs" color="muted" className="text-center leading-tight">
-        {achievement.description}
+        {achievement.description ?? ''}
       </Text>
 
       {/* Progress or unlocked status */}
