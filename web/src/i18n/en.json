@@ -976,7 +976,12 @@
       "energyCostTrend": "Energy & Cost Trend",
       "chargerBreakdown": "Charger Breakdown",
       "batteryLevelAtStart": "Battery Level at Charge Start",
-      "batteryLevelHint": "How low do you typically go before charging?"
+      "batteryLevelHint": "How low do you typically go before charging?",
+      "energyKwh": "Energy (kWh)",
+      "costUsd": "Cost ($)",
+      "total": "total",
+      "noTrendData": "No charging trend data available yet.",
+      "noBreakdownData": "No charger breakdown data available yet."
     },
     "stats": {
       "chargingByType": "Charging Stats by Type",
