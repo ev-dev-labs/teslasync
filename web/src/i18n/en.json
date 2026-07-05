@@ -10100,6 +10100,7 @@
     "noSecurityData": "No live status available",
     "lightsTitle": "Lights & Signals",
     "noLightData": "No lights data available",
+    "loadingSection": "Loading {{section}}",
     "turnSignal": "Turn Signal",
     "turnLeft": "Left",
     "turnRight": "Right",
