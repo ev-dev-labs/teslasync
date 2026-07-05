@@ -27,14 +27,14 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
         <GlassPanel className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
-              <Route className="h-4 w-4 text-cyan-300" />{' '}
+              <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
               {t('common.recentDrives', 'Recent Drives')}
             </h3>
             <Link
               to="/drives"
               className="text-xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-1"
             >
-              {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" />
+              {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
             </Link>
           </div>
           {drives && drives.length > 0 ? (
@@ -46,7 +46,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group"
                 >
                   <IconBox color="cyan" size="sm">
-                    <Route className="h-3.5 w-3.5" />
+                    <Route className="h-3.5 w-3.5" aria-hidden="true" />
                   </IconBox>
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
@@ -62,8 +62,8 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   </div>
                   <div className="text-right">
                     <InlineMetric
-                      icon={<Clock />}
-                      value={`${Math.floor(d.duration_s / 3600)}h ${fmtInt(Math.floor((d.duration_s % 3600) / 60))}m`}
+                      icon={<Clock aria-hidden="true" />}
+                      value={`${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m`}
                     />
                     {d.start_soc_pct != null && d.end_soc_pct != null && (
                       <span className="text-2xs text-[var(--text-muted)]">
@@ -87,14 +87,14 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
         <GlassPanel className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
-              <BatteryCharging className="h-4 w-4 text-emerald-300" />{' '}
+              <BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />{' '}
               {t('common.recentCharges', 'Recent Charges')}
             </h3>
             <Link
               to="/charging"
               className="text-xs text-[var(--text-muted)] hover:text-emerald-300 transition-colors flex items-center gap-1"
             >
-              {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" />
+              {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
             </Link>
           </div>
           {sessions && sessions.length > 0 ? (
@@ -106,24 +106,24 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group"
                 >
                   <IconBox color="green" size="sm">
-                    <Zap className="h-3.5 w-3.5" />
+                    <Zap className="h-3.5 w-3.5" aria-hidden="true" />
                   </IconBox>
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-emerald-300 transition-colors">
                       <AnimatedNumber
-                        value={convertEnergyFromSI(s.total_energy_added_wh, 'kWh')}
+                        value={convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh')}
                         decimals={1}
                         suffix=" kWh"
                       />
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
-                      <TimeStamp value={s.start_ts} />
+                      <TimeStamp value={s.started_at ?? s.start_ts} />
                     </p>
                   </div>
                   <div className="text-right">
                     <InlineMetric
-                      icon={<Clock />}
-                      value={`${Math.floor(s.duration_min / 60)}h ${fmtInt(s.duration_min % 60)}m`}
+                      icon={<Clock aria-hidden="true" />}
+                      value={`${Math.floor((s.duration_min ?? 0) / 60)}h ${fmtInt((s.duration_min ?? 0) % 60)}m`}
                     />
                     {s.end_soc_pct != null && (
                       <span className="text-2xs text-[var(--text-muted)]">
