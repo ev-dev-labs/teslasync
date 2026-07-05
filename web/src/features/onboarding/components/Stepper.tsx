@@ -1,7 +1,10 @@
-import { type ReactNode } from 'react';
-import { Check, Loader2, ArrowRight } from 'lucide-react';
+import { useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Check, Loader2, ArrowRight, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button, Heading, Text } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 
 /**
  * Compact vertical step list used by the onboarding page. Each step
@@ -44,12 +47,18 @@ export interface StepperProps {
   renderCta?: (step: OnboardingStep) => ReactNode;
 }
 
-function stateOf(steps: OnboardingStep[], index: number): 'done' | 'current' | 'pending' {
-  if (steps[index].done) return 'done';
-  // The "current" step is the first not-done step. Subsequent
-  // not-done steps stay pending so the user follows the flow.
-  const firstPending = steps.findIndex((s) => !s.done);
-  return firstPending === index ? 'current' : 'pending';
+type StepState = 'done' | 'current' | 'pending';
+
+/**
+ * Resolve a row's visual state from its own `done` flag and the index of
+ * the first not-done step (`currentIndex`, computed once by the caller so
+ * the whole list isn't re-scanned per row). Done rows are always `done`;
+ * the single first-pending row is `current`; every later not-done row
+ * stays `pending` so the user follows the flow top-to-bottom.
+ */
+function stepStateFor(done: boolean, index: number, currentIndex: number): StepState {
+  if (done) return 'done';
+  return index === currentIndex ? 'current' : 'pending';
 }
 
 const indicatorClasses = {
@@ -71,16 +80,45 @@ const descriptionClasses = {
 } as const;
 
 export function Stepper({ steps, renderCta }: StepperProps) {
+  const { t } = useTranslation();
+  // Null-safe: callers may hand us `data?.steps` before the query resolves.
+  const items = steps ?? [];
+
+  // The "current" step is the first not-done step. Compute it once here
+  // instead of re-scanning the whole list inside every row (previously an
+  // O(n²) pass). `-1` means every step is done — no current, no CTA.
+  const currentIndex = useMemo(() => items.findIndex((s) => !s.done), [items]);
+
+  // Screen-reader-only status announced before each row's title, since the
+  // done/current/pending state is otherwise conveyed with colour + an
+  // aria-hidden indicator glyph only.
+  const statusLabel: Record<StepState, string> = {
+    done: t('onboarding.stepper.status.done', 'Completed'),
+    current: t('onboarding.stepper.status.current', 'In progress'),
+    pending: t('onboarding.stepper.status.pending', 'Not started'),
+  };
+
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={<ListChecks className="h-8 w-8" aria-hidden="true" />}
+        message={t('onboarding.stepper.empty', 'No setup steps to show right now.')}
+      />
+    );
+  }
+
   return (
-    <ol className="flex flex-col gap-6" aria-label="Onboarding steps">
-      {steps.map((step, idx) => {
-        const state = stateOf(steps, idx);
+    <ol className="flex flex-col gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
+      {items.map((step, idx) => {
+        const state = stepStateFor(step.done, idx, currentIndex);
         const showCta = state === 'current' && step.cta;
+        const isLast = idx === items.length - 1;
         return (
           <li
             key={step.key}
             id={`onboarding-step-${step.key}`}
             className="flex gap-4"
+            aria-current={state === 'current' ? 'step' : undefined}
           >
             <div className="relative flex flex-col items-center">
               <span
@@ -98,7 +136,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
                   <span>{idx + 1}</span>
                 )}
               </span>
-              {idx < steps.length - 1 && (
+              {!isLast && (
                 <span
                   aria-hidden="true"
                   className={cn(
@@ -110,6 +148,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
             </div>
 
             <div className="flex-1 pb-1">
+              <VisuallyHidden>{statusLabel[state]}</VisuallyHidden>
               <Heading level="panel" className={titleClasses[state]}>
                 {step.title}
               </Heading>
