@@ -3798,6 +3798,7 @@
       "updated": "Last updated"
     },
     "timeline": "Timeline",
+    "updatesLabel": "Incident updates",
     "noUpdates": "No updates recorded yet.",
     "postUpdate": "Post an update",
     "resolvedTitle": "Incident resolved",
