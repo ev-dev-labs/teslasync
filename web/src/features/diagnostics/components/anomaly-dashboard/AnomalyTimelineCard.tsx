@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { SeverityBadge, TimeStamp } from '@/components/data-display';
@@ -19,7 +20,7 @@ interface AnomalyTimelineCardProps {
  * alone). Values are raw signal readings (unit-less at this layer) formatted
  * with `fmtNumber`.
  */
-export function AnomalyTimelineCard({ anomaly }: AnomalyTimelineCardProps) {
+function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
   const { t } = useTranslation();
   const tone = severityTokens[normalizeSeverity(anomaly.severity)];
 
@@ -71,3 +72,12 @@ export function AnomalyTimelineCard({ anomaly }: AnomalyTimelineCardProps) {
     </li>
   );
 }
+
+/**
+ * Memoized: the timeline renders these via `.map()` in a responsive grid,
+ * and the parent page re-renders on vehicle switches, query refetches, and
+ * AI-panel state changes. Each `anomaly` prop keeps a stable identity across
+ * those renders (TanStack Query structural sharing), so the default shallow
+ * comparison lets unchanged cards skip re-rendering — mirrors `DriveCard`.
+ */
+export const AnomalyTimelineCard = memo(AnomalyTimelineCardImpl);
