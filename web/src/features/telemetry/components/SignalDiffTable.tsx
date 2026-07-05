@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataTable, PinButton, HelpTooltip, type Column } from '@/components/ui';
 import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { SignalDiffRow } from '@/api/hooks/useTelemetry';
 
@@ -31,16 +31,10 @@ export interface SignalDiffTableProps {
   selectedSignals: string[];
   onSelectionChange: (signals: string[]) => void;
   pinnedSignals: Set<string>;
-  /** Callback for direct row pin click (when not delegated to the PinButton). */
-  onRowClick?: (row: SignalDiffRow) => void;
   className?: string;
 }
 
-function isFiniteNumber(n: unknown): n is number {
-  return typeof n === 'number' && Number.isFinite(n);
-}
-
-function asNumber(v: unknown): number | null {
+export function asNumber(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v)) return v;
   if (typeof v === 'string') {
     const parsed = Number(v);
@@ -50,7 +44,7 @@ function asNumber(v: unknown): number | null {
   return null;
 }
 
-function formatRaw(v: unknown): string {
+export function formatRaw(v: unknown): string {
   if (v == null) return '—';
   if (typeof v === 'number') return Number.isFinite(v) ? fmtNumber(v) : '—';
   if (typeof v === 'boolean') return v ? 'true' : 'false';
@@ -62,7 +56,7 @@ function formatRaw(v: unknown): string {
   }
 }
 
-function deltaLabel(a: unknown, b: unknown): { kind: 'num' | 'change' | 'none'; delta?: number; pct?: number } {
+export function deltaLabel(a: unknown, b: unknown): { kind: 'num' | 'change' | 'none'; delta?: number; pct?: number } {
   const numA = asNumber(a);
   const numB = asNumber(b);
   if (isFiniteNumber(numA) && isFiniteNumber(numB)) {
@@ -87,7 +81,7 @@ export function SignalDiffTable({
   const { t } = useTranslation();
 
   const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
+    return [...(rows ?? [])].sort((a, b) => {
       const aPin = pinnedSignals.has(a.name) ? 1 : 0;
       const bPin = pinnedSignals.has(b.name) ? 1 : 0;
       if (aPin !== bPin) return bPin - aPin;
