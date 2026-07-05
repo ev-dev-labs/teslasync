@@ -86,6 +86,20 @@ const MARKER_COLORS: Record<TimelineMarkerKind, string> = {
 /** Smooth-scrub interval — emit intermediate seeks every N ms while dragging. */
 const SCRUB_INTERVAL_MS = 50;
 
+/** Keyboard nudge (1%) and page-jump (10%) increments for slider a11y. */
+const KEY_STEP = 0.01;
+const KEY_PAGE = 0.1;
+
+/**
+ * Clamp to the 0..1 track range, coercing non-finite input (NaN / ±Infinity /
+ * undefined-as-NaN) to 0. Without this a stray `NaN` progress leaks straight
+ * into an inline `width: NaN%` and `aria-valuenow={NaN}`, corrupting both the
+ * render and the screen-reader announcement.
+ */
+function clamp01(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -124,9 +138,14 @@ export function TimelineScrubber({
   const [hoverAt, setHoverAt] = useState<number | null>(null);
   const [hoverPreview, setHoverPreview] = useState<TimelinePreviewPoint | null>(null);
   const lastEmitRef = useRef(0);
+  // A pointer down→up sequence already commits its own seek; the browser then
+  // fires a trailing synthetic `click` on the same track. This latch lets the
+  // click handler swallow that one redundant `onSeek` without disabling the
+  // click path entirely (it stays live as a fallback for non-pointer input).
+  const pointerHandledRef = useRef(false);
 
-  const clampedProgress = Math.max(0, Math.min(1, progress));
-  const clampedBuffered = buffered != null ? Math.max(0, Math.min(1, buffered)) : null;
+  const clampedProgress = clamp01(progress);
+  const clampedBuffered = buffered != null ? clamp01(buffered) : null;
 
   /* ── Position calc helpers ───────────────────────────────────── */
   const positionAtClientX = useCallback((clientX: number): number => {
@@ -157,6 +176,13 @@ export function TimelineScrubber({
   /* ── Click-to-seek (no drag) ─────────────────────────────────── */
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      // A pointer sequence (down→up) already committed this seek; the trailing
+      // synthetic click would otherwise fire a second, redundant onSeek at the
+      // same position. Swallow exactly one such click.
+      if (pointerHandledRef.current) {
+        pointerHandledRef.current = false;
+        return;
+      }
       // Ignore clicks bubbling from marker buttons — they call onSeek themselves.
       if ((e.target as HTMLElement).closest('[data-timeline-marker]')) return;
       const at = positionAtClientX(e.clientX);
@@ -173,6 +199,9 @@ export function TimelineScrubber({
       const target = e.target as HTMLElement;
       // Marker clicks should not start a drag.
       if (target.closest('[data-timeline-marker]')) return;
+      // Mark that a pointer sequence owns this interaction so the trailing
+      // click is swallowed (see handleClick).
+      pointerHandledRef.current = true;
       setIsDragging(true);
       const at = positionAtClientX(e.clientX);
       setHoverAt(at);
@@ -236,6 +265,43 @@ export function TimelineScrubber({
       window.removeEventListener('pointercancel', onUp);
     };
   }, [isDragging]);
+
+  /* ── Keyboard operability (slider a11y) ──────────────────────── */
+  // `role="slider" tabIndex=0` promises keyboard control; a <div> gets none for
+  // free. Arrow/Home/End/PageUp/PageDown nudge the playhead and commit via
+  // onSeek, mirroring the aria value scale (0..100).
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      let next: number;
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowUp':
+          next = clampedProgress + KEY_STEP;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowDown':
+          next = clampedProgress - KEY_STEP;
+          break;
+        case 'PageUp':
+          next = clampedProgress + KEY_PAGE;
+          break;
+        case 'PageDown':
+          next = clampedProgress - KEY_PAGE;
+          break;
+        case 'Home':
+          next = 0;
+          break;
+        case 'End':
+          next = 1;
+          break;
+        default:
+          return; // leave every other key (Tab, Enter, …) to the browser
+      }
+      e.preventDefault();
+      onSeek(clamp01(next));
+    },
+    [clampedProgress, onSeek],
+  );
 
   /* ── Aria value text ─────────────────────────────────────────── */
   const ariaValueText = useMemo(() => {
@@ -309,6 +375,7 @@ export function TimelineScrubber({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
