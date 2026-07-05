@@ -117,7 +117,11 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
         </div>
 
         {shareError && (
-          <AlertBanner variant="warning" icon={<AlertTriangle className="h-4 w-4" />}>
+          <AlertBanner
+            variant="warning"
+            role="alert"
+            icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+          >
             {shareError}
           </AlertBanner>
         )}
