@@ -779,6 +779,7 @@
     "cost": "Cost",
     "normal": "Normal",
     "low": "Low",
+    "high": "High",
     "critical": "Critical",
     "wakeUp": "Wake Up",
     "location": "Location",

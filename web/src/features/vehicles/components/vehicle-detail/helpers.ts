@@ -38,15 +38,49 @@ export function paToKpa(pa: number | null | undefined): number | null {
 }
 
 /**
+ * Directional tire-pressure status derived from the backend SI value (Pa).
+ *
+ * Unlike the coarse UI {@link tirePressureVariant}, this preserves the LOW vs
+ * HIGH direction, so an over-inflated tyre is never mislabelled as "low".
+ * Returns 'unknown' for nullish / non-finite input.
+ */
+export type TirePressureStatus =
+  | 'normal'
+  | 'low'
+  | 'high'
+  | 'critical-low'
+  | 'critical-high'
+  | 'unknown'
+
+/** Classify a backend SI tire pressure (Pa) into a directional status band. */
+export function tirePressureStatus(pa: number | null | undefined): TirePressureStatus {
+  if (pa == null || !Number.isFinite(pa)) return 'unknown'
+  if (pa < TIRE_PRESSURE_PA.LOW_CRITICAL) return 'critical-low'
+  if (pa > TIRE_PRESSURE_PA.HIGH_CRITICAL) return 'critical-high'
+  if (pa < TIRE_PRESSURE_PA.LOW_WARNING) return 'low'
+  if (pa > TIRE_PRESSURE_PA.HIGH_WARNING) return 'high'
+  return 'normal'
+}
+
+const TIRE_STATUS_VARIANT: Record<
+  TirePressureStatus,
+  'success' | 'warning' | 'danger' | 'neutral'
+> = {
+  normal: 'success',
+  low: 'warning',
+  high: 'warning',
+  'critical-low': 'danger',
+  'critical-high': 'danger',
+  unknown: 'neutral',
+}
+
+/**
  * Map a backend SI pressure value (Pa) to a tire-pressure UI variant.
  * Returns 'neutral' for unknown values, 'success' inside the safe band,
  * 'warning' inside the soft band, and 'danger' outside the critical band.
  */
 export function tirePressureVariant(pa: number | null | undefined): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (pa == null || !Number.isFinite(pa)) return 'neutral'
-  if (pa < TIRE_PRESSURE_PA.LOW_CRITICAL || pa > TIRE_PRESSURE_PA.HIGH_CRITICAL) return 'danger'
-  if (pa < TIRE_PRESSURE_PA.LOW_WARNING || pa > TIRE_PRESSURE_PA.HIGH_WARNING) return 'warning'
-  return 'success'
+  return TIRE_STATUS_VARIANT[tirePressureStatus(pa)]
 }
 
 export function durationStr(minutes: number): string {
