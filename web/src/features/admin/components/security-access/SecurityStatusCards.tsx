@@ -31,8 +31,13 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
       <PanelTitle className="mb-3">{t('admin.security.statusTitle', 'Security Status')}</PanelTitle>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : isLoading ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 3xl:grid-cols-3">
+      ) : isLoading && !latest ? (
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('common.loading', 'Loading…')}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 3xl:grid-cols-3"
+        >
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} height={104} />
           ))}
@@ -45,10 +50,24 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 3xl:grid-cols-3">
           <StatusTile
-            icon={latest.locked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
-            tone={latest.locked ? 'green' : 'red'}
+            icon={
+              latest.locked == null ? (
+                <ShieldQuestion className="h-5 w-5" />
+              ) : latest.locked ? (
+                <Lock className="h-5 w-5" />
+              ) : (
+                <Unlock className="h-5 w-5" />
+              )
+            }
+            tone={latest.locked == null ? 'muted' : latest.locked ? 'green' : 'red'}
             label={t('admin.security.card.lockStatus', 'Lock Status')}
-            value={latest.locked ? t('admin.security.locked', 'Locked') : t('admin.security.unlocked', 'Unlocked')}
+            value={
+              latest.locked == null
+                ? t('admin.security.unknown', 'Unknown')
+                : latest.locked
+                  ? t('admin.security.locked', 'Locked')
+                  : t('admin.security.unlocked', 'Unlocked')
+            }
             description={t('admin.security.card.lockDesc', 'Vehicle lock state')}
           />
           <StatusTile
