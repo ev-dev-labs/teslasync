@@ -1094,6 +1094,7 @@
       "title": "Charging Curve",
       "subtitle": "Power vs state-of-charge across sessions",
       "empty": "No charging sessions to plot a curve.",
+      "noCurve": "No curve data for this session.",
       "selectSession": "Select a session to inspect",
       "col": {
         "charger": "Charger Type",
