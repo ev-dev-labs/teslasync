@@ -25,6 +25,11 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
 
   const tempUnit = unitPrefs.temperature;
 
+  // Null-safety: a caller may hand us `undefined`/`null` while the upstream
+  // health query is still settling. Guard before reading `.length`/`.map` so a
+  // transient nullish prop degrades to the empty state instead of throwing.
+  const list = sensors ?? [];
+
   return (
     <FadeIn delay={0.15}>
       <GlassPanel className="h-full p-4 sm:p-5">
@@ -34,16 +39,16 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
         </PanelTitle>
         {loading ? (
           <Skeleton height={180} />
-        ) : sensors.length === 0 ? (
+        ) : list.length === 0 ? (
           <EmptyState /* no-action: transient — awaiting first thermal telemetry */
             message={t('drivetrain.noSensors', 'No temperature sensor data available yet')}
           />
         ) : (
           <Grid cols={{ default: 2, md: 4 }} gap={6}>
-            {sensors.map((sensor) => (
+            {list.map((sensor) => (
               <div key={sensor.key} className="flex flex-col items-center">
                 <RadialGauge
-                  value={sensor.value !== null ? toTemperatureDisplay(sensor.value) : 0}
+                  value={sensor.value != null ? toTemperatureDisplay(sensor.value) : 0}
                   max={toTemperatureDisplay(sensor.maxTemp)}
                   label={t(sensor.labelKey, sensor.defaultLabel)}
                   unit={tempUnit}
