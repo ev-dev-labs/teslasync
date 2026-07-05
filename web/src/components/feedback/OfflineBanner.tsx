@@ -33,7 +33,7 @@ export function OfflineBanner() {
       <AlertBanner
         variant="warning"
         title={t('pwa.offline.title', "You're offline")}
-        icon={<WifiOff className="h-4 w-4" />}
+        icon={<WifiOff className="h-4 w-4" aria-hidden />}
         role="status"
         aria-live="polite"
       >
