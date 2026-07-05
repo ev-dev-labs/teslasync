@@ -11,8 +11,10 @@
  * parent so the page can URL-sync them.
  */
 
-import { useMemo } from 'react';
-import { TreeSelect, type TreeGroup } from '@/components/forms';
+import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { TreeSelect, type TreeGroup, type TreeLeaf } from '@/components/forms';
 import { useAvailableSignals } from '@/api/hooks/useSignals';
 import type { SignalDescriptor } from '@/api/types';
 import { SignalSparklinePreview } from './SignalSparklinePreview';
@@ -54,8 +56,8 @@ function categoryRank(id: string): number {
   return idx === -1 ? CATEGORY_ORDER.length : idx;
 }
 
-function friendlyCategoryLabel(id: string): string {
-  return CATEGORY_LABELS[id] ?? id;
+function friendlyCategoryLabel(id: string, t: TFunction): string {
+  return t(`signals.category.${id}`, CATEGORY_LABELS[id] ?? id);
 }
 
 export interface SignalCategoryTreeProps {
@@ -84,6 +86,7 @@ export function SignalCategoryTree({
   className,
   maxHeightClassName,
 }: SignalCategoryTreeProps) {
+  const { t } = useTranslation();
   const query = useAvailableSignals(vehicleId);
 
   const groups = useMemo<TreeGroup<SignalDescriptor>[]>(() => {
@@ -102,7 +105,7 @@ export function SignalCategoryTree({
       list.sort((a, b) => a.name.localeCompare(b.name));
       out.push({
         id: cat,
-        label: friendlyCategoryLabel(cat),
+        label: friendlyCategoryLabel(cat, t),
         leaves: list.map((s) => ({ id: s.name, label: s.name, data: s })),
       });
     }
@@ -113,11 +116,35 @@ export function SignalCategoryTree({
       return a.label.localeCompare(b.label);
     });
     return out;
-  }, [query.data]);
+  }, [query.data, t]);
 
   // Per-group expansion drives the sparkline lazy-fetch.
   const expandedSet = useMemo(() => new Set(expandedGroupIds), [expandedGroupIds]);
   const isSearching = searchValue.trim().length > 0;
+
+  // Stable render-prop for the leaf sparkline slot. Recomputing the closure
+  // on every render would force each visible leaf to re-render even when the
+  // gating inputs (search / expansion / vehicle) are unchanged.
+  const renderSparkline = useCallback(
+    (leaf: TreeLeaf<SignalDescriptor>) => {
+      // Sparkline fetches only when the group is expanded (or the user is
+      // searching, which auto-expands all matching groups in TreeSelect).
+      const enabled = isSearching || expandedSet.has(leaf.data.category);
+      return (
+        <SignalSparklinePreview
+          vehicleId={vehicleId}
+          signal={leaf.id}
+          valueKind={leaf.data.value_kind}
+          enabled={enabled}
+        />
+      );
+    },
+    [isSearching, expandedSet, vehicleId],
+  );
+
+  const catalogError = query.isError
+    ? (query.error as Error | null)?.message?.trim() || t('common.unknownError', 'unknown error')
+    : undefined;
 
   return (
     <TreeSelect<SignalDescriptor>
@@ -129,34 +156,18 @@ export function SignalCategoryTree({
       expandedGroupIds={expandedGroupIds}
       onExpandedChange={onExpandedChange}
       isLoading={query.isLoading}
-      ariaLabel="Signal catalog"
-      searchPlaceholder="Search signals…"
+      ariaLabel={t('signals.catalog.aria', 'Signal catalog')}
+      searchPlaceholder={t('signals.catalog.searchPlaceholder', 'Search signals…')}
       emptyState={
-        query.isError
-          ? `Failed to load catalog: ${(query.error as Error)?.message ?? 'unknown error'}`
-          : 'No signals available for this vehicle.'
+        catalogError !== undefined
+          ? t('signals.catalog.loadError', 'Failed to load catalog: {{message}}', {
+              message: catalogError,
+            })
+          : t('signals.catalog.empty', 'No signals available for this vehicle.')
       }
       className={className}
       maxHeightClassName={maxHeightClassName}
-      renderLeafRight={
-        showSparklines
-          ? (leaf) => {
-              const groupId = leaf.data.category;
-              // Sparkline fetches only when the group is expanded
-              // (or the user is searching, which auto-expands all
-              // matching groups in TreeSelect).
-              const enabled = isSearching || expandedSet.has(groupId);
-              return (
-                <SignalSparklinePreview
-                  vehicleId={vehicleId}
-                  signal={leaf.id}
-                  valueKind={leaf.data.value_kind}
-                  enabled={enabled}
-                />
-              );
-            }
-          : undefined
-      }
+      renderLeafRight={showSparklines ? renderSparkline : undefined}
     />
   );
 }
