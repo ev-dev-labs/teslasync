@@ -7434,7 +7434,10 @@
       "drive": "Drive",
       "maxKw": "Max kW",
       "regenKw": "Regen kW"
-    }
+    },
+    "brakeUnknown": "Brake Unknown",
+    "pedalLoading": "Loading pedal telemetry…",
+    "pedalResource": "Pedal telemetry"
   },
   "share": {
     "title": "Share Drive",
