@@ -23,25 +23,27 @@ export const HEALTH_FALLBACK_ICON = Shield;
  * Map a raw health-summary status onto the canonical {@link Severity} union so
  * status chips get a color-independent icon + tone from `severityTokens`.
  *
- * The backend seeds every category to `'normal'` and only ever upgrades it to
- * one of the anomaly severities — `'info' | 'warning' | 'critical'` — as it
- * folds detected anomalies into each category (see
- * `internal/api/anomaly/handler.go`). So the real status domain is
- * `'normal' | 'info' | 'warning' | 'critical'`:
- *   - `'normal'`   → `success` (green + check): the ONLY "all healthy" state.
- *   - `'warning'`  → `warn`.
- *   - `'critical'` → `critical`.
- *   - `'info'`     → `info`: an info-level anomaly is present, so the category
- *     must NOT masquerade as a green success.
- *
- * Any unrecognized status falls back to the neutral `info` tone rather than a
- * misleading green `success` — an unknown state is not a healthy one.
+ * The backend emits one of 'normal' | 'info' | 'warning' | 'critical' per
+ * category (a category inherits the severity of its worst anomaly, and an
+ * info-level anomaly out-ranks the seeded 'normal' — see severityOrder in
+ * internal/api/anomaly/handler.go). 'normal' surfaces as `success` (green +
+ * check); everything else that is not a warning/critical — including 'info'
+ * and any status the frontend does not yet recognize, plus a missing/null
+ * value — maps to the neutral `info` tone. It must never fall through to a
+ * green `success`, which would let an unknown or info-level state masquerade
+ * as an all-clear "healthy".
  */
-export function healthSeverity(status: string): Severity {
-  if (status === 'critical') return 'critical';
-  if (status === 'warning') return 'warn';
-  if (status === 'normal') return 'success';
-  return 'info';
+export function healthSeverity(status: string | null | undefined): Severity {
+  switch (status) {
+    case 'critical':
+      return 'critical';
+    case 'warning':
+      return 'warn';
+    case 'normal':
+      return 'success';
+    default:
+      return 'info';
+  }
 }
 
 /** Human-readable label for an anomaly detector type, i18n-aware. */
