@@ -6,7 +6,7 @@ import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
 
 import type { DrivetrainHealthData, DrivingStats } from '@/types/driving';
 import { displayTemp } from './helpers';
@@ -61,15 +61,18 @@ export function DetailCards({
             items={[
               {
                 label: t('drivetrain.peakPowerLabel', 'Peak Power'),
-                value: peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—',
+                value: isFiniteNumber(peakPower) && peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—',
               },
               {
                 label: t('drivetrain.avgPowerLabel', 'Avg Peak Power'),
-                value: avgPowerMax > 0 ? `${fmtNumber(avgPowerMax, 1)} kW` : '—',
+                value: isFiniteNumber(avgPowerMax) && avgPowerMax > 0 ? `${fmtNumber(avgPowerMax, 1)} kW` : '—',
               },
               {
                 label: t('drivetrain.maxRegenLabel', 'Max Regen'),
-                value: minRegenPower < 0 ? `${fmtNumber(Math.abs(minRegenPower), 1)} kW` : '—',
+                value:
+                  isFiniteNumber(minRegenPower) && minRegenPower < 0
+                    ? `${fmtNumber(Math.abs(minRegenPower), 1)} kW`
+                    : '—',
               },
               {
                 label: t('drivetrain.regenLabel', 'Total Regen'),
@@ -77,7 +80,10 @@ export function DetailCards({
               },
               {
                 label: t('drivetrain.co2Label', 'CO₂ Saved'),
-                value: stats ? `${fmtNumber(stats.co2SavedKg, 1)} kg` : '—',
+                value:
+                  stats && isFiniteNumber(stats.co2SavedKg)
+                    ? `${fmtNumber(stats.co2SavedKg, 1)} kg`
+                    : '—',
               },
             ]}
           />
