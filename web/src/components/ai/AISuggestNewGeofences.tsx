@@ -22,7 +22,7 @@
 //     (returns null) when ai_mode='off' or the per-feature toggle
 //     is off.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
@@ -80,6 +80,63 @@ export interface AISuggestNewGeofencesProps {
   }) => void
 }
 
+/**
+ * parseGeofenceDraft narrows the untyped `tool_result.data` wire
+ * payload emitted by the draft_geofence tool
+ * (internal/ai/tools/suggest_new_geofences.go *geofenceDraftOutput)
+ * into the typed {@link GeofenceDraft} the panel renders. Anything we
+ * cannot positively prove from the wire shape — a missing envelope, a
+ * field of the wrong type, an absent status — yields `null` so a
+ * malformed provider response is ignored instead of rendering a
+ * half-populated proposal or dereferencing an undefined field.
+ *
+ * Exported for the unit test — production code reaches it only via the
+ * `tool_result` handler below.
+ */
+export function parseGeofenceDraft(data: unknown): GeofenceDraft | null {
+  if (typeof data !== 'object' || data === null) {
+    return null
+  }
+  const wrapper = data as {
+    draft?: {
+      location_id?: unknown
+      vehicle_id?: unknown
+      proposed_name?: unknown
+      radius_m?: unknown
+      centroid_lat?: unknown
+      centroid_lon?: unknown
+    }
+    status?: unknown
+    validation_error?: unknown
+  }
+  const inner = wrapper.draft
+  if (
+    !inner ||
+    typeof inner.location_id !== 'number' ||
+    typeof inner.vehicle_id !== 'number' ||
+    typeof inner.proposed_name !== 'string' ||
+    typeof inner.radius_m !== 'number' ||
+    typeof inner.centroid_lat !== 'number' ||
+    typeof inner.centroid_lon !== 'number' ||
+    typeof wrapper.status !== 'string'
+  ) {
+    return null
+  }
+  return {
+    location_id: inner.location_id,
+    vehicle_id: inner.vehicle_id,
+    proposed_name: inner.proposed_name,
+    radius_m: inner.radius_m,
+    centroid_lat: inner.centroid_lat,
+    centroid_lon: inner.centroid_lon,
+    status: wrapper.status as GeofenceDraft['status'],
+    validation_error:
+      typeof wrapper.validation_error === 'string'
+        ? wrapper.validation_error
+        : undefined,
+  }
+}
+
 function InnerSection({
   locationId,
   currentName,
@@ -87,6 +144,10 @@ function InnerSection({
 }: AISuggestNewGeofencesProps) {
   const { t } = useTranslation()
   const [draft, setDraft] = useState<GeofenceDraft | null>(null)
+  // Stable id so the proposal card can be an aria-labelledby group —
+  // screen readers announce the "Proposed geofence" region when it
+  // appears asynchronously after the stream resolves.
+  const proposalLabelId = useId()
 
   // The body carries the location_id the backend route expects.
   // Memoised so useAiStream's deps stay stable across rerenders.
@@ -99,47 +160,13 @@ function InnerSection({
     if (ev.type === 'tool_result' && ev.name === 'draft_geofence' && ev.ok) {
       // The dispatcher unwraps the tool envelope into the data
       // payload; the draft lives at data.draft per the Go tool's
-      // *geofenceDraftOutput shape.
-      const wrapper = ev.data as
-        | {
-            draft?: {
-              location_id?: unknown
-              vehicle_id?: unknown
-              proposed_name?: unknown
-              radius_m?: unknown
-              centroid_lat?: unknown
-              centroid_lon?: unknown
-            }
-            status?: unknown
-            validation_error?: unknown
-          }
-        | undefined
-      const inner = wrapper?.draft
-      if (
-        !inner ||
-        typeof inner.location_id !== 'number' ||
-        typeof inner.vehicle_id !== 'number' ||
-        typeof inner.proposed_name !== 'string' ||
-        typeof inner.radius_m !== 'number' ||
-        typeof inner.centroid_lat !== 'number' ||
-        typeof inner.centroid_lon !== 'number' ||
-        typeof wrapper?.status !== 'string'
-      ) {
-        return
+      // *geofenceDraftOutput shape. parseGeofenceDraft narrows the
+      // untyped wire payload defensively — a malformed frame yields
+      // null and is ignored rather than corrupting the panel.
+      const parsed = parseGeofenceDraft(ev.data)
+      if (parsed) {
+        setDraft(parsed)
       }
-      setDraft({
-        location_id: inner.location_id,
-        vehicle_id: inner.vehicle_id,
-        proposed_name: inner.proposed_name,
-        radius_m: inner.radius_m,
-        centroid_lat: inner.centroid_lat,
-        centroid_lon: inner.centroid_lon,
-        status: wrapper.status as GeofenceDraft['status'],
-        validation_error:
-          typeof wrapper.validation_error === 'string'
-            ? wrapper.validation_error
-            : undefined,
-      })
     }
   }, [])
 
@@ -211,14 +238,20 @@ function InnerSection({
         <div
           className="rounded-md border border-cyan-300/30 bg-cyan-300/5 p-3 text-sm"
           data-testid="ai-feature-suggest-new-geofences-draft"
+          role="group"
+          aria-labelledby={proposalLabelId}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <div className="text-xs uppercase tracking-wide text-cyan-300">
+              <div
+                id={proposalLabelId}
+                className="text-xs uppercase tracking-wide text-cyan-300"
+              >
                 {t('geofences.aiSuggest.proposalLabel', 'Proposed geofence')}
               </div>
               <div className="font-medium text-[var(--text-primary)]">
-                {draft.proposed_name}
+                {draft.proposed_name ||
+                  t('geofences.aiSuggest.unnamed', '(unnamed)')}
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
                 {t('geofences.aiSuggest.radiusLabel', 'Radius')}:{' '}
