@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, Clock } from 'lucide-react';
 
 import { GlassPanel, IconBox, Text } from '@/components/ui';
@@ -42,12 +43,16 @@ export function OnboardingStatusCard({
   loading = false,
   className,
 }: OnboardingStatusCardProps) {
+  const { t } = useTranslation();
   const StatusIcon = done ? Check : Clock;
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+    <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading}>
       {loading ? (
-        <div className="space-y-2">
+        <div className="space-y-2" role="status">
+          <span className="sr-only">
+            {t('onboarding.status.loading', 'Loading status…')}
+          </span>
           <Skeleton width="55%" height={12} />
           <Skeleton width="70%" height={24} />
           <Skeleton width="45%" height={12} />

@@ -1841,7 +1841,8 @@
         "waiting": "Waiting",
         "hintDone": "Live signals arriving",
         "hint": "No signals received yet"
-      }
+      },
+      "loading": "Loading status…"
     },
     "progress": {
       "label": "Setup progress",
