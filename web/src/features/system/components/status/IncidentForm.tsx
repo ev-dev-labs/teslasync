@@ -31,6 +31,7 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
   const componentsId = useId()
   const messageId = useId()
   const [title, setTitle] = useState('')
+  const [titleError, setTitleError] = useState('')
   const [severity, setSeverity] = useState<IncidentSeverity>('minor')
   const [status, setStatus] = useState<IncidentStatus>('investigating')
   const [message, setMessage] = useState('')
@@ -39,14 +40,18 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const t = title.trim()
-    if (t.length < 3) {
-      toast.error('Title must be at least 3 characters.')
+    setTitleError('')
+    const trimmed = title.trim()
+    if (trimmed.length < 3) {
+      // Surface the error on the field itself (aria-invalid + aria-describedby
+      // via Input's `error`) so assistive tech ties it to the input — a
+      // transient toast alone isn't programmatically associated (WCAG 3.3.1).
+      setTitleError('Title must be at least 3 characters.')
       return
     }
     try {
       await create.mutateAsync({
-        title: t,
+        title: trimmed,
         severity,
         status,
         initial_message: message.trim() || undefined,
@@ -70,11 +75,15 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
           <Input
             id={titleId}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value)
+              if (titleError) setTitleError('')
+            }}
             placeholder="e.g. Wall connector restart at 14:00"
             maxLength={200}
             required
             autoFocus
+            error={titleError || undefined}
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
