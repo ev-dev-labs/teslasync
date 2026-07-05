@@ -8070,7 +8070,8 @@
       "title": "Narrate the cabin-temperature impact",
       "description": "Ask Helix to explain how outside ambient temperature affects this vehicle's efficiency — which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.",
       "badge": "Helix",
-      "generateButton": "Narrate impact"
+      "generateButton": "Narrate impact",
+      "emptyHint": "Select a vehicle to narrate its temperature impact."
     }
   },
   "notifications": {
