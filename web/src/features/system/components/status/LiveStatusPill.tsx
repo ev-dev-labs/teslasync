@@ -40,7 +40,11 @@ const TONE: Record<StatusLiveState, { dot: string; pulse: boolean; label: string
 }
 
 export function LiveStatusPill({ state, lastUpdateAt, now }: LiveStatusPillProps) {
-  const tone = TONE[state]
+  // Fall back to the offline tone if an unknown state slips through (e.g. an
+  // untyped caller or a future StatusLiveState member added without a TONE
+  // entry). This pill renders in the page actions slot, so an unguarded lookup
+  // would crash the whole header rather than degrade gracefully.
+  const tone = TONE[state] ?? TONE.offline
   const { Icon } = tone
   const rel = useMemo(() => relative(now, lastUpdateAt), [now, lastUpdateAt])
   return (
