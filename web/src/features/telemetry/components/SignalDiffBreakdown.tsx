@@ -54,6 +54,10 @@ function pct(count: number, total: number): number {
   return total > 0 ? Math.round((count / total) * 100) : 0;
 }
 
+/** Stable empty-set fallback so a missing `pinnedSignals` prop never crashes
+ *  `Array.from(...)` and doesn't churn the `pinned` memo across renders. */
+const EMPTY_PINNED: ReadonlySet<string> = new Set();
+
 export function SignalDiffBreakdown({
   rows,
   loading,
@@ -63,30 +67,39 @@ export function SignalDiffBreakdown({
   className,
 }: SignalDiffBreakdownProps) {
   const { t } = useTranslation();
-  const total = rows.length;
+
+  // Null-safety: `rows`/`pinnedSignals` come straight from live query +
+  // user state upstream; a slow, failed, or not-yet-initialised source can
+  // hand us `undefined` instead of an empty array/set. Normalise once so the
+  // derives below can iterate freely (`.length`/`.filter`/`Array.from`)
+  // without a guard at every call site — and so a bad prop degrades to the
+  // empty states rather than blanking the whole section with a crash.
+  const safeRows = rows ?? [];
+  const safePinned = pinnedSignals ?? EMPTY_PINNED;
+  const total = safeRows.length;
 
   const categoryRows = useMemo(
     () =>
       CATEGORY_PREFIXES.map((c) => ({
         id: c.id,
         label: t(c.labelKey, c.defaultLabel),
-        count: rows.filter((r) => c.matches(r.name)).length,
+        count: safeRows.filter((r) => c.matches(r.name ?? '')).length,
       }))
         .filter((c) => c.count > 0)
         .sort((a, b) => b.count - a.count),
-    [rows, t],
+    [safeRows, t],
   );
 
   const sourceRows = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const r of rows) {
+    for (const r of safeRows) {
       const key = (r.source_b ?? 'unknown').toLowerCase();
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     return SOURCE_META.map((s) => ({ ...s, count: counts.get(s.id) ?? 0 })).filter((s) => s.count > 0);
-  }, [rows]);
+  }, [safeRows]);
 
-  const pinned = useMemo(() => Array.from(pinnedSignals).sort(), [pinnedSignals]);
+  const pinned = useMemo(() => Array.from(safePinned).sort(), [safePinned]);
 
   return (
     <section
