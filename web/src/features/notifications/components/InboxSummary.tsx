@@ -63,7 +63,12 @@ export function InboxSummary({ query }: InboxSummaryProps) {
   const gridClass = 'grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6';
   const sectionLabel = t('notifications.inbox.summary.label', 'Inbox summary');
 
-  if (query.isLoading) {
+  // Only the genuine first load (no cached rows yet) shows the skeleton.
+  // A background refetch keeps its previously-fetched data, so we keep the
+  // KPIs on screen instead of flashing an empty skeleton grid over them.
+  const firstLoad = query.isLoading && rows.length === 0;
+
+  if (firstLoad) {
     return (
       <section aria-label={sectionLabel}>
         <StatGridSkeleton cards={6} />
