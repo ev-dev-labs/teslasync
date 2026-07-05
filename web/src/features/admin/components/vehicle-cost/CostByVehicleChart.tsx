@@ -36,8 +36,24 @@ interface CostByVehicleChartProps extends SectionState {
 const HIGHLIGHT = chartTokens.series[2];
 const BASE = chartTokens.series[0];
 
+// Hoisted so recharts children receive stable references instead of a fresh
+// object literal on every render (see "no new object/array literals in hot
+// JSX props"). Values are static module-level tokens.
+const CHART_MARGIN = { top: 4, right: 16, left: 8, bottom: 4 };
+const TOOLTIP_CURSOR = { fill: 'var(--surface-2)', opacity: 0.4 };
+const TOOLTIP_CONTENT_STYLE = {
+  background: chartTokens.tooltipBg,
+  border: `1px solid ${chartTokens.tooltipBorder}`,
+  borderRadius: 8,
+  color: chartTokens.tooltipText,
+};
+
 export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehicleChartProps) {
   const { t } = useTranslation();
+
+  // Null-safe: a caller passing undefined/null must fall through to the empty
+  // state, never crash on `.length` / `.map`.
+  const items = bars ?? [];
 
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
@@ -47,9 +63,9 @@ export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehi
       </PanelTitle>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : loading && bars.length === 0 ? (
+      ) : loading && items.length === 0 ? (
         <Skeleton height={288} />
-      ) : bars.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState
           icon={<BarChart3 className="h-8 w-8" />}
           message={t('admin.vehicleCost.chartEmpty', 'No ingest volume recorded in this window yet.')}
@@ -64,7 +80,7 @@ export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehi
           )}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={bars} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+            <BarChart data={items} layout="vertical" margin={CHART_MARGIN}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke={chartTokens.gridStroke}
@@ -84,17 +100,12 @@ export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehi
                 tickFormatter={(v: string) => (v.length > 18 ? `${v.slice(0, 17)}…` : v)}
               />
               <Tooltip
-                cursor={{ fill: 'var(--surface-2)', opacity: 0.4 }}
-                contentStyle={{
-                  background: chartTokens.tooltipBg,
-                  border: `1px solid ${chartTokens.tooltipBorder}`,
-                  borderRadius: 8,
-                  color: chartTokens.tooltipText,
-                }}
+                cursor={TOOLTIP_CURSOR}
+                contentStyle={TOOLTIP_CONTENT_STYLE}
                 formatter={(v: number) => [formatBytes(v), t('admin.vehicleCost.colBytes', 'Bytes (est.)')]}
               />
               <Bar dataKey="bytes" radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                {bars.map((b, i) => (
+                {items.map((b, i) => (
                   <Cell key={b.vehicle_id} fill={i === 0 ? HIGHLIGHT : BASE} />
                 ))}
               </Bar>
