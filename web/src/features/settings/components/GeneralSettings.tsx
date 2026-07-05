@@ -67,6 +67,18 @@ const DEFAULT_FORM: AppSettings = {
   ui_density: 'comfortable',
 }
 
+// Clamp a user- or server-supplied decimal precision into the [0, 20] range
+// the UI actually offers. `Number.prototype.toFixed` throws a RangeError for
+// any argument outside [0, 100], so an out-of-range value persisted in a
+// restored draft or returned by the API would otherwise crash the entire
+// panel the moment the live preview rendered. Non-finite input falls back to
+// the default precision rather than NaN.
+function clampDecimals(precision: number | null | undefined): number {
+  const n = Number(precision)
+  if (!Number.isFinite(n)) return DEFAULT_FORM.decimal_precision
+  return Math.max(0, Math.min(20, Math.trunc(n)))
+}
+
 export function GeneralSettings() {
   const { t } = useTranslation('settings')
   const toast = useToast()
@@ -255,12 +267,12 @@ export function GeneralSettings() {
                   type="number"
                   min={0}
                   max={20}
-                  value={String(form.decimal_precision)}
+                  value={String(form.decimal_precision ?? DEFAULT_FORM.decimal_precision)}
                   onChange={e => setForm({ ...form, decimal_precision: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
-                  placeholder="e.g. 2"
+                  placeholder={t('app.decimalPrecisionPlaceholder', 'e.g. 2')}
                 />
                 <HelperText className="mt-1">
-                  {t('app.preview', 'Preview')}: {(14.248539).toFixed(form.decimal_precision)}
+                  {t('app.preview', 'Preview')}: {(14.248539).toFixed(clampDecimals(form.decimal_precision))}
                 </HelperText>
               </div>
 
@@ -346,7 +358,7 @@ export function GeneralSettings() {
                   ariaLabel={t('app.electricityCost', 'Electricity Cost (per kWh)')}
                   currency={symbolToIsoCode(form.currency_symbol)}
                   locale={form.locale ?? 'en-US'}
-                  precision={form.decimal_precision ?? 2}
+                  precision={clampDecimals(form.decimal_precision)}
                   valueMicro={valueToMicro(form.base_cost_per_kwh)}
                   onChange={({ valueMicro }) =>
                     setForm({ ...form, base_cost_per_kwh: microToValue(valueMicro) ?? 0 })
@@ -361,7 +373,7 @@ export function GeneralSettings() {
                       ariaLabel={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}
                       currency={symbolToIsoCode(form.currency_symbol)}
                       locale={form.locale ?? 'en-US'}
-                      precision={form.decimal_precision ?? 2}
+                      precision={clampDecimals(form.decimal_precision)}
                       valueMicro={valueToMicro(form.gas_price_per_unit)}
                       onChange={({ valueMicro }) =>
                         setForm({ ...form, gas_price_per_unit: microToValue(valueMicro) ?? 0 })
@@ -381,7 +393,7 @@ export function GeneralSettings() {
                 <Input
                   type="number"
                   step="0.5"
-                  value={form.gas_efficiency_mpg}
+                  value={form.gas_efficiency_mpg ?? ''}
                   onChange={e => setForm({ ...form, gas_efficiency_mpg: parseFloat(e.target.value) || 0 })}
                   className="w-full px-3 py-2.5 text-sm"
                   placeholder={t('app.mpgPlaceholder', 'Average MPG of equivalent gas car')}

@@ -8586,6 +8586,7 @@
     "rated": "Rated",
     "ideal": "Ideal",
     "decimalPrecision": "Decimal Precision",
+    "decimalPrecisionPlaceholder": "e.g. 2",
     "preview": "Preview",
     "language": "Language",
     "currency": "Currency",
