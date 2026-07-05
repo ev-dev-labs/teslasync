@@ -5592,7 +5592,12 @@
     "lastUpdated": "Last updated: {{time}}",
     "neverUpdated": "Never updated",
     "refresh": "Refresh",
-    "updatingTooltip": "Updating…"
+    "updatingTooltip": "Updating…",
+    "fresh": "Up to date",
+    "stale": "Stale",
+    "offline": "Offline",
+    "noData": "No recent data",
+    "ariaLabel": "{{status}} · {{age}}"
   },
   "export": {
     "urlTooLong": "Layout too large for URL sharing ({{size}} chars). Use clipboard or file export instead.",
