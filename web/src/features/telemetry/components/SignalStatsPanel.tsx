@@ -14,7 +14,7 @@
  * placeholder rows once they've confirmed the data gap.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, DataTable, Toggle, SectionTitle, Caption, type Column } from '@/components/ui';
@@ -41,11 +41,17 @@ export interface SignalStatsPanelProps {
   signalIndex?: Record<string, number>;
 }
 
-function emptyStatRow(signal: string): SignalStat {
+/**
+ * Placeholder row for a selected signal that produced no numeric samples in
+ * the queried range. `count === 0` is what {@link isEmptyStat} keys off, and
+ * the `NaN` aggregates render as `—` via the numeric cell renderer.
+ */
+export function emptyStatRow(signal: string): SignalStat {
   return { signal, min: NaN, max: NaN, avg: NaN, count: 0 };
 }
 
-function isEmptyStat(s: SignalStat): boolean {
+/** A stat row is "empty" when it carries no samples (`count === 0`). */
+export function isEmptyStat(s: SignalStat): boolean {
   return s.count === 0;
 }
 
@@ -60,14 +66,29 @@ export function SignalStatsPanel({
   const { t } = useTranslation();
   const [hideEmpty, setHideEmpty] = useState(false);
 
+  // `stats` is typed as required, but callers thread `data?.stats` through
+  // before their query resolves — guard so `.map`/`.reduce`/the colour lookup
+  // never hit `undefined` and crash the whole rail.
+  const safeStats = useMemo<SignalStat[]>(() => stats ?? [], [stats]);
+
   // Compute the display rows: when `selectedSignals` is provided, emit
   // one row per selected signal (filling gaps with placeholder rows);
   // otherwise pass `stats` through unchanged.
   const displayStats = useMemo<SignalStat[]>(() => {
-    if (!selectedSignals?.length) return stats;
-    const byName = new Map(stats.map((s) => [s.signal, s]));
+    if (!selectedSignals?.length) return safeStats;
+    const byName = new Map(safeStats.map((s) => [s.signal, s]));
     return selectedSignals.map((sig) => byName.get(sig) ?? emptyStatRow(sig));
-  }, [stats, selectedSignals]);
+  }, [safeStats, selectedSignals]);
+
+  // Signal → position map for the default colour index, built once per row set
+  // so the per-cell colour lookup stays O(1) instead of an O(n) indexOf scan.
+  const positionIndex = useMemo(() => {
+    const m = new Map<string, number>();
+    displayStats.forEach((s, i) => {
+      if (!m.has(s.signal)) m.set(s.signal, i);
+    });
+    return m;
+  }, [displayStats]);
 
   const emptyCount = useMemo(
     () => displayStats.reduce((n, s) => (isEmptyStat(s) ? n + 1 : n), 0),
@@ -78,21 +99,31 @@ export function SignalStatsPanel({
     [displayStats, hideEmpty],
   );
 
-  const renderNumeric = (n: number) =>
-    Number.isNaN(n) || !Number.isFinite(n) ? (
-      <span className="text-[var(--text-muted)]" aria-label="No data">
-        —
-      </span>
-    ) : (
-      <span className="font-mono text-[var(--text-secondary)]">{fmtNumber(n)}</span>
-    );
+  // One renderer for the min/max/avg columns: any non-finite value (incl. the
+  // `NaN` placeholders) renders as `—`, labelled "No data" for screen readers
+  // so the em-dash isn't announced as literal punctuation. Finite values go
+  // through the shared locale formatter.
+  const renderNumeric = useCallback(
+    (n: number, valueClassName: string) =>
+      Number.isFinite(n) ? (
+        <span className={cn('font-mono', valueClassName)}>{fmtNumber(n)}</span>
+      ) : (
+        <span
+          className="text-[var(--text-muted)]"
+          aria-label={t('signalStats.noData', 'No data')}
+        >
+          —
+        </span>
+      ),
+    [t],
+  );
 
   const columns: Column<SignalStat>[] = useMemo(() => [
     {
       key: 'signal',
       header: t('Signal'),
       render: (s) => {
-        const idx = signalIndex?.[s.signal] ?? displayStats.indexOf(s);
+        const idx = signalIndex?.[s.signal] ?? positionIndex.get(s.signal) ?? 0;
         const color = CHART_COLORS[Math.max(0, idx) % CHART_COLORS.length];
         return (
           <div className="flex flex-col gap-0.5">
@@ -108,18 +139,9 @@ export function SignalStatsPanel({
         );
       },
     },
-    { key: 'min', header: t('Min'), render: (s) => renderNumeric(s.min) },
-    { key: 'max', header: t('Max'), render: (s) => renderNumeric(s.max) },
-    {
-      key: 'avg',
-      header: t('Avg'),
-      render: (s) =>
-        Number.isNaN(s.avg) || !Number.isFinite(s.avg) ? (
-          <span className="text-[var(--text-muted)]">—</span>
-        ) : (
-          <span className="font-mono text-[var(--text-primary)]">{fmtNumber(s.avg)}</span>
-        ),
-    },
+    { key: 'min', header: t('Min'), render: (s) => renderNumeric(s.min, 'text-[var(--text-secondary)]') },
+    { key: 'max', header: t('Max'), render: (s) => renderNumeric(s.max, 'text-[var(--text-secondary)]') },
+    { key: 'avg', header: t('Avg'), render: (s) => renderNumeric(s.avg, 'text-[var(--text-primary)]') },
     {
       key: 'count',
       header: t('Count'),
@@ -127,7 +149,7 @@ export function SignalStatsPanel({
         <span className="font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</span>
       ),
     },
-  ], [displayStats, signalIndex, t]);
+  ], [positionIndex, renderNumeric, signalIndex, t]);
 
   return (
     <FadeIn>
