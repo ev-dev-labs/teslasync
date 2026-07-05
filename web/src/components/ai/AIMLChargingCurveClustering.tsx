@@ -29,49 +29,82 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// This feature streams its narration purely through useAiStream's
+// built-in delta-text accumulator (surfaced by AiOutputPanel), so it
+// has no per-event work to do. A module-level no-op keeps the onEvent
+// callback identity stable across renders instead of allocating a
+// fresh closure in the render path (which would re-run useAiStream's
+// onEvent-ref effect on every render).
+const noop = (): void => {}
+
+// Default learning window: the last 90 days. Charging sessions
+// are O(0.1–1/day) per vehicle (the prompt's
+// DefaultMinSessionsPerCluster=3 acknowledges this), so a 90-day
+// window is what the trainer needs to cover representative
+// L1/L2/DC behaviour. The Go trainer clamps the upper bound at
+// mlchargingcurves.MaxLookbackDays=365, so wider values are
+// silently capped server-side. Mirrors the SPA Charging Curve
+// page's default lookback for parity with the baseline charts.
+const DEFAULT_LOOKBACK_DAYS = 90
+
 interface InnerSectionProps {
+  /**
+   * Active vehicle id from the parent Charging Curve page. Optional
+   * because the active-vehicle context may be unresolved at first
+   * paint; when absent (or not a positive integer) we still render the
+   * section — the gate has already passed — but keep the Train button
+   * disabled because the backend cluster handler rejects any
+   * `vehicle_id <= 0` with HTTP 400 (see
+   * internal/api/aimlchargcv/handler.go `parseClusterRequest`).
+   */
   vehicleId?: number
 }
 
 function InnerSection({ vehicleId }: InnerSectionProps) {
   const { t } = useTranslation()
-  // Default learning window: the last 90 days. Charging sessions
-  // are O(0.1–1/day) per vehicle (the prompt's
-  // DefaultMinSessionsPerCluster=3 acknowledges this), so a 90-day
-  // window is what the trainer needs to cover representative
-  // L1/L2/DC behaviour. The Go trainer clamps the upper bound at
-  // mlchargingcurves.MaxLookbackDays=365, so wider values are
-  // silently capped server-side. Mirrors the SPA Charging Curve
-  // page's default lookback for parity with the baseline charts.
+  // Mirror the handler-side parser (vehicle_id must be a positive
+  // integer). A missing, non-finite (NaN), zero, or negative id keeps
+  // the Train button disabled so the SPA never fires a request the
+  // backend would immediately 400. The weaker `vehicleId != null`
+  // guard this replaced wrongly enabled 0 / -5 / NaN and POSTed a
+  // doomed vehicle_id=0. Keeping the disabled state computed (rather
+  // than a literal) also keeps the double-submit wiring test honest.
+  const numericVehicleId =
+    typeof vehicleId === 'number' && Number.isFinite(vehicleId) ? vehicleId : 0
+  const canStart = numericVehicleId > 0
   const body = useMemo(
-    () => ({ vehicle_id: vehicleId ?? 0, lookback_days: 90 }),
-    [vehicleId],
+    () => ({ vehicle_id: numericVehicleId, lookback_days: DEFAULT_LOOKBACK_DAYS }),
+    [numericVehicleId],
   )
   const stream = useAiStream({
     url: '/ai/ml/charging-curves/cluster',
     body,
-    onEvent: () => {},
+    onEvent: noop,
   })
-  // Keep the disabled state computed rather than hard-coded; the explicit
-  // boolean expression keeps the on-mode wiring test honest: a regression that
-  // pins the button as always-disabled would silently falsify the
-  // double-submit guard test.
-    return (
+  return (
     <AIFeatureCard
       title={t(
-                  'charging.aiMlClustering.title',
-                  'Learn per-vehicle charging-curve clusters',
-                )}
+        'charging.aiMlClustering.title',
+        'Learn per-vehicle charging-curve clusters',
+      )}
       description={t(
-                'charging.aiMlClustering.description',
-                'Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle’s recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging Curve page today.',
-              )}
+        'charging.aiMlClustering.description',
+        'Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle’s recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging Curve page today.',
+      )}
       buttonLabel={t(
-                  'charging.aiMlClustering.generateButton',
-                  'Train charging-curve clusters',
-                )}
+        'charging.aiMlClustering.generateButton',
+        'Train charging-curve clusters',
+      )}
       badgeLabel={t('charging.aiMlClustering.badge', 'Helix')}
-      canStart={vehicleId != null}
+      emptyHint={
+        canStart
+          ? undefined
+          : t(
+              'charging.aiMlClustering.noVehicleHint',
+              'Pick a vehicle to train its charging-curve clusters.',
+            )
+      }
+      canStart={canStart}
       stream={stream}
     />
   )
