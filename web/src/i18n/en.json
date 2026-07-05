@@ -8060,7 +8060,8 @@
       "sent": "Total Sent",
       "failed": "Failed",
       "pending": "Pending",
-      "activeChannels": "Active Channels"
+      "activeChannels": "Active Channels",
+      "loading": "Loading notification statistics"
     },
     "channels": {
       "add": "Add Channel",
