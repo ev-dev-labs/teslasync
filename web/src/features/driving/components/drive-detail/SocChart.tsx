@@ -20,6 +20,12 @@ export function SocChart({ chartData }: SocChartProps) {
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
+  // `chartData` is typed non-null, but the drive-detail data hook can hand
+  // down `undefined` transiently (drive still loading) — guard before `.length`
+  // so a mid-fetch render never throws on the missing array.
+  const points = chartData ?? [];
+  const hasSeries = points.length > 1;
+
   return (
     <FadeIn className="h-full">
       {/* chart-a11y:no-table dense per-sample SOC trace; start/end SOC visible in the drive summary tiles */}
@@ -29,10 +35,10 @@ export function SocChart({ chartData }: SocChartProps) {
         height={220}
         className="h-full"
       >
-        {chartData.length > 1 ? (
+        {hasSeries ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={chartData}
+              data={points}
               syncId={syncProps.syncId}
               syncMethod={syncProps.syncMethod}
               onMouseMove={syncProps.onMouseMove}
@@ -57,7 +63,7 @@ export function SocChart({ chartData }: SocChartProps) {
           </ResponsiveContainer>
         ) : (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
+            <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
             <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
           </div>
         )}
