@@ -10,7 +10,7 @@ import {
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
-import { SIGNAL_FIELD_OPTIONS, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
 import type {
   AutomationConditionKind,
   AutomationConditionSignalOp,
@@ -241,6 +241,8 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
 function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFieldsProps) {
   const { t } = useTranslation();
 
+  const signalOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+
   const operatorOptions = useMemo(() => {
     const isBool = condition.kind === 'condition_signal' && BOOL_FIELD_KEYS.has(condition.signal);
     return CONDITION_SIGNAL_OPERATORS
@@ -277,7 +279,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               i18nKey: 'help.fields.automations.signal',
               content: 'The vehicle telemetry signal this condition reads. Booleans use true/false, "state" uses keywords like online/asleep, all others compare numeric values.',
             }}
-            options={SIGNAL_FIELD_OPTIONS}
+            options={signalOptions}
             value={condition.signal}
             onChange={(event) => {
               const signal = event.target.value;

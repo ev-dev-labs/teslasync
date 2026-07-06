@@ -9,7 +9,7 @@ import {
 } from '@/components/ui';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
-import { SIGNAL_FIELD_OPTIONS, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
 import {
   Clock,
   Zap,
@@ -215,6 +215,8 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
     [t],
   );
 
+  const signalFieldOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+
   const handleDayToggle = useCallback((days: number[], day: number) => {
     if (days.length === 0) {
       return DAYS.map((_, index) => index).filter((index) => index !== day);
@@ -413,7 +415,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
         <div className="space-y-4">
           <UiSelect
             label={t('automations.builder.signal', 'Signal')}
-            options={SIGNAL_FIELD_OPTIONS}
+            options={signalFieldOptions}
             value={trigger.signal}
             onChange={(event) => {
               const signal = event.target.value;

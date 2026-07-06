@@ -4629,7 +4629,18 @@
       "geofenceEvent": "Event",
       "dwellMinutes": "Dwell Minutes",
       "dwellHint": "Required for dwell triggers",
-      "changedOnly": "Fire on any change"
+      "changedOnly": "Fire on any change",
+      "signals": {
+        "batteryLevel": "Battery Level",
+        "insideTemp": "Inside Temperature",
+        "outsideTemp": "Outside Temperature",
+        "speed": "Speed",
+        "isLocked": "Is Locked",
+        "isCharging": "Is Charging",
+        "isClimateOn": "Climate On",
+        "sentryMode": "Sentry Mode",
+        "state": "Vehicle State"
+      }
     },
     "recentActivity": "Recent Activity",
     "live": "Live",
