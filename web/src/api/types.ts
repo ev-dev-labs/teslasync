@@ -1154,6 +1154,8 @@ export interface ClimateSnapshot {
   hvac_ac_enabled?: boolean | null
   hvac_fan_status?: number | null
   hvac_fan_speed?: number | null
+  /** `/climate/latest` projection of the HvacFanSpeed signal. */
+  fan_speed?: number | null
   hvac_steering_wheel_heat_level?: number | null
   battery_heater?: boolean | null
   battery_heater_on?: boolean | null
