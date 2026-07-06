@@ -4,12 +4,10 @@ import { HeartPulse } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
-import { convertTempFromSI } from '@/lib/unitConversion';
 
 function scoreColor(score: number): string {
   if (score >= 80) return '#10b981';
@@ -19,10 +17,6 @@ function scoreColor(score: number): string {
 
 export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
-  const tempUnit = unitPrefs.temperature;
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : null;
@@ -35,6 +29,13 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
 
   const isCompact = size.cols <= 1;
   const hasData = !!data;
+  // Only replace the whole widget with a full-panel error on the INITIAL
+  // load failure, when there is no cached data to fall back on. Once we have
+  // data, a transient background-refetch failure must not blank out
+  // otherwise-valid numbers — it is surfaced through the freshness
+  // indicator's error state instead (WidgetShell forwards `isError` to
+  // <DataFreshness>).
+  const blockingError = !hasData && error ? String(error) : null;
 
   const healthScore = data?.current_soh ?? 0;
   const color = useMemo(() => scoreColor(healthScore), [healthScore]);
@@ -77,11 +78,11 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
       value: fmtInt(data?.charge_habits_score ?? 0),
       unit: `/ 100`,
     },
-  ], [data, toTemperatureDisplay, tempUnit, t]);
+  ], [data, t]);
 
   const shellProps = {
     loading: isLoading,
-    error: error ? String(error) : null,
+    error: blockingError,
     updatedAt: dataUpdatedAt ?? 0,
     isFetching,
     isStale,
@@ -91,13 +92,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
           {hasData ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />
