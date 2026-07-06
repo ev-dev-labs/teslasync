@@ -35,7 +35,10 @@ export function WidgetTipCards({
 }: WidgetTipCardsProps) {
   const limit = maxTips ?? (compact ? 1 : 3);
 
-  const visible = useMemo(() => tips.slice(0, limit), [tips, limit]);
+  // Null-safety: callers build `tips` from possibly-undefined API data
+  // (e.g. `data?.recommendations`). Coalesce before `.slice`/`.length` so a
+  // missing source degrades to the empty state instead of throwing.
+  const visible = useMemo(() => (tips ?? []).slice(0, limit), [tips, limit]);
 
   if (visible.length === 0) {
     return (
@@ -48,14 +51,19 @@ export function WidgetTipCards({
   }
 
   return (
-    <div className="space-y-2 overflow-y-auto h-full">
+    <div role="list" className="space-y-2 overflow-y-auto h-full">
       {visible.map((tip) => (
         <div
           key={tip.id}
+          role="listitem"
           className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 min-h-[44px] flex items-start gap-3"
         >
           {tip.icon && (
-            <span className="mt-0.5 shrink-0 text-[var(--text-secondary)]">{tip.icon}</span>
+            // Decorative leading glyph — the title conveys the meaning, so hide
+            // the icon from assistive tech to avoid a redundant announcement.
+            <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)]">
+              {tip.icon}
+            </span>
           )}
 
           <div className="flex-1 min-w-0">
