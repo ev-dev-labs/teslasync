@@ -7045,7 +7045,8 @@
       "sessions": "Sessions",
       "avgPerSession": "Avg / Session",
       "title": "Wall Connector",
-      "energy": "Energy"
+      "energy": "Energy",
+      "chartLabel": "Daily Wall Connector charging energy over the last 14 days"
     },
     "warranty": {
       "expired": "Expired",
