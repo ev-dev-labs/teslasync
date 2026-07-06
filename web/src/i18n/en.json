@@ -376,7 +376,8 @@
   },
   "vehiclePicker": {
     "aria": "Select vehicle",
-    "label": "Vehicle"
+    "label": "Vehicle",
+    "fallbackName": "Vehicle {{id}}"
   },
   "statusBar": {
     "aria": "Application status",
