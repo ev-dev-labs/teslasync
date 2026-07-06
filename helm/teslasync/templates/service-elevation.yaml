@@ -1,0 +1,19 @@
+{{- if .Values.elevation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslasync.fullname" . }}-elevation
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: elevation
+spec:
+  type: {{ .Values.elevation.service.type }}
+  selector:
+    {{- include "teslasync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: elevation
+  ports:
+    - name: http
+      port: {{ .Values.elevation.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

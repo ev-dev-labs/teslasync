@@ -57,6 +57,11 @@ data:
   FLEET_TELEMETRY_CLEANUP_INTERVAL: {{ .Values.fleetTelemetry.cleanupInterval | default "2m" | quote }}
   FLEET_TELEMETRY_STALE_SESSION_TIMEOUT: {{ .Values.fleetTelemetry.staleSessionTimeout | default "5m" | quote }}
   {{- end }}
+  {{- $elevationURL := include "teslasync.elevation.url" . }}
+  {{- if $elevationURL }}
+  ELEVATION_SERVICE_URL: {{ $elevationURL | quote }}
+  ELEVATION_TIMEOUT: {{ .Values.elevation.timeout | default "2s" | quote }}
+  {{- end }}
   {{- if or .Values.mongodb.enabled .Values.mongodb.external.uri }}
   MONGODB_ENABLED: "true"
   {{- if not .Values.secrets.existingSecret }}

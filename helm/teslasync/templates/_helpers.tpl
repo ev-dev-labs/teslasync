@@ -264,6 +264,19 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{/* ── Elevation connection helper ──────────────────────────────────────── */}}
+{{/* Unlike the host/port helper pairs above, this returns a full base URL
+     (scheme + host + port) because ELEVATION_SERVICE_URL is consumed as an
+     HTTP client base URL (internal/elevation.Client), not a bare host. */}}
+
+{{- define "teslasync.elevation.url" -}}
+{{- if .Values.elevation.enabled }}
+{{- printf "http://%s-elevation:%v" (include "teslasync.fullname" .) (.Values.elevation.service.port | default 8080) }}
+{{- else }}
+{{- .Values.elevation.external.url | default "" }}
+{{- end }}
+{{- end }}
+
 {{/* ── Notification Worker connection helpers ──────────────────────────── */}}
 
 {{- define "teslasync.notificationWorker.host" -}}

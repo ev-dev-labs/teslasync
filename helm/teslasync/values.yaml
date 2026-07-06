@@ -452,6 +452,63 @@ fleetTelemetry:
     port: 4443
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Elevation (optional — self-hosted terrain elevation service)
+#
+# Tesla Fleet Telemetry's Location signal carries only latitude/longitude —
+# elevation is never on the wire. When enabled, TeslaSync's positions writer
+# and drive-session tracker call this service once per completed lat/lng fix
+# to populate positions.altitude_m and drives.elevation_start/end/gain/loss.
+# Leave enabled: false (and external.url empty) to disable entirely — those
+# columns simply stay NULL, exactly as before this feature existed.
+#
+# Set enabled: true  → an embedded gedtm30api pod is deployed.
+# Set enabled: false → supply a URL via elevation.external.url, or leave
+#                       both empty to disable elevation lookups entirely.
+# ─────────────────────────────────────────────────────────────────────────────
+elevation:
+  enabled: false
+
+  # -- akhenakh/gedtm30api (MIT-licensed): https://github.com/akhenakh/gedtm30api
+  image: ghcr.io/akhenakh/gedtm30api:latest
+
+  # -- Cloud-Optimized GeoTIFF source. Defaults to the free, publicly-hosted
+  # GEDTM30 dataset (Global Ensemble Digital Terrain Model, ~30m resolution,
+  # -65..85 degrees latitude — true worldwide coverage). The server fetches
+  # and caches only the tiles your fleet actually visits — no multi-hundred-
+  # GB upfront download. For a fully offline deployment, mount your own COG/
+  # VRT file and point cogSource at a file:// or /vsicurl/ path instead.
+  cogSource: "https://s3.opengeohub.org/global/edtm/gedtm_rf_m_30m_s_20060101_20151231_go_epsg.4326.3855_v20250611.tif"
+
+  # -- Number of decoded raster tiles kept in memory (~1MiB each at the
+  # default 512x512 tile size). 1024 -> ~1GiB; size resources.limits.memory
+  # accordingly (see gedtm30api's README "Sizing memory" section).
+  cacheMaxSize: 1024
+
+  # -- Bounds a single HTTP round-trip from TeslaSync to this service.
+  # Elevation lookups run on the telemetry hot path (as often as once per
+  # completed lat/lng fix), so this stays short — env: ELEVATION_TIMEOUT.
+  timeout: "2s"
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1536Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+  # External elevation service — used when elevation.enabled is false but
+  # you want TeslaSync to consult a separately-deployed elevation service
+  # (e.g., a shared instance running outside this cluster). Must be a full
+  # base URL including scheme, e.g. "http://elevation.example.com:8080".
+  external:
+    url: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Service Account
 # ─────────────────────────────────────────────────────────────────────────────
 serviceAccount:

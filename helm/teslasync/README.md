@@ -132,6 +132,10 @@ The following table lists all configurable parameters and their default values.
 | `fleetTelemetry.enabled` | Enable Fleet Telemetry status monitoring | `false` |
 | `fleetTelemetry.host` | Fleet Telemetry server hostname | `` |
 | `fleetTelemetry.port` | Fleet Telemetry server port | `4443` |
+| `elevation.enabled` | Deploy bundled self-hosted elevation service (terrain height for positions/drives; Tesla never transmits it) | `false` |
+| `elevation.image` | Elevation service image (akhenakh/gedtm30api) | `ghcr.io/akhenakh/gedtm30api:latest` |
+| `elevation.service.port` | Elevation service port | `8080` |
+| `elevation.external.url` | External elevation service base URL (used when `elevation.enabled` is `false`) | `""` |
 | `postgresql.enabled` | Deploy bundled PostgreSQL | `true` |
 | `postgresql.auth.username` | PostgreSQL username | `teslasync` |
 | `postgresql.auth.password` | PostgreSQL password | `teslasync` |
