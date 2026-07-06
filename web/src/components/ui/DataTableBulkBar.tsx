@@ -22,11 +22,17 @@ interface DataTableBulkBarProps {
  */
 export function DataTableBulkBar({ count, onClear, children, className }: DataTableBulkBarProps) {
   const { t } = useTranslation()
-  if (count <= 0) return null
+  // Coerce to a safe non-negative integer: callers commonly wire
+  // `count={data?.length}` or `count={selection.size}`, which can surface
+  // undefined/NaN/fractional/Infinity before a query resolves. A bare
+  // `count <= 0` check lets NaN and undefined slip through and would render
+  // a nonsensical "NaN selected" / "undefined selected" toolbar.
+  const safeCount = Number.isFinite(count) ? Math.trunc(count) : 0
+  if (safeCount <= 0) return null
   return (
     <div role="region" aria-label={t('table.bulkActions.region', 'Bulk actions')} className={cn(tableTokens.bulkBar, className)}>
       <span className="font-medium" aria-live="polite">
-        {t('table.bulkActions.selected', '{{count}} selected', { count })}
+        {t('table.bulkActions.selected', '{{count}} selected', { count: safeCount })}
       </span>
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {children}
