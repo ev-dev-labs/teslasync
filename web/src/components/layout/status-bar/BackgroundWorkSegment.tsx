@@ -96,7 +96,11 @@ export function BackgroundWorkSegment({ iconOnly = false }: BackgroundWorkSegmen
             {t('statusBar.background.heading', 'Running')}
           </div>
           {jobs.map((job) => {
-            const Icon = KIND_ICON[job.kind];
+            // Defensive: a job whose `kind` falls outside the known union
+            // (e.g. a future/legacy value crossing the export/registration
+            // boundary) would otherwise resolve to `undefined` and crash the
+            // dynamic `<Icon />` render ("Element type is invalid").
+            const Icon = KIND_ICON[job.kind] ?? Sparkles;
             return (
               <div
                 key={job.id}
