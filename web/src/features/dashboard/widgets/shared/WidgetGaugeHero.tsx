@@ -27,24 +27,37 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
   // widgets via container queries (handled below by the wrapper).
   const size = compact ? 70 : 100;
 
+  // Guard the numbers the gauge feeds into its arc math. A missing / non-finite
+  // value collapses to 0, and a non-positive max would make the RadialGauge
+  // divide by zero — producing a NaN stroke offset and a visually broken ring —
+  // so it falls back to a sane 100-unit scale.
+  const value = Number.isFinite(gauge?.value) ? gauge.value : 0;
+  const max = Number.isFinite(gauge?.max) && gauge.max > 0 ? gauge.max : 100;
+
+  // Never call .length / .map on a possibly-undefined stats prop.
+  const items = stats ?? [];
+
   return (
     <div className="flex flex-col items-center justify-center gap-2">
       <RadialGauge
-        value={gauge.value}
-        max={gauge.max}
-        label={gauge.label}
-        unit={gauge.unit}
-        color={gauge.color}
+        value={value}
+        max={max}
+        label={gauge?.label ?? ''}
+        unit={gauge?.unit ?? ''}
+        color={gauge?.color}
         size={size}
       />
 
-      {!compact && stats && stats.length > 0 && (
+      {!compact && items.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-          {stats.map((stat) => (
-            <div key={stat.label} className="flex min-w-0 flex-col items-center text-center">
-              <span className="truncate text-xs text-[var(--text-secondary)]">{stat.label}</span>
+          {items.map((stat, index) => (
+            <div
+              key={`${stat.label ?? 'stat'}-${index}`}
+              className="flex min-w-0 flex-col items-center text-center"
+            >
+              <span className="truncate text-xs text-[var(--text-secondary)]">{stat.label ?? '—'}</span>
               <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                {stat.value}
+                {stat.value ?? '—'}
                 {stat.unit && (
                   <span className="ml-0.5 text-xs font-normal text-[var(--text-secondary)]">{stat.unit}</span>
                 )}
