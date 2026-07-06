@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Battery } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -20,11 +20,13 @@ function ChargeLimitRing({ value, max, gaugeSize }: { value: number; max: number
   const radius = (gaugeSize - STROKE_WIDTH) / 2;
   const center = gaugeSize / 2;
   const circumference = 2 * Math.PI * radius;
-  const clamped = Math.max(0, Math.min(value, max));
-  const offset = circumference - (clamped / max) * circumference;
+  // Guard against a zero/negative max (division by zero → NaN dashoffset).
+  const safeMax = max > 0 ? max : 100;
+  const clamped = Math.max(0, Math.min(value, safeMax));
+  const offset = circumference - (clamped / safeMax) * circumference;
 
   return (
-    <div className="absolute inset-x-0 top-0 flex justify-center pointer-events-none">
+    <div aria-hidden className="absolute inset-x-0 top-0 flex justify-center pointer-events-none">
       <svg
         width={gaugeSize}
         height={gaugeSize}
@@ -50,19 +52,27 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = useVehicleState(id);
   const state = stateData?.state;
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isLarge = size.cols >= 2 && size.rows >= 2;
 
   const batteryLevel = state?.battery_level ?? 0;
-  // charge_limit_soc may be present on extended state payloads
-  const chargeLimitSoc = (state as Record<string, unknown> | undefined)?.charge_limit_soc as number | undefined;
+  // charge_limit_soc may be present on extended state payloads. Validate it is
+  // a finite number before use so a malformed field never leaks a NaN into the
+  // gauge overlay or the stat row.
+  const chargeLimitRaw = (state as Record<string, unknown> | undefined)?.charge_limit_soc;
+  const chargeLimitSoc =
+    typeof chargeLimitRaw === 'number' && Number.isFinite(chargeLimitRaw) ? chargeLimitRaw : undefined;
 
   const color = useMemo(() => (state ? getBatteryColor(batteryLevel) : '#374151'), [state, batteryLevel]);
 
   const gaugeSize = isCompact ? 70 : 100;
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const stats = useMemo<GaugeHeroStat[]>(() => {
     const s: GaugeHeroStat[] = [
@@ -79,11 +89,16 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
       title={isCompact ? undefined : t('widget.batteryRadial', 'Battery')}
       icon={isCompact ? undefined : <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
       loading={isLoading}
+      // Surface a genuine initial-load failure (no state yet) as a real error
+      // panel instead of the misleading "No battery data" empty state. When
+      // cached state is present, a background-refetch error stays a subtle
+      // freshness signal so we never blank out valid data.
+      error={isError && !state ? String(error ?? t('widget.batteryError', 'Unable to load battery data')) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       <div className="h-full flex flex-col items-center justify-center gap-1">
         {state ? (
