@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -6,7 +6,7 @@ import { useDrivetrainHealth } from '@/api/hooks/useDriving';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
@@ -28,10 +28,12 @@ function healthColor(score: number): string {
 export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
   const tempUnit = unitPrefs.temperature;
-  const { data: vehicles } = useVehicles();
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, tempUnit),
+    [tempUnit],
+  );
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
 
@@ -47,20 +49,32 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
     isFetching: motorFetching,
   } = useMotorLatest(vid ?? 0);
 
-  const isLoading = healthLoading || motorLoading;
+  const isLoading = healthLoading || motorLoading || (vehicleId == null && vehiclesLoading);
   const isCompact = size.cols <= 1;
   const hasData = !!health || !!motor;
 
   const score = useMemo(() => healthScore(health?.overallHealth), [health?.overallHealth]);
   const color = useMemo(() => healthColor(score), [score]);
+  const statusLabel = useMemo(() => {
+    switch (health?.overallHealth) {
+      case 'good':
+        return t('widget.drivetrainHealth.statusGood', 'Healthy');
+      case 'warning':
+        return t('widget.drivetrainHealth.statusWarning', 'Warning');
+      case 'critical':
+        return t('widget.drivetrainHealth.statusCritical', 'Critical');
+      default:
+        return t('widget.drivetrainHealth.statusUnknown', 'Unknown');
+    }
+  }, [health?.overallHealth, t]);
 
   const gaugeConfig = useMemo(() => ({
     value: score,
     max: 100,
-    label: `${fmtInt(score)}`,
+    label: statusLabel,
     unit: t('widget.drivetrainHealth.score', 'health'),
     color,
-  }), [score, color, t]);
+  }), [score, color, statusLabel, t]);
 
   const motorTemp = health?.frontMotorTempC ?? motor?.motor_temp_c_front ?? null;
   const statorTemp = motor?.di_stator_temp ?? health?.rearMotorTempC ?? null;
@@ -85,9 +99,9 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
     },
     {
       label: t('widget.drivetrainHealth.driveState', 'Drive State'),
-      value: driveState ?? '—',
+      value: driveState,
     },
-  ], [health, motor, motorTemp, statorTemp, inverterTemp, driveState, toTemperatureDisplay, tempUnit, t]);
+  ], [motorTemp, statorTemp, inverterTemp, driveState, toTemperatureDisplay, tempUnit, t]);
 
   const updatedAt = Math.max(healthUpdatedAt ?? 0, motorUpdatedAt ?? 0);
 
@@ -103,13 +117,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={healthUpdatedAt}
-      isFetching={healthFetching}
-      isStale={healthStale}
-      isError={healthIsError}
-      onRefresh={() => healthRefetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
           {hasData ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />
