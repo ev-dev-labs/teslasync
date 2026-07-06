@@ -17,12 +17,24 @@ const MI_TO_KM = 1.60934;
 
 const SPARKLINE_COLORS = ['#00f0ff', '#34d399', '#fbbf24', '#a78bfa'];
 
+/**
+ * Defensively coerce an unknown payload field into a finite-number array.
+ * The trend fields below are not part of the typed `AnalyticsSummary`
+ * contract yet, so a malformed value (missing, a scalar, or NaN-poisoned)
+ * must never reach `<Sparkline>` where `.filter` would throw on a non-array.
+ */
+function toNumberArray(value: unknown): number[] {
+  return Array.isArray(value)
+    ? value.filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
+    : [];
+}
+
 export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-  const { currencySymbol, formatCurrency } = useFormatting();
+  const { formatCurrency } = useFormatting();
 
   const {
     data,
@@ -51,13 +63,17 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
 
   const hasData = distKm > 0 || energyKwh > 0;
 
-  // Trend arrays — API may provide these in the future
-  const trends = data as Record<string, unknown> | undefined;
-  const distTrend = (trends?.distanceTrend as number[] | undefined) ?? [];
-  const effTrend = (trends?.efficiencyTrend as number[] | undefined) ?? [];
-  const energyTrend = (trends?.energyTrend as number[] | undefined) ?? [];
-  const costTrend = (trends?.costTrend as number[] | undefined) ?? [];
-  const sparklines = [distTrend, effTrend, energyTrend, costTrend];
+  // Trend arrays — API may provide these in the future. Coerce defensively so
+  // a non-array/NaN-poisoned payload can never crash the sparkline row.
+  const sparklines = useMemo(() => {
+    const src = data as Record<string, unknown> | undefined;
+    return [
+      toNumberArray(src?.distanceTrend),
+      toNumberArray(src?.efficiencyTrend),
+      toNumberArray(src?.energyTrend),
+      toNumberArray(src?.costTrend),
+    ];
+  }, [data]);
   const hasSparklines = sparklines.some((s) => s.length > 0);
 
   const stats = useMemo((): StatGridItem[] => [
@@ -84,7 +100,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
       value: costPerDist > 0 ? formatCurrency(costPerDist, 3) : '—',
       icon: <DollarSign className="h-3.5 w-3.5 text-purple-400" />,
     },
-  ], [displayDist, displayEff, effUnit, energyKwh, costPerDist, distanceUnit, currencySymbol, t]);
+  ], [displayDist, displayEff, effUnit, energyKwh, costPerDist, distanceUnit, formatCurrency, t]);
 
   // Compact (1×2): large animated distance number
   if (isCompact) {
@@ -140,7 +156,13 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
             <div className="grid grid-cols-4 gap-3">
               {sparklines.map((trend, i) => (
                 <div key={i} className="flex items-center justify-center h-[30px]">
-                  <Sparkline data={trend} color={SPARKLINE_COLORS[i]} />
+                  <Sparkline
+                    data={trend}
+                    color={SPARKLINE_COLORS[i]}
+                    ariaLabel={t('widget.analyticsSummary.trendAria', '{{metric}} trend', {
+                      metric: stats[i]?.label ?? '',
+                    })}
+                  />
                 </div>
               ))}
             </div>
