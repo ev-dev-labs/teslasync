@@ -19,7 +19,7 @@ interface ChartDatum {
   home: number;
 }
 
-function shortTime(iso: string): string {
+export function shortTime(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
@@ -104,8 +104,11 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     if (siteId) refetchHistory();
   };
 
-  // No energy sites linked
-  if (!hasSites && !isLoading) {
+  // No energy sites linked. Only surface the "no site" empty state when the
+  // sites query genuinely returned none — a sites *error* must fall through so
+  // the shell can render it, rather than masking a fetch failure behind a
+  // misleading "no site linked" message.
+  if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
         loading={false}
@@ -120,7 +123,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
           compact={isCompact}
           isEmpty
           emptyMessage={t('widget.powerFlowHistory.noSite', 'No Tesla Energy site linked')}
-          emptyIcon={<TrendingUp className="h-5 w-5" />}
+          emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
           stats={[]}
           chart={null}
         />
@@ -144,7 +147,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
           compact
           isEmpty={!hasData}
           emptyMessage={t('widget.powerFlowHistory.noData', 'No power flow data')}
-          emptyIcon={<TrendingUp className="h-5 w-5" />}
+          emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
           stats={hasData ? [
             {
               label: t('widget.powerFlowHistory.avgSolar', 'Avg Solar'),
@@ -190,7 +193,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.powerFlowHistory.title', 'Power Flow History')}
-      icon={<TrendingUp className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={<TrendingUp aria-hidden="true" className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error ? String(error) : null}
       updatedAt={updatedAt}
@@ -202,7 +205,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
       <WidgetChartSummary
         isEmpty={!hasData}
         emptyMessage={t('widget.powerFlowHistory.noData', 'No power flow data')}
-        emptyIcon={<TrendingUp className="h-5 w-5" />}
+        emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
         stats={stats}
         chart={
           <ResponsiveContainer width="100%" height="100%">
