@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { getConnectionStatus, onStatusChange } from '@/lib/resilience'
 
 /**
@@ -21,15 +21,38 @@ import { getConnectionStatus, onStatusChange } from '@/lib/resilience'
  *   - Routing both reads through `lib/resilience` means the offline
  *     banner, fetch retry logic, and query error states all share one
  *     source of truth.
+ *
+ * Why `useSyncExternalStore` (not `useState` + `useEffect`)?
+ *   - It closes the mount-gap race: if the connection flips in the window
+ *     between the initial render-time read and the effect that wires up the
+ *     subscription, `useSyncExternalStore` re-reads the snapshot right after
+ *     subscribing and reconciles, so consumers never latch a stale value.
+ *   - It is tearing-safe under concurrent rendering and matches the store
+ *     subscription pattern used across the app's other external-state hooks.
  */
+
+// Module-scope adapters so their identities stay stable across renders —
+// passing fresh closures to useSyncExternalStore would force a re-subscribe
+// on every render.
+
+function subscribe(onStoreChange: () => void): () => void {
+  // onStatusChange invokes its callback with the new status, but the store
+  // contract only needs a zero-arg "something changed" signal — React re-reads
+  // getSnapshot() itself, so the status argument is intentionally ignored.
+  return onStatusChange(onStoreChange)
+}
+
+function getSnapshot(): boolean {
+  return getConnectionStatus() === 'online'
+}
+
+// During SSR / prerender there is no network signal to read, so assume online.
+// This keeps an offline banner from flashing before the client hydrates and
+// can consult navigator.onLine.
+function getServerSnapshot(): boolean {
+  return true
+}
+
 export function useOnlineStatus(): boolean {
-  const [online, setOnline] = useState<boolean>(() => getConnectionStatus() === 'online')
-
-  useEffect(() => {
-    return onStatusChange((status) => {
-      setOnline(status === 'online')
-    })
-  }, [])
-
-  return online
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
