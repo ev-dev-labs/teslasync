@@ -16,7 +16,7 @@ import (
 )
 
 type tripRepository struct {
-	pool pgxPool
+	pool *pgxpool.Pool
 }
 
 func NewTripRepository(pool *pgxpool.Pool) repository.TripRepository {
@@ -44,11 +44,7 @@ func (r *tripRepository) GetByVehicleID(ctx context.Context, vehicleID string) (
 	if err != nil {
 		return nil, fmt.Errorf("querying trips for vehicle %s: %w", vehicleID, err)
 	}
-	trips, err := pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
-	if err != nil {
-		return nil, fmt.Errorf("collecting trips for vehicle %s: %w", vehicleID, err)
-	}
-	return trips, nil
+	return pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
 }
 
 func (r *tripRepository) ListByDateRange(ctx context.Context, vehicleID string, from, to time.Time) ([]trip.Trip, error) {
@@ -56,11 +52,7 @@ func (r *tripRepository) ListByDateRange(ctx context.Context, vehicleID string, 
 	if err != nil {
 		return nil, fmt.Errorf("listing trips for vehicle %s: %w", vehicleID, err)
 	}
-	trips, err := pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
-	if err != nil {
-		return nil, fmt.Errorf("collecting trips for vehicle %s: %w", vehicleID, err)
-	}
-	return trips, nil
+	return pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
 }
 
 func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip.Trip, error) {
@@ -80,8 +72,9 @@ func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip
 }
 
 func (r *tripRepository) Save(ctx context.Context, t *trip.Trip) error {
-	// Only the trips table's own columns are persisted; the derived fields are
-	// reconstructed at read time (see queries.UpsertTrip / tripSelectFrom).
+	// The trips table owns only id, vehicle_id, started_at and completed_at;
+	// every other Trip field is derived from the joined drives at read time,
+	// so UpsertTrip binds exactly these four parameters.
 	_, err := r.pool.Exec(ctx, queries.UpsertTrip,
 		t.ID, t.VehicleID, t.StartedAt, t.CompletedAt,
 	)
