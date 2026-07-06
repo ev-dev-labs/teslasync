@@ -4,17 +4,17 @@ import { Download } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { MetricBar, TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { useExports, exportDownloadUrl } from '@/api/hooks/useExports';
+import { useExports } from '@/api/hooks/useExports';
 import { useExportJobs } from '@/api/hooks/useAdmin';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
-import type { ExportJob as ExportJobExport } from '@/types/export';
+import { exportJobStatus, type ExportJob as ExportJobExport } from '@/types/export';
 import type { ExportJob as ExportJobAdmin } from '@/types/admin';
 
 // ── Normalised job shape used within this widget ─────────────────────
 
-export interface NormalisedJob {
+interface NormalisedJob {
   id: string;
   format: string;
   filePath?: string;
@@ -44,17 +44,9 @@ function fromAdminHook(j: ExportJobAdmin): NormalisedJob {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-export type JobStatus = 'queued' | 'processing' | 'ready' | 'failed';
+type JobStatus = 'queued' | 'processing' | 'ready' | 'failed';
 
-export function normaliseStatusFromExport(fsmState: string | undefined): JobStatus {
-  const s = (fsmState ?? '').toLowerCase();
-  if (s === 'processing' || s === 'running') return 'processing';
-  if (s === 'ready' || s === 'done' || s === 'completed') return 'ready';
-  if (s === 'failed' || s === 'error') return 'failed';
-  return 'queued';
-}
-
-export function normaliseStatusFromAdmin(status: string | undefined): JobStatus {
+function normaliseStatusFromAdmin(status: string | undefined): JobStatus {
   const s = (status ?? '').toLowerCase();
   if (s === 'processing' || s === 'running') return 'processing';
   if (s === 'ready' || s === 'done' || s === 'completed') return 'ready';
@@ -76,73 +68,19 @@ const STATUS_BADGE: Record<JobStatus, { variant: 'neutral' | 'info' | 'success' 
   failed:     { variant: 'danger',  labelKey: 'widget.exportFailed',     label: 'Failed' },
 };
 
-export function fmtBytes(bytes: number): string {
-  // Guard non-finite (NaN/±Infinity) and non-positive sizes so a corrupt
-  // `file_size` renders the em-dash placeholder instead of "NaN GB".
-  if (!Number.isFinite(bytes) || bytes <= 0) return '—';
+function fmtBytes(bytes: number): string {
+  if (bytes <= 0) return '—';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function truncateFilename(path: string | undefined, maxLen: number): string {
+function truncateFilename(path: string | undefined, maxLen: number): string {
   if (!path) return '—';
-  // `|| path` (not `??`) so a trailing-slash path whose last segment is the
-  // empty string falls back to the full path instead of rendering nothing.
-  const name = path.split('/').pop() || path;
+  const name = path.split('/').pop() ?? path;
   if (name.length <= maxLen) return name;
   return name.slice(0, maxLen - 1) + '…';
-}
-
-export interface JobEntry {
-  job: NormalisedJob;
-  status: JobStatus;
-}
-
-function toEpoch(value: string | undefined): number {
-  if (!value) return 0;
-  const ms = new Date(value).getTime();
-  return Number.isNaN(ms) ? 0 : ms;
-}
-
-/**
- * Merge the two `/export/jobs` reads into one de-duplicated, sorted list.
- *
- * Both hooks hit the same endpoint but type it differently: the export hook
- * exposes `filePath` (required to build the download link) while the admin
- * summary carries the fresher `status`. We key by id and let the admin entry
- * win for status, but preserve the export hook's `filePath` — otherwise the
- * "ready" download link could never resolve. Rows are ordered
- * processing → queued → ready → failed, then newest-first within a status.
- */
-export function mergeExportJobs(
-  exports: ExportJobExport[] | undefined,
-  adminJobs: ExportJobAdmin[] | undefined,
-): JobEntry[] {
-  const byId = new Map<string, JobEntry>();
-
-  for (const j of exports ?? []) {
-    byId.set(j.id, { job: fromExportHook(j), status: normaliseStatusFromExport(j.fsmState) });
-  }
-  for (const j of adminJobs ?? []) {
-    const existing = byId.get(j.id);
-    const job = fromAdminHook(j);
-    byId.set(j.id, {
-      job: { ...job, filePath: job.filePath ?? existing?.job.filePath },
-      status: normaliseStatusFromAdmin(j.status),
-    });
-  }
-
-  const items = Array.from(byId.values());
-
-  items.sort((a, b) => {
-    const orderDiff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-    if (orderDiff !== 0) return orderDiff;
-    return toEpoch(b.job.createdAt) - toEpoch(a.job.createdAt);
-  });
-
-  return items;
 }
 
 // ── Compact layout (1×2) ─────────────────────────────────────────────
@@ -217,12 +155,11 @@ function JobRow({
       {showDownload && (
         job.filePath && status === 'ready' ? (
           <a
-            href={exportDownloadUrl(job.id)}
+            href={`/api/v1/export/download/${job.id}`}
             className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-cyan-300 hover:text-[var(--text-primary)] transition-colors"
             title={t('widget.exportDownload', 'Download')}
-            aria-label={t('widget.exportDownload', 'Download')}
           >
-            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+            <Download className="h-3.5 w-3.5" />
           </a>
         ) : (
           <span className="shrink-0 w-[44px]" />
@@ -305,11 +242,26 @@ export default function ExportStatusWidget({ size }: WidgetProps) {
   const updatedAt = Math.max(exportsUpdatedAt ?? 0, adminUpdatedAt ?? 0);
 
   // Merge and deduplicate by id, preferring adminJobs (fresher status info)
-  // while preserving the export hook's filePath so the download link resolves.
-  const sortedJobs = useMemo(
-    () => mergeExportJobs(exports, adminJobs),
-    [exports, adminJobs],
-  );
+  const sortedJobs = useMemo(() => {
+    const byId = new Map<string, { job: NormalisedJob; status: JobStatus }>();
+
+    for (const j of (exports ?? [])) {
+      byId.set(j.id, { job: fromExportHook(j), status: exportJobStatus(j) });
+    }
+    for (const j of (adminJobs ?? [])) {
+      byId.set(j.id, { job: fromAdminHook(j), status: normaliseStatusFromAdmin(j.status) });
+    }
+
+    const items = Array.from(byId.values());
+
+    items.sort((a, b) => {
+      const orderDiff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+      if (orderDiff !== 0) return orderDiff;
+      return new Date(b.job.createdAt ?? 0).getTime() - new Date(a.job.createdAt ?? 0).getTime();
+    });
+
+    return items;
+  }, [exports, adminJobs]);
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
