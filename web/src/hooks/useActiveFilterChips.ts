@@ -62,16 +62,27 @@ export function useActiveFilterChips(
 ): FilterChipDescriptor[] {
   return useMemo(() => {
     const chips: FilterChipDescriptor[] = [];
-    for (const key of Object.keys(config)) {
-      const cfg = config[key] as ChipConfig<unknown>;
-      const value = state[key];
+    // `config` / `state` can be momentarily nullish while a page assembles
+    // its filter snapshot (e.g. before URL state hydrates). Degrade to
+    // "no chips" instead of throwing on Object.keys(undefined) mid-render.
+    const configRecord: ChipConfigRecord = config ?? {};
+    const snapshot: Record<string, unknown> = state ?? {};
+    for (const key of Object.keys(configRecord)) {
+      const cfg = configRecord[key] as ChipConfig<unknown> | undefined;
+      // A record built conditionally (`{ vehicle: show ? cfg : undefined }`)
+      // still surfaces the key via Object.keys; skip nullish entries rather
+      // than dereferencing them and crashing the render.
+      if (cfg == null) continue;
+      const value = snapshot[key];
       const empty = (cfg.isEmpty ?? defaultIsEmpty)(value);
       if (empty) continue;
-      const value_ = (cfg.format ?? defaultFormat)(value);
+      // Coerce so a mis-typed formatter can never leak a non-string into
+      // the descriptor (FilterChipDescriptor.value is typed `string`).
+      const formatted = String((cfg.format ?? defaultFormat)(value));
       chips.push({
         key,
         label: cfg.label,
-        value: value_,
+        value: formatted,
         onRemove: () => cfg.setter(undefined),
       });
     }
