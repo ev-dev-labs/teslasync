@@ -13,10 +13,14 @@ import type { WidgetProps } from './types';
 
 /**
  * Derive a status from how far a cell's voltage deviates from the average.
- * ≤5 mV → ok, ≤15 mV → warning, >15 mV → error, null → unknown.
+ * ≤5 mV → ok, ≤15 mV → warning, >15 mV → error, missing/invalid → unknown.
+ *
+ * Exported for unit testing. A `null`, `NaN` or `Infinity` reading resolves
+ * to `unknown` rather than masquerading as a critical `error` — a non-finite
+ * value is a dropped/garbled reading, not a genuine cell imbalance.
  */
-function cellStatus(voltage: number | null, avg: number): StatusCell['status'] {
-  if (voltage == null) return 'unknown';
+export function cellStatus(voltage: number | null, avg: number): StatusCell['status'] {
+  if (voltage == null || !Number.isFinite(voltage)) return 'unknown';
   const deviationMv = Math.abs(voltage - avg) * 1000;
   if (deviationMv <= 5) return 'ok';
   if (deviationMv <= 15) return 'warning';
