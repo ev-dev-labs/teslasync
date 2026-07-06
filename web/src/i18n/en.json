@@ -8056,6 +8056,9 @@
     "mapRegion": "Live location map"
   },
   "maps": {
+    "animatedMarker": {
+      "label": "Vehicle position"
+    },
     "routePlayback": {
       "empty": "No GPS points to replay for this route.",
       "mapLabel": "Route playback map"
