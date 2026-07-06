@@ -74,22 +74,46 @@ func main() {
 		SetCleanSession(true)
 
 	client := pahomqtt.NewClient(opts)
-	if tok := client.Connect(); !tok.WaitTimeout(10*time.Second) || tok.Error() != nil {
-		log.Fatalf("connect: %v", tok.Error())
+	tok := client.Connect()
+	if !tok.WaitTimeout(connectTimeout) {
+		log.Fatalf("connect: timed out after %s", connectTimeout)
+	}
+	if err := tok.Error(); err != nil {
+		log.Fatalf("connect: %v", err)
 	}
 	defer client.Disconnect(250)
 
 	if *csvPath != "" {
-		runCSVReplay(client, *topicBase, *vin, *csvPath, *startFilter, *endFilter, *throttleMS, *publishLimit)
+		if err := runCSVReplay(client, *topicBase, *vin, *csvPath, *startFilter, *endFilter, *throttleMS, *publishLimit); err != nil {
+			log.Fatalf("csv replay: %v", err)
+		}
 		return
 	}
 
-	runSynthetic(client, *topicBase, *vin, *count, *intervalMS)
+	if err := runSynthetic(client, *topicBase, *vin, *count, *intervalMS); err != nil {
+		log.Fatalf("synthetic: %v", err)
+	}
 }
 
 // ---------------------------------------------------------------------------
 // Per-field publish primitive
 // ---------------------------------------------------------------------------
+
+// publisher is the narrow slice of paho's mqtt.Client that this tool
+// actually uses. Depending on the interface rather than the concrete
+// client keeps publishField/runSynthetic/runCSVReplay unit-testable with
+// an in-memory fake and honours interface-segregation: the real
+// pahomqtt.Client already implements this exact method set.
+type publisher interface {
+	Publish(topic string, qos byte, retained bool, payload interface{}) pahomqtt.Token
+}
+
+// Broker interaction timeouts, named so the values live in one place and
+// are reused by both the CLI connect path and the per-field publish path.
+const (
+	connectTimeout = 10 * time.Second
+	publishTimeout = 5 * time.Second
+)
 
 // publishField emits a single per-field MQTT message in the wire shape
 // codec.DecodeJSONField expects: topic = `{base}/{vin}/v/{field}`,
@@ -114,9 +138,9 @@ func main() {
 //   - StringCompound:    string (DoorState et al.)    -> `"FrontDoorOpen|..."`
 //
 // The ts argument is the original event-time (CSV row timestamp for
-// replay; wall-clock for synthetic). Marshal failure is fatal because
-// it indicates a programming bug in the caller's value shape.
-func publishField(client pahomqtt.Client, topicBase, vin, field string, jsonValue any, ts time.Time) (int, error) {
+// replay; wall-clock for synthetic). A marshal failure is returned as an
+// error because it indicates a programming bug in the caller's value shape.
+func publishField(client publisher, topicBase, vin, field string, jsonValue any, ts time.Time) (int, error) {
 	topic := fmt.Sprintf("%s/%s/v/%s", topicBase, vin, field)
 	envelope := struct {
 		Value any    `json:"value"`
@@ -130,8 +154,17 @@ func publishField(client pahomqtt.Client, topicBase, vin, field string, jsonValu
 		return 0, fmt.Errorf("marshal envelope for %q: %w", field, err)
 	}
 	tok := client.Publish(topic, 1, false, body)
-	if !tok.WaitTimeout(5*time.Second) || tok.Error() != nil {
-		return 0, fmt.Errorf("publish %q: %w", topic, tok.Error())
+	if tok == nil {
+		return 0, fmt.Errorf("publish %q: nil token from broker client", topic)
+	}
+	// Distinguish timeout from a delivery error: on timeout paho leaves
+	// Error() nil, so wrapping it with %w would emit a confusing
+	// "%!w(<nil>)" — report the timeout explicitly instead.
+	if !tok.WaitTimeout(publishTimeout) {
+		return 0, fmt.Errorf("publish %q: timed out after %s", topic, publishTimeout)
+	}
+	if err := tok.Error(); err != nil {
+		return 0, fmt.Errorf("publish %q: %w", topic, err)
 	}
 	return len(body), nil
 }
@@ -149,7 +182,7 @@ type syntheticAtomic struct {
 	value any
 }
 
-func runSynthetic(client pahomqtt.Client, topicBase, vin string, count, intervalMS int) {
+func runSynthetic(client publisher, topicBase, vin string, count, intervalMS int) error {
 	log.Printf("synthetic mode: publishing %d burst(s) of per-field signals to %s/%s/v/+", count, topicBase, vin)
 
 	for i := 0; i < count; i++ {
@@ -173,7 +206,7 @@ func runSynthetic(client pahomqtt.Client, topicBase, vin string, count, interval
 		for _, a := range burst {
 			n, err := publishField(client, topicBase, vin, a.field, a.value, now)
 			if err != nil {
-				log.Fatalf("burst %d field %q: %v", i, a.field, err)
+				return fmt.Errorf("synthetic burst %d field %q: %w", i, a.field, err)
 			}
 			totalBytes += n
 		}
@@ -187,6 +220,7 @@ func runSynthetic(client pahomqtt.Client, topicBase, vin string, count, interval
 	}
 
 	log.Printf("done — query signal_log/positions/drive_telemetry/charging_telemetry in postgres to confirm")
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -208,16 +242,22 @@ type csvRow struct {
 // Latitude/Longitude as bare scalars; we pair them into a
 // single Location compound publish per (vin, timestamp) so the codec
 // flattens back to the canonical LocationLatitude/Longitude atomics.
-func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, endFilter string, throttleMS, publishLimit int) {
+func runCSVReplay(client publisher, topicBase, vin, csvPath, startFilter, endFilter string, throttleMS, publishLimit int) error {
 	log.Printf("CSV replay mode: %s", csvPath)
 	log.Printf("  publishing per-field to %s/%s/v/+ (envelope wraps event-time)", topicBase, vin)
 
-	startCutoff := parseTimeFilter(startFilter, time.Time{})
-	endCutoff := parseTimeFilter(endFilter, time.Time{})
+	startCutoff, err := parseTimeFilter(startFilter, time.Time{})
+	if err != nil {
+		return fmt.Errorf("parse --start: %w", err)
+	}
+	endCutoff, err := parseTimeFilter(endFilter, time.Time{})
+	if err != nil {
+		return fmt.Errorf("parse --end: %w", err)
+	}
 
 	f, err := os.Open(csvPath)
 	if err != nil {
-		log.Fatalf("open csv: %v", err)
+		return fmt.Errorf("open csv %q: %w", csvPath, err)
 	}
 	defer f.Close()
 
@@ -225,9 +265,12 @@ func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, 
 	r.FieldsPerRecord = -1
 	header, err := r.Read()
 	if err != nil {
-		log.Fatalf("read header: %v", err)
+		return fmt.Errorf("read csv header: %w", err)
 	}
-	colIdx := indexHeaders(header, []string{"signal", "value_num", "value_str", "value_bool", "created_at"})
+	colIdx, err := indexHeaders(header, []string{"signal", "value_num", "value_str", "value_bool", "created_at"})
+	if err != nil {
+		return err
+	}
 
 	var rows []csvRow
 	skippedTime := 0
@@ -238,9 +281,9 @@ func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, 
 			break
 		}
 		if err != nil {
-			log.Fatalf("read row: %v", err)
+			return fmt.Errorf("read csv row: %w", err)
 		}
-		ts, err := parseCSVTimestamp(rec[colIdx["created_at"]])
+		ts, err := parseCSVTimestamp(fieldAt(rec, colIdx["created_at"]))
 		if err != nil {
 			skippedParse++
 			continue
@@ -254,17 +297,17 @@ func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, 
 			continue
 		}
 		rows = append(rows, csvRow{
-			signal:    rec[colIdx["signal"]],
-			valueNum:  rec[colIdx["value_num"]],
-			valueStr:  rec[colIdx["value_str"]],
-			valueBool: rec[colIdx["value_bool"]],
+			signal:    fieldAt(rec, colIdx["signal"]),
+			valueNum:  fieldAt(rec, colIdx["value_num"]),
+			valueStr:  fieldAt(rec, colIdx["value_str"]),
+			valueBool: fieldAt(rec, colIdx["value_bool"]),
 			createdAt: ts,
 		})
 	}
 
 	log.Printf("  loaded %d rows (skipped %d outside time window, %d parse errors)", len(rows), skippedTime, skippedParse)
 	if len(rows) == 0 {
-		log.Fatalf("no rows in window — check --start/--end")
+		return fmt.Errorf("no rows in window — check --start/--end")
 	}
 
 	// Sort by timestamp so the codec sees event-time in monotonic
@@ -288,6 +331,17 @@ func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, 
 
 	for i := range rows {
 		row := rows[i]
+
+		// Sentinel emitted by pairLatLonRows for a Latitude/Longitude
+		// scalar it already folded into a synthetic Location compound.
+		// Handle it before the SignalsByName lookup so the diagnostic
+		// counters stay accurate instead of surfacing a phantom ""
+		// entry under unknown signals.
+		if row.signal == "" {
+			stats.datumsSkipped++
+			stats.skipReasons["bare lat/lon (consumed by Location pair)"]++
+			continue
+		}
 
 		// Skip the bare scalars that have no Field on the modern
 		// proto; pairLatLonRows already consumed valid pairs.
@@ -313,7 +367,7 @@ func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, 
 
 		n, err := publishField(client, topicBase, vin, row.signal, jsonValue, row.createdAt)
 		if err != nil {
-			log.Fatalf("publish row %d field %q: %v", i, row.signal, err)
+			return fmt.Errorf("publish row %d field %q: %w", i, row.signal, err)
 		}
 		stats.payloadsPublished++
 		stats.bytesPublished += int64(n)
@@ -348,6 +402,7 @@ func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, 
 			log.Printf("    %6d  %s", r.count, r.reason)
 		}
 	}
+	return nil
 }
 
 // pairLatLonRows scans the timestamp-sorted CSV row stream and merges
@@ -662,7 +717,18 @@ func canonicaliseDetailedChargeState(s string) (string, bool) {
 // CSV helpers
 // ---------------------------------------------------------------------------
 
-func indexHeaders(header []string, want []string) map[string]int {
+// fieldAt returns the value at column idx, or "" when idx is out of range.
+// csv.Reader with FieldsPerRecord = -1 tolerates short rows, so a bare
+// rec[idx] would panic on a truncated line; every column read goes through
+// this bounds-safe accessor instead.
+func fieldAt(rec []string, idx int) string {
+	if idx < 0 || idx >= len(rec) {
+		return ""
+	}
+	return rec[idx]
+}
+
+func indexHeaders(header []string, want []string) (map[string]int, error) {
 	out := map[string]int{}
 	for i, h := range header {
 		out[strings.TrimSpace(h)] = i
@@ -674,9 +740,9 @@ func indexHeaders(header []string, want []string) map[string]int {
 		}
 	}
 	if len(missing) > 0 {
-		log.Fatalf("csv missing required columns: %v (got %v)", missing, header)
+		return nil, fmt.Errorf("csv missing required columns %v (got %v)", missing, header)
 	}
-	return out
+	return out, nil
 }
 
 // parseCSVTimestamp handles the prod-signal export format
@@ -706,14 +772,14 @@ func parseCSVTimestamp(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unparseable timestamp %q", s)
 }
 
-func parseTimeFilter(s string, def time.Time) time.Time {
+func parseTimeFilter(s string, def time.Time) (time.Time, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return def
+		return def, nil
 	}
 	t, err := parseCSVTimestamp(s)
 	if err != nil {
-		log.Fatalf("invalid time filter %q: %v", s, err)
+		return time.Time{}, fmt.Errorf("invalid time filter %q: %w", s, err)
 	}
-	return t
+	return t, nil
 }
