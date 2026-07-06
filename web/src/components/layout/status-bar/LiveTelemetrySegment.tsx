@@ -74,7 +74,10 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
       short: t('statusBar.live.unknown', 'Idle'),
     },
   };
-  const v = cfg[status];
+  // Defensive: `useLiveConnection` is contracted to emit one of the four
+  // known statuses, but fall back to the muted "unknown" variant rather than
+  // dereference `undefined.icon` if an out-of-contract value ever reaches us.
+  const v = cfg[status] ?? cfg.unknown;
   const Icon = v.icon;
 
   const tooltipBody =
