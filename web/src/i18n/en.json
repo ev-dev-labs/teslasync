@@ -7102,7 +7102,8 @@
       "noData": "No year-in-review data",
       "title": "Year in Review"
     },
-    "updateStatus": "{{status}}"
+    "updateStatus": "{{status}}",
+    "moreInfoAbout": "More info about {{title}}"
   },
   "anomaly": {
     "title": "Anomaly Detection",
