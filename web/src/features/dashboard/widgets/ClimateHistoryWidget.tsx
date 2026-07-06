@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThermometerSun } from 'lucide-react';
 import {
@@ -43,9 +43,13 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
   const tempUnit = unitPrefs.temperature;
+  // Memoise on the primitive unit so the chartData memo below actually caches;
+  // an inline arrow would be a new reference every render and defeat it.
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, tempUnit),
+    [tempUnit],
+  );
 
   const {
     data,
@@ -56,6 +60,10 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
     dataUpdatedAt,
     refetch,
   } = useClimateHistory(vid > 0 ? String(vid) : '');
+
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   const chartData = useMemo(
     () => buildChartData(data, toTemperatureDisplay),
@@ -105,7 +113,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => refetch()}
+        onRefresh={handleRefresh}
       >
         <WidgetChartSummary
           compact
@@ -128,7 +136,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       <WidgetChartSummary
         isEmpty={!hasData}
@@ -136,7 +144,15 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
         emptyIcon={<ThermometerSun className="h-5 w-5" />}
         stats={stats}
         chart={
-          <ResponsiveContainer width="100%" height="100%">
+          <div
+            className="h-full w-full"
+            role="img"
+            aria-label={t(
+              'widget.climateHistory.chartAria',
+              'Cabin and outside temperature history',
+            )}
+          >
+            <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
               {chartGrid}
               <defs>
@@ -199,6 +215,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
               />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         }
       />
     </WidgetShell>
