@@ -34,6 +34,13 @@ export function useKeyboardShortcuts(): ShortcutState {
   const [mode, setMode] = useState<ShortcutMode>('idle');
   const [showCheatSheet, setShowCheatSheet] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  // Mirror `mode` into a ref so the singleton keydown listener always reads
+  // the latest value. The effect deliberately does NOT depend on `mode`:
+  // re-subscribing on every transition (the previous behaviour) ran the
+  // effect cleanup the same commit the GOTO timeout was armed, clearing it
+  // before it could fire — so the 1.5s auto-reset back to 'idle' never ran.
+  const modeRef = useRef<ShortcutMode>(mode);
+  modeRef.current = mode;
 
   const toggleCheatSheet = useCallback(() => {
     setShowCheatSheet(prev => !prev);
@@ -41,12 +48,13 @@ export function useKeyboardShortcuts(): ShortcutState {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
+      const target = e.target as HTMLElement | null;
       if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
       ) {
         return;
       }
@@ -69,14 +77,14 @@ export function useKeyboardShortcuts(): ShortcutState {
       }
 
       // Ctrl+K or / → command palette
-      if ((e.key === 'k' && isCtrlOrMeta) || (e.key === '/' && !isCtrlOrMeta && mode === 'idle')) {
+      if ((e.key === 'k' && isCtrlOrMeta) || (e.key === '/' && !isCtrlOrMeta && modeRef.current === 'idle')) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('toggle-command-palette'));
         return;
       }
 
       // Enter GOTO mode
-      if (mode === 'idle' && e.key === 'g' && !isCtrlOrMeta) {
+      if (modeRef.current === 'idle' && e.key === 'g' && !isCtrlOrMeta) {
         setMode('goto');
         clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => setMode('idle'), GOTO_TIMEOUT_MS);
@@ -84,7 +92,7 @@ export function useKeyboardShortcuts(): ShortcutState {
       }
 
       // Handle GOTO target key
-      if (mode === 'goto') {
+      if (modeRef.current === 'goto') {
         const shortcut = GOTO_SHORTCUTS[e.key.toLowerCase()];
         if (shortcut) {
           e.preventDefault();
@@ -101,7 +109,7 @@ export function useKeyboardShortcuts(): ShortcutState {
       window.removeEventListener('keydown', handler);
       clearTimeout(timeoutRef.current);
     };
-  }, [mode, navigate, toggleCheatSheet]);
+  }, [navigate, toggleCheatSheet]);
 
   return { mode, showCheatSheet, toggleCheatSheet };
 }
