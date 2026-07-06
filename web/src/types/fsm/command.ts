@@ -65,17 +65,22 @@ export const COMMAND_DISALLOWED: DisallowedTransition<CommandState>[] = [
   { from: 'queued',    to: 'succeeded', reason: 'Must transit Sending to record API call' },
 ]
 
+// The six 'disallowed' cells mirror COMMAND_DISALLOWED exactly: they are
+// explicitly forbidden (with a documented reason), which is semantically
+// distinct from a plain `null` "no transition here". Keeping the two in sync
+// lets isValidTransition() report 'disallowed' vs null correctly — matching
+// the vehicle FSM convention (VEHICLE_COVERAGE.driving.asleep === 'disallowed').
 export const COMMAND_COVERAGE: CoverageMatrix<CommandState> = {
-  queued:         { queued: 'self', waking: 'valid', wake_confirmed: null,   wake_timeout: null, sending: 'valid', succeeded: null, failed: null, timed_out: null, retrying: null,   gave_up: 'valid' },
+  queued:         { queued: 'self', waking: 'valid', wake_confirmed: null,   wake_timeout: null, sending: 'valid', succeeded: 'disallowed', failed: null, timed_out: null, retrying: null,   gave_up: 'valid' },
   waking:         { queued: null,   waking: 'self',  wake_confirmed: 'valid', wake_timeout: 'valid', sending: null, succeeded: null, failed: null, timed_out: null, retrying: null, gave_up: null },
   wake_confirmed: { queued: null,   waking: null,    wake_confirmed: 'self', wake_timeout: null, sending: 'valid', succeeded: null, failed: null, timed_out: null, retrying: null,   gave_up: null },
   wake_timeout:   { queued: null,   waking: 'valid', wake_confirmed: null,   wake_timeout: 'self', sending: null, succeeded: null, failed: null, timed_out: null, retrying: null,   gave_up: 'valid' },
-  sending:        { queued: null,   waking: null,    wake_confirmed: null,   wake_timeout: null, sending: 'self', succeeded: 'valid', failed: 'valid', timed_out: 'valid', retrying: null, gave_up: null },
-  succeeded:      { queued: null,   waking: null,    wake_confirmed: null,   wake_timeout: null, sending: null,   succeeded: 'self', failed: null, timed_out: null, retrying: null,   gave_up: null },
+  sending:        { queued: null,   waking: 'disallowed', wake_confirmed: null,   wake_timeout: null, sending: 'self', succeeded: 'valid', failed: 'valid', timed_out: 'valid', retrying: null, gave_up: null },
+  succeeded:      { queued: null,   waking: 'disallowed', wake_confirmed: null,   wake_timeout: null, sending: null,   succeeded: 'self', failed: null, timed_out: null, retrying: 'disallowed', gave_up: null },
   failed:         { queued: null,   waking: null,    wake_confirmed: null,   wake_timeout: null, sending: null,   succeeded: null,   failed: 'self', timed_out: null, retrying: 'valid', gave_up: 'valid' },
   timed_out:      { queued: null,   waking: null,    wake_confirmed: null,   wake_timeout: null, sending: null,   succeeded: null,   failed: null, timed_out: 'self', retrying: 'valid', gave_up: 'valid' },
   retrying:       { queued: null,   waking: null,    wake_confirmed: null,   wake_timeout: null, sending: 'valid', succeeded: null, failed: null, timed_out: null, retrying: 'self',   gave_up: null },
-  gave_up:        { queued: null,   waking: null,    wake_confirmed: null,   wake_timeout: null, sending: null,   succeeded: null,   failed: null, timed_out: null, retrying: null,   gave_up: 'self' },
+  gave_up:        { queued: null,   waking: 'disallowed', wake_confirmed: null,   wake_timeout: null, sending: null,   succeeded: null,   failed: null, timed_out: null, retrying: 'disallowed', gave_up: 'self' },
 }
 
 export const COMMAND_TOASTS: ToastMap<CommandState> = {
