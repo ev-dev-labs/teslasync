@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Zap, BatteryCharging, Plug } from 'lucide-react';
 import { Sparkline } from '@/components/charts';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useChargingTelemetryLatest, useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { convertPowerFromSI } from '@/lib/unitConversion';
+import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
@@ -14,6 +16,7 @@ const MAX_POWER_HISTORY = 30;
 
 export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { unitPrefs } = useUnits();
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
@@ -42,8 +45,20 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
 
   const voltage = data?.charger_voltage ?? 0;
   const current = data?.charger_actual_current ?? 0;
-  const power = data?.charger_power_w ?? 0;
+  const power = data?.charger_power_w ?? 0; // SI watts
   const phases = data?.charger_phases ?? 0;
+
+  // `charger_power_w` is SI watts. Convert to the user's power unit (kW) at the
+  // render boundary — rendering the raw watt magnitude with a "kW" suffix was a
+  // 1000× overstatement (an 11 kW charger showed as "11,000.0 kW").
+  const powerDisplay = useMemo(
+    () => fmtNumber(convertPowerFromSI(power, unitPrefs.power), 1),
+    [power, unitPrefs.power],
+  );
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   // Derive charger type from voltage/phases heuristic
   const chargerType = useMemo(() => {
@@ -57,9 +72,12 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
     if (!data || !isCharging) return null;
     const pilot = data.charger_pilot_current ?? 0;
     if (pilot <= 0 || voltage <= 0) return null;
-    const theoreticalPower = (pilot * voltage * (phases > 0 ? phases : 1)) / 1000;
-    if (theoreticalPower <= 0) return null;
-    return Math.min(100, (power / theoreticalPower) * 100);
+    // Theoretical draw in WATTS (A × V × phases) so it matches the SI-watt
+    // `power`; the previous kW divisor made the ratio 1000× too small and
+    // pinned the result at the 100% clamp.
+    const theoreticalPowerW = pilot * voltage * (phases > 0 ? phases : 1);
+    if (theoreticalPowerW <= 0) return null;
+    return Math.min(100, (power / theoreticalPowerW) * 100);
   }, [data, isCharging, voltage, phases, power]);
 
   const coreStats = useMemo((): StatGridItem[] => {
@@ -79,8 +97,8 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
       },
       {
         label: t('widget.chargingTelemetry.power', 'Power'),
-        value: fmtNumber(power, 1),
-        unit: 'kW',
+        value: powerDisplay,
+        unit: unitPrefs.power,
         icon: <BatteryCharging className="h-3.5 w-3.5" />,
         valueColor: 'text-emerald-300',
       },
@@ -90,7 +108,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
         icon: <Gauge className="h-3.5 w-3.5" />,
       },
     ];
-  }, [isCharging, voltage, current, power, phases, t]);
+  }, [isCharging, voltage, current, powerDisplay, unitPrefs.power, phases, t]);
 
   // Wide-only extra stats
   const wideStats = useMemo((): StatGridItem[] => {
@@ -117,18 +135,18 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
     return (
       <WidgetShell
         loading={isLoading}
-        error={error ? String(error) : null}
+        error={isError && !data ? String(error ?? t('widget.chargingTelemetry.error', 'Unable to load charging telemetry')) : null}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => refetch()}
+        onRefresh={handleRefresh}
       >
         {isCharging ? (
           <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
             <BatteryCharging className="h-5 w-5 text-neon-green animate-pulse" />
             <span className="text-lg font-bold text-emerald-300">
-              {fmtNumber(power, 1)} kW
+              {powerDisplay} {unitPrefs.power}
             </span>
             <span className="text-2xs text-[var(--text-muted)]">
               {fmtNumber(voltage, 0)}V · {fmtNumber(current, 0)}A
@@ -151,12 +169,12 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
       title={t('widget.chargingTelemetry.title', 'Charging Telemetry')}
       icon={<Gauge className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      error={isError && !data ? String(error ?? t('widget.chargingTelemetry.error', 'Unable to load charging telemetry')) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       {isCharging ? (
         <div className="flex flex-col gap-3 h-full">
