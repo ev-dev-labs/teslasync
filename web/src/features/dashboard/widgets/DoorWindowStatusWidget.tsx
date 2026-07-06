@@ -8,33 +8,41 @@ import { WidgetStatusGrid, type StatusCell } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-type DoorWindowState = 'closed' | 'open' | 'partial' | 'unknown';
+// Exported for direct unit testing of the parse/label branches; the component
+// remains the module's default export and its behaviour is unchanged.
+export type DoorWindowState = 'closed' | 'open' | 'partial' | 'unknown';
 
-function toGridStatus(state: DoorWindowState): StatusCell['status'] {
+export function toGridStatus(state: DoorWindowState): StatusCell['status'] {
   if (state === 'closed') return 'ok';
   if (state === 'open' || state === 'partial') return 'warning';
   return 'unknown';
 }
 
-function toValueLabel(state: DoorWindowState, t: (key: string, fallback: string) => string): string {
+export function toValueLabel(state: DoorWindowState, t: (key: string, fallback: string) => string): string {
   if (state === 'closed') return t('widget.doorWindow.closed', 'Closed');
   if (state === 'open') return t('widget.doorWindow.open', 'Open');
   if (state === 'partial') return t('widget.doorWindow.partial', 'Partial');
   return '—';
 }
 
-function parseWindowState(val: unknown): DoorWindowState {
+export function parseWindowState(val: unknown): DoorWindowState {
   // Backend may emit window state as a native boolean.
   if (typeof val === 'boolean') return val ? 'open' : 'closed';
   const raw = asNonEmptyString(val);
   if (!raw) return 'unknown';
-  const lower = raw.toLowerCase();
-  if (lower === 'closed') return 'closed';
+  // Tesla's WindowState enum arrives as (optionally "WindowState"-prefixed)
+  // "Closed" | "PartiallyOpen" | "Opened" | "Unknown", with a legacy "0"
+  // sentinel meaning closed. Match defensively so an "Unknown" (or a prefixed
+  // "WindowStateClosed") value is never mis-reported as an open window — the
+  // old `=== 'closed'` / fall-through-to-'open' logic flagged both as open.
+  const lower = raw.toLowerCase().replace(/windowstate/g, '');
+  if (lower.includes('closed') || lower === '0') return 'closed';
   if (lower.includes('vent') || lower.includes('partial')) return 'partial';
-  return 'open';
+  if (lower.includes('open')) return 'open';
+  return 'unknown';
 }
 
-function parseDoorStates(doorState: unknown): Record<string, DoorWindowState> {
+export function parseDoorStates(doorState: unknown): Record<string, DoorWindowState> {
   const result: Record<string, DoorWindowState> = {
     fl: 'unknown',
     fr: 'unknown',
