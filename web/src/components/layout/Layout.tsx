@@ -955,11 +955,21 @@ export default function Layout() {
         active.scrollIntoView({
           block: 'nearest',
           inline: 'nearest',
-          behavior: reduced ? 'auto' : 'auto',
+          // Honour prefers-reduced-motion: instant jump when the user has
+          // asked for reduced motion, smooth scroll otherwise. (Both branches
+          // were previously 'auto', silently discarding the `reduced` check.)
+          behavior: reduced ? 'auto' : 'smooth',
         })
       } catch {
-        // Older Safari can throw on scrollIntoViewOptions — fall back to bool form.
-        active.scrollIntoView(false)
+        // Older Safari throws on scrollIntoViewOptions; some headless
+        // environments don't implement scrollIntoView at all. Fall back to the
+        // boolean form and swallow if even that is unavailable so a missing
+        // scroll primitive never breaks navigation.
+        try {
+          active.scrollIntoView(false)
+        } catch {
+          /* scrollIntoView unavailable — navigation still works without it */
+        }
       }
     })
     return () => window.cancelAnimationFrame(id)
