@@ -6325,7 +6325,8 @@
       "totalCost": "Total Cost",
       "costPerDist": "Cost / {{unit}}",
       "gasSavings": "Gas Savings",
-      "lifetime": "Lifetime"
+      "lifetime": "Lifetime",
+      "chartLabel": "Monthly EV charging cost breakdown"
     },
     "costForecast": {
       "noData": "No forecast data",
