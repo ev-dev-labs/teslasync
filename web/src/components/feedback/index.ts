@@ -13,7 +13,7 @@ export {
   ChartBlockSkeleton,
   TableSkeleton,
 } from './PageSkeleton';
-export { PageLoader } from './PageLoader';
+export { PageLoader, type PageLoaderProps } from './PageLoader';
 export { PageLoadSkeleton } from './PageLoadSkeleton';
 export { QueryError } from './QueryError';
 export { AlertBanner } from './AlertBanner';
