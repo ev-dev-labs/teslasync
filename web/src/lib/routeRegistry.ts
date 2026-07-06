@@ -171,5 +171,6 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/vehicles/:id/access', name: 'VehicleAccess', label: 'Vehicle Access', i18nKey: 'routes.vehicleAccess', hidden: true },
   { path: '/watch', name: 'WatchFace', label: 'Watch Face', i18nKey: 'routes.watchFace' },
   { path: '/weekly-digest', name: 'WeeklyDigest', label: 'Weekly Digest', i18nKey: 'routes.weeklyDigest' },
+  { path: '/what-if', name: 'WhatIf', label: 'What If', i18nKey: 'routes.whatIf' },
   { path: '/year-review/:year', name: 'YearReview', label: 'Year Review', i18nKey: 'routes.yearReview', hidden: true },
 ] as const
