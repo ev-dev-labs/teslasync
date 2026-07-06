@@ -141,8 +141,8 @@ export interface SpeedBucket {
   speed_bucket: string;
   speedBucket?: string;
   readings: number;
-  avg_power_kw?: number;
-  avgPowerKw?: number;
+  /** Average power draw for the bucket in watts (W, SI canonical). */
+  avg_power_w?: number;
   // Legacy field names (may not exist from API)
   range?: string;
   percentage?: number;
