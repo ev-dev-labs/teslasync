@@ -147,6 +147,7 @@ import (
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
 	apiregen "github.com/ev-dev-labs/teslasync/internal/api/regen"
 	apirouteeff "github.com/ev-dev-labs/teslasync/internal/api/routeeff"
+	apirul "github.com/ev-dev-labs/teslasync/internal/api/rul"
 	apisafety "github.com/ev-dev-labs/teslasync/internal/api/safety"
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
 	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
@@ -822,6 +823,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
 	batteryPassportHandler := batterypassport.NewBatteryPassportHandler(db)
 	carbonHandler := apicarbon.NewCarbonHandler(db)
+	rulHandler := apirul.NewRULHandler(db)
 	auditHandler := apiaudit.NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
@@ -2940,6 +2942,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// GET /api/v1/carbon/intensity route below.
 				r.Get("/carbon/summary", carbonHandler.Summary)
 				r.Get("/carbon/recommendation", carbonHandler.Recommendation)
+
+				// Remaining Useful Life — predictive component prognostics.
+				// /rul returns the whole health board (per-component remaining
+				// days/km, projected replace-by date, confidence, status) plus
+				// the nearest upcoming service; /rul/{component} adds the
+				// configured reference figures and a forecast series for the
+				// end-of-life chart. Both are read-only and rate-limit-free (the
+				// SPA reads them on page load; the prognosis is computed from
+				// cached daily roll-ups + a tiny config table).
+				r.Get("/rul", rulHandler.RUL)
+				r.Get("/rul/{component}", rulHandler.Component)
 
 				// Vehicle access: drivers & share invitations
 				r.Route("/drivers", func(r chi.Router) {

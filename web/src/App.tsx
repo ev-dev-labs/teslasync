@@ -129,6 +129,7 @@ const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspecto
 
 // Diagnostics
 const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
+const RemainingUsefulLife = lazy(() => import('./features/diagnostics/pages/RemainingUsefulLifePage'))
 
 // Admin & DevTools
 const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
@@ -520,6 +521,7 @@ export default function App() {
             the opt-in AILearnedAnomalyBaselines section when AI mode is on
             and the toggle is enabled). */}
         <Route path="analytics/anomalies" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
+        <Route path="diagnostics/rul" element={<SafeRoute name="RemainingUsefulLife"><RemainingUsefulLife /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature

@@ -12284,5 +12284,56 @@
       "climateOn": "Turn climate on",
       "climateOff": "Turn climate off"
     }
+  },
+  "rul": {
+    "title": "Remaining Useful Life",
+    "subtitle": "Predictive end-of-life forecasts for your wear components",
+    "selectVehicle": "Select a vehicle to view its component prognostics.",
+    "nextService": {
+      "title": "Next Service Due",
+      "by": "projected by",
+      "none": "No upcoming service projected — all components healthy.",
+      "error": "Unable to load service projection."
+    },
+    "board": {
+      "title": "Component Health",
+      "empty": "Component health will appear once telemetry is available."
+    },
+    "card": {
+      "aria": "Show forecast for {{label}}",
+      "health": "Health",
+      "remaining": "Remaining",
+      "distanceLeft": "Distance left",
+      "replaceBy": "Replace by",
+      "confidence": "Confidence",
+      "overdueNow": "Overdue"
+    },
+    "status": {
+      "healthy": "Healthy",
+      "watch": "Watch",
+      "replace_soon": "Replace soon",
+      "overdue": "Overdue"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "units": {
+      "years": "yr",
+      "days": "days",
+      "km": "km"
+    },
+    "forecast": {
+      "title": "Health Forecast",
+      "subtitle": "Projected health decaying to the end-of-life threshold, with a confidence band.",
+      "select": "Select a component above to see its forecast.",
+      "empty": "No forecast available for this component yet.",
+      "aria": "Area chart of projected component health declining to its end-of-life threshold, with a shaded confidence band",
+      "eol": "End of life",
+      "band": "Confidence band",
+      "projected": "Projected health",
+      "basis": "Basis"
+    }
   }
 }

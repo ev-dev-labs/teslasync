@@ -77,6 +77,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/data-repair', name: 'DataRepair', label: 'Data Repair', i18nKey: 'routes.dataRepair' },
   { path: '/db-health', name: 'DBHealthDashboard', label: 'DB Health Dashboard', i18nKey: 'routes.dBHealthDashboard' },
   { path: '/dev-tools', name: 'DevTools', label: 'Dev Tools', i18nKey: 'routes.devTools' },
+  { path: '/diagnostics/rul', name: 'RemainingUsefulLife', label: 'Remaining Useful Life', i18nKey: 'routes.remainingUsefulLife' },
   { path: '/digital-twin', name: 'DigitalTwin', label: 'Digital Twin', i18nKey: 'routes.digitalTwin' },
   { path: '/docs/status-api', name: 'StatusApiDocs', label: 'Status Api Docs', i18nKey: 'routes.statusApiDocs' },
   { path: '/drive-dna', name: 'DriveDNA', label: 'Drive DNA', i18nKey: 'routes.driveDNA' },
