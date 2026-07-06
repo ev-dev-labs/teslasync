@@ -62,10 +62,16 @@ const (
 		WHERE t.id = $1::bigint
 		FOR UPDATE OF t`
 
+	// UpsertTrip persists only the four columns the trips table owns:
+	//   $1 id, $2 vehicle_id, $3 started_at, $4 completed_at.
+	// Distance, energy, speed and geo fields are derived at read time from the
+	// joined drives (see tripSelectFrom), so they are never written here.
+	// ended_at is NULL for an in-progress trip whose completed_at still equals
+	// its started_at sentinel.
 	UpsertTrip = `
 		INSERT INTO trips (
 			id, vehicle_id, started_at, ended_at
-		) VALUES ($1::bigint, $2::bigint, $14, NULLIF($15, $14))
+		) VALUES ($1::bigint, $2::bigint, $3, NULLIF($4, $3))
 		ON CONFLICT (id) DO UPDATE SET
 			vehicle_id = EXCLUDED.vehicle_id,
 			started_at = EXCLUDED.started_at,

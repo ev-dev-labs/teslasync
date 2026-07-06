@@ -72,10 +72,11 @@ func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip
 }
 
 func (r *tripRepository) Save(ctx context.Context, t *trip.Trip) error {
+	// The trips table owns only id, vehicle_id, started_at and completed_at;
+	// every other Trip field is derived from the joined drives at read time,
+	// so UpsertTrip binds exactly these four parameters.
 	_, err := r.pool.Exec(ctx, queries.UpsertTrip,
-		t.ID, t.VehicleID, t.StartLatitude, t.StartLongitude, t.EndLatitude, t.EndLongitude,
-		t.StartAddress, t.EndAddress, t.DistanceM, t.EnergyUsedWh,
-		t.EfficiencyWhPerM, t.MaxSpeedMps, t.FSMState, t.StartedAt, t.CompletedAt, t.CreatedAt,
+		t.ID, t.VehicleID, t.StartedAt, t.CompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("saving trip %s: %w", t.ID, err)
