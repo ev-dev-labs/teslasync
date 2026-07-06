@@ -175,6 +175,7 @@ import (
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
+	apitimemachine "github.com/ev-dev-labs/teslasync/internal/api/timemachine"
 	apitirepressure "github.com/ev-dev-labs/teslasync/internal/api/tirepressure"
 	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
@@ -833,6 +834,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
 	tempImpactHandler := tempimpact.NewHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
+	timeMachineHandler := apitimemachine.NewTimeMachineHandler(db)
 	batteryCellsHandler := batterycells.NewHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
 	rangeProjectionHandler := apirangeproj.NewRangeProjectionHandler(db, stateReader)
 	drivetrainHealthHandler := apidrivetrain.NewDrivetrainHealthHandler(db, stateReader)
@@ -2905,6 +2907,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/battery/cells", batteryCellsHandler.GetByVehicle)
 				r.Get("/battery/projected-range", rangeProjectionHandler.GetByVehicle)
 				r.Get("/weekly-digest", weeklyDigestHandler.Get)
+
+				// Vehicle Time Machine — reconstruct the complete signal
+				// state at any past instant from the signal_log cold path.
+				// Both routes are read-only and rate-limit-free: the SPA
+				// polls them as the user drags the timeline scrubber, and
+				// the point-in-time query is index-served + field-capped.
+				r.Get("/time-machine", timeMachineHandler.State)
+				r.Get("/time-machine/range", timeMachineHandler.Range)
 
 				// Vehicle access: drivers & share invitations
 				r.Route("/drivers", func(r chi.Router) {

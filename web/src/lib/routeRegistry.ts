@@ -158,6 +158,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/tesla-features', name: 'TeslaFeatureFlags', label: 'Tesla Feature Flags', i18nKey: 'routes.teslaFeatureFlags' },
   { path: '/tesla-orders', name: 'TeslaOrders', label: 'Tesla Orders', i18nKey: 'routes.teslaOrders' },
   { path: '/tesla-region', name: 'TeslaRegion', label: 'Tesla Region', i18nKey: 'routes.teslaRegion' },
+  { path: '/time-machine', name: 'TimeMachine', label: 'Time Machine', i18nKey: 'routes.timeMachine' },
   { path: '/timeline', name: 'Timeline', label: 'Timeline', i18nKey: 'routes.timeline' },
   { path: '/tire-pressure', name: 'TirePressure', label: 'Tire Pressure', i18nKey: 'routes.tirePressure' },
   { path: '/trip-planner', name: 'TripPlanner', label: 'Trip Planner', i18nKey: 'routes.tripPlanner' },
