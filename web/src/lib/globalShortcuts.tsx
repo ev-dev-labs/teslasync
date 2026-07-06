@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GOTO_SHORTCUTS } from '@/hooks/useKeyboardShortcuts'
 import { useShortcut, type ShortcutDefinition } from '@/hooks/useShortcutRegistry'
-import { commandRegistry } from '@/lib/commandRegistry'
+import { commandRegistry, type CommandDefinition } from '@/lib/commandRegistry'
 
 /**
  * Registers global shortcuts.
@@ -72,11 +72,11 @@ export function GlobalShortcuts(): null {
     )
 
     const palette: ShortcutDefinition[] = commandRegistry
-      .filter((c) => c.shortcut)
+      .filter((c): c is CommandDefinition & { shortcut: string } => Boolean(c.shortcut))
       .map(
         (c): ShortcutDefinition => ({
           id: `global.palette.cmd.${c.id}`,
-          keys: [c.shortcut as string],
+          keys: [c.shortcut],
           description: t(c.labelKey, c.labelFallback),
           group: groupCommands,
           scope: 'global',
