@@ -8,7 +8,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 
-interface ClusterPoint {
+export interface ClusterPoint {
   lat: number;
   lon: number;
   count: number;
@@ -20,7 +20,7 @@ interface ClusterPoint {
  * Grid-based density clustering: bucket positions by rounded lat/lon,
  * count visits per bucket, then normalise to 0–1 intensity.
  */
-function clusterPositions(
+export function clusterPositions(
   positions: { latitude: number; longitude: number }[],
   precision: number,
 ): ClusterPoint[] {
@@ -56,7 +56,7 @@ function clusterPositions(
   return result;
 }
 
-function centroid(points: ClusterPoint[]): [number, number] {
+export function centroid(points: ClusterPoint[]): [number, number] {
   if (points.length === 0) return [37.7749, -122.4194]; // fallback SF
   let latSum = 0;
   let lonSum = 0;
@@ -68,12 +68,14 @@ function centroid(points: ClusterPoint[]): [number, number] {
 }
 
 /** Map intensity (0–1) to an RGBA colour string (cool cyan → hot magenta) */
-function intensityColor(intensity: number): string {
+export function intensityColor(intensity: number): string {
+  // Clamp so malformed intensities can never emit out-of-gamut channels.
+  const k = intensity < 0 ? 0 : intensity > 1 ? 1 : intensity;
   // Low: teal-500 → Mid: amber-500 → High: rose-500
-  const r = Math.round(20 + intensity * 225);
-  const g = Math.round(184 - intensity * 120);
-  const b = Math.round(166 + intensity * 60);
-  return `rgba(${r},${g},${b},${0.35 + intensity * 0.55})`;
+  const r = Math.round(20 + k * 225);
+  const g = Math.round(184 - k * 120);
+  const b = Math.round(166 + k * 60);
+  return `rgba(${r},${g},${b},${0.35 + k * 0.55})`;
 }
 
 export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) {
@@ -87,6 +89,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
     isFetching,
     isStale,
     isError,
+    error,
     dataUpdatedAt,
     refetch,
   } = useVehiclePositions(id);
@@ -110,6 +113,9 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
 
   const shellProps = {
     loading: isLoading,
+    // Forward the fetch error so a failure surfaces the shared QueryError
+    // panel instead of masquerading as the "No position data" empty state.
+    error: error ? String(error) : null,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -120,13 +126,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
   // ─── Compact layout (1-col) ───
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps} noPadding
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps} noPadding>
         <WidgetMapView
           center={center}
           zoom={11}
