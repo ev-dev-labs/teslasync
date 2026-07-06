@@ -75,6 +75,20 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
   const items = data?.items ?? [];
   const summary = data?.summary;
   const successRate = summary?.success_rate ?? 0;
+  const totalRuns = summary?.total_executions ?? 0;
+  const hasRuns = totalRuns > 0 || items.length > 0;
+
+  // A red "danger" chip for a 0% success rate must mean "runs are failing",
+  // not "nothing has run yet" — otherwise a fresh install with zero executions
+  // looks like a broken one. Fall back to a neutral chip until there is at
+  // least one run to grade.
+  const rateVariant = !hasRuns
+    ? 'neutral'
+    : successRate >= 90
+      ? 'success'
+      : successRate >= 50
+        ? 'warning'
+        : 'danger';
 
   const feedItems = useMemo<EventFeedItem[]>(
     () =>
@@ -106,6 +120,11 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
+      error={
+        isError && !data
+          ? t('widget.automationHistoryError', 'Failed to load automation history')
+          : undefined
+      }
       onRefresh={() => refetch()}
     >
       {isCompact ? (
@@ -126,12 +145,12 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
         <div className="flex-1 min-h-0 flex flex-col gap-2">
           {/* Success rate header */}
           <div className="flex items-center gap-2 pb-1.5 border-b border-white/[0.06]">
-            <Badge variant={successRate >= 90 ? 'success' : successRate >= 50 ? 'warning' : 'danger'}>
+            <Badge variant={rateVariant}>
               {fmtNumber(successRate, 1)}% {t('widget.successRate', 'Success Rate')}
             </Badge>
             {summary && (
               <span className="text-2xs text-[var(--text-muted)]">
-                {fmtInt(summary.total_executions)} {t('widget.totalRuns', 'runs')}
+                {fmtInt(totalRuns)} {t('widget.totalRuns', 'runs')}
               </span>
             )}
           </div>
