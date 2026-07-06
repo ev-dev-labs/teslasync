@@ -6029,6 +6029,7 @@
     }
   },
   "widget": {
+    "moreInfoAbout": "More info about {{title}}",
     "alertFeed": "Alert Feed",
     "noAlerts": "No alerts yet",
     "analyticsSummary": {
