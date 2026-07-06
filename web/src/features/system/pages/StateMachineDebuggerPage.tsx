@@ -339,7 +339,7 @@ export default function StateMachineDebuggerPage() {
 
   const fsmTypeOptions = FSM_TYPE_OPTIONS.map((o) => ({
     value: o.value,
-    label: o.label,
+    label: t(o.i18nKey, o.label),
   }));
 
   const perPageOptions = [
