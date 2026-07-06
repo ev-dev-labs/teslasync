@@ -30,7 +30,7 @@ function buildChartData(
   return distribution.map((b) => {
     const label = formatBucketLabel(b.speed_bucket ?? b.speedBucket ?? '', toSpeedDisplay);
     const freq = totalReadings > 0 ? ((b.readings ?? 0) / totalReadings) * 100 : 0;
-    const eff = b.avg_power_kw ?? b.avgPowerKw ?? 0;
+    const eff = b.avg_power_w ?? b.avgPowerW ?? 0;
     return { bucket: label, frequency: freq, efficiency: eff };
   });
 }
