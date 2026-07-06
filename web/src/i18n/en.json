@@ -1,4 +1,19 @@
 {
+  "driveDna": {
+    "title": "Drive DNA",
+    "heading": "Generative telemetry art",
+    "blurb": "Every drive has a unique signature. This bloom encodes speed, power flow, elevation and battery into a reproducible fingerprint.",
+    "pickDrive": "Choose a drive",
+    "noDrives": "No drives found for this vehicle yet.",
+    "noTelemetry": "This drive has no telemetry to synthesize.",
+    "artAlt": "Drive DNA visualization, signature {{sig}}",
+    "genome": "Genome",
+    "samples": "Samples",
+    "topSpeed": "Top speed",
+    "climb": "Elevation climb",
+    "regen": "Regen share",
+    "download": "Download SVG"
+  },
   "global": {
     "loading": "Loading"
   },

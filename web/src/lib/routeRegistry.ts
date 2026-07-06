@@ -77,6 +77,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/dev-tools', name: 'DevTools', label: 'Dev Tools', i18nKey: 'routes.devTools' },
   { path: '/digital-twin', name: 'DigitalTwin', label: 'Digital Twin', i18nKey: 'routes.digitalTwin' },
   { path: '/docs/status-api', name: 'StatusApiDocs', label: 'Status Api Docs', i18nKey: 'routes.statusApiDocs' },
+  { path: '/drive-dna', name: 'DriveDNA', label: 'Drive DNA', i18nKey: 'routes.driveDNA' },
   { path: '/drive-score', name: 'DriveScore', label: 'Drive Score', i18nKey: 'routes.driveScore' },
   { path: '/drives', name: 'Drives', label: 'Drives', i18nKey: 'routes.drives' },
   { path: '/drives/:id', name: 'DriveDetail', label: 'Drive Detail', i18nKey: 'routes.driveDetail', hidden: true },

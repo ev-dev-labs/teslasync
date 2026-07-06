@@ -64,6 +64,7 @@ const SpeedProfile = lazy(() => import('./features/driving/pages/SpeedProfilePag
 const RegenEfficiency = lazy(() => import('./features/driving/pages/RegenEfficiencyPage'))
 const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficiencyPage'))
 const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'))
+const DriveDNA = lazy(() => import('./features/driving/pages/DriveDNAPage'))
 
 // Analytics & Statistics
 const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
@@ -562,6 +563,7 @@ export default function App() {
         <Route path="temperature-impact" element={<SafeRoute name="TemperatureImpact"><TemperatureImpact /></SafeRoute>} />
         <Route path="route-efficiency" element={<SafeRoute name="RouteEfficiency"><RouteEfficiency /></SafeRoute>} />
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
+                <Route path="drive-dna" element={<SafeRoute name="DriveDNA"><DriveDNA /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
