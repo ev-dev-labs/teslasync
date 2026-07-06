@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { getApiBase } from '@/lib/resilience'
 import { request } from '@/api/client'
 import { broadcast, subscribe } from '@/lib/broadcast'
@@ -277,6 +277,22 @@ function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
   root.classList.toggle('light-mode', mode.colorScheme === 'light')
 }
 
+/**
+ * System `prefers-color-scheme: dark` lookup that never throws. `matchMedia`
+ * is unavailable in some embedded webviews, SSR passes, and test environments;
+ * when it is missing we fall back to the app's dark-first default so `auto`
+ * mode still resolves to a sensible palette instead of crashing the provider
+ * on its very first render.
+ */
+function prefersDarkScheme(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  } catch {
+    return true
+  }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeId] = useState<ThemeId>(() => {
     const saved = localStorage.getItem('teslasync-theme')
@@ -317,12 +333,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       .finally(() => setInitialized(true))
   }, [])
 
-  const currentThemes = { ...themes, custom: buildCustomTheme(customColors.primary, customColors.accent) }
+  const currentThemes = useMemo(
+    () => ({ ...themes, custom: buildCustomTheme(customColors.primary, customColors.accent) }),
+    [customColors.primary, customColors.accent],
+  )
   const theme = currentThemes[themeId]
 
   // Auto mode: resolve to light or dark based on system preference
-  const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const [systemDark, setSystemDark] = useState(prefersDarkScheme)
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches)
     mq.addEventListener('change', handler)
@@ -350,18 +370,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }).catch(() => {})
   }, [initialized])
 
-  const setTheme = (id: ThemeId) => {
+  const setTheme = useCallback((id: ThemeId) => {
     setThemeId(id)
     saveThemeToBackend(id, modeId, customColors.primary, customColors.accent)
     broadcast({ type: 'theme.changed', themeId: id, modeId })
-  }
-  const setMode = (id: ModeId) => {
+  }, [saveThemeToBackend, modeId, customColors.primary, customColors.accent])
+
+  const setMode = useCallback((id: ModeId) => {
     setModeId(id)
     saveThemeToBackend(themeId, id, customColors.primary, customColors.accent)
     broadcast({ type: 'theme.changed', themeId, modeId: id })
-  }
+  }, [saveThemeToBackend, themeId, customColors.primary, customColors.accent])
 
-  const setCustomColors = (primary: string, accent: string) => {
+  const setCustomColors = useCallback((primary: string, accent: string) => {
     localStorage.setItem('teslasync-custom-primary', primary)
     localStorage.setItem('teslasync-custom-accent', accent)
     setCustomColorsState({ primary, accent })
@@ -369,7 +390,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     saveThemeToBackend('custom', modeId, primary, accent)
     broadcast({ type: 'theme.customColors', primary, accent })
     broadcast({ type: 'theme.changed', themeId: 'custom', modeId })
-  }
+  }, [saveThemeToBackend, modeId])
 
   // Cross-tab theme sync: mirror changes from other tabs without rebroadcasting
   // or re-persisting, which would loop and duplicate backend writes.
@@ -388,8 +409,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const value = useMemo<ThemeContextValue>(
+    () => ({ themeId, modeId, theme, mode, setTheme, setMode, setCustomColors, themes: currentThemes, modes }),
+    [themeId, modeId, theme, mode, setTheme, setMode, setCustomColors, currentThemes],
+  )
+
   return (
-    <ThemeContext.Provider value={{ themeId, modeId, theme, mode, setTheme, setMode, setCustomColors, themes: currentThemes, modes }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )
