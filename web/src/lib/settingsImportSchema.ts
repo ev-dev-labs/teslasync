@@ -73,7 +73,12 @@ export function validateSettingsBundle(input: unknown): SettingsBundle | string 
   const obj = input as Record<string, unknown>;
 
   const version = obj.schema_version;
-  if (typeof version !== 'number' || !Number.isFinite(version) || version < 1) {
+  // `Number.isInteger` already rejects NaN, ±Infinity and non-integral
+  // floats (e.g. 1.5), so it subsumes the old `Number.isFinite` guard while
+  // also enforcing the "integer" half of the documented contract — a
+  // fractional version previously slipped through to the confusing
+  // "newer than this build supports" branch instead of this message.
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
     return 'schema_version must be a positive integer';
   }
   if (version > SETTINGS_BUNDLE_SCHEMA_VERSION) {
@@ -124,9 +129,13 @@ export function validateSettingsBundle(input: unknown): SettingsBundle | string 
  * without exposing the hour (which would be locale-confusing).
  */
 export function defaultExportFilename(now: Date = new Date()): string {
-  const yyyy = now.getUTCFullYear();
-  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(now.getUTCDate()).padStart(2, '0');
+  // Guard against an invalid Date (e.g. `new Date('nope')`) — the getUTC*
+  // accessors would otherwise return NaN and yield a literal
+  // "teslasync-settings-NaNNaNNaN.json" that the browser would happily save.
+  const when = Number.isNaN(now.getTime()) ? new Date() : now;
+  const yyyy = when.getUTCFullYear();
+  const mm = String(when.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(when.getUTCDate()).padStart(2, '0');
   return `teslasync-settings-${yyyy}${mm}${dd}.json`;
 }
 
@@ -144,11 +153,16 @@ export function summariseImportResult(result: SettingsImportResult): {
   let added = 0;
   let updated = 0;
   let skipped = 0;
-  for (const sec of Object.values(result.sections)) {
+  // `result`/`sections` are typed non-null, but this value comes off the
+  // wire — a truncated or partial API response must summarise to zeroes
+  // rather than throw on `Object.values(undefined)`. Likewise a section
+  // missing an individual count must contribute 0, never NaN (which would
+  // poison the "Apply N changes" label the page derives from `total`).
+  for (const sec of Object.values(result?.sections ?? {})) {
     if (sec == null) continue;
-    added += sec.added;
-    updated += sec.updated;
-    skipped += sec.skipped;
+    added += sec.added ?? 0;
+    updated += sec.updated ?? 0;
+    skipped += sec.skipped ?? 0;
   }
   return { added, updated, skipped, total: added + updated };
 }
