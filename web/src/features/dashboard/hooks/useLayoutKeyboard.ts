@@ -69,9 +69,9 @@ export function useLayoutKeyboard({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const tag = target.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
         return;
       }
 
@@ -110,10 +110,15 @@ export function useLayoutKeyboard({
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
       if (!isCtrlOrMeta) return;
 
-      if (e.key === 'z' && !e.shiftKey && canUndo) {
+      // Browsers report the *uppercase* letter while Shift is held, so
+      // Ctrl+Shift+Z arrives as key "Z" (and CapsLock turns Ctrl+Z into "Z").
+      // Match case-insensitively — otherwise redo-via-Ctrl+Shift+Z silently
+      // never fires.
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey && canUndo) {
         e.preventDefault();
         onUndo();
-      } else if ((e.key === 'y' || (e.key === 'z' && e.shiftKey)) && canRedo) {
+      } else if ((key === 'y' || (key === 'z' && e.shiftKey)) && canRedo) {
         e.preventDefault();
         onRedo();
       }
