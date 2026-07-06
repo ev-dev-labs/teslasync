@@ -19,9 +19,21 @@
  */
 import L from 'leaflet';
 
-const w = globalThis as unknown as { L?: typeof L };
-if (typeof window !== 'undefined' && !w.L) {
-  w.L = L;
+// Write to — and guard on — the SAME object the plugins read (`window`). In
+// browsers `window === globalThis`, so this matches the previous `globalThis`
+// target there, but keeping both the check and the assignment on `window`
+// honors the documented `window.L` contract above and avoids a silent
+// mismatch in the rare environments where the two diverge (a bare `globalThis`
+// write would leave `window.L` undefined and the plugin still broken).
+//
+// The `!w.L` guard keeps the mirror idempotent and, crucially, never clobbers
+// a leaflet already installed by a CDN `<script>` tag or an earlier evaluation
+// of this module.
+if (typeof window !== 'undefined') {
+  const w = window as unknown as { L?: typeof L };
+  if (!w.L) {
+    w.L = L;
+  }
 }
 
 export {};
