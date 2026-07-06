@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wrench, CheckCircle2, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -13,20 +13,25 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
+/** SI prefix: 1 km = 1000 m. Restores true SI metres from the km-scaled fields. */
+const METERS_PER_KM = 1000;
+
+export type Urgency = 'overdue' | 'soon' | 'good';
+
 /** Determine urgency based on interval months remaining (heuristic). */
-function getUrgency(intervalMonths: number): 'overdue' | 'soon' | 'good' {
+export function getUrgency(intervalMonths: number): Urgency {
   if (intervalMonths <= 0) return 'overdue';
   if (intervalMonths <= 3) return 'soon';
   return 'good';
 }
 
-function urgencyBadgeVariant(urgency: string): 'danger' | 'warning' | 'success' {
+export function urgencyBadgeVariant(urgency: Urgency): 'danger' | 'warning' | 'success' {
   if (urgency === 'overdue') return 'danger';
   if (urgency === 'soon') return 'warning';
   return 'success';
 }
 
-function urgencyLabel(urgency: string, t: (k: string, f: string) => string): string {
+export function urgencyLabel(urgency: Urgency, t: (k: string, f: string) => string): string {
   if (urgency === 'overdue') return t('widget.maintenance.overdue', 'Overdue');
   if (urgency === 'soon') return t('widget.maintenance.soon', 'Soon');
   return t('widget.maintenance.good', 'Good');
@@ -35,9 +40,16 @@ function urgencyLabel(urgency: string, t: (k: string, f: string) => string): str
 export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-
   const distanceUnit = unitPrefs.distance;
+  // Odometer + service-interval distances arrive in kilometres. Restate them as
+  // SI metres before the SI→display converter, otherwise the value is off by the
+  // 1000× km→m prefix (e.g. 20,000 km would render as "20 km" / "12 mi").
+  const toDistanceDisplay = useCallback(
+    (km: number | null | undefined) =>
+      convertDistanceFromSI((km ?? 0) * METERS_PER_KM, distanceUnit),
+    [distanceUnit],
+  );
+
   const { formatCurrency } = useFormatting();
   const { formatDate } = useDateFormat();
 
@@ -87,7 +99,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
     const itemMap = new Map(items.map((m) => [m.id, m]));
     return recentRecords.map((rec) => {
       const mi = itemMap.get(rec.itemId);
-      const odometerDisplay = fmtNumber(toDistanceDisplay((rec.odometerKm ?? 0) * 0.621371), 0);
+      const odometerDisplay = fmtNumber(toDistanceDisplay(rec.odometerKm), 0);
       return {
         icon: <CheckCircle2 className="h-3 w-3" />,
         title: mi?.name ?? rec.itemId ?? '—',
@@ -105,25 +117,30 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   const updatedAt = Math.max(maintUpdatedAt ?? 0, recordsUpdatedAt ?? 0);
   const hasData = items.length > 0 || records.length > 0;
 
+  const handleRefresh = useCallback(() => {
+    maintRefetch();
+  }, [maintRefetch]);
+
   const shellProps = {
     loading: isLoading,
     updatedAt,
     isFetching: maintFetching || recordsFetching,
     isStale: maintStale,
     isError: maintIsError,
-    onRefresh: () => maintRefetch(),
+    onRefresh: handleRefresh,
   };
 
   // ── Compact layout (1×2): days until next + item name ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={maintUpdatedAt}
-      isFetching={maintFetching}
-      isStale={maintStale}
-      isError={maintIsError}
-      onRefresh={() => maintRefetch()}
-    >
+      <WidgetShell
+        loading={isLoading}
+        updatedAt={maintUpdatedAt}
+        isFetching={maintFetching}
+        isStale={maintStale}
+        isError={maintIsError}
+        onRefresh={handleRefresh}
+      >
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           {nextItem ? (
             <>
@@ -181,7 +198,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
                   {t('widget.maintenance.months', 'mo')}
                 </span>
                 <span className="flex items-center gap-1">
-                  {fmtNumber(toDistanceDisplay((nextItem.intervalKm ?? 0) * 0.621371), 0)}{' '}
+                  {fmtNumber(toDistanceDisplay(nextItem.intervalKm), 0)}{' '}
                   {distanceUnit}
                 </span>
                 {nextItem.estimatedCostUsd != null && nextItem.estimatedCostUsd > 0 && (
