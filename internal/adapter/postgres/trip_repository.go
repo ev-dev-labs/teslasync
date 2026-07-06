@@ -16,7 +16,7 @@ import (
 )
 
 type tripRepository struct {
-	pool *pgxpool.Pool
+	pool pgxPool
 }
 
 func NewTripRepository(pool *pgxpool.Pool) repository.TripRepository {
@@ -44,7 +44,11 @@ func (r *tripRepository) GetByVehicleID(ctx context.Context, vehicleID string) (
 	if err != nil {
 		return nil, fmt.Errorf("querying trips for vehicle %s: %w", vehicleID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	trips, err := pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	if err != nil {
+		return nil, fmt.Errorf("collecting trips for vehicle %s: %w", vehicleID, err)
+	}
+	return trips, nil
 }
 
 func (r *tripRepository) ListByDateRange(ctx context.Context, vehicleID string, from, to time.Time) ([]trip.Trip, error) {
@@ -52,7 +56,11 @@ func (r *tripRepository) ListByDateRange(ctx context.Context, vehicleID string, 
 	if err != nil {
 		return nil, fmt.Errorf("listing trips for vehicle %s: %w", vehicleID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	trips, err := pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	if err != nil {
+		return nil, fmt.Errorf("collecting trips for vehicle %s: %w", vehicleID, err)
+	}
+	return trips, nil
 }
 
 func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip.Trip, error) {
@@ -72,10 +80,10 @@ func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip
 }
 
 func (r *tripRepository) Save(ctx context.Context, t *trip.Trip) error {
+	// Only the trips table's own columns are persisted; the derived fields are
+	// reconstructed at read time (see queries.UpsertTrip / tripSelectFrom).
 	_, err := r.pool.Exec(ctx, queries.UpsertTrip,
-		t.ID, t.VehicleID, t.StartLatitude, t.StartLongitude, t.EndLatitude, t.EndLongitude,
-		t.StartAddress, t.EndAddress, t.DistanceM, t.EnergyUsedWh,
-		t.EfficiencyWhPerM, t.MaxSpeedMps, t.FSMState, t.StartedAt, t.CompletedAt, t.CreatedAt,
+		t.ID, t.VehicleID, t.StartedAt, t.CompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("saving trip %s: %w", t.ID, err)

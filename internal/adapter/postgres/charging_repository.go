@@ -16,7 +16,7 @@ import (
 )
 
 type chargingRepository struct {
-	pool *pgxpool.Pool
+	pool pgxPool
 }
 
 func NewChargingSessionRepository(pool *pgxpool.Pool) repository.ChargingSessionRepository {
@@ -44,7 +44,11 @@ func (r *chargingRepository) GetByVehicleID(ctx context.Context, vehicleID strin
 	if err != nil {
 		return nil, fmt.Errorf("querying charging sessions for vehicle %s: %w", vehicleID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[charging.ChargingSession])
+	sessions, err := pgx.CollectRows(rows, pgx.RowToStructByName[charging.ChargingSession])
+	if err != nil {
+		return nil, fmt.Errorf("collecting charging sessions for vehicle %s: %w", vehicleID, err)
+	}
+	return sessions, nil
 }
 
 func (r *chargingRepository) ListByDateRange(ctx context.Context, vehicleID string, from, to time.Time) ([]charging.ChargingSession, error) {
@@ -52,7 +56,11 @@ func (r *chargingRepository) ListByDateRange(ctx context.Context, vehicleID stri
 	if err != nil {
 		return nil, fmt.Errorf("listing charging sessions for vehicle %s: %w", vehicleID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[charging.ChargingSession])
+	sessions, err := pgx.CollectRows(rows, pgx.RowToStructByName[charging.ChargingSession])
+	if err != nil {
+		return nil, fmt.Errorf("collecting charging sessions for vehicle %s: %w", vehicleID, err)
+	}
+	return sessions, nil
 }
 
 func (r *chargingRepository) GetByIDForUpdate(ctx context.Context, id string) (*charging.ChargingSession, error) {
