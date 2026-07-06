@@ -3,7 +3,15 @@
  * Tesla sends values like "DistanceUnitMiles", "TemperatureUnitCelsius",
  * "ChargeUnitPercent", "PressureUnitPsi" — this strips the prefix and returns
  * the human-readable value.
+ *
+ * The backend serializes raw `signal.SignalValue` (`interface{}`) directly, so
+ * a nominally "string" setting field can arrive at runtime as a bool/number.
+ * Every helper accepts `unknown` and narrows defensively via `asNonEmptyString`
+ * — never calling `.toLowerCase()`/`.includes()` on a value whose runtime shape
+ * we don't control (mirrors safetyEnum.ts / parseEnums.ts).
  */
+
+import { asNonEmptyString } from './typeGuards'
 
 const enumMappings: Record<string, Record<string, string>> = {
   distance: {
@@ -41,37 +49,45 @@ const enumMappings: Record<string, Record<string, string>> = {
   },
 }
 
-/** Parse a Tesla setting enum to clean display value */
-export function parseSettingEnum(value: string | undefined | null, category: keyof typeof enumMappings): string {
-  if (!value) return '—'
-  const lower = value.toLowerCase().replace(/[^a-z]/g, '')
-  return enumMappings[category]?.[lower] ?? value
+/** Parse a Tesla setting enum to clean display value. Returns '—' for
+ *  nullish / non-string / empty input. */
+export function parseSettingEnum(value: unknown, category: keyof typeof enumMappings): string {
+  const raw = asNonEmptyString(value)
+  if (!raw) return '—'
+  const lower = raw.toLowerCase().replace(/[^a-z]/g, '')
+  return enumMappings[category]?.[lower] ?? raw
 }
 
-/** Detect if setting means imperial/miles */
-export function isSettingMiles(value: string | undefined | null): boolean {
-  if (!value) return false
-  const lower = value.toLowerCase()
-  return lower.includes('mile')
+/** Detect if a setting means imperial/miles. Matches the full Tesla enum
+ *  ("DistanceUnitMiles"/"ChargeUnitMiles") and the codec-stripped "mi"
+ *  abbreviation — both of which the enumMappings table above lists. Without
+ *  the "mi" branch a car reporting the short form would sync the app to km. */
+export function isSettingMiles(value: unknown): boolean {
+  const raw = asNonEmptyString(value)
+  if (!raw) return false
+  const lower = raw.toLowerCase()
+  return lower.includes('mile') || lower.replace(/[^a-z]/g, '') === 'mi'
 }
 
-/** Detect if setting means Fahrenheit */
-export function isSettingFahrenheit(value: string | undefined | null): boolean {
-  if (!value) return false
-  const lower = value.toLowerCase()
-  return lower.includes('fahr')
+/** Detect if a setting means Fahrenheit. Matches the full Tesla enum
+ *  ("TemperatureUnitFahrenheit") and the "f" abbreviation. */
+export function isSettingFahrenheit(value: unknown): boolean {
+  const raw = asNonEmptyString(value)
+  if (!raw) return false
+  const lower = raw.toLowerCase()
+  return lower.includes('fahr') || lower.replace(/[^a-z]/g, '') === 'f'
 }
 
-/** Detect if setting means PSI */
-export function isSettingPSI(value: string | undefined | null): boolean {
-  if (!value) return false
-  const lower = value.toLowerCase()
-  return lower.includes('psi')
+/** Detect if a setting means PSI. */
+export function isSettingPSI(value: unknown): boolean {
+  const raw = asNonEmptyString(value)
+  if (!raw) return false
+  return raw.toLowerCase().includes('psi')
 }
 
-/** Detect if setting means Bar */
-export function isSettingBar(value: string | undefined | null): boolean {
-  if (!value) return false
-  const lower = value.toLowerCase()
-  return lower.includes('bar')
+/** Detect if a setting means Bar. */
+export function isSettingBar(value: unknown): boolean {
+  const raw = asNonEmptyString(value)
+  if (!raw) return false
+  return raw.toLowerCase().includes('bar')
 }
