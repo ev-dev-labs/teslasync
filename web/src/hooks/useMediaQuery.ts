@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 
 /**
+ * SSR-safe accessor for a `MediaQueryList`. Returns `null` when there is no
+ * DOM (`window` undefined during SSR / node test bootstrap) or on a platform
+ * without `window.matchMedia`, so the hook's initial read and its effect share
+ * a single guard instead of duplicating the `typeof` checks.
+ */
+function getMediaQueryList(query: string): MediaQueryList | null {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return null;
+  }
+  return window.matchMedia(query);
+}
+
+/**
  * Reactive `window.matchMedia()` hook. Returns the current match state for
  * a CSS media query, and re-renders whenever the match state flips
  * (e.g. the user rotates their phone, resizes the window, or attaches an
@@ -22,18 +35,15 @@ import { useEffect, useState } from 'react';
  * supports the modern call).
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState<boolean>(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return false;
-    }
-    return window.matchMedia(query).matches;
-  });
+  const [matches, setMatches] = useState<boolean>(
+    () => getMediaQueryList(query)?.matches ?? false,
+  );
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    const mql = getMediaQueryList(query);
+    if (!mql) {
       return;
     }
-    const mql = window.matchMedia(query);
     // Sync once in case the SSR / first-paint default disagrees with the
     // current client state (e.g. browser was resized between mount and
     // effect).
