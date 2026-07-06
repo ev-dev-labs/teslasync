@@ -11,5 +11,10 @@ export { MAIN_TOUR } from './tours/mainTour'
 import { MAIN_TOUR } from './tours/mainTour'
 import type { TourStep } from '@/hooks/useTour'
 
-export const MAIN_TOUR_STEPS: TourStep[] = MAIN_TOUR.steps
+// Defensive copy — never hand legacy importers a live reference to the
+// canonical `MAIN_TOUR.steps`. That array is shared with the tour registry
+// and `useTour`, so a stray `.push`/`.sort`/`.splice` from an old call site
+// would corrupt the running walkthrough for every user. `?? []` also guards
+// against a future edit leaving `steps` undefined before consumers iterate it.
+export const MAIN_TOUR_STEPS: TourStep[] = [...(MAIN_TOUR.steps ?? [])]
 
