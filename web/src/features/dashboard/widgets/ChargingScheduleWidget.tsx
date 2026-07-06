@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, Clock, BatteryFull, Zap } from 'lucide-react';
@@ -11,7 +11,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-interface ScheduleSignals {
+export interface ScheduleSignals {
   mode: string | null;
   pending: boolean;
   startTime: string | null;
@@ -19,26 +19,36 @@ interface ScheduleSignals {
   chargeLimit: number | null;
 }
 
-function parseScheduleSignals(
+/**
+ * Coerce a raw signal value into a trimmed, non-empty string — otherwise
+ * `null`. Guards the widget against blank / whitespace-only mode & time
+ * strings that would otherwise flip `hasScheduleData` to true and render an
+ * empty badge or an unparseable time.
+ */
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+export function parseScheduleSignals(
   signals: Record<string, { value: unknown; timestamp: string }>,
 ): ScheduleSignals {
   const raw = (key: string) => signals[key]?.value ?? null;
-  const mode = raw('ScheduledChargingMode');
   const pending = raw('ScheduledChargingPending');
-  const startTime = raw('ScheduledChargingStartTime');
-  const departureTime = raw('ScheduledDepartureTime');
   const chargeLimit = raw('ChargeLimitSoc');
 
   return {
-    mode: typeof mode === 'string' ? mode : null,
+    mode: asNonEmptyString(raw('ScheduledChargingMode')),
     pending: pending === true || pending === 'true',
-    startTime: typeof startTime === 'string' ? startTime : null,
-    departureTime: typeof departureTime === 'string' ? departureTime : null,
-    chargeLimit: typeof chargeLimit === 'number' ? chargeLimit : null,
+    startTime: asNonEmptyString(raw('ScheduledChargingStartTime')),
+    departureTime: asNonEmptyString(raw('ScheduledDepartureTime')),
+    chargeLimit:
+      typeof chargeLimit === 'number' && Number.isFinite(chargeLimit) ? chargeLimit : null,
   };
 }
 
-function modeLabel(mode: string | null, t: (k: string, f: string) => string): string {
+export function modeLabel(mode: string | null, t: (k: string, f: string) => string): string {
   switch (mode) {
     case 'StartAt':
       return t('widget.chargingSchedule.modeStartAt', 'Start At');
@@ -51,7 +61,7 @@ function modeLabel(mode: string | null, t: (k: string, f: string) => string): st
   }
 }
 
-function modeBadgeVariant(mode: string | null): 'success' | 'warning' | 'neutral' {
+export function modeBadgeVariant(mode: string | null): 'success' | 'warning' | 'neutral' {
   switch (mode) {
     case 'StartAt':
     case 'DepartBy':
@@ -96,14 +106,24 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
   const hasScheduleData =
     schedule.mode != null || schedule.startTime != null || schedule.chargeLimit != null;
 
-  const chargeLimit = schedule.chargeLimit ?? (state?.battery_level != null ? undefined : null);
+  const handleRefresh = useCallback(() => {
+    void refetchSignals();
+  }, [refetchSignals]);
+
+  const emptyState = (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Calendar className="h-5 w-5" aria-hidden="true" />}
+      message={t('widget.chargingSchedule.noData', 'No schedule data')}
+      className="py-4"
+    />
+  );
 
   const timelineItems = useMemo(() => {
     const items: { icon?: React.ReactNode; title: string; subtitle?: string; time: string; color?: string }[] = [];
 
     if (schedule.startTime) {
       items.push({
-        icon: <Zap className="h-3 w-3" />,
+        icon: <Zap className="h-3 w-3" aria-hidden="true" />,
         title: t('widget.chargingSchedule.startCharging', 'Start Charging'),
         subtitle: schedule.pending
           ? t('widget.chargingSchedule.pending', 'Pending')
@@ -115,24 +135,24 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
 
     if (schedule.departureTime) {
       items.push({
-        icon: <Clock className="h-3 w-3" />,
+        icon: <Clock className="h-3 w-3" aria-hidden="true" />,
         title: t('widget.chargingSchedule.departure', 'Departure'),
         time: formatScheduleTime(schedule.departureTime),
         color: '#3b82f6',
       });
     }
 
-    if (chargeLimit != null) {
+    if (schedule.chargeLimit != null) {
       items.push({
-        icon: <BatteryFull className="h-3 w-3" />,
+        icon: <BatteryFull className="h-3 w-3" aria-hidden="true" />,
         title: t('widget.chargingSchedule.targetLimit', 'Target Limit'),
-        time: `${chargeLimit}%`,
+        time: `${schedule.chargeLimit}%`,
         color: '#f59e0b',
       });
     }
 
     return items;
-  }, [schedule, chargeLimit, t]);
+  }, [schedule, t, formatScheduleTime]);
 
   if (isCompact) {
     return (
@@ -142,7 +162,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
         isFetching={signalsFetching}
         isStale={signalsStale}
         isError={signalsError}
-        onRefresh={() => refetchSignals()}
+        onRefresh={handleRefresh}
       >
         {hasScheduleData ? (
           <div className="h-full flex flex-col items-center justify-center gap-1">
@@ -154,11 +174,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
             </span>
           </div>
         ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Calendar className="h-5 w-5" />}
-            message={t('widget.chargingSchedule.noData', 'No schedule data')}
-            className="py-4"
-          />
+          emptyState
         )}
       </WidgetShell>
     );
@@ -167,13 +183,13 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
   return (
     <WidgetShell
       title={t('widget.chargingSchedule.title', 'Charging Schedule')}
-      icon={<Calendar className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={<Calendar className="h-3.5 w-3.5 text-cyan-400" aria-hidden="true" />}
       loading={isLoading}
       updatedAt={signalsUpdatedAt}
       isFetching={signalsFetching}
       isStale={signalsStale}
       isError={signalsError}
-      onRefresh={() => refetchSignals()}
+      onRefresh={handleRefresh}
     >
       {hasScheduleData ? (
         <div className="h-full flex flex-col gap-3">
@@ -223,11 +239,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
           )}
         </div>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Calendar className="h-5 w-5" />}
-          message={t('widget.chargingSchedule.noData', 'No schedule data')}
-          className="py-4"
-        />
+        emptyState
       )}
     </WidgetShell>
   );
