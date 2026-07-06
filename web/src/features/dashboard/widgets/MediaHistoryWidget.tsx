@@ -28,15 +28,17 @@ function CompactView({
   artist: string;
   t: (key: string, fallback: string) => string;
 }) {
+  const hasTitle = title !== '—';
+  const label = hasTitle
+    ? artist !== '—'
+      ? `${title} — ${artist}`
+      : title
+    : t('widget.noMediaPlayed', 'No tracks played');
   return (
     <div className="flex items-center gap-2 min-h-[44px]">
-      <Music className="h-4 w-4 flex-shrink-0 text-neon-cyan" />
+      <Music className="h-4 w-4 flex-shrink-0 text-neon-cyan" aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-[var(--text-primary)] truncate">
-          {title !== '—'
-            ? `${title} — ${artist}`
-            : t('widget.noMediaPlayed', 'No tracks played')}
-        </p>
+        <p className="text-sm text-[var(--text-primary)] truncate">{label}</p>
       </div>
     </div>
   );
@@ -56,12 +58,13 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
     isFetching,
     isStale,
     isError,
+    error,
     dataUpdatedAt,
     refetch,
   } = useMediaHistory(vidStr ?? '');
 
   const isCompact = size.cols <= 1;
-  const list = history ?? [];
+  const list = useMemo(() => history ?? [], [history]);
 
   const feedItems = useMemo<EventFeedItem[]>(
     () =>
@@ -91,6 +94,7 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.mediaHistory', 'Media History')}
       icon={<ListMusic className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
