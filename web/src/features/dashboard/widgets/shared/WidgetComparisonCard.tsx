@@ -1,4 +1,6 @@
+import { type ReactNode } from 'react';
 import { Delta } from '@/components/data-display';
+import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 
 export interface ComparisonMetric {
@@ -13,6 +15,8 @@ export interface ComparisonMetric {
 interface WidgetComparisonCardProps {
   metrics: ComparisonMetric[];
   compact?: boolean;
+  emptyMessage?: string;
+  emptyIcon?: ReactNode;
 }
 
 function MetricRow({ metric }: { metric: ComparisonMetric }) {
@@ -24,7 +28,7 @@ function MetricRow({ metric }: { metric: ComparisonMetric }) {
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-xs text-[var(--text-muted)]">{metric.label}</span>
         <span className="truncate text-base font-semibold text-[var(--text-primary)]">
-          {metric.formattedCurrent}
+          {metric.formattedCurrent ?? '—'}
           {metric.unit && (
             <span className="ml-0.5 text-xs font-normal text-[var(--text-muted)]">
               {metric.unit}
@@ -45,20 +49,27 @@ function MetricRow({ metric }: { metric: ComparisonMetric }) {
 
 export function WidgetComparisonCard({
   metrics,
-  compact,
+  compact = false,
+  emptyMessage = 'No comparison data',
+  emptyIcon,
 }: WidgetComparisonCardProps) {
-  const visible = compact ? metrics.slice(0, 2) : metrics;
+  const list = metrics ?? [];
+  const visible = compact ? list.slice(0, 2) : list;
 
   if (visible.length === 0) {
     return (
-      <p className="text-sm text-[var(--text-muted)] py-2">No comparison data</p>
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        icon={emptyIcon}
+        message={emptyMessage}
+        className="py-4"
+      />
     );
   }
 
   return (
     <div className={cn('flex flex-col', compact && 'text-sm')}>
-      {visible.map((m) => (
-        <MetricRow key={m.label} metric={m} />
+      {visible.map((m, i) => (
+        <MetricRow key={`${m.label}-${i}`} metric={m} />
       ))}
     </div>
   );
