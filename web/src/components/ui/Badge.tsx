@@ -34,13 +34,22 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
         // Canvas colour. Add a system-colour border so the chip outline stays
         // visible while still respecting the user's OS palette.
         'forced-colors:border forced-colors:border-[CanvasText]',
-        variants[variant],
-        badgeSizes[size],
+        // Data-driven call sites forward API status strings through helpers
+        // (e.g. `variant={statusVariant(status)}`). Should a value land outside
+        // the union at runtime, `variants[variant]`/`badgeSizes[size]` is
+        // undefined and the chip would render with no colour — effectively
+        // invisible. Fall back to the neutral/md tokens so it stays perceivable.
+        variants[variant] ?? variants.neutral,
+        badgeSizes[size] ?? badgeSizes.md,
         className,
       )}
       {...props}
     >
-      {dot && <span className={cn('h-1.5 w-1.5 rounded-full', `bg-current`)} />}
+      {dot && (
+        // Purely decorative status dot — hidden from assistive tech, and
+        // shrink-0 so it stays a circle next to long labels in the flex row.
+        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+      )}
       {children}
     </span>
   ),
