@@ -70,6 +70,33 @@ export interface UseStatusLiveSSEResult {
 const RECONNECT_BASE_MS = 1_000
 const RECONNECT_MAX_MS = 30_000
 
+/**
+ * Parse a raw `status` SSE frame body into a snapshot, or null when the frame
+ * must be ignored (keeping the prior snapshot on screen).
+ *
+ * Two classes of frame are rejected:
+ *   • malformed JSON — a partial write, or a proxy-injected keep-alive that
+ *     leaked into the `data:` field; and
+ *   • valid JSON that is NOT a snapshot object — `null`, a bare number, a
+ *     string, or an array. This second guard matters: `JSON.parse('null')`
+ *     does not throw, so without it a stray `data: null` frame would call
+ *     setSnapshot(null) and blank the entire status page.
+ *
+ * Exported for direct unit testing, mirroring `parseSignalChangeEvent` in
+ * hooks/useSSE.
+ */
+export function parseStatusSnapshot(raw: string): StatusV1Snapshot | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null
+    }
+    return parsed as StatusV1Snapshot
+  } catch {
+    return null
+  }
+}
+
 export function useStatusLiveSSE(opts: UseStatusLiveSSEOptions = {}): UseStatusLiveSSEResult {
   const { enabled = true, endpoint = '/api/v1/status/live' } = opts
   const [snapshot, setSnapshot] = useState<StatusV1Snapshot | null>(null)
@@ -112,14 +139,14 @@ export function useStatusLiveSSE(opts: UseStatusLiveSSEOptions = {}): UseStatusL
     })
 
     es.addEventListener('status', (ev) => {
-      try {
-        const parsed = JSON.parse((ev as MessageEvent).data) as StatusV1Snapshot
-        setSnapshot(parsed)
-        setLastUpdateAt(Date.now())
-        setState('live')
-      } catch {
-        // Ignore malformed payload — keep prior snapshot, stay live.
+      const next = parseStatusSnapshot((ev as MessageEvent).data)
+      if (next === null) {
+        // Malformed or non-object frame — keep the prior snapshot, stay live.
+        return
       }
+      setSnapshot(next)
+      setLastUpdateAt(Date.now())
+      setState('live')
     })
 
     es.addEventListener('heartbeat', () => {
