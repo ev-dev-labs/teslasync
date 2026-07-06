@@ -17,11 +17,25 @@ const numericString = (label: string, opts: { min: number; max: number }) =>
     .string()
     .trim()
     .min(1, `${label} is required`)
-    .refine((value) => !Number.isNaN(Number(value)), `${label} must be a number`)
-    .refine((value) => {
+    // A single superRefine (rather than two chained `.refine`s) so the range
+    // check never runs on a non-numeric value: `Number('abc')` is `NaN` and
+    // `Number('1e400')` is `Infinity`, both of which would otherwise slip past
+    // an `!Number.isNaN` guard or produce a confusing "must be a number" AND
+    // "must be between" pair for the same field. `Number.isFinite` rejects NaN
+    // and ±Infinity together, and the early return stops the range comparison.
+    .superRefine((value, ctx) => {
       const n = Number(value)
-      return n >= opts.min && n <= opts.max
-    }, `${label} must be between ${opts.min} and ${opts.max}`)
+      if (!Number.isFinite(n)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${label} must be a number` })
+        return
+      }
+      if (n < opts.min || n > opts.max) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${label} must be between ${opts.min} and ${opts.max}`,
+        })
+      }
+    })
 
 /**
  * Form schema — operates on the literal `string` values held in the modal's
