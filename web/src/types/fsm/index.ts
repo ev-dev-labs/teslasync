@@ -96,4 +96,4 @@ export { TELEMETRY_CONNECTION_TRANSITIONS } from './telemetry-connection'
 
 // Cross-FSM
 export type { FSMAction } from './cross-fsm'
-export { VEHICLE_TRANSITION_ACTIONS, FAILURE_ISOLATION_RULES, OUT_OF_SCOPE_STATES } from './cross-fsm'
+export { VEHICLE_TRANSITION_ACTIONS, FAILURE_ISOLATION_RULES, OUT_OF_SCOPE_STATES, getTransitionActions } from './cross-fsm'
