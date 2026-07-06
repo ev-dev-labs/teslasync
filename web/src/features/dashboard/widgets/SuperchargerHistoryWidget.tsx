@@ -10,6 +10,18 @@ import { WidgetRankedList, type RankedItem } from './shared';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 
+/**
+ * Parse an entry's ISO start timestamp to epoch milliseconds. A missing or
+ * unparseable value is treated as epoch 0 (ranked oldest) so the recency sort
+ * stays deterministic — a raw `new Date(bad).getTime()` yields NaN, and NaN
+ * comparisons scramble the order (and which rows survive the top-10 slice).
+ */
+function startTimeMs(raw: string | null | undefined): number {
+  if (!raw) return 0;
+  const ms = new Date(raw).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
 export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatCurrency } = useFormatting();
@@ -32,7 +44,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
 
   const rankedItems: RankedItem[] = useMemo(() => {
     const sorted = [...entries]
-      .sort((a, b) => new Date(b.charge_start_datetime).getTime() - new Date(a.charge_start_datetime).getTime())
+      .sort((a, b) => startTimeMs(b.charge_start_datetime) - startTimeMs(a.charge_start_datetime))
       .slice(0, 10);
 
     return sorted.map((entry) => {
