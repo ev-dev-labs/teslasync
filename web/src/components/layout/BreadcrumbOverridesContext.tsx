@@ -26,6 +26,7 @@ interface BreadcrumbOverridesContextValue {
 }
 
 const BreadcrumbOverridesContext = createContext<BreadcrumbOverridesContextValue | null>(null);
+const EMPTY_BREADCRUMB_OVERRIDES: BreadcrumbOverrideMap = {};
 
 let nextId = 1;
 
@@ -78,7 +79,7 @@ export function BreadcrumbOverridesProvider({ children }: { children: ReactNode 
 
 export function useBreadcrumbOverrides(): BreadcrumbOverrideMap {
   const ctx = useContext(BreadcrumbOverridesContext);
-  return ctx?.overrides ?? {};
+  return ctx?.overrides ?? EMPTY_BREADCRUMB_OVERRIDES;
 }
 
 /**

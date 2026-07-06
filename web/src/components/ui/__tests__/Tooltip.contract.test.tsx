@@ -38,8 +38,8 @@ describe('Tooltip — text-colour contract', () => {
     const tip = getByRole('tooltip');
     // The intrinsic colour pair is on the tooltip body itself; no text-* class
     // should be inherited from the trigger or wrapper.
-    expect(tip.className).toContain('text-gray-100');
-    expect(tip.className).toContain('dark:text-gray-900');
+    expect(tip.className).toContain('text-[var(--text-inverse)]');
+    expect(tip.className).toContain('dark:bg-gray-100');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 

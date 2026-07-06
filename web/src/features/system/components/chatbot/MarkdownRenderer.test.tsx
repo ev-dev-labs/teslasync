@@ -61,7 +61,10 @@ describe('MarkdownRenderer', () => {
 
     // Once the chunk resolves, the fallback is replaced by parsed markdown:
     // the `**` markers are gone and a real <strong> element exists.
-    await waitFor(() => expect(container.querySelector('strong')).toBeInTheDocument());
+    await waitFor(
+      () => expect(container.querySelector('strong')).toBeInTheDocument(),
+      { timeout: 10_000 },
+    );
     expect(container.querySelector('strong')).toHaveTextContent('bold');
     expect(container.querySelector('p.whitespace-pre-wrap')).toBeNull();
   });

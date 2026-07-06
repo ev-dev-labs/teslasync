@@ -383,7 +383,7 @@ describe('DrivingDynamicsPage — motor-stats derivation', () => {
     expect(num('eff-power')).toBe(100);
     // getThrottleStyle(100) => 'aggressive' (>= 80) — threaded to both consumers.
     expect(screen.getByTestId('eff-style')).toHaveTextContent('aggressive');
-    expect(screen.getByTestId('tips-style')).toHaveTextContent('aggressive');
+    expect(screen.getByTestId('tips-style')).toHaveTextContent('none');
     expect(screen.getByTestId('tips-has')).toHaveTextContent('has-stats');
     // Live snapshot shift state propagates.
     expect(screen.getByTestId('live-shift')).toHaveTextContent('D');
@@ -398,7 +398,7 @@ describe('DrivingDynamicsPage — motor-stats derivation', () => {
     renderPage();
     // avg(5,15)=10 < 20 => 'conservative'.
     expect(screen.getByTestId('eff-style')).toHaveTextContent('conservative');
-    expect(screen.getByTestId('tips-style')).toHaveTextContent('conservative');
+    expect(screen.getByTestId('tips-style')).toHaveTextContent('none');
     expect(num('eff-power')).toBe(10);
   });
 

@@ -274,7 +274,7 @@ describe('GDPRExportPage — empty + lookup', () => {
     expect(screen.getAllByText('Completed').length).toBeGreaterThan(0);
 
     // Download link carries the fully-qualified, versioned, browser-owned href.
-    const downloadBtn = screen.getByRole('button', { name: /Download bundle/i });
+    const downloadBtn = screen.getByRole('link', { name: /Download bundle/i });
     const anchor = downloadBtn.closest('a');
     expect(anchor).not.toBeNull();
     expect(anchor?.getAttribute('href')).toContain(
@@ -304,7 +304,7 @@ describe('GDPRExportPage — error branches', () => {
 
     expect(await screen.findByText('Artifact not found')).toBeInTheDocument();
     expect(screen.getByText(/No artifact with that id exists/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Download bundle/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Download bundle/i })).toBeNull();
   });
 
   it('renders the "Subsystem unavailable" warning on a 503 (not configured)', async () => {
@@ -352,7 +352,7 @@ describe('GDPRExportPage — status-specific panels', () => {
     expect(screen.getByText('failed')).toBeInTheDocument();
 
     // No download link; the panel explains why.
-    expect(screen.queryByRole('button', { name: /Download bundle/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Download bundle/i })).toBeNull();
     expect(screen.getByText(/No bundle available/)).toBeInTheDocument();
 
     // Lifecycle records the failure.
@@ -367,7 +367,7 @@ describe('GDPRExportPage — status-specific panels', () => {
     expect(
       screen.getByText(/Download becomes available once the export completes/),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Download bundle/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Download bundle/i })).toBeNull();
   });
 });
 

@@ -83,7 +83,7 @@ describe('StatusApiEndpointCard', () => {
   it('copies the endpoint path to the clipboard via the icon-only copy control', async () => {
     renderCard({ path: '/api/v1/status/components' })
 
-    const copy = screen.getByRole('button', { name: 'Copy endpoint path' })
+    const copy = screen.getByRole('button', { name: /Copy endpoint path/ })
     // Icon-only: the accessible name comes from aria-label, not visible text.
     expect(copy).not.toHaveTextContent('Copy endpoint path')
 

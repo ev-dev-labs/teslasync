@@ -301,9 +301,12 @@ export default function TripReplayPage() {
   /* ---- Speed + Power timeline data (shared with TripReplayCharts) ---- */
   const timelineData: TripReplayChartPoint[] = useMemo(() => {
     if (positions.length === 0) return [];
-    const t0 = new Date(positions[0].timestamp).getTime();
+    const t0 = positions
+      .map((p) => new Date(p.timestamp).getTime())
+      .find((ts) => Number.isFinite(ts)) ?? 0;
     return positions.map((p, i) => {
-      const elapsedMin = (new Date(p.timestamp).getTime() - t0) / 60_000;
+      const ts = new Date(p.timestamp).getTime();
+      const elapsedMin = Number.isFinite(ts) ? (ts - t0) / 60_000 : 0;
       return {
         index: i,
         time: Number(elapsedMin.toFixed(3)),
@@ -484,7 +487,7 @@ export default function TripReplayPage() {
               <StatCard
                 label={t('replay.summary.efficiency', 'Efficiency')}
                 value={efficiency != null ? fmtNumber(efficiency) : '—'}
-                unit={efficiency != null ? 'Wh/km' : undefined}
+                unit={efficiency != null ? (distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km') : undefined}
                 icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
               />
             </StaggerItem>

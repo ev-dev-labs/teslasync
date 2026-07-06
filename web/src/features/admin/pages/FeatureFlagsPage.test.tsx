@@ -214,7 +214,7 @@ function registryRow(key: string): HTMLElement {
     .getAllByText(key)
     .map((el) => el.closest('tr'))
     .find((tr): tr is HTMLTableRowElement =>
-      tr != null && within(tr).queryAllByRole('button', { name: 'Edit' }).length > 0,
+      tr != null && within(tr).queryAllByRole('button', { name: /Edit flag/ }).length > 0,
     );
   if (!cell) throw new Error(`no registry row for ${key}`);
   return cell;
@@ -257,8 +257,8 @@ describe('FeatureFlagsPage', () => {
     expect(metricValue('Contributors')).toBe('2');
 
     // Registry: one Edit + one Delete action per flag row.
-    expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(5);
-    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(5);
+    expect(screen.getAllByRole('button', { name: /Edit flag/ })).toHaveLength(5);
+    expect(screen.getAllByRole('button', { name: /Delete flag/ })).toHaveLength(5);
     expect(screen.getByText('rollout.buckets')).toBeInTheDocument();
 
     // Composition: only non-empty value buckets are drawn (null bucket absent).
@@ -348,7 +348,7 @@ describe('FeatureFlagsPage', () => {
     renderPage();
 
     const row = registryRow('ui.new_dashboard');
-    fireEvent.click(within(row).getByRole('button', { name: 'Edit' }));
+    fireEvent.click(within(row).getByRole('button', { name: /Edit flag/ }));
 
     expect(
       screen.getByText('Edit flag "ui.new_dashboard"'),
@@ -364,7 +364,7 @@ describe('FeatureFlagsPage', () => {
     renderPage();
 
     const row = registryRow('limits.config');
-    fireEvent.click(within(row).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(row).getByRole('button', { name: /Delete flag/ }));
 
     // Confirm dialog names the flag and starts with the destructive CTA off.
     expect(
@@ -420,7 +420,7 @@ describe('FeatureFlagsPage', () => {
     renderPage();
 
     // The flags feed is healthy, so the registry table still renders.
-    expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(5);
+    expect(screen.getAllByRole('button', { name: /Edit flag/ })).toHaveLength(5);
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);

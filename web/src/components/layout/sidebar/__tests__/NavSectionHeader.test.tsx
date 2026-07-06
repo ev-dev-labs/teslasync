@@ -7,7 +7,7 @@ describe('NavSectionHeader', () => {
     render(<NavSectionHeader label="Pinned" />)
     const label = screen.getByText('Pinned')
     expect(label.tagName).toBe('P')
-    expect(label).toHaveClass('text-[10px]')
+    expect(label).toHaveClass('text-2xs')
     expect(label).toHaveClass('font-semibold')
     expect(label).toHaveClass('uppercase')
     expect(label).toHaveClass('tracking-[0.14em]')

@@ -102,10 +102,10 @@ function makeReading(overrides: Partial<TirePressureReading> = {}): TirePressure
   return {
     id: '1',
     vehicleId: '42',
-    frontLeft: 250,
-    frontRight: 260,
-    rearLeft: 240,
-    rearRight: 270,
+    frontLeft: 250_000,
+    frontRight: 260_000,
+    rearLeft: 240_000,
+    rearRight: 270_000,
     tpmsHardWarning: false,
     tpmsSoftWarning: false,
     timestamp: '2024-11-01T10:00:00.000Z',
@@ -142,7 +142,7 @@ function renderWidget(node: ReactElement) {
 // A converter matching the real bar projection (kPa → bar), with the same
 // null / non-finite guard `usePressureFormat` applies.
 const barConv = (kpa: number | null | undefined): number | null =>
-  kpa == null || !Number.isFinite(kpa) ? null : kpa / 100;
+  kpa == null || !Number.isFinite(kpa) ? null : kpa / 100_000;
 
 beforeEach(() => {
   tireHistoryMock.mockReset();
@@ -163,8 +163,8 @@ describe('RECOMMENDED_RANGE_KPA', () => {
 describe('buildChartData', () => {
   it('drops timestamp-less rows, converts every corner, and sorts oldest→newest', () => {
     const rows: TirePressureReading[] = [
-      makeReading({ id: 'b', timestamp: '2024-11-02T00:00:00.000Z', frontLeft: 250 }),
-      makeReading({ id: 'a', timestamp: '2024-11-01T00:00:00.000Z', frontLeft: 210 }),
+      makeReading({ id: 'b', timestamp: '2024-11-02T00:00:00.000Z', frontLeft: 250_000 }),
+      makeReading({ id: 'a', timestamp: '2024-11-01T00:00:00.000Z', frontLeft: 210_000 }),
       makeReading({ id: 'skip', timestamp: '' }), // filtered out
     ];
 
@@ -190,10 +190,10 @@ describe('buildChartData', () => {
     // A converter that maps a 0 sentinel to null (as the real one does for
     // non-finite input) — buildChartData must propagate that null, not coerce it.
     const zeroToNull = (kpa: number | null | undefined): number | null => (kpa ? kpa : null);
-    const out = buildChartData([makeReading({ frontLeft: 0, frontRight: 260 })], zeroToNull);
+    const out = buildChartData([makeReading({ frontLeft: 0, frontRight: 260_000 })], zeroToNull);
 
     expect(out[0].fl).toBeNull();
-    expect(out[0].fr).toBe(260);
+    expect(out[0].fr).toBe(260_000);
   });
 });
 
@@ -222,7 +222,9 @@ describe('latestNonNull', () => {
 // ── recommendedPressureRange (pure — R2 unit-bug regression guard) ────────────
 describe('recommendedPressureRange', () => {
   it('feeds the range to the converter as kilopascals → 2.4/2.8 bar (NOT 2400/2800)', () => {
-    const range = recommendedPressureRange(barConv);
+    const kpaToBar = (kpa: number | null | undefined): number | null =>
+      kpa == null || !Number.isFinite(kpa) ? null : kpa / 100;
+    const range = recommendedPressureRange(kpaToBar);
     expect(range).toEqual({ low: 2.4, high: 2.8 });
     // Explicit guard against the old `* 100_000` Pascals bug (240000 → 2400 bar).
     expect(range.low).not.toBe(2400);
@@ -271,8 +273,8 @@ describe('TirePressureHistoryWidget', () => {
   it('shows the newest reading in the summary even when the API returns rows out of order', () => {
     tireHistoryMock.mockReturnValue(
       makeQuery([
-        makeReading({ id: 'new', timestamp: '2024-11-05T00:00:00.000Z', frontLeft: 290 }),
-        makeReading({ id: 'old', timestamp: '2024-11-01T00:00:00.000Z', frontLeft: 300 }),
+        makeReading({ id: 'new', timestamp: '2024-11-05T00:00:00.000Z', frontLeft: 290_000 }),
+        makeReading({ id: 'old', timestamp: '2024-11-01T00:00:00.000Z', frontLeft: 300_000 }),
       ]),
     );
 

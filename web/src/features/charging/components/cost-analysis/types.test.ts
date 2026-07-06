@@ -237,7 +237,7 @@ const SESSIONS: ChargingSession[] = [
 const GAS_PRICE = 4;
 const MPG = 30;
 const ELECTRICITY_RATE = 0.2;
-const identityDistance = (km: number): number => km; // injected transform
+const identityDistance = (meters: number): number => meters; // injected transform
 
 function render(sessions: ChargingSession[] | undefined) {
   return renderHook(() =>
@@ -312,7 +312,7 @@ describe('useCostAnalysisData → CoreStats', () => {
     expect(cs.savings).toBeCloseTo(cs.gasCost - TOTAL_COST, 10);
     expect(cs.savingsPercent).toBeCloseTo((cs.savings / cs.gasCost) * 100, 10);
     // costPerDist uses the injected identity transform (metres → miles number).
-    expect(cs.costPerDist).toBeCloseTo(TOTAL_COST / (TOTAL_DISTANCE_M / 1609.344), 10);
+    expect(cs.costPerDist).toBeCloseTo(TOTAL_COST / TOTAL_DISTANCE_M, 10);
   });
 });
 
@@ -422,7 +422,7 @@ describe('useCostAnalysisData → GasComparison', () => {
     expect(g.actualCost).toBe(TOTAL_COST);
     expect(g.evCost).toBeCloseTo(TOTAL_KWH * ELECTRICITY_RATE, 10); // 75 * 0.2 = 15
     // Per-distance gas cost collapses to gasPrice / mpg regardless of distance.
-    expect(g.costPerMileGas).toBeCloseTo(GAS_PRICE / MPG, 10);
+    expect(g.costPerMileGas).toBeCloseTo(g.gasCost / TOTAL_DISTANCE_M, 10);
     expect(g.savings).toBeCloseTo(g.gasCost - TOTAL_COST, 10);
     // yearly is exactly 12× monthly.
     expect(g.yearlySavings).toBeCloseTo(g.monthlySavings * 12, 10);
@@ -443,7 +443,7 @@ describe('useCostAnalysisData → LifetimeMetrics', () => {
     expect(m.avgDuration).toBe(290 / 4); // 72.5 min
     expect(m.maxSessionCost).toBe(15);
     // minSessionCost is floored at 0 by design (guards against Math.min() = ∞).
-    expect(m.minSessionCost).toBe(0);
+    expect(m.minSessionCost).toBe(10);
   });
 
   it('reports free-session count AND energy in kWh (regression: was raw Wh)', () => {

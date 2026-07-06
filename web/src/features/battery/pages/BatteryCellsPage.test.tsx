@@ -374,7 +374,7 @@ describe('BatteryCellsPage', () => {
     renderPage();
 
     expect(screen.getByText(/No vehicle selected/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Set up TeslaSync/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Set up TeslaSync/i })).toBeInTheDocument();
     // The data scaffolding must NOT render behind the guard.
     expect(screen.queryByText('Cell Voltage Heatmap')).not.toBeInTheDocument();
     expect(screen.queryByText('3.9025 V')).not.toBeInTheDocument();

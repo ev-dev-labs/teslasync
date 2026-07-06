@@ -237,7 +237,7 @@ describe('TimeOfUseAnalysis — chart wiring', () => {
 describe('TimeOfUseAnalysis — legend', () => {
   it('renders three decorative swatches whose colours match the bars', () => {
     const { container } = renderTou();
-    const dots = container.querySelectorAll('span[aria-hidden="true"]');
+    const dots = container.querySelectorAll('span[aria-hidden="true"][style]');
     expect(dots).toHaveLength(3);
     // Same order + colours as TOU_PERIOD_COLORS → they can never drift from the bars.
     expect(dots[0]).toHaveStyle({ backgroundColor: TOU_PERIOD_COLORS.peak });

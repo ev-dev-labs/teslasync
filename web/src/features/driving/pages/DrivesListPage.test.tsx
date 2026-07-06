@@ -322,7 +322,7 @@ describe('DrivesListPage — no vehicle selected', () => {
     renderPage();
 
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Set up TeslaSync' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set up TeslaSync' })).toBeInTheDocument();
     // None of the drive scaffolding mounts when there is no vehicle.
     expect(screen.queryByRole('heading', { name: 'Overview', level: 3 })).toBeNull();
     expect(screen.queryByRole('tablist', { name: 'Filter drives by collection' })).toBeNull();

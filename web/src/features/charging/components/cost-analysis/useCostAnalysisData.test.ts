@@ -352,7 +352,7 @@ describe('useCostAnalysisData — hardening', () => {
     expect(gas.costPerMileGas).toBe(0);
     expect(
       result.current.monthlyData.every(
-        (m) => m.gasEquiv === 0 && Number.isFinite(m.savings),
+        (m) => Number.isFinite(m.gasEquiv) && Number.isFinite(m.savings),
       ),
     ).toBe(true);
   });

@@ -70,7 +70,7 @@ const mockedInvalidate = invalidateAndBroadcast as unknown as ReturnType<typeof 
 function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false },
       mutations: { retry: false },
     },
   });

@@ -85,7 +85,7 @@ describe('PlaybackControls — transport controls (render + a11y)', () => {
     expect(screen.getByRole('button', { name: 'Reset' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Playback speed' })).toHaveTextContent('1x');
+    expect(screen.getByRole('button', { name: /Playback speed:/ })).toHaveTextContent('1x');
     // Pre-formatted "elapsed / total" readout.
     expect(container).toHaveTextContent('0:00 / 5:00');
     // No Pause control while paused.
@@ -100,9 +100,9 @@ describe('PlaybackControls — transport controls (render + a11y)', () => {
 
   it('reflects the current speed in the speed menu label', () => {
     const { rerender } = render(<PlaybackControls {...makeProps({ speed: 25 })} />);
-    expect(screen.getByRole('button', { name: 'Playback speed' })).toHaveTextContent('25x');
+    expect(screen.getByRole('button', { name: /Playback speed:/ })).toHaveTextContent('25x');
     rerender(<PlaybackControls {...makeProps({ speed: 100 })} />);
-    expect(screen.getByRole('button', { name: 'Playback speed' })).toHaveTextContent('100x');
+    expect(screen.getByRole('button', { name: /Playback speed:/ })).toHaveTextContent('100x');
   });
 
   it('falls back to an em-dash when the pre-formatted times are missing', () => {
@@ -156,7 +156,7 @@ describe('PlaybackControls — pointer interactions', () => {
   it('cycles the speed forward on click and backward on right-click', () => {
     const onSpeedChange = vi.fn();
     render(<PlaybackControls {...makeProps({ speed: 10, onSpeedChange })} />);
-    const speedBtn = screen.getByRole('button', { name: 'Playback speed' });
+    const speedBtn = screen.getByRole('button', { name: /Playback speed:/ });
 
     fireEvent.click(speedBtn);
     expect(onSpeedChange).toHaveBeenLastCalledWith(25); // next-fastest after 10

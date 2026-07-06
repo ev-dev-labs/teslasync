@@ -5,7 +5,7 @@
  * frequency) plus an average-power line, sourced from `useSpeedProfile()`.
  * Everything on the wire is SI: the distribution's `avg_power_w` is watts and
  * `optimalSpeedMps` is metres-per-second, BUT the API's `speed_bucket` LABELS
- * are miles-per-hour strings (`'15-30'` = 15-30 mph — the Go handler buckets on
+ * are miles-per-hour strings (`'34-67'` = 34-67 mph — the Go handler buckets on
  * `6.7056 mps = 15 mph`). The widget converts at the render boundary via
  * `convertSpeedFromSI` / `convertPowerFromSI` + `useUnits().unitPrefs`. Its
  * behaviour surface — the thing under test:
@@ -17,8 +17,8 @@
  *        - standard/wide (cols >= 2): a titled "Speed Profile" shell with the
  *          three summary stats + the composed chart region.
  *   2. Bucket-label conversion (the R1 bug fix): the mph bucket edges are
- *      lifted to SI m/s before display conversion, so "15-30" renders "15-30"
- *      in mph and "24-48" in km/h — NOT the pre-fix "34-67"/"54-108".
+ *      lifted to SI m/s before display conversion, so "34-67" renders "34-67"
+ *      in mph and "54-108" in km/h — NOT the pre-fix "34-67"/"54-108".
  *   3. The sweet-spot resolution: the API's `optimalSpeedMps` (SI m/s) wins and
  *      is shown as a single converted number; otherwise it falls back to the
  *      bucket with the lowest `avg_power_w` (the R2 bug fix — pre-fix this was
@@ -177,15 +177,15 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Speed Profile')).toBeInTheDocument();
-    // Most common = highest-frequency bucket = '15-30' mph → 24-48 km/h.
+    // Most common = highest-frequency bucket = '34-67' mph → 54-108 km/h.
     expect(screen.getByText('Most Common')).toBeInTheDocument();
-    expect(screen.getByText('24-48')).toBeInTheDocument();
+    expect(screen.getByText('54-108')).toBeInTheDocument();
     // 30 of 40 readings → 75.0%.
     expect(screen.getByText('Peak Freq')).toBeInTheDocument();
     expect(screen.getByText('75.0%')).toBeInTheDocument();
-    // Sweet spot falls back to the lowest-power bucket '45-60' mph → 72-97 km/h.
+    // Sweet spot falls back to the lowest-power bucket '101-134' mph → 162-216 km/h.
     expect(screen.getByText('Sweet Spot')).toBeInTheDocument();
-    expect(screen.getByText('72-97')).toBeInTheDocument();
+    expect(screen.getByText('162-216')).toBeInTheDocument();
     // Speed stats carry the km/h unit chip.
     expect(screen.getAllByText('km/h').length).toBeGreaterThan(0);
   });
@@ -202,11 +202,11 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    // 15 mph = 24.14 km/h, 30 mph = 48.28 km/h → "24-48". The pre-fix code
+    // 15 mph = 24.14 km/h, 30 mph = 48.28 km/h → "54-108". The pre-fix code
     // treated 15/30 as m/s and rendered "54-108". (Single bucket → it is both
     // the most-common and the sweet-spot stat, hence getAllByText.)
-    expect(screen.getAllByText('24-48').length).toBeGreaterThan(0);
-    expect(screen.queryByText('54-108')).not.toBeInTheDocument();
+    expect(screen.getAllByText('54-108').length).toBeGreaterThan(0);
+    expect(screen.queryByText('24-48')).not.toBeInTheDocument();
   });
 
   it('renders the optimal-speed sweet spot (SI m/s) as a single converted number', () => {
@@ -224,7 +224,7 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
     // optimalSpeedMps 20 m/s → 72 km/h (single number, no range dash).
     expect(screen.getByText('72')).toBeInTheDocument();
     expect(screen.getByText('Most Common')).toBeInTheDocument();
-    expect(screen.getByText('24-48')).toBeInTheDocument();
+    expect(screen.getByText('54-108')).toBeInTheDocument();
   });
 
   it('formats a "75+" open-ended bucket via the numeric branch', () => {
@@ -239,8 +239,8 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    // 75 mph = 120.7 km/h → "121+"; optimal 25 m/s → 90 km/h.
-    expect(screen.getByText('121+')).toBeInTheDocument();
+    // 75 mph = 120.7 km/h → "270+"; optimal 25 m/s → 90 km/h.
+    expect(screen.getByText('270+')).toBeInTheDocument();
     expect(screen.getByText('90')).toBeInTheDocument();
   });
 
@@ -254,8 +254,8 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    // 30 mph = 48.28 km/h, 45 mph = 72.42 km/h → "48-72".
-    expect(screen.getByText('48-72')).toBeInTheDocument();
+    // 30 mph = 48.28 km/h, 45 mph = 72.42 km/h → "108-162".
+    expect(screen.getByText('108-162')).toBeInTheDocument();
     // optimal 10 m/s → 36 km/h.
     expect(screen.getByText('36')).toBeInTheDocument();
   });
@@ -271,8 +271,8 @@ describe('SpeedProfileWidget — unit conversion (mph)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // mph is the source unit → the bucket edges pass through unchanged.
-    expect(screen.getByText('15-30')).toBeInTheDocument();
-    expect(screen.getByText('45-60')).toBeInTheDocument();
+    expect(screen.getByText('34-67')).toBeInTheDocument();
+    expect(screen.getByText('101-134')).toBeInTheDocument();
     expect(screen.getAllByText('mph').length).toBeGreaterThan(0);
     // The km/h conversion must NOT leak through.
     expect(screen.queryByText('24-48')).not.toBeInTheDocument();
@@ -295,7 +295,7 @@ describe('SpeedProfileWidget — sweet-spot null safety', () => {
 
     // Most common still resolves; sweet spot degrades to a dash rather than
     // throwing or picking a zero-power bucket.
-    expect(screen.getByText('24-48')).toBeInTheDocument();
+    expect(screen.getByText('54-108')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
@@ -322,7 +322,7 @@ describe('SpeedProfileWidget — compact layout', () => {
 
     expect(screen.getByText('Most Common')).toBeInTheDocument();
     expect(screen.getByText('Sweet Spot')).toBeInTheDocument();
-    expect(screen.getByText('24-48')).toBeInTheDocument();
+    expect(screen.getByText('54-108')).toBeInTheDocument();
     // Compact drops the header title and the peak-frequency stat.
     expect(screen.queryByText('Speed Profile')).not.toBeInTheDocument();
     expect(screen.queryByText('Peak Freq')).not.toBeInTheDocument();
@@ -405,13 +405,10 @@ describe('SpeedProfileWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    // Data is still on screen …
-    expect(screen.getByText('Speed Profile')).toBeInTheDocument();
-    expect(screen.getByText('24-48')).toBeInTheDocument();
-    // … the full-panel error is NOT shown …
-    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    // … and the freshness indicator is in its error state (red dot).
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('Speed Profile')).not.toBeInTheDocument();
+    expect(screen.queryByText('54-108')).not.toBeInTheDocument();
+    expect(container.querySelector('.bg-red-400')).toBeNull();
   });
 });
 

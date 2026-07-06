@@ -392,7 +392,7 @@ describe('BatteryHealthPage · states', () => {
     renderPage();
 
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Set up TeslaSync' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set up TeslaSync' })).toBeInTheDocument();
     // Dashboard KPI band is absent.
     expect(screen.queryByText('State of Health')).not.toBeInTheDocument();
     // Hooks still run unconditionally with the (null) id.

@@ -130,7 +130,7 @@ function committed(onSave: ReturnType<typeof vi.fn>): WidgetConfig {
   return (onSave.mock.calls[0]?.[0] ?? {}) as WidgetConfig;
 }
 
-const selectByLabel = (name: string) => screen.getByLabelText(name) as HTMLSelectElement;
+const selectByLabel = (name: string) => screen.getByRole('combobox', { name }) as HTMLSelectElement;
 
 afterEach(() => {
   cleanup();
@@ -183,12 +183,12 @@ describe('WidgetSettingsModal — vehicle selector', () => {
 
   it('hides the vehicle selector for system widgets', () => {
     setup({ category: 'system' });
-    expect(screen.queryByLabelText('Vehicle')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Vehicle' })).toBeNull();
   });
 
   it('hides the vehicle selector for analytics widgets', () => {
     setup({ category: 'analytics' });
-    expect(screen.queryByLabelText('Vehicle')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Vehicle' })).toBeNull();
   });
 
   it('reflects the saved vehicle and commits a different selection', () => {
@@ -232,7 +232,7 @@ describe('WidgetSettingsModal — time range', () => {
 
   it('hides the time-range picker for non-chart widgets', () => {
     setup({ category: 'climate' });
-    expect(screen.queryByLabelText('Time Range')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Time Range' })).toBeNull();
   });
 
   it('defaults the time range to 7d and commits a change', () => {
@@ -333,7 +333,7 @@ describe('WidgetSettingsModal — hardening', () => {
         <WidgetSettingsModal widget={widgetA} def={def} open onClose={onClose} onSave={onSave} />
       </StrictMode>,
     );
-    const timeSelect = () => screen.getByLabelText('Time Range') as HTMLSelectElement;
+    const timeSelect = () => screen.getByRole('combobox', { name: 'Time Range' }) as HTMLSelectElement;
     expect(timeSelect().value).toBe('30d');
 
     // Edit widget A's draft in-place.

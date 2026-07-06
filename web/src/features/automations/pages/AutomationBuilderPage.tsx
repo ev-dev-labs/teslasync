@@ -231,6 +231,19 @@ export function formToPayload(form: FormState): AutomationFullInput {
   };
 }
 
+export function applyDraftToForm(previous: FormState, proposedDraft: AutomationFullInput): FormState {
+  return {
+    ...previous,
+    name: proposedDraft.name,
+    description: proposedDraft.description ?? '',
+    vehicle_id: proposedDraft.vehicle_id ?? null,
+    enabled: proposedDraft.enabled ?? true,
+    triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
+    conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
+    actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
+  };
+}
+
 export function triggerNeedsPlace(trigger: AutomationTriggerStepInput): boolean {
   return trigger.kind === 'trigger_geofence' && trigger.place_id <= 0;
 }
@@ -882,24 +895,7 @@ export default function AutomationBuilderPage() {
                   // per-step normalizers so the typed envelope is
                   // byte-equivalent to one the canonical
                   // POST /api/v1/automations handler accepts.
-                  setFormValue((previous) => ({
-                    ...previous,
-                    name: proposedDraft.name,
-                    description: proposedDraft.description ?? '',
-                    vehicle_id: proposedDraft.vehicle_id ?? null,
-                    enabled: proposedDraft.enabled ?? true,
-                    // The LLM-produced AutomationTriggerInput / etc.
-                    // have the same wire shape as the editing-time
-                    // AutomationTriggerStepInput modulo a TS-only
-                    // field-omission difference; the normalizers read
-                    // only the discriminated `kind` fields so the
-                    // structural cast is safe and runtime-equivalent
-                    // to the byte-shape POST /api/v1/automations
-                    // accepts.
-                    triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
-                    conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
-                    actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
-                  }));
+                  setFormValue((previous) => applyDraftToForm(previous, proposedDraft));
                   setDirty(true);
                 }}
               />

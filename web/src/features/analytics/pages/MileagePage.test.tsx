@@ -216,7 +216,7 @@ describe('MileagePage — no vehicle selected', () => {
 
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Set up TeslaSync' }),
+      screen.getByRole('link', { name: 'Set up TeslaSync' }),
     ).toBeInTheDocument();
     // The KPI region and its metrics must not mount when there is no vehicle.
     expect(screen.queryByRole('region', { name: 'Mileage summary metrics' })).toBeNull();

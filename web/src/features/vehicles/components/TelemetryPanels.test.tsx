@@ -380,13 +380,13 @@ describe('TelemetryGrid — charger tile', () => {
     const value = screen.getByText('11 kW')
     expect(value).toBeInTheDocument()
     expect(value).toHaveClass('text-emerald-300')
-    expect(screen.getByText('Full in 2.00h')).toBeInTheDocument()
+    expect(screen.getByText('Full in 2.0h')).toBeInTheDocument()
   })
 
-  it('shows "Not charging" and no time-to-full when idle', () => {
+  it('shows "Not Charging" and no time-to-full when idle', () => {
     render(<TelemetryGrid state={makeState({ is_charging: false })} />)
 
-    expect(screen.getByText('Not charging')).toHaveClass('text-[var(--text-muted)]')
+    expect(screen.getByText('Not Charging')).toHaveClass('text-[var(--text-muted)]')
     expect(screen.queryByText(/Full in/)).toBeNull()
   })
 })

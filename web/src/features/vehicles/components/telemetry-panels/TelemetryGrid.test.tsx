@@ -179,8 +179,8 @@ describe('TelemetryGrid', () => {
     const value = screen.getByText('11 kW')
     expect(value.className).toContain('text-emerald-300')
     // fmtNumber(1.5, 1) → "1.5"; the "Full in" prefix is i18n.
-    expect(screen.getByText('Full in 1.5h')).toBeInTheDocument()
-    expect(mockT).toHaveBeenCalledWith('vehicles.detail.fullIn', 'Full in')
+    expect(screen.getByText('Full in {{hours}}h')).toBeInTheDocument()
+    expect(mockT).toHaveBeenCalledWith('telemetry.fullInHours', 'Full in {{hours}}h', { hours: '1.5' })
   })
 
   it('hides the "Full in" ETA when time_to_full_charge is 0 or null (regression: no "Full in 0h")', () => {

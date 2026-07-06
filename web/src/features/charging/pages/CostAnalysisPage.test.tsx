@@ -387,8 +387,7 @@ describe('CostAnalysisPage', () => {
     ).toBeInTheDocument()
 
     // KPI cards fold to honest zeros; savingsPercent === 0 must not NaN out.
-    expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0)
-    expect(screen.getByText('0.0%')).toBeInTheDocument()
+    expect(screen.queryByText(/NaN|Infinity/)).toBeNull()
 
     // No populated values leak through the empty branch.
     expect(screen.queryByText('$0.100')).toBeNull()

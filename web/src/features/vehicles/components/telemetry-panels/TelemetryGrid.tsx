@@ -38,7 +38,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           icon={Gauge}
           label={t('common.speed', 'Speed')}
           value={formatSpeed(state.speed)}
-          sub={state.speed > 0 ? t('telemetry.driving', 'Driving') : t('telemetry.parked', 'Parked')}
+          sub={state.speed > 0 ? t('common.driving', 'Driving') : t('common.parked', 'Parked')}
         />
       </StaggerItem>
       <StaggerItem>
@@ -63,13 +63,13 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           value={
             state.is_charging
               ? `${fmtInt(state.charger_power)} kW`
-              : t('telemetry.notCharging', 'Not charging')
+              : t('common.notCharging', 'Not Charging')
           }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}
           sub={
-            state.is_charging && state.time_to_full_charge != null
+            state.is_charging && state.time_to_full_charge != null && state.time_to_full_charge > 0
               ? t('telemetry.fullInHours', 'Full in {{hours}}h', {
-                  hours: fmtNumber(state.time_to_full_charge),
+                  hours: fmtNumber(state.time_to_full_charge, 1),
                 })
               : undefined
           }

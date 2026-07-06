@@ -256,7 +256,7 @@ async function openEntryADrawer() {
   const vinCell = await screen.findByText(ENTRY_A_VIN);
   const row = vinCell.closest('tr') as HTMLElement | null;
   if (!row) throw new Error('entry A row not found in table');
-  fireEvent.click(within(row).getByRole('button', { name: 'Inspect' }));
+  fireEvent.click(within(row).getByRole('button', { name: /Inspect/ }));
   await screen.findByRole('dialog', { name: /DLQ entry #1/ });
 }
 

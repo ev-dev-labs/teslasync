@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles, useLatestTirePressure } from '@/api/hooks/useVehicles';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { paToKpa, tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
+import { tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -108,12 +108,8 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
   const allNormal = tires.every((tire) => tire.variant === 'success');
   const hasWarning = tires.some((tire) => tire.variant !== 'success');
 
-  // Backend stores tire pressure in SI Pascals; convert Pa→kPa before the
-  // display formatter (which expects the frontend kPa SI floor) and then to
-  // the user's pressure unit. Feeding raw Pascals straight in over-reported
-  // the value ~1000× and mis-coloured every reading.
   const formatPressure = (val: number | null): string => {
-    const v = toPressureValue(paToKpa(val));
+    const v = toPressureValue(val);
     return v != null ? `${fmtNumber(v, 1)}` : '—';
   };
 

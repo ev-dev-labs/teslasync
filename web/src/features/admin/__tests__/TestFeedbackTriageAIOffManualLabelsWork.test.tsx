@@ -262,7 +262,7 @@ describe('TestFeedbackTriageAIOffManualLabelsWork (feedback-queue-triage AI-off 
     expect(
       screen.getAllByLabelText(/Status/i).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByLabelText(/Category/i)).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/Category/i).length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByRole('button', { name: /Refresh/i }),
     ).toBeInTheDocument();

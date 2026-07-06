@@ -314,7 +314,7 @@ describe('IncidentTimelinePage', () => {
 
     renderAt();
 
-    expect(screen.getByText('major')).toBeInTheDocument();
+    expect(screen.getByText('Major')).toBeInTheDocument();
     expect(screen.getAllByText('Monitoring').length).toBeGreaterThan(0);
     expect(
       screen.getByText(/Customers report bursty 502 responses/),

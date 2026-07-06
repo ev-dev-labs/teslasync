@@ -186,12 +186,12 @@ export function useDeleteVehiclePhoto() {
       return vehicleId;
     },
     onSuccess: (vehicleId) => {
+      invalidateAndBroadcast(queryClient, { queryKey: vehiclePhotoKeys.detail(vehicleId) });
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.detail(String(vehicleId)) });
       queryClient.setQueryData<VehiclePhotoMeta>(
         vehiclePhotoKeys.detail(vehicleId),
         { has_photo: false },
       );
-      invalidateAndBroadcast(queryClient, { queryKey: vehiclePhotoKeys.detail(vehicleId) });
-      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.detail(String(vehicleId)) });
     },
   });
 }

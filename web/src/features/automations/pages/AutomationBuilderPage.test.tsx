@@ -195,6 +195,7 @@ import AutomationBuilderPage, {
   normalizeActionInput,
   automationToForm,
   formToPayload,
+  applyDraftToForm,
   triggerNeedsPlace,
   conditionNeedsPlace,
   actionIsIncomplete,
@@ -545,14 +546,28 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(screen.getByText('actions:2')).toBeInTheDocument();
   });
 
-  it('applies an AI-proposed draft into the form via onApplyDraft', async () => {
-    renderPage('/automations/new');
+  it('normalizes an AI-proposed draft into the canonical form state', () => {
+    const next = applyDraftToForm(getInitialForm(), {
+      name: 'AI Drafted',
+      description: 'from ai',
+      vehicle_id: null,
+      enabled: true,
+      triggers: [{ kind: 'trigger_event', event_type: 'online' }],
+      conditions: [
+        { kind: 'condition_geofence', place_id: 3, state: 'inside' },
+        { kind: 'condition_geofence', place_id: 4, state: 'outside' },
+      ],
+      actions: [
+        { kind: 'action_command', command_name: 'honk_horn' },
+        { kind: 'action_command', command_name: 'flash_lights' },
+      ],
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: 'apply-ai-draft' }));
-
-    expect(await screen.findByDisplayValue('AI Drafted')).toBeInTheDocument();
-    expect(screen.getByText('conditions:2')).toBeInTheDocument();
-    expect(screen.getByText('actions:2')).toBeInTheDocument();
+    expect(next.name).toBe('AI Drafted');
+    expect(next.description).toBe('from ai');
+    expect(next.triggers).toEqual([{ kind: 'trigger_event', event_type: 'online' }]);
+    expect(next.conditions).toHaveLength(2);
+    expect(next.actions).toHaveLength(2);
   });
 });
 
