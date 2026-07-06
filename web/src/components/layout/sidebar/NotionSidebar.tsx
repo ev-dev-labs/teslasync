@@ -238,12 +238,18 @@ export function NotionSidebar({
   const location = useLocation()
   const effectivePath = pathname ?? location.pathname
 
+  // Null-safe views of the array props so a not-yet-loaded or malformed
+  // parent (undefined sections / pinned list) degrades to an empty tree
+  // instead of throwing on `.map` / `.filter` / `.length`.
+  const safeSections = sections ?? []
+  const safePinnedItems = pinnedItems ?? []
+
   // ── Tree state ─────────────────────────────────────────────────────────
   const [collapsed, setCollapsed] = useState<Set<string>>(() => {
     // Default: collapse everything except the active section. Notion's
     // "show me the page I'm on" behaviour.
     const initial = new Set<string>()
-    for (const section of sections) {
+    for (const section of safeSections) {
       if (section.title !== activeSectionTitle) initial.add(section.title)
     }
     return initial
@@ -282,11 +288,11 @@ export function NotionSidebar({
 
   const filteredSections = useMemo(
     () =>
-      sections.map(section => ({
+      safeSections.map(section => ({
         ...section,
-        items: section.items.filter(item => matchesFilter(navLabel(item.label))),
+        items: (section.items ?? []).filter(item => matchesFilter(navLabel(item.label))),
       })),
-    [sections, filterTokens, navLabel],
+    [safeSections, filterTokens, navLabel],
   )
 
   const isExpanded = (title: string) => {
@@ -302,7 +308,7 @@ export function NotionSidebar({
   // on every collapsible row. We borrow the first item's icon+color so the
   // glyph stays in the same visual family as the section contents.
   const sectionGlyph = (section: NotionSidebarSectionInput) => {
-    const first = section.items[0]
+    const first = section.items?.[0]
     return {
       icon: first?.icon ?? Icons.home,
       color: first?.color,
@@ -338,7 +344,7 @@ export function NotionSidebar({
   }
 
   // Hover action — "pin" if not pinned, "unpin" if pinned.
-  const pinnedSet = useMemo(() => new Set(pinnedItems.map(p => p.to)), [pinnedItems])
+  const pinnedSet = useMemo(() => new Set(safePinnedItems.map(p => p.to)), [safePinnedItems])
   const pinAction = (item: NotionSidebarSectionInput['items'][number]) => {
     const pinned = pinnedSet.has(item.to)
     return (
@@ -375,13 +381,13 @@ export function NotionSidebar({
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Favorites group — only when there's at least one pin. */}
-        {pinnedItems.length > 0 && (
+        {safePinnedItems.length > 0 && (
           <div className="mb-1">
             <GroupLabel id="notion-favorites-label">
               {t('nav.favorites', 'Favorites')}
             </GroupLabel>
             <div className="space-y-px" aria-labelledby="notion-favorites-label">
-              {pinnedItems
+              {safePinnedItems
                 .filter(item => matchesFilter(navLabel(item.label)))
                 .map(item => (
                   <NotionRow
@@ -455,6 +461,16 @@ export function NotionSidebar({
               </div>
             )
           })}
+
+          {filterTokens.length === 0 && expandedSections.length === 0 && (
+            <div
+              className="rounded px-3 py-4 text-center text-xs text-[var(--text-muted)]"
+              role="status"
+              data-testid="notion-sidebar-empty"
+            >
+              <p>{t('nav.empty', 'No pages yet.')}</p>
+            </div>
+          )}
 
           {filterTokens.length > 0 && expandedSections.length === 0 && (
             <div
