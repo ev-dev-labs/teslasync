@@ -12,6 +12,29 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 
+/**
+ * Format an "hours until full charge" value into a compact "Hh Mm" label.
+ *
+ * Exported for unit testing. Two edge cases are handled that the naive inline
+ * version got wrong:
+ *   - Non-finite input (a dropped / garbled `time_to_full_charge` reading)
+ *     resolves to the em-dash placeholder rather than rendering "NaNh NaNm".
+ *   - The minute-rounding rollover: `Math.round((hours - h) * 60)` can yield
+ *     60 for values like 1.999, which must read "2h" — never "1h 60m".
+ */
+export function formatTimeRemaining(hours: number): string {
+  if (!Number.isFinite(hours) || hours <= 0) return '—';
+  let h = Math.floor(hours);
+  let m = Math.round((hours - h) * 60);
+  if (m === 60) {
+    h += 1;
+    m = 0;
+  }
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
 export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -47,15 +70,6 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
     return { power, voltage, amps, energyAdded, timeToFull, chargeRate, batteryLevel };
   }, [state, latestSession]);
 
-  const formatTime = (hours: number): string => {
-    if (hours <= 0) return '—';
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    if (h === 0) return `${m}m`;
-    if (m === 0) return `${h}h`;
-    return `${h}h ${m}m`;
-  };
-
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.chargeStatusLive', 'Charge Status')}
@@ -81,7 +95,6 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
               isTall={isTall}
               toDistanceDisplay={toDistanceDisplay}
               distanceUnit={distanceUnit}
-              formatTime={formatTime}
               t={t}
             />
           )
@@ -141,11 +154,10 @@ interface FullChargingViewProps {
   isTall: boolean;
   toDistanceDisplay: (km: number) => number;
   distanceUnit: string;
-  formatTime: (h: number) => string;
   t: (k: string, f: string) => string;
 }
 
-function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, formatTime, t }: FullChargingViewProps) {
+function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t }: FullChargingViewProps) {
   const { power, voltage, amps, energyAdded, timeToFull, chargeRate, batteryLevel } = metrics;
 
   return (
@@ -186,7 +198,7 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, fo
         <MetricCell
           icon={<Timer className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.timeRemaining', 'Time Left')}
-          value={formatTime(timeToFull)}
+          value={formatTimeRemaining(timeToFull)}
         />
         <MetricCell
           icon={<Zap className="h-3 w-3 text-[var(--text-muted)]" />}
