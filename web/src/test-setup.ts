@@ -100,10 +100,14 @@ class MockIntersectionObserver {
   readonly rootMargin: string = ''
   readonly thresholds: ReadonlyArray<number> = []
   constructor(private callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
-  observe(_target: Element) {
-    // Immediately trigger with isIntersecting = true
+  observe(target: Element) {
+    // Immediately trigger with isIntersecting = true, echoing the observed
+    // target back on the entry. The DOM contract guarantees every entry
+    // carries its `target`; without it, consumers that key off
+    // `entry.target` (rather than only `entry.isIntersecting`) would read
+    // `undefined` under test.
     this.callback(
-      [{ isIntersecting: true, intersectionRatio: 1 } as IntersectionObserverEntry],
+      [{ isIntersecting: true, intersectionRatio: 1, target } as IntersectionObserverEntry],
       this as unknown as IntersectionObserver,
     )
   }
