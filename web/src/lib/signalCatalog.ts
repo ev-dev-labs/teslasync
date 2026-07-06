@@ -162,7 +162,7 @@ const catalog: SignalMeta[] = [
   { name: 'DestinationLocation', category: 'Location', type: 'string', description: 'Navigation destination coordinates' },
   { name: 'DestinationName', category: 'Navigation', type: 'string', description: 'Navigation destination name' },
   { name: 'GpsHeading', category: 'Location', type: 'number', unit: '°', description: 'GPS heading in degrees' },
-  { name: 'GpsState', category: 'Location', type: 'string', description: 'GPS fix state. Polymorphic: Tesla emits "true"/"false"; legacy data uses "GPSValid"/"GPSInvalid"; canonical enum is NoFix/Fix2D/Fix3D. Use normalizeGpsState() before display.', enumValues: ['NoFix', 'Fix2D', 'Fix3D', 'GPSValid', 'GPSInvalid', 'true', 'false'] },
+  { name: 'GpsState', category: 'Location', type: 'string', description: 'GPS fix state. Polymorphic: Tesla emits "true"/"false" or "GpsLocked"; legacy data uses "GPSValid"/"GPSInvalid"; canonical enum is NoFix/Fix2D/Fix3D. Use normalizeGpsState() before display.', enumValues: ['NoFix', 'Fix2D', 'Fix3D', 'GPSValid', 'GPSInvalid', 'GpsLocked', 'true', 'false'] },
   { name: 'LocatedAtFavorite', category: 'Location', type: 'boolean', description: 'Vehicle at a favorite location' },
   { name: 'LocatedAtHome', category: 'Location', type: 'boolean', description: 'Vehicle at home location' },
   { name: 'LocatedAtWork', category: 'Location', type: 'boolean', description: 'Vehicle at work location' },
@@ -300,9 +300,12 @@ export type GpsFixState = 'locked' | 'unlocked' | 'unknown'
  * generators emit into a stable 3-value enum the UI can switch on.
  *
  * Real-world raw values include: "true"/"false" (Tesla bool literal),
- * "GPSValid"/"GPSInvalid" (legacy test data), "NoFix"/"Fix2D"/"Fix3D"
- * (canonical enum), and historic strings like "normal"/"good"/"strong"/
- * "ok"/"valid"/"invalid"/"none".
+ * "GpsLocked" (current firmware / proto-batch wire form persisted verbatim
+ * by internal/tesla/codec/coercion.go), "GPSValid"/"GPSInvalid" (legacy
+ * test data), "NoFix"/"Fix2D"/"Fix3D"/"fix" (canonical enum + short form),
+ * and historic strings like "normal"/"good"/"strong"/"ok"/"valid"/
+ * "invalid"/"none". Genuinely ambiguous states ("GpsUnknown",
+ * "DR_GPS_NAV_LIMITED") fall through to 'unknown' rather than guessing.
  */
 export function normalizeGpsState(raw: string | null | undefined): GpsFixState {
   if (raw == null) return 'unknown'
@@ -311,8 +314,8 @@ export function normalizeGpsState(raw: string | null | undefined): GpsFixState {
 
   if (
     v === 'true' || v === '1' || v === 'yes' ||
-    v === 'gpsvalid' ||
-    v === 'fix2d' || v === 'fix3d' ||
+    v === 'gpsvalid' || v === 'gpslocked' ||
+    v === 'fix' || v === 'fix2d' || v === 'fix3d' ||
     v === 'normal' || v === 'good' || v === 'strong' || v === 'ok' || v === 'valid'
   ) return 'locked'
 
