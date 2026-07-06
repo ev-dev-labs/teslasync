@@ -9,7 +9,32 @@ import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
+
+/**
+ * Convert the live odometer to the user's display unit. `VehicleState.odometer`
+ * is SI **metres** (the `/vehicles/{id}/state` contract — see VehicleHeroCard),
+ * so it feeds the shared metre-floor `convertDistanceFromSI` directly. A
+ * non-finite payload collapses to 0 so the counter never renders "NaN".
+ */
+export function toOdometerDisplay(odometerMeters: number, to: DistanceUnitPref): number {
+  if (!Number.isFinite(odometerMeters)) return 0;
+  return convertDistanceFromSI(odometerMeters, to);
+}
+
+/**
+ * Convert a `DrivingStats.totalDistanceKm` value to the user's display unit.
+ * That field is a legacy display scalar in **kilometres**, NOT SI — but the
+ * shared `convertDistanceFromSI` expects **metres**, so the value is scaled to
+ * metres first (the same bridge `EfficiencyPage`, `FleetComparePage`, and
+ * `FleetStatsBarWidget` apply). Passing kilometres straight through previously
+ * under-reported total-driven distance by 1000× (5,000 km surfaced as 5 km). A
+ * non-finite payload collapses to 0 so the tile never renders "NaN".
+ */
+export function toTotalDrivenDisplay(totalDistanceKm: number, to: DistanceUnitPref): number {
+  if (!Number.isFinite(totalDistanceKm)) return 0;
+  return convertDistanceFromSI(totalDistanceKm * 1000, to);
+}
 
 export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -20,8 +45,6 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
   const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { data: stats, isLoading: statsLoading } = useDrivingStats(idStr);
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-
   const distanceUnit = unitPrefs.distance;
 
   const isCompact = size.cols === 1 && size.rows === 1;
@@ -31,12 +54,12 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
   const totalDistanceKm = stats?.totalDistanceKm ?? null;
 
   const convertedOdometer = useMemo(
-    () => (odometer != null ? toDistanceDisplay(odometer) : null),
-    [odometer, toDistanceDisplay],
+    () => (odometer != null ? toOdometerDisplay(odometer, distanceUnit) : null),
+    [odometer, distanceUnit],
   );
   const convertedTotalDriven = useMemo(
-    () => (totalDistanceKm != null ? toDistanceDisplay(totalDistanceKm) : null),
-    [totalDistanceKm, toDistanceDisplay],
+    () => (totalDistanceKm != null ? toTotalDrivenDisplay(totalDistanceKm, distanceUnit) : null),
+    [totalDistanceKm, distanceUnit],
   );
 
   const isLoading = stateLoading || statsLoading;
