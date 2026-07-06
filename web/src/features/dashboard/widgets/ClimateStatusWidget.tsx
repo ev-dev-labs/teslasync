@@ -3,7 +3,7 @@ import { Thermometer, Snowflake, Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
@@ -59,7 +59,9 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
           <Row
             label={t('widget.hvac', 'HVAC')}
             value={
-              climateData.hvac_power != null ? `${fmtNumber(climateData.hvac_power, 1)} kW` : '—'
+              isFiniteNumber(climateData.hvac_power)
+                ? `${fmtNumber(climateData.hvac_power, 1)} kW`
+                : '—'
             }
           />
           <div className="flex items-center gap-2 flex-wrap">
@@ -68,7 +70,7 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
                 <Snowflake className="h-2.5 w-2.5" /> {t('widget.defrost', 'Defrost')}
               </span>
             )}
-            {climateData.battery_heater_on && (
+            {climateData.battery_heater && (
               <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
                 <Zap className="h-2.5 w-2.5" /> {t('widget.batHeater', 'Heater')}
               </span>
