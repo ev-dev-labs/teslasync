@@ -9,7 +9,7 @@ import {
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { SavedDashboard, DashboardSettings } from '../widgets/types';
-import { DEFAULT_DASHBOARD_SETTINGS } from '../widgets/types';
+import { mergeDashboardSettings } from '../widgets/types';
 
 /* ─── Emoji picker ─── */
 const DASHBOARD_EMOJIS = [
@@ -88,17 +88,16 @@ export function DashboardSettingsModal({
 }: DashboardSettingsModalProps) {
   const { t } = useTranslation('dashboard');
 
-  const [settings, setSettings] = useState<DashboardSettings>(() => ({
-    ...DEFAULT_DASHBOARD_SETTINGS,
-    ...dashboard.settings,
-  }));
+  const [settings, setSettings] = useState<DashboardSettings>(() =>
+    mergeDashboardSettings(dashboard.settings),
+  );
   const [name, setName] = useState(dashboard.name);
   const [icon, setIcon] = useState(dashboard.icon ?? '📊');
 
   // Reset form state when modal opens or target dashboard changes
   useEffect(() => {
     if (open) {
-      setSettings({ ...DEFAULT_DASHBOARD_SETTINGS, ...dashboard.settings });
+      setSettings(mergeDashboardSettings(dashboard.settings));
       setName(dashboard.name);
       setIcon(dashboard.icon ?? '📊');
     }
