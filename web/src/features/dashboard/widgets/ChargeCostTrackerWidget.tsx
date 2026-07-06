@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, Zap, Fuel, TrendingDown } from 'lucide-react';
@@ -9,29 +9,45 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
-import { convertEnergyFromSI } from '@/lib/unitConversion';
+import { convertDistanceToSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
 
-interface CostMetrics {
+export interface CostMetrics {
   totalKwh: number;
   totalCost: number;
   costPerDistance: number | null;
   gasSavings: number | null;
   sessionCount: number;
-  totalDistanceMi: number;
+  /** Estimated distance covered by the charged energy, in SI meters. */
+  totalDistanceM: number;
 }
 
-function computeMetrics(
+/**
+ * Average Tesla efficiency (~3.5 mi/kWh) expressed in SI meters per kWh.
+ * The cost/gas helpers from `useFormatting` consume SI meters, so the
+ * mile-based figure is lifted into SI once here via the lib rather than any
+ * call site hardcoding 1609.344.
+ */
+const AVG_METERS_PER_KWH = convertDistanceToSI(3.5, 'mi');
+
+/**
+ * Aggregate 30-day charging sessions into the widget's cost metrics.
+ *
+ * `costPerDistFn` and `estimateGasCostFn` both expect an SI-meter distance,
+ * so the estimated range is derived in meters (`totalDistanceM`) — passing
+ * miles here silently under-counts distance by ~1609× and corrupts both the
+ * cost-per-distance and gas-savings figures.
+ */
+export function computeMetrics(
   sessions: ChargingSession[],
   costPerKwh: number,
-  costPerDistFn: (kwh: number, mi: number) => number | null,
-  estimateGasCostFn: (mi: number) => number | null,
+  costPerDistFn: (kwh: number, distanceM: number) => number | null,
+  estimateGasCostFn: (distanceM: number) => number | null,
 ): CostMetrics {
   let totalKwh = 0;
   let totalCost = 0;
-  let totalDistanceMi = 0;
 
   for (const s of sessions) {
     const energy = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
@@ -40,12 +56,10 @@ function computeMetrics(
     totalCost += s.cost != null ? s.cost : energy * costPerKwh;
   }
 
-  // Rough distance estimate: ~3.5 mi/kWh average efficiency
-  const AVG_MI_PER_KWH = 3.5;
-  totalDistanceMi = totalKwh * AVG_MI_PER_KWH;
+  const totalDistanceM = totalKwh * AVG_METERS_PER_KWH;
 
-  const costPerDistance = costPerDistFn(totalKwh, totalDistanceMi);
-  const gasCost = estimateGasCostFn(totalDistanceMi);
+  const costPerDistance = costPerDistFn(totalKwh, totalDistanceM);
+  const gasCost = estimateGasCostFn(totalDistanceM);
   const gasSavings = gasCost != null ? gasCost - totalCost : null;
 
   return {
@@ -54,7 +68,7 @@ function computeMetrics(
     costPerDistance,
     gasSavings,
     sessionCount: sessions.length,
-    totalDistanceMi,
+    totalDistanceM,
   };
 }
 
@@ -63,10 +77,9 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { costPerKwh } = useFormatting();
+  const { costPerKwh, formatCurrency, costPerDistanceUnit, estimateGasCost } = useFormatting();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
-  const { formatCurrency, costPerDistanceUnit, estimateGasCost } = useFormatting();
 
   // Fetch last 30 days of charging sessions
   const thirtyDaysAgo = useMemo(() => {
@@ -75,7 +88,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
     return d.toISOString();
   }, []);
 
-  const { data: sessions, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
+  const { data: sessions, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['charging', id, 'cost-tracker-30d', thirtyDaysAgo],
     queryFn: () =>
       request<ChargingSession[]>(
@@ -100,17 +113,30 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   const isTall = size.rows >= 2;
   const hasData = (sessions ?? []).length > 0;
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  // Only surface the full-panel error when the INITIAL load failed with no
+  // cached data. A background-refetch error over existing data keeps the
+  // metrics on screen (the freshness dot still flags the error state), so a
+  // transient blip never blanks out a working widget.
+  const errorMessage =
+    isError && !sessions
+      ? t('widget.chargeCost.error', 'Failed to load charge data')
+      : null;
+
   // Compact: single big metric (total cost)
   if (isCompact) {
     return (
       <WidgetShell
         loading={isLoading}
-        error={error ? String(error) : null}
+        error={errorMessage}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => refetch()}
+        onRefresh={handleRefresh}
       >
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5">
@@ -137,12 +163,12 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       title={t('widget.chargeCost.title', 'Charge Cost Tracker')}
       icon={<DollarSign className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      error={errorMessage}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       {hasData ? (
         <div className="space-y-2">

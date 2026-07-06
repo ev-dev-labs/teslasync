@@ -11,6 +11,7 @@ import {
   type PowerUnitPref,
   type DurationUnitPref,
   convertDistanceFromSI,
+  convertDistanceToSI,
   convertSpeedFromSI,
   convertTempFromSI,
   convertPressureFromSI,
@@ -104,6 +105,22 @@ describe('convertDistanceFromSI', () => {
 
   it('passes NaN through (caller is responsible for guarding)', () => {
     expect(Number.isNaN(convertDistanceFromSI(NaN, 'km'))).toBe(true)
+  })
+})
+
+describe('convertDistanceToSI', () => {
+  it('lifts a display-unit distance into SI meters', () => {
+    expect(convertDistanceToSI(1, 'mi')).toBeCloseTo(1609.344, 9)
+    expect(convertDistanceToSI(1, 'km')).toBe(1000)
+    expect(convertDistanceToSI(1, 'ft')).toBeCloseTo(0.3048, 9)
+  })
+
+  it('is the exact inverse of convertDistanceFromSI for every unit', () => {
+    const meters = 8046.72 // 5 miles
+    const targets: DistanceUnitPref[] = ['km', 'mi', 'ft']
+    for (const to of targets) {
+      expect(convertDistanceToSI(convertDistanceFromSI(meters, to), to)).toBeCloseTo(meters, 9)
+    }
   })
 })
 

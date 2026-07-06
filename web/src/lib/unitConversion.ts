@@ -140,6 +140,32 @@ export function convertDistanceFromSI(
 }
 
 /**
+ * Convert a distance from a display unit back to SI meters.
+ *
+ * Exact inverse of {@link convertDistanceFromSI}. Producers should already
+ * emit SI, so this is reserved for the rare case where a constant is only
+ * known in a display unit (e.g. an efficiency figure quoted in mi/kWh) and
+ * must be lifted into SI before feeding an SI-only consumer — without any
+ * call site hardcoding the mile/foot factor.
+ *
+ * @param value - distance in the `from` display unit
+ * @param from - source display unit
+ */
+export function convertDistanceToSI(
+  value: number,
+  from: DistanceUnitPref,
+): number {
+  switch (from) {
+    case 'km':
+      return value * METERS_PER_KM
+    case 'mi':
+      return value * METERS_PER_MILE
+    case 'ft':
+      return value * METERS_PER_FOOT
+  }
+}
+
+/**
  * Convert speed from SI meters-per-second to the user's display unit.
  * @param mps - speed in meters per second (SI)
  * @param to - target display unit
