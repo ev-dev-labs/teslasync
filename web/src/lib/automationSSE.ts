@@ -64,6 +64,15 @@ function doConnect() {
   if (connecting) return
   connecting = true
 
+  // A fresh connect supersedes any scheduled backoff reconnect. Without this
+  // a subscribe() during the reconnect window races the pending timer and can
+  // leave two overlapping EventSources open (the timer fires after we already
+  // reconnected, tearing down the healthy stream).
+  if (reconnectTimer !== undefined) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = undefined
+  }
+
   if (source) {
     source.close()
     source = null
@@ -118,12 +127,26 @@ export const automationSSE: AutomationSSEClient = {
 
   unsubscribe(listener) {
     eventListeners.delete(listener)
-    // Auto-disconnect when no subscribers remain
-    if (eventListeners.size === 0 && source) {
-      source.close()
-      source = null
+    // Fully tear down once the last subscriber leaves. This must run even when
+    // `source` is null (i.e. we are mid-backoff between attempts): otherwise a
+    // pending reconnect timer fires later and opens a zombie stream nobody is
+    // listening to. It must also clear the `connecting` latch — a teardown that
+    // happens before the server's `connected` event would otherwise leave
+    // `connecting === true`, and the next subscribe() (`!source && !connecting`)
+    // would never reopen the stream. Resetting `failCount` lets a later
+    // subscribe() start the backoff schedule fresh from 1s.
+    if (eventListeners.size === 0) {
+      if (source) {
+        source.close()
+        source = null
+      }
+      if (reconnectTimer !== undefined) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = undefined
+      }
+      connecting = false
+      failCount = 0
       state = 'reconnecting'
-      if (reconnectTimer) clearTimeout(reconnectTimer)
     }
   },
 
