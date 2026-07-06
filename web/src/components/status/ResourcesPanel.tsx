@@ -29,20 +29,37 @@ export interface ResourcesPanelProps {
   rows: ResourceRow[]
   /** Optional footnote rendered beneath the rows. */
   footnote?: ReactNode
+  /** Panel heading. Defaults to "Resources". Pass a translated string at the call site. */
+  title?: string
+  /** Message shown when `rows` is empty. Defaults to "No resource metrics available". */
+  emptyText?: string
   id?: string
   className?: string
 }
 
-export function ResourcesPanel({ rows, footnote, id, className }: ResourcesPanelProps) {
+export function ResourcesPanel({
+  rows,
+  footnote,
+  title = 'Resources',
+  emptyText = 'No resource metrics available',
+  id,
+  className,
+}: ResourcesPanelProps) {
+  const safeRows = rows ?? []
+
   return (
     <GlassPanel id={id} className={cn('p-4', className)}>
-      <Text as="h3" size="sm" weight="semibold" color="primary" className="mb-3">Resources</Text>
+      <Text as="h3" size="sm" weight="semibold" color="primary" className="mb-3">{title}</Text>
 
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <ResourceRowItem key={row.label} row={row} />
-        ))}
-      </div>
+      {safeRows.length > 0 ? (
+        <div className="space-y-3">
+          {safeRows.map((row) => (
+            <ResourceRowItem key={row.label} row={row} />
+          ))}
+        </div>
+      ) : (
+        <Text as="p" variant="caption" role="status">{emptyText}</Text>
+      )}
 
       {footnote && (
         <Text as="div" variant="caption" className="mt-3">{footnote}</Text>
@@ -52,7 +69,12 @@ export function ResourcesPanel({ rows, footnote, id, className }: ResourcesPanel
 }
 
 function ResourceRowItem({ row }: { row: ResourceRow }) {
-  const percent = row.percent
+  // Guard against non-finite values (NaN / ±Infinity from upstream divisions)
+  // and clamp to [0,100] so the bar width and the ARIA value never disagree.
+  const percent =
+    row.percent != null && Number.isFinite(row.percent)
+      ? Math.max(0, Math.min(100, row.percent))
+      : null
   const severity =
     percent == null ? 'normal'
     : percent >= 90 ? 'critical'
@@ -96,7 +118,7 @@ function ResourceRowItem({ row }: { row: ResourceRow }) {
         >
           <div
             className={cn('h-full transition-all duration-slow', barColor)}
-            style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+            style={{ width: `${percent}%` }}
           />
         </div>
       )}
