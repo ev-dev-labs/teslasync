@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trophy, Route, Zap, Car, Leaf, DollarSign, CalendarDays } from 'lucide-react';
 import { AnimatedNumber } from '@/components/data-display';
@@ -8,7 +8,6 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
@@ -23,17 +22,25 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
     data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useLifetimeStats(id > 0 ? String(id) : undefined);
 
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  // convertDistanceFromSI expects SI meters and maps to the user's unit.
+  const toDistanceDisplay = useCallback(
+    (meters: number) => convertDistanceFromSI(meters, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
 
   const distanceUnit = unitPrefs.distance;
   const { formatCurrency } = useFormatting();
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  // API returns km; convert km → mi (internal) → user pref
-  const distanceMi = (data?.total_distance_km ?? 0) * UNITS.KM_TO_MI;
-  const displayDistance = toDistanceDisplay(distanceMi);
+  // API returns kilometers; lift to SI meters before the display conversion.
+  const distanceMeters = (data?.total_distance_km ?? 0) * 1000;
+  const displayDistance = toDistanceDisplay(distanceMeters);
 
   const coreStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
@@ -67,10 +74,10 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   const wideStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
 
-    const avgDailyMi = data.ownership_days > 0
-      ? distanceMi / data.ownership_days
+    const avgDailyMeters = data.ownership_days > 0
+      ? distanceMeters / data.ownership_days
       : 0;
-    const avgDailyDisplay = toDistanceDisplay(avgDailyMi);
+    const avgDailyDisplay = toDistanceDisplay(avgDailyMeters);
 
     return [
       {
@@ -90,7 +97,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
         icon: <Route className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, distanceMi, toDistanceDisplay, distanceUnit, formatCurrency, t]);
+  }, [data, distanceMeters, toDistanceDisplay, distanceUnit, formatCurrency, t]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),
@@ -102,12 +109,12 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell
         loading={isLoading}
-        error={error ? String(error) : null}
+        error={isError && !data ? String(error ?? t('widget.lifetimeStats.error', 'Unable to load lifetime stats')) : null}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => refetch()}
+        onRefresh={handleRefresh}
       >
         {data ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
@@ -136,12 +143,12 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.lifetimeStats.title', 'Lifetime Stats')}
       icon={<Trophy className="h-3.5 w-3.5 text-amber-400" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      error={isError && !data ? String(error ?? t('widget.lifetimeStats.error', 'Unable to load lifetime stats')) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       {data ? (
         <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
