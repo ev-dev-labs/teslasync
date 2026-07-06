@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog } from 'lucide-react';
 import {
@@ -34,7 +34,7 @@ function buildChartData(
   return items
     .filter((d) => d.ts || d.created_at)
     .map((d) => {
-      const ts = d.ts ?? d.created_at ?? '';
+      const ts = d.ts || d.created_at || '';
       const raw = d as unknown as Record<string, number | string | null | undefined>;
       const statorRaw = d.di_stator_temp ?? d.motor_temp_c_front ?? null;
       return {
@@ -58,7 +58,13 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+  // Stable per temperature preference so the chartData / danger-threshold
+  // memos below actually memoize (an inline arrow would be a new reference
+  // every render and defeat them).
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, unitPrefs.temperature),
+    [unitPrefs.temperature],
+  );
 
   const tempUnit = unitPrefs.temperature;
 
@@ -135,13 +141,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <WidgetChartSummary
           compact
           isEmpty={!hasData}
