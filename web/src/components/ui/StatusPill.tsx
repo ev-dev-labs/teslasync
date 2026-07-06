@@ -20,6 +20,7 @@ export const StatusPill = forwardRef<HTMLSpanElement, StatusPillProps>(
       {...props}
     >
       <span
+        aria-hidden="true"
         className={cn(
           'h-1.5 w-1.5 rounded-full shrink-0',
           color,
