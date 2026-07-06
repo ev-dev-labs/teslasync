@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -22,6 +22,13 @@ function CompactView({
   mobileEnabled: boolean | null;
   t: (key: string, fallback: string) => string;
 }) {
+  const mobileLabel =
+    mobileEnabled === true
+      ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
+      : mobileEnabled === false
+        ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
+        : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown');
+
   return (
     <div className="flex items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
@@ -31,6 +38,8 @@ function CompactView({
         </span>
       </div>
       <span
+        role="img"
+        aria-label={mobileLabel}
         className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
           mobileEnabled === true
             ? 'bg-emerald-400'
@@ -38,13 +47,7 @@ function CompactView({
               ? 'bg-red-400'
               : 'bg-[var(--surface-2)]'
         }`}
-        title={
-          mobileEnabled === true
-            ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
-            : mobileEnabled === false
-              ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
-              : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown')
-        }
+        title={mobileLabel}
       />
     </div>
   );
@@ -115,7 +118,7 @@ function StandardView({
 
 export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vidStr = vid != null ? String(vid) : undefined;
 
@@ -191,7 +194,16 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     [safeInvitations, t],
   );
 
-  const isLoading = driversLoading || invitationsLoading || mobileLoading;
+  // Fold the vehicle-list load into the skeleton: with no explicit vehicleId
+  // prop the widget resolves its vehicle from `vehicles?.[0]`, and until that
+  // list lands the per-vehicle queries are disabled (and therefore NOT
+  // "loading"). Without this the widget would flash the "No access data" empty
+  // state before any vehicle resolves.
+  const isLoading =
+    (vehiclesLoading && vidStr === undefined) ||
+    driversLoading ||
+    invitationsLoading ||
+    mobileLoading;
   const isFetching = driversFetching || invitationsFetching || mobileFetching;
   const isStale = driversStale || invitationsStale || mobileStale;
   const isError = driversError || invitationsError || mobileError;
@@ -201,22 +213,38 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     mobileUpdatedAt ?? 0,
   );
 
+  const hasAnyData =
+    safeDrivers.length > 0 || safeInvitations.length > 0 || mobileEnabled !== null;
+
+  // An errored INITIAL load (nothing cached across all three sources) surfaces
+  // an error panel instead of the misleading "No access data available" empty
+  // state. A background-refetch error over already-loaded data keeps the panel
+  // on screen — the freshness dot still flags the error — so a transient blip
+  // never blanks out a working widget.
+  const errorMessage =
+    isError && !hasAnyData
+      ? t('widget.vehicleAccessError', 'Failed to load access data')
+      : undefined;
+
+  const handleRefresh = useCallback(() => {
+    void refetchDrivers();
+    void refetchInvitations();
+    void refetchMobile();
+  }, [refetchDrivers, refetchInvitations, refetchMobile]);
+
   return (
     <WidgetShell
       title={t('widget.vehicleAccess', 'Vehicle Access')}
       icon={<Users className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
+      error={errorMessage}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => {
-        refetchDrivers();
-        refetchInvitations();
-        refetchMobile();
-      }}
+      onRefresh={handleRefresh}
     >
-      {safeDrivers.length > 0 || safeInvitations.length > 0 || mobileEnabled !== null ? (
+      {hasAnyData ? (
         isCompact ? (
           <CompactView
             driverCount={safeDrivers.length}
