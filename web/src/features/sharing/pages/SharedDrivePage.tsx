@@ -30,7 +30,7 @@ import {
   convertSpeedFromSI,
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
-import type { SharedDriveData, SharedDriveDataV1 } from '@/types/sharing';
+import { normalizeSharedDriveData } from '@/types/sharing';
 
 /* ------------------------------------------------------------------ */
 /*  Boundary constants                                                */
@@ -49,7 +49,6 @@ const KM_PER_MILE = 1.609344;
 const METERS_PER_FOOT = 0.3048;
 
 const METERS_PER_KM = 1000;
-const KMH_PER_MPS = 3.6;
 
 /* ------------------------------------------------------------------ */
 /*  Unit-aware helpers                                                */
@@ -69,54 +68,6 @@ function efficiencyUnit(distancePref: DistanceUnitPref): string {
 
 function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): number {
   return distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
-}
-
-
-function normalizeSharedDriveData(data: SharedDriveData | SharedDriveDataV1 | undefined): SharedDriveData | undefined {
-  if (!data) return undefined;
-  // The SI `SharedDriveData` wire shape always carries `payload_version`
-  // (v2 today, historically v1); the legacy `SharedDriveDataV1` never does.
-  // Presence of the field — not its specific value — is the discriminator:
-  // a v1-tagged SI payload is passed through untouched instead of being
-  // re-run through the km→m converters, which would read its (absent) km
-  // fields as undefined and emit NaN.
-  if ('payload_version' in data) return data;
-  const v1 = data;
-  return {
-    payload_version: 'v1',
-    title: v1.title,
-    description: v1.description,
-    drive: {
-      date: v1.drive.date,
-      distance_m: v1.drive.distance_km * METERS_PER_KM,
-      duration_s: Math.round(v1.drive.duration_min * 60),
-      start_address: v1.drive.start_address,
-      end_address: v1.drive.end_address,
-      start_battery: v1.drive.start_battery,
-      end_battery: v1.drive.end_battery,
-      elevation_gain: v1.drive.elevation_gain,
-      elevation_loss: v1.drive.elevation_loss,
-      max_speed_mps: v1.drive.max_speed_kmh == null ? null : v1.drive.max_speed_kmh / KMH_PER_MPS,
-      avg_speed_mps: v1.drive.avg_speed_kmh == null ? null : v1.drive.avg_speed_kmh / KMH_PER_MPS,
-      efficiency_wh_per_m: v1.drive.efficiency_wh_km == null ? null : v1.drive.efficiency_wh_km / METERS_PER_KM,
-    },
-    vehicle: v1.vehicle,
-    map_points: v1.map_points,
-    elevation_profile: (v1.elevation_profile ?? []).map((p) => ({
-      distance_m: p.distance_km * METERS_PER_KM,
-      elevation_m: p.elevation_m,
-    })),
-    speed_profile: (v1.speed_profile ?? []).map((p) => ({
-      distance_m: p.distance_km * METERS_PER_KM,
-      speed_mps: p.speed_kmh / KMH_PER_MPS,
-    })),
-    telemetry: (v1.telemetry ?? []).map((p) => ({
-      distance_m: p.distance_km * METERS_PER_KM,
-      battery_level: p.battery_level,
-      power: p.power,
-      elevation: p.elevation,
-    })),
-  };
 }
 
 /* ------------------------------------------------------------------ */
