@@ -6,14 +6,41 @@
  * kind gets a dedicated interface with explicitly typed fields (no jsonb blobs).
  */
 
-export type NotificationChannelKind =
-  | 'discord'
-  | 'slack'
-  | 'telegram'
-  | 'email'
-  | 'webhook'
-  | 'ntfy'
-  | 'pushover';
+/**
+ * Canonical, ordered list of every supported notification channel kind — the
+ * single runtime source of truth. `NotificationChannelKind` is derived from
+ * this tuple (via `as const`) so the compile-time union and the runtime list
+ * can never drift, mirroring the `VEHICLE_STATES → VEHICLE_STATUSES` pattern in
+ * `@/api/types`. Iterate this for provider dropdowns / payload validation
+ * instead of hand-maintaining a parallel array.
+ */
+export const NOTIFICATION_CHANNEL_KINDS = [
+  'discord',
+  'slack',
+  'telegram',
+  'email',
+  'webhook',
+  'ntfy',
+  'pushover',
+] as const;
+
+export type NotificationChannelKind = (typeof NOTIFICATION_CHANNEL_KINDS)[number];
+
+/**
+ * Runtime type guard for an untrusted `kind` value (a raw API payload, a form
+ * field, a query param) before it is narrowed to `NotificationChannelKind`.
+ * Rejects `null` / `undefined` / non-string input so a malformed channel is
+ * caught at the boundary rather than trusted as a valid discriminant
+ * downstream (where a `switch (ch.kind)` would silently fall through).
+ */
+export function isNotificationChannelKind(
+  value: unknown,
+): value is NotificationChannelKind {
+  return (
+    typeof value === 'string' &&
+    (NOTIFICATION_CHANNEL_KINDS as readonly string[]).includes(value)
+  );
+}
 
 export interface NotificationChannelBase {
   id: number;
