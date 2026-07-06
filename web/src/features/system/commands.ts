@@ -5,7 +5,8 @@
  * The page uses this config to render tiles, handle input prompts,
  * manage toggles, and filter/search commands.
  *
- * 67 entries → 72 commands (5 toggle pairs merged into single entries).
+ * 67 entries map to 75 Tesla commands: 8 toggle entries each carry a
+ * `commandOff`, so they expand to an on/off pair; the remaining 59 map 1:1.
  */
 
 import type { LucideIcon } from '@/lib/icons';
@@ -646,7 +647,9 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.nav.enterScId',
       promptFallback: 'Enter Supercharger ID:',
-      paramName: 'id', transform: (v) => parseInt(v, 10),
+      // Supercharger IDs are integers — validate before the parseInt transform
+      // so a non-numeric entry can't post `id: NaN` (which serialises to null).
+      paramName: 'id', validation: 'number', transform: (v) => parseInt(v, 10),
     },
     params: { order: 0 },
   },
@@ -662,8 +665,14 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.software.enterDelay',
       promptFallback: 'Install in how many minutes? (0 = now, 120 = 2 hours)',
-      paramName: 'offset_sec', defaultValue: '0',
-      transform: (v) => String(parseInt(v, 10) * 60),
+      paramName: 'offset_sec', defaultValue: '0', validation: 'number', min: 0,
+      // Minutes → seconds. Guard non-numeric input (the field stays free-text
+      // until validation runs, and callers can invoke transform directly) so an
+      // unparseable entry never posts the literal string "NaN".
+      transform: (v) => {
+        const minutes = Number.parseInt(v, 10);
+        return String((Number.isFinite(minutes) ? minutes : 0) * 60);
+      },
     },
   },
   {
@@ -686,7 +695,7 @@ export const COMMANDS: CommandDef[] = [
       promptFallback: 'Enter new vehicle name:',
       paramName: 'vehicle_name', validation: 'text',
       getDefaultValue: (ctx) => ctx.vehicle?.display_name ?? '',
-      buildParams: (values) => ({ vehicle_name: values.vehicle_name.trim() }),
+      buildParams: (values) => ({ vehicle_name: (values.vehicle_name ?? '').trim() }),
     },
   },
 
