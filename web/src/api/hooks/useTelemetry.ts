@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
+import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
 import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
@@ -284,26 +285,14 @@ export function useMQTTStatus() {
     queryKey: telemetryKeys.mqttStatus,
     queryFn: async ({ signal }) => {
       const raw = await request<TelemetryStatus>('/telemetry', { signal });
-      // Backend returns vehicles as Record<vin, VehicleStreamState>.
-      // Normalize to array for the page.
-      const vehiclesRaw = raw.vehicles ?? raw.streaming_vehicles;
-      let vehiclesArr: VehicleTelemetry[] = [];
-      if (Array.isArray(vehiclesRaw)) {
-        vehiclesArr = vehiclesRaw;
-      } else if (vehiclesRaw && typeof vehiclesRaw === 'object') {
-        vehiclesArr = Object.entries(vehiclesRaw).map(([vin, v]) => ({
-          ...v,
-          vin,
-          signalCount: v.signalCount ?? v.signal_count ?? 0,
-          batchCount: v.batchCount ?? v.batch_count ?? 0,
-          signalsPerSecond: v.signalsPerSecond ?? v.signals_per_second,
-          lastReceived: v.lastReceived ?? v.last_received,
-        }));
-      }
+      // The backend has shipped vehicles as an array or a Record<vin, …> map,
+      // under `vehicles` or the older `streaming_vehicles`, in either casing.
+      // telemetryVehicleList() collapses all of that to one normalized array
+      // (and telemetryUptimeSeconds() resolves the dual-shape uptime field).
       return {
         ...raw,
-        uptimeSeconds: raw.uptimeSeconds ?? raw.uptime_seconds,
-        vehicles: vehiclesArr,
+        uptimeSeconds: telemetryUptimeSeconds(raw),
+        vehicles: telemetryVehicleList(raw),
       } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
     },
     refetchInterval: INTERVALS.REALTIME,
