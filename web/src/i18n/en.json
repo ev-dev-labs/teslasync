@@ -6460,7 +6460,8 @@
       "regen": "Regen",
       "charger": "Charger",
       "title": "Energy Flow",
-      "noData": "No energy data available"
+      "noData": "No energy data available",
+      "error": "Unable to load energy data"
     },
     "consuming": "Consuming",
     "regenerating": "Regenerating",
