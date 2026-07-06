@@ -9,12 +9,22 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
-function trendOf(
+/** 1 km = 1000 m exactly — scales the digest's km wire value up to SI metres. */
+const METERS_PER_KM = 1000;
+/** 1 mile = 1.609344 km exactly — converts a per-km rate (Wh/km) to per-mile (Wh/mi). */
+const KM_PER_MILE = 1.609344;
+
+/**
+ * Derive a display trend from a current vs previous pair. Exported for
+ * unit testing (branch coverage of the flat / up / down / lower-is-better
+ * cases). A zero baseline yields an em-dash (no meaningful percentage), and
+ * sub-1% moves collapse to "~0%" so noise never renders as a coloured arrow.
+ */
+export function trendOf(
   current: number,
   previous: number,
   lowerIsPositive = false,
@@ -34,37 +44,34 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
 
   const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useWeeklyDigest(String(id));
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const { formatCurrency } = useFormatting();
 
   const distanceUnit = unitPrefs.distance;
-  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
-  const { formatCurrency } = useFormatting();
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const metrics = useMemo(() => {
     if (!data) return null;
 
-    // WeeklyDigestData stores distance in km; convert to miles for toDistanceDisplay
-    const distMi = (data.distanceKm ?? 0) * UNITS.KM_TO_MI;
-    const prevDistMi = (data.prevDistanceKm ?? 0) * UNITS.KM_TO_MI;
-
-    // Efficiency in Wh/km; convert to Wh/mi for toEfficiencyDisplay
-    const effWhMi = (data.efficiency ?? 0) * UNITS.MI_TO_KM;
-    const prevEffWhMi = (data.prevEfficiency ?? 0) * UNITS.MI_TO_KM;
+    // The digest wire shape carries distance in km and efficiency in Wh/km, but
+    // convertDistanceFromSI expects SI metres — scale km → m before converting
+    // to the user's display unit.
+    const toDistance = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
+    // Wh/km → Wh/mi only when the user reads miles; km is already the base unit.
+    const toEfficiency = (whPerKm: number) => (distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm);
 
     return {
-      distance: toDistanceDisplay(distMi),
-      prevDistance: toDistanceDisplay(prevDistMi),
+      distance: toDistance(data.distanceKm ?? 0),
+      prevDistance: toDistance(data.prevDistanceKm ?? 0),
       energy: data.energyKwh ?? 0,
       prevEnergy: data.prevEnergyKwh ?? 0,
       cost: data.cost ?? 0,
       prevCost: data.prevCost ?? 0,
-      efficiency: toEfficiencyDisplay(effWhMi),
-      prevEfficiency: toEfficiencyDisplay(prevEffWhMi),
+      efficiency: toEfficiency(data.efficiency ?? 0),
+      prevEfficiency: toEfficiency(data.prevEfficiency ?? 0),
       drives: data.drives ?? 0,
       prevDrives: data.prevDrives ?? 0,
     };
-  }, [data, toDistanceDisplay, toEfficiencyDisplay]);
+  }, [data, distanceUnit]);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;
