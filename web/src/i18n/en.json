@@ -410,7 +410,12 @@
       "many": "{{count}} tasks",
       "tooltip": "Background work in progress",
       "aria": "Background tasks",
-      "heading": "Running"
+      "heading": "Running",
+      "queued": "Queued",
+      "processing": "Processing",
+      "exportLabel": "{{type}} export",
+      "saving": "Saving…",
+      "savingMany": "Saving {{count}} changes…"
     },
     "version": {
       "tooltip": "TeslaSync version",
