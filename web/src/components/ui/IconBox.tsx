@@ -17,11 +17,16 @@ const iconBoxSize = {
 
 /** Colored icon container with background ring. Replaces the repeated h-10 w-10 rounded-xl pattern. */
 export function IconBox({ children, color = 'cyan', size = 'md', className }: IconBoxProps) {
-  const c = neonColorMap[color]
+  // Fall back to the defaults when an out-of-union `color`/`size` slips in at
+  // runtime (e.g. a value coming from untyped JSON or dynamic data cast to
+  // NeonColor). Without the guard an unmapped key makes `neonColorMap[color]`
+  // undefined and the `c.bg` access throws, crashing the whole surrounding
+  // panel instead of degrading to the default tint.
+  const c = neonColorMap[color] ?? neonColorMap.cyan
   return (
     <div className={cn(
       'flex items-center justify-center ring-1 shrink-0',
-      iconBoxSize[size],
+      iconBoxSize[size] ?? iconBoxSize.md,
       c.bg, c.ring, c.text,
       className,
     )}>
