@@ -1,10 +1,20 @@
 import type { TourDefinition } from '@/lib/tourRegistry'
 import type { TourStep } from '@/hooks/useTour'
 
+/**
+ * Drives tour — walks through the drives history table and the drive-replay
+ * experience. The first step calls `navigate('/drives')` from its `onShow`
+ * hook so the list is mounted before the spotlight measures its target; the
+ * remaining steps assume the user is already on the drives or replay route the
+ * launcher recommended them from (see `routeMatch` below).
+ */
+
 function navigate(href: string) {
   if (typeof window === 'undefined') return
   if (window.location.pathname === href) return
   window.history.pushState({}, '', href)
+  // history.pushState does not emit a popstate on its own; dispatch a
+  // synthetic one so the SPA router observes the change and re-renders.
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
