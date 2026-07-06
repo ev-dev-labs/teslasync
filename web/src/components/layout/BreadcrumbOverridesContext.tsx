@@ -27,6 +27,11 @@ interface BreadcrumbOverridesContextValue {
 
 const BreadcrumbOverridesContext = createContext<BreadcrumbOverridesContextValue | null>(null);
 
+// Shared, frozen empty map returned when no provider is mounted. A fresh `{}`
+// literal per render would defeat the `useMemo(overrides)` in `useBreadcrumbs`
+// (and any other consumer) by handing them a new reference every render.
+const EMPTY_OVERRIDES: BreadcrumbOverrideMap = Object.freeze({});
+
 let nextId = 1;
 
 export function BreadcrumbOverridesProvider({ children }: { children: ReactNode }) {
@@ -78,7 +83,7 @@ export function BreadcrumbOverridesProvider({ children }: { children: ReactNode 
 
 export function useBreadcrumbOverrides(): BreadcrumbOverrideMap {
   const ctx = useContext(BreadcrumbOverridesContext);
-  return ctx?.overrides ?? {};
+  return ctx?.overrides ?? EMPTY_OVERRIDES;
 }
 
 /**
@@ -90,26 +95,35 @@ export function useBreadcrumbOverrides(): BreadcrumbOverrideMap {
  */
 export function useSetBreadcrumbOverrides(map?: BreadcrumbOverrideMap): void {
   const ctx = useContext(BreadcrumbOverridesContext);
+  // Depend on the register/unregister callbacks directly, NOT the whole context
+  // value. Both are created once (useCallback with `[]` deps) so their identity
+  // is stable for the life of the provider. The context *value*, by contrast,
+  // gets a new identity on every registration (its `overrides` field changes).
+  // Keying the effect on `ctx` therefore re-ran it after each registration —
+  // including this hook's own — re-registering in a feedback loop that spins
+  // until React's "Maximum update depth exceeded" guard fires.
+  const register = ctx?.register;
+  const unregister = ctx?.unregister;
   const idRef = useRef<number | null>(null);
   // Serialise the map so we don't re-register on every render when callers
   // pass a fresh object literal with identical content.
   const serialised = map ? JSON.stringify(map) : '';
 
   useEffect(() => {
-    if (!ctx) return;
+    if (!register || !unregister) return;
     if (!serialised) {
       if (idRef.current != null) {
-        ctx.unregister(idRef.current);
+        unregister(idRef.current);
         idRef.current = null;
       }
       return;
     }
     if (idRef.current == null) idRef.current = nextId++;
     const id = idRef.current;
-    ctx.register(id, JSON.parse(serialised) as BreadcrumbOverrideMap);
+    register(id, JSON.parse(serialised) as BreadcrumbOverrideMap);
     return () => {
-      ctx.unregister(id);
+      unregister(id);
       idRef.current = null;
     };
-  }, [ctx, serialised]);
+  }, [register, unregister, serialised]);
 }
