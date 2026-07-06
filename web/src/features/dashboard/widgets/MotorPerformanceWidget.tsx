@@ -14,7 +14,17 @@ import { convertTempFromSI } from '@/lib/unitConversion';
 
 const TORQUE_MAX = 600;
 
-function torqueColor(nm: number): string {
+// Live poll cadence (ms) for the motor telemetry tile. Mirrors the 5s interval
+// every other live-telemetry widget (door/window, live signals, energy flow)
+// and the drivetrain/dynamics pages use, so the tile stays current instead of
+// freezing on the first reading until a manual refresh.
+const LIVE_REFRESH_MS = 5_000;
+
+/**
+ * Map an absolute torque magnitude (Nm) to a gauge colour: green below 200,
+ * amber below 400, red at/above 400. Exported for unit testing.
+ */
+export function torqueColor(nm: number): string {
   if (nm < 200) return '#10b981';
   if (nm < 400) return '#f59e0b';
   return '#ef4444';
@@ -33,7 +43,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
     data, isLoading, error,
     isFetching, isStale, isError,
     dataUpdatedAt, refetch,
-  } = useMotorLatest(vid ?? 0);
+  } = useMotorLatest(vid ?? 0, LIVE_REFRESH_MS);
 
   const isCompact = size.cols <= 1;
   const hasData = !!data;
@@ -61,13 +71,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
           {hasData ? (
             <>
