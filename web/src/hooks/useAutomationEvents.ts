@@ -44,6 +44,16 @@ interface UseAutomationEventsReturn {
 
 let eventCounter = 0
 
+/** Default cap on retained events when the caller doesn't override it. */
+const DEFAULT_MAX_EVENTS = 50
+
+/**
+ * How long an automation remains in the "firing now" set after a
+ * `triggered` event before it auto-clears — unless a terminal event
+ * (succeeded / failed / skipped) arrives first.
+ */
+const FIRING_INDICATOR_TTL_MS = 5000
+
 /**
  * React hook for real-time automation SSE events.
  * Subscribes to the dedicated automation events stream.
@@ -64,6 +74,14 @@ export function useAutomationEvents(
   const clearEvents = useCallback(() => setEvents([]), [])
 
   useEffect(() => {
+    // Reset the transient "firing now" indicators whenever the
+    // subscription is (re)configured or torn down. The per-automation
+    // auto-clear timers below live for the lifetime of a single
+    // subscription and are disposed in cleanup; without this reset a
+    // modeFilter change (or disabling the hook) would strand entries in
+    // `firingNow` that can never drain — their timers are already gone.
+    setFiringNow((prev) => (prev.size === 0 ? prev : new Set()))
+
     if (!enabled) return
 
     const listener: AutomationSSEListener = (type, data) => {
@@ -78,37 +96,44 @@ export function useAutomationEvents(
       }
 
       setEvents((prev) => {
+        const max = optsRef.current.maxEvents ?? DEFAULT_MAX_EVENTS
         const next = [event, ...prev]
-        return next.length > (optsRef.current.maxEvents ?? 50)
-          ? next.slice(0, optsRef.current.maxEvents ?? 50)
-          : next
+        return next.length > max ? next.slice(0, max) : next
       })
 
-      // Track "firing now" for triggered events — auto-clear after 5s
+      // Track "firing now" for triggered events — auto-clear after a TTL.
       if (type === 'automation.triggered') {
         const automationId = (data as AutomationTriggeredEvent).automation_id
+        // Guard against malformed payloads: events originate from
+        // JSON.parse in automationSSE, so a missing / non-numeric id would
+        // otherwise poison the Set and leak an orphan timer.
+        if (!Number.isFinite(automationId)) return
+
         setFiringNow((prev) => {
+          if (prev.has(automationId)) return prev
           const next = new Set(prev)
           next.add(automationId)
           return next
         })
 
-        // Clear existing timer for this automation
+        // Reset any in-flight auto-clear timer for this automation.
         const existing = firingTimers.current.get(automationId)
         if (existing) clearTimeout(existing)
 
         const timer = window.setTimeout(() => {
           setFiringNow((prev) => {
+            if (!prev.has(automationId)) return prev
             const next = new Set(prev)
             next.delete(automationId)
             return next
           })
           firingTimers.current.delete(automationId)
-        }, 5000)
+        }, FIRING_INDICATOR_TTL_MS)
         firingTimers.current.set(automationId, timer)
+        return
       }
 
-      // Clear firing state on terminal events
+      // Clear firing state on terminal events.
       if (
         type === 'automation.succeeded' ||
         type === 'automation.failed' ||
@@ -130,15 +155,18 @@ export function useAutomationEvents(
     }
 
     const onConnect = () => setConnectionState('connected')
+    const onDisconnect = () => setConnectionState('reconnecting')
 
     automationSSE.subscribe(listener)
     automationSSE.onConnect(onConnect)
+    automationSSE.onDisconnect(onDisconnect)
     setConnectionState(automationSSE.getState())
 
     return () => {
       automationSSE.unsubscribe(listener)
       automationSSE.offConnect(onConnect)
-      // Clean up all firing timers
+      automationSSE.offDisconnect(onDisconnect)
+      // Dispose all in-flight firing timers for this subscription.
       for (const timer of firingTimers.current.values()) {
         clearTimeout(timer)
       }

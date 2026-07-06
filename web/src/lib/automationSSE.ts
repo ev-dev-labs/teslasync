@@ -31,11 +31,14 @@ interface AutomationSSEClient {
   unsubscribe: (listener: AutomationSSEListener) => void
   onConnect: (listener: ConnectionListener) => void
   offConnect: (listener: ConnectionListener) => void
+  onDisconnect: (listener: ConnectionListener) => void
+  offDisconnect: (listener: ConnectionListener) => void
   getState: () => 'connected' | 'reconnecting'
 }
 
 const eventListeners = new Set<AutomationSSEListener>()
 const connectListeners = new Set<ConnectionListener>()
+const disconnectListeners = new Set<ConnectionListener>()
 let source: EventSource | null = null
 let state: 'connected' | 'reconnecting' = 'reconnecting'
 let failCount = 0
@@ -57,6 +60,12 @@ const EVENT_TYPES: AutomationSSEEventType[] = [
 function emit(type: AutomationSSEEventType, data: AutomationEventData) {
   for (const fn of eventListeners) {
     try { fn(type, data) } catch (e) { console.error('AutomationSSE listener error:', e) }
+  }
+}
+
+function notifyDisconnect() {
+  for (const fn of disconnectListeners) {
+    try { fn() } catch (e) { console.error('AutomationSSE disconnect listener error:', e) }
   }
 }
 
@@ -101,6 +110,11 @@ function doConnect() {
     failCount++
 
     state = 'reconnecting'
+    // Notify subscribers so live "connected" indicators can flip to
+    // "reconnecting" during an outage. Without this the state only ever
+    // transitions forward to 'connected' (via the 'connected' event) and
+    // any status badge stays green through the entire disconnection.
+    notifyDisconnect()
     const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, failCount - 1), MAX_BACKOFF_MS)
     reconnectTimer = window.setTimeout(() => {
       doConnect()
@@ -133,6 +147,14 @@ export const automationSSE: AutomationSSEClient = {
 
   offConnect(listener) {
     connectListeners.delete(listener)
+  },
+
+  onDisconnect(listener) {
+    disconnectListeners.add(listener)
+  },
+
+  offDisconnect(listener) {
+    disconnectListeners.delete(listener)
   },
 
   getState() { return state },
