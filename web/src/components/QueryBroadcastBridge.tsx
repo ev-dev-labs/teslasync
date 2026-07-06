@@ -15,12 +15,20 @@ import { subscribe } from '@/lib/broadcast'
  * NOT `invalidateAndBroadcast(...)` — to avoid an infinite ping-pong
  * between tabs A and B re-broadcasting each other's invalidations.
  */
-export function QueryBroadcastBridge() {
+export function QueryBroadcastBridge(): null {
   const qc = useQueryClient()
   useEffect(() => {
     return subscribe((msg) => {
       if (msg.type !== 'queryInvalidate') return
-      for (const key of msg.keys) {
+      // A peer tab may be running a different app version, so the wire
+      // payload is NOT guaranteed to match our current type. Guard both
+      // the `keys` array and each entry defensively: a missing/non-array
+      // `keys` would otherwise throw inside the bus subscriber (silently
+      // dropping the invalidation), and a non-array entry would be handed
+      // to invalidateQueries as an invalid QueryKey.
+      const keys = Array.isArray(msg.keys) ? msg.keys : []
+      for (const key of keys) {
+        if (!Array.isArray(key)) continue
         // QueryKey is `readonly unknown[]` in TanStack — cast through
         // the same shape we received over the wire.
         void qc.invalidateQueries({ queryKey: key as unknown[] })
