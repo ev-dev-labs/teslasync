@@ -287,10 +287,14 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['ChargeLimitSoc'] != null) s.chargeLimitSoc = Math.round(n('ChargeLimitSoc'))
   if (raw['TimeToFullCharge'] != null) s.timeToFullCharge = n('TimeToFullCharge')
   
-  // Derive isCharging
+  // Derive isCharging from the live charge signals. Only override when a
+  // charge-related signal is present in this update so the merge in
+  // useVehicleLive preserves the last known value between partial updates
+  // instead of leaving a stale `true` after charging stops.
   const dcs = str('DetailedChargeState')
-  if (dcs.includes('Charging') || dcs.includes('Starting')) s.isCharging = true
-  else if (n('ChargeAmps') > 1) s.isCharging = true
+  if (raw['DetailedChargeState'] != null || raw['ChargeAmps'] != null) {
+    s.isCharging = dcs.includes('Charging') || dcs.includes('Starting') || n('ChargeAmps') > 1
+  }
 
   // Security
   if (raw['Locked'] != null) s.locked = bool('Locked')
