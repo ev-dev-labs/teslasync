@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, Zap, Battery, Gauge, Shield, Thermometer, Radio, Settings, Wrench, ChevronDown, CheckCircle } from 'lucide-react'
-import clsx from 'clsx'
+import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/cn'
+import { EmptyState } from '@/components/feedback'
 import { Input, Modal, Select } from '.'
 
 const INTERVAL_OPTIONS = [
@@ -15,6 +17,14 @@ const INTERVAL_OPTIONS = [
   { value: 3600, label: '1h', color: 'text-[var(--text-muted)]', desc: '1 hour' },
   { value: 86400, label: '24h', color: 'text-[var(--text-muted)]', desc: 'Daily' },
 ]
+
+/** Fallback sampling cadence (seconds) applied when a caller omits `initialInterval`. */
+const DEFAULT_INTERVAL = 10
+
+// Static <Select> option lists, derived once at module load so the hot signal
+// list never rebuilds identical arrays on every render.
+const MASTER_INTERVAL_OPTIONS = INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))
+const SIGNAL_INTERVAL_OPTIONS = INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))
 
 const PRESETS = [
   { name: '⚡ Real-time Driving', desc: 'Driving signals at 1s, battery at 10s, config at 24h',
@@ -96,6 +106,27 @@ const CATEGORY_ICONS: Record<string, typeof Zap> = {
   'User Preference': Settings, 'Vehicle Config': Settings,
 }
 
+/**
+ * Build the flat signal list from the category definitions, pre-selecting any
+ * field present in `initialSelected`. Null-safe: missing `categories`/`fields`
+ * collapse to an empty list rather than throwing on `.flatMap`/`.map`.
+ */
+function seedSignals(
+  categories: CategoryDef[] | undefined,
+  initialSelected: string[] | undefined,
+  interval: number,
+): SignalConfig[] {
+  const selected = initialSelected ?? []
+  return (categories ?? []).flatMap(cat =>
+    (cat.fields ?? []).map(f => ({
+      name: f,
+      category: cat.category,
+      selected: selected.includes(f),
+      interval,
+    })),
+  )
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -106,40 +137,56 @@ interface Props {
 }
 
 export default function SignalConfigModal({ open, onClose, categories, initialSelected, initialInterval, onSubmit }: Props) {
-  const [signals, setSignals] = useState<SignalConfig[]>(() =>
-    categories.flatMap(cat => cat.fields.map(f => ({
-      name: f,
-      category: cat.category,
-      selected: initialSelected.includes(f),
-      interval: initialInterval,
-    })))
-  )
-  const [search, setSearch] = useState('')
-  const [masterInterval, setMasterInterval] = useState(initialInterval)
-  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(categories.map(c => c.category)))
+  const { t } = useTranslation()
+  const seedInterval = initialInterval ?? DEFAULT_INTERVAL
 
-  const filtered = useMemo(() =>
-    signals.filter(s => s.name.toLowerCase().includes(search.toLowerCase())),
-    [signals, search]
+  const [signals, setSignals] = useState<SignalConfig[]>(() => seedSignals(categories, initialSelected, seedInterval))
+  const [search, setSearch] = useState('')
+  const [masterInterval, setMasterInterval] = useState(seedInterval)
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(() => new Set((categories ?? []).map(c => c.category)))
+
+  // Re-seed from the latest props whenever the dialog opens so a reopened modal
+  // reflects the current saved configuration (and a cleared search) instead of
+  // stale first-mount state. Keyed on `open` only: a parent re-render while the
+  // modal is already open must NOT wipe the user's in-progress edits.
+  useEffect(() => {
+    if (!open) return
+    setSignals(seedSignals(categories, initialSelected, seedInterval))
+    setMasterInterval(seedInterval)
+    setExpandedCats(new Set((categories ?? []).map(c => c.category)))
+    setSearch('')
+  }, [open])
+
+  const query = search.trim().toLowerCase()
+  const filtered = useMemo(
+    () => signals.filter(s => s.name.toLowerCase().includes(query)),
+    [signals, query],
   )
 
   const selectedCount = signals.filter(s => s.selected).length
   const totalCount = signals.length
-  const allSelected = selectedCount === totalCount
+  const allSelected = totalCount > 0 && selectedCount === totalCount
+  const at500msCount = signals.filter(s => s.selected && s.interval === 0).length
+  const at10sCount = signals.filter(s => s.selected && s.interval === 10).length
 
   // Group by category
   const grouped = useMemo(() => {
     const map = new Map<string, SignalConfig[]>()
     for (const s of filtered) {
-      const arr = map.get(s.category) || []
+      const arr = map.get(s.category) ?? []
       arr.push(s)
       map.set(s.category, arr)
     }
     return map
   }, [filtered])
 
+  const categoryIntervalOptions = useMemo(
+    () => [{ value: '', label: t('signalConfig.setAll', 'Set all…') }, ...SIGNAL_INTERVAL_OPTIONS],
+    [t],
+  )
+
   const updateSignal = (name: string, updates: Partial<SignalConfig>) => {
-    setSignals(prev => prev.map(s => s.name === name ? { ...s, ...updates } : s))
+    setSignals(prev => prev.map(s => (s.name === name ? { ...s, ...updates } : s)))
   }
 
   const toggleAll = (selected: boolean) => {
@@ -153,12 +200,21 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
 
   const toggleCategory = (category: string) => {
     const catSignals = signals.filter(s => s.category === category)
-    const allCatSelected = catSignals.every(s => s.selected)
-    setSignals(prev => prev.map(s => s.category === category ? { ...s, selected: !allCatSelected } : s))
+    const allCatSelected = catSignals.length > 0 && catSignals.every(s => s.selected)
+    setSignals(prev => prev.map(s => (s.category === category ? { ...s, selected: !allCatSelected } : s)))
   }
 
   const setCategoryInterval = (category: string, interval: number) => {
-    setSignals(prev => prev.map(s => s.category === category ? { ...s, interval } : s))
+    setSignals(prev => prev.map(s => (s.category === category ? { ...s, interval } : s)))
+  }
+
+  const toggleExpanded = (category: string) => {
+    setExpandedCats(prev => {
+      const next = new Set(prev)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      return next
+    })
   }
 
   const applyPreset = (preset: typeof PRESETS[0]) => {
@@ -179,11 +235,14 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
     <Modal
       open={open}
       onClose={onClose}
-      title="Fleet Telemetry Signal Configuration"
+      title={t('signalConfig.title', 'Fleet Telemetry Signal Configuration')}
       size="full"
     >
       <p className="-mt-1 mb-3 text-xs text-[var(--text-muted)]">
-        {selectedCount} / {totalCount} signals selected
+        {t('signalConfig.selectedSummary', '{{selected}} / {{total}} signals selected', {
+          selected: selectedCount,
+          total: totalCount,
+        })}
       </p>
 
       {/* Master Controls — sticky to top of Modal scroll container */}
@@ -191,7 +250,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
         {/* Presets */}
         <div className="flex flex-wrap gap-2">
           {PRESETS.map(p => (
-            <button key={p.name} onClick={() => applyPreset(p)} title={p.desc}
+            <button key={p.name} type="button" onClick={() => applyPreset(p)} title={p.desc}
               className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.03] border border-white/[0.08] hover:border-neon-cyan/30 hover:bg-neon-cyan/5 transition-colors">
               {p.name}
             </button>
@@ -200,27 +259,30 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
 
         {/* Master Toggle + Master Interval */}
         <div className="flex items-center gap-4 flex-wrap">
-          <button onClick={() => toggleAll(!allSelected)}
-            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+          <button type="button" onClick={() => toggleAll(!allSelected)} aria-pressed={allSelected}
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
               allSelected ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-secondary)]'
             )}>
-            <div className={clsx('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]')}>
-              {allSelected && <CheckCircle className="h-2 w-2 text-[var(--text-on-accent)]" />}
-            </div>
-            {allSelected ? 'Deselect All' : 'Select All'}
+            <span className={cn('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]')}>
+              {allSelected && <CheckCircle className="h-2 w-2 text-[var(--text-on-accent)]" aria-hidden="true" />}
+            </span>
+            {allSelected ? t('signalConfig.deselectAll', 'Deselect All') : t('signalConfig.selectAll', 'Select All')}
           </button>
 
           <div className="flex items-center gap-2">
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">Master Interval:</span>
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">{t('signalConfig.masterInterval', 'Master Interval:')}</span>
             <Select value={String(masterInterval)} onChange={e => setMasterIntervalAll(Number(e.target.value))}
+              aria-label={t('signalConfig.masterIntervalLabel', 'Master sampling interval for all signals')}
               className="px-2 py-1 text-xs"
-              options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))}
+              options={MASTER_INTERVAL_OPTIONS}
             />
           </div>
 
           <div className="relative ml-auto flex-1 max-w-xs">
-            <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search signals..."
-              icon={<Search className="h-3.5 w-3.5" />}
+            <Input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder={t('signalConfig.searchPlaceholder', 'Search signals...')}
+              aria-label={t('signalConfig.searchLabel', 'Search signals')}
+              icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
               className="w-full text-xs"
             />
           </div>
@@ -229,97 +291,105 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
 
       {/* Signal List */}
       <div className="space-y-2 py-3">
-        {Array.from(grouped.entries()).map(([category, catSignals]) => {
-          const expanded = expandedCats.has(category)
-          const allCatSelected = catSignals.every(s => s.selected)
-          const someCatSelected = catSignals.some(s => s.selected)
-          const CatIcon = CATEGORY_ICONS[category] || Zap
+        {grouped.size === 0 ? (
+          <EmptyState
+            icon={<Search className="h-6 w-6" aria-hidden="true" />}
+            message={query
+              ? t('signalConfig.noMatches', 'No signals match “{{query}}”.', { query: search.trim() })
+              : t('signalConfig.noSignals', 'No telemetry signals are available to configure.')}
+          />
+        ) : (
+          Array.from(grouped.entries()).map(([category, catSignals]) => {
+            const expanded = expandedCats.has(category)
+            const allCatSelected = catSignals.every(s => s.selected)
+            const someCatSelected = catSignals.some(s => s.selected)
+            const CatIcon = CATEGORY_ICONS[category] ?? Zap
+            const catSelectedCount = catSignals.filter(s => s.selected).length
 
-          return (
-            <div key={category} className="border border-white/[0.06] rounded-xl overflow-hidden">
-              {/* Category Header */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] cursor-pointer" onClick={() => {
-                setExpandedCats(prev => {
-                  const next = new Set(prev)
-                  if (next.has(category)) {
-                    next.delete(category)
-                  } else {
-                    next.add(category)
-                  }
-                  return next
-                })
-              }}>
-                <ChevronDown className={clsx('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} />
-                <button onClick={e => { e.stopPropagation(); toggleCategory(category) }}
-                  className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
-                    allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-[var(--border-strong)]'
-                  )}>
-                  {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-[var(--text-on-accent)]" />}
-                </button>
-                <CatIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">{category}</span>
-                <span className="text-2xs text-[var(--text-muted)]">({catSignals.filter(s => s.selected).length}/{catSignals.length})</span>
-                <div className="ml-auto flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                  <Select value="" onChange={e => { if (e.target.value) setCategoryInterval(category, Number(e.target.value)); e.target.value = '' }}
-                    className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-2xs text-[var(--text-muted)]"
-                    options={[
-                      { value: '', label: 'Set all...' },
-                      ...INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label })),
-                    ]}
-                  />
+            return (
+              <div key={category} className="border border-white/[0.06] rounded-xl overflow-hidden">
+                {/* Category Header */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02]">
+                  <button type="button" onClick={() => toggleCategory(category)} aria-pressed={allCatSelected}
+                    aria-label={allCatSelected
+                      ? t('signalConfig.deselectCategory', 'Deselect all {{category}} signals', { category })
+                      : t('signalConfig.selectCategory', 'Select all {{category}} signals', { category })}
+                    className={cn('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                      allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-[var(--border-strong)]'
+                    )}>
+                    {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-[var(--text-on-accent)]" aria-hidden="true" />}
+                  </button>
+                  <button type="button" onClick={() => toggleExpanded(category)} aria-expanded={expanded}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    <ChevronDown className={cn('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} aria-hidden="true" />
+                    <CatIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">{category}</span>
+                    <span className="text-2xs text-[var(--text-muted)]">({catSelectedCount}/{catSignals.length})</span>
+                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Select value="" onChange={e => { if (e.target.value) setCategoryInterval(category, Number(e.target.value)) }}
+                      aria-label={t('signalConfig.setCategoryInterval', 'Set interval for all {{category}} signals', { category })}
+                      className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-2xs text-[var(--text-muted)]"
+                      options={categoryIntervalOptions}
+                    />
+                  </div>
                 </div>
+
+                {/* Signal Rows */}
+                {expanded && (
+                  <div className="divide-y divide-white/[0.03]">
+                    {catSignals.map(sig => {
+                      const intervalOpt = INTERVAL_OPTIONS.find(o => o.value === sig.interval) ?? INTERVAL_OPTIONS[3]
+                      return (
+                        <div key={sig.name} className={cn(
+                          'flex items-center gap-2 px-4 py-1.5 transition-colors',
+                          sig.selected ? 'bg-white/[0.01]' : 'opacity-40'
+                        )}>
+                          <button type="button" onClick={() => updateSignal(sig.name, { selected: !sig.selected })} aria-pressed={sig.selected}
+                            aria-label={sig.selected
+                              ? t('signalConfig.deselectSignal', 'Deselect {{signal}}', { signal: sig.name })
+                              : t('signalConfig.selectSignal', 'Select {{signal}}', { signal: sig.name })}
+                            className={cn('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                              sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]'
+                            )}>
+                            {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-[var(--text-on-accent)]" aria-hidden="true" />}
+                          </button>
+                          <span className="text-xs font-mono flex-1 truncate">{sig.name}</span>
+                          <Select value={String(sig.interval)}
+                            onChange={e => updateSignal(sig.name, { interval: Number(e.target.value) })}
+                            aria-label={t('signalConfig.intervalForSignal', 'Sampling interval for {{signal}}', { signal: sig.name })}
+                            className={cn(
+                              'border border-white/[0.1] rounded px-2 py-0.5 text-xs min-w-[80px]',
+                              intervalOpt.color
+                            )}
+                            options={SIGNAL_INTERVAL_OPTIONS}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-
-              {/* Signal Rows */}
-              {expanded && (
-                <div className="divide-y divide-white/[0.03]">
-                  {catSignals.map(sig => {
-                    const intervalOpt = INTERVAL_OPTIONS.find(o => o.value === sig.interval) || INTERVAL_OPTIONS[3]
-                    return (
-                      <div key={sig.name} className={clsx(
-                        'flex items-center gap-2 px-4 py-1.5 transition-colors',
-                        sig.selected ? 'bg-white/[0.01]' : 'opacity-40'
-                      )}>
-                        <button onClick={() => updateSignal(sig.name, { selected: !sig.selected })}
-                          className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
-                            sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]'
-                          )}>
-                          {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-[var(--text-on-accent)]" />}
-                        </button>
-                        <span className="text-xs font-mono flex-1 truncate">{sig.name}</span>
-                        <Select value={String(sig.interval)}
-                          onChange={e => updateSignal(sig.name, { interval: Number(e.target.value) })}
-                          className={clsx(
-                            'border border-white/[0.1] rounded px-2 py-0.5 text-xs min-w-[80px]',
-                            intervalOpt.color
-                          )}
-                          options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))}
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
+            )
+          })
+        )}
       </div>
 
       {/* Footer — sticky to bottom of Modal scroll container */}
       <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center justify-between border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 sm:-mx-6 sm:-mb-6 sm:px-6">
         <div className="text-xs text-[var(--text-muted)]">
-          {selectedCount} signals selected
-          {selectedCount > 0 && ` • ${signals.filter(s => s.selected && s.interval === 0).length} at 500ms`}
-          {selectedCount > 0 && ` • ${signals.filter(s => s.selected && s.interval === 10).length} at 10s`}
+          {t('signalConfig.footerSelected', '{{n}} signals selected', { n: selectedCount })}
+          {selectedCount > 0 && ` • ${t('signalConfig.footerAt500', '{{n}} at 500ms', { n: at500msCount })}`}
+          {selectedCount > 0 && ` • ${t('signalConfig.footerAt10s', '{{n}} at 10s', { n: at10sCount })}`}
         </div>
         <div className="flex gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs font-medium border border-white/[0.1] hover:bg-white/[0.05] transition-colors">
-            Cancel
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-xs font-medium border border-white/[0.1] hover:bg-white/[0.05] transition-colors">
+            {t('common.cancel', 'Cancel')}
           </button>
-          <button onClick={handleSubmit} disabled={selectedCount === 0}
+          <button type="button" onClick={handleSubmit} disabled={selectedCount === 0}
             className="px-4 py-2 rounded-lg text-xs font-medium bg-neon-cyan text-[var(--text-on-accent)] hover:bg-neon-cyan/80 disabled:opacity-40 transition-colors flex items-center gap-1.5">
-            <Zap className="h-3.5 w-3.5" />
-            Subscribe {selectedCount} Signals
+            <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('signalConfig.subscribeCount', 'Subscribe {{n}} Signals', { n: selectedCount })}
           </button>
         </div>
       </div>
