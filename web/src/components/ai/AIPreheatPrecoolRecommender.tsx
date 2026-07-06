@@ -59,6 +59,19 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// The recommender consumes the accumulated delta text through
+// AiOutputPanel and never reacts to individual stream frames, so
+// onEvent is a stable no-op. Hoisting it to module scope keeps the
+// reference identical across renders, which avoids re-running
+// useAiStream's onEvent ref-sync effect on every parent re-render.
+const noopStreamEvent = (): void => {}
+
+// DEFAULT_TARGET_CABIN_TEMP_C is the comfortable cabin temperature the
+// deterministic departure heuristic assumes when the parent has not
+// supplied an explicit target. The backend parser bounds the target to
+// [10, 32]°C; 21°C sits comfortably inside that window.
+const DEFAULT_TARGET_CABIN_TEMP_C = 21
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent ClimateControlPage. Optional
@@ -113,6 +126,9 @@ interface InnerSectionProps {
  *   - Draft button is disabled while a stream is open OR when no
  *     vehicleId / cabin temperature / outside temperature /
  *     depart_by is available from the parent page.
+ *   - While the Draft button is disabled for want of inputs, an
+ *     empty-state hint explains which inputs are still missing so
+ *     the control is never a bare, unexplained disabled button.
  *   - Title attribute carries the long-form explanation so a user
  *     hovering for a tooltip understands the privacy contract — only
  *     the vehicle name may be narrated; the temperatures and
@@ -131,19 +147,35 @@ function InnerSection({
   const { t } = useTranslation()
   const numericVehicleId =
     typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)
-  // The handler-side parser validates vehicle_id > 0 and
-  // depart_by present + RFC3339; we mirror those preconditions
-  // here to keep the button disabled when the parent has not yet
-  // resolved them. The hook is called unconditionally with the
-  // current body so the dependency graph stays stable regardless
-  // of resolution.
+
+  // The handler-side parser validates vehicle_id > 0 and depart_by
+  // present + RFC3339, and the deterministic departure heuristic needs
+  // a cabin + outside temperature to bound the warm-up / cool-down
+  // window. We mirror those preconditions here so the Draft button
+  // stays disabled until the parent has resolved every input. The hook
+  // is called unconditionally with the current body so the dependency
+  // graph stays stable regardless of resolution.
+  const haveVehicle = Number.isFinite(numericVehicleId) && numericVehicleId > 0
+  const haveDepart = typeof departBy === 'string' && departBy.length > 0
+  const haveCabin =
+    typeof currentCabinTempC === 'number' && Number.isFinite(currentCabinTempC)
+  const haveOutside =
+    typeof outsideTempC === 'number' && Number.isFinite(outsideTempC)
+  const haveInputs = haveVehicle && haveDepart && haveCabin && haveOutside
+
   const target =
     typeof targetCabinTempC === 'number' && Number.isFinite(targetCabinTempC)
       ? targetCabinTempC
-      : 21
+      : DEFAULT_TARGET_CABIN_TEMP_C
+
   const body = useMemo(() => {
     return {
-      vehicle_id: Number.isFinite(numericVehicleId) ? numericVehicleId : 0,
+      // Only ever forward a resolved, positive vehicle id; otherwise
+      // fall back to the 0 sentinel the disabled button never sends.
+      // Keeping the body in lockstep with the have* gate means a stale
+      // negative / NaN id can never be POSTed even if a future refactor
+      // decouples the button's disabled state from `haveInputs`.
+      vehicle_id: haveVehicle ? numericVehicleId : 0,
       depart_by: typeof departBy === 'string' ? departBy : '',
       current_cabin_temp_c:
         typeof currentCabinTempC === 'number' &&
@@ -156,34 +188,33 @@ function InnerSection({
           : 0,
       target_cabin_temp_c: target,
     }
-  }, [numericVehicleId, departBy, currentCabinTempC, outsideTempC, target])
+  }, [haveVehicle, numericVehicleId, departBy, currentCabinTempC, outsideTempC, target])
+
   const stream = useAiStream({
     url: '/ai/climate/schedule/draft',
     body,
-    onEvent: () => {},
+    onEvent: noopStreamEvent,
   })
-  const haveVehicle = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-  const haveDepart = typeof departBy === 'string' && departBy.length > 0
-  const haveCabin =
-    typeof currentCabinTempC === 'number' && Number.isFinite(currentCabinTempC)
-  const haveOutside =
-    typeof outsideTempC === 'number' && Number.isFinite(outsideTempC)
-  const haveInputs = haveVehicle && haveDepart && haveCabin && haveOutside
-    return (
+
+  return (
     <AIFeatureCard
       title={t(
-                  'climate.aiPreheatPrecool.title',
-                  'Suggest a preheat or precool schedule',
-                )}
+        'climate.aiPreheatPrecool.title',
+        'Suggest a preheat or precool schedule',
+      )}
       description={t(
-                'climate.aiPreheatPrecool.description',
-                'Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic \u2014 start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.',
-              )}
+        'climate.aiPreheatPrecool.description',
+        'Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic \u2014 start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.',
+      )}
       buttonLabel={t(
-                  'climate.aiPreheatPrecool.generateButton',
-                  'Draft schedule',
-                )}
+        'climate.aiPreheatPrecool.generateButton',
+        'Draft schedule',
+      )}
       badgeLabel={t('climate.aiPreheatPrecool.badge', 'Helix')}
+      emptyHint={t(
+        'climate.aiPreheatPrecool.emptyHint',
+        'Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule.',
+      )}
       canStart={haveInputs}
       stream={stream}
     />

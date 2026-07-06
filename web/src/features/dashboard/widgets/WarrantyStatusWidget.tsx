@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -13,8 +13,16 @@ import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
+/**
+ * 1 mile = 1609.344 m exactly (international yard, NIST). Mirrors the private
+ * constant inside `@/lib/unitConversion`; re-declared locally because the
+ * warranty API delivers mileage in MILES (`*_mi` fields) while
+ * `convertDistanceFromSI` only accepts SI meters.
+ */
+const METERS_PER_MILE = 1609.344;
+
 /** Safely extract a string from an unknown value */
-function asString(val: unknown): string | null {
+export function asString(val: unknown): string | null {
   if (val == null) return null;
   if (typeof val === 'string' && val.length > 0) return val;
   if (typeof val === 'number') return String(val);
@@ -22,7 +30,7 @@ function asString(val: unknown): string | null {
 }
 
 /** Safely extract a number from an unknown value */
-function asNumber(val: unknown): number | null {
+export function asNumber(val: unknown): number | null {
   if (val == null) return null;
   if (typeof val === 'number' && isFinite(val)) return val;
   if (typeof val === 'string') {
@@ -33,7 +41,7 @@ function asNumber(val: unknown): number | null {
 }
 
 /** Compute days remaining from an expiry date string (ISO or date) */
-function daysUntil(dateStr: string | null): number | null {
+export function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
   const expiry = new Date(dateStr);
   if (isNaN(expiry.getTime())) return null;
@@ -42,14 +50,14 @@ function daysUntil(dateStr: string | null): number | null {
 }
 
 /** Badge variant based on days remaining */
-function statusVariant(days: number | null): 'success' | 'warning' | 'error' {
+export function statusVariant(days: number | null): 'success' | 'warning' | 'error' {
   if (days == null || days <= 0) return 'error';
   if (days <= 90) return 'warning';
   return 'success';
 }
 
 /** Status label based on days remaining */
-function statusLabel(days: number | null, t: (k: string, f: string) => string): string {
+export function statusLabel(days: number | null, t: (k: string, f: string) => string): string {
   if (days == null || days <= 0) return t('widget.warranty.expired', 'Expired');
   return t('widget.warranty.active', 'Active');
 }
@@ -66,10 +74,13 @@ const COVERAGE_TYPES = [
 export default function WarrantyStatusWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const { formatDate, locale } = useDateFormat();
 
   const distanceUnit = unitPrefs.distance;
+  const toDistanceDisplay = useCallback(
+    (meters: number) => convertDistanceFromSI(meters, distanceUnit),
+    [distanceUnit],
+  );
 
   const {
     data: envelope,
@@ -103,6 +114,13 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     ?? warrantyData?.odometer_mi
     ?? warrantyData?.current_odometer_mi,
   );
+
+  // The warranty API delivers mileage in MILES (`*_mi` fields), but
+  // `convertDistanceFromSI` (and thus `toDistanceDisplay`) expects SI meters.
+  // Convert miles→meters up front so a 50,000 mi limit renders as "50,000 mi"
+  // (or "80,467 km"), not the ~31 mi / ~50 km the raw-value path produced.
+  const mileageLimitM = mileageLimitMi != null ? mileageLimitMi * METERS_PER_MILE : null;
+  const currentMileageM = currentMileageMi != null ? currentMileageMi * METERS_PER_MILE : null;
 
   // Total warranty period in days (for progress bar)
   const startDate = asString(
@@ -144,8 +162,8 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     });
 
     // Mileage limit (converted)
-    if (mileageLimitMi != null) {
-      const converted = toDistanceDisplay(mileageLimitMi);
+    if (mileageLimitM != null) {
+      const converted = toDistanceDisplay(mileageLimitM);
       items.push({
         label: t('widget.warranty.mileageLimit', 'Mileage Limit'),
         value: `${fmtNumber(converted, 0)} ${distanceUnit}`,
@@ -154,8 +172,8 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     }
 
     // Current mileage (converted)
-    if (currentMileageMi != null) {
-      const converted = toDistanceDisplay(currentMileageMi);
+    if (currentMileageM != null) {
+      const converted = toDistanceDisplay(currentMileageM);
       items.push({
         label: t('widget.warranty.currentMileage', 'Current Mileage'),
         value: `${fmtNumber(converted, 0)} ${distanceUnit}`,
@@ -188,7 +206,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     }
 
     return items;
-  }, [warrantyData, expiryDate, daysRemaining, variant, mileageLimitMi, currentMileageMi, toDistanceDisplay, distanceUnit, t, formatDate, locale]);
+  }, [warrantyData, expiryDate, daysRemaining, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, locale]);
 
   const shellProps = {
     loading: isLoading,
@@ -202,13 +220,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
   // ── Compact layout (1×2): days remaining + Active/Expired badge ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           {warrantyData ? (
             <>
@@ -264,19 +276,19 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
           )}
 
           {/* Mileage remaining progress bar */}
-          {mileageLimitMi != null && currentMileageMi != null && (
+          {mileageLimitM != null && mileageLimitM > 0 && currentMileageM != null && (
             <MetricBar
-              value={toDistanceDisplay(currentMileageMi)}
-              max={toDistanceDisplay(mileageLimitMi)}
+              value={toDistanceDisplay(currentMileageM)}
+              max={toDistanceDisplay(mileageLimitM)}
               color={
-                currentMileageMi / mileageLimitMi > 0.9
+                currentMileageM / mileageLimitM > 0.9
                   ? '#ef4444'
-                  : currentMileageMi / mileageLimitMi > 0.75
+                  : currentMileageM / mileageLimitM > 0.75
                     ? '#f59e0b'
                     : '#10b981'
               }
               label={t('widget.warranty.mileageRemaining', 'Mileage Remaining')}
-              sublabel={`${fmtNumber(toDistanceDisplay(mileageLimitMi - currentMileageMi), 0)} ${distanceUnit}`}
+              sublabel={`${fmtNumber(toDistanceDisplay(mileageLimitM - currentMileageM), 0)} ${distanceUnit}`}
             />
           )}
 

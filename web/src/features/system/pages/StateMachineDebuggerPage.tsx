@@ -55,12 +55,23 @@ function getVehicleStyle(state?: string | null) {
   return vehicleStateStyle[state.toLowerCase()] ?? vehicleStateStyle.offline;
 }
 
+/**
+ * Human-readable duration. Rounds to whole minutes *before* splitting into
+ * hours + minutes so a value that rounds up to a full 60 minutes rolls over
+ * into the next hour (e.g. 7199s → "2h", never the "1h 60m" artefact the
+ * previous per-branch `fmtInt(mRaw)` rounding produced). Non-finite or
+ * negative inputs — which shouldn't occur but can slip in from a corrupt
+ * timestamp gap — render as an em dash instead of "NaNh".
+ */
 function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${fmtInt(seconds)}s`;
-  if (seconds < 3600) return `${fmtInt(seconds / 60)}m`;
-  const h = Math.floor(seconds / 3600);
-  const mRaw = (seconds % 3600) / 60;
-  return mRaw >= 0.5 ? `${h}h ${fmtInt(mRaw)}m` : `${h}h`;
+  if (!Number.isFinite(seconds) || seconds < 0) return '—';
+  const roundedSeconds = Math.round(seconds);
+  if (roundedSeconds < 60) return `${roundedSeconds}s`;
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 interface StateResponse {
@@ -328,7 +339,7 @@ export default function StateMachineDebuggerPage() {
 
   const fsmTypeOptions = FSM_TYPE_OPTIONS.map((o) => ({
     value: o.value,
-    label: o.label,
+    label: t(o.i18nKey, o.label),
   }));
 
   const perPageOptions = [

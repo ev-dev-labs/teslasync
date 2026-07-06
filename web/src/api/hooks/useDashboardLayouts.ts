@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
 
@@ -47,6 +48,11 @@ export const dashboardLayoutLibraryKeys = {
  * List the user's saved layouts, optionally scoped to a single vehicle.
  * The backend returns vehicle-pinned and user-global (`vehicle_id IS NULL`)
  * layouts so the switcher can show both in one list.
+ *
+ * `select: safeArray` guarantees a real array on success even if the endpoint
+ * ever regresses to a null/non-array body, so the `<LayoutSwitcher>` can
+ * `.map()` over `data` without a null guard (matches the list-hook convention
+ * in useExports.ts).
  */
 export function useNamedDashboardLayouts(vehicleId?: number | null) {
   return useQuery({
@@ -55,6 +61,7 @@ export function useNamedDashboardLayouts(vehicleId?: number | null) {
       const qs = vehicleId != null ? `?vehicle_id=${vehicleId}` : '';
       return request<NamedDashboardLayout[]>(`/dashboard/layouts${qs}`, { signal });
     },
+    select: safeArray,
     staleTime: STALE_TIMES.SLOW,
   });
 }

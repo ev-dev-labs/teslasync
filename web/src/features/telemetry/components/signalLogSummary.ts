@@ -94,7 +94,9 @@ export function summarizeSignalLog(
 /**
  * Project rows into timestamp-keyed records for the multi-line chart.
  * Booleans are coerced to 1/0 so on/off signals still plot; non-numeric
- * strings are left null so the chart's numeric guard skips them.
+ * strings — and non-finite numbers (NaN / ±Infinity) — are left null so the
+ * chart's numeric guard skips them instead of an Infinity blowing out the
+ * shared Y-axis domain and flattening every real series.
  */
 export function buildSignalChartData(
   rows: SignalLogEntry[] | null | undefined,
@@ -109,9 +111,17 @@ export function buildSignalChartData(
       entry = { timestamp: row.created_at };
       byTs.set(row.created_at, entry);
     }
+    const num = row.value_num;
+    // Finite numbers win (including 0); a nullish or non-finite value_num
+    // falls back to the boolean 1/0 coercion, else null so the chart skips it.
     entry[row.signal] =
-      row.value_num ??
-      (row.value_bool === true ? 1 : row.value_bool === false ? 0 : null);
+      num !== null && num !== undefined && Number.isFinite(num)
+        ? num
+        : row.value_bool === true
+          ? 1
+          : row.value_bool === false
+            ? 0
+            : null;
   }
 
   return Array.from(byTs.values()).sort(
@@ -121,7 +131,7 @@ export function buildSignalChartData(
   );
 }
 
-/** Compute per-signal numeric statistics (min/max/avg/count). */
+/** Compute per-signal statistics (min/max/avg/count) over finite numeric samples. */
 export function buildSignalStats(
   rows: SignalLogEntry[] | null | undefined,
 ): SignalStat[] {
@@ -130,9 +140,12 @@ export function buildSignalStats(
 
   const bySignal = new Map<string, number[]>();
   for (const row of safeRows) {
-    if (row.value_num === null || row.value_num === undefined) continue;
+    const v = row.value_num;
+    // Skip nullish AND non-finite (NaN / ±Infinity) samples: a single one would
+    // otherwise poison the whole signal's min/max/avg via Math.min/max/reduce.
+    if (v === null || v === undefined || !Number.isFinite(v)) continue;
     const arr = bySignal.get(row.signal) ?? [];
-    arr.push(row.value_num);
+    arr.push(v);
     bySignal.set(row.signal, arr);
   }
 

@@ -1,6 +1,17 @@
 import type { ReactNode } from 'react';
 
+import type { GlassPanelProps } from '@/components/ui';
+
 export type HealthStatus = 'good' | 'warning' | 'critical';
+
+/**
+ * The glow accent a *real* health status carries on its <GlassPanel>. Derived
+ * from GlassPanel's own `glow` prop union (with `'none'` excluded) so the two
+ * can never drift: if GlassPanel renames/drops an accent this fails to compile
+ * here, and a live status can never resolve to the empty `'none'` glow that
+ * would silently drop the severity signal.
+ */
+export type HealthGlow = Exclude<NonNullable<GlassPanelProps['glow']>, 'none'>;
 
 export const HEALTH_SCORE: Record<HealthStatus, number> = {
   good: 95,
@@ -14,7 +25,7 @@ export const HEALTH_COLOR: Record<HealthStatus, string> = {
   critical: '#ef4444',
 };
 
-export const HEALTH_GLOW: Record<HealthStatus, 'green' | 'cyan' | 'purple' | 'none'> = {
+export const HEALTH_GLOW: Record<HealthStatus, HealthGlow> = {
   good: 'green',
   warning: 'cyan',
   critical: 'purple',

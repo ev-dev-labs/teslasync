@@ -24,6 +24,9 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,49 +39,129 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ocpp"
 )
 
+const (
+	defaultListenAddr        = ":9090"
+	defaultHeartbeatInterval = 300 * time.Second
+	defaultReadDeadline      = 900 * time.Second
+	// readHeaderTimeout bounds the header-read phase of the initial
+	// HTTP/WebSocket handshake — a defence against slowloris-style
+	// clients holding a connection open before the upgrade.
+	readHeaderTimeout = 10 * time.Second
+	// shutdownTimeout bounds how long graceful drain waits for
+	// in-flight charger connections before forcing them closed.
+	shutdownTimeout = 10 * time.Second
+)
+
+// config is the fully-resolved runtime configuration for the CSMS.
+// It is a plain value so tests can construct it directly instead of
+// mutating the process environment.
+type config struct {
+	listenAddr        string
+	heartbeatInterval time.Duration
+	readDeadline      time.Duration
+}
+
+// loadConfig resolves the CSMS configuration from the environment,
+// falling back to spec-sensible defaults for anything unset or blank.
+func loadConfig() config {
+	return config{
+		listenAddr:        envOr("OCPP_LISTEN_ADDR", defaultListenAddr),
+		heartbeatInterval: envDurationOr("OCPP_HEARTBEAT_INTERVAL", defaultHeartbeatInterval),
+		readDeadline:      envDurationOr("OCPP_READ_DEADLINE", defaultReadDeadline),
+	}
+}
+
 func main() {
 	zerolog.TimeFieldFormat = time.RFC3339
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
 
-	addr := envOr("OCPP_LISTEN_ADDR", ":9090")
-	heartbeat := envDurationOr("OCPP_HEARTBEAT_INTERVAL", 300*time.Second)
-	readDeadline := envDurationOr("OCPP_READ_DEADLINE", 900*time.Second)
+	cfg := loadConfig()
+	log.Info().
+		Str("addr", cfg.listenAddr).
+		Dur("heartbeat_interval", cfg.heartbeatInterval).
+		Dur("read_deadline", cfg.readDeadline).
+		Msg("OCPP CSMS configuration loaded")
 
-	store := ocpp.NewMemorySessionStore()
-	dispatcher := ocpp.NewDispatcher(store, heartbeat)
-	server := ocpp.NewServer(dispatcher, readDeadline)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	})
-	mux.Handle("/ocpp/", server)
-
-	httpSrv := &http.Server{
-		Addr:              addr,
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
+	// Bind before entering the serve loop so a bad OCPP_LISTEN_ADDR
+	// (port in use, insufficient privileges) fails fast + visibly
+	// rather than racing inside a background goroutine.
+	ln, err := net.Listen("tcp", cfg.listenAddr)
+	if err != nil {
+		log.Fatal().Err(err).Str("addr", cfg.listenAddr).Msg("OCPP server failed to bind")
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	if err := run(ctx, newServer(cfg), ln, shutdownTimeout); err != nil {
+		log.Fatal().Err(err).Msg("OCPP server failed")
+	}
+}
+
+// newServer builds the HTTP server that fronts the OCPP CSMS: a
+// /healthz liveness probe plus the WebSocket transport mounted at
+// /ocpp/. Persistence uses the zero-config in-memory session store;
+// a Postgres-backed store can be swapped in without changing this
+// wiring or the protocol layer.
+func newServer(cfg config) *http.Server {
+	store := ocpp.NewMemorySessionStore()
+	dispatcher := ocpp.NewDispatcher(store, cfg.heartbeatInterval)
+	ocppServer := ocpp.NewServer(dispatcher, cfg.readDeadline)
+	return &http.Server{
+		Handler:           newMux(ocppServer),
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+}
+
+// newMux wires the health probe and the OCPP WebSocket handler. A
+// charger connects to /ocpp/{chargePointId}; every other path 404s.
+func newMux(ocppHandler http.Handler) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", healthz)
+	mux.Handle("/ocpp/", ocppHandler)
+	return mux
+}
+
+// healthz is a dependency-free liveness probe. It deliberately never
+// touches the OCPP layer so it stays green even when no charger is
+// connected.
+func healthz(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+// run serves on ln until ctx is cancelled, then gracefully drains
+// in-flight connections within shutdownTimeout. A serve failure before
+// shutdown is returned (wrapped) so the caller can exit non-zero; a
+// clean shutdown returns nil.
+func run(ctx context.Context, srv *http.Server, ln net.Listener, drainTimeout time.Duration) error {
+	serveErr := make(chan error, 1)
 	go func() {
-		log.Info().Str("addr", addr).
-			Dur("heartbeat_interval", heartbeat).
-			Dur("read_deadline", readDeadline).
-			Msg("OCPP CSMS listening")
-		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("OCPP server failed")
+		log.Info().Str("addr", ln.Addr().String()).Msg("OCPP CSMS listening")
+		err := srv.Serve(ln)
+		if errors.Is(err, http.ErrServerClosed) {
+			err = nil
 		}
+		serveErr <- err
 	}()
 
-	<-ctx.Done()
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
+		return nil
+	case <-ctx.Done():
+	}
+
 	log.Info().Msg("OCPP CSMS shutting down")
-	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelShutdown()
-	_ = httpSrv.Shutdown(shutdownCtx)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), drainTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("graceful shutdown: %w", err)
+	}
+	return nil
 }
 
 func envOr(key, def string) string {

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, Cpu, BatteryCharging } from 'lucide-react';
 
@@ -13,7 +13,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
-import { convertDistanceFromSI, convertTempFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
 import {
   HEALTH_SCORE,
@@ -69,9 +69,19 @@ export default function DrivetrainHealthPage() {
   const { state: liveState } = useVehicleLive(vehicleId ?? undefined);
 
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+  // Memoise the SI→display converters on the specific unit preference they
+  // depend on. Fresh closures every render would give the derived-series
+  // useMemo()s below (chartData / motorChartData) a new dependency identity on
+  // each pass, silently defeating their memoisation and re-running the
+  // filter/sort/map work on unrelated re-renders.
+  const toDistanceDisplay = useCallback(
+    (value: number) => convertDistanceFromSI(value, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, unitPrefs.temperature),
+    [unitPrefs.temperature],
+  );
 
   const hasHealth = health != null;
   const overallHealth = health?.overallHealth ?? 'good';
@@ -106,7 +116,7 @@ export default function DrivetrainHealthPage() {
         powerMax: (d.avgPowerW ?? 0) / 1000,
         powerMin: 0,
         outsideTemp: d.outsideTempAvgC ?? null,
-        distance: toDistanceDisplay(d.distanceM),
+        distance: toDistanceDisplay(d.distanceM ?? 0),
       }));
   }, [drives, startDate, endDate, toDistanceDisplay, formatDateShort]);
 
@@ -139,7 +149,7 @@ export default function DrivetrainHealthPage() {
       speed: null, // no direct power signal in motor pivot; field unused by charts
       axle: s.motor_rpm_front ?? s.motor_rpm_rear ?? null,
     }));
-  }, [motorHistory, toTemperatureDisplay, toSpeedDisplay, formatTime]);
+  }, [motorHistory, toTemperatureDisplay, formatTime]);
 
   return (
     <PageContainer

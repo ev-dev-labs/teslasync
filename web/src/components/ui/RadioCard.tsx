@@ -47,7 +47,10 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
   ) => {
     const autoId = useId()
     const inputId = id ?? autoId
-    const c = neonColorMap[accent]
+    // Fall back to the documented cyan default if an out-of-contract accent
+    // reaches us from an untyped (JS) caller. A shared primitive must never
+    // hard-crash the page on `neonColorMap[bad].border` — degrade instead.
+    const c = neonColorMap[accent] ?? neonColorMap.cyan
     return (
       <label htmlFor={inputId} className={cn('block', !disabled && 'cursor-pointer', className)}>
         <input

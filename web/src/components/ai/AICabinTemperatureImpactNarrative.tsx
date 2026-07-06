@@ -18,6 +18,13 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// The narration card consumes the accumulated delta text through
+// AiOutputPanel and never reacts to individual stream frames, so
+// onEvent is a stable no-op. Hoisting it to module scope keeps the
+// reference identical across renders, which avoids re-running
+// useAiStream's onEvent ref-sync effect on every parent re-render.
+const noopStreamEvent = (): void => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent TemperatureImpactPage. Optional
@@ -39,35 +46,43 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   const { t } = useTranslation()
   const numericVehicleId =
     typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)
-  // The handler-side parser validates vehicle_id > 0; we mirror
-  // that here to keep the button disabled when the parent has not
-  // yet resolved the active vehicle. The hook is called
-  // unconditionally with the current body so the dependency graph
-  // stays stable regardless of vehicleId resolution.
+  // The handler-side parser validates vehicle_id > 0; we mirror that
+  // here so the Narrate button stays disabled until the parent has
+  // resolved the active vehicle.
+  const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
+  // The hook is called unconditionally with the current body so the
+  // dependency graph stays stable regardless of vehicleId resolution.
   const body = useMemo(() => {
     const out: { vehicle_id: number } = {
-      vehicle_id: Number.isFinite(numericVehicleId) ? numericVehicleId : 0,
+      // Only forward a resolved, positive vehicle id; otherwise fall
+      // back to the 0 sentinel the disabled button never actually
+      // sends. Keeping the body in lockstep with `haveInputs` means a
+      // stale negative/NaN id can never be POSTed.
+      vehicle_id: haveInputs ? numericVehicleId : 0,
     }
     return out
-  }, [numericVehicleId])
+  }, [haveInputs, numericVehicleId])
   const stream = useAiStream({
     url: '/ai/climate/temperature-impact/narrate',
     body,
-    onEvent: () => {},
+    onEvent: noopStreamEvent,
   })
-  const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-    return (
+  return (
     <AIFeatureCard
       title={t(
-                  'tempImpact.aiNarrative.title',
-                  'Narrate the cabin-temperature impact',
-                )}
+        'tempImpact.aiNarrative.title',
+        'Narrate the cabin-temperature impact',
+      )}
       description={t(
-                'tempImpact.aiNarrative.description',
-                'Ask Helix to explain how outside ambient temperature affects this vehicle\u2019s efficiency \u2014 which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.',
-              )}
+        'tempImpact.aiNarrative.description',
+        'Ask Helix to explain how outside ambient temperature affects this vehicle\u2019s efficiency \u2014 which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.',
+      )}
       buttonLabel={t('tempImpact.aiNarrative.generateButton', 'Narrate impact')}
       badgeLabel={t('tempImpact.aiNarrative.badge', 'Helix')}
+      emptyHint={t(
+        'tempImpact.aiNarrative.emptyHint',
+        'Select a vehicle to narrate its temperature impact.',
+      )}
       canStart={haveInputs}
       stream={stream}
     />

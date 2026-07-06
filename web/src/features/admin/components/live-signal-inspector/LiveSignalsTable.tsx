@@ -66,15 +66,34 @@ function renderValue(v: unknown): { text: string; cls: string } {
   }
 }
 
+/** Stable empty fallback so a nullish `rows` prop never breaks the spread. */
+const EMPTY_ROWS: LiveSignalRow[] = [];
+
+/** Hoisted static table config — keeps the JSX prop identities stable. */
+const PAGINATION = { defaultPageSize: 50, pageSizeOptions: [25, 50, 100] };
+const MOBILE_COLUMNS = ['name', 'value'];
+
+/**
+ * Parse an ISO timestamp to epoch millis for sorting. Missing or unparseable
+ * values collapse to 0 so a malformed row can never poison the comparator with
+ * a NaN (which would leave the resulting order engine-defined).
+ */
+function parseTs(ts: string | undefined): number {
+  if (!ts) return 0;
+  const parsed = Date.parse(ts);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('');
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc');
 
   const filtered = useMemo(() => {
+    const list = rows ?? EMPTY_ROWS;
     const q = filter.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.name.toLowerCase().includes(q));
+    if (!q) return list;
+    return list.filter((r) => r.name.toLowerCase().includes(q));
   }, [rows, filter]);
 
   const sorted = useMemo(() => {
@@ -82,9 +101,7 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
     return [...filtered].sort((a, b) => {
       if (sortKey === 'name') return a.name.localeCompare(b.name) * dir;
       if (sortKey === 'timestamp') {
-        const at = a.timestamp ? Date.parse(a.timestamp) : 0;
-        const bt = b.timestamp ? Date.parse(b.timestamp) : 0;
-        return (at - bt) * dir;
+        return (parseTs(a.timestamp) - parseTs(b.timestamp)) * dir;
       }
       return 0;
     });
@@ -182,8 +199,8 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
           'admin.liveSignals.table.filtered',
           'No signals match this filter.',
         )}
-        pagination={{ defaultPageSize: 50, pageSizeOptions: [25, 50, 100] }}
-        mobileColumns={['name', 'value']}
+        pagination={PAGINATION}
+        mobileColumns={MOBILE_COLUMNS}
       />
     </div>
   );

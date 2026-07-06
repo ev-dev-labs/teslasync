@@ -9,10 +9,9 @@ import (
 
 	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiauthctx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
-
-type apiKeyPermCtxKey struct{}
 
 // APIKeyAuth is middleware that authenticates requests via X-API-Key header.
 // If no key is provided, the request passes through (Tesla OAuth may handle auth).
@@ -39,7 +38,7 @@ func APIKeyAuth(db *database.DB) func(next http.Handler) http.Handler {
 
 			_ = updateAPIKeyLastUsed(db, r.Context(), apiKey.ID)
 
-			ctx := context.WithValue(r.Context(), apiKeyPermCtxKey{}, apiKey.Permissions)
+			ctx := apiauthctx.WithPermissions(r.Context(), apiKey.Permissions)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -72,7 +71,7 @@ func APIKeyAuthRequired(db *database.DB) func(next http.Handler) http.Handler {
 
 			_ = updateAPIKeyLastUsed(db, r.Context(), apiKey.ID)
 
-			ctx := context.WithValue(r.Context(), apiKeyPermCtxKey{}, apiKey.Permissions)
+			ctx := apiauthctx.WithPermissions(r.Context(), apiKey.Permissions)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

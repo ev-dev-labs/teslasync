@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { Modal, Button, Input, Select, GlassPanel, CopyButton, MaskedValue, Text } from '@/components/ui';
@@ -38,21 +38,27 @@ export function CreateApiKeyModal({ open, onClose }: CreateApiKeyModalProps) {
   };
 
   const handleGenerate = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
     createMut.mutate(
-      { name: name.trim(), permissions: perm },
-      { onSuccess: (data) => setGeneratedKey(data.key) },
+      { name: trimmed, permissions: perm },
+      { onSuccess: (data) => setGeneratedKey(data?.key ?? null) },
     );
   };
 
-  const permissionOptions = PERMISSION_ORDER.map((value) => ({
-    value,
-    label:
-      value === 'read'
-        ? t('apiKeys.perm.read', 'Read')
-        : value === 'read-write'
-          ? t('apiKeys.perm.readWrite', 'Read-Write')
-          : t('apiKeys.perm.admin', 'Admin'),
-  }));
+  const permissionOptions = useMemo(
+    () =>
+      PERMISSION_ORDER.map((value) => ({
+        value,
+        label:
+          value === 'read'
+            ? t('apiKeys.perm.read', 'Read')
+            : value === 'read-write'
+              ? t('apiKeys.perm.readWrite', 'Read-Write')
+              : t('apiKeys.perm.admin', 'Admin'),
+      })),
+    [t],
+  );
 
   return (
     <Modal

@@ -396,7 +396,14 @@ func (t *streamChatbotResponse) Validate(raw json.RawMessage) (any, error) {
 // registration), the tool refuses. RegisterVoiceModeTools ALWAYS
 // wires non-nil ports.
 func (t *streamChatbotResponse) Execute(ctx context.Context, in any) (any, error) {
-	input := in.(streamChatbotResponseInput)
+	input, ok := in.(streamChatbotResponseInput)
+	if !ok {
+		// Defensive: the dispatcher always feeds Execute the value
+		// Validate returned, so a wrong type here means the tool was
+		// invoked from an unintended path. Return an error rather
+		// than panicking — the [Tool] contract forbids panics.
+		return nil, fmt.Errorf("stream_chatbot_response: validator returned wrong type %T", in)
+	}
 	if t.chat == nil {
 		return nil, errors.New("stream_chatbot_response: no ChatContextSource wired")
 	}

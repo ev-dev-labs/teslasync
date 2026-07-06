@@ -66,7 +66,20 @@ export interface AINLGrafanaPanelProps {
   onApply: (draft: GrafanaPanelDraft) => void
 }
 
-function parseGrafanaPanelDraft(data: unknown): GrafanaPanelDraft | null {
+/**
+ * parseGrafanaPanelDraft narrows the untyped `draft_grafana_panel`
+ * tool-result payload ({@link AiStreamEvent}'s `data`) into a typed
+ * {@link GrafanaPanelDraft}, or returns `null` when the envelope is
+ * missing, its `status` is not `'ok'`, or any required field is absent
+ * or the wrong type. The narrowing is intentionally strict: a
+ * partially-formed draft is dropped whole rather than applied with
+ * holes, so the editor never receives a panel it cannot round-trip.
+ *
+ * Exported for the unit test — production code reaches it only through
+ * the component's `onEvent` handler (mirrors {@link parseSSEFrame} in
+ * useAiStream, which is likewise exported solely for its test).
+ */
+export function parseGrafanaPanelDraft(data: unknown): GrafanaPanelDraft | null {
   if (!data || typeof data !== 'object') return null
   const obj = data as Record<string, unknown>
   if (obj.status !== 'ok') return null
@@ -161,6 +174,12 @@ function InnerSection(props: AINLGrafanaPanelProps) {
     onApply(draft)
   }, [canApply, draft, onApply])
 
+  // Null-safe, memoised view of the captured draft's referenced
+  // tables so the review list below never re-creates the array on an
+  // unrelated re-render and never calls .join/.length on undefined
+  // (parse always yields an array, but the render stays defensive).
+  const referencedTables = useMemo(() => draft?.referenced_tables ?? [], [draft])
+
   return (
     <AIFeatureCard
       title={t('powerGrafana.aiDrafter.title', 'Helix natural-language Grafana panel drafter')}
@@ -187,21 +206,59 @@ function InnerSection(props: AINLGrafanaPanelProps) {
       }
     >
       {draft && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={!canApply}
-            aria-disabled={!canApply ? 'true' : 'false'}
-            onClick={handleApply}
-            title={t(
-              'powerGrafana.aiDrafter.applyTooltip',
-              'Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.',
+        <>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!canApply}
+              aria-disabled={!canApply ? 'true' : 'false'}
+              onClick={handleApply}
+              data-testid="ai-feature-nl-grafana-panel-apply"
+              title={t(
+                'powerGrafana.aiDrafter.applyTooltip',
+                'Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.',
+              )}
+            >
+              {t('powerGrafana.aiDrafter.applyButton', 'Apply to editor')}
+            </Button>
+          </div>
+          <div
+            role="group"
+            aria-label={t(
+              'powerGrafana.aiDrafter.previewLabel',
+              'Proposed Grafana panel (review before applying)',
             )}
+            data-testid="ai-feature-nl-grafana-panel-draft"
+            className="rounded-md border border-cyan-300/30 bg-cyan-300/5 p-3 text-sm text-[var(--text-secondary)]"
           >
-            {t('powerGrafana.aiDrafter.applyButton', 'Apply to editor')}
-          </Button>
-        </div>
+            <div className="font-medium text-[var(--text-primary)]">
+              {draft.panel.title.trim().length > 0
+                ? draft.panel.title
+                : t('powerGrafana.aiDrafter.previewUntitled', 'Untitled panel')}
+            </div>
+            <ul className="mt-1 list-inside list-disc text-xs">
+              <li>
+                {t('powerGrafana.aiDrafter.previewType', 'Panel type:')}{' '}
+                {draft.panel.type}
+              </li>
+              <li>
+                {t('powerGrafana.aiDrafter.previewDatasource', 'Datasource:')}{' '}
+                {draft.panel.datasource.type} ({draft.panel.datasource.uid})
+              </li>
+              <li>
+                {t('powerGrafana.aiDrafter.previewTargets', 'Query targets:')}{' '}
+                {draft.panel.targets?.length ?? 0}
+              </li>
+              {referencedTables.length > 0 && (
+                <li>
+                  {t('powerGrafana.aiDrafter.previewTables', 'Referenced tables:')}{' '}
+                  {referencedTables.join(', ')}
+                </li>
+              )}
+            </ul>
+          </div>
+        </>
       )}
     </AIFeatureCard>
   )

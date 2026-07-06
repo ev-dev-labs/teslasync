@@ -31,10 +31,16 @@ function FleetApiConfigTool() {
   if (configError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>
 
   const info = data ?? {}
+  // apiFetch resolves request failures into a `{ error }` payload instead of
+  // rejecting, so the useQuery().error branch above never fires. Surface that
+  // payload error here rather than silently rendering blank config fields.
+  const apiError = typeof info.error === 'string' ? info.error : undefined
+  if (apiError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {apiError}</AlertBanner>
+
   const baseUrl = (info.baseUrl as string) ?? ''
   const clientId = (info.clientId as string) ?? ''
   const authStatus = info.authenticated === true
-  const regions = (info.regions as string[]) ?? []
+  const regions = Array.isArray(info.regions) ? (info.regions as string[]) : []
 
   return (
     <ToolCard icon={Icons.settings} color="cyan" title={t('Config')} description={t('Config Desc')}>
@@ -257,6 +263,11 @@ function PublicKeySetupTool() {
 
   if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={3} /></GlassPanel>
   if (keyError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>
+
+  // apiFetch resolves request failures as a `{ error }` payload, so surface it
+  // here — the useQuery().error branch above is otherwise unreachable.
+  const statusApiError = typeof status?.error === 'string' ? status.error : undefined
+  if (statusApiError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {statusApiError}</AlertBanner>
 
   const configured = status?.configured === true
   const fingerprint = (status?.fingerprint as string) ?? ''
@@ -610,9 +621,16 @@ function FleetStatusTool() {
 
 /* ─── Vehicle Data Tools ──────────────────────────────────────────────── */
 
+type VehicleDataAction = 'charging' | 'releaseNotes' | 'alerts' | 'service'
+
 function VehicleDataTools() {
   const { t } = useTranslation()
   const [vin, setVin] = useState('')
+  // Track the last-invoked action so the result panel reflects the most
+  // recent click. The previous `charging ?? releaseNotes ?? …` chain always
+  // surfaced the first-populated mutation, so once any button had run a later
+  // action's result was silently swallowed.
+  const [activeAction, setActiveAction] = useState<VehicleDataAction | null>(null)
   const { options: vehicleOptions } = useVehicleOptions()
 
   const chargingMut = useMutation({ mutationFn: () => apiFetch(`nearby-charging?vin=${vin}`) })
@@ -620,7 +638,14 @@ function VehicleDataTools() {
   const alertsMut = useMutation({ mutationFn: () => apiFetch(`recent-alerts?vin=${vin}`) })
   const serviceMut = useMutation({ mutationFn: () => apiFetch(`service-data?vin=${vin}`) })
 
-  const lastResult = chargingMut.data ?? releaseNotesMut.data ?? alertsMut.data ?? serviceMut.data
+  const activeMutation =
+    activeAction === 'charging' ? chargingMut
+      : activeAction === 'releaseNotes' ? releaseNotesMut
+        : activeAction === 'alerts' ? alertsMut
+          : activeAction === 'service' ? serviceMut
+            : null
+  const lastResult = activeMutation?.data
+  const resultError = typeof lastResult?.error === 'string' ? lastResult.error : undefined
 
   return (
     <ToolCard icon={Icons.vehicle} color="cyan" title={t('Vehicle Data')} description={t('Vehicle Data Desc')}>
@@ -633,26 +658,26 @@ function VehicleDataTools() {
           onChange={(e) => setVin(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" loading={chargingMut.isPending} onClick={() => chargingMut.mutate()} icon={<Icons.location className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={chargingMut.isPending} onClick={() => { setActiveAction('charging'); chargingMut.mutate() }} icon={<Icons.location className="h-3.5 w-3.5" />}>
             {t('Nearby Charging')}
           </Button>
-          <Button variant="secondary" size="sm" loading={releaseNotesMut.isPending} onClick={() => releaseNotesMut.mutate()} icon={<Icons.fileText className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={releaseNotesMut.isPending} onClick={() => { setActiveAction('releaseNotes'); releaseNotesMut.mutate() }} icon={<Icons.fileText className="h-3.5 w-3.5" />}>
             {t('Release Notes')}
           </Button>
-          <Button variant="secondary" size="sm" loading={alertsMut.isPending} onClick={() => alertsMut.mutate()} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={alertsMut.isPending} onClick={() => { setActiveAction('alerts'); alertsMut.mutate() }} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
             {t('Recent Alerts')}
           </Button>
-          <Button variant="secondary" size="sm" loading={serviceMut.isPending} onClick={() => serviceMut.mutate()} icon={<Icons.maintenance className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={serviceMut.isPending} onClick={() => { setActiveAction('service'); serviceMut.mutate() }} icon={<Icons.maintenance className="h-3.5 w-3.5" />}>
             {t('Service Data')}
           </Button>
         </div>
-        {lastResult && (
-          <ResultPanel
-            title={t('Vehicle Data')}
-            data={lastResult.error ? undefined : lastResult}
-            error={typeof lastResult.error === 'string' ? lastResult.error : undefined}
-          />
-        )}
+        <ResultPanel
+          title={t('Vehicle Data')}
+          data={resultError ? undefined : lastResult}
+          error={resultError}
+          idle={!lastResult}
+          idleMessage={t('devtools.vehicleDataIdle', 'Choose a vehicle and an action to see results.')}
+        />
       </div>
     </ToolCard>
   )
@@ -707,7 +732,12 @@ function OnboardingWorkflow() {
     if (currentStep < ONBOARDING_STEPS.length - 1) setCurrentStep(currentStep + 1)
   }
 
-  const onboardingError = [keyStatusError, fleetInfoError].find(Boolean)
+  // apiFetch turns request failures into a `{ error }` payload rather than a
+  // rejected query, so fold those payload errors into the banner too —
+  // otherwise a failed status/info fetch would leave the wizard silent.
+  const keyStatusApiError = typeof keyStatus?.error === 'string' ? keyStatus.error : undefined
+  const fleetInfoApiError = typeof fleetInfo?.error === 'string' ? fleetInfo.error : undefined
+  const onboardingError = [keyStatusError, fleetInfoError, keyStatusApiError, fleetInfoApiError].find(Boolean)
 
   return (
     <div className="space-y-4">
@@ -739,7 +769,17 @@ function OnboardingWorkflow() {
             variant={completed[s.id] ? 'success' : i === currentStep ? 'info' : 'neutral'}
             size="sm"
             dot={i === currentStep}
+            role="button"
+            tabIndex={0}
+            aria-current={i === currentStep ? 'step' : undefined}
+            aria-label={t('devtools.onboarding.goToStep', 'Go to step {{step}}: {{label}}', { step: i + 1, label: s.label })}
             onClick={() => setCurrentStep(i)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setCurrentStep(i)
+              }
+            }}
             className="cursor-pointer"
           >
             {s.label}

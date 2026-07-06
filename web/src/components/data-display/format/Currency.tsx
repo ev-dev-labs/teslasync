@@ -39,10 +39,17 @@ export function Currency({
   if (value == null || !Number.isFinite(value)) {
     return <span className={className}>{fallback}</span>;
   }
+  // Clamp to the fraction-digit range shared by `Number.toFixed` and
+  // `Intl.NumberFormat` (0–20). An out-of-range or non-finite `precision` prop
+  // would otherwise throw a RangeError out of `fmtNumber`/`toFixed` and blank
+  // the surrounding panel instead of rendering an amount.
+  const safePrecision = Number.isFinite(precision)
+    ? Math.min(20, Math.max(0, Math.floor(precision)))
+    : 2;
   const symbol = symbolOverride ?? currencySymbol;
-  const display = fmtNumber(value, precision);
+  const display = fmtNumber(value, safePrecision);
   return (
-    <span className={className} title={`${symbol}${value.toFixed(precision)}`}>
+    <span className={className} title={`${symbol}${value.toFixed(safePrecision)}`}>
       {symbol}{display}
     </span>
   );

@@ -31,6 +31,12 @@ export function ThermalLoadPanel({
   const { formatTemperature: formatTemperatureUnit } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
 
+  // Null-safe: the prop is typed as an array, but a transient render (before
+  // the parent's derived memo resolves, or a partial API response) can hand us
+  // `undefined`. Guard once so `.length`/`.map` below never throw — matching
+  // the sibling HealthGaugeGrid contract for the same `sensors` source.
+  const sensorList = sensors ?? [];
+
   return (
     <FadeIn delay={0.2}>
       <GlassPanel className="h-full p-4 sm:p-5">
@@ -40,14 +46,14 @@ export function ThermalLoadPanel({
         </PanelTitle>
         {loading ? (
           <Skeleton height={200} />
-        ) : sensors.length === 0 ? (
+        ) : sensorList.length === 0 ? (
           <EmptyState /* no-action: transient — awaiting first thermal telemetry */
             message={t('drivetrain.noSensors', 'No temperature sensor data available yet')}
           />
         ) : (
           <>
             <div className="space-y-4">
-              {sensors.map((sensor) => (
+              {sensorList.map((sensor) => (
                 <MetricBar
                   key={sensor.key}
                   label={t(sensor.labelKey, sensor.defaultLabel)}

@@ -63,6 +63,12 @@ export interface BulkActionsToolbarProps {
   className?: string;
 }
 
+// Stable empty fallbacks so the null-safe defaults below don't hand
+// `runAction` (or the render map) a fresh array identity on every render
+// when a consumer omits the prop. Never mutated.
+const EMPTY_IDS: Array<string | number> = [];
+const EMPTY_ACTIONS: BulkAction[] = [];
+
 export function BulkActionsToolbar({
   selectedIds,
   total,
@@ -75,7 +81,13 @@ export function BulkActionsToolbar({
   const { confirm, dialogProps } = useConfirm();
   const [pending, setPending] = useState<Record<string, boolean>>({});
 
-  const count = selectedIds.length;
+  // Null-safety: these are typed as required, but defend against an
+  // `undefined` selection / action list at runtime so a stray value never
+  // throws on `.length` / `.map` and blanks the whole page.
+  const ids = selectedIds ?? EMPTY_IDS;
+  const items = actions ?? EMPTY_ACTIONS;
+
+  const count = ids.length;
 
   const noun = itemNoun
     ? count === 1
@@ -99,7 +111,13 @@ export function BulkActionsToolbar({
 
       setPending((prev) => ({ ...prev, [action.id]: true }));
       try {
-        await action.onClick(selectedIds);
+        await action.onClick(ids);
+      } catch {
+        // The consumer's onClick surfaces its own failure (toast / mutation
+        // error state); the toolbar only owns the per-action spinner, reset
+        // in `finally`. Swallow here so a rejected action never escapes as an
+        // unhandled promise rejection, and leave the selection intact so the
+        // user can retry.
       } finally {
         setPending((prev) => {
           const next = { ...prev };
@@ -108,7 +126,7 @@ export function BulkActionsToolbar({
         });
       }
     },
-    [confirm, pending, selectedIds],
+    [confirm, pending, ids],
   );
 
   if (count === 0) return null;
@@ -148,7 +166,7 @@ export function BulkActionsToolbar({
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {actions.map((action) => (
+          {items.map((action) => (
             <Button
               key={action.id}
               variant={action.variant === 'danger' ? 'danger' : 'secondary'}

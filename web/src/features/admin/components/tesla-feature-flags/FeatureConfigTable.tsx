@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListChecks, Search, Flag } from 'lucide-react';
 
-import { GlassPanel, Badge, Input, Select, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Input, Select, DataTable, useSortToggle, type Column } from '@/components/ui';
 import { PanelTitle, Caption, Code } from '@/components/ui/Typography';
 import { EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
 import { fmtInt } from '@/lib/numberFormat';
@@ -27,6 +27,11 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
+  const { sortKey, sortDir, onSort } = useSortToggle('key', 'asc');
+
+  // Defensive: the parent always hands over a parsed array, but guard against
+  // an undefined slipping through before any `.filter` / `.length` access.
+  const safeEntries = useMemo(() => entries ?? [], [entries]);
 
   const kindLabel = useMemo<Record<FeatureFlagKind, string>>(
     () => ({
@@ -47,14 +52,40 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return entries.filter((entry) => {
+    return safeEntries.filter((entry) => {
       if (status === 'enabled' && !entry.enabled) return false;
       if (status === 'disabled' && entry.enabled) return false;
       if (term.length === 0) return true;
       const haystack = `${entry.key} ${entry.details ?? ''}`.toLowerCase();
       return haystack.includes(term);
     });
-  }, [entries, search, status]);
+  }, [safeEntries, search, status]);
+
+  // The Feature / Type / Status columns advertise themselves as `sortable`, so
+  // this component MUST own the sort state and hand <DataTable> a pre-sorted
+  // array — the table is presentational for sorting (it only fires `onSort` and
+  // never reorders rows itself). Sorting a copy keeps the incoming array
+  // immutable; the ascending `key` tiebreak keeps the boolean Status sort and
+  // the two-value Type sort deterministic across otherwise-equal rows.
+  const sortedRows = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const byKey = (a: FeatureFlagEntry, b: FeatureFlagEntry) => a.key.localeCompare(b.key);
+    return [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case 'kind': {
+          const cmp = a.kind.localeCompare(b.kind);
+          return cmp !== 0 ? cmp * dir : byKey(a, b);
+        }
+        case 'enabled': {
+          const cmp = (a.enabled ? 1 : 0) - (b.enabled ? 1 : 0);
+          return cmp !== 0 ? cmp * dir : byKey(a, b);
+        }
+        case 'key':
+        default:
+          return byKey(a, b) * dir;
+      }
+    });
+  }, [filtered, sortKey, sortDir]);
 
   const columns = useMemo<Column<FeatureFlagEntry>[]>(
     () => [
@@ -110,11 +141,11 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
           <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('featureConfig.tableTitle', 'Feature Flags')}
         </PanelTitle>
-        {entries.length > 0 && (
+        {safeEntries.length > 0 && (
           <Caption>
             {t('featureConfig.showing', 'Showing {{shown}} of {{total}}', {
               shown: fmtInt(filtered.length),
-              total: fmtInt(entries.length),
+              total: fmtInt(safeEntries.length),
             })}
           </Caption>
         )}
@@ -124,7 +155,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
         <TableSkeleton rows={8} cols={4} />
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : entries.length === 0 ? (
+      ) : safeEntries.length === 0 ? (
         <EmptyState
           /* no-action: transient — nothing synced from Tesla yet; the header Refresh CTA owns recovery */
           icon={<Flag className="h-10 w-10" aria-hidden="true" />}
@@ -156,8 +187,11 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
           <DataTable
             tableId="admin:tesla-feature-flags"
             columns={columns}
-            data={filtered}
+            data={sortedRows}
             keyExtractor={(row) => row.key}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={onSort}
             mobileColumns={['key', 'enabled']}
             emptyMessage={t('featureConfig.noMatch', 'No features match your filters.')}
             pagination

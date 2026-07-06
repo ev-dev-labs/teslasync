@@ -37,10 +37,37 @@ const thumbTranslate = {
  *   `role="switch"` control.
  * - `aria-checked` reflects the current state; clicking the label text also
  *   toggles via the wrapper's onClick (delegating to the button).
+ * - Icon-only switches (no visible `label`) can be named by passing
+ *   `aria-label`/`aria-labelledby`; these — along with `aria-describedby`
+ *   and `title` — are forwarded to the button so they name/describe the
+ *   actual control rather than the neutral wrapper `<div>`.
  */
 export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
-  ({ label, checked, onChange, size = 'md', className, ...props }, ref) => {
+  (
+    {
+      label,
+      checked,
+      onChange,
+      size = 'md',
+      className,
+      // Naming/description attributes belong on the interactive
+      // `role="switch"` button, not the neutral wrapper `<div>`.
+      // Pulling them out of `...props` means a caller that passes
+      // `aria-label` (icon-only switch with no visible `label`) actually
+      // names the control instead of a generic div a screen reader skips.
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledBy,
+      'aria-describedby': ariaDescribedBy,
+      title,
+      ...props
+    },
+    ref,
+  ) => {
     const labelId = useId();
+    // `role="switch"` REQUIRES a boolean `aria-checked`; a nullish `checked`
+    // (JS callers / loosely-typed props) would otherwise drop the attribute
+    // and leave the state unannounced. Normalise once and reuse everywhere.
+    const isChecked = checked ?? false;
     return (
       <div
         ref={ref}
@@ -49,16 +76,21 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           // Allow clicking the label text to toggle, but ignore clicks that
           // already targeted the button (which fires its own onClick).
           if ((e.target as HTMLElement).closest('button')) return;
-          onChange(!checked);
+          onChange(!isChecked);
         }}
         {...props}
       >
         <button
           type="button"
           role="switch"
-          aria-checked={checked}
-          aria-labelledby={label ? labelId : undefined}
-          onClick={() => onChange(!checked)}
+          aria-checked={isChecked}
+          // Visible `label` wins (points at the rendered span); otherwise
+          // fall back to a caller-supplied `aria-labelledby`/`aria-label`.
+          aria-label={ariaLabel}
+          aria-labelledby={label ? labelId : ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          title={title}
+          onClick={() => onChange(!isChecked)}
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
@@ -69,7 +101,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
             // and the switch boundary survives Windows High Contrast.
             'forced-colors:border forced-colors:border-[ButtonBorder]',
             trackSize[size],
-            checked
+            isChecked
               ? 'bg-cyan-500 dark:bg-cyan-600'
               : 'bg-gray-300 dark:bg-gray-600',
           )}
@@ -82,7 +114,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
               'forced-colors:border forced-colors:border-[ButtonBorder]',
               thumbSize[size],
               'translate-y-[3px] translate-x-[3px]',
-              checked && thumbTranslate[size],
+              isChecked && thumbTranslate[size],
             )}
             aria-hidden="true"
           />

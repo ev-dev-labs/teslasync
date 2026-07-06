@@ -13,7 +13,12 @@ export const REPLAY_SPEEDS: ReplaySpeed[] = [1, 10, 25, 50, 100];
 export function shiftSpeed(current: ReplaySpeed, delta: number): ReplaySpeed {
   const idx = REPLAY_SPEEDS.indexOf(current);
   const safeIdx = idx === -1 ? 0 : idx;
-  const nextIdx = Math.max(0, Math.min(REPLAY_SPEEDS.length - 1, safeIdx + delta));
+  // Coerce the step to a whole, finite slot count. A NaN/Infinity/fractional
+  // `delta` would otherwise flow through Math.min/Math.max as NaN and make
+  // `REPLAY_SPEEDS[NaN]` return `undefined`, silently breaking the
+  // `: ReplaySpeed` contract for every caller. A meaningless step stays put.
+  const step = Number.isFinite(delta) ? Math.round(delta) : 0;
+  const nextIdx = Math.max(0, Math.min(REPLAY_SPEEDS.length - 1, safeIdx + step));
   return REPLAY_SPEEDS[nextIdx];
 }
 
@@ -40,6 +45,10 @@ export interface PlaybackSpeedMenuProps {
  */
 export function PlaybackSpeedMenu({ speed, onChange, className }: PlaybackSpeedMenuProps) {
   const { t } = useTranslation();
+  // Fold the current value into the accessible name — the aria-label overrides
+  // the visible `{speed}x`, so without it screen-reader users would only hear
+  // "Playback speed" and never learn (or hear updates to) the active rate.
+  const label = t('replay.controls.speed', 'Playback speed');
   return (
     <Button
       variant="ghost"
@@ -49,11 +58,12 @@ export function PlaybackSpeedMenu({ speed, onChange, className }: PlaybackSpeedM
         e.preventDefault();
         onChange(shiftSpeed(speed, -1));
       }}
-      aria-label={t('replay.controls.speed', 'Playback speed')}
+      aria-label={`${label}: ${speed}x`}
+      title={label}
       className={className ?? 'flex items-center gap-0.5 px-2 text-xs font-mono'}
     >
       {speed}x
-      <ChevronDown className="h-3 w-3 opacity-50" />
+      <ChevronDown className="h-3 w-3 opacity-50" aria-hidden />
     </Button>
   );
 }

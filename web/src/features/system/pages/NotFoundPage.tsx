@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Compass, Home, Search } from 'lucide-react'
@@ -37,9 +37,23 @@ export default function NotFoundPage() {
     [location.pathname],
   )
 
-  const openCommandPalette = () => {
+  const handleGoBack = useCallback(() => {
+    // A direct hit or refresh on a bad URL leaves this 404 as the only entry
+    // in the session history, so history.back() would be a no-op and trap the
+    // user on the error page. Fall back to the dashboard when there is nowhere
+    // to go back to.
+    if (window.history.length > 1) {
+      window.history.back()
+    } else {
+      navigate('/')
+    }
+  }, [navigate])
+
+  const handleGoHome = useCallback(() => navigate('/'), [navigate])
+
+  const openCommandPalette = useCallback(() => {
     window.dispatchEvent(new Event('toggle-command-palette'))
-  }
+  }, [])
 
   return (
     <PageContainer title={t('notFound.title', 'Page not found')}>
@@ -59,7 +73,10 @@ export default function NotFoundPage() {
         </p>
 
         {suggestions.length > 0 && (
-          <div className="mt-6">
+          <nav
+            className="mt-6"
+            aria-label={t('notFound.suggestionsLabel', 'Suggested pages')}
+          >
             <p className="mb-2 text-sm text-[var(--text-muted)]">
               {t('notFound.didYouMean', 'Did you mean:')}
             </p>
@@ -78,20 +95,20 @@ export default function NotFoundPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => window.history.back()}
+            onClick={handleGoBack}
             icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
           >
             {t('notFound.goBack', 'Go back')}
           </Button>
           <Button
             variant="primary"
-            onClick={() => navigate('/')}
+            onClick={handleGoHome}
             icon={<Home className="h-4 w-4" aria-hidden="true" />}
           >
             {t('notFound.goHome', 'Go to dashboard')}

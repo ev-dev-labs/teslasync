@@ -13,10 +13,10 @@ export {
   ChartBlockSkeleton,
   TableSkeleton,
 } from './PageSkeleton';
-export { PageLoader } from './PageLoader';
+export { PageLoader, type PageLoaderProps } from './PageLoader';
 export { PageLoadSkeleton } from './PageLoadSkeleton';
 export { QueryError } from './QueryError';
-export { AlertBanner } from './AlertBanner';
+export { AlertBanner, type AlertBannerProps, type AlertVariant } from './AlertBanner';
 export { InlineCallout, type InlineCalloutProps, type CalloutVariant } from './InlineCallout';
 export { DraftRecoveryBanner, type DraftRecoveryBannerProps } from './DraftRecoveryBanner';
 export { DraftRestorePrompt } from './DraftRestorePrompt';

@@ -72,8 +72,14 @@ export default function ExportsPage() {
         variant: 'danger',
       });
       if (!ok) return;
-      await bulkDelete.mutateAsync(ids.map((i) => String(i)));
-      setSelectedKeys([]);
+      try {
+        await bulkDelete.mutateAsync(ids.map((i) => String(i)));
+        setSelectedKeys([]);
+      } catch {
+        // The mutation's onError handler surfaces a toast; keep the current
+        // selection intact so the user can retry the failed bulk deletion
+        // instead of silently losing their multi-select.
+      }
     },
     [confirm, bulkDelete, t],
   );
@@ -87,7 +93,7 @@ export default function ExportsPage() {
         visibleOnMobile: true,
         render: (j) => (
           <Text weight="medium" color="primary">
-            {j.type}
+            {j.type || '—'}
           </Text>
         ),
       },
@@ -97,7 +103,7 @@ export default function ExportsPage() {
         sortable: true,
         render: (j) => (
           <Text color="secondary" className="uppercase">
-            {j.format}
+            {j.format || '—'}
           </Text>
         ),
       },

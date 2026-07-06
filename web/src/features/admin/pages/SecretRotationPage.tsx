@@ -297,6 +297,15 @@ export default function SecretRotationPage() {
             Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} height={92} className="rounded-xl" />
             ))
+          ) : showError ? (
+            // A genuine (non-503) fetch failure must not surface fabricated
+            // zero totals — a "0 overdue" band would falsely tell an operator
+            // no secret needs rotating when the data never loaded. Mirror the
+            // error state the sections below own so the whole band reads as
+            // "failed", not "everything healthy".
+            <div className="col-span-full">
+              <QueryError error={query.error} onRetry={retry} />
+            </div>
           ) : (
             <>
               <MetricCard
@@ -501,7 +510,7 @@ export default function SecretRotationPage() {
                     key={rowKey(r)}
                     label={truncate(rowLabel(r), 28)}
                     value={r.age_days ?? 0}
-                    max={(r.critical_days ?? 0) > 0 ? (r.critical_days as number) : (r.age_days ?? 1)}
+                    max={(r.critical_days ?? 0) > 0 ? (r.critical_days as number) : ((r.age_days ?? 0) || 1)}
                     color={SEVERITY_HEX[r.severity] ?? SEVERITY_HEX.unknown}
                     sublabel={`${fmtNumber(r.age_days ?? 0)}d / ${fmtNumber(r.critical_days ?? 0)}d`}
                   />

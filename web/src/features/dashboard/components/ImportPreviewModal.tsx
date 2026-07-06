@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Upload, FileJson, Link2, CheckCircle2, XCircle,
@@ -44,12 +44,15 @@ export function ImportPreviewModal({
   const [validation, setValidation] = useState<ImportValidation | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
 
-  // If initialJson is provided, auto-validate on open
-  const [didAutoValidate, setDidAutoValidate] = useState(false);
-  if (open && initialJson && !didAutoValidate) {
-    const result = validateImportData(initialJson);
-    setValidation(result);
-    setDidAutoValidate(true);
+  // If initialJson is provided, auto-validate it. Keyed on the JSON *value*
+  // (not a one-shot boolean) so a parent that swaps `initialJson` while the
+  // modal stays mounted re-validates the new payload instead of showing the
+  // stale preview. Clicking "Back" leaves this untouched, so returning to the
+  // input tabs does not immediately re-trigger the preview.
+  const [autoValidatedJson, setAutoValidatedJson] = useState<string | null>(null);
+  if (open && initialJson && initialJson !== autoValidatedJson) {
+    setValidation(validateImportData(initialJson));
+    setAutoValidatedJson(initialJson);
   }
 
   const resetState = useCallback(() => {
@@ -57,7 +60,7 @@ export function ImportPreviewModal({
     setParseError(null);
     setPastedJson('');
     setImportUrl('');
-    setDidAutoValidate(false);
+    setAutoValidatedJson(null);
     setActiveTab('file');
   }, []);
 
@@ -133,11 +136,14 @@ export function ImportPreviewModal({
     setParseError(null);
   }, []);
 
-  const tabs = [
-    { key: 'file', label: t('import.fromFile', 'From File') },
-    { key: 'paste', label: t('import.fromClipboard', 'Paste JSON') },
-    { key: 'url', label: t('import.fromUrl', 'From URL') },
-  ];
+  const tabs = useMemo(
+    () => [
+      { key: 'file', label: t('import.fromFile', 'From File') },
+      { key: 'paste', label: t('import.fromClipboard', 'Paste JSON') },
+      { key: 'url', label: t('import.fromUrl', 'From URL') },
+    ],
+    [t],
+  );
 
   // Show preview if we have validation results
   if (validation) {
@@ -177,6 +183,8 @@ export function ImportPreviewModal({
         {activeTab === 'file' && (
           <FadeIn>
             <div
+              role="tabpanel"
+              aria-label={t('import.fromFile', 'From File')}
               onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
               onDragLeave={() => setIsDragOver(false)}
               onDrop={handleDrop}
@@ -209,7 +217,7 @@ export function ImportPreviewModal({
 
         {activeTab === 'paste' && (
           <FadeIn>
-            <div className="space-y-3">
+            <div className="space-y-3" role="tabpanel" aria-label={t('import.fromClipboard', 'Paste JSON')}>
               <UiTextarea
                 value={pastedJson}
                 onChange={(e) => setPastedJson(e.target.value)}
@@ -231,7 +239,7 @@ export function ImportPreviewModal({
 
         {activeTab === 'url' && (
           <FadeIn>
-            <div className="space-y-3">
+            <div className="space-y-3" role="tabpanel" aria-label={t('import.fromUrl', 'From URL')}>
               <UiInput
                 value={importUrl}
                 onChange={(e) => setImportUrl(e.target.value)}
@@ -271,7 +279,14 @@ function ImportPreview({
   onBack: () => void;
 }) {
   const { t } = useTranslation('dashboard');
-  const { isValid, errors, warnings, dashboard, missingWidgets, availableWidgets } = validation;
+  const {
+    isValid,
+    errors = [],
+    warnings = [],
+    dashboard,
+    missingWidgets = [],
+    availableWidgets = [],
+  } = validation;
 
   return (
     <div className="space-y-4">

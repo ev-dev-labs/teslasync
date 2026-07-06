@@ -1,6 +1,7 @@
 package datarepair
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -15,10 +16,42 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// chargingRepository is the narrow charging-session data-access surface the
+// handler depends on. Declared as an interface at the call site so handler
+// tests can inject an in-memory fake without a real database (the codebase has
+// no pgxmock harness). *chargingdb.ChargingRepo satisfies this interface.
+type chargingRepository interface {
+	GetStale(ctx context.Context, cutoff time.Time) ([]*chargingmodel.ChargingSession, error)
+	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)
+	PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error
+	Delete(ctx context.Context, id int64) error
+}
+
+// driveRepository is the narrow drive data-access surface the handler depends
+// on. *drivedb.DriveRepo satisfies this interface.
+type driveRepository interface {
+	GetStale(ctx context.Context, cutoff time.Time) ([]*drivemodel.Drive, error)
+	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)
+	PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error
+	Delete(ctx context.Context, id int64) error
+}
+
+// Compile-time assertions that the production repos satisfy the narrow ports.
+var (
+	_ chargingRepository = (*chargingdb.ChargingRepo)(nil)
+	_ driveRepository    = (*drivedb.DriveRepo)(nil)
+)
+
+// clockFunc supplies the current time. Injected so tests can pin the
+// stale-session cutoff and the drive-close duration; production wiring leaves
+// it nil and falls through to time.Now().UTC() via (*DataRepairHandler).now.
+type clockFunc func() time.Time
+
 // DataRepairHandler handles endpoints for repairing incomplete/stale sessions.
 type DataRepairHandler struct {
-	chargingRepo *chargingdb.ChargingRepo
-	driveRepo    *drivedb.DriveRepo
+	chargingRepo chargingRepository
+	driveRepo    driveRepository
+	clock        clockFunc
 }
 
 func NewDataRepairHandler(db *database.DB) *DataRepairHandler {
@@ -26,6 +59,16 @@ func NewDataRepairHandler(db *database.DB) *DataRepairHandler {
 		chargingRepo: chargingdb.NewChargingRepo(db),
 		driveRepo:    drivedb.NewDriveRepo(db),
 	}
+}
+
+// now returns the injected clock value, or wall-clock UTC when no clock is
+// configured, so every time-derived computation in the handler reads from a
+// single source.
+func (h *DataRepairHandler) now() time.Time {
+	if h.clock != nil {
+		return h.clock()
+	}
+	return time.Now().UTC()
 }
 
 // StaleSessionsResponse contains charging sessions and drives that are still open.
@@ -37,7 +80,7 @@ type StaleSessionsResponse struct {
 // GetStaleSessions returns sessions with no end_ts that started more than 24 hours ago.
 func (h *DataRepairHandler) GetStaleSessions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	cutoff := time.Now().UTC().Add(-24 * time.Hour)
+	cutoff := h.now().Add(-24 * time.Hour)
 
 	charging, err := h.chargingRepo.GetStale(ctx, cutoff)
 	if err != nil {
@@ -148,7 +191,9 @@ func (h *DataRepairHandler) UpdateDrive(w http.ResponseWriter, r *http.Request) 
 	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
-// CloseCharging sets end_ts=NOW() and calculates duration from start_ts.
+// CloseCharging sets ended_at=NOW() on an open charging session. The
+// charging_sessions table stores no duration column (duration is derived at
+// read time), so only ended_at is written here.
 func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request) {
 	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
@@ -168,7 +213,7 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	now := time.Now().UTC()
+	now := h.now()
 	patch := map[string]interface{}{
 		"ended_at": now.Format(time.RFC3339),
 	}
@@ -180,7 +225,8 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "closed"})
 }
 
-// CloseDrive sets end_ts=NOW() and calculates duration from start_ts.
+// CloseDrive sets ended_at=NOW() and stores the whole-second duration computed
+// from the drive's start_ts.
 func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
@@ -200,11 +246,11 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now().UTC()
+	now := h.now()
 	durationS := int64(now.Sub(drive.StartTs).Seconds() + 0.5)
 
 	patch := map[string]interface{}{
-		"end_ts":     now.Format(time.RFC3339),
+		"ended_at":   now.Format(time.RFC3339),
 		"duration_s": durationS,
 	}
 	if err := h.driveRepo.PartialUpdate(ctx, id, patch); err != nil {

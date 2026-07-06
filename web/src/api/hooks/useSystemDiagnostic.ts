@@ -67,12 +67,19 @@ export function useLastDiagnostic(): DiagnosticReport | undefined {
 export function formatDiagnosticReportText(report: DiagnosticReport): string {
   const lines: string[] = [];
   lines.push('TeslaSync diagnostic report');
-  lines.push(`Generated: ${report.generated_at}`);
-  lines.push(`Overall:   ${report.overall_status}`);
+  lines.push(`Generated: ${report.generated_at ?? '—'}`);
+  lines.push(`Overall:   ${report.overall_status ?? '—'}`);
   lines.push('');
   lines.push('Checks:');
-  for (const c of report.checks) {
-    lines.push(`  [${c.status.toUpperCase()}] ${c.name} (${c.id}) — ${c.duration_ms}ms`);
+  // Go marshals a nil `[]DiagnosticCheck` slice as JSON `null`, so `checks`
+  // can be null/undefined at runtime even though the type says otherwise.
+  // Guard the iteration (and each field) so a support-ticket export never
+  // throws "checks is not iterable" on an empty or degraded report.
+  const checks = report.checks ?? [];
+  for (const c of checks) {
+    const status = String(c.status ?? 'unknown').toUpperCase();
+    const durationMs = c.duration_ms ?? 0;
+    lines.push(`  [${status}] ${c.name ?? '—'} (${c.id ?? '—'}) — ${durationMs}ms`);
     if (c.detail) lines.push(`    detail:      ${c.detail}`);
     if (c.remediation) lines.push(`    remediation: ${c.remediation}`);
   }

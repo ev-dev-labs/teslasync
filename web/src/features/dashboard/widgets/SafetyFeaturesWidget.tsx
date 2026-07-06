@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -12,12 +12,12 @@ import type { StatusCell } from './shared';
 import type { WidgetProps } from './types';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
 
-function boolStatus(val: boolean | null | undefined): StatusCell['status'] {
+export function boolStatus(val: boolean | null | undefined): StatusCell['status'] {
   if (val == null) return 'unknown';
   return val ? 'ok' : 'inactive';
 }
 
-function invertedBoolStatus(val: boolean | null | undefined): StatusCell['status'] {
+export function invertedBoolStatus(val: boolean | null | undefined): StatusCell['status'] {
   if (val == null) return 'unknown';
   // Field is "off" flag — true means feature is disabled
   return val ? 'inactive' : 'ok';
@@ -26,12 +26,12 @@ function invertedBoolStatus(val: boolean | null | undefined): StatusCell['status
 /** Maps a safety enum value to a StatusCell.status.
  *  Accepts unknown so a stray boolean/number from the backend never
  *  crashes .toLowerCase(). See lib/safetyEnum.ts for the contract. */
-function safetyEnumStatus(val: unknown, field: SafetyEnumField): StatusCell['status'] {
+export function safetyEnumStatus(val: unknown, field: SafetyEnumField): StatusCell['status'] {
   if (val == null) return 'unknown';
   return isSafetyEnumActive(val, field) ? 'ok' : 'inactive';
 }
 
-function buildCells(
+export function buildCells(
   data: SafetySnapshot,
   t: (key: string, defaultValue: string) => string,
 ): StatusCell[] {
@@ -121,7 +121,14 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
     [data, t],
   );
 
-  const activeCount = cells.filter((c) => c.status === 'ok').length;
+  const activeCount = useMemo(
+    () => cells.filter((c) => c.status === 'ok').length,
+    [cells],
+  );
+
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   return (
     <WidgetShell
@@ -133,7 +140,7 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       {data ? (
         isCompact ? (

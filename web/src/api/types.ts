@@ -1154,6 +1154,8 @@ export interface ClimateSnapshot {
   hvac_ac_enabled?: boolean | null
   hvac_fan_status?: number | null
   hvac_fan_speed?: number | null
+  /** `/climate/latest` projection of the HvacFanSpeed signal. */
+  fan_speed?: number | null
   hvac_steering_wheel_heat_level?: number | null
   battery_heater?: boolean | null
   battery_heater_on?: boolean | null
@@ -2431,8 +2433,11 @@ export interface YearReviewMonthStat {
   drives: number
   /** Distance in kilometers (km, derived SI). */
   distance_km: number
-  /** Energy in kilowatt-hours (kWh, derived SI). */
-  energy_wh: number
+  /**
+   * Energy in kilowatt-hours (kWh, derived SI). Matches the backend
+   * `monthStat` JSON tag `energy_kwh` (SUM(total_energy_added_wh) / 1000).
+   */
+  energy_kwh: number
   cost: number
 }
 

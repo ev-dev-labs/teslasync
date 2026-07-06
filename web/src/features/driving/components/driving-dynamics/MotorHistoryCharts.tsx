@@ -70,6 +70,24 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
     [motorHistory, formatTime],
   );
 
+  // A snapshot window can carry samples whose series are all null (e.g. a
+  // torque-only telemetry burst has no power/regen, a pre-Raven car reports
+  // no per-axle rpm). Plotting those would leave an axis-only blank panel, so
+  // gate each chart on "has at least one finite value" and fall back to the
+  // placeholder — never a mute frame.
+  const powerHasData = useMemo(
+    () => powerChartData.some((d) => Number.isFinite(d.power) || Number.isFinite(d.regen)),
+    [powerChartData],
+  );
+  const torqueHasData = useMemo(
+    () => torqueChartData.some((d) => Number.isFinite(d.front) || Number.isFinite(d.rear)),
+    [torqueChartData],
+  );
+  const rpmHasData = useMemo(
+    () => rpmChartData.some((d) => Number.isFinite(d.front) || Number.isFinite(d.rear)),
+    [rpmChartData],
+  );
+
   const noData = (
     <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
       icon={<Activity className="h-5 w-5" />}
@@ -91,7 +109,7 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
           exportable
           exportFilename="motor-power"
         >
-          {powerChartData.length > 0 ? (
+          {powerHasData ? (
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={powerChartData}>
                 <defs>
@@ -124,7 +142,7 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
           exportable
           exportFilename="torque-history"
         >
-          {torqueChartData.length > 0 ? (
+          {torqueHasData ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={torqueChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -153,7 +171,7 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
           exportable
           exportFilename="motor-rpm"
         >
-          {rpmChartData.length > 0 ? (
+          {rpmHasData ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={rpmChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />

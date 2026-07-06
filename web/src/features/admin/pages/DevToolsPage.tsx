@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Globe, Radio, Server, Wrench, BookOpen, RefreshCw, AlertCircle,
@@ -46,13 +46,25 @@ export default function DevToolsPage() {
 
   const errorVins = telemetryQuery.data ?? []
   const vehicles = vehiclesQuery.data ?? []
+
+  // KPI placeholders track the *initial* load only (`isLoading`) so a manual
+  // refresh doesn't blank the last-known counts. The refresh button, by
+  // contrast, must reflect *any* fetch in flight (`isFetching`) — otherwise it
+  // gives no feedback once data has loaded once and `isLoading` stays false.
   const overviewLoading = telemetryQuery.isLoading || vehiclesQuery.isLoading
+  const overviewFetching = telemetryQuery.isFetching || vehiclesQuery.isFetching
   const overviewError = telemetryQuery.error ?? vehiclesQuery.error
 
-  const refreshOverview = () => {
+  // When a live source fails with no data to fall back on, the KPI band must
+  // show "—" rather than a fabricated `0` that reads as a healthy fleet.
+  // Stale data from a prior success is still shown (react-query keeps it).
+  const overviewErrored =
+    Boolean(overviewError) && errorVins.length === 0 && vehicles.length === 0
+
+  const refreshOverview = useCallback(() => {
     void telemetryQuery.refetch()
     void vehiclesQuery.refetch()
-  }
+  }, [telemetryQuery, vehiclesQuery])
 
   const tabs = useMemo(
     () => [
@@ -69,7 +81,7 @@ export default function DevToolsPage() {
     <Button
       variant="ghost"
       onClick={refreshOverview}
-      loading={overviewLoading}
+      loading={overviewFetching}
       aria-label={t('devtools.refreshStatus', 'Refresh developer tools status')}
       icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
     >
@@ -97,6 +109,7 @@ export default function DevToolsPage() {
             errorVinCount={errorVins.length}
             vehicleCount={vehicles.length}
             loading={overviewLoading}
+            errored={overviewErrored}
           />
         </FadeIn>
 

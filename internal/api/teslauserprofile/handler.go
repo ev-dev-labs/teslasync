@@ -1,6 +1,7 @@
 package teslauserprofile
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -14,10 +15,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// teslaUserProfileClient is the narrow slice of *tesla.Client the profile
+// handler depends on. Declaring the port at the call site lets handler tests
+// inject a fake without standing up a real Tesla HTTP client + OAuth token.
+type teslaUserProfileClient interface {
+	HasValidToken() bool
+	GetUserProfile(ctx context.Context) ([]byte, int, error)
+}
+
+// teslaUserProfileStore is the narrow persistence port used by the handler. It
+// is satisfied by *tesladb.TeslaUserProfileRepo and declared here so tests can
+// substitute an in-memory fake instead of a real pgx pool.
+type teslaUserProfileStore interface {
+	Get(ctx context.Context) (*teslamodel.TeslaUserProfile, error)
+	Upsert(ctx context.Context, p *teslamodel.TeslaUserProfile) error
+}
+
+// Compile-time assertions that the production concrete types satisfy the ports.
+var (
+	_ teslaUserProfileClient = (*tesla.Client)(nil)
+	_ teslaUserProfileStore  = (*tesladb.TeslaUserProfileRepo)(nil)
+)
+
 // Handler serves the Tesla account owner's profile data.
 type Handler struct {
-	teslaClient *tesla.Client
-	profileRepo *tesladb.TeslaUserProfileRepo
+	teslaClient teslaUserProfileClient
+	profileRepo teslaUserProfileStore
 }
 
 // NewHandler creates a new handler.

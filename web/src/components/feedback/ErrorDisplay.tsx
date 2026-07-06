@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, FileQuestion, Lock, Server, WifiOff } from 'lucide-react'
@@ -40,10 +41,26 @@ export function ErrorDisplay({
   const { t } = useTranslation()
   const navigate = useNavigate()
   const online = useOnlineStatus()
+  const status = isApiError(error) ? error.status : undefined
+
+  useEffect(() => {
+    // Keep the offline branch's "we'll retry automatically when your
+    // connection returns" promise. Only the status-less network branch
+    // auto-retries: 4xx/5xx are permanent and shouldn't be re-fired on an
+    // `online` event, and a status-0 offline ApiError leaves retry manual.
+    // Mirrors QueryError so both error banners recover identically.
+    if (!error || online || !onRetry || status !== undefined) return
+    let fired = false
+    const handler = () => {
+      if (fired) return
+      fired = true
+      onRetry()
+    }
+    window.addEventListener('online', handler, { once: true })
+    return () => window.removeEventListener('online', handler)
+  }, [error, online, onRetry, status])
 
   if (!error) return null
-
-  const status = isApiError(error) ? error.status : undefined
 
   // 404 — record was deleted or URL is wrong.
   if (status === 404) {

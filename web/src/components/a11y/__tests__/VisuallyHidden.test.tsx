@@ -1,16 +1,13 @@
 /**
- * VisuallyHidden + AnnouncerRegion contract tests.
+ * VisuallyHidden contract tests.
+ *
+ * `AnnouncerRegion` — which is built on top of VisuallyHidden — has its own
+ * dedicated suite in `./AnnouncerRegion.test.tsx` (one concern per file).
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { VisuallyHidden } from '../VisuallyHidden';
-import { AnnouncerRegion } from '../AnnouncerRegion';
-import {
-  announce,
-  __resetAnnouncerForTests,
-  __getAnnouncerListenerCountForTests,
-} from '@/hooks/useAnnouncer';
 
 describe('VisuallyHidden', () => {
   it('renders a span with the sr-only class by default', () => {
@@ -101,61 +98,5 @@ describe('VisuallyHidden', () => {
     const node = screen.getByTestId('vh');
     expect(node.className).toContain('sr-only');
     expect(node.className).toContain('custom-class');
-  });
-});
-
-describe('AnnouncerRegion', () => {
-  beforeEach(() => {
-    __resetAnnouncerForTests();
-  });
-
-  it('renders both polite and assertive live regions on mount', () => {
-    render(<AnnouncerRegion />);
-    const polite = screen.getByTestId('announcer-polite');
-    const assertive = screen.getByTestId('announcer-assertive');
-    expect(polite).toHaveAttribute('aria-live', 'polite');
-    expect(polite).toHaveAttribute('role', 'status');
-    expect(assertive).toHaveAttribute('aria-live', 'assertive');
-    expect(assertive).toHaveAttribute('role', 'alert');
-  });
-
-  it('subscribes one listener while mounted and unsubscribes on unmount', () => {
-    expect(__getAnnouncerListenerCountForTests()).toBe(0);
-    const { unmount } = render(<AnnouncerRegion />);
-    expect(__getAnnouncerListenerCountForTests()).toBe(1);
-    unmount();
-    expect(__getAnnouncerListenerCountForTests()).toBe(0);
-  });
-
-  it('routes polite announcements to the polite region', () => {
-    render(<AnnouncerRegion />);
-    act(() => {
-      announce('Filter removed', 'polite');
-    });
-    const polite = screen.getByTestId('announcer-polite');
-    expect(polite.textContent ?? '').toContain('Filter removed');
-    const assertive = screen.getByTestId('announcer-assertive');
-    expect(assertive.textContent ?? '').toBe('');
-  });
-
-  it('routes assertive announcements to the assertive region', () => {
-    render(<AnnouncerRegion />);
-    act(() => {
-      announce('Session expired', 'assertive');
-    });
-    const assertive = screen.getByTestId('announcer-assertive');
-    expect(assertive.textContent ?? '').toContain('Session expired');
-    const polite = screen.getByTestId('announcer-polite');
-    expect(polite.textContent ?? '').toBe('');
-  });
-
-  it('keeps polite as the default priority', () => {
-    render(<AnnouncerRegion />);
-    act(() => {
-      announce('default priority');
-    });
-    expect(screen.getByTestId('announcer-polite').textContent ?? '').toContain(
-      'default priority',
-    );
   });
 });

@@ -12,10 +12,12 @@ export function CommandSearch({ value, onChange }: CommandSearchProps) {
 
   return (
     <Input
-      value={value}
+      type="search"
+      value={value ?? ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder={t('commands.search.placeholder', 'Search commands...')}
-      icon={<Search className="h-4 w-4" />}
+      aria-label={t('commands.search.aria', 'Search commands')}
+      icon={<Search className="h-4 w-4" aria-hidden="true" />}
       className="bg-white/[0.03] border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
     />
   );

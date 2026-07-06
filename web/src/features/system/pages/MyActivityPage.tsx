@@ -13,7 +13,7 @@
  * rather than a generic error page.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
@@ -64,7 +64,10 @@ export default function MyActivityPage() {
   const query = useMyRecentActivity({ start, end, limit: ACTIVITY_LIMIT });
   const { data, isLoading, isError, error, refetch } = query;
 
-  const entries = data ?? [];
+  // Stabilise the array identity so the derived-analytics memo below and the
+  // feed panel don't churn on every render while the query is pending (when
+  // `data` is undefined, `data ?? []` would otherwise be a fresh array each time).
+  const entries = useMemo(() => data ?? [], [data]);
   const apiError = error instanceof ApiError ? error : null;
   const featureDisabled = apiError?.status === 503;
   const unauthenticated = apiError?.status === 401;
@@ -77,9 +80,9 @@ export default function MyActivityPage() {
 
   // Shared section state. Hard-gate failures (503 / 401) are surfaced by the
   // notice below, so the derived panels treat only non-gate failures as errors.
-  const retry = () => {
+  const retry = useCallback(() => {
     void refetch();
-  };
+  }, [refetch]);
   const sectionIsError = isError && !hardGate;
   const isEmpty = !isLoading && !sectionIsError && entries.length === 0;
 

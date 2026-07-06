@@ -38,7 +38,10 @@ export function BrowserNotificationsKpis({
         ? { label: t('browserNotifications.status.denied', 'Blocked'), color: 'red' }
         : { label: t('browserNotifications.status.default', 'Not enabled'), color: 'cyan' };
 
-  const pushActive = (pushPrefs.alerts ? 1 : 0) + (pushPrefs.exportStatus ? 1 : 0);
+  // Defensive: this is a presentational band, so a parent that hands over an
+  // undefined `pushPrefs` during a loading window degrades to "0 on" rather
+  // than crashing the whole notifications page behind an error boundary.
+  const pushActive = (pushPrefs?.alerts ? 1 : 0) + (pushPrefs?.exportStatus ? 1 : 0);
 
   const tabBadgeEnabled = settings?.tab_badge_enabled !== false;
   const criticalFlashEnabled = settings?.critical_flash_enabled !== false;
@@ -47,8 +50,8 @@ export function BrowserNotificationsKpis({
     : null;
 
   const totalChannels = NOTIFICATION_SOUND_CATEGORIES.length;
-  const soundActive = soundPrefs.master
-    ? NOTIFICATION_SOUND_CATEGORIES.filter((c) => soundPrefs.perCategory[c]).length
+  const soundActive = soundPrefs?.master
+    ? NOTIFICATION_SOUND_CATEGORIES.filter((c) => soundPrefs.perCategory?.[c]).length
     : 0;
 
   const activeOf = (active: number, total: number) =>

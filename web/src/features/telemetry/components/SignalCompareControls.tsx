@@ -51,6 +51,9 @@ export const DIFF_PRESETS: DiffPreset[] = [
 ];
 
 export function toLocalDatetimeInput(date: Date): string {
+  // Guard invalid / absent dates so a bad preset or upstream computation
+  // renders as an empty window rather than the literal "NaN-NaN-NaNTNaN:NaN".
+  if (!date || Number.isNaN(date.getTime())) return '';
   const pad = (n: number) => n.toString().padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
@@ -115,7 +118,12 @@ export function SignalCompareControls({
                 ariaLabel={t('help.signal.snapshot.aria', { defaultValue: 'More info about signal snapshots' })}
               />
             </span>
-            <Input type="datetime-local" value={atA} onChange={(e) => onChangeA(e.target.value)} />
+            <Input
+              type="datetime-local"
+              value={atA}
+              onChange={(e) => onChangeA(e.target.value)}
+              aria-label={t('signalDiff.windowA', 'Window A')}
+            />
           </div>
           <div>
             <span className="mb-1.5 flex items-center gap-1 text-xs text-amber-300">
@@ -126,12 +134,21 @@ export function SignalCompareControls({
                 ariaLabel={t('help.signal.diff.aria', { defaultValue: 'More info about signal diffs' })}
               />
             </span>
-            <Input type="datetime-local" value={atB} onChange={(e) => onChangeB(e.target.value)} />
+            <Input
+              type="datetime-local"
+              value={atB}
+              onChange={(e) => onChangeB(e.target.value)}
+              aria-label={t('signalDiff.windowB', 'Window B')}
+            />
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[var(--text-muted)]">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          role="group"
+          aria-labelledby="signal-compare-presets-label"
+        >
+          <span id="signal-compare-presets-label" className="text-xs text-[var(--text-muted)]">
             {t('signalDiff.presetsLabel', 'Quick presets:')}
           </span>
           {DIFF_PRESETS.map((p) => (
@@ -145,26 +162,36 @@ export function SignalCompareControls({
           <Input
             type="search"
             placeholder={t('signalDiff.filterPlaceholder', 'Filter signals…')}
+            aria-label={t('signalDiff.filterLabel', 'Filter signals')}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="max-w-sm"
           />
-          <div className="flex flex-wrap items-center gap-1.5">
-            {CATEGORY_PREFIXES.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => onCategoryChange(category === c.id ? null : c.id)}
-                className={cn(
-                  'rounded-full border px-2.5 py-1 text-xs uppercase tracking-wide transition-colors',
-                  category === c.id
-                    ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
-                    : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
-                )}
-              >
-                {t(c.labelKey, c.defaultLabel)}
-              </button>
-            ))}
+          <div
+            className="flex flex-wrap items-center gap-1.5"
+            role="group"
+            aria-label={t('signalDiff.categoryFilterLabel', 'Filter by category')}
+          >
+            {CATEGORY_PREFIXES.map((c) => {
+              const active = category === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onCategoryChange(active ? null : c.id)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-xs uppercase tracking-wide transition-colors',
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]',
+                    active
+                      ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
+                      : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
+                  )}
+                >
+                  {t(c.labelKey, c.defaultLabel)}
+                </button>
+              );
+            })}
             {category ? (
               <Button variant="ghost" size="sm" onClick={() => onCategoryChange(null)}>
                 {t('signalDiff.clearCategory', 'Clear')}

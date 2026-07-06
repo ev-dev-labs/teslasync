@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
+import { safeArray } from '@/lib/safeArray';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import type { SavedView, SavedViewCreateInput, SavedViewUpdateInput } from '../types';
@@ -29,9 +30,12 @@ function buildQuery(route: string): string {
 }
 
 /**
- * Fetch the current user's saved views for a list-page route. Always
- * returns an array — never undefined — so consumers can `.map(...)` and
- * `.find(...)` without a null guard.
+ * Fetch the current user's saved views for a list-page route. Once the
+ * query resolves it ALWAYS yields an array — never `null` or a stray
+ * object — so consumers can `.map(...)` and `.find(...)` without a null
+ * guard. This is enforced by the `select: safeArray` coercion rather than
+ * trusting the wire payload, matching every other list hook in the
+ * codebase (useExports, useGuardEvents, …).
  *
  * staleTime is set to STANDARD (60s) — saved views change rarely, but
  * we still want the menu to reflect a fresh "Save current view" within
@@ -42,6 +46,7 @@ export function useSavedViews(route: string) {
     queryKey: savedViewsKeys.list(route),
     queryFn: ({ signal }) => request<SavedView[]>(`/saved-views${buildQuery(route)}`, { signal }),
     staleTime: STALE_TIMES.STANDARD,
+    select: safeArray,
   });
 }
 

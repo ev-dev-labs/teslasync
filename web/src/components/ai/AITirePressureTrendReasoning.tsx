@@ -53,6 +53,14 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// This feature renders its narrative purely through useAiStream's
+// built-in delta-text accumulator (surfaced by AiOutputPanel), so it
+// has no per-event work to do. A module-level no-op keeps the onEvent
+// callback identity stable across renders instead of allocating a
+// fresh closure in the render path (which would re-run useAiStream's
+// onEvent-ref effect on every render).
+const noop = (): void => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent TirePressurePage. Optional
@@ -78,7 +86,9 @@ interface InnerSectionProps {
  *     colour).
  *   - Narrate button is disabled while a stream is open OR when
  *     no vehicleId is available from the active-vehicle
- *     context.
+ *     context. When it is disabled for want of a vehicle, an
+ *     empty-state hint tells the user how to enable it rather
+ *     than leaving them to guess why the button is inert.
  *   - Title attribute carries the long-form explanation so a
  *     user hovering for a tooltip understands the privacy
  *     contract — only the vehicle name may be narrated; the
@@ -105,21 +115,29 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/tire-pressure/trends/explain',
     body,
-    onEvent: () => {},
+    onEvent: noop,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-    return (
+  return (
     <AIFeatureCard
       title={t(
-                  'tirePressure.aiTrendReasoning.title',
-                  'Narrate the 30-day tire-pressure trend',
-                )}
+        'tirePressure.aiTrendReasoning.title',
+        'Narrate the 30-day tire-pressure trend',
+      )}
       description={t(
-                'tirePressure.aiTrendReasoning.description',
-                'Ask Helix to explain the recent 30-day trend in this vehicle\u2019s four corner tire pressures \u2014 which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.',
-              )}
+        'tirePressure.aiTrendReasoning.description',
+        'Ask Helix to explain the recent 30-day trend in this vehicle\u2019s four corner tire pressures \u2014 which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.',
+      )}
       buttonLabel={t('tirePressure.aiTrendReasoning.generateButton', 'Narrate trend')}
       badgeLabel={t('tirePressure.aiTrendReasoning.badge', 'Helix')}
+      emptyHint={
+        haveInputs
+          ? undefined
+          : t(
+              'tirePressure.aiTrendReasoning.noVehicleHint',
+              'Pick a vehicle above to enable Helix.',
+            )
+      }
       canStart={haveInputs}
       stream={stream}
     />

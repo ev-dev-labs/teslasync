@@ -44,7 +44,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
     const q = search.toLowerCase();
     return entries.filter(
       (s) =>
-        s.name.toLowerCase().includes(q) ||
+        (s.name ?? '').toLowerCase().includes(q) ||
         (s.description ?? '').toLowerCase().includes(q) ||
         (s.source_module ?? '').toLowerCase().includes(q),
     );
@@ -76,7 +76,11 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
       {entries.length === 0 ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BookOpen className="h-5 w-5" />}
-          message={t('widget.signalCatalog.noData', 'No signals in catalog')}
+          message={
+            catalogError
+              ? t('widget.signalCatalog.loadError', 'Failed to load signal catalog')
+              : t('widget.signalCatalog.noData', 'No signals in catalog')
+          }
           className="py-4"
         />
       ) : isCompact ? (
@@ -93,6 +97,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
         /* ── Standard / Wide layout ── */
         <div className="flex flex-col gap-2 h-full min-h-0">
           <Input
+            aria-label={t('widget.signalCatalog.searchLabel', 'Search signals')}
             placeholder={t('widget.signalCatalog.searchPlaceholder', 'Search signals…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -114,24 +119,27 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                     <span className="ml-1 text-[var(--text-muted)]">({signals.length})</span>
                   </h4>
                   <div className="space-y-0.5">
-                    {signals.map((sig) => (
-                      <div
-                        key={sig.name}
-                        className="flex items-center gap-2 min-h-[32px] px-1 rounded hover:bg-white/[0.04] transition-colors"
-                      >
-                        <span className="text-xs font-mono text-[var(--text-primary)] truncate flex-1 min-w-0">
-                          {sig.name}
-                        </span>
-                        {sig.unit && (
-                          <Badge variant="neutral" className="text-2xs shrink-0">
-                            {sig.unit}
-                          </Badge>
-                        )}
-                        <span className="text-2xs text-[var(--text-muted)] tabular-nums shrink-0 min-w-[36px] text-right">
-                          {fmtInt(observationCounts.get(sig.name) ?? 0)}
-                        </span>
-                      </div>
-                    ))}
+                    {signals.map((sig, i) => {
+                      const name = sig.name ?? '';
+                      return (
+                        <div
+                          key={name || `${category}-${i}`}
+                          className="flex items-center gap-2 min-h-[32px] px-1 rounded hover:bg-white/[0.04] transition-colors"
+                        >
+                          <span className="text-xs font-mono text-[var(--text-primary)] truncate flex-1 min-w-0">
+                            {name || '—'}
+                          </span>
+                          {sig.unit && (
+                            <Badge variant="neutral" className="text-2xs shrink-0">
+                              {sig.unit}
+                            </Badge>
+                          )}
+                          <span className="text-2xs text-[var(--text-muted)] tabular-nums shrink-0 min-w-[36px] text-right">
+                            {fmtInt(observationCounts.get(name) ?? 0)}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

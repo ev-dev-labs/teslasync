@@ -44,9 +44,15 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
         // Canvas background. Force a system-color border + Canvas bg so
         // the surface is always perceivable for low-vision users.
         'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
-        padding ? paddingClasses[padding] : null,
+        padding ? (paddingClasses[padding] ?? null) : null,
         hover && 'transition-all duration-normal',
-        hover && glowClasses[glow],
+        // `glow` is frequently data-driven (`glow={HEALTH_GLOW[status]}`,
+        // `glow={glowMap[color] ?? 'none'}`, `glow={active ? 'green' : 'none'}`).
+        // Should a value land outside the union at runtime, `glowClasses[glow]`
+        // is undefined; fall back to the no-glow tokens so the hover affordance
+        // degrades cleanly instead of leaking `undefined` into the class list.
+        // Mirrors Badge's variant/size null-safety.
+        hover && (glowClasses[glow] ?? glowClasses.none),
         className,
       )}
       {...props}

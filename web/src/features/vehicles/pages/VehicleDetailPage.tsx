@@ -6,7 +6,7 @@ import { Activity } from 'lucide-react'
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui'
 import { LiveIndicator } from '@/components/data-display'
-import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton } from '@/components/feedback'
+import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -98,7 +98,7 @@ export default function VehicleDetailPage() {
       ? nicknameSetting.value
       : vehicle?.display_name
 
-  const { data: stateData, refetch: refetchState } = useQuery({
+  const { data: stateData, error: stateError, refetch: refetchState } = useQuery({
     queryKey: ['vehicle-state', vehicleId],
     queryFn: () => request<StateResponse>(`/vehicles/${vehicleId}/state`),
     enabled: vehicleId > 0,
@@ -217,7 +217,15 @@ export default function VehicleDetailPage() {
       {!state ? (
         <FadeIn delay={0.05}>
           <GlassPanel className="p-8">
-            <Skeleton lines={5} height={20} />
+            {stateError ? (
+              <QueryError
+                error={stateError}
+                onRetry={() => { refetchState() }}
+                resourceName={t('vehicles.detail.liveStateResource', 'Live vehicle state')}
+              />
+            ) : (
+              <Skeleton lines={5} height={20} />
+            )}
           </GlassPanel>
         </FadeIn>
       ) : (

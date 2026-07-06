@@ -140,12 +140,21 @@ const TONE_TEXT: Record<ComfortTone, string> = {
 
 /* ─── Helpers ─── */
 
+// Clamp an arbitrary heat/cool signal to a valid 0–3 style index. Fleet
+// Telemetry occasionally surfaces interpolated (fractional) levels, so we
+// round; non-finite values fall back to "Off". Without this the lookup
+// could return `undefined` and crash the card reading `.color`/`.label`.
+function clampLevel(level: number): number {
+  if (!Number.isFinite(level)) return 0;
+  return Math.min(Math.max(Math.round(level), 0), 3);
+}
+
 function heatStyle(level: number): HeatLevelStyle {
-  return HEAT_LEVELS[Math.min(Math.max(level, 0), 3)];
+  return HEAT_LEVELS[clampLevel(level)];
 }
 
 function coolStyle(level: number): HeatLevelStyle {
-  return COOL_LEVELS[Math.min(Math.max(Math.round(level), 0), 3)];
+  return COOL_LEVELS[clampLevel(level)];
 }
 
 function heatBadgeVariant(level: number): 'neutral' | 'info' | 'warning' | 'danger' {

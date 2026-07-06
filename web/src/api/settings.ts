@@ -83,15 +83,20 @@ export const getNotificationLogs = (limit = 50, offset = 0) =>
 export const getNotificationStats = () => request<NotificationStats>('/notifications/stats')
 
 // === Notification Scheduling ===
+/** Fetches all scheduled (cron/one-shot) notification jobs. */
 export const getNotificationSchedules = () => request<NotificationSchedule[]>('/notifications/schedules')
+/** Creates a scheduled notification job from a partial payload. */
 export const createNotificationSchedule = (data: Partial<NotificationSchedule>) =>
   request<NotificationSchedule>('/notifications/schedules', { method: 'POST', body: JSON.stringify(data) })
+/** Deletes a scheduled notification job by ID. */
 export const deleteNotificationSchedule = (id: number) =>
   request<void>(`/notifications/schedules/${id}`, { method: 'DELETE' })
 
 // === Notification Preferences ===
+/** Fetches the per-event-type delivery preferences for a channel. */
 export const getNotificationPreferences = (channelId: number) =>
   request<NotificationPreference[]>(`/notifications/${channelId}/preferences`)
+/** Enables or disables a single event type for a channel. */
 export const updateNotificationPreference = (channelId: number, eventType: string, enabled: boolean) =>
   request<void>(`/notifications/${channelId}/preferences`, {
     method: 'PUT',
@@ -99,8 +104,10 @@ export const updateNotificationPreference = (channelId: number, eventType: strin
   })
 
 // === Notification Analytics ===
+/** Fetches aggregate notification analytics, optionally scoped to the last `days`. */
 export const getNotificationAnalytics = (days?: number) =>
   request<NotificationAnalytics>(`/notifications/analytics${days ? `?days=${days}` : ''}`)
+/** Fetches per-day delivery metrics for a channel, optionally scoped to the last `days`. */
 export const getChannelMetrics = (channelId: number, days?: number) =>
   request<NotificationMetric[]>(`/notifications/${channelId}/metrics${days ? `?days=${days}` : ''}`)
 
@@ -122,4 +129,5 @@ export const getGasPriceHistory = (limit = 50, offset = 0) =>
   request<GasPriceHistory[]>(`/gas-price/history?limit=${limit}&offset=${offset}`)
 
 // === Map Config ===
+/** Fetches the map tile provider configuration (tile URL, attribution, bounds). */
 export const getMapConfig = () => request<MapConfig>('/system/map-config')

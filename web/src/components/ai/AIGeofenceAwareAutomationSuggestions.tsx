@@ -79,8 +79,11 @@ export interface AIGeofenceAwareAutomationSuggestionsProps {
  * decodeAutomationInputDTO before returning); this client-side
  * narrowing is defence-in-depth against an unexpected provider
  * response.
+ *
+ * Exported for the unit test — production code reaches it only via the
+ * `tool_result` handler below.
  */
-function normalizeAutomationInput(value: unknown): AutomationFullInput | null {
+export function normalizeAutomationInput(value: unknown): AutomationFullInput | null {
   if (typeof value !== 'object' || value === null) {
     return null
   }
@@ -215,6 +218,10 @@ function InnerSection({
         <Textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          aria-label={t(
+            'automations.builder.aiGeofenceAware.promptAria',
+            'Describe the geofence-aware automation to draft',
+          )}
           placeholder={t(
             'automations.builder.aiGeofenceAware.placeholder',
             'e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection',

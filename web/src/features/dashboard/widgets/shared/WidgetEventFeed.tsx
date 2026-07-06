@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TimelineItem } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -25,6 +25,19 @@ interface WidgetEventFeedProps {
   emptyIcon?: ReactNode;
 }
 
+/** Universal placeholder rendered for an unparseable timestamp. */
+const TIME_FALLBACK = '—';
+
+/**
+ * Parse an ISO timestamp to epoch millis for sorting, mapping any invalid /
+ * missing value to -Infinity so malformed rows sink to the bottom of the feed
+ * instead of scrambling `Array.prototype.sort` with a `NaN` comparator.
+ */
+function toEpoch(timestamp: string): number {
+  const ms = new Date(timestamp).getTime();
+  return Number.isNaN(ms) ? Number.NEGATIVE_INFINITY : ms;
+}
+
 export function WidgetEventFeed({
   items,
   maxItems,
@@ -35,24 +48,33 @@ export function WidgetEventFeed({
   const { t } = useTranslation('dashboard');
   const { formatDateTime } = useDateFormat();
 
-  function formatRelativeTime(isoStr: string): string {
-    const d = new Date(isoStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMin = Math.floor(diffMs / 60_000);
-    if (diffMin < 1) return 'Just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHrs = Math.floor(diffMin / 60);
-    if (diffHrs < 24) return `${diffHrs}h ago`;
-    return formatDateTime(isoStr);
-  }
+  const formatRelativeTime = useCallback(
+    (isoStr: string): string => {
+      const ms = new Date(isoStr).getTime();
+      if (Number.isNaN(ms)) return TIME_FALLBACK;
+      const diffMin = Math.floor((Date.now() - ms) / 60_000);
+      if (diffMin < 1) return t('widget.eventFeed.justNow', 'Just now');
+      if (diffMin < 60)
+        return t('widget.eventFeed.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
+      const diffHrs = Math.floor(diffMin / 60);
+      if (diffHrs < 24)
+        return t('widget.eventFeed.hoursAgo', '{{hours}}h ago', { hours: diffHrs });
+      return formatDateTime(isoStr);
+    },
+    [t, formatDateTime],
+  );
 
   const limit = maxItems ?? (compact ? 3 : 10);
 
   const sorted = useMemo(
     () =>
-      [...items]
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      [...(items ?? [])]
+        .sort((a, b) => {
+          const ea = toEpoch(a.timestamp);
+          const eb = toEpoch(b.timestamp);
+          if (ea === eb) return 0;
+          return ea > eb ? -1 : 1;
+        })
         .slice(0, limit),
     [items, limit],
   );
@@ -68,18 +90,23 @@ export function WidgetEventFeed({
   }
 
   return (
-    <div className="space-y-0 overflow-y-auto h-full">
+    <div
+      role="list"
+      aria-label={t('widget.eventFeed.label', 'Event feed')}
+      className="space-y-0 overflow-y-auto h-full"
+    >
       {sorted.map((item, i) => (
-        <TimelineItem
-          key={item.id}
-          icon={item.icon}
-          title={item.title}
-          subtitle={item.subtitle}
-          time={formatRelativeTime(item.timestamp)}
-          color={item.color}
-          isLast={i === sorted.length - 1}
-          href={item.href}
-        />
+        <div role="listitem" key={item.id}>
+          <TimelineItem
+            icon={item.icon}
+            title={item.title}
+            subtitle={item.subtitle}
+            time={formatRelativeTime(item.timestamp)}
+            color={item.color}
+            isLast={i === sorted.length - 1}
+            href={item.href}
+          />
+        </div>
       ))}
     </div>
   );

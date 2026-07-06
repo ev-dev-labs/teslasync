@@ -32,7 +32,7 @@ import { AITirePressureTrendReasoning } from '@/components/ai/AITirePressureTren
 /*  Types (snake_case from backend)                                    */
 /* ------------------------------------------------------------------ */
 
-interface TirePressureReading {
+export interface TirePressureReading {
   id: number;
   vehicle_id: number;
   front_left: number;
@@ -48,8 +48,14 @@ interface TirePressureReading {
 /*  Constants & helpers                                                */
 /* ------------------------------------------------------------------ */
 
-/** Check if a TPMS warning JSON string contains any true value. */
-function hasTpmsWarning(val: string | null | undefined): boolean {
+/**
+ * Check if a TPMS warning JSON string contains any true value.
+ *
+ * Exported (with the other pure helpers below) so the corner-status /
+ * normalisation logic can be unit-tested in isolation without mounting the
+ * whole page. The page's public surface is still the default export.
+ */
+export function hasTpmsWarning(val: string | null | undefined): boolean {
   if (!val) return false;
   try {
     const parsed = JSON.parse(val) as Record<string, boolean>;
@@ -91,7 +97,7 @@ const GAUGE_MAX_PA = 500_000; // 5.0 bar
  *   - bar    : 1.5–5             → multiply by 100_000
  *   - 0/null : missing reading   → return 0
  */
-function normaliseTpmsToPa(raw: number | null | undefined): number {
+export function normaliseTpmsToPa(raw: number | null | undefined): number {
   if (raw == null || !Number.isFinite(raw) || raw <= 0) return 0;
   if (raw >= 50_000) return raw; // already Pa
   if (raw >= 100) return raw * 1_000; // kPa
@@ -99,8 +105,8 @@ function normaliseTpmsToPa(raw: number | null | undefined): number {
   return raw * 100_000; // bar (covers 0.5..10)
 }
 
-const TIRE_POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
-type TirePosition = (typeof TIRE_POSITIONS)[number];
+export const TIRE_POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
+export type TirePosition = (typeof TIRE_POSITIONS)[number];
 
 // English fallbacks; the visible labels are resolved through i18n at the
 // render boundary via `tireLabel(pos)` so translators can localise each
@@ -112,7 +118,7 @@ const TIRE_LABELS: Record<TirePosition, string> = {
   rr: 'Rear Right',
 };
 
-type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
+export type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
 
 // English fallbacks for the four status buckets; resolved via `statusLabel`.
 const STATUS_LABELS: Record<PressureStatus, string> = {
@@ -124,7 +130,7 @@ const STATUS_LABELS: Record<PressureStatus, string> = {
 
 const PRESET_IDS = ['7d', '30d', '90d', 'mtd', 'ytd', 'all'];
 
-function getTirePressureValue(
+export function getTirePressureValue(
   reading: TirePressureReading,
   pos: TirePosition,
 ): number {
@@ -137,13 +143,13 @@ function getTirePressureValue(
   return normaliseTpmsToPa(map[pos]);
 }
 
-function pressureColor(pa: number): string {
+export function pressureColor(pa: number): string {
   if (pa >= NORMAL_MIN_PA && pa <= NORMAL_MAX_PA) return '#10b981';
   if (pa >= SOFT_LOW_PA && pa <= SOFT_HIGH_PA) return '#f59e0b';
   return '#ef4444';
 }
 
-function pressureStatus(pa: number): PressureStatus {
+export function pressureStatus(pa: number): PressureStatus {
   if (pa < SOFT_LOW_PA) return 'critical';
   if (pa < NORMAL_MIN_PA) return 'low';
   if (pa > SOFT_HIGH_PA) return 'critical';
@@ -151,7 +157,7 @@ function pressureStatus(pa: number): PressureStatus {
   return 'normal';
 }
 
-function statusVariant(
+export function statusVariant(
   status: PressureStatus,
 ): 'success' | 'warning' | 'danger' {
   switch (status) {
@@ -262,7 +268,15 @@ export default function TirePressurePage() {
 
   const summaryStats = useMemo(() => {
     if (!latest) return null;
-    const values = TIRE_POSITIONS.map((p) => getTirePressureValue(latest, p));
+    // A corner that never reported normalises to 0 (see normaliseTpmsToPa).
+    // Treat those as "no reading", not 0 Pa — otherwise a vehicle that only
+    // reports some corners shows a phantom 0-bar minimum and inflated warning
+    // count, which reads as "broken" rather than "partial". Aggregate over the
+    // corners that actually have a reading; when none do, surface "no data".
+    const values = TIRE_POSITIONS.map((p) => getTirePressureValue(latest, p)).filter(
+      (v) => v > 0,
+    );
+    if (values.length === 0) return null;
     const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
     const min = Math.min(...values);
     const warningCount = values.filter(

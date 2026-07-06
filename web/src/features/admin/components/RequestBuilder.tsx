@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, AlertTriangle } from 'lucide-react';
 import { GlassPanel, Button as UiButton, Input as UiInput, Textarea as UiTextarea, Text, HelperText } from '@/components/ui';
@@ -20,7 +20,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
   // Reset state when endpoint changes
   useEffect(() => {
     const defaults: Record<string, string> = {};
-    endpoint.parameters.forEach(p => {
+    (endpoint.parameters ?? []).forEach(p => {
       if (p.default != null) defaults[p.name] = String(p.default);
     });
     setParams(defaults);
@@ -37,14 +37,19 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
   // Build final URL with path and query params
   const buildUrl = useCallback(() => {
+    const parameters = endpoint.parameters ?? [];
     let url = endpoint.path;
-    endpoint.parameters
+    parameters
       .filter(p => p.in === 'path')
       .forEach(p => {
-        url = url.replace(`{${p.name}}`, params[p.name] || `{${p.name}}`);
+        const value = params[p.name];
+        // Use a replacer *function* so a user-supplied value containing
+        // `$&`, `$1`, `$'` … is inserted verbatim rather than being
+        // interpreted as a String.prototype.replace substitution pattern.
+        url = url.replace(`{${p.name}}`, () => (value ? value : `{${p.name}}`));
       });
 
-    const queryParts = endpoint.parameters
+    const queryParts = parameters
       .filter(p => p.in === 'query' && params[p.name])
       .map(p => `${p.name}=${encodeURIComponent(params[p.name])}`);
 
@@ -68,8 +73,14 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
   const handleCancel = () => setConfirmOpen(false);
 
-  const pathParams = endpoint.parameters.filter(p => p.in === 'path');
-  const queryParams = endpoint.parameters.filter(p => p.in === 'query');
+  const pathParams = useMemo(
+    () => (endpoint.parameters ?? []).filter(p => p.in === 'path'),
+    [endpoint.parameters],
+  );
+  const queryParams = useMemo(
+    () => (endpoint.parameters ?? []).filter(p => p.in === 'query'),
+    [endpoint.parameters],
+  );
 
   return (
     <div className="space-y-4">
@@ -85,15 +96,15 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           disabled={loading}
           className="shrink-0"
         >
-          <Send className="h-3.5 w-3.5 mr-1.5" />
+          <Send className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
           {loading ? t('playground.sending', 'Sending...') : t('playground.send', 'Send')}
         </UiButton>
       </div>
 
       {/* Destructive action confirmation */}
       {confirmOpen && (
-        <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+        <div role="alert" className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" aria-hidden="true" />
           <Text size="xs" className="flex-1 text-amber-300">
             {t('playground.confirmDestructive', 'This is a {{method}} request. Are you sure you want to send it?', { method: endpoint.method })}
           </Text>
@@ -127,10 +138,11 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           </Text>
           {pathParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
-              <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
+              <label htmlFor={`req-path-${p.name}`} className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
                 {p.name} <span className="text-red-400">*</span>
               </label>
               <UiInput
+                id={`req-path-${p.name}`}
                 value={params[p.name] ?? ''}
                 onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
                 placeholder={p.description || p.type}
@@ -149,11 +161,12 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           </Text>
           {queryParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
-              <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
+              <label htmlFor={`req-query-${p.name}`} className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
                 {p.name}
                 {p.required && <span className="text-red-400 ml-0.5">*</span>}
               </label>
               <UiInput
+                id={`req-query-${p.name}`}
                 value={params[p.name] ?? ''}
                 onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
                 placeholder={p.description || `${p.type}${p.default != null ? ` (default: ${p.default})` : ''}`}

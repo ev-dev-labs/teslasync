@@ -43,14 +43,20 @@ export default function RouteEfficiencyPage() {
 
   const routeQuery = useRouteEfficiency(vehicleIdStr, startDate, endDate);
   const { data, isLoading, error, refetch } = routeQuery;
-  const isError = Boolean(error);
+
+  const routes = data?.routes ?? [];
+  const hasRoutes = routes.length > 0;
+  // Only surface the hard error state when there is nothing to fall back on.
+  // TanStack Query retains the last good `data` when a background refetch
+  // fails, so a transient error must not blow the still-valid routes away —
+  // the page keeps rendering them and the header freshness chip (wired via
+  // `query={routeQuery}`) reflects the degraded state instead.
+  const isError = Boolean(error) && !hasRoutes;
 
   const { unitPrefs } = useUnits();
   const unit = useMemo(() => makeUnitDisplay(unitPrefs.distance), [unitPrefs.distance]);
 
   /* ---- Aggregates (SI Wh/km in, converted at the display boundary) ---- */
-  const routes = data?.routes ?? [];
-  const hasRoutes = routes.length > 0;
   const totalTrips = routes.reduce((sum, r) => sum + (r.tripCount ?? 0), 0);
   const bestEff = hasRoutes ? Math.min(...routes.map((r) => r.bestEfficiency ?? 0)) : 0;
   const worstEff = hasRoutes ? Math.max(...routes.map((r) => r.worstEfficiency ?? 0)) : 0;

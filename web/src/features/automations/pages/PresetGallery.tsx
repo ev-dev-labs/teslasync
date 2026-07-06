@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassPanel, Button as UiButton, Badge, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
+import { QueryError } from '@/components/feedback/QueryError';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -43,10 +44,9 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const Icon = iconMap[preset.icon] ?? Shield;
-  const firstTrigger = preset.triggers[0];
-  const triggerLabel = firstTrigger
-    ? triggerLabels[firstTrigger.kind]
-    : null;
+  const firstTrigger = preset.triggers?.[0];
+  const triggerLabel = firstTrigger ? triggerLabels[firstTrigger.kind] : null;
+  const actionCount = preset.actions?.length ?? 0;
 
   const handleInstall = () => {
     navigate(`/automations/new?preset=${preset.id}`);
@@ -56,7 +56,7 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
     <GlassPanel hover glow="cyan" className="p-5 flex flex-col gap-3">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-          <Icon className="h-5 w-5 text-cyan-400" />
+          <Icon className="h-5 w-5 text-cyan-400" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
           <Text as="h3" size="sm" weight="semibold" color="primary" className="truncate">
@@ -70,7 +70,7 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
         </div>
         <Badge variant="neutral" size="sm">
           {t('automations.presets.actionCount', '{{count}} actions', {
-            count: preset.actions.length,
+            count: actionCount,
           })}
         </Badge>
       </div>
@@ -83,9 +83,12 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
         size="sm"
         variant="secondary"
         onClick={handleInstall}
+        aria-label={t('automations.presets.installNamed', 'Install {{name}}', {
+          name: preset.name,
+        })}
         className="mt-1 w-full"
       >
-        <Plus className="h-3.5 w-3.5 mr-1.5" />
+        <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
         {t('automations.presets.install', 'Install')}
       </UiButton>
     </GlassPanel>
@@ -114,7 +117,7 @@ interface PresetGalleryProps {
 
 export function PresetGallery({ category }: PresetGalleryProps) {
   const { t } = useTranslation();
-  const { data, isLoading } = useAutomationPresets(category);
+  const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
 
   const presetList = useMemo(() => data?.presets ?? [], [data]);
 
@@ -125,6 +128,16 @@ export function PresetGallery({ category }: PresetGalleryProps) {
           <PresetCardSkeleton key={i} />
         ))}
       </div>
+    );
+  }
+
+  if (isError && presetList.length === 0) {
+    return (
+      <QueryError
+        error={error}
+        onRetry={() => refetch()}
+        resourceName={t('automations.presets.resource', 'Automation presets')}
+      />
     );
   }
 

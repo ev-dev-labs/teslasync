@@ -121,19 +121,35 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("write text report: %w", err)
 	}
 	if *output != "" {
-		f, err := os.Create(*output)
-		if err != nil {
-			return fmt.Errorf("create %s: %w", *output, err)
-		}
-		defer f.Close()
-		if err := eval.WriteJUnitReport(f, allResults); err != nil {
-			return fmt.Errorf("write junit %s: %w", *output, err)
+		if err := writeJUnitFile(*output, allResults); err != nil {
+			return err
 		}
 	}
 
 	sum := eval.SummarizeResults(allResults)
 	if sum.Fail > 0 {
 		return &exitErr{code: 1, msg: fmt.Sprintf("%d/%d goldens failed", sum.Fail, sum.Total)}
+	}
+	return nil
+}
+
+// writeJUnitFile writes the JUnit XML report for results to path. It
+// surfaces both the write error and the close error (via a named
+// return) so a truncated report — e.g. a short write on a full disk —
+// is never silently reported as success. CI consumes this file to
+// decide the eval gate's pass/fail, so partial output must fail loudly.
+func writeJUnitFile(path string, results []eval.Result) (err error) {
+	f, cerr := os.Create(path)
+	if cerr != nil {
+		return fmt.Errorf("create %s: %w", path, cerr)
+	}
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close %s: %w", path, closeErr)
+		}
+	}()
+	if werr := eval.WriteJUnitReport(f, results); werr != nil {
+		return fmt.Errorf("write junit %s: %w", path, werr)
 	}
 	return nil
 }

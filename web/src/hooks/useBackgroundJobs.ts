@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useExportJobs, type ExportJobSummary } from '@/api/hooks/useExports';
 
 /**
@@ -68,10 +70,14 @@ function getSnapshot(): BackgroundJob[] {
  * ```
  */
 export function registerJob(input: Omit<BackgroundJob, 'startedAt' | 'kind'> & { kind?: BackgroundJobKind }): () => void {
+  // Spread the caller's input FIRST, then apply defaults last. Doing it the
+  // other way round let an explicit `kind: undefined` on `input` clobber the
+  // `?? 'custom'` fallback back to `undefined`, which then crashed the footer
+  // popover's icon lookup (`KIND_ICON[undefined]`).
   const job: BackgroundJob = {
+    ...input,
     kind: input.kind ?? 'custom',
     startedAt: new Date().toISOString(),
-    ...input,
   };
   // Replace any existing entry with the same id so re-registration is idempotent.
   customJobs = [...customJobs.filter((j) => j.id !== job.id), job];
@@ -101,20 +107,29 @@ export interface UseBackgroundJobsResult {
   count: number;
 }
 
-function activeExportJobs(jobs: ExportJobSummary[] | undefined): BackgroundJob[] {
+function activeExportJobs(jobs: ExportJobSummary[] | undefined, t: TFunction): BackgroundJob[] {
   if (!jobs) return [];
   return jobs
     .filter((j) => j.status === 'queued' || j.status === 'processing')
     .map<BackgroundJob>((j) => ({
       id: `export:${j.id}`,
       kind: 'export',
-      label: j.file_name || `${j.type} export`,
-      description: j.status === 'queued' ? 'Queued' : 'Processing',
-      startedAt: j.created_at,
+      label:
+        j.file_name ||
+        t('statusBar.background.exportLabel', '{{type}} export', { type: j.type ?? '—' }),
+      description:
+        j.status === 'queued'
+          ? t('statusBar.background.queued', 'Queued')
+          : t('statusBar.background.processing', 'Processing'),
+      // `created_at` is required by the API contract, but guard against a
+      // malformed payload so the `.localeCompare` sort below can never throw
+      // on an undefined `startedAt`.
+      startedAt: j.created_at ?? '',
     }));
 }
 
 export function useBackgroundJobs(): UseBackgroundJobsResult {
+  const { t } = useTranslation();
   const { data: exportJobs } = useExportJobs({ pollWhileActive: true });
   const mutationCount = useIsMutating();
   const custom = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
@@ -128,23 +143,23 @@ export function useBackgroundJobs(): UseBackgroundJobsResult {
       {
         id: 'tanstack-mutations',
         kind: 'mutation',
-        label: mutationCount === 1 ? 'Saving…' : `Saving ${mutationCount} changes…`,
+        label:
+          mutationCount === 1
+            ? t('statusBar.background.saving', 'Saving…')
+            : t('statusBar.background.savingMany', 'Saving {{count}} changes…', {
+                count: mutationCount,
+              }),
         startedAt: new Date().toISOString(),
       },
     ];
-  }, [mutationCount]);
+  }, [mutationCount, t]);
 
-  const exports = useMemo(() => activeExportJobs(exportJobs), [exportJobs]);
+  const exports = useMemo(() => activeExportJobs(exportJobs, t), [exportJobs, t]);
 
   const jobs = useMemo(() => {
     const all = [...exports, ...mutationJob, ...custom];
     return all.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
   }, [exports, mutationJob, custom]);
-
-  // Keep the module-scoped registry from leaking memory if the host
-  // component unmounts while jobs are still in flight (it shouldn't
-  // happen, but guard against it).
-  useEffect(() => () => {}, []);
 
   return { jobs, hasJobs: jobs.length > 0, count: jobs.length };
 }

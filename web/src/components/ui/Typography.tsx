@@ -53,7 +53,7 @@ export function Heading({ level = 'section', as, className, children, ...rest }:
 // ─────────────────────────────────────────────
 
 export interface TextProps extends CommonProps {
-  /** Pre-composed role. If set, size/weight/color are ignored. */
+  /** Pre-composed role. If set, size/weight/color are ignored (mono still composes on top). */
   variant?: TypographyRole
   /** Granular size — only applied when variant is unset. */
   size?: TypographySize
@@ -78,8 +78,11 @@ export function Text({
   ...rest
 }: TextProps) {
   const Tag = as
+  // `variant` supplies the pre-composed role (size/weight/color). `mono` is an
+  // orthogonal family switch that must still apply on top of a role — several
+  // call sites use `<Text variant="body" mono>` for monospaced values.
   const classes = variant
-    ? typography.role[variant]
+    ? cn(typography.role[variant], mono && typography.family.mono)
     : cn(
         size && typography.size[size],
         weight && typography.weight[weight],

@@ -1,10 +1,11 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Server, Database, Activity, Clock, Gauge } from 'lucide-react';
 import { Grid } from '@/components/layout';
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { StatCard, KVList } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, AlertBanner } from '@/components/feedback';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
@@ -24,7 +25,7 @@ interface ComponentRow {
 export function BackendStatusSection() {
   const { t } = useTranslation();
 
-  const { data: extHealth, isLoading: extLoading } = useQuery({
+  const { data: extHealth, isLoading: extLoading, isError: extError } = useQuery({
     queryKey: ['system-status', 'extended-health'],
     queryFn: getExtendedHealth,
     refetchInterval: 30_000,
@@ -40,53 +41,63 @@ export function BackendStatusSection() {
 
   const isLoading = extLoading || poolLoading;
 
-  const componentRows: ComponentRow[] = extHealth
-    ? Object.entries(extHealth.components).map(([name, c]) => ({
-        name,
-        status: c.status,
-        latency_ms: c.latency_ms ?? 0,
-        failures: c.consecutive_failures ?? 0,
-        lastCheck: c.last_check ?? '',
-      }))
-    : [];
+  const componentRows: ComponentRow[] = useMemo(
+    () =>
+      extHealth
+        ? Object.entries(extHealth.components ?? {}).map(([name, c]) => ({
+            name,
+            status: c.status ?? 'unknown',
+            latency_ms: c.latency_ms ?? 0,
+            failures: c.consecutive_failures ?? 0,
+            lastCheck: c.last_check ?? '',
+          }))
+        : [],
+    [extHealth],
+  );
 
-  const componentColumns: Column<ComponentRow>[] = [
-    {
-      key: 'status',
-      header: t('Status'),
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          {getStatusIcon(row.status)}
-          <span className={statusTextClass(row.status)}>{row.status}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'name',
-      header: t('Component'),
-      sortable: true,
-      render: (row) => <span className="font-medium text-[var(--text-primary)]">{row.name}</span>,
-    },
-    {
-      key: 'latency_ms',
-      header: t('Latency'),
-      sortable: true,
-      render: (row) => `${fmtNumber(row.latency_ms, 1)} ms`,
-    },
-    {
-      key: 'failures',
-      header: t('Failures'),
-      sortable: true,
-      render: (row) => <span className={cn(row.failures > 0 && 'text-red-400')}>{fmtInt(row.failures)}</span>,
-    },
-    {
-      key: 'lastCheck',
-      header: t('Last Check'),
-      render: (row) => (row.lastCheck ? formatDateTime(row.lastCheck) : '—'),
-    },
-  ];
+  const componentColumns: Column<ComponentRow>[] = useMemo(
+    () => [
+      {
+        key: 'status',
+        header: t('Status'),
+        render: (row) => (
+          <div className="flex items-center gap-2">
+            {getStatusIcon(row.status)}
+            <span className={statusTextClass(row.status)}>{row.status}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'name',
+        header: t('Component'),
+        sortable: true,
+        render: (row) => <span className="font-medium text-[var(--text-primary)]">{row.name}</span>,
+      },
+      {
+        key: 'latency_ms',
+        header: t('Latency'),
+        sortable: true,
+        render: (row) => `${fmtNumber(row.latency_ms, 1)} ms`,
+      },
+      {
+        key: 'failures',
+        header: t('Failures'),
+        sortable: true,
+        render: (row) => <span className={cn(row.failures > 0 && 'text-red-400')}>{fmtInt(row.failures)}</span>,
+      },
+      {
+        key: 'lastCheck',
+        header: t('Last Check'),
+        render: (row) => (row.lastCheck ? formatDateTime(row.lastCheck) : '—'),
+      },
+    ],
+    [t],
+  );
 
-  const okCount = componentRows.filter((r) => r.status === 'ok' || r.status === 'healthy').length;
+  const okCount = useMemo(
+    () => componentRows.filter((r) => r.status === 'ok' || r.status === 'healthy').length,
+    [componentRows],
+  );
 
   return (
     <AccordionSection
@@ -109,6 +120,11 @@ export function BackendStatusSection() {
         </div>
       ) : (
         <div className="space-y-6">
+          {extError && (
+            <AlertBanner variant="danger" title={t('Backend health unavailable')}>
+              {t('Could not load backend component health. Values below may be incomplete.')}
+            </AlertBanner>
+          )}
           <div>
             <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Component Health')}</h4>
             <DataTable

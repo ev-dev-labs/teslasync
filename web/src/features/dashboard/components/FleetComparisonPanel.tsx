@@ -8,7 +8,7 @@ import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber, safeNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { VehicleComparisonEntry } from '@/types/analytics';
 
@@ -45,24 +45,27 @@ export function FleetComparisonPanel({
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
-  const rows = useMemo(() => {
+  const { rows, maxDistance } = useMemo(() => {
     const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
     const whPerKmToDisplay = (whPerKm: number) =>
       distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
-    return (entries ?? [])
+    // `safeNumber` coerces null/undefined/NaN/Infinity from the API to 0 so a
+    // single bad rollup can't produce NaN bar widths or scramble the sort.
+    const mapped = (entries ?? [])
       .map((e) => ({
         id: e.id,
-        name: e.name || t('quickStats.fleet.unnamed', 'Unnamed'),
-        distance: fromKm(e.distance ?? 0),
-        efficiency: whPerKmToDisplay(e.efficiency ?? 0),
+        name: e.name?.trim() || t('quickStats.fleet.unnamed', 'Unnamed'),
+        distance: fromKm(safeNumber(e.distance)),
+        efficiency: whPerKmToDisplay(safeNumber(e.efficiency)),
       }))
       .sort((a, b) => b.distance - a.distance);
+    // `|| 1` guards MetricBar's `value / max` when every vehicle is at 0 km.
+    const peak = mapped.reduce((m, r) => Math.max(m, r.distance), 0) || 1;
+    return { rows: mapped, maxDistance: peak };
   }, [entries, distanceUnit, t]);
 
-  const maxDistance = rows.reduce((m, r) => Math.max(m, r.distance), 0) || 1;
-
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+    <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading || undefined}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('quickStats.fleet.title', 'Fleet Comparison')}
@@ -78,7 +81,7 @@ export function FleetComparisonPanel({
           message={t('quickStats.fleet.empty', 'No fleet comparison data yet')}
         />
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet Comparison')}>
           {rows.map((r, i) => (
             <li key={r.id}>
               <MetricBar

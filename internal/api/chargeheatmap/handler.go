@@ -1,23 +1,36 @@
 package chargeheatmap
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strconv"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
+// dbQuerier is the read port ChargingHeatmapHandler depends on: the
+// Query + QueryRow subset of database.DBTX that *pgxpool.Pool satisfies
+// directly. Depending on this narrow interface (interface segregation)
+// rather than the concrete *database.DB keeps the handler unit-testable
+// with an in-memory fake — no live Postgres required — while
+// NewChargingHeatmapHandler still wires the real pool in production.
+type dbQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 // ChargingHeatmapHandler serves aggregated charging-pattern analytics.
 type ChargingHeatmapHandler struct {
-	db *database.DB
+	q dbQuerier
 }
 
 func NewChargingHeatmapHandler(db *database.DB) *ChargingHeatmapHandler {
-	return &ChargingHeatmapHandler{db: db}
+	return &ChargingHeatmapHandler{q: db.Pool}
 }
 
 type heatmapCell struct {
@@ -60,7 +73,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Charging heatmap uses SI canonical energy and power columns; the
 	// frontend display boundary formats them with user preferences.
 	// Heatmap data: hour of day × day of week
-	heatmapRows, err := h.db.Pool.Query(ctx, `
+	heatmapRows, err := h.q.Query(ctx, `
 		SELECT EXTRACT(DOW FROM started_at)::int  AS day_of_week,
 		       EXTRACT(HOUR FROM started_at)::int AS hour_of_day,
 		       COUNT(*)                            AS session_count,
@@ -71,7 +84,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		GROUP BY day_of_week, hour_of_day
 		ORDER BY day_of_week, hour_of_day`, vehicleID)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("charging heatmap: failed to query heatmap data")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("charging heatmap: failed to query heatmap data")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query heatmap data")
 		return
 	}
@@ -97,7 +110,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Location breakdown uses the geocoded start_place column captured at
 	// session start.
-	locRows, err := h.db.Pool.Query(ctx, `
+	locRows, err := h.q.Query(ctx, `
 		SELECT COALESCE(start_place, 'Unknown')                  AS location,
 		       COUNT(*)                                          AS count,
 		       COALESCE(SUM(total_energy_added_wh), 0)           AS total_wh,
@@ -109,7 +122,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ORDER BY count DESC
 		LIMIT 10`, vehicleID)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("charging heatmap: failed to query locations")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("charging heatmap: failed to query locations")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query location data")
 		return
 	}
@@ -137,7 +150,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Summary stats — duration derived from ended_at - started_at since the
 	// legacy duration column was dropped by 000184.
 	var summary chargingSummary
-	err = h.db.Pool.QueryRow(ctx, `
+	err = h.q.QueryRow(ctx, `
 		SELECT COUNT(*)                                                                      AS total_sessions,
 		       COALESCE(SUM(total_energy_added_wh), 0)                                       AS total_wh,
 		       COALESCE(SUM(cost_decimal), 0)                                                AS total_cost,
@@ -145,7 +158,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).
 		Scan(&summary.TotalSessions, &summary.TotalWh, &summary.TotalCost, &summary.AvgDurationS)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("charging heatmap: failed to query summary")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("charging heatmap: failed to query summary")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query summary")
 		return
 	}

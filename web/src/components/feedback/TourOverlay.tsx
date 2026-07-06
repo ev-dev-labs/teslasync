@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
@@ -21,6 +22,17 @@ export function TourOverlay({
 }: TourOverlayProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
+
+  // Keyboard operability: Esc dismisses the tour, matching the close
+  // button and the backdrop click. The listener is only registered while
+  // the overlay is mounted (i.e. while the tour is active).
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onSkip();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onSkip]);
 
   if (!targetRect) return null;
 
@@ -60,6 +72,7 @@ export function TourOverlay({
           )`,
         }}
         onClick={onSkip}
+        data-testid="tour-backdrop"
       />
 
       {/* Spotlight border glow */}
@@ -94,17 +107,19 @@ export function TourOverlay({
       >
         {/* Close button — 44px touch target for mobile */}
         <button
+          type="button"
           onClick={onSkip}
           className="absolute top-1 right-1 p-2.5 rounded-md text-[var(--text-muted)]
             hover:text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors
             min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label={t('tour.close', 'Close tour')}
+          data-testid="tour-close"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Step counter */}
-        <div className="text-2xs text-[var(--text-muted)] mb-1">
+        <div className="text-2xs text-[var(--text-muted)] mb-1" data-testid="tour-counter">
           {currentStep + 1} / {totalSteps}
         </div>
 
@@ -115,9 +130,11 @@ export function TourOverlay({
         {/* Navigation */}
         <div className="flex items-center justify-between">
           <button
+            type="button"
             onClick={onSkip}
             className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors
               py-2.5 px-2 min-h-[44px] flex items-center"
+            data-testid="tour-skip"
           >
             {t('tour.skip', 'Skip tour')}
           </button>
@@ -139,28 +156,40 @@ export function TourOverlay({
           </div>
         </div>
 
-        {/* Progress dots */}
-        <div className="flex justify-center gap-1 mt-3">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                'h-1 rounded-full transition-all',
-                i === currentStep
-                  ? 'w-4 bg-[var(--theme-primary)]'
-                  : i < currentStep
-                    ? 'w-1.5 bg-[var(--surface-2)]'
-                    : 'w-1.5 bg-[var(--surface-2)]',
-              )}
-            />
-          ))}
+        {/* Progress dots — decorative; the "N / M" counter and the dialog
+            aria-label already convey progress to assistive tech, so the dot
+            row is hidden from the accessibility tree. Completed dots use a
+            dimmed theme colour so they read differently from upcoming dots. */}
+        <div
+          className="flex justify-center gap-1 mt-3"
+          data-testid="tour-progress"
+          aria-hidden="true"
+        >
+          {Array.from({ length: totalSteps }).map((_, i) => {
+            const state = i === currentStep ? 'current' : i < currentStep ? 'done' : 'upcoming';
+            return (
+              <div
+                key={i}
+                data-state={state}
+                className={cn(
+                  'h-1 rounded-full',
+                  reduce ? '' : 'transition-all',
+                  state === 'current'
+                    ? 'w-4 bg-[var(--theme-primary)]'
+                    : state === 'done'
+                      ? 'w-1.5 bg-[var(--theme-primary)]/40'
+                      : 'w-1.5 bg-[var(--surface-2)]',
+                )}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
 
-function getTooltipPosition(
+export function getTooltipPosition(
   placement: string,
   rect: DOMRect,
 ): React.CSSProperties {

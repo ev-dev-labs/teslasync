@@ -114,7 +114,7 @@ const SAFETY_ROWS: SafetySettingRow[] = [
     docsAnchor: '/docs/notifications/quiet-hours.md',
     icon: Sunset,
     accent: 'blue',
-    renderValue: (s) => s.quiet_hours_start ?? '—',
+    renderValue: (s) => coalesceBlank(s.quiet_hours_start, '—'),
     badgeVariant: () => 'info',
   },
   {
@@ -126,7 +126,7 @@ const SAFETY_ROWS: SafetySettingRow[] = [
     docsAnchor: '/docs/notifications/quiet-hours.md',
     icon: Sunrise,
     accent: 'blue',
-    renderValue: (s) => s.quiet_hours_end ?? '—',
+    renderValue: (s) => coalesceBlank(s.quiet_hours_end, '—'),
     badgeVariant: () => 'info',
   },
   {
@@ -138,7 +138,7 @@ const SAFETY_ROWS: SafetySettingRow[] = [
     docsAnchor: '/docs/notifications/digest.md',
     icon: BellRing,
     accent: 'cyan',
-    renderValue: (s) => s.alert_digest_mode ?? 'instant',
+    renderValue: (s) => coalesceBlank(s.alert_digest_mode, 'instant'),
     badgeVariant: () => 'info',
   },
   {
@@ -199,6 +199,15 @@ const DIGEST_LABELS: Record<string, { key: string; fallback: string }> = {
   daily: { key: 'safetySettings.digest.daily', fallback: 'Daily' },
 }
 
+// Backend text columns that have never been written can come back as an empty
+// string rather than null. Nullish coalescing (`??`) treats `''` as present,
+// so a bare `value ?? fallback` would surface a blank status chip / KPI value.
+// Collapse null/undefined/blank to the caller's fallback so a safety value is
+// never rendered as an empty element.
+function coalesceBlank(value: string | null | undefined, fallback: string): string {
+  return value != null && value.trim().length > 0 ? value : fallback
+}
+
 export default function SafetyPage() {
   const { t } = useTranslation()
   usePageTitle(t('safetySettings.pageTitle', 'Safety settings'))
@@ -213,9 +222,9 @@ export default function SafetyPage() {
   ]
   const safeguardsOn = safeguards.filter(Boolean).length
   const quietWindow = settings.quiet_hours_enabled
-    ? `${settings.quiet_hours_start ?? '—'}–${settings.quiet_hours_end ?? '—'}`
+    ? `${coalesceBlank(settings.quiet_hours_start, '—')}–${coalesceBlank(settings.quiet_hours_end, '—')}`
     : t('safetySettings.kpi.quietWindowOff', 'Off')
-  const digest = settings.alert_digest_mode ?? 'instant'
+  const digest = coalesceBlank(settings.alert_digest_mode, 'instant')
   const digestMeta = DIGEST_LABELS[digest]
   const digestLabel = digestMeta ? t(digestMeta.key, digestMeta.fallback) : digest
   const apiActive = !settings.api_suspended

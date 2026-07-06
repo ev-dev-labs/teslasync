@@ -50,7 +50,14 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
   const [message, setMessage] = useState('')
 
   const isActive = state?.mode === 'maintenance'
-  const untilTs = useMemo(() => (state?.maintenance_until ? Date.parse(state.maintenance_until) : null), [state])
+  // Guard against a malformed `maintenance_until` (non-ISO string → NaN). A raw
+  // NaN would slip past the `untilTs != null` render checks below and paint a
+  // stray "Until —" line, so collapse any non-finite parse back to null.
+  const untilTs = useMemo(() => {
+    if (!state?.maintenance_until) return null
+    const parsed = Date.parse(state.maintenance_until)
+    return Number.isFinite(parsed) ? parsed : null
+  }, [state])
   const minutesToStart = useMemo(() => {
     if (!untilTs || !isActive) return null
     return Math.floor((untilTs - now) / 60_000)
@@ -109,7 +116,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
           {isActive && <Badge variant="info">Maintenance active</Badge>}
           {within24h && (
             <span className="inline-flex items-center gap-1 text-xs text-amber-200">
-              <AlertTriangle className="h-3 w-3" />
+              <AlertTriangle className="h-3 w-3" aria-hidden />
               Within 24h
             </span>
           )}
@@ -136,7 +143,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
 
         {!isActive && !showSchedule && (
           <Button type="button" variant="ghost" size="sm" onClick={() => setShowSchedule(true)} className="gap-1.5">
-            <CalendarClock className="h-3.5 w-3.5" />
+            <CalendarClock className="h-3.5 w-3.5" aria-hidden />
             Schedule a window
           </Button>
         )}
@@ -170,7 +177,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
 
         {isActive && (
           <Button type="button" variant="ghost" size="sm" onClick={handleClear} disabled={mutation.isPending} className="gap-1.5 text-amber-200">
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden />
             {mutation.isPending ? 'Clearing…' : 'Clear maintenance'}
           </Button>
         )}

@@ -10,6 +10,33 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
 
+/**
+ * Potential-savings percentage derived from the driver's current average
+ * efficiency versus their best observed efficiency (both in Wh/km, where a
+ * lower value is more efficient).
+ *
+ * The guards keep the "Potential savings" badge trustworthy rather than merely
+ * non-crashing:
+ *   - a non-positive `current` (no drives analysed yet) avoids a
+ *     divide-by-zero;
+ *   - a non-positive `best` (no baseline captured yet) would otherwise imply a
+ *     misleading "100% savings", so it collapses to 0 instead;
+ *   - `NaN` / `null` / `undefined` inputs collapse to 0;
+ *   - the result is clamped to a sane [0, 100] window so a run that already
+ *     beats the recorded best reads as "no savings" rather than a negative
+ *     percentage.
+ */
+export function computeSavingsPct(
+  currentEff: number | null | undefined,
+  bestEff: number | null | undefined,
+): number {
+  const current = currentEff ?? 0;
+  const best = bestEff ?? 0;
+  if (!(current > 0) || !(best > 0)) return 0;
+  const pct = Math.round(((current - best) / current) * 100);
+  return Math.min(100, Math.max(0, pct));
+}
+
 export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -24,17 +51,16 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
 
   const score = data?.overall_score ?? 0;
   const recommendations = data?.recommendations ?? [];
-  const bestEff = data?.best_efficiency_wh_km ?? 0;
-  const currentEff = data?.efficiency_wh_km ?? 0;
-  const savingsPct = currentEff > 0
-    ? Math.round(((currentEff - bestEff) / currentEff) * 100)
-    : 0;
+  const savingsPct = computeSavingsPct(
+    data?.efficiency_wh_km,
+    data?.best_efficiency_wh_km,
+  );
 
   const tips: TipItem[] = useMemo(
     () =>
       recommendations.map((rec, i) => ({
         id: i,
-        icon: <Lightbulb className="h-4 w-4" />,
+        icon: <Lightbulb className="h-4 w-4" aria-hidden="true" />,
         title: rec.category ?? '—',
         description: rec.tip ?? '—',
         impact: rec.impact ?? undefined,
@@ -57,13 +83,7 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
           <span className="text-2xl font-bold text-[var(--text-primary)]">
             {fmtInt(score)}
@@ -75,7 +95,7 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
           )}
           {savingsPct <= 0 && recommendations.length === 0 && (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Lightbulb className="h-5 w-5" />}
+              icon={<Lightbulb className="h-5 w-5" aria-hidden="true" />}
               message={t('widget.drivingCoach.noTips', 'No tips available')}
               className="py-2"
             />
@@ -88,7 +108,7 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.drivingCoach.title', 'Driving Coach')}
-      icon={<Lightbulb className="h-3.5 w-3.5 text-amber-400" />}
+      icon={<Lightbulb className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
       {...shellProps}
     >
       <div className="flex flex-col gap-3 h-full">
@@ -116,7 +136,7 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
             maxTips={3}
             compact={false}
             emptyMessage={t('widget.drivingCoach.noTips', 'No tips available')}
-            emptyIcon={<Lightbulb className="h-5 w-5" />}
+            emptyIcon={<Lightbulb className="h-5 w-5" aria-hidden="true" />}
           />
         </div>
       </div>

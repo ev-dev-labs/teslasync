@@ -17,6 +17,13 @@ import type { PinnedItem, PinnedItemType } from '../types';
 
 export const pinnedKeys = {
   all: ['pinned'] as const,
+  /**
+   * Context-agnostic prefix for a single item type. Matches every
+   * `list(type, *)` bucket (all contexts) under TanStack Query's
+   * prefix-based `invalidateQueries`, unlike `list(type)` which pins the
+   * third tuple slot to `null` and would miss context-scoped queries.
+   */
+  type: (type: PinnedItemType) => ['pinned', type] as const,
   list: (type: PinnedItemType, context?: string) =>
     ['pinned', type, context ?? null] as const,
 };
@@ -29,6 +36,23 @@ function buildQuery(type: PinnedItemType, context?: string): string {
 }
 
 /**
+ * Shared empty result reused as the null-body fallback in {@link selectPinned}
+ * so a 204 / malformed response resolves to a single stable `[]` reference
+ * rather than churning a new array (and re-rendering consumers) on each read.
+ */
+const EMPTY_PINNED: PinnedItem[] = [];
+
+/**
+ * Coerces the raw list body to an array. The backend always emits `[]`
+ * (see `pinned_handler.go` `List`), but a 204 / malformed body would
+ * otherwise surface as `null` here and break the never-undefined guarantee
+ * every consumer (`.some`, `.map`) relies on.
+ */
+function selectPinned(rows: PinnedItem[]): PinnedItem[] {
+  return rows ?? EMPTY_PINNED;
+}
+
+/**
  * Fetch the current user's pins of a given type, optionally narrowed to a
  * sub-surface (e.g. a specific dashboard ID when pinning widgets). Always
  * returns an array — never undefined — so consumers can `.some(...)` or
@@ -38,6 +62,7 @@ export function usePinned(type: PinnedItemType, context?: string) {
   return useQuery({
     queryKey: pinnedKeys.list(type, context),
     queryFn: ({ signal }) => request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`, { signal }),
+    select: selectPinned,
     staleTime: STALE_TIMES.SLOW,
   });
 }
@@ -83,7 +108,7 @@ export function useTogglePin(type: PinnedItemType) {
       const cached = qc.getQueryData<PinnedItem[]>(pinnedKeys.list(type, context));
       const existing =
         cached?.find(p => String(p.item_id) === String(itemId)) ??
-        (await request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`)).find(
+        ((await request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`)) ?? []).find(
           p => String(p.item_id) === String(itemId),
         );
       if (!existing) return null;
@@ -129,7 +154,7 @@ export function useReorderPin(type: PinnedItemType) {
         body: JSON.stringify({ position }),
       }),
     onSuccess: () => {
-      invalidateAndBroadcast(qc, { queryKey: pinnedKeys.list(type) });
+      invalidateAndBroadcast(qc, { queryKey: pinnedKeys.type(type) });
     },
     onError: (e) => error(e, 'toast.pin.reorder.error', 'Failed to reorder pins'),
   });

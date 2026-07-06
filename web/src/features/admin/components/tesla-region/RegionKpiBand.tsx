@@ -40,13 +40,19 @@ export function RegionKpiBand({
     : t('region.status.pending', 'Not configured')
   const protocolValue = scheme ? scheme.toUpperCase() : '—'
   const syncedValue = fetchedAt ? formatRelative(new Date(fetchedAt)) : '—'
+  // `??` only guards null/undefined — an empty or whitespace-only label would
+  // otherwise render a blank subtitle. Trim-guard it so the card keeps its
+  // "Not detected" placeholder and never collapses to an empty line.
+  const regionSubtitle = regionLabel?.trim()
+    ? regionLabel
+    : t('region.kpi.regionUnknown', 'Not detected')
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <MetricCard
         label={t('region.kpi.region', 'Region')}
         value={regionValue}
-        subtitle={regionLabel ?? t('region.kpi.regionUnknown', 'Not detected')}
+        subtitle={regionSubtitle}
         icon={<Globe className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />

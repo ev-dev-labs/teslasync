@@ -120,6 +120,32 @@ function alertBadgeLabel(type: AlertType, t: (k: string) => string): string {
   }
 }
 
+/**
+ * Robustly detect a W3C Geolocation error.
+ *
+ * `getCurrentPosition`'s error callback yields a `GeolocationPositionError`
+ * (numeric `code`: 1=denied, 2=unavailable, 3=timeout). We cannot rely on the
+ * `GeolocationPositionError` constructor existing as a runtime global — it is
+ * absent in insecure contexts, some test environments (jsdom), and older
+ * browsers that only exposed the legacy `PositionError` name — so a bare
+ * `instanceof` inside the catch block would itself throw. Prefer the
+ * constructor when present, then fall back to duck-typing the numeric `code`.
+ */
+function isGeolocationError(err: unknown): boolean {
+  if (
+    typeof GeolocationPositionError !== 'undefined' &&
+    err instanceof GeolocationPositionError
+  ) {
+    return true;
+  }
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    typeof (err as { code: unknown }).code === 'number'
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function GeofencesPage() {
@@ -466,7 +492,16 @@ export default function GeofencesPage() {
         lat = positions[0].latitude;
         lon = positions[0].longitude;
       } else {
-        // Browser geolocation
+        // Browser geolocation — guard against environments (insecure
+        // contexts, unsupported browsers) where the API is absent so the user
+        // sees a friendly message instead of a raw TypeError.
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+          toast.error(
+            t('geofences.geolocationUnsupported', 'Geolocation is not supported by this browser'),
+          );
+          setLocationLoading(false);
+          return;
+        }
         const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
@@ -485,7 +520,7 @@ export default function GeofencesPage() {
         longitude: String(lon),
       }));
     } catch (err) {
-      const message = err instanceof GeolocationPositionError
+      const message = isGeolocationError(err)
         ? t('geofences.locationDenied', 'Location access denied')
         : err instanceof Error
           ? err.message

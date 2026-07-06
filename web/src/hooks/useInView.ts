@@ -46,6 +46,16 @@ export function useInView<T extends Element = HTMLDivElement>(
   });
   const seenRef = useRef(false);
 
+  // Callers routinely pass `threshold` as an inline array literal
+  // (`useInView({ threshold: [0, 0.5, 1] })`). A fresh array reference on every
+  // render would change the effect's dependency identity and tear down + rebuild
+  // the observer each render — defeating the lazy-mount purpose of the hook and
+  // thrashing IntersectionObserver. Key the effect on the serialized values so
+  // it only re-subscribes when the thresholds genuinely change.
+  const thresholdKey = Array.isArray(threshold)
+    ? threshold.join(',')
+    : String(threshold);
+
   useEffect(() => {
     if (typeof IntersectionObserver === 'undefined') {
       setInView(true);
@@ -56,9 +66,14 @@ export function useInView<T extends Element = HTMLDivElement>(
     if (seenRef.current && freezeOnceVisible) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        const isVisible = entry.isIntersecting;
-        if (isVisible) {
+      (entries) => {
+        // A spec-compliant observer always delivers at least one entry, but
+        // polyfills and test fakes can fire with an empty batch. Reading
+        // `entries[0].isIntersecting` on `undefined` would throw inside the
+        // observer callback, where React cannot recover from it.
+        const entry = entries[0];
+        if (!entry) return;
+        if (entry.isIntersecting) {
           seenRef.current = true;
           setInView(true);
           if (freezeOnceVisible) observer.disconnect();
@@ -70,7 +85,9 @@ export function useInView<T extends Element = HTMLDivElement>(
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [rootMargin, threshold, root, freezeOnceVisible]);
+    // `threshold` is read fresh inside the effect but keyed via `thresholdKey`
+    // so equal-valued inline arrays don't trigger needless re-subscription.
+  }, [rootMargin, thresholdKey, root, freezeOnceVisible]);
 
   return { ref, inView };
 }

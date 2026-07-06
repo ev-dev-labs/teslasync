@@ -63,3 +63,36 @@ export const notificationStates: Record<string, StateConfig> = {
   failed: { label: 'Failed', color: '#ef4444', variant: 'danger' },
   retrying: { label: 'Retrying', color: '#f59e0b', variant: 'warning' },
 };
+
+// Shared neutral fallback so unresolved keys collapse onto a single,
+// well-formed StateConfig. Kept as one module-level singleton so the hot
+// path (rendering many rows with an unknown state) allocates nothing.
+const unknownState: StateConfig = { label: 'Unknown', color: '#6b7280', variant: 'neutral' };
+
+/**
+ * Safely resolve a raw state key against one of the display-config maps above.
+ *
+ * Returns the matching {@link StateConfig}, or a neutral "Unknown" fallback when
+ * `state` is nullish, not a registered key, or an inherited `Object.prototype`
+ * member (e.g. `"toString"`, `"constructor"`, `"__proto__"`). A plain
+ * `map[state]` lookup returns those inherited members as if they were configs,
+ * so callers reading `.variant` off a function would render garbage — the
+ * `hasOwnProperty` guard prevents that. The result is never `undefined`, so
+ * `getStateConfig(vehicleStates, apiState).label` is always safe to read.
+ *
+ * @param map           one of the exported state maps
+ * @param state         raw state string from the API (may be null/undefined)
+ * @param fallbackLabel label for the unresolved case (defaults to "Unknown")
+ */
+export function getStateConfig(
+  map: Record<string, StateConfig>,
+  state: string | null | undefined,
+  fallbackLabel = 'Unknown',
+): StateConfig {
+  if (typeof state === 'string' && Object.prototype.hasOwnProperty.call(map, state)) {
+    return map[state];
+  }
+  // Reuse the singleton for the common default; only allocate when a caller
+  // supplies a custom (e.g. translated) label.
+  return fallbackLabel === unknownState.label ? unknownState : { ...unknownState, label: fallbackLabel };
+}

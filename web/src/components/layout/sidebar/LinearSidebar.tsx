@@ -37,7 +37,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { GuardedNavLink } from '../../feedback/GuardedLink'
-import { Button } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 
@@ -216,8 +216,8 @@ function CountChip({ value, label }: { value: number; label: string }) {
 // ─── Main component ──────────────────────────────────────────────────────
 
 export function LinearSidebar({
-  sections,
-  pinnedItems,
+  sections = [],
+  pinnedItems = [],
   pathname,
   navLabel,
   onPin,
@@ -286,7 +286,7 @@ export function LinearSidebar({
 
   const matchesFilter = (label: string) => {
     if (filterTokens.length === 0) return true
-    const haystack = label.toLowerCase()
+    const haystack = (label ?? '').toLowerCase()
     return filterTokens.every(token => haystack.includes(token))
   }
 
@@ -300,6 +300,14 @@ export function LinearSidebar({
         items: section.items.filter(item => matchesFilter(navLabel(item.label))),
       })),
     [sections, filterTokens, navLabel],
+  )
+
+  // Favorites after the same filter. Memoized so the "Favorites" header can be
+  // hidden entirely when the active filter excludes every pinned item —
+  // otherwise an orphan label would sit above an empty list.
+  const visiblePinned = useMemo(
+    () => pinnedItems.filter(item => matchesFilter(navLabel(item.label))),
+    [pinnedItems, filterTokens, navLabel],
   )
 
   // When the filter is active, treat every section with matches as expanded.
@@ -352,6 +360,20 @@ export function LinearSidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-role="linear-sidebar">
+      {/* Inline tree filter — whittles the tree down without leaving the
+          sidebar. Non-matching rows hide; sections with a match auto-expand. */}
+      <div className="px-2 pb-2 pt-1">
+        <Input
+          type="search"
+          size="sm"
+          value={filter}
+          onChange={event => setFilter(event.target.value)}
+          icon={<Icons.search className="h-3.5 w-3.5" aria-hidden />}
+          aria-label={t('nav.filterLabel', 'Filter navigation')}
+          placeholder={t('nav.filterPlaceholder', 'Filter…')}
+          data-testid="linear-sidebar-filter"
+        />
+      </div>
       {/* Tree */}
       <nav
         aria-label={t('nav.sidebar', 'Sidebar navigation')}
@@ -360,7 +382,7 @@ export function LinearSidebar({
       >
         {/* Favorites — only when there is at least one pinned item.
             Never collapses (Linear style: favorites are always visible). */}
-        {pinnedItems.length > 0 && (
+        {visiblePinned.length > 0 && (
           <div className="mb-3">
             <div
               className="flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
@@ -370,8 +392,7 @@ export function LinearSidebar({
               <span>{t('nav.favorites', 'Favorites')}</span>
             </div>
             <div className="mt-0.5 space-y-px" aria-labelledby="linear-nav-favorites-label">
-              {pinnedItems
-                .filter(item => matchesFilter(navLabel(item.label)))
+              {visiblePinned
                 .map(item => (
                   <LinearNavLink
                     key={`pinned-${item.to}`}
@@ -434,7 +455,7 @@ export function LinearSidebar({
             )
           })}
 
-          {filterTokens.length > 0 && expandedSections.length === 0 && (
+          {filterTokens.length > 0 && expandedSections.length === 0 && visiblePinned.length === 0 && (
             <div
               className="rounded-md px-3 py-4 text-center text-xs text-[var(--text-muted)]"
               role="status"

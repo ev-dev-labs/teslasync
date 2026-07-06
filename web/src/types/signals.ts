@@ -44,7 +44,11 @@ export type TypedSignalObservation =
 /**
  * Narrows a raw SignalObservation against its catalog entry, surfacing the
  * single populated value via `.value` and `.value_type`. Returns null if the
- * row is malformed (e.g., value_type=numeric but value_numeric is null).
+ * row is malformed — either the discriminant column is empty (e.g.,
+ * value_type=numeric but value_numeric is null) or the catalog reports an
+ * unrecognized value_type. The catalog is sourced from an unvalidated API
+ * response, so the default branch keeps the declared `| null` return honest
+ * at runtime rather than leaking an `undefined` a caller would dereference.
  */
 export function narrowSignal(
   obs: SignalObservation,
@@ -63,5 +67,7 @@ export function narrowSignal(
       return obs.value_bool == null
         ? null
         : { ...obs, value_type: 'bool', value: obs.value_bool };
+    default:
+      return null;
   }
 }

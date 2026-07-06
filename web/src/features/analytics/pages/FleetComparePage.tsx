@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -264,10 +264,20 @@ export default function FleetComparePage() {
   const navigate = useNavigate();
   usePageTitle(t('comparison.title', 'Fleet Comparison'));
 
-  const { unitPrefs, formatDistance: formatDistanceUnit, formatEnergy } = useUnits();
-  const formatDistance = (value: number | null | undefined, precision?: number) => formatDistanceUnit(value, { precision });
-  const { formatTemperature: formatTemperatureUnit } = useUnits();
-  const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
+  const {
+    unitPrefs,
+    formatDistance: formatDistanceUnit,
+    formatEnergy,
+    formatTemperature: formatTemperatureUnit,
+  } = useUnits();
+  const formatDistance = useCallback(
+    (value: number | null | undefined, precision?: number) => formatDistanceUnit(value, { precision }),
+    [formatDistanceUnit],
+  );
+  const formatTemperature = useCallback(
+    (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision }),
+    [formatTemperatureUnit],
+  );
   const { currencySymbol, formatCurrency } = useFormatting();
 
   // i18n-safe "A vs B" comparison string for the KPI highlight cards — keeps the
@@ -329,7 +339,9 @@ export default function FleetComparePage() {
   const vehiclesQuery = useVehicles();
   const vehicles = vehiclesQuery.data;
   const vehiclesLoading = vehiclesQuery.isLoading;
-  const vehicleList = vehicles ?? [];
+  // Stable reference: `vehicles ?? []` would allocate a new array every render,
+  // re-running the auto-select effect and defeating the optionsA/optionsB memos.
+  const vehicleList = useMemo(() => vehicles ?? [], [vehicles]);
 
   // Auto-select first two vehicles if not provided via query params.
   useEffect(() => {

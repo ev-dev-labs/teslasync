@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, BatteryCharging, Zap, Plug } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -8,12 +8,18 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
 import type { WidgetProps } from './types';
 
+const REFRESH_INTERVAL = 5_000;
+
 export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 5_000 });
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: REFRESH_INTERVAL });
   const state = stateData?.state;
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const power = state?.power ?? 0;
   const isConsuming = power > 0;
@@ -96,12 +102,12 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
     <WidgetShell
       title={t('widget.energyFlow', 'Energy Flow')}
       icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={isLoading}
+      loading={isLoading || vehiclesLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       {state ? (
         <WidgetFlowDiagram

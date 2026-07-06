@@ -6,6 +6,7 @@
  * constant rather than the i18n catalog; the surrounding copy is
  * translated.
  */
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Smartphone } from 'lucide-react'
 import { GlassPanel, IconBox, PanelTitle, Text, HelperText } from '@/components/ui'
@@ -22,6 +23,14 @@ const COMPATIBLE_APPS = [
 
 export function TotpCompatibleApps() {
   const { t } = useTranslation('settings')
+  // Stable id so the app list is named by the panel heading — assistive tech
+  // announces it as "Compatible apps" rather than an unlabeled group of items.
+  const titleId = useId()
+
+  // `|| '—'` guards against an empty/missing translation so the heading and
+  // subtitle never collapse to a blank line (and the list keeps its name).
+  const title = t('totp.apps.title', 'Compatible apps') || '—'
+  const subtitle = t('totp.apps.subtitle', 'Any RFC 6238 TOTP client works.') || '—'
 
   return (
     <GlassPanel className="h-full space-y-4 p-4 sm:p-5">
@@ -30,11 +39,11 @@ export function TotpCompatibleApps() {
           <Smartphone className="h-5 w-5" aria-hidden="true" />
         </IconBox>
         <div>
-          <PanelTitle>{t('totp.apps.title', 'Compatible apps')}</PanelTitle>
-          <HelperText>{t('totp.apps.subtitle', 'Any RFC 6238 TOTP client works.')}</HelperText>
+          <PanelTitle id={titleId}>{title}</PanelTitle>
+          <HelperText>{subtitle}</HelperText>
         </div>
       </div>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <ul aria-labelledby={titleId} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {COMPATIBLE_APPS.map((name) => (
           <li
             key={name}

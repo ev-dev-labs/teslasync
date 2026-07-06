@@ -13,7 +13,10 @@
 //
 //	go run ./cmd/audit-signal-types
 //
-// This binary intentionally has no CI gate; exit code is always 0.
+// This binary intentionally has no CI gate: the audit findings never
+// change the exit code. The process exits 0 once the audit completes and
+// 2 only on a fatal setup error (working directory unavailable,
+// unreadable migrations, or malformed routing.yaml).
 // Output is a tabular report grouped by mismatch class, used during
 // signal-catalog reviews and telemetry pipeline audits.
 //

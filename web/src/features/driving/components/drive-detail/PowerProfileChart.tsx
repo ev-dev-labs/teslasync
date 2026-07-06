@@ -22,6 +22,11 @@ export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) 
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
+  // A single sample can't form an area — treat 0/1 points (or a missing
+  // array) as "no chart" so an undefined `chartData` degrades to the empty
+  // state instead of throwing on `.length`.
+  const hasChart = (chartData ?? []).length > 1;
+
   return (
     <FadeIn>
       {/* chart-a11y:no-table dense per-sample power trace; max/regen/avg stats appear below the chart */}
@@ -30,7 +35,7 @@ export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) 
         ariaLabel={t('driveDetail.powerProfile.aria', 'Drive power profile area chart over time')}
         height={220}
       >
-        {chartData.length > 1 ? (
+        {hasChart ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={chartData}
@@ -64,7 +69,7 @@ export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) 
           </div>
         )}
       </ChartContainer>
-      {chartData.length > 1 && (
+      {hasChart && (
         <div className="mt-3 flex items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
           <span>{t('driveDetail.maxPower', 'Max Power')}: <strong className="text-amber-400">{fmtInt(stats.powerMax)} kW</strong></span>
           <span>{t('driveDetail.maxRegen', 'Max Regen')}: <strong className="text-cyan-400">{fmtInt(stats.powerMin)} kW</strong></span>

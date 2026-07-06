@@ -313,7 +313,7 @@ export const DASHBOARD_PRESETS: SavedDashboard[] = [
 
 /* ─── Migration from legacy format ─── */
 function migrateLegacy(legacy: LegacyDashboardLayout): SavedDashboard {
-  const widgets: WidgetInstance[] = legacy.widgets
+  const widgets: WidgetInstance[] = (legacy.widgets ?? [])
     .filter((w) => WIDGET_REGISTRY.some((def) => def.id === w.widgetId))
     .map((w) => ({
       id: w.id,
@@ -371,21 +371,21 @@ function loadDashboards(): SavedDashboard[] {
       let parsed = JSON.parse(stored) as SavedDashboard[];
       // Migrate row heights from old ROW_HEIGHT=180 to new ROW_HEIGHT=80
       parsed = migrateRowHeight(parsed);
-      // Reconcile widgets against current registry
-      return parsed.map((d) => ({
-        ...d,
-        widgets: d.widgets.filter((w) =>
+      // Reconcile widgets against current registry. Compute the valid-widget
+      // set once (DRY) and guard against a corrupt entry whose `widgets` is
+      // missing — one bad dashboard must not nuke the entire saved list.
+      return parsed.map((d) => {
+        const validWidgets = (d.widgets ?? []).filter((w) =>
           WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
-        ),
-        layouts: sanitizeLayouts(
-          reconcileLayouts(
-            d.layouts ?? {},
-            d.widgets.filter((w) =>
-              WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
-            ),
+        );
+        return {
+          ...d,
+          widgets: validWidgets,
+          layouts: sanitizeLayouts(
+            reconcileLayouts(d.layouts ?? {}, validWidgets),
           ),
-        ),
-      }));
+        };
+      });
     }
     // Try legacy migration
     const legacy = localStorage.getItem(LEGACY_KEY);
@@ -690,9 +690,16 @@ export function useDashboardLayout() {
       setDashboards((prev) => {
         const result = [...prev];
         const [moved] = result.splice(fromIndex, 1);
+        // Guard against out-of-range indices: `Array.prototype.splice` on a
+        // bad `fromIndex` yields `undefined`, which would otherwise be
+        // re-inserted and corrupt the dashboard list. Treat it as a no-op.
+        if (moved === undefined) return prev;
         result.splice(toIndex, 0, moved);
         localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(result));
         syncToBackend(result, activeId);
+        // Match every other list mutation so peer tabs re-read the reordered
+        // snapshot from localStorage instead of drifting out of sync.
+        broadcast({ type: 'dashboard.layout' });
         return result;
       });
     },
@@ -700,7 +707,7 @@ export function useDashboardLayout() {
   );
 
   const duplicateDashboard = useCallback(
-    (id: string) => {
+    (id: string, name?: string) => {
       const source = dashboards.find((d) => d.id === id);
       if (!source) return;
 
@@ -729,7 +736,7 @@ export function useDashboardLayout() {
       const duplicate: SavedDashboard = {
         ...source,
         id: newId,
-        name: `${source.name} (Copy)`,
+        name: name?.trim() || `${source.name} (Copy)`,
         icon: source.icon,
         isDefault: false,
         widgets,

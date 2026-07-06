@@ -4,10 +4,56 @@ import { Radio } from 'lucide-react';
 import { StatusBadge, StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt, safeNumber } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
+import type { VehicleTelemetry } from '@/types/telemetry';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+
+export interface MqttWidgetStats {
+  /** Sum of per-vehicle signal counts across the streaming fleet. */
+  totalMessages: number;
+  /** Sum of per-vehicle signal rates (signals/sec) across the fleet. */
+  messagesPerSec: number;
+  /** ISO timestamp of the most recently received signal, or null when none. */
+  lastMessage: string | null;
+}
+
+/**
+ * Fold the per-vehicle telemetry rows into the three fleet-level figures the
+ * widget renders. Pure + null-safe so it can be unit-tested in isolation and
+ * reused without a React tree.
+ *
+ * Counts run through `safeNumber` so a nullish/NaN/non-numeric field
+ * contributes 0 instead of poisoning the running total. `lastMessage` is
+ * chosen by parsed instant rather than lexical order — an out-of-band
+ * timestamp format (e.g. differing fractional-second precision) can sort
+ * incorrectly as a raw string, and unparseable timestamps are skipped instead
+ * of winning the comparison.
+ */
+export function deriveMqttStats(
+  vehicles: VehicleTelemetry[] | null | undefined,
+): MqttWidgetStats {
+  let totalMessages = 0;
+  let messagesPerSec = 0;
+  let lastMessage: string | null = null;
+  let lastMessageMs = -Infinity;
+
+  for (const v of vehicles ?? []) {
+    totalMessages += safeNumber(v.signalCount ?? v.signal_count);
+    messagesPerSec += safeNumber(v.signalsPerSecond ?? v.signals_per_second);
+    const received = v.lastReceived ?? v.last_received;
+    if (received) {
+      const ms = new Date(received).getTime();
+      if (Number.isFinite(ms) && ms > lastMessageMs) {
+        lastMessageMs = ms;
+        lastMessage = received;
+      }
+    }
+  }
+
+  return { totalMessages, messagesPerSec, lastMessage };
+}
 
 export default function MQTTStatusWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -16,28 +62,12 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const stats = useMemo(() => {
-    const vehicles = data?.vehicles ?? [];
-    const totalMessages = vehicles.reduce(
-      (sum, v) => sum + (v.signalCount ?? v.signal_count ?? 0),
-      0,
-    );
-    const messagesPerSec = vehicles.reduce(
-      (sum, v) => sum + (v.signalsPerSecond ?? v.signals_per_second ?? 0),
-      0,
-    );
-    const lastReceivedDates = vehicles
-      .map((v) => v.lastReceived ?? v.last_received)
-      .filter(Boolean) as string[];
-    const lastMessage =
-      lastReceivedDates.length > 0
-        ? lastReceivedDates.sort().reverse()[0]
-        : null;
-    return { totalMessages, messagesPerSec, lastMessage };
-  }, [data]);
+  const stats = useMemo(() => deriveMqttStats(data?.vehicles), [data]);
 
   const connected = data?.connected ?? false;
-  const broker = data?.broker ?? '—';
+  // `|| '—'` (not `??`) so an empty-string broker also degrades to the
+  // placeholder rather than rendering a blank value.
+  const broker = data?.broker || '—';
 
   return (
     <WidgetShell

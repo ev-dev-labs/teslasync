@@ -21,11 +21,11 @@ import (
 // id. When multi-tenancy lands the handler will start passing a real
 // user id and the same queries keep working.
 type PinnedRepo struct {
-	db *database.DB
+	pool adminPool
 }
 
 func NewPinnedRepo(db *database.DB) *PinnedRepo {
-	return &PinnedRepo{db: db}
+	return &PinnedRepo{pool: db.Pool}
 }
 
 // PinnedListFilter narrows a List call to a (user, type) bucket and an
@@ -58,7 +58,7 @@ func (r *PinnedRepo) List(ctx context.Context, f PinnedListFilter) ([]*dashboard
 		contextValue = *f.Context
 	}
 
-	rows, err := r.db.Pool.Query(ctx, query, f.UserID, string(f.ItemType), hasContext, contextValue)
+	rows, err := r.pool.Query(ctx, query, f.UserID, string(f.ItemType), hasContext, contextValue)
 	if err != nil {
 		return nil, fmt.Errorf("pinned_items list query: %w", err)
 	}
@@ -89,7 +89,7 @@ func (r *PinnedRepo) GetByID(ctx context.Context, id int64) (*dashboardmodel.Pin
 		WHERE id = $1`
 
 	p := &dashboardmodel.PinnedItem{}
-	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&p.ID, &p.UserID, &p.ItemType, &p.ItemID, &p.Position, &p.PinnedAt, &p.Context,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -111,7 +111,7 @@ var ErrPinnedAlreadyExists = errors.New("pinned item already exists")
 // transaction so a partial failure can never leave the bucket with two
 // rows at the same position.
 func (r *PinnedRepo) Create(ctx context.Context, p *dashboardmodel.PinnedItem) error {
-	tx, err := r.db.Pool.Begin(ctx)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("pinned_items create begin: %w", err)
 	}
@@ -153,7 +153,7 @@ func (r *PinnedRepo) Create(ctx context.Context, p *dashboardmodel.PinnedItem) e
 // is expected to issue one PATCH per moved item with the new index.
 // Returns pgx.ErrNoRows when the id is unknown.
 func (r *PinnedRepo) UpdatePosition(ctx context.Context, id int64, position int) error {
-	tag, err := r.db.Pool.Exec(ctx, `
+	tag, err := r.pool.Exec(ctx, `
 		UPDATE pinned_items SET position = $2 WHERE id = $1`,
 		id, position,
 	)
@@ -169,7 +169,7 @@ func (r *PinnedRepo) UpdatePosition(ctx context.Context, id int64, position int)
 // Delete removes a pin by id. Returns pgx.ErrNoRows when the row was
 // already gone so the handler can return 404 cleanly.
 func (r *PinnedRepo) Delete(ctx context.Context, id int64) error {
-	tag, err := r.db.Pool.Exec(ctx, `DELETE FROM pinned_items WHERE id = $1`, id)
+	tag, err := r.pool.Exec(ctx, `DELETE FROM pinned_items WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("pinned_items delete: %w", err)
 	}

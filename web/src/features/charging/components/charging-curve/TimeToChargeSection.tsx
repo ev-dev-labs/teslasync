@@ -35,20 +35,27 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
       slowest: null,
       yearlyTrend: [],
     };
-    if (!sessions.length) return empty;
+    const list = sessions ?? [];
+    if (!list.length) return empty;
 
-    const dcSessions = sessions.filter(isDcSession);
+    const dcSessions = list.filter(isDcSession);
     if (!dcSessions.length) return empty;
 
-    const cross10to80 = dcSessions.filter(
-      (s) => s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80,
-    );
-    const cross20to80 = dcSessions.filter(
-      (s) => s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80,
-    );
+    // Only sessions with a real, positive elapsed time can contribute a
+    // duration to the SOC-window averages. A live/incomplete session that
+    // already reports end_soc >= 80 (ended_at still null) otherwise folds a
+    // spurious 0-minute reading in and drags the average toward zero.
+    const crossedDurations = (predicate: (s: ChargingSession) => boolean): number[] =>
+      dcSessions
+        .filter(predicate)
+        .map((s) => durationMinutes(s.started_at, s.ended_at))
+        .filter((d) => d > 0);
 
-    const avg10to80 = cross10to80.length ? avg(cross10to80.map((s) => durationMinutes(s.started_at, s.ended_at))) : null;
-    const avg20to80 = cross20to80.length ? avg(cross20to80.map((s) => durationMinutes(s.started_at, s.ended_at))) : null;
+    const d10to80 = crossedDurations((s) => s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80);
+    const d20to80 = crossedDurations((s) => s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80);
+
+    const avg10to80 = d10to80.length ? avg(d10to80) : null;
+    const avg20to80 = d20to80.length ? avg(d20to80) : null;
 
     const withRate = dcSessions
       .filter((s) => durationMinutes(s.started_at, s.ended_at) > 0 && s.total_energy_added_wh > 0)
@@ -63,13 +70,13 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
     const byYear = new Map<string, { d10: number[]; d20: number[]; count: number }>();
     dcSessions.forEach((s) => {
       const year = (s.started_at ?? '').slice(0, 4);
+      if (!/^\d{4}$/.test(year)) return; // skip sessions we cannot date — no phantom "" bucket
       if (!byYear.has(year)) byYear.set(year, { d10: [], d20: [], count: 0 });
       const g = byYear.get(year)!;
       g.count++;
-      if (s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80)
-        g.d10.push(durationMinutes(s.started_at, s.ended_at));
-      if (s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80)
-        g.d20.push(durationMinutes(s.started_at, s.ended_at));
+      const dur = durationMinutes(s.started_at, s.ended_at);
+      if (dur > 0 && s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80) g.d10.push(dur);
+      if (dur > 0 && s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80) g.d20.push(dur);
     });
 
     const yearlyTrend = Array.from(byYear.entries())

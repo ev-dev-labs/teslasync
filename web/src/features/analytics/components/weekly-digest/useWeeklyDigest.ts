@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import { formatDateShort } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, safeNumber } from '@/lib/numberFormat';
 
 import type {
   Drive, ChargingSession, Alert,
@@ -132,45 +132,57 @@ export function useWeeklyDigest() {
 
   /* ── Aggregated metrics ── */
   const metrics: DigestMetrics = useMemo(() => {
-    const totalDistance = weekDrives.reduce((s, d) => s + d.distance, 0);
-    const prevDistance = prevWeekDrives.reduce((s, d) => s + d.distance, 0);
+    // safeNumber() coerces null / undefined / NaN / ±Infinity to 0 so a single
+    // malformed API row can't poison an aggregate into NaN (the fields are typed
+    // `number`, but partial telemetry rows can arrive with missing values).
+    const totalDistance = weekDrives.reduce((s, d) => s + safeNumber(d.distance), 0);
+    const prevDistance = prevWeekDrives.reduce((s, d) => s + safeNumber(d.distance), 0);
     const totalDrives = weekDrives.length;
     const prevDriveCount = prevWeekDrives.length;
-    const energyUsed = weekDrives.reduce((s, d) => s + d.energy_used, 0);
-    const prevEnergy = prevWeekDrives.reduce((s, d) => s + d.energy_used, 0);
-    const chargingCost = weekCharging.reduce((s, c) => s + c.cost, 0);
-    const prevChargingCost = prevWeekCharging.reduce((s, c) => s + c.cost, 0);
+    const energyUsed = weekDrives.reduce((s, d) => s + safeNumber(d.energy_used), 0);
+    const prevEnergy = prevWeekDrives.reduce((s, d) => s + safeNumber(d.energy_used), 0);
+    const chargingCost = weekCharging.reduce((s, c) => s + safeNumber(c.cost), 0);
+    const prevChargingCost = prevWeekCharging.reduce((s, c) => s + safeNumber(c.cost), 0);
     const co2Saved = energyUsed * CO2_PER_KWH_GASOLINE_KG;
     const prevCo2 = prevEnergy * CO2_PER_KWH_GASOLINE_KG;
     const avgEfficiency =
       totalDrives > 0
-        ? weekDrives.reduce((s, d) => s + d.efficiency_wh_km, 0) / totalDrives
+        ? weekDrives.reduce((s, d) => s + safeNumber(d.efficiency_wh_km), 0) / totalDrives
         : 0;
     const prevAvgEfficiency =
       prevDriveCount > 0
-        ? prevWeekDrives.reduce((s, d) => s + d.efficiency_wh_km, 0) / prevDriveCount
+        ? prevWeekDrives.reduce((s, d) => s + safeNumber(d.efficiency_wh_km), 0) / prevDriveCount
         : 0;
-    const totalDuration = weekDrives.reduce((s, d) => s + d.duration_min, 0);
+    const totalDuration = weekDrives.reduce((s, d) => s + safeNumber(d.duration_min), 0);
     const topDrive =
       weekDrives.length > 0
-        ? weekDrives.reduce((best, d) => (d.distance > best.distance ? d : best))
+        ? weekDrives.reduce((best, d) =>
+            safeNumber(d.distance) > safeNumber(best.distance) ? d : best,
+          )
         : undefined;
-    const chargeEnergyAdded = weekCharging.reduce((s, c) => s + c.total_energy_added_wh, 0);
-    const prevChargeEnergy = prevWeekCharging.reduce((s, c) => s + c.total_energy_added_wh, 0);
+    const chargeEnergyAdded = weekCharging.reduce(
+      (s, c) => s + safeNumber(c.total_energy_added_wh),
+      0,
+    );
+    const prevChargeEnergy = prevWeekCharging.reduce(
+      (s, c) => s + safeNumber(c.total_energy_added_wh),
+      0,
+    );
     const avgChargeRate =
       weekCharging.length > 0
         ? weekCharging.reduce(
-            (s, c) => s + (c.duration_min > 0 ? (c.total_energy_added_wh / c.duration_min) * 60 : 0),
+            (s, c) =>
+              s + (c.duration_min > 0 ? (safeNumber(c.total_energy_added_wh) / c.duration_min) * 60 : 0),
             0,
           ) / weekCharging.length
         : 0;
     const batteryStart =
       weekCharging.length > 0
-        ? weekCharging.reduce((s, c) => s + c.start_battery_pct, 0) / weekCharging.length
+        ? weekCharging.reduce((s, c) => s + safeNumber(c.start_battery_pct), 0) / weekCharging.length
         : 0;
     const batteryEnd =
       weekCharging.length > 0
-        ? weekCharging.reduce((s, c) => s + c.end_battery_pct, 0) / weekCharging.length
+        ? weekCharging.reduce((s, c) => s + safeNumber(c.end_battery_pct), 0) / weekCharging.length
         : 0;
 
     const alertsByType: Record<string, number> = {};
@@ -209,7 +221,8 @@ export function useWeeklyDigest() {
     const bins = DAY_LABELS.map((label) => ({ day: label, distance: 0 }));
     for (const d of weekDrives) {
       const idx = dayOfWeekIndex(d.start_date);
-      bins[idx].distance += d.distance;
+      if (idx < 0) continue; // unparseable start_date — skip rather than crash
+      bins[idx].distance += safeNumber(d.distance);
     }
     return bins;
   }, [weekDrives]);
@@ -219,7 +232,8 @@ export function useWeeklyDigest() {
     const bins = DAY_LABELS.map((label) => ({ day: label, energy: 0 }));
     for (const c of weekCharging) {
       const idx = dayOfWeekIndex(c.start_ts);
-      bins[idx].energy += c.total_energy_added_wh;
+      if (idx < 0) continue; // unparseable start_ts — skip rather than crash
+      bins[idx].energy += safeNumber(c.total_energy_added_wh);
     }
     return bins;
   }, [weekCharging]);
@@ -239,9 +253,6 @@ export function useWeeklyDigest() {
     const pair = findCityPair(metrics.totalDistance);
     if (!pair) return undefined;
     const times = metrics.totalDistance / pair.km;
-    if (times >= 0.8) {
-      return { from: pair.from, to: pair.to, times: fmtNumber(times, 1) };
-    }
     return { from: pair.from, to: pair.to, times: fmtNumber(times, 1) };
   }, [metrics.totalDistance]);
 

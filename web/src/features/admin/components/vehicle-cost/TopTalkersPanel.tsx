@@ -13,7 +13,7 @@ import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { type SectionState, type VehicleCostBar } from './helpers';
 
 interface TopTalkersPanelProps extends SectionState {
@@ -30,12 +30,16 @@ export function TopTalkersPanel({
 }: TopTalkersPanelProps) {
   const { t } = useTranslation();
 
+  // Null-safe the inputs before any `.length` / `.reduce` / `.map`: the page
+  // feeds normalised arrays today, but a section that owns its empty / error
+  // rendering must never assume a well-formed payload.
+  const items = talkers ?? [];
+  const total = totalRows ?? 0;
+
   // Share bars scale to the fleet total when known, else to the biggest
   // talker so a single-vehicle window still fills the bar meaningfully.
   const max =
-    totalRows > 0
-      ? totalRows
-      : talkers.reduce((m, v) => Math.max(m, v.rows), 0) || 1;
+    total > 0 ? total : items.reduce((m, v) => Math.max(m, v.rows ?? 0), 0) || 1;
 
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -48,33 +52,50 @@ export function TopTalkersPanel({
       </Caption>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : loading && talkers.length === 0 ? (
-        <div className="space-y-3">
+      ) : loading && items.length === 0 ? (
+        <div
+          className="space-y-3"
+          role="status"
+          aria-busy="true"
+          aria-label={t('common.loading', 'Loading')}
+        >
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} height={40} />
           ))}
         </div>
-      ) : talkers.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState
-          icon={<Flame className="h-8 w-8" />}
+          icon={<Flame className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.vehicleCost.topTalkersEmpty', 'No vehicles have ingested signals yet.')}
         />
       ) : (
-        <div className="space-y-3">
-          {talkers.map((v, i) => {
-            const pct = max > 0 ? (v.rows / max) * 100 : 0;
+        <ul
+          className="space-y-3"
+          aria-label={t(
+            'admin.vehicleCost.topTalkersListLabel',
+            'Top talkers ranked by ingested rows',
+          )}
+        >
+          {items.map((v, i) => {
+            const value = v.rows ?? 0;
+            // A share of the fleet total can never exceed 100%; clamp so the
+            // readout stays consistent with the bar (which caps its own width
+            // at 100%) even if one vehicle's window count briefly outruns the
+            // reported fleet total.
+            const pct = Math.min(max > 0 ? (value / max) * 100 : 0, 100);
             return (
-              <MetricBar
-                key={v.vehicle_id}
-                label={v.name}
-                value={v.rows}
-                max={max}
-                color={chartTokens.series[i % chartTokens.series.length]}
-                sublabel={`${fmtNumber(v.rows)} · ${fmtNumber(pct, 1)}%`}
-              />
+              <li key={v.vehicle_id}>
+                <MetricBar
+                  label={v.name ?? '—'}
+                  value={value}
+                  max={max}
+                  color={chartTokens.series[i % chartTokens.series.length]}
+                  sublabel={`${fmtInt(value)} · ${fmtPercent(pct, 1)}`}
+                />
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </GlassPanel>
   );

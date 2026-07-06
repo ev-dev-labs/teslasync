@@ -23,8 +23,14 @@ type FakeVehicles struct {
 }
 
 // GetAll returns every vehicle the fake was seeded with, or Err.
+// On error it returns a nil slice (mirroring GetByID and the real
+// *vehicledb.VehicleRepo, which never returns rows alongside an
+// error) so a fake stands in for the production repo faithfully.
 func (f *FakeVehicles) GetAll(_ context.Context) ([]*vehiclemodel.Vehicle, error) {
-	return f.All, f.Err
+	if f.Err != nil {
+		return nil, f.Err
+	}
+	return f.All, nil
 }
 
 // GetByID returns the vehicle with the given ID, or Err.

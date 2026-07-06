@@ -9,26 +9,39 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
+
+/**
+ * Convert a fleet-analytics `total_distance_km` value to the user's display
+ * unit. `FleetAnalytics.total_distance_km` is SI **kilometres**, but the shared
+ * `convertDistanceFromSI` expects **metres** — so the value is scaled to metres
+ * first (the same meter-floor pattern used by `HeroGauges` and
+ * `YearSummaryCard`). Passing kilometres straight through previously
+ * under-reported fleet distance by 1000×. A non-finite payload collapses to 0
+ * so the tile never renders "NaN".
+ */
+export function toDistanceDisplay(totalDistanceKm: number, to: DistanceUnitPref): number {
+  if (!Number.isFinite(totalDistanceKm)) return 0;
+  return convertDistanceFromSI(totalDistanceKm * 1000, to);
+}
 
 export default function FleetStatsBarWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const { data: analytics, isLoading: analyticsLoading, error, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsIsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-
   const distanceUnit = unitPrefs.distance;
 
   const isLoading = vehiclesLoading || analyticsLoading;
 
   const stats = useMemo(() => {
-    const vehicleCount = vehicles?.length ?? 0;
-    const onlineCount = vehicles?.filter((v) => v.state === 'online').length ?? 0;
-    const totalDistance = toDistanceDisplay(analytics?.total_distance_km ?? 0);
+    const vehicleList = vehicles ?? [];
+    const vehicleCount = vehicleList.length;
+    const onlineCount = vehicleList.filter((v) => v.state === 'online').length;
+    const totalDistance = toDistanceDisplay(analytics?.total_distance_km ?? 0, distanceUnit);
     const totalEnergy = analytics?.total_energy_kwh ?? 0;
     return { vehicleCount, onlineCount, totalDistance, totalEnergy };
-  }, [vehicles, analytics, toDistanceDisplay]);
+  }, [vehicles, analytics, distanceUnit]);
 
   const isCompact = size.rows < 2;
 
@@ -45,12 +58,14 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
         label: t('widget.fleetStatsBar.vehicles', 'Vehicles'),
         value: stats.vehicleCount,
         icon: <Car className="h-3.5 w-3.5" />,
+        trend: 'flat',
         trendValue: `${stats.onlineCount} ${t('widget.fleetStatsBar.online', 'online')}`,
       },
       {
         label: t('widget.fleetStatsBar.onlineNow', 'Online Now'),
         value: stats.onlineCount,
         icon: <Wifi className="h-3.5 w-3.5" />,
+        trend: 'flat',
         trendValue: onlinePct,
       },
       {

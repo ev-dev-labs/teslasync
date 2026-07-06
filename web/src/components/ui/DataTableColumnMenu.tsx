@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Columns3, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
@@ -84,30 +84,52 @@ export function DataTableColumnMenu({
     }
   }, [open])
 
-  const orderedKeys = effectiveColumnOrder(columns, layout)
-  const colByKey = new Map(columns.map((c) => [c.key, c] as const))
-  const visibleCount = applyColumnLayout(columns, layout).length
+  // Defensive: props are typed to require an array, but a transient
+  // `undefined` from a still-loading parent must never crash the menu on
+  // the `.map` / `.length` reads below.
+  const safeColumns = useMemo(() => columns ?? [], [columns])
 
-  const ensureLayout = (): ColumnLayout => layout ?? defaultColumnLayout(columns)
+  // Derived layout views are pure functions of (columns, layout); memoize so
+  // the Map/Set/array rebuilds don't run on every unrelated re-render.
+  const orderedKeys = useMemo(
+    () => effectiveColumnOrder(safeColumns, layout),
+    [safeColumns, layout],
+  )
+  const colByKey = useMemo(
+    () => new Map(safeColumns.map((c) => [c.key, c] as const)),
+    [safeColumns],
+  )
+  const visibleCount = useMemo(
+    () => applyColumnLayout(safeColumns, layout).length,
+    [safeColumns, layout],
+  )
+
+  const ensureLayout = (): ColumnLayout =>
+    layout ?? defaultColumnLayout(safeColumns)
 
   // Effective hidden set used to drive checkbox `checked` state. When the
   // user hasn't touched anything yet, we honor `defaultVisible: false` so
   // the menu reflects the table's initial render.
-  const effectiveHidden = new Set(
-    (layout ?? defaultColumnLayout(columns)).hidden,
+  const effectiveHidden = useMemo(
+    () => new Set((layout ?? defaultColumnLayout(safeColumns)).hidden),
+    [layout, safeColumns],
   )
 
   const handleToggle = (key: string) => {
     const base = ensureLayout()
+    const col = colByKey.get(key)
     const isHidden = base.hidden.includes(key)
-    // Don't allow hiding the last visible column.
-    if (!isHidden && visibleCount <= 1) return
+    // Refuse to hide a required column or the last remaining visible one.
+    // The checkbox is also rendered `disabled` for these cases, but the
+    // state-mutation path must enforce the invariant independently so a
+    // programmatic / keyboard toggle can never violate it.
+    if (!isHidden && (col?.required || visibleCount <= 1)) return
     onChange(toggleHiddenColumn(base, key))
   }
 
   const handleMove = (key: string, direction: -1 | 1) => {
     const base = ensureLayout()
-    const currentOrder = effectiveColumnOrder(columns, base)
+    const currentOrder = effectiveColumnOrder(safeColumns, base)
     const fromIndex = currentOrder.indexOf(key)
     if (fromIndex < 0) return
     const toIndex = fromIndex + direction
@@ -247,6 +269,14 @@ export function DataTableColumnMenu({
                 </li>
               )
             })}
+            {orderedKeys.length === 0 && (
+              <li
+                data-testid="datatable-column-menu-empty"
+                className="px-2 py-3 text-center text-2xs text-[var(--text-muted)]"
+              >
+                {t('table.columns.empty', 'No columns to configure')}
+              </li>
+            )}
           </ul>
         </div>
       )}

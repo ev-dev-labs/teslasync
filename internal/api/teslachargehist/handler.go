@@ -1,6 +1,7 @@
 package teslachargehist
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,10 +17,36 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// teslaChargeHistoryAPI is the consumer-side port for the Tesla Fleet API
+// calls the charging-history handler makes. Declaring the narrow interface
+// here (rather than depending on the concrete *tesla.Client) keeps the
+// handlers unit-testable with a fake; the concrete client satisfies it
+// unchanged.
+type teslaChargeHistoryAPI interface {
+	GetChargingHistory(ctx context.Context, vin, startTime, endTime string, pageNo, pageSize int) ([]byte, int, error)
+	GetChargingInvoice(ctx context.Context, contentID string) ([]byte, int, error)
+	HasValidToken() bool
+}
+
+// teslaChargeHistoryStore is the consumer-side port for the persistence the
+// handler needs. *tesladb.TeslaChargingHistoryRepo satisfies it unchanged.
+type teslaChargeHistoryStore interface {
+	GetAll(ctx context.Context, vin string, limit, offset int) ([]*teslamodel.TeslaChargingHistoryEntry, error)
+	GetSummary(ctx context.Context, vin string) (*teslamodel.TeslaChargingHistorySummary, error)
+	UpsertBatch(ctx context.Context, entries []*teslamodel.TeslaChargingHistoryEntry) (int, error)
+}
+
+// Compile-time proof the concrete production dependencies still satisfy the
+// ports above, so a signature drift is caught at build time, not runtime.
+var (
+	_ teslaChargeHistoryAPI   = (*tesla.Client)(nil)
+	_ teslaChargeHistoryStore = (*tesladb.TeslaChargingHistoryRepo)(nil)
+)
+
 // TeslaChargingHistoryHandler serves Tesla Supercharger/DC charging history.
 type TeslaChargingHistoryHandler struct {
-	teslaClient *tesla.Client
-	repo        *tesladb.TeslaChargingHistoryRepo
+	teslaClient teslaChargeHistoryAPI
+	repo        teslaChargeHistoryStore
 }
 
 // NewTeslaChargingHistoryHandler wires Tesla charging history dependencies.
@@ -28,6 +55,12 @@ func NewTeslaChargingHistoryHandler(tc *tesla.Client, db *database.DB) *TeslaCha
 		teslaClient: tc,
 		repo:        tesladb.NewTeslaChargingHistoryRepo(db),
 	}
+}
+
+// newHandler builds a handler from explicit ports. Tests use it to inject
+// fakes; production code uses NewTeslaChargingHistoryHandler.
+func newHandler(api teslaChargeHistoryAPI, store teslaChargeHistoryStore) *TeslaChargingHistoryHandler {
+	return &TeslaChargingHistoryHandler{teslaClient: api, repo: store}
 }
 
 // List returns stored charging history from DB with pagination and server-side summary.
@@ -99,7 +132,7 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		entries := parseTeslaChargingEntries(resp.Response.Data, body)
+		entries := parseTeslaChargingEntries(resp.Response.Data)
 		allEntries = append(allEntries, entries...)
 
 		if !resp.Response.HasMoreData || len(resp.Response.Data) == 0 {
@@ -223,7 +256,7 @@ type teslaChargingInvoice struct {
 }
 
 // parseTeslaChargingEntries converts Tesla API items to model entries.
-func parseTeslaChargingEntries(items []teslaChargingHistoryItem, rawPage []byte) []*teslamodel.TeslaChargingHistoryEntry {
+func parseTeslaChargingEntries(items []teslaChargingHistoryItem) []*teslamodel.TeslaChargingHistoryEntry {
 	results := make([]*teslamodel.TeslaChargingHistoryEntry, 0, len(items))
 
 	for _, item := range items {

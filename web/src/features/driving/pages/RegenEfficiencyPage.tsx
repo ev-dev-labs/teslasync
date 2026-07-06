@@ -32,18 +32,28 @@ import type { Drive } from '@/types/driving';
 /* ------------------------------------------------------------------ */
 
 /** Threshold color for a regen ratio (%). Higher recovery reads greener. */
-function regenColor(ratio: number): string {
+export function regenColor(ratio: number): string {
   if (ratio >= 25) return chartTokens.series[1]; // emerald
   if (ratio >= 15) return chartTokens.series[5]; // cyan
   if (ratio >= 8) return chartTokens.series[2];  // amber
   return chartTokens.series[3];                   // rose
 }
 
-/** Per-drive regen recovery ratio, or null when the drive lacks the inputs. */
-function getRegenRatio(drive: Drive): number | null {
-  if (!drive.avgPowerW || drive.avgPowerW <= 0) return null;
-  if (!drive.regenEnergyWh || !drive.energyUsedWh || drive.energyUsedWh <= 0) return null;
-  return (drive.regenEnergyWh / drive.energyUsedWh) * 100;
+/**
+ * Per-drive regen recovery ratio (regen energy ÷ energy used, as a %), or
+ * `null` when the drive lacks the energy inputs.
+ *
+ * The ratio is a pure function of the two energy counters; it must NOT be
+ * gated on `avgPowerW`. `avgPowerW` is an independently-nullable field, so the
+ * old guard silently hid a valid ratio for every drive imported without power
+ * telemetry — the recent-drives table showed "—" even though regen and energy
+ * were both present.
+ */
+export function getRegenRatio(drive: Drive): number | null {
+  const regen = drive.regenEnergyWh ?? 0;
+  const used = drive.energyUsedWh ?? 0;
+  if (regen <= 0 || used <= 0) return null;
+  return (regen / used) * 100;
 }
 
 interface RegenDriveRow {
@@ -56,11 +66,43 @@ interface RegenDriveRow {
 
 // Type alias (not interface) so it carries an implicit index signature and
 // stays assignable to ChartContainer's `ChartDataRow` fallback-table shape.
-type MonthlyTrendPoint = {
+export type MonthlyTrendPoint = {
   month: string;
   regenKwh: number;
   drives: number;
 };
+
+/**
+ * Aggregate in-range drives into a month-bucketed regen trend (most recent 12
+ * months). Regen energy is summed in Wh then converted to kWh with a pure
+ * numeric round to 1 decimal.
+ *
+ * Rounding is deliberately numeric (`Math.round(x * 10) / 10`) rather than
+ * `parseFloat(fmtNumber(x, 1))`: the locale formatter injects a thousands
+ * separator (en-US "1,234.5" → `parseFloat` truncates to `1`) and non-'.'
+ * decimal locales (de-DE "1234,5") drop the fraction entirely, both of which
+ * corrupt the chart series for high-regen months.
+ */
+export function buildMonthlyTrend(drives: Drive[]): MonthlyTrendPoint[] {
+  if (drives.length === 0) return [];
+  const byMonth = new Map<string, { totalRegen: number; count: number }>();
+  for (const d of drives) {
+    const month = d.startTs?.substring(0, 7);
+    if (!month) continue;
+    const existing = byMonth.get(month) ?? { totalRegen: 0, count: 0 };
+    existing.totalRegen += d.regenEnergyWh ?? 0;
+    existing.count += 1;
+    byMonth.set(month, existing);
+  }
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12)
+    .map(([month, val]) => ({
+      month,
+      regenKwh: Math.round((val.totalRegen / 1000) * 10) / 10,
+      drives: val.count,
+    }));
+}
 
 const SERIES_REGEN = chartTokens.series[1];  // emerald
 const SERIES_DRIVES = chartTokens.series[4]; // purple
@@ -113,26 +155,7 @@ export default function RegenEfficiencyPage() {
   }, [allDrives, start, end]);
 
   /* ---- Monthly regen trend from drives ---- */
-  const monthlyTrend = useMemo<MonthlyTrendPoint[]>(() => {
-    if (drives.length === 0) return [];
-    const byMonth = new Map<string, { totalRegen: number; count: number }>();
-    drives.forEach((d) => {
-      const month = d.startTs?.substring(0, 7);
-      if (!month) return;
-      const existing = byMonth.get(month) ?? { totalRegen: 0, count: 0 };
-      existing.totalRegen += d.regenEnergyWh ?? 0;
-      existing.count += 1;
-      byMonth.set(month, existing);
-    });
-    return Array.from(byMonth.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12)
-      .map(([month, val]) => ({
-        month,
-        regenKwh: parseFloat(fmtNumber(val.totalRegen / 1000, 1)),
-        drives: val.count,
-      }));
-  }, [drives]);
+  const monthlyTrend = useMemo<MonthlyTrendPoint[]>(() => buildMonthlyTrend(drives), [drives]);
 
   /* ---- Per-drive regen list ---- */
   const regenDrives = useMemo<RegenDriveRow[]>(() => {

@@ -8,12 +8,16 @@
 //
 //	go run ./cmd/audit-signal-types
 //
-// Output: a tabular report grouped by mismatch class. Exit code is
-// always 0 — this is a discovery tool, not a CI gate.
+// Output: a tabular report grouped by mismatch class. The audit
+// findings never influence the exit code — this is a discovery tool,
+// not a CI gate. The process exits 0 on a completed audit and 2 only on
+// a fatal setup error (working directory unavailable, unreadable
+// migrations, or malformed routing.yaml).
 package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -304,35 +308,88 @@ var falsePositives = map[string]string{
 // the label.
 var deferredKnown = map[string]string{}
 
+// auditInputs bundles the three sources of truth (parsed DB schema,
+// routing map, proto signal metadata) plus the classification look-up
+// tables that buildFindings cross-references. Passing them in as data
+// instead of reaching for package globals keeps the core audit a pure
+// function of its inputs, so the report logic can be exercised in tests
+// with hand-built fixtures rather than the live migrations, routing.yaml,
+// and generated proto metadata.
+type auditInputs struct {
+	schema         map[string]map[string]string
+	routes         map[string]router.Entry
+	signals        map[string]*protomodel.SignalMeta
+	destTables     map[router.Destination][]string
+	alreadyFixed   map[string]bool
+	falsePositives map[string]string
+	deferredKnown  map[string]string
+}
+
 func main() {
 	repoRoot, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "getwd:", err)
 		os.Exit(2)
 	}
+	os.Exit(run(os.Stdout, os.Stderr, repoRoot))
+}
+
+// run performs the full audit against the migrations under repoRoot and
+// writes the tabular report to stdout. It returns the process exit code:
+// 0 when the audit completes (regardless of how many mismatches it
+// found — this is a discovery tool, not a gate) and 2 on a fatal setup
+// error (unreadable migrations or malformed routing.yaml). Keeping run
+// separate from main isolates the os.Exit / os.Getwd boundary in main so
+// the audit is testable end-to-end against a fixture repo root.
+func run(stdout, stderr io.Writer, repoRoot string) int {
 	schema, err := parseSchema(repoRoot)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "parseSchema:", err)
-		os.Exit(2)
+		fmt.Fprintln(stderr, "parseSchema:", err)
+		return 2
 	}
 
 	routes, err := router.LoadMap()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "router.LoadMap:", err)
-		os.Exit(2)
+		fmt.Fprintln(stderr, "router.LoadMap:", err)
+		return 2
 	}
 
-	var findings []finding
-	var unrouted []string
-	var noColumn []string
+	in := auditInputs{
+		schema:         schema,
+		routes:         routes,
+		signals:        protomodel.SignalsByName,
+		destTables:     destinationTables,
+		alreadyFixed:   alreadyFixed,
+		falsePositives: falsePositives,
+		deferredKnown:  deferredKnown,
+	}
 
-	for field, meta := range protomodel.SignalsByName {
-		entry, ok := routes[field]
+	findings, unrouted, noColumn := buildFindings(in)
+	sortFindings(findings)
+	writeReport(stdout, len(in.signals), len(routes), findings, unrouted, noColumn)
+	return 0
+}
+
+// buildFindings is the pure core of the audit. For every signal it
+// cross-references the declared ValueKind (via expectedGoType) against
+// the SQL type of its routing destination's hot column and returns:
+//
+//   - findings: type-shape mismatches, plus "column not found" schema-drift
+//     entries, each tagged with its classification (already-fixed by codec
+//     coercion, writer-handled false positive, or deferred to a migration);
+//   - unrouted: signals present in metadata but absent from routing.yaml;
+//   - noColumn: signals routed to a snapshot destination whose routing
+//     entry has an empty Column mapping (the writer would silently no-op).
+//
+// It performs no I/O and reads no globals, so every branch is table-testable.
+func buildFindings(in auditInputs) (findings []finding, unrouted, noColumn []string) {
+	for field, meta := range in.signals {
+		entry, ok := in.routes[field]
 		if !ok {
 			unrouted = append(unrouted, field)
 			continue
 		}
-		tables, ok := destinationTables[entry.Destination]
+		tables, ok := in.destTables[entry.Destination]
 		if !ok {
 			// destinations like signal_log/drop/unit_history have no
 			// per-field hot column; skip the column-level audit.
@@ -346,7 +403,7 @@ func main() {
 		// look up the column in each candidate table; first hit wins
 		var sqlTyp, table string
 		for _, t := range tables {
-			if cols, ok := schema[t]; ok {
+			if cols, ok := in.schema[t]; ok {
 				if st, ok := cols[entry.Column]; ok {
 					sqlTyp = st
 					table = t
@@ -379,22 +436,29 @@ func main() {
 				goTyp:   goTyp,
 				sqlTyp:  sqlTyp,
 				reason:  reason,
-				already: alreadyFixed[field],
+				already: in.alreadyFixed[field],
 			}
-			if note, ok := falsePositives[field]; ok {
+			if note, ok := in.falsePositives[field]; ok {
 				f.falsePositive = true
 				f.note = note
 			}
-			if note, ok := deferredKnown[field]; ok {
+			if note, ok := in.deferredKnown[field]; ok {
 				f.deferred = true
 				f.note = note
 			}
 			findings = append(findings, f)
 		}
 	}
+	return findings, unrouted, noColumn
+}
 
+// sortFindings orders findings in place for the report: action-required
+// ("new") first, then deferred, then writer-handled false positives, then
+// already-fixed. Ties break by destination then field so the render is
+// stable and diff-friendly across runs (map iteration in buildFindings is
+// otherwise non-deterministic).
+func sortFindings(findings []finding) {
 	sort.Slice(findings, func(i, j int) bool {
-		// unfixed/new first, then deferred, then false-positives, then already-fixed
 		rank := func(f finding) int {
 			if !f.already && !f.deferred && !f.falsePositive {
 				return 0
@@ -416,7 +480,12 @@ func main() {
 		}
 		return findings[i].field < findings[j].field
 	})
+}
 
+// writeReport renders the audit summary and the three detail sections to
+// w. It is the single output boundary; buildFindings and sortFindings do
+// no I/O. unrouted and noColumn are sorted in place for a stable render.
+func writeReport(w io.Writer, totalSignals, totalRoutes int, findings []finding, unrouted, noColumn []string) {
 	newCount := 0
 	for _, f := range findings {
 		if !f.already && !f.deferred && !f.falsePositive {
@@ -424,22 +493,22 @@ func main() {
 		}
 	}
 
-	fmt.Printf("# Signal-type audit\n\n")
-	fmt.Printf("Total signals in metadata:           %d\n", len(protomodel.SignalsByName))
-	fmt.Printf("Routed (in routing.yaml):            %d\n", len(routes))
-	fmt.Printf("Mismatch candidates found:           %d\n", len(findings))
-	fmt.Printf("  already-fixed by codec coercion:   %d\n", countFixed(findings))
-	fmt.Printf("  false positives (writer-handled):  %d\n", countFalsePositive(findings))
-	fmt.Printf("  deferred to schema migration:      %d\n", countDeferred(findings))
-	fmt.Printf("  *** NEW (action required):         %d\n", newCount)
-	fmt.Println()
+	fmt.Fprintf(w, "# Signal-type audit\n\n")
+	fmt.Fprintf(w, "Total signals in metadata:           %d\n", totalSignals)
+	fmt.Fprintf(w, "Routed (in routing.yaml):            %d\n", totalRoutes)
+	fmt.Fprintf(w, "Mismatch candidates found:           %d\n", len(findings))
+	fmt.Fprintf(w, "  already-fixed by codec coercion:   %d\n", countFixed(findings))
+	fmt.Fprintf(w, "  false positives (writer-handled):  %d\n", countFalsePositive(findings))
+	fmt.Fprintf(w, "  deferred to schema migration:      %d\n", countDeferred(findings))
+	fmt.Fprintf(w, "  *** NEW (action required):         %d\n", newCount)
+	fmt.Fprintln(w)
 
 	if len(findings) > 0 {
-		fmt.Println("## Type mismatch candidates")
-		fmt.Println()
-		fmt.Printf("%-44s %-25s %-32s %-12s %-10s %-18s %s\n",
+		fmt.Fprintln(w, "## Type mismatch candidates")
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "%-44s %-25s %-32s %-12s %-10s %-18s %s\n",
 			"FIELD", "DESTINATION", "COLUMN", "VALUEKIND", "GO_TYPE", "SQL_TYPE", "STATUS")
-		fmt.Println(strings.Repeat("-", 180))
+		fmt.Fprintln(w, strings.Repeat("-", 180))
 		for _, f := range findings {
 			status := "*** NEW ***"
 			switch {
@@ -450,47 +519,47 @@ func main() {
 			case f.falsePositive:
 				status = "false-positive: " + f.note
 			}
-			fmt.Printf("%-44s %-25s %-32s %-12s %-10s %-18s %s\n",
+			fmt.Fprintf(w, "%-44s %-25s %-32s %-12s %-10s %-18s %s\n",
 				f.field, f.dest, f.column, f.vk, f.goTyp, f.sqlTyp, status)
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
 	}
 
 	if len(unrouted) > 0 {
 		sort.Strings(unrouted)
-		fmt.Printf("## Fields in metadata but NOT in routing.yaml (%d)\n", len(unrouted))
-		fmt.Println("These signals decode successfully but have no router entry — they'd hit the router's 'unknown field' error path.")
-		fmt.Println()
+		fmt.Fprintf(w, "## Fields in metadata but NOT in routing.yaml (%d)\n", len(unrouted))
+		fmt.Fprintln(w, "These signals decode successfully but have no router entry — they'd hit the router's 'unknown field' error path.")
+		fmt.Fprintln(w)
 		// don't dump 200+ entries; show first 20
 		limit := 20
 		if len(unrouted) < limit {
 			limit = len(unrouted)
 		}
 		for i := 0; i < limit; i++ {
-			fmt.Printf("  - %s\n", unrouted[i])
+			fmt.Fprintf(w, "  - %s\n", unrouted[i])
 		}
 		if len(unrouted) > limit {
-			fmt.Printf("  ... and %d more\n", len(unrouted)-limit)
+			fmt.Fprintf(w, "  ... and %d more\n", len(unrouted)-limit)
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
 	}
 
 	if len(noColumn) > 0 {
 		sort.Strings(noColumn)
-		fmt.Printf("## Fields routed to a snapshot destination with no column mapping (%d)\n", len(noColumn))
-		fmt.Println("These signals route to a destination table but the routing entry has Column=\"\" — the snapshot writer would no-op.")
-		fmt.Println()
+		fmt.Fprintf(w, "## Fields routed to a snapshot destination with no column mapping (%d)\n", len(noColumn))
+		fmt.Fprintln(w, "These signals route to a destination table but the routing entry has Column=\"\" — the snapshot writer would no-op.")
+		fmt.Fprintln(w)
 		limit := 20
 		if len(noColumn) < limit {
 			limit = len(noColumn)
 		}
 		for i := 0; i < limit; i++ {
-			fmt.Printf("  - %s\n", noColumn[i])
+			fmt.Fprintf(w, "  - %s\n", noColumn[i])
 		}
 		if len(noColumn) > limit {
-			fmt.Printf("  ... and %d more\n", len(noColumn)-limit)
+			fmt.Fprintf(w, "  ... and %d more\n", len(noColumn)-limit)
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
 	}
 }
 

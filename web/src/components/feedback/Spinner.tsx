@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 
@@ -30,14 +31,23 @@ const sizeMap = {
  * so we short-circuit here instead.
  */
 export function Spinner({ size = 'md', label, className }: SpinnerProps) {
-  const { box, pixels, stroke } = sizeMap[size];
+  const { t } = useTranslation();
+  // Fall back to `md` if an unknown size slips through (untyped/JS callers) so
+  // the destructure can never blow up on an undefined entry.
+  const { box, pixels, stroke } = sizeMap[size] ?? sizeMap.md;
   const { reduce } = useMotionPreference();
+
+  // An empty / whitespace-only label must not become the accessible name of the
+  // status region (that would leave it silently unnamed for assistive tech) nor
+  // render an empty caption. Treat it as "no label" and use the default.
+  const visibleLabel = label && label.trim() ? label : undefined;
+  const accessibleLabel = visibleLabel ?? t('a11y.loading', 'Loading');
 
   return (
     <div
       className={cn('flex flex-col items-center gap-3', className)}
       role="status"
-      aria-label={label ?? 'Loading'}
+      aria-label={accessibleLabel}
     >
       <div className={cn('relative flex items-center justify-center', box)}>
         <svg
@@ -64,7 +74,9 @@ export function Spinner({ size = 'md', label, className }: SpinnerProps) {
           />
         </svg>
       </div>
-      {label && <span className="text-sm text-[var(--text-secondary)]">{label}</span>}
+      {visibleLabel && (
+        <span className="text-sm text-[var(--text-secondary)]">{visibleLabel}</span>
+      )}
     </div>
   );
 }

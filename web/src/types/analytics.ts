@@ -1,3 +1,12 @@
+/**
+ * Fleet rollup returned by GET /analytics/fleet
+ * (internal/api/analytics/queries.go). The Go handler emits snake_case keys
+ * (total_distance_km, avg_efficiency_wh_km, vehicle_comparison, …); the
+ * client's camelCaseKeys() transform exposes the camelCase aliases this
+ * interface declares. Distances are kilometres and efficiency is Wh/km — the
+ * analytics-layer canonical units; convert at the render boundary via
+ * useUnits(). All values are non-null (the handler math.Rounds every field).
+ */
 export interface AnalyticsSummary {
   totalVehicles: number;
   totalDrives: number;
@@ -6,10 +15,22 @@ export interface AnalyticsSummary {
   totalEnergyKwh: number;
   totalCost: number;
   avgEfficiencyWhKm: number;
-  co2SavedKg: number;
+  /**
+   * Optional: the /analytics/fleet handler does NOT emit `co2_saved_kg`, so
+   * this resolves `undefined` on the wire. Consumers (QuickStatsPage) already
+   * read it defensively as `co2SavedKg ?? 0`; typing it optional keeps the
+   * contract honest instead of promising a value the endpoint never sends.
+   */
+  co2SavedKg?: number;
   vehicleComparison: VehicleComparisonEntry[];
 }
 
+/**
+ * One row of the fleet comparison table. `id` is the vehicle identifier: the
+ * backend serialises it as a JSON number (int64), but the frontend types and
+ * keys it as a string since it is only ever used as a React `key`. `distance`
+ * is kilometres and `efficiency` is Wh/km — convert at the render boundary.
+ */
 export interface VehicleComparisonEntry {
   id: string;
   name: string;

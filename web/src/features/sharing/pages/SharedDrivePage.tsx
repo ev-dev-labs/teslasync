@@ -30,7 +30,7 @@ import {
   convertSpeedFromSI,
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
-import type { SharedDriveData, SharedDriveDataV1 } from '@/types/sharing';
+import { normalizeSharedDriveData } from '@/types/sharing';
 
 /* ------------------------------------------------------------------ */
 /*  Boundary constants                                                */
@@ -49,7 +49,6 @@ const KM_PER_MILE = 1.609344;
 const METERS_PER_FOOT = 0.3048;
 
 const METERS_PER_KM = 1000;
-const KMH_PER_MPS = 3.6;
 
 /* ------------------------------------------------------------------ */
 /*  Unit-aware helpers                                                */
@@ -69,48 +68,6 @@ function efficiencyUnit(distancePref: DistanceUnitPref): string {
 
 function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): number {
   return distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
-}
-
-
-function normalizeSharedDriveData(data: SharedDriveData | SharedDriveDataV1 | undefined): SharedDriveData | undefined {
-  if (!data) return undefined;
-  if ('payload_version' in data && data.payload_version === 'v2') return data;
-  const v1 = data as SharedDriveDataV1;
-  return {
-    payload_version: 'v1',
-    title: v1.title,
-    description: v1.description,
-    drive: {
-      date: v1.drive.date,
-      distance_m: v1.drive.distance_km * METERS_PER_KM,
-      duration_s: Math.round(v1.drive.duration_min * 60),
-      start_address: v1.drive.start_address,
-      end_address: v1.drive.end_address,
-      start_battery: v1.drive.start_battery,
-      end_battery: v1.drive.end_battery,
-      elevation_gain: v1.drive.elevation_gain,
-      elevation_loss: v1.drive.elevation_loss,
-      max_speed_mps: v1.drive.max_speed_kmh == null ? null : v1.drive.max_speed_kmh / KMH_PER_MPS,
-      avg_speed_mps: v1.drive.avg_speed_kmh == null ? null : v1.drive.avg_speed_kmh / KMH_PER_MPS,
-      efficiency_wh_per_m: v1.drive.efficiency_wh_km == null ? null : v1.drive.efficiency_wh_km / METERS_PER_KM,
-    },
-    vehicle: v1.vehicle,
-    map_points: v1.map_points,
-    elevation_profile: (v1.elevation_profile ?? []).map((p) => ({
-      distance_m: p.distance_km * METERS_PER_KM,
-      elevation_m: p.elevation_m,
-    })),
-    speed_profile: (v1.speed_profile ?? []).map((p) => ({
-      distance_m: p.distance_km * METERS_PER_KM,
-      speed_mps: p.speed_kmh / KMH_PER_MPS,
-    })),
-    telemetry: (v1.telemetry ?? []).map((p) => ({
-      distance_m: p.distance_km * METERS_PER_KM,
-      battery_level: p.battery_level,
-      power: p.power,
-      elevation: p.elevation,
-    })),
-  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -184,8 +141,8 @@ export default function SharedDrivePage() {
   // values; tickFormatter / Tooltip only render the unit suffix.
   const elevationData = useMemo(
     () => (data?.elevation_profile ?? []).map((p) => ({
-      // Wire ships per-point distance in km via haversineKm; lift to display
-      // unit once and pass downstream to the renderer.
+      // Wire ships per-point cumulative distance in SI metres; lift to the
+      // viewer's display unit once and pass downstream to the renderer.
       distance: convertDistanceFromSI(p.distance_m, distancePref),
       // Wire ships elevation_m as SI metres; convert to feet for imperial
       // viewers.
@@ -198,8 +155,8 @@ export default function SharedDrivePage() {
   const speedData = useMemo(
     () => (data?.speed_profile ?? []).map((p) => ({
       distance: convertDistanceFromSI(p.distance_m, distancePref),
-      // Wire field is named speed_kmh; convert km/h → m/s at boundary then
-      // convert again to the preferred display unit via convertSpeedFromSI.
+      // Wire ships SI m/s (`speed_mps`); convertSpeedFromSI maps it straight
+      // to the viewer's km/h or mph preference — no intermediate hop.
       speed: convertSpeedFromSI(p.speed_mps, speedPref),
     })),
     [data?.speed_profile, distancePref, speedPref],
@@ -426,7 +383,7 @@ export default function SharedDrivePage() {
         )}
 
         {/* No map data fallback */}
-        {mapPoints.length === 0 && elevationData.length === 0 && speedData.length === 0 && (
+        {mapPoints.length <= 1 && elevationData.length === 0 && speedData.length === 0 && (
           <GlassPanel className="p-8">
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MapPin className="h-8 w-8" />}

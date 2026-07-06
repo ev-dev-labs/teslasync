@@ -1,5 +1,4 @@
 import { type ReactNode, useMemo } from 'react';
-import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 
@@ -25,6 +24,8 @@ interface WidgetFlowDiagramProps {
   arrows: FlowArrow[];
   compact?: boolean;
   emptyMessage?: string;
+  /** Accessible name for the diagram. Localise at the call site (like `emptyMessage`). */
+  ariaLabel?: string;
 }
 
 /* ── position → SVG coordinate mapping (100×100 viewBox) ── */
@@ -62,6 +63,7 @@ export function WidgetFlowDiagram({
   arrows,
   compact = false,
   emptyMessage = 'No flow data available',
+  ariaLabel = 'Energy flow diagram',
 }: WidgetFlowDiagramProps) {
   const nodeMap = useMemo(
     () => new Map(nodes.map((n) => [n.id, n])),
@@ -76,7 +78,7 @@ export function WidgetFlowDiagram({
   }, [arrows, compact]);
 
   const maxArrowValue = useMemo(
-    () => Math.max(...arrows.map((a) => Math.abs(a.value)), 1),
+    () => arrows.reduce((max, a) => Math.max(max, Math.abs(a.value ?? 0)), 1),
     [arrows],
   );
 
@@ -91,7 +93,7 @@ export function WidgetFlowDiagram({
       viewBox="0 0 100 100"
       className="h-full w-full"
       role="img"
-      aria-label="Energy flow diagram"
+      aria-label={ariaLabel}
     >
       <defs>
         {/* animated dash pattern for active arrows */}
@@ -126,8 +128,9 @@ export function WidgetFlowDiagram({
         const x2 = toPos.cx - ux * r;
         const y2 = toPos.cy - uy * r;
 
-        const sw = strokeForValue(arrow.value, maxArrowValue);
-        const colorClass = arrowColor(arrow.value, arrow.color);
+        const value = arrow.value ?? 0;
+        const sw = strokeForValue(value, maxArrowValue);
+        const colorClass = arrowColor(value, arrow.color);
 
         return (
           <line
@@ -136,21 +139,21 @@ export function WidgetFlowDiagram({
             y1={y1}
             x2={x2}
             y2={y2}
-            className={cn('stroke-current', colorClass)}
+            className={cn('stroke-current', colorClass, arrow.active && 'flow-active')}
             strokeWidth={sw}
             strokeDasharray={arrow.active ? '4 8' : undefined}
             strokeLinecap="round"
-            style={arrow.active ? { animation: 'dashFlow 0.8s linear infinite' } : undefined}
           />
         );
       })}
 
       {/* ── nodes ── */}
       {nodes.map((node) => {
-        const pos = POSITION_COORDS[node.position];
-        const label = compact && node.label.length > 3
-          ? node.label.slice(0, 3).toUpperCase()
-          : node.label;
+        const pos = POSITION_COORDS[node.position] ?? POSITION_COORDS.center;
+        const rawLabel = node.label ?? '';
+        const label = compact && rawLabel.length > 3
+          ? rawLabel.slice(0, 3).toUpperCase()
+          : rawLabel;
 
         return (
           <g key={node.id}>
@@ -179,11 +182,9 @@ export function WidgetFlowDiagram({
                     {node.icon}
                   </span>
                 )}
-                <AnimatedNumber
-                  value={node.value}
-                  decimals={1}
-                  className="font-semibold text-[var(--text-primary)]"
-                />
+                <span className="font-semibold text-[var(--text-primary)]">
+                  {node.formattedValue ?? '—'}
+                </span>
               </div>
             </foreignObject>
 

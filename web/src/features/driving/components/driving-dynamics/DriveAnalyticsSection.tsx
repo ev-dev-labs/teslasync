@@ -46,6 +46,10 @@ interface PowerPoint {
   powerMin: number;
 }
 
+/** Stable empty reference so `filteredDrives ?? EMPTY_DRIVES` doesn't
+ *  invalidate the memoised derives when the prop is briefly undefined. */
+const EMPTY_DRIVES: Drive[] = [];
+
 interface DriveAnalyticsSectionProps {
   filteredDrives: Drive[];
   startDate: string;
@@ -71,45 +75,64 @@ export default function DriveAnalyticsSection({
 }: DriveAnalyticsSectionProps) {
   const { t } = useTranslation();
 
+  const drives = filteredDrives ?? EMPTY_DRIVES;
+
   const speedDistribution = useMemo<SpeedBucket[]>(() => {
     const buckets = SPEED_BUCKETS_RANGES.map((b) => ({
       range: `${b.label} ${speedUnit}`,
       count: 0,
     }));
-    for (const d of filteredDrives) {
-      const spd = d.avgSpeedMps != null ? toSpeedDisplay(d.avgSpeedMps) : null;
-      if (spd == null) continue;
+    for (const d of drives) {
+      if (d.avgSpeedMps == null) continue;
+      const spd = toSpeedDisplay(d.avgSpeedMps);
+      // `spd` and the bucket bounds are BOTH in display units: the
+      // SPEED_BUCKETS_RANGES numbers (0/30/60/90/120) are the same figures
+      // the axis label prints ("30–60 mph"), so compare directly. Running
+      // the bounds back through toSpeedDisplay bucketed drives in raw m/s
+      // while labelling them mph/km/h — a 100 mph drive landed in "30–60".
       for (let i = 0; i < SPEED_BUCKETS_RANGES.length; i++) {
         const r = SPEED_BUCKETS_RANGES[i];
-        const hi = r.max === Infinity ? Infinity : toSpeedDisplay(r.max);
-        const lo = toSpeedDisplay(r.min);
-        if (spd >= lo && spd < hi) {
+        if (spd >= r.min && spd < r.max) {
           buckets[i].count += 1;
           break;
         }
       }
     }
     return buckets;
-  }, [filteredDrives, toSpeedDisplay, speedUnit]);
+  }, [drives, toSpeedDisplay, speedUnit]);
 
   const accelPatterns = useMemo<AccelPoint[]>(() =>
-    filteredDrives
+    drives
       .filter((d) => d.avgPowerW != null)
       .map((d) => ({
-        distance: Math.round(toDistanceDisplay(d.distanceM)),
+        distance: Math.round(toDistanceDisplay(d.distanceM ?? 0)),
         powerMax: (d.avgPowerW as number) / 1000,
       })),
-  [filteredDrives, toDistanceDisplay]);
+  [drives, toDistanceDisplay]);
+
+  // Average peak-power reference line for the scatter. Memoised so the
+  // reduce doesn't re-run on every render and the ReferenceLine prop stays
+  // referentially stable for Recharts.
+  const accelAvgPower = useMemo<number | null>(() => {
+    if (accelPatterns.length === 0) return null;
+    return accelPatterns.reduce((sum, p) => sum + p.powerMax, 0) / accelPatterns.length;
+  }, [accelPatterns]);
 
   const powerProfile = useMemo<PowerPoint[]>(() => {
-    const recent = filteredDrives.slice(-20);
+    const recent = drives.slice(-20);
     return recent.map((d, i) => ({
       index: i + 1,
       label: formatDateShort(d.startTs),
       powerMax: (d.avgPowerW ?? 0) / 1000,
       powerMin: 0,
     }));
-  }, [filteredDrives]);
+  }, [drives]);
+
+  // Empty guards — every panel shows a "No data available" placeholder
+  // instead of an axis-only blank chart when its series has no points.
+  const speedEmpty = speedDistribution.every((b) => b.count === 0);
+  const accelEmpty = accelPatterns.length === 0;
+  const powerEmpty = powerProfile.length === 0;
 
   return (
     <>
@@ -142,6 +165,7 @@ export default function DriveAnalyticsSection({
               { key: 'count', label: t('dynamics.col.drives', 'Drives') },
             ]}
             height={300}
+            empty={speedEmpty}
             exportable
             exportFilename="speed-distribution"
           >
@@ -165,6 +189,7 @@ export default function DriveAnalyticsSection({
             subtitle={t('dynamics.accelPatternsDesc', 'Peak power vs trip distance')}
             ariaLabel={t('dynamics.accelPatterns.aria', 'Per-drive scatter chart of peak power versus trip distance')}
             height={300}
+            empty={accelEmpty}
             exportable
             exportFilename="acceleration-patterns"
           >
@@ -175,9 +200,9 @@ export default function DriveAnalyticsSection({
                 <YAxis dataKey="powerMax" type="number" name={t('dynamics.peakPower', 'Peak Power')} unit=" kW" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Scatter data={accelPatterns} fill="#a855f7" name={t('dynamics.drives', 'Drives')} />
-                {accelPatterns.length > 0 && (
+                {accelAvgPower != null && (
                   <ReferenceLine
-                    y={accelPatterns.reduce((sum, p) => sum + p.powerMax, 0) / accelPatterns.length}
+                    y={accelAvgPower}
                     stroke="#eab308"
                     strokeDasharray="4 4"
                     label={{ value: t('dynamics.avg', 'Avg'), fill: '#eab308', fontSize: 11 }}
@@ -206,6 +231,7 @@ export default function DriveAnalyticsSection({
             { key: 'powerMin', label: t('dynamics.col.regenKw', 'Regen kW') },
           ]}
           height={320}
+          empty={powerEmpty}
           exportable
           exportFilename="power-profile"
         >

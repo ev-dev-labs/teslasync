@@ -8,13 +8,6 @@ import type { WidgetProps } from './types';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 
-const SEVERITY_LABELS: Record<Severity, string> = {
-  info: 'Info',
-  warn: 'Warning',
-  critical: 'Critical',
-  success: 'Success',
-};
-
 const SEVERITY_HEX: Record<Severity, string> = {
   info: '#0ea5e9',
   warn: '#f59e0b',
@@ -36,20 +29,32 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
 
+  // User-visible severity labels must go through i18n (module scope can't call
+  // `t`). Memoised so the map identity only changes when the language does.
+  const severityLabels = useMemo<Record<Severity, string>>(() => ({
+    info: t('widget.severity.info', 'Info'),
+    warn: t('widget.severity.warn', 'Warning'),
+    critical: t('widget.severity.critical', 'Critical'),
+    success: t('widget.severity.success', 'Success'),
+  }), [t]);
+
   const items: EventFeedItem[] = useMemo(() =>
     (alerts ?? []).map(a => {
       const sev = normalizeSeverity(a.severity);
+      const label = severityLabels[sev];
       return {
         id: a.id,
         icon: SEVERITY_ICONS[sev],
         title: a.title ?? '—',
-        subtitle: isWide ? a.message : SEVERITY_LABELS[sev],
+        // Wide widgets show the alert message; fall back to the severity label
+        // so a row with an empty/degraded message is never left contextless.
+        subtitle: isWide ? (a.message || label) : label,
         timestamp: a.created_at,
         color: SEVERITY_HEX[sev],
         href: getAlertDrillthroughHref(a),
       };
     }),
-    [alerts, isWide],
+    [alerts, isWide, severityLabels],
   );
 
   return (

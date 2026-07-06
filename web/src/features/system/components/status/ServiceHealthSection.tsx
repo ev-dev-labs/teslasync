@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Satellite, Radio, Zap, TrendingUp } from 'lucide-react';
@@ -24,8 +25,8 @@ export function ServiceHealthSection() {
 
   type VehicleRow = (typeof vehicles)[number];
 
-  const vehicleColumns: Column<VehicleRow>[] = [
-    { key: 'vin', header: t('VIN'), render: (row) => <span className="font-mono text-xs">{row.vin}</span> },
+  const vehicleColumns = useMemo<Column<VehicleRow>[]>(() => [
+    { key: 'vin', header: t('VIN'), render: (row) => <span className="font-mono text-xs">{row.vin ?? '—'}</span> },
     {
       key: 'status', header: t('Status'),
       render: (row) => <Badge variant={row.is_streaming ? 'success' : 'neutral'} size="sm" dot>{row.is_streaming ? t('Streaming') : t('Idle')}</Badge>,
@@ -34,7 +35,7 @@ export function ServiceHealthSection() {
     { key: 'signals_per_second', header: t('Signals/s'), render: (row) => fmtNumber(row.signals_per_second, 1) },
     { key: 'latency_ms', header: t('Latency'), render: (row) => `${fmtNumber(row.latency_ms, 0)} ms` },
     { key: 'last_received', header: t('Last Received'), render: (row) => formatDateTime(row.last_received) },
-  ];
+  ], [t]);
 
   return (
     <AccordionSection
@@ -54,14 +55,14 @@ export function ServiceHealthSection() {
     >
       {isLoading ? (
         <Skeleton className="h-48" />
-      ) : error ? (
+      ) : error && !data ? (
         <QueryError error={error as Error} onRetry={() => refetch()} />
       ) : !data ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No telemetry data available')} />
       ) : (
         <div className="space-y-4">
           <Grid cols={{ default: 2, md: 4 }} gap={3}>
-            <MetricCard label={t('Mode')} value={data.mode} icon={<Radio className="h-4 w-4" />} color="cyan" />
+            <MetricCard label={t('Mode')} value={data.mode ?? '—'} icon={<Radio className="h-4 w-4" />} color="cyan" />
             <MetricCard label={t('Vehicles Connected')} value={activeCount} icon={<Satellite className="h-4 w-4" />} color="green" />
             <MetricCard label={t('Total Signals')} value={fmtInt(data.aggregate_stats?.total_signals_received ?? 0)} icon={<Zap className="h-4 w-4" />} color="purple" />
             <MetricCard label={t('Avg Signals/s')} value={data.aggregate_stats?.avg_signals_per_second ?? '0'} icon={<TrendingUp className="h-4 w-4" />} color="cyan" />

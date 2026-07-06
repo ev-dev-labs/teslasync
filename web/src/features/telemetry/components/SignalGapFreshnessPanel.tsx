@@ -32,6 +32,7 @@ export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFresh
   const { t } = useTranslation();
   const { query, buckets, freshnessPct, topStale } = analysis;
   const receiving = buckets.active + buckets.aging;
+  const neverCount = buckets.never;
 
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -77,12 +78,28 @@ export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFresh
           <div className="space-y-2">
             <Caption>{t('signalGap.topStaleTitle', 'Top stale signals')}</Caption>
             {topStale.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-                <Text variant="bodySm">
-                  {t('signalGap.allFresh', 'All signals are arriving on time.')}
-                </Text>
-              </div>
+              neverCount > 0 ? (
+                // A signal with no timestamp has *never* reported, so it is
+                // never a "stale offender" (it has no staleness to rank) and
+                // is excluded from `topStale`. Guard against the freshness
+                // gauge reading < 100% while this banner would otherwise
+                // falsely reassure that everything is arriving on time.
+                <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                  <Text variant="bodySm">
+                    {t('signalGap.neverReported', '{{never}} signals have never reported.', {
+                      never: neverCount,
+                    })}
+                  </Text>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                  <Text variant="bodySm">
+                    {t('signalGap.allFresh', 'All signals are arriving on time.')}
+                  </Text>
+                </div>
+              )
             ) : (
               <ul className="space-y-1.5">
                 {topStale.map((row) => (

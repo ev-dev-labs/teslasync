@@ -14,6 +14,7 @@ import { Clock, AlertTriangle } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { PanelTitle } from '@/components/ui';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import {
@@ -45,34 +46,39 @@ export default function AuditLogPage() {
     searchFields,
   );
 
-  const columns: Column<AuditLogEntry>[] = [
-    {
-      key: 'time',
-      header: t('Time'),
-      render: (log) => (
-        <span className="text-xs font-mono whitespace-nowrap text-[var(--text-muted)]">
-          {formatDateTime(log.createdAt)}
-        </span>
-      ),
-    },
-    {
-      key: 'action',
-      header: t('Action'),
-      render: (log) => <span className="text-[var(--text-primary)]">{log.action}</span>,
-    },
-    {
-      key: 'resource',
-      header: t('Resource'),
-      render: (log) => <span className="font-mono text-cyan-300">{log.resource}</span>,
-    },
-    {
-      key: 'details',
-      header: t('Details'),
-      render: (log) => (
-        <span className="text-xs truncate max-w-xs text-[var(--text-muted)]">{log.details}</span>
-      ),
-    },
-  ];
+  const columns: Column<AuditLogEntry>[] = useMemo(
+    () => [
+      {
+        key: 'time',
+        header: t('Time'),
+        render: (log) => (
+          <span className="text-xs font-mono whitespace-nowrap text-[var(--text-muted)]">
+            {formatDateTime(log.createdAt)}
+          </span>
+        ),
+      },
+      {
+        key: 'action',
+        header: t('Action'),
+        render: (log) => <span className="text-[var(--text-primary)]">{log.action ?? '—'}</span>,
+      },
+      {
+        key: 'resource',
+        header: t('Resource'),
+        render: (log) => <span className="font-mono text-cyan-300">{log.resource ?? '—'}</span>,
+      },
+      {
+        key: 'details',
+        header: t('Details'),
+        render: (log) => (
+          <span className="text-xs truncate max-w-xs text-[var(--text-muted)]">
+            {log.details ?? '—'}
+          </span>
+        ),
+      },
+    ],
+    [t],
+  );
 
   return (
     <PageContainer
@@ -82,10 +88,10 @@ export default function AuditLogPage() {
     >
       <FadeIn>
         <GlassPanel className="p-6">
-          <span className="text-base font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-neon-cyan" />
+          <PanelTitle className="mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-neon-cyan" aria-hidden="true" />
             {t('Recent Activity')}
-          </span>
+          </PanelTitle>
 
           {isLoading ? (
             <div className="space-y-2 mt-4">
@@ -94,9 +100,11 @@ export default function AuditLogPage() {
               ))}
             </div>
           ) : error ? (
-            <span className="text-sm text-rose-300 flex items-center gap-2 mt-4">
-              <AlertTriangle className="h-4 w-4" />{' '}
-              {t('Failed to load audit logs')}: {(error as Error).message}
+            <span role="alert" className="text-sm text-rose-300 flex items-center gap-2 mt-4">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />{' '}
+              {t('Failed to load audit logs')}:{' '}
+              {(error instanceof Error && error.message) ||
+                t('audit.loadError.unknown', 'Unknown error')}
             </span>
           ) : (auditLogs as AuditLogEntry[])?.length ? (
             <div className="mt-4">

@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -17,10 +19,37 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// oauthExchangeTimeout bounds each outbound Tesla OAuth token exchange
+// (authorization-code grant + refresh) together with the subsequent
+// token persistence, so a hung upstream can never wedge the request
+// goroutine indefinitely. The tesla-auth HTTP client enforces its own
+// 30s budget; mirroring it at the handler boundary also covers the DB
+// write and keeps the two in lock-step.
+const oauthExchangeTimeout = 30 * time.Second
+
+// tokenStore is the persistence port for the single stored Tesla OAuth
+// token. *dbauth.TokenRepo is the production implementation; tests
+// supply an in-memory fake so no database is required.
+type tokenStore interface {
+	Upsert(ctx context.Context, t *authmodel.Token) error
+	Get(ctx context.Context) (*authmodel.Token, error)
+	Delete(ctx context.Context) error
+}
+
+// teslaAuthClient is the Tesla OAuth port used by the handler.
+// *tesla.Client is the production implementation; tests supply a fake
+// that performs no network I/O.
+type teslaAuthClient interface {
+	GetAuthURL(state string) string
+	ExchangeCode(ctx context.Context, code string) (*tesla.TokenResponse, error)
+	RefreshTokens(ctx context.Context) (*tesla.TokenResponse, error)
+	SetTokens(access, refresh string, expiresAt time.Time)
+}
+
 // Handler handles OAuth flow with Tesla.
 type Handler struct {
-	tokenRepo   *dbauth.TokenRepo
-	teslaClient *tesla.Client
+	tokenRepo   tokenStore
+	teslaClient teslaAuthClient
 }
 
 func NewHandler(db *database.DB, tc *tesla.Client, enc ...*crypto.Encryptor) *Handler {
@@ -55,10 +84,19 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenResp, err := h.teslaClient.ExchangeCode(r.Context(), code)
+	ctx, cancel := context.WithTimeout(r.Context(), oauthExchangeTimeout)
+	defer cancel()
+
+	tokenResp, err := h.teslaClient.ExchangeCode(ctx, code)
 	if err != nil {
 		metrics.AuthAttempts.WithLabelValues("failure").Inc()
 		log.Error().Err(err).Msg("failed to exchange code")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to exchange authorization code")
+		return
+	}
+	if tokenResp == nil {
+		metrics.AuthAttempts.WithLabelValues("failure").Inc()
+		log.Error().Msg("tesla returned a nil token response on code exchange")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to exchange authorization code")
 		return
 	}
@@ -70,7 +108,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresAt:    expiresAt,
 	}
-	if err := h.tokenRepo.Upsert(r.Context(), token); err != nil {
+	if err := h.tokenRepo.Upsert(ctx, token); err != nil {
 		log.Error().Err(err).Msg("failed to save token")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to save token")
 		return
@@ -100,10 +138,19 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenResp, err := h.teslaClient.RefreshTokens(r.Context())
+	ctx, cancel := context.WithTimeout(r.Context(), oauthExchangeTimeout)
+	defer cancel()
+
+	tokenResp, err := h.teslaClient.RefreshTokens(ctx)
 	if err != nil {
 		metrics.TokenRefreshes.WithLabelValues("failure").Inc()
 		log.Error().Err(err).Msg("failed to refresh token")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to refresh token")
+		return
+	}
+	if tokenResp == nil {
+		metrics.TokenRefreshes.WithLabelValues("failure").Inc()
+		log.Error().Msg("tesla returned a nil token response on refresh")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to refresh token")
 		return
 	}
@@ -115,7 +162,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresAt:    expiresAt,
 	}
-	if err := h.tokenRepo.Upsert(r.Context(), token); err != nil {
+	if err := h.tokenRepo.Upsert(ctx, token); err != nil {
 		log.Error().Err(err).Msg("failed to save refreshed token")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to save token")
 		return
@@ -148,7 +195,7 @@ func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
 func generateState() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		return "", err
+		return "", fmt.Errorf("generate oauth state: %w", err)
 	}
 	return hex.EncodeToString(b), nil
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Send, AlertTriangle, Radio, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge, DataTable, type Column } from '@/components/ui';
@@ -21,17 +21,23 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatDateTime } = useDateFormat();
 
-  function formatLogTime(isoStr: string): string {
-    const d = new Date(isoStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMin = Math.floor(diffMs / 60_000);
-    if (diffMin < 1) return 'Just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHrs = Math.floor(diffMin / 60);
-    if (diffHrs < 24) return `${diffHrs}h ago`;
-    return formatDateTime(isoStr);
-  }
+  const formatLogTime = useCallback(
+    (isoStr: string): string => {
+      const ms = new Date(isoStr).getTime();
+      // Invalid/absent timestamp: defer to the locale-aware formatter, which
+      // renders an em-dash rather than "NaNm ago".
+      if (Number.isNaN(ms)) return formatDateTime(isoStr);
+      const diffMin = Math.floor((Date.now() - ms) / 60_000);
+      if (diffMin < 1) return t('widget.notificationStats.justNow', 'Just now');
+      if (diffMin < 60)
+        return t('widget.notificationStats.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
+      const diffHrs = Math.floor(diffMin / 60);
+      if (diffHrs < 24)
+        return t('widget.notificationStats.hoursAgo', '{{hours}}h ago', { hours: diffHrs });
+      return formatDateTime(isoStr);
+    },
+    [formatDateTime, t],
+  );
 
   const {
     data: stats,
@@ -103,8 +109,8 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
 
   const logColumns = useMemo<Column<NotificationLog>[]>(() => [
     {
-      key: 'channel',
-      header: t('widget.notificationStats.channel', 'Channel'),
+      key: 'title',
+      header: t('widget.notificationStats.notificationTitle', 'Title'),
       className: 'max-w-[120px]',
       render: (log) => (
         <span className="block truncate text-[var(--text-secondary)]">
@@ -113,8 +119,8 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       ),
     },
     {
-      key: 'type',
-      header: t('widget.notificationStats.type', 'Type'),
+      key: 'message',
+      header: t('widget.notificationStats.notificationMessage', 'Message'),
       className: 'max-w-[100px]',
       render: (log) => (
         <span className="block truncate text-[var(--text-secondary)]">
@@ -144,12 +150,12 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
         </span>
       ),
     },
-  ], [t]);
+  ], [t, formatLogTime]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     statsRefetch();
     logsRefetch();
-  };
+  }, [statsRefetch, logsRefetch]);
 
   // Compact layout: single big number
   if (isCompact) {

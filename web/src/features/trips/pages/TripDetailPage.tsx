@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
@@ -14,22 +15,34 @@ export default function TripDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
 
-  const tripQuery = useTrip(id!);
+  const tripQuery = useTrip(id ?? '');
   const { data: trip, isLoading, isError, error, refetch } = tripQuery;
-  const onRetry = () => { void refetch(); };
+  const onRetry = useCallback(() => { void refetch(); }, [refetch]);
 
-  const tripLabel = trip
-    ? (trip.name ?? t('trips.detail.tripNumber', 'Trip #{{id}}', { id: trip.id }))
-    : t('trips.detail.tripNumber', 'Trip #{{id}}', { id: id ?? '' });
+  const tripLabel = useMemo(
+    () =>
+      trip
+        ? (trip.name ?? t('trips.detail.tripNumber', 'Trip #{{id}}', { id: trip.id }))
+        : t('trips.detail.tripNumber', 'Trip #{{id}}', { id: id ?? '' }),
+    [trip, id, t],
+  );
 
-  usePageTitle(trip?.name ?? t('trips.detail.title', 'Trip Detail'));
+  // Keep the browser tab title consistent with the on-page subtitle: an
+  // unnamed but loaded trip identifies itself as "Trip #<id>" instead of the
+  // generic page title, so multiple open trip tabs stay distinguishable.
+  usePageTitle(trip ? tripLabel : t('trips.detail.title', 'Trip Detail'));
+
+  const breadcrumbLabels = useMemo(
+    () => ({ '/trips/:id': tripLabel }),
+    [tripLabel],
+  );
 
   return (
     <PageContainer
       title={t('trips.detail.title', 'Trip Detail')}
       subtitle={trip ? tripLabel : undefined}
       query={tripQuery}
-      breadcrumbLabels={{ '/trips/:id': tripLabel }}
+      breadcrumbLabels={breadcrumbLabels}
     >
       <div className="space-y-6">
         <FadeIn>

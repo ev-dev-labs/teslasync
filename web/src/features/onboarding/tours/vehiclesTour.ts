@@ -1,6 +1,20 @@
 import type { TourDefinition } from '@/lib/tourRegistry'
 import type { TourStep } from '@/hooks/useTour'
 
+/**
+ * Vehicles & sharing tour.
+ *
+ * Walks the fleet list, the vehicle deep-dive, its sectioned tabs, and
+ * shared access. The first step forces navigation to `/vehicles` so the
+ * walkthrough always starts on the list regardless of where the launcher
+ * was opened from. Launcher-only (no auto-start) per registry policy.
+ */
+
+// Router-agnostic SPA navigation: this module has no access to React
+// Router, so we push history and emit a synthetic `popstate` that the
+// app's history listener treats like a real back/forward navigation.
+// The pathname guard keeps re-entry (re-running a step) from stacking
+// duplicate history entries.
 function navigate(href: string) {
   if (typeof window === 'undefined') return
   if (window.location.pathname === href) return

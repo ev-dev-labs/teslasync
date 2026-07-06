@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Flag, Navigation2 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
@@ -27,7 +27,11 @@ import { convertSpeedFromSI } from '@/lib/unitConversion';
  * anchor coord at zoom 15 so the user sees recognisable streets. */
 function FitBounds({ trail, fallbackCenter }: { trail: LatLngExpression[]; fallbackCenter?: [number, number] }) {
   const map = useMap();
-  useMemo(() => {
+  // Fitting the map viewport is a side effect on the leaflet instance, so it
+  // belongs in an effect — never `useMemo`, whose result React is free to
+  // discard or double-invoke under StrictMode / concurrent rendering, which
+  // would either skip the fit or fit a render that never commits.
+  useEffect(() => {
     if (trail.length > 1) {
       const bounds = latLngBounds(
         trail.map((p) => (Array.isArray(p) ? [p[0] as number, p[1] as number] as [number, number] : [0, 0] as [number, number])),
@@ -45,7 +49,7 @@ function FitBounds({ trail, fallbackCenter }: { trail: LatLngExpression[]; fallb
     } else if (fallbackCenter) {
       map.setView(fallbackCenter, 15);
     }
-  }, [trail.length, fallbackCenter?.[0], fallbackCenter?.[1]]);
+  }, [map, trail.length, fallbackCenter?.[0], fallbackCenter?.[1]]);
   return null;
 }
 
@@ -65,6 +69,12 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
 
   const speedUnit = unitPrefs.speed;
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+
+  // Defensive null-safety: these are typed as required, but the parent derives
+  // them from a query hook, so a partial/mid-fetch shape must never crash the
+  // panel on `.length` / `.map`.
+  const safeTrail = trail ?? [];
+  const safeSegments = speedSegments ?? [];
 
   /* Stationary-GPS detection: positions exist but every recorded coord is
    * within ~10 m of the first. Render a single anchor marker + an overlay
@@ -92,15 +102,15 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
             <MapPin className="h-4 w-4 text-cyan-400" /> {t('driveDetail.route', 'Route')}
           </h3>
         </div>
-        {trail.length > 0 ? (
+        {safeTrail.length > 0 ? (
           <>
-            <div className="h-64 sm:h-80 lg:h-96 relative">
+            <div className="h-64 sm:h-80 lg:h-96 relative" role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')}>
               <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
-              <MapContainer center={centerPos} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
+              <MapContainer center={centerPos} zoom={safeTrail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
                 <MapTileLayer style={mapStyle} />
                 <MapInvalidator />
-                <FitBounds trail={hasRoute ? trail : []} fallbackCenter={anchorPoint} />
-                {hasRoute && speedSegments.map((seg, i) => (
+                <FitBounds trail={hasRoute ? safeTrail : []} fallbackCenter={anchorPoint} />
+                {hasRoute && safeSegments.map((seg, i) => (
                   <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
                 ))}
                 {hasRoute && startPos && (
@@ -137,7 +147,7 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
             </div>
             <div className="flex items-center justify-between px-4 py-3 text-xs">
               <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startTs)}</span>
-              {hasRoute && trail.length > 1 && (
+              {hasRoute && safeTrail.length > 1 && (
                 <div className="flex items-center gap-3 text-[var(--text-muted)]">
                   <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
                   <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>

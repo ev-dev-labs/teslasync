@@ -23,7 +23,7 @@ export function Percentage({ value, ratio, precision, className }: PercentagePro
   }
 
   return (
-    <span className={className} title={`${v.toFixed(2)}%`}>
+    <span className={className} title={`${v.toFixed(3)}%`}>
       {fmtNumber(v, precision)}%
     </span>
   );

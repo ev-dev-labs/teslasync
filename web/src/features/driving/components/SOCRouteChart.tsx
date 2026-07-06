@@ -15,6 +15,8 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { TripSOCPoint, TripChargeStop } from '@/types/driving';
 
 interface SOCRouteChartProps {
@@ -23,42 +25,61 @@ interface SOCRouteChartProps {
   minArrivalSOC: number;
 }
 
+/** Round to one decimal place for stable, legible chart/axis values. */
+const roundTo1 = (n: number) => Math.round(n * 10) / 10;
+
 export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRouteChartProps) {
   const { t } = useTranslation();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
 
-  const chartData = useMemo(() =>
-    (socCurve ?? []).map((pt) => ({
-      distance: Math.round(pt.distance_m * 10) / 10,
-      soc: Math.round(pt.soc * 10) / 10,
-    })),
-    [socCurve],
+  // The reference line reads a required number; guard defensively against a
+  // JS caller passing null/undefined/NaN so it never plots a phantom line.
+  const minSOC = Number.isFinite(minArrivalSOC) ? minArrivalSOC : 0;
+
+  // soc_curve distances are SI meters — convert to the user's display unit at
+  // the render boundary so the X axis, its label, and the reference lines all
+  // share one scale (previously the axis plotted raw meters under a "km" label).
+  const chartData = useMemo(
+    () =>
+      (socCurve ?? []).map((pt) => ({
+        distance: roundTo1(convertDistanceFromSI(pt?.distance_m ?? 0, distanceUnit)),
+        soc: roundTo1(pt?.soc ?? 0),
+      })),
+    [socCurve, distanceUnit],
   );
 
-  // Find charge stop distances for reference lines
+  // Match each charge stop to the first onward soc_curve point near its
+  // charge_from_soc; record the display-unit distance so the vertical marker
+  // lands on the same X scale as the plotted area.
   const stopDistances = useMemo(() => {
     const distances: number[] = [];
-    let cumDist = 0;
+    let cumDistM = 0;
     for (const stop of chargeStops ?? []) {
-      // Charge stops align with leg boundaries in soc_curve
       const matchPt = (socCurve ?? []).find(
-        (pt) => pt.distance_m > cumDist && Math.abs(pt.soc - stop.charge_from_soc) < 5,
+        (pt) =>
+          (pt?.distance_m ?? 0) > cumDistM &&
+          Math.abs((pt?.soc ?? 0) - (stop?.charge_from_soc ?? 0)) < 5,
       );
       if (matchPt) {
-        distances.push(Math.round(matchPt.distance_m));
-        cumDist = matchPt.distance_m;
+        const m = matchPt.distance_m ?? 0;
+        distances.push(roundTo1(convertDistanceFromSI(m, distanceUnit)));
+        cumDistM = m;
       }
     }
     return distances;
-  }, [socCurve, chargeStops]);
+  }, [socCurve, chargeStops, distanceUnit]);
+
+  const title = t('tripPlanner.socChart.title', 'Battery Along Route');
+  const ariaLabel = t(
+    'tripPlanner.socChart.aria',
+    'Planned route battery state-of-charge area chart',
+  );
 
   if (chartData.length === 0) {
     // chart-a11y:no-table empty-state branch wraps a placeholder, no series available to tabulate
     return (
-      <ChartContainer
-        title={t('tripPlanner.socChart.title', 'Battery Along Route')}
-        ariaLabel={t('tripPlanner.socChart.aria', 'Planned route battery state-of-charge area chart')}
-        height={300}
-      >
+      <ChartContainer title={title} ariaLabel={ariaLabel} height={300}>
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tripPlanner.socChart.empty', 'Plan a trip to see the SOC curve')} />
       </ChartContainer>
     );
@@ -66,14 +87,16 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
 
   return (
     <ChartContainer
-      title={t('tripPlanner.socChart.title', 'Battery Along Route')}
-      ariaLabel={t('tripPlanner.socChart.aria', 'Planned route battery state-of-charge area chart')}
-      data={chartData.map((p) => ({
-        distance: p.distance,
-        soc: p.soc,
-      }))}
+      title={title}
+      ariaLabel={ariaLabel}
+      data={chartData}
       dataColumns={[
-        { key: 'distance', label: t('tripPlanner.socChart.col.distance', 'Distance') },
+        {
+          key: 'distance',
+          label: t('tripPlanner.socChart.col.distance', 'Distance ({{unit}})', {
+            unit: distanceUnit,
+          }),
+        },
         { key: 'soc', label: t('tripPlanner.socChart.col.soc', 'SOC %') },
       ]}
       height={300}
@@ -91,17 +114,17 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
           <XAxis
             dataKey="distance"
             {...axisTick}
-            label={{ value: 'km', position: 'insideBottomRight', offset: -5, fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+            label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
           />
           <YAxis
             domain={[0, 100]}
             {...axisTick}
-            label={{ value: 'SOC %', angle: -90, position: 'insideLeft', fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+            label={{ value: t('tripPlanner.socChart.socAxis', 'SOC %'), angle: -90, position: 'insideLeft', fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
           />
           <Tooltip
             contentStyle={{ background: 'rgba(15,15,30,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
-            labelFormatter={(v) => `${v} km`}
-            formatter={(v: number) => [`${v}%`, 'SOC']}
+            labelFormatter={(v) => `${v} ${distanceUnit}`}
+            formatter={(v: number) => [`${v}%`, t('tripPlanner.socChart.socSeries', 'SOC')]}
           />
           <Area
             {...AREA_DEFAULTS}
@@ -111,10 +134,10 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
           />
           {/* Min arrival SOC reference line */}
           <ReferenceLine
-            y={minArrivalSOC}
+            y={minSOC}
             stroke="#ef4444"
             strokeDasharray="6 4"
-            label={{ value: `Min ${minArrivalSOC}%`, fill: '#ef4444', fontSize: 11, position: 'right' }}
+            label={{ value: t('tripPlanner.socChart.minArrival', 'Min {{soc}}%', { soc: minSOC }), fill: '#ef4444', fontSize: 11, position: 'right' }}
           />
           {/* Charge stop vertical lines */}
           {stopDistances.map((dist, i) => (
@@ -123,7 +146,7 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
               x={dist}
               stroke="#3b82f6"
               strokeDasharray="4 4"
-              label={{ value: `⚡ Stop ${i + 1}`, fill: '#3b82f6', fontSize: 10, position: 'top' }}
+              label={{ value: t('tripPlanner.socChart.stopLabel', '⚡ Stop {{n}}', { n: i + 1 }), fill: '#3b82f6', fontSize: 10, position: 'top' }}
             />
           ))}
         </AreaChart>

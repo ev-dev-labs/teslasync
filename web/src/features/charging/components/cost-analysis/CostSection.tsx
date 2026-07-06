@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { GlassPanel, PanelTitle, type GlassPanelProps } from '@/components/ui';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
@@ -6,7 +7,7 @@ import { cn } from '@/lib/cn';
 interface CostSectionProps {
   /** Localized panel heading (rendered as an h3 via PanelTitle). */
   title: string;
-  /** Decorative leading icon — callers pass it already `aria-hidden`. */
+  /** Decorative leading icon — wrapped `aria-hidden` so it never leaks into the heading's accessible name. */
   icon?: ReactNode;
   /** Optional trailing header slot (toggles, legends, secondary actions). */
   action?: ReactNode;
@@ -19,6 +20,7 @@ interface CostSectionProps {
   /** True when the query resolved but produced no rows. */
   isEmpty?: boolean;
   emptyIcon?: ReactNode;
+  /** Empty-state copy. Falls back to a localized "No data available" so an empty section is never a blank panel. */
   emptyMessage?: string;
   /** Height of the loading skeleton block. */
   skeletonHeight?: number;
@@ -49,11 +51,16 @@ export function CostSection({
   bodyClassName,
   children,
 }: CostSectionProps) {
+  const { t } = useTranslation();
   return (
     <GlassPanel glow={glow} className={cn('p-4 sm:p-5', className)}>
       <div className="mb-3 flex items-start justify-between gap-3">
         <PanelTitle className="flex items-center gap-2">
-          {icon}
+          {icon ? (
+            <span className="inline-flex" aria-hidden="true">
+              {icon}
+            </span>
+          ) : null}
           {title}
         </PanelTitle>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -67,7 +74,7 @@ export function CostSection({
         <EmptyState
           /* no-action: transient empty state — surfaces when no charging rows match the filters */
           icon={emptyIcon}
-          message={emptyMessage ?? ''}
+          message={emptyMessage ?? t('common.noData', 'No data available')}
         />
       ) : (
         <div className={bodyClassName}>{children}</div>

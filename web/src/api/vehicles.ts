@@ -28,21 +28,69 @@ export const getVehicles = () => request<Vehicle[]>('/vehicles')
 export const getVehicle = (id: number) => request<Vehicle>(`/vehicles/${id}`)
 /** Syncs the vehicle list from Tesla's API into the local database. */
 export const syncVehicles = () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', { method: 'POST' })
+/** Vehicle half of the cached `GET /vehicles/{id}/state` shape. Every field
+ *  optional so a snapshot that has not fully landed decodes without throwing. */
+interface RawStateVehicle {
+  id?: number
+  state?: string
+  is_locked?: boolean
+  software_version?: string
+}
+
+/** Position half of the cached `GET /vehicles/{id}/state` shape. */
+interface RawStatePosition {
+  latitude?: number
+  longitude?: number
+  speed?: number
+  power?: number
+  battery_level?: number
+  rated_range?: number
+  ideal_range?: number
+  odometer?: number
+  inside_temp?: number
+  outside_temp?: number
+  is_climate_on?: boolean
+}
+
+/** Wire shape of `GET /vehicles/{id}/state`: either a pre-assembled `state`
+ *  (identified by a `vehicle_id` key) or a `vehicle` + `position` pair. */
+interface RawStateResponse {
+  state?: VehicleState
+  live?: boolean
+  vehicle?: RawStateVehicle | null
+  position?: RawStatePosition | null
+  is_charging?: boolean
+  charger_power?: number
+  charge_rate?: number
+  time_to_full_charge?: number
+  is_locked?: boolean
+  sentry_mode?: boolean
+  software_version?: string
+}
+
 /** Fetches the live state (location, battery, climate, etc.) for a vehicle.
  *  The backend returns two formats:
  *  Live/telemetry: { state: VehicleState, live: true }
  *  Cached (no token): { vehicle: Vehicle, position: Position, live: false }
  *  This function normalises both into { state?: VehicleState; live: boolean }.
+ *
+ *  Null-safety: a 204 / JSON-null / non-object body resolves to
+ *  { state: undefined, live: false } instead of throwing on `res.state`. A
+ *  vehicle whose snapshot has not arrived yet must render an empty panel, not
+ *  crash the caller.
  */
 export const getVehicleState = async (id: number): Promise<{ state?: VehicleState; live: boolean }> => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const res = await request<any>(`/vehicles/${id}/state`)
+  const res = await request<RawStateResponse | null>(`/vehicles/${id}/state`)
+  if (res == null || typeof res !== 'object') {
+    return { state: undefined, live: false }
+  }
+  const live = res.live ?? false
   if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
-    return { state: res.state as VehicleState, live: res.live ?? false }
+    return { state: res.state, live }
   }
   const v = res.vehicle
   const p = res.position
-  if (!v && !p) return { state: res.state, live: res.live ?? false }
+  if (!v && !p) return { state: res.state, live }
   const state: VehicleState = {
     vehicle_id: v?.id ?? id,
     state: v?.state ?? 'offline',
@@ -65,7 +113,7 @@ export const getVehicleState = async (id: number): Promise<{ state?: VehicleStat
     sentry_mode: res.sentry_mode ?? false,
     software_version: res.software_version ?? v?.software_version ?? '',
   }
-  return { state, live: res.live ?? false }
+  return { state, live }
 }
 /** Fetches recent GPS positions for a vehicle. */
 export const getVehiclePositions = (id: number, limit = 100) => request<Position[]>(`/vehicles/${id}/positions?limit=${limit}`)

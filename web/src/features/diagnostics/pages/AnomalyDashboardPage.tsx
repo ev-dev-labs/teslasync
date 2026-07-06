@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Activity, AlertTriangle, Clock, HeartPulse, BarChart3, ShieldCheck,
@@ -33,6 +33,12 @@ export default function AnomalyDashboardPage() {
 
   const anomaliesQuery = useAnomalies(activeIdStr);
   const { data, isLoading, error, refetch } = anomaliesQuery;
+
+  /* Stable retry handler shared by all three error panels (frequency, health,
+     timeline) so we don't allocate three fresh closures on every render. */
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   /* Anomaly frequency by signal — top 10 offenders, for the bar chart. */
   const signalFrequency = useMemo(() => {
@@ -113,7 +119,10 @@ export default function AnomalyDashboardPage() {
 
       {/* ── 3. Overview bento — frequency chart (hero) + system health ─ */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section
+          aria-label={t('anomaly.overview', 'Anomaly overview')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
           {/* Frequency chart — spans two columns on wide screens. */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
@@ -123,7 +132,7 @@ export default function AnomalyDashboardPage() {
             {isLoading ? (
               <Skeleton height={300} />
             ) : error ? (
-              <QueryError error={error} onRetry={() => refetch()} />
+              <QueryError error={error} onRetry={handleRetry} />
             ) : signalFrequency.length === 0 ? (
               <EmptyState /* no-action: transient — appears until the detector has produced results */
                 icon={<BarChart3 className="h-8 w-8" />}
@@ -157,7 +166,7 @@ export default function AnomalyDashboardPage() {
             {isLoading ? (
               <Skeleton height={220} />
             ) : error ? (
-              <QueryError error={error} onRetry={() => refetch()} />
+              <QueryError error={error} onRetry={handleRetry} />
             ) : healthEntries.length === 0 ? (
               <EmptyState /* no-action: transient — health grid populates once telemetry is available */
                 icon={<HeartPulse className="h-8 w-8" />}
@@ -188,7 +197,7 @@ export default function AnomalyDashboardPage() {
               ))}
             </div>
           ) : error ? (
-            <QueryError error={error} onRetry={() => refetch()} />
+            <QueryError error={error} onRetry={handleRetry} />
           ) : anomalies.length === 0 ? (
             <EmptyState /* no-action: healthy state — no anomalies detected, nothing to recover */
               icon={<ShieldCheck className="h-8 w-8" />}

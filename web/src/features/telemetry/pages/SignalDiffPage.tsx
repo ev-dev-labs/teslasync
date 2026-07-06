@@ -42,7 +42,7 @@ import {
 } from '../components/SignalCompareControls';
 
 /** Coerce an arbitrary signal value to a finite number, or null when it isn't one. */
-function toNum(v: unknown): number | null {
+export function toNum(v: unknown): number | null {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   if (typeof v === 'string' && v.trim() !== '') {
     const n = Number(v);
@@ -53,7 +53,7 @@ function toNum(v: unknown): number | null {
 }
 
 /** Compact human span (e.g. "1h 5m", "45s") for the window-span KPI. */
-function formatSpan(totalSeconds: number): string {
+export function formatSpan(totalSeconds: number): string {
   const s = Math.round(totalSeconds);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
@@ -153,6 +153,14 @@ export default function SignalDiffPage() {
   }, [allRows, signalFilter, activeCategory]);
   const filterActive = signalFilter.trim().length > 0 || activeCategory != null;
   const initialLoading = isLoading && !diffResp;
+  // A failed diff must not read as "0 changed / 0 numeric / 0 categories" in the
+  // KPI band — that silently reports "nothing changed" for what is actually an
+  // error, which is dangerous on an incident-response surface. When the diff is
+  // untrustworthy (initial load or error) the diff-derived metrics show "—",
+  // mirroring the table + breakdown, which both switch to their error/loading
+  // UI. Pinned count and window span come from independent sources (the pinned
+  // query and the date inputs) so they stay visible regardless.
+  const metricsUnavailable = initialLoading || Boolean(error);
 
   // Derived KPI metrics (from the already-fetched rows — no extra hooks).
   const numericChanges = useMemo(
@@ -291,25 +299,25 @@ export default function SignalDiffPage() {
         >
           <MetricCard
             label={t('signalDiff.totalChanged', 'Changed signals')}
-            value={initialLoading ? '—' : allRows.length}
+            value={metricsUnavailable ? '—' : allRows.length}
             icon={<GitCompare className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
             label={t('signalDiff.visible', 'Visible after filter')}
-            value={initialLoading ? '—' : filteredRows.length}
+            value={metricsUnavailable ? '—' : filteredRows.length}
             icon={<Filter className="h-5 w-5" />}
             color="blue"
           />
           <MetricCard
             label={t('signalDiff.numericChanges', 'Numeric changes')}
-            value={initialLoading ? '—' : numericChanges}
+            value={metricsUnavailable ? '—' : numericChanges}
             icon={<Sigma className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
             label={t('signalDiff.categoriesAffected', 'Categories affected')}
-            value={initialLoading ? '—' : categoriesAffected}
+            value={metricsUnavailable ? '—' : categoriesAffected}
             icon={<Layers className="h-5 w-5" />}
             color="purple"
           />

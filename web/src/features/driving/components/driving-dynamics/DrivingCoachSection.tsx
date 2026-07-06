@@ -58,13 +58,16 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
     [t],
   );
 
-  const patterns = [
-    { label: t('dynamics.coach.hardAccel', 'Hard Acceleration'), value: coachData?.patterns.hard_accel_pct ?? 0, lo: 20, hi: 40 },
-    { label: t('dynamics.coach.hardBrake', 'Hard Braking'), value: coachData?.patterns.hard_brake_pct ?? 0, lo: 15, hi: 30 },
-    { label: t('dynamics.coach.highway', 'Highway Driving'), value: coachData?.patterns.highway_pct ?? 0, lo: 50, hi: 70 },
-    { label: t('dynamics.coach.shortTrips', 'Short Trips (<5 km)'), value: coachData?.patterns.short_trip_pct ?? 0, lo: 30, hi: 50 },
-    { label: t('dynamics.coach.coldStarts', 'Cold Starts'), value: coachData?.patterns.cold_start_pct ?? 0, lo: 15, hi: 30 },
-  ];
+  const patterns = useMemo(
+    () => [
+      { label: t('dynamics.coach.hardAccel', 'Hard Acceleration'), value: coachData?.patterns?.hard_accel_pct ?? 0, lo: 20, hi: 40 },
+      { label: t('dynamics.coach.hardBrake', 'Hard Braking'), value: coachData?.patterns?.hard_brake_pct ?? 0, lo: 15, hi: 30 },
+      { label: t('dynamics.coach.highway', 'Highway Driving'), value: coachData?.patterns?.highway_pct ?? 0, lo: 50, hi: 70 },
+      { label: t('dynamics.coach.shortTrips', 'Short Trips (<5 km)'), value: coachData?.patterns?.short_trip_pct ?? 0, lo: 30, hi: 50 },
+      { label: t('dynamics.coach.coldStarts', 'Cold Starts'), value: coachData?.patterns?.cold_start_pct ?? 0, lo: 15, hi: 30 },
+    ],
+    [coachData, t],
+  );
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -104,7 +107,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
               <>
                 <div className="flex h-4 rounded-full overflow-hidden mb-4">
                   {(['efficient', 'moderate', 'aggressive'] as const).map((style) => {
-                    const count = coachData.style_breakdown[style] ?? 0;
+                    const count = coachData.style_breakdown?.[style] ?? 0;
                     const pct = (count / coachData.total_drives_analyzed) * 100;
                     if (pct <= 0) return null;
                     return (
@@ -132,7 +135,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                         <Text as="span" color="secondary" className="capitalize">{t(`dynamics.coach.style.${key}`, key)}</Text>
                       </div>
                       <Text as="span" weight="bold" className={cn('tabular-nums', text)}>
-                        {coachData.style_breakdown[key] ?? 0}
+                        {coachData.style_breakdown?.[key] ?? 0}
                       </Text>
                     </div>
                   ))}

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -74,6 +74,16 @@ interface OverviewCard {
   sublabel?: string
 }
 
+/**
+ * Coalesce a unit string to an em-dash when it is null, undefined, or blank.
+ * The KPI band must never render an empty value cell — an absent/blank unit
+ * shows "—" exactly like the loading / no-settings placeholder instead of a
+ * visually empty StatCard.
+ */
+function orDash(value: string | null | undefined): string {
+  return value && value.trim() !== '' ? value : '—'
+}
+
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
@@ -114,57 +124,62 @@ export default function SettingsPage() {
     return () => window.clearTimeout(timer)
   }, [location.hash])
 
-  // ── Derived "preferences at a glance" values (null-safe, display only) ──
-  const languageCode = settings?.language ? settings.language.toUpperCase() : '—'
-  const languageName = settings?.language ? LANGUAGE_LABELS[settings.language] : undefined
-  const currencySymbol = settings?.currency_symbol ?? '$'
-  const rangeLabel = settings
-    ? settings.preferred_range === 'ideal'
-      ? t('app.ideal', 'Ideal')
-      : t('app.rated', 'Rated')
-    : undefined
+  // ── Derived "preferences at a glance" cards (null-safe, display only) ──
+  // Memoised so the seven KPI cards + their icon nodes are only rebuilt when
+  // the underlying settings, font prefs, or translator actually change — not on
+  // every unrelated re-render (edit-lease election ticks, hash-effect cleanups).
+  const overviewCards = useMemo<OverviewCard[]>(() => {
+    const languageCode = settings?.language ? settings.language.toUpperCase() : '—'
+    const languageName = settings?.language ? LANGUAGE_LABELS[settings.language] : undefined
+    const currencySymbol = settings?.currency_symbol ?? '$'
+    const rangeLabel = settings
+      ? settings.preferred_range === 'ideal'
+        ? t('app.ideal', 'Ideal')
+        : t('app.rated', 'Rated')
+      : undefined
 
-  const overviewCards: OverviewCard[] = [
-    {
-      icon: <Ruler className="h-5 w-5" aria-hidden="true" />,
-      label: t('overview.distance', 'Distance'),
-      value: settings?.unit_of_length ?? '—',
-      sublabel: rangeLabel,
-    },
-    {
-      icon: <Thermometer className="h-5 w-5" aria-hidden="true" />,
-      label: t('overview.temperature', 'Temperature'),
-      value: settings ? (settings.unit_of_temp === 'F' ? '°F' : '°C') : '—',
-    },
-    {
-      icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
-      label: t('overview.pressure', 'Pressure'),
-      value: settings?.unit_of_pressure ?? '—',
-    },
-    {
-      icon: <Languages className="h-5 w-5" aria-hidden="true" />,
-      label: t('overview.language', 'Language'),
-      value: languageCode,
-      sublabel: languageName,
-    },
-    {
-      icon: <CircleDollarSign className="h-5 w-5" aria-hidden="true" />,
-      label: t('overview.currency', 'Currency'),
-      value: settings ? currencySymbol : '—',
-    },
-    {
-      icon: <Zap className="h-5 w-5" aria-hidden="true" />,
-      label: t('overview.energyCost', 'Energy cost'),
-      value: settings ? `${currencySymbol}${(settings.base_cost_per_kwh ?? 0).toFixed(2)}` : '—',
-      sublabel: t('overview.perKwh', 'per kWh'),
-    },
-    {
-      icon: <Type className="h-5 w-5" aria-hidden="true" />,
-      label: t('overview.typography', 'Typography'),
-      value: FONT_FAMILY_LABELS[fontPrefs.sans] ?? fontPrefs.sans,
-      sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
-    },
-  ]
+    return [
+      {
+        icon: <Ruler className="h-5 w-5" aria-hidden="true" />,
+        label: t('overview.distance', 'Distance'),
+        value: orDash(settings?.unit_of_length),
+        sublabel: rangeLabel,
+      },
+      {
+        icon: <Thermometer className="h-5 w-5" aria-hidden="true" />,
+        label: t('overview.temperature', 'Temperature'),
+        value: settings ? (settings.unit_of_temp === 'F' ? '°F' : '°C') : '—',
+      },
+      {
+        icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
+        label: t('overview.pressure', 'Pressure'),
+        value: orDash(settings?.unit_of_pressure),
+      },
+      {
+        icon: <Languages className="h-5 w-5" aria-hidden="true" />,
+        label: t('overview.language', 'Language'),
+        value: languageCode,
+        sublabel: languageName,
+      },
+      {
+        icon: <CircleDollarSign className="h-5 w-5" aria-hidden="true" />,
+        label: t('overview.currency', 'Currency'),
+        value: settings ? currencySymbol : '—',
+      },
+      {
+        icon: <Zap className="h-5 w-5" aria-hidden="true" />,
+        label: t('overview.energyCost', 'Energy cost'),
+        value: settings ? `${currencySymbol}${(settings.base_cost_per_kwh ?? 0).toFixed(2)}` : '—',
+        sublabel: t('overview.perKwh', 'per kWh'),
+      },
+      {
+        icon: <Type className="h-5 w-5" aria-hidden="true" />,
+        label: t('overview.typography', 'Typography'),
+        value: FONT_FAMILY_LABELS[fontPrefs.sans] ?? fontPrefs.sans,
+        sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
+      },
+    ]
+  }, [settings, fontPrefs, t])
 
   return (
     <PageContainer

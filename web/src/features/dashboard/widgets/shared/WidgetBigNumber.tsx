@@ -30,10 +30,17 @@ export function WidgetBigNumber({
   nullDisplay = '—',
   animated = true,
 }: WidgetBigNumberProps) {
+  // A "big number" is only meaningful when it is a finite number. Guarding on
+  // `!== null` alone let NaN / ±Infinity through — the non-animated path then
+  // rendered the literal string "NaN"/"Infinity", and AnimatedNumber silently
+  // coerced non-finite input to a misleading "0". A runtime-`undefined` value
+  // (the type says `number | null`, but callers pass `data?.field`) slipped
+  // through the same crack. Treat every non-finite input as absent so it lands
+  // on the placeholder instead.
   return (
     <div className="flex flex-col items-center justify-center h-full gap-1">
       <div className="flex items-baseline gap-1">
-        {value !== null ? (
+        {value != null && Number.isFinite(value) ? (
           animated ? (
             <AnimatedNumber value={value} className={cn('text-3xl font-bold', valueColor)} />
           ) : (

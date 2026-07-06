@@ -26,6 +26,7 @@ interface BreadcrumbOverridesContextValue {
 }
 
 const BreadcrumbOverridesContext = createContext<BreadcrumbOverridesContextValue | null>(null);
+const EMPTY_BREADCRUMB_OVERRIDES: BreadcrumbOverrideMap = {};
 
 let nextId = 1;
 
@@ -78,7 +79,7 @@ export function BreadcrumbOverridesProvider({ children }: { children: ReactNode 
 
 export function useBreadcrumbOverrides(): BreadcrumbOverrideMap {
   const ctx = useContext(BreadcrumbOverridesContext);
-  return ctx?.overrides ?? {};
+  return ctx?.overrides ?? EMPTY_BREADCRUMB_OVERRIDES;
 }
 
 /**
@@ -90,26 +91,34 @@ export function useBreadcrumbOverrides(): BreadcrumbOverrideMap {
  */
 export function useSetBreadcrumbOverrides(map?: BreadcrumbOverrideMap): void {
   const ctx = useContext(BreadcrumbOverridesContext);
+  // Depend on the stable `register` / `unregister` callbacks (both are
+  // `useCallback(…, [])` in the provider) rather than the whole context
+  // value. The context value's identity changes on EVERY registration
+  // because `overrides` is re-derived each time, so keying the effect on
+  // `ctx` would make it re-run → unregister → re-register in an infinite
+  // loop the moment any non-empty map is registered.
+  const register = ctx?.register;
+  const unregister = ctx?.unregister;
   const idRef = useRef<number | null>(null);
   // Serialise the map so we don't re-register on every render when callers
   // pass a fresh object literal with identical content.
   const serialised = map ? JSON.stringify(map) : '';
 
   useEffect(() => {
-    if (!ctx) return;
+    if (!register || !unregister) return;
     if (!serialised) {
       if (idRef.current != null) {
-        ctx.unregister(idRef.current);
+        unregister(idRef.current);
         idRef.current = null;
       }
       return;
     }
     if (idRef.current == null) idRef.current = nextId++;
     const id = idRef.current;
-    ctx.register(id, JSON.parse(serialised) as BreadcrumbOverrideMap);
+    register(id, JSON.parse(serialised) as BreadcrumbOverrideMap);
     return () => {
-      ctx.unregister(id);
+      unregister(id);
       idRef.current = null;
     };
-  }, [ctx, serialised]);
+  }, [register, unregister, serialised]);
 }

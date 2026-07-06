@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -20,6 +20,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     isFetching: specsFetching,
     isStale: specsStale,
     isError: specsError,
+    error: specsErrorObj,
     dataUpdatedAt: specsUpdatedAt,
     refetch: refetchSpecs,
   } = useVehicleSpecs(stringId);
@@ -30,6 +31,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     isFetching: optionsFetching,
     isStale: optionsStale,
     isError: optionsError,
+    error: optionsErrorObj,
     dataUpdatedAt: optionsUpdatedAt,
     refetch: refetchOptions,
   } = useVehicleOptions(stringId);
@@ -40,6 +42,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     isFetching: configFetching,
     isStale: configStale,
     isError: configError,
+    error: configErrorObj,
     dataUpdatedAt: configUpdatedAt,
     refetch: refetchConfig,
   } = useVehicleConfigLatest(numericId, 60_000);
@@ -48,6 +51,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
   const isFetching = specsFetching || optionsFetching || configFetching;
   const isStale = specsStale || optionsStale || configStale;
   const isError = specsError || optionsError || configError;
+  const queryError = specsErrorObj ?? optionsErrorObj ?? configErrorObj ?? null;
   const updatedAt = Math.max(specsUpdatedAt ?? 0, optionsUpdatedAt ?? 0, configUpdatedAt ?? 0);
 
   const specs = specsEnvelope?.data ?? null;
@@ -124,19 +128,21 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     return items;
   }, [specs, options, configData, isCompact, t]);
 
-  const hasAnyData = specs !== null || options !== null || configData !== null;
+  const hasOptions = options != null && Object.keys(options).length > 0;
+  const hasAnyData = specs != null || hasOptions || configData != null;
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refetchSpecs();
     refetchOptions();
     refetchConfig();
-  };
+  }, [refetchSpecs, refetchOptions, refetchConfig]);
 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.vehicleSpecs', 'Vehicle Specs')}
       icon={isCompact ? undefined : <FileText className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      error={queryError && !hasAnyData ? String(queryError) : null}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -196,6 +202,6 @@ function CompactView({
 function asString(val: unknown): string | null {
   if (val == null) return null;
   if (typeof val === 'string' && val.length > 0) return val;
-  if (typeof val === 'number') return String(val);
+  if (typeof val === 'number' && Number.isFinite(val)) return String(val);
   return null;
 }

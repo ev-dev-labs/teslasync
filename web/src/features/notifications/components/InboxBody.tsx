@@ -281,7 +281,12 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     () => bulkSelection.selectAll(visibleIds),
     [bulkSelection, visibleIds],
   );
-  const allVisibleSelected = bulkSelection.masterState(visibleIds) === 'all';
+  // Derive the master-checkbox tri-state once so the header checkbox can
+  // reflect the "some but not all visible rows selected" case as a native
+  // `indeterminate` control instead of silently showing an unchecked box.
+  const visibleSelectionState = bulkSelection.masterState(visibleIds);
+  const allVisibleSelected = visibleSelectionState === 'all';
+  const someVisibleSelected = visibleSelectionState === 'some';
   // Drop selections when filter changes — selection should never carry over
   // across a different result set.
   useEffect(() => { clearSelection(); }, [filters, clearSelection]);
@@ -543,6 +548,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           {!isGrouped && (
             <input
               type="checkbox"
+              ref={el => {
+                if (el) el.indeterminate = someVisibleSelected;
+              }}
               checked={allVisibleSelected}
               onChange={e => (e.target.checked ? selectAllVisible() : clearSelection())}
               aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
@@ -564,6 +572,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 type="button"
                 onClick={() => setView('grouped')}
                 aria-pressed={view === 'grouped'}
+                aria-label={t('notifications.view.grouped', 'Grouped')}
                 className={cn(
                   'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs',
                   view === 'grouped'
@@ -572,7 +581,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 )}
                 data-testid="view-toggle-grouped"
               >
-                <Layers className="h-3.5 w-3.5" />
+                <Layers className="h-3.5 w-3.5" aria-hidden="true" />
                 <span className="hidden sm:inline">
                   {t('notifications.view.grouped', 'Grouped')}
                 </span>
@@ -581,6 +590,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 type="button"
                 onClick={() => setView('flat')}
                 aria-pressed={view === 'flat'}
+                aria-label={t('notifications.view.flat', 'Flat')}
                 className={cn(
                   'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs',
                   view === 'flat'
@@ -589,7 +599,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 )}
                 data-testid="view-toggle-flat"
               >
-                <List className="h-3.5 w-3.5" />
+                <List className="h-3.5 w-3.5" aria-hidden="true" />
                 <span className="hidden sm:inline">
                   {t('notifications.view.flat', 'Flat')}
                 </span>

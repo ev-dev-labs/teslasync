@@ -25,15 +25,22 @@ function isFinitePositive(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n) && n >= 0;
 }
 
-/** Sanitize a single layout item to ensure valid coordinates */
+/**
+ * Sanitize a single layout item to ensure valid coordinates.
+ *
+ * Grid units must be non-negative integers, and an item must fit fully inside
+ * the grid: `x + w <= cols`. Width is resolved first so `x` can be clamped to
+ * `cols - w` — otherwise a hand-edited or malicious import could place a widget
+ * partly off the right edge (react-grid-layout then shoves it during compaction,
+ * corrupting the imported layout). Fractional values are floored so RGL never
+ * receives sub-cell coordinates.
+ */
 function sanitizeLayoutItem(item: RGLLayout, cols: number): RGLLayout {
-  return {
-    ...item,
-    x: isFinitePositive(item.x) ? clamp(item.x, 0, cols - 1) : 0,
-    y: isFinitePositive(item.y) ? item.y : 0,
-    w: isFinitePositive(item.w) ? clamp(item.w, 1, cols) : 1,
-    h: isFinitePositive(item.h) ? clamp(item.h, 1, 8) : 1,
-  };
+  const w = isFinitePositive(item.w) ? clamp(Math.floor(item.w), 1, cols) : 1;
+  const h = isFinitePositive(item.h) ? clamp(Math.floor(item.h), 1, 8) : 1;
+  const x = isFinitePositive(item.x) ? clamp(Math.floor(item.x), 0, cols - w) : 0;
+  const y = isFinitePositive(item.y) ? Math.floor(item.y) : 0;
+  return { ...item, x, y, w, h };
 }
 
 /** Validate and normalize raw JSON into a safe dashboard import */

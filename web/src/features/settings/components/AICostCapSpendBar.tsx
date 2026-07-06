@@ -34,20 +34,49 @@ const TEXT_CLASS: Record<SpendLevel, string> = {
   critical: 'text-rose-300',
 }
 
+/**
+ * Coerce a possibly null / undefined / NaN / Infinity value to a finite
+ * number, falling back to 0. Guards the bar against a corrupt usage
+ * payload rendering `width: NaN%` or an out-of-range `aria-valuenow`.
+ */
+function toFinite(n: number | null | undefined): number {
+  return typeof n === 'number' && Number.isFinite(n) ? n : 0
+}
+
 export function AICostCapSpendBar({ capCents }: { capCents: number }) {
   const { t } = useTranslation('settings')
-  const { data, isLoading } = useAiUsageToday()
+  const { data, isLoading, isError } = useAiUsageToday()
 
   // Backend stores spend in micro-cents (1e-4 cent). Cap is supplied in
-  // whole cents. Convert both to dollars for display.
-  const todayMicroCents = data?.cost_micro_cents ?? 0
-  const capMicroCents = capCents * 10_000 // 1 cent = 10_000 micro-cents
+  // whole cents. Convert both to dollars for display. Every input is
+  // coerced to a finite, non-negative number so a corrupt payload can
+  // never yield a `NaN%` width or an out-of-range progress value.
+  const safeCapCents = Math.max(0, toFinite(capCents))
+  const todayMicroCents = Math.max(0, toFinite(data?.cost_micro_cents))
+  const capMicroCents = safeCapCents * 10_000 // 1 cent = 10_000 micro-cents
   const pct =
-    capMicroCents > 0 ? Math.min(100, (todayMicroCents / capMicroCents) * 100) : 0
+    capMicroCents > 0
+      ? Math.min(100, Math.max(0, (todayMicroCents / capMicroCents) * 100))
+      : 0
   const todayDollars = todayMicroCents / 1_000_000
-  const capDollars = capCents / 100
+  const capDollars = safeCapCents / 100
 
   const level: SpendLevel = pct >= 100 ? 'critical' : pct >= 80 ? 'warn' : 'ok'
+
+  // Readout copy. On a failed fetch we must NOT surface a falsely
+  // reassuring "$0.00" — the cap is still enforced server-side, we just
+  // can't show today's number. Loading and error each get their own
+  // state so the panel is never a blank/misleading placeholder.
+  const readout = isLoading
+    ? t('ai.settings.costCap.loading', 'Loading…')
+    : isError
+      ? t('ai.settings.costCap.unavailable', 'Spend unavailable')
+      : t('ai.settings.costCap.amount', '${{spent}} / ${{cap}}', {
+          spent: todayDollars.toFixed(2),
+          cap: capDollars.toFixed(2),
+          defaultValue: `$${todayDollars.toFixed(2)} / $${capDollars.toFixed(2)}`,
+        })
+  const readoutClass = isError ? 'text-[var(--text-muted)]' : TEXT_CLASS[level]
 
   return (
     <GlassPanel
@@ -57,14 +86,8 @@ export function AICostCapSpendBar({ capCents }: { capCents: number }) {
     >
       <div className="flex items-baseline justify-between gap-2">
         <Caption>{t('ai.settings.costCap.todayTitle', 'Today’s Helix spend')}</Caption>
-        <Text size="xs" weight="medium" className={TEXT_CLASS[level]}>
-          {isLoading
-            ? t('ai.settings.costCap.loading', 'Loading…')
-            : t('ai.settings.costCap.amount', '${{spent}} / ${{cap}}', {
-                spent: todayDollars.toFixed(2),
-                cap: capDollars.toFixed(2),
-                defaultValue: `$${todayDollars.toFixed(2)} / $${capDollars.toFixed(2)}`,
-              })}
+        <Text size="xs" weight="medium" className={readoutClass}>
+          {readout}
         </Text>
       </div>
       <div
@@ -80,7 +103,15 @@ export function AICostCapSpendBar({ capCents }: { capCents: number }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      {level === 'critical' && (
+      {isError && (
+        <HelperText>
+          {t(
+            'ai.settings.costCap.unavailableHint',
+            'Could not load today’s spend. The cap is still enforced server-side.',
+          )}
+        </HelperText>
+      )}
+      {!isError && level === 'critical' && (
         <HelperText>
           {t(
             'ai.settings.costCap.criticalHint',
@@ -88,7 +119,7 @@ export function AICostCapSpendBar({ capCents }: { capCents: number }) {
           )}
         </HelperText>
       )}
-      {level === 'warn' && (
+      {!isError && level === 'warn' && (
         <HelperText>
           {t(
             'ai.settings.costCap.warnHint',

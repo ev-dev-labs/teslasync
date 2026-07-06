@@ -30,6 +30,12 @@ interface LiveTelemetryProps {
   remoteStartEnabled?: boolean | null
 }
 
+// Stable empty-object fallback for the `live` signal map. VehicleStatePanel
+// reads keys straight off `live`, so a nullish value would throw; coalescing to
+// this shared constant keeps it null-safe without allocating a fresh literal in
+// the render path.
+const EMPTY_LIVE: Record<string, unknown> = {}
+
 export function LiveTelemetryPanels({
   motorData,
   climateData,
@@ -49,7 +55,7 @@ export function LiveTelemetryPanels({
       {/* Section header with live indicator */}
       <FadeIn delay={0.12}>
         <div className="flex items-center gap-3 mt-2">
-          <span className="relative flex h-3 w-3">
+          <span className="relative flex h-3 w-3" aria-hidden="true">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
           </span>
@@ -73,7 +79,7 @@ export function LiveTelemetryPanels({
         </FadeIn>
 
         <FadeIn delay={0.19}>
-          <VehicleStatePanel live={live} sseConnected={sseConnected} />
+          <VehicleStatePanel live={live ?? EMPTY_LIVE} sseConnected={sseConnected} />
         </FadeIn>
 
         <FadeIn delay={0.2}>

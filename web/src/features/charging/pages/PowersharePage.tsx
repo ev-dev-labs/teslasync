@@ -162,7 +162,10 @@ export default function PowersharePage() {
 
       {/* 2 — Hero output-power trend + live-session side panel */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+        <section
+          aria-label={t('powershare.output.sectionLabel', 'Powershare output and live session')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+        >
           <PowerTrendPanel
             points={powerSeries}
             isLoading={powerQ.isLoading}
@@ -185,7 +188,10 @@ export default function PowersharePage() {
 
       {/* 3 — Runtime trend + stop reason */}
       <FadeIn delay={0.2}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+        <section
+          aria-label={t('powershare.detail.sectionLabel', 'Powershare runtime trend and stop reason')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5"
+        >
           <HoursTrendPanel
             points={hoursSeries}
             isLoading={hoursQ.isLoading}

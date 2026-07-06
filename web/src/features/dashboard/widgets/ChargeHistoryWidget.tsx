@@ -24,12 +24,17 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   const chartData = useMemo(
     () =>
+      // Reverse first (the API returns newest-first) so the chart reads
+      // oldest → newest left-to-right, THEN index — giving ascending x-axis
+      // labels. `slice()` guards the react-query cache array from an
+      // in-place `reverse()` mutation.
       (charges ?? [])
+        .slice()
+        .reverse()
         .map((s, i) => ({
           i: String(i),
           energy: convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'),
-        }))
-        .reverse(),
+        })),
     [charges],
   );
 
@@ -91,6 +96,10 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
             series={[{ key: 'energy', label: 'kWh', color: '#10b981' }]}
             height={200}
             yFormatter={(v) => `${v} kWh`}
+            ariaLabel={t(
+              'widget.chargeHistory.chartLabel',
+              'Energy added per recent charge session, in kilowatt-hours',
+            )}
           />
         }
       />

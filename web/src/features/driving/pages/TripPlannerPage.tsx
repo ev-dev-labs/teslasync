@@ -419,8 +419,15 @@ export default function TripPlannerPage() {
 }
 
 function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
+  // API-sourced durations can be malformed (NaN/Infinity) or negative — never
+  // render "NaNm" or a negative clock in a KPI tile.
+  if (!Number.isFinite(minutes) || minutes < 0) return PLACEHOLDER;
+  // Round to whole minutes *before* splitting so a fractional value that rounds
+  // up to 60 (e.g. 119.99 → "1h 60m") rolls over into the next hour ("2h 0m")
+  // instead of showing an impossible 60-minute remainder.
+  const total = Math.round(minutes);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   if (h === 0) return `${m}m`;
   return `${h}h ${m}m`;
 }

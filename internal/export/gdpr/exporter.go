@@ -20,10 +20,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -75,6 +75,36 @@ func NewExporter(outDir string) (*Exporter, error) {
 	return &Exporter{outDir: outDir}, nil
 }
 
+// validateJobID rejects a jobID that is empty or that would let the bundle
+// escape outDir. The jobID becomes the bundle filename (<jobID>.tar.gz), so it
+// MUST be a single, clean path segment. Without this, a caller-supplied jobID
+// like "../../etc/cron.d/x" would traverse out of outDir on Join.
+func validateJobID(jobID string) error {
+	if jobID == "" {
+		return errors.New("gdpr: jobID is required")
+	}
+	if !isSafeSegment(jobID) {
+		return fmt.Errorf("gdpr: invalid jobID %q: must be a single path segment", jobID)
+	}
+	return nil
+}
+
+// isSafeSegment reports whether s is a single, non-escaping path segment safe
+// to use as a filename: no path separators, no volume name, and not "." / "..".
+func isSafeSegment(s string) bool {
+	if s == "" || s == "." || s == ".." {
+		return false
+	}
+	if strings.ContainsAny(s, `/\`) {
+		return false
+	}
+	if filepath.VolumeName(s) != "" {
+		return false
+	}
+	// A clean single segment equals its own Base.
+	return filepath.Base(s) == s
+}
+
 // Export streams every extractor into a single gzipped tar archive
 // at <outDir>/<jobID>.tar.gz, computing sha256 incrementally so we
 // don't have to re-read the file at the end.
@@ -86,9 +116,32 @@ func (e *Exporter) Export(ctx context.Context, jobID string, extractors []Domain
 	if e == nil {
 		return nil, errors.New("gdpr: nil exporter")
 	}
+	if err := validateJobID(jobID); err != nil {
+		return nil, err
+	}
 	if len(extractors) == 0 {
 		return nil, errors.New("gdpr: at least one extractor required")
 	}
+	for i, ext := range extractors {
+		if ext == nil {
+			return nil, fmt.Errorf("gdpr: extractor %d is nil", i)
+		}
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	// Own every extractor from here on: close each exactly once, even if we
+	// bail out early. Without this, a failure on domain N would leak the DB
+	// cursors held by domains N+1… that were never reached.
+	closed := make([]bool, len(extractors))
+	defer func() {
+		for i, ext := range extractors {
+			if !closed[i] {
+				_ = ext.Close()
+			}
+		}
+	}()
 
 	path := filepath.Join(e.outDir, jobID+".tar.gz")
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
@@ -130,9 +183,10 @@ func (e *Exporter) Export(ctx context.Context, jobID string, extractors []Domain
 		return cause
 	}
 
-	for _, ext := range extractors {
-		stat, err := writeDomainEntry(ctx, tarw, ext, hasher)
-		ext.Close()
+	for i, ext := range extractors {
+		stat, err := writeDomainEntry(ctx, tarw, ext)
+		_ = ext.Close()
+		closed[i] = true
 		if err != nil {
 			return nil, closeAll(fmt.Errorf("gdpr: domain %s: %w", ext.Domain(), err))
 		}
@@ -164,7 +218,11 @@ func (e *Exporter) Export(ctx context.Context, jobID string, extractors []Domain
 
 // writeDomainEntry writes one JSONL stream into the tar archive. The
 // returned DomainStat counts JSONL bytes (not tar overhead).
-func writeDomainEntry(ctx context.Context, tarw *tar.Writer, ext DomainExtractor, hasher hash.Hash) (DomainStat, error) {
+func writeDomainEntry(ctx context.Context, tarw *tar.Writer, ext DomainExtractor) (DomainStat, error) {
+	domain := ext.Domain()
+	if !isSafeSegment(domain) {
+		return DomainStat{}, fmt.Errorf("invalid domain name %q", domain)
+	}
 	// Tar format requires the entry size up-front. Since we're
 	// streaming we don't know the size, so we use a temp file as
 	// a length-prefix buffer. Acceptable because per-domain
@@ -204,7 +262,7 @@ func writeDomainEntry(ctx context.Context, tarw *tar.Writer, ext DomainExtractor
 		return DomainStat{}, err
 	}
 	hdr := &tar.Header{
-		Name:    ext.Domain() + ".jsonl",
+		Name:    domain + ".jsonl",
 		Mode:    0o600,
 		Size:    byteCount,
 		ModTime: time.Now().UTC(),
@@ -215,8 +273,7 @@ func writeDomainEntry(ctx context.Context, tarw *tar.Writer, ext DomainExtractor
 	if _, err := io.Copy(tarw, tmp); err != nil {
 		return DomainStat{}, err
 	}
-	_ = hasher // hasher is captured via MultiWriter, not used directly
-	return DomainStat{Domain: ext.Domain(), RowCount: rowCount, ByteCount: byteCount}, nil
+	return DomainStat{Domain: domain, RowCount: rowCount, ByteCount: byteCount}, nil
 }
 
 // writeManifestEntry writes a manifest.json describing the bundle

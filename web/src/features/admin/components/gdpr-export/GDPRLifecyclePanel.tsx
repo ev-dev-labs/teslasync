@@ -43,7 +43,10 @@ export function GDPRLifecyclePanel({ artifact, loading, className }: GDPRLifecyc
       },
     ];
 
-    if (artifact.completed_at) {
+    // A `failed` export never truly "completed": suppress the green
+    // Completed step so the timeline can't contradict itself. Its terminal
+    // timestamp (if any) is surfaced on the Failed entry instead.
+    if (artifact.completed_at && artifact.status !== 'failed') {
       list.push({
         icon: <CircleCheck className="h-3 w-3" aria-hidden="true" />,
         title: t('admin.gdprExport.lifecycle.completed', 'Completed'),
@@ -54,11 +57,18 @@ export function GDPRLifecyclePanel({ artifact, loading, className }: GDPRLifecyc
     }
 
     if (artifact.status === 'failed') {
+      // `?? fallback` only guards null/undefined — an empty or whitespace-only
+      // error string would slip through and render a blank subtitle, so fall
+      // back to the generic copy for any non-meaningful error.
+      const reason =
+        artifact.error && artifact.error.trim().length > 0
+          ? artifact.error
+          : t('admin.gdprExport.lifecycle.failedGeneric', 'Export did not finish');
       list.push({
         icon: <CircleX className="h-3 w-3" aria-hidden="true" />,
         title: t('admin.gdprExport.lifecycle.failed', 'Failed'),
-        subtitle: artifact.error ?? t('admin.gdprExport.lifecycle.failedGeneric', 'Export did not finish'),
-        time: '',
+        subtitle: reason,
+        time: artifact.completed_at ? formatRelative(artifact.completed_at) : '',
         color: STATUS_COLOR.failed,
       });
     }

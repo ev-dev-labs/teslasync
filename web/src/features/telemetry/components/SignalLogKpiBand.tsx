@@ -22,6 +22,23 @@ export interface SignalLogKpiBandProps {
   loading?: boolean;
 }
 
+/**
+ * All-zero fallback. Used when a caller renders the band before
+ * `summarizeSignalLog` has produced a summary (or passes it as `undefined`
+ * across an async boundary) so the band degrades to an honest zero grid
+ * instead of throwing on `summary.totalRecords` / `formatSpan(...)`.
+ */
+const ZERO_SUMMARY: SignalLogSummary = {
+  totalRecords: 0,
+  signalsSelected: 0,
+  distinctSignals: 0,
+  numericPoints: 0,
+  textPoints: 0,
+  boolPoints: 0,
+  earliest: null,
+  latest: null,
+};
+
 /** Human-friendly duration between the oldest and newest sample. */
 function formatSpan(earliest: string | null, latest: string | null): string {
   if (!earliest || !latest) return '—';
@@ -42,11 +59,12 @@ function formatSpan(earliest: string | null, latest: string | null): string {
 
 export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandProps) {
   const { t } = useTranslation();
+  const s = summary ?? ZERO_SUMMARY;
 
   const gridClass =
     'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6';
 
-  if (loading && summary.totalRecords === 0) {
+  if (loading && s.totalRecords === 0) {
     return (
       <FadeIn>
         <section aria-label={t('signalLog.kpis', 'Query summary')} className={gridClass}>
@@ -63,40 +81,40 @@ export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandP
       <section aria-label={t('signalLog.kpis', 'Query summary')} className={gridClass}>
         <MetricCard
           label={t('signalLog.kpi.totalRecords', 'Total Records')}
-          value={fmtInt(summary.totalRecords)}
+          value={fmtInt(s.totalRecords)}
           icon={<Database className="h-5 w-5" aria-hidden="true" />}
           color="cyan"
         />
         <MetricCard
           label={t('signalLog.kpi.signals', 'Signals')}
-          value={fmtInt(summary.signalsSelected)}
+          value={fmtInt(s.signalsSelected)}
           subtitle={t('signalLog.kpi.signalsWithData', '{{count}} with data', {
-            count: summary.distinctSignals,
+            count: s.distinctSignals,
           })}
           icon={<Layers className="h-5 w-5" aria-hidden="true" />}
           color="blue"
         />
         <MetricCard
           label={t('signalLog.kpi.numeric', 'Numeric Points')}
-          value={fmtInt(summary.numericPoints)}
+          value={fmtInt(s.numericPoints)}
           icon={<Hash className="h-5 w-5" aria-hidden="true" />}
           color="green"
         />
         <MetricCard
           label={t('signalLog.kpi.text', 'Text Points')}
-          value={fmtInt(summary.textPoints)}
+          value={fmtInt(s.textPoints)}
           icon={<Type className="h-5 w-5" aria-hidden="true" />}
           color="amber"
         />
         <MetricCard
           label={t('signalLog.kpi.boolean', 'Boolean Points')}
-          value={fmtInt(summary.boolPoints)}
+          value={fmtInt(s.boolPoints)}
           icon={<ToggleRight className="h-5 w-5" aria-hidden="true" />}
           color="purple"
         />
         <MetricCard
           label={t('signalLog.kpi.timeSpan', 'Time Span')}
-          value={formatSpan(summary.earliest, summary.latest)}
+          value={formatSpan(s.earliest, s.latest)}
           icon={<Clock className="h-5 w-5" aria-hidden="true" />}
           color="blue"
         />

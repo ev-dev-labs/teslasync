@@ -51,7 +51,7 @@ export interface TourPersistenceContext {
 }
 
 export function useTour(
-  steps: TourStep[],
+  steps: TourStep[] = [],
   persistence?: TourPersistenceContext,
 ): TourState {
   const [isActive, setIsActive] = useState(false);
@@ -62,26 +62,31 @@ export function useTour(
   stepsRef.current = steps;
 
   const updateRect = useCallback(() => {
-    if (!isActive || currentStep >= stepsRef.current.length) {
+    const selector = stepsRef.current[currentStep]?.target;
+    // An empty/missing selector is not a valid `querySelector` argument
+    // (it throws a SyntaxError), so treat it the same as "no target".
+    if (!isActive || currentStep >= stepsRef.current.length || !selector) {
       setTargetRect(null);
       return;
     }
-    const el = document.querySelector(stepsRef.current[currentStep].target);
-    if (el) {
-      setTargetRect(el.getBoundingClientRect());
-    } else {
-      setTargetRect(null);
-    }
+    const el = document.querySelector(selector);
+    setTargetRect(el ? el.getBoundingClientRect() : null);
   }, [isActive, currentStep]);
 
   // Observe resize, scroll, and element dimensions
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      // Clear any rect carried over from a previous step so a finished or
+      // skipped tour never leaves a stale spotlight target behind.
+      setTargetRect(null);
+      return;
+    }
     updateRect();
     window.addEventListener('resize', updateRect);
     window.addEventListener('scroll', updateRect, true);
 
-    const el = document.querySelector(stepsRef.current[currentStep]?.target ?? '');
+    const selector = stepsRef.current[currentStep]?.target;
+    const el = selector ? document.querySelector(selector) : null;
     if (el) {
       observerRef.current = new ResizeObserver(updateRect);
       observerRef.current.observe(el);

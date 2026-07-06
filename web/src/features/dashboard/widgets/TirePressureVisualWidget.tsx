@@ -5,34 +5,31 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles, useLatestTirePressure } from '@/api/hooks/useVehicles';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-/** Pressure thresholds in bar for color coding */
-const THRESHOLD = {
-  dangerLow: 2.068,
-  warnLow: 2.275,
-  warnHigh: 2.896,
-  dangerHigh: 3.103,
-} as const;
+type TireVariant = ReturnType<typeof tirePressureVariant>;
 
-function getPressureStatus(bar: number | null): 'green' | 'amber' | 'red' {
-  if (bar == null) return 'red';
-  if (bar < THRESHOLD.dangerLow || bar > THRESHOLD.dangerHigh) return 'red';
-  if (bar < THRESHOLD.warnLow || bar > THRESHOLD.warnHigh) return 'amber';
-  return 'green';
-}
-
-const STATUS_COLORS = {
-  green: { fill: '#22c55e', text: 'text-emerald-300' },
-  amber: { fill: '#f59e0b', text: 'text-amber-300' },
-  red: { fill: '#ef4444', text: 'text-rose-300' },
-} as const;
+/**
+ * Fill + value-text colour per tire-pressure severity variant. The variant is
+ * derived from the backend SI value (Pascals) by the shared
+ * `tirePressureVariant` helper, keeping this widget consistent with the
+ * vehicle-detail tire panels instead of re-deriving thresholds locally. The
+ * `neutral` band renders a muted grey for an unknown/missing reading rather
+ * than an alarming critical-red.
+ */
+const VARIANT_STYLE: Record<TireVariant, { fill: string; text: string }> = {
+  success: { fill: '#22c55e', text: 'text-emerald-300' },
+  warning: { fill: '#f59e0b', text: 'text-amber-300' },
+  danger: { fill: '#ef4444', text: 'text-rose-300' },
+  neutral: { fill: '#6b7280', text: 'text-[var(--text-muted)]' },
+};
 
 interface TireInfo {
   label: string;
   value: number | null;
-  status: 'green' | 'amber' | 'red';
+  variant: TireVariant;
 }
 
 /**
@@ -67,7 +64,7 @@ function CarDiagram({ tires }: { tires: [TireInfo, TireInfo, TireInfo, TireInfo]
         <rect
           key={tire.label}
           x={x} y={y} width="16" height="26" rx="4" ry="4"
-          fill={STATUS_COLORS[tire.status].fill}
+          fill={VARIANT_STYLE[tire.variant].fill}
           fillOpacity={0.85}
         />
       ))}
@@ -102,14 +99,14 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
   const isCompact = size.cols <= 1;
 
   const tires: [TireInfo, TireInfo, TireInfo, TireInfo] = [
-    { label: 'FL', value: tireData?.front_left ?? null, status: getPressureStatus(tireData?.front_left ?? null) },
-    { label: 'FR', value: tireData?.front_right ?? null, status: getPressureStatus(tireData?.front_right ?? null) },
-    { label: 'RL', value: tireData?.rear_left ?? null, status: getPressureStatus(tireData?.rear_left ?? null) },
-    { label: 'RR', value: tireData?.rear_right ?? null, status: getPressureStatus(tireData?.rear_right ?? null) },
+    { label: 'FL', value: tireData?.front_left ?? null, variant: tirePressureVariant(tireData?.front_left) },
+    { label: 'FR', value: tireData?.front_right ?? null, variant: tirePressureVariant(tireData?.front_right) },
+    { label: 'RL', value: tireData?.rear_left ?? null, variant: tirePressureVariant(tireData?.rear_left) },
+    { label: 'RR', value: tireData?.rear_right ?? null, variant: tirePressureVariant(tireData?.rear_right) },
   ];
 
-  const allNormal = tires.every((tire) => tire.status === 'green');
-  const hasWarning = tires.some((tire) => tire.status !== 'green');
+  const allNormal = tires.every((tire) => tire.variant === 'success');
+  const hasWarning = tires.some((tire) => tire.variant !== 'success');
 
   const formatPressure = (val: number | null): string => {
     const v = toPressureValue(val);
@@ -144,13 +141,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
             <div className="flex flex-col justify-between h-full py-2 text-right min-w-[50px]">
               <div>
                 <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireFL', 'FL')}</p>
-                <p className={`text-sm font-bold ${STATUS_COLORS[tires[0].status].text}`}>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[0].variant].text}`}>
                   {formatPressure(tires[0].value)}
                 </p>
               </div>
               <div>
                 <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireRL', 'RL')}</p>
-                <p className={`text-sm font-bold ${STATUS_COLORS[tires[2].status].text}`}>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[2].variant].text}`}>
                   {formatPressure(tires[2].value)}
                 </p>
               </div>
@@ -165,13 +162,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
             <div className="flex flex-col justify-between h-full py-2 text-left min-w-[50px]">
               <div>
                 <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireFR', 'FR')}</p>
-                <p className={`text-sm font-bold ${STATUS_COLORS[tires[1].status].text}`}>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[1].variant].text}`}>
                   {formatPressure(tires[1].value)}
                 </p>
               </div>
               <div>
                 <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireRR', 'RR')}</p>
-                <p className={`text-sm font-bold ${STATUS_COLORS[tires[3].status].text}`}>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[3].variant].text}`}>
                   {formatPressure(tires[3].value)}
                 </p>
               </div>

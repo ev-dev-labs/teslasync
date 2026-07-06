@@ -154,6 +154,9 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 	currentSet := make(map[int64]bool, len(currentPlaces))
 	placeNames := make(map[int64]string, len(currentPlaces))
 	for _, p := range currentPlaces {
+		if p == nil {
+			continue
+		}
 		currentSet[p.ID] = true
 		placeNames[p.ID] = p.Name
 	}

@@ -9,7 +9,7 @@
  * and cleared whenever `resetKey` changes (e.g. on vehicle switch).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface ThroughputPoint {
   /** ISO timestamp of the sample — formatted at the display boundary. */
@@ -45,8 +45,10 @@ export function useThroughputHistory(
   const [history, setHistory] = useState<ThroughputPoint[]>([]);
 
   // Keep the latest rate in a ref so the sampling interval stays stable.
-  const rateRef = useRef(rate);
-  rateRef.current = Number.isFinite(rate) ? rate : 0;
+  // A signals/sec rate can never be negative, and NaN/Infinity would poison
+  // both the chart and `peak`, so clamp to a finite, non-negative value.
+  const rateRef = useRef(0);
+  rateRef.current = Number.isFinite(rate) ? Math.max(0, rate) : 0;
 
   const reset = useCallback(() => setHistory([]), []);
 
@@ -57,16 +59,23 @@ export function useThroughputHistory(
 
   useEffect(() => {
     if (!enabled) return;
+    // Guard against a caller passing a non-positive cadence or window: a
+    // setInterval(0) busy-loops, and a cap < 1 would discard every sample so
+    // the chart would never fill. Fall back to the documented defaults.
+    const cadence = Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : 1000;
+    const cap = Number.isFinite(maxPoints) && maxPoints >= 1 ? Math.floor(maxPoints) : 1;
     const id = setInterval(() => {
       setHistory((prev) => {
         const next = [...prev, { ts: new Date().toISOString(), rate: rateRef.current }];
-        return next.length > maxPoints ? next.slice(next.length - maxPoints) : next;
+        return next.length > cap ? next.slice(next.length - cap) : next;
       });
-    }, intervalMs);
+    }, cadence);
     return () => clearInterval(id);
   }, [enabled, maxPoints, intervalMs]);
 
-  const peak = history.reduce((m, p) => (p.rate > m ? p.rate : m), 0);
+  // Peak over the current window. Memoised so consumers can pass it into a
+  // memoised chart child without re-rendering on unrelated parent updates.
+  const peak = useMemo(() => history.reduce((m, p) => (p.rate > m ? p.rate : m), 0), [history]);
 
   return { history, peak, reset };
 }

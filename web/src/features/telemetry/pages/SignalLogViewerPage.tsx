@@ -91,11 +91,12 @@ export default function SignalLogViewerPage() {
 
   const signalLogQuery = useQuery<SignalLogEntry[]>({
     queryKey: ['signal-log', vehicleId, queryKey],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const results = await Promise.all(
         selectedSignals.map((sig) =>
           request<SignalHistoryResp>(
-            `/signals/${vehicleId}/${sig}/history?from=${fromIso}&to=${toIso}&limit=${perPage * 10}`,
+            `/signals/${vehicleId}/${encodeURIComponent(sig)}/history?from=${fromIso}&to=${toIso}&limit=${perPage * 10}`,
+            { signal },
           ),
         ),
       );

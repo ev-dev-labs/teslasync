@@ -75,6 +75,11 @@ export default function DriveDetailPage() {
     <PageContainer
       title={routeTitle}
       error={error as Error | null}
+      empty={!error && !drive}
+      emptyMessage={t(
+        'driveDetail.notFound',
+        'This drive could not be found. It may have been deleted, or the link is incorrect.',
+      )}
       breadcrumbLabels={{
         '/drives/:id': drive
           ? `${drive.startAddress ?? t('driveDetail.title', 'Drive')} → ${drive.endAddress ?? ''}`

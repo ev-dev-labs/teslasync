@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Input as UiInput,
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
-import { SIGNAL_FIELD_OPTIONS, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
 import {
   Clock,
   Zap,
@@ -107,12 +107,26 @@ function parseCronExpr(expr: string): { hour: number; minute: number; days: numb
   if (parts.length !== 5) return null;
   const [min, hr, dom, month, dow] = parts;
   if (dom !== '*' || month !== '*') return null;
+  // Simple mode can only round-trip a single integer minute/hour. Reject
+  // lists, ranges, and steps (e.g. "*/15", "0,30", "9-17") so those stay in
+  // the raw editor instead of being silently flattened to a lossy value.
+  if (!/^\d{1,2}$/.test(min) || !/^\d{1,2}$/.test(hr)) return null;
   const minute = Number.parseInt(min, 10);
   const hour = Number.parseInt(hr, 10);
-  if (Number.isNaN(minute) || Number.isNaN(hour)) return null;
-  const days = dow === '*'
-    ? []
-    : dow.split(',').map(Number).filter((day) => !Number.isNaN(day));
+  if (minute > 59 || hour > 23) return null;
+  const days: number[] = [];
+  if (dow !== '*') {
+    // A weekday range/step ("1-5", "*/2") is a valid cron the simple UI cannot
+    // represent. Only a comma list of 0-6 day indices is safe to parse — any
+    // other token keeps the expression in advanced mode so it is not corrupted
+    // (e.g. a weekday-only schedule must never be shown as "every day").
+    for (const token of dow.split(',')) {
+      if (!/^\d$/.test(token)) return null;
+      const day = Number.parseInt(token, 10);
+      if (day > 6) return null;
+      days.push(day);
+    }
+  }
   return { hour, minute, days };
 }
 
@@ -166,7 +180,8 @@ function signalValueFromInput(
 
 export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorProps) {
   const { t } = useTranslation();
-  const { data: geofences } = useGeofences();
+  const { data: geofences, isLoading: geofencesLoading, isError: geofencesError } = useGeofences();
+  const [advancedMode, setAdvancedMode] = useState(false);
 
   const geofenceOptions = useMemo(
     () => [
@@ -200,6 +215,8 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
     [t],
   );
 
+  const signalFieldOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+
   const handleDayToggle = useCallback((days: number[], day: number) => {
     if (days.length === 0) {
       return DAYS.map((_, index) => index).filter((index) => index !== day);
@@ -213,7 +230,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
   switch (trigger.kind) {
     case 'trigger_schedule': {
       const parsed = parseCronExpr(trigger.cron_expr);
-      const isSimple = parsed !== null;
+      const showSimple = parsed !== null && !advancedMode;
       const hour = parsed?.hour ?? 8;
       const minute = parsed?.minute ?? 0;
       const selectedDays = parsed?.days ?? [];
@@ -224,15 +241,21 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
 
       return (
         <div className="space-y-4">
-          {isSimple ? (
+          {showSimple ? (
             <>
               <UiInput
                 label={t('automations.builder.time', 'Time')}
                 type="time"
                 value={`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`}
                 onChange={(event) => {
-                  const [nextHour, nextMinute] = event.target.value.split(':').map(Number);
-                  updateCron(nextHour ?? hour, nextMinute ?? minute, selectedDays);
+                  const [rawHour, rawMinute] = event.target.value.split(':');
+                  const nextHour = Number.parseInt(rawHour, 10);
+                  const nextMinute = Number.parseInt(rawMinute, 10);
+                  updateCron(
+                    Number.isNaN(nextHour) ? hour : nextHour,
+                    Number.isNaN(nextMinute) ? minute : nextMinute,
+                    selectedDays,
+                  );
                 }}
                 className="w-36"
               />
@@ -285,13 +308,17 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
             variant="ghost"
             className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] underline hover:!bg-transparent hover:text-[var(--text-secondary)]"
             onClick={() => {
-              onChange({
-                ...trigger,
-                cron_expr: isSimple ? trigger.cron_expr : '0 8 * * *',
-              });
+              if (showSimple) {
+                setAdvancedMode(true);
+                return;
+              }
+              setAdvancedMode(false);
+              if (parsed === null) {
+                onChange({ ...trigger, cron_expr: '0 8 * * *' });
+              }
             }}
           >
-            {isSimple
+            {showSimple
               ? t('automations.builder.advancedCron', 'Use advanced cron expression')
               : t('automations.builder.simpleCron', 'Switch to simple mode')}
           </UiButton>
@@ -323,12 +350,21 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
         </div>
       );
 
-    case 'trigger_geofence':
+    case 'trigger_geofence': {
+      const geofenceHint = geofencesLoading
+        ? t('automations.builder.geofenceLoading', 'Loading geofences…')
+        : geofencesError
+          ? t('automations.builder.geofenceError', 'Could not load geofences')
+          : (geofences ?? []).length === 0
+            ? t('automations.builder.geofenceEmpty', 'No geofences configured yet')
+            : undefined;
+
       return (
         <div className="space-y-4">
           <UiSelect
             label={t('automations.builder.geofence', 'Geofence')}
             options={geofenceOptions}
+            hint={geofenceHint}
             value={trigger.place_id > 0 ? String(trigger.place_id) : ''}
             onChange={(event) => onChange({
               ...trigger,
@@ -365,6 +401,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
           )}
         </div>
       );
+    }
 
     case 'trigger_signal': {
       const isBool = BOOL_FIELD_KEYS.has(trigger.signal);
@@ -378,7 +415,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
         <div className="space-y-4">
           <UiSelect
             label={t('automations.builder.signal', 'Signal')}
-            options={SIGNAL_FIELD_OPTIONS}
+            options={signalFieldOptions}
             value={trigger.signal}
             onChange={(event) => {
               const signal = event.target.value;
@@ -438,5 +475,8 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
         </div>
       );
     }
+
+    default:
+      return null;
   }
 }

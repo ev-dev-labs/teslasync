@@ -35,52 +35,54 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
   return (
     <FadeIn className="mt-4 space-y-4 xl:space-y-5">
       {/* Summary Cards band */}
-      {isLoading ? (
-        <MetricBandSkeleton count={6} />
-      ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <MetricCard
-            label={t('analytics.charging.sessions', 'Sessions')}
-            value={fmtInt(data?.total_charging_sessions)}
-            icon={<Plug className="h-4 w-4" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('analytics.charging.totalEnergy', 'Total Energy')}
-            value={fmtNumber(data?.total_energy_kwh, 1)}
-            subtitle="kWh"
-            icon={<Zap className="h-4 w-4" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('analytics.charging.totalCost', 'Total Cost')}
-            value={formatCurrency(data?.total_cost ?? 0, 2)}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t('analytics.charging.avgPower', 'Avg Power')}
-            value={powerStats ? fmtNumber(safe(powerStats.avg), 1) : '—'}
-            subtitle="kW"
-            icon={<Gauge className="h-4 w-4" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('analytics.charging.avgDuration', 'Avg Duration')}
-            value={durStats ? fmtNumber(safe(durStats.avg), 0) : '—'}
-            subtitle={t('analytics.charging.min', 'min')}
-            icon={<Timer className="h-4 w-4" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('analytics.charging.chargeEff', 'Charge Efficiency')}
-            value={effStats ? fmtNumber(safe(effStats.avg), 1) : '—'}
-            subtitle="%"
-            icon={<TrendingUp className="h-4 w-4" />}
-            color="green"
-          />
-        </div>
-      )}
+      <section aria-label={t('analytics.charging.summary', 'Charging summary metrics')}>
+        {isLoading ? (
+          <MetricBandSkeleton count={6} />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+            <MetricCard
+              label={t('analytics.charging.sessions', 'Sessions')}
+              value={data ? fmtInt(data.total_charging_sessions ?? 0) : '—'}
+              icon={<Plug className="h-4 w-4" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('analytics.charging.totalEnergy', 'Total Energy')}
+              value={data ? fmtNumber(data.total_energy_kwh ?? 0, 1) : '—'}
+              subtitle="kWh"
+              icon={<Zap className="h-4 w-4" />}
+              color="green"
+            />
+            <MetricCard
+              label={t('analytics.charging.totalCost', 'Total Cost')}
+              value={data ? formatCurrency(data.total_cost ?? 0, 2) : '—'}
+              icon={<DollarSign className="h-4 w-4" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('analytics.charging.avgPower', 'Avg Power')}
+              value={powerStats ? fmtNumber(safe(powerStats.avg), 1) : '—'}
+              subtitle="kW"
+              icon={<Gauge className="h-4 w-4" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('analytics.charging.avgDuration', 'Avg Duration')}
+              value={durStats ? fmtNumber(safe(durStats.avg), 0) : '—'}
+              subtitle={t('analytics.charging.min', 'min')}
+              icon={<Timer className="h-4 w-4" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('analytics.charging.chargeEff', 'Charge Efficiency')}
+              value={effStats ? fmtNumber(safe(effStats.avg), 1) : '—'}
+              subtitle="%"
+              icon={<TrendingUp className="h-4 w-4" />}
+              color="green"
+            />
+          </div>
+        )}
+      </section>
 
       <section
         aria-label={t('analytics.tabs.charging', 'Charging')}

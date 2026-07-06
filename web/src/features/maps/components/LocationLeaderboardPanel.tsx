@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -33,6 +33,13 @@ export interface LocationLeaderboardPanelProps {
   ariaLabel: string;
 }
 
+// Static chart geometry hoisted to module scope: recreating identical object /
+// array literals inline every render hands Recharts a fresh prop reference and
+// defeats its child memoisation, so keep them stable here.
+const BAR_MARGIN = { left: 8, right: 12, top: 4, bottom: 4 } as const;
+const BAR_RADIUS: [number, number, number, number] = [0, 4, 4, 0];
+const TOOLTIP_CURSOR = { fill: 'rgba(255,255,255,0.04)' } as const;
+
 /**
  * Reusable horizontal-bar leaderboard panel. Shared by the "Top Locations by
  * Visits" and "Top Locations by Time" sections so the chart markup, axis
@@ -51,7 +58,19 @@ export function LocationLeaderboardPanel({
   emptyMessage,
   ariaLabel,
 }: LocationLeaderboardPanelProps) {
-  const rows = data ?? [];
+  // Normalise once per data change: coerce untyped / API-sourced rows to a
+  // finite bar value and a non-empty category label so a stray null neither
+  // paints a NaN-wide bar nor drops a blank Y-axis tick. Memoised so the array
+  // reference stays stable across unrelated re-renders (avoids re-diffing the
+  // whole chart subtree).
+  const rows = useMemo<LeaderboardDatum[]>(
+    () =>
+      (data ?? []).map((d) => ({
+        name: d.name ?? '—',
+        value: Number.isFinite(d.value) ? d.value : 0,
+      })),
+    [data],
+  );
   // Horizontal bars need vertical room per entry; grow with the row count but
   // keep a sensible floor so a short list still fills the panel.
   const chartHeight = Math.max(240, Math.min(rows.length, 15) * 34);
@@ -71,12 +90,12 @@ export function LocationLeaderboardPanel({
       ) : (
         <div style={{ height: chartHeight }} aria-label={ariaLabel} role="img">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows as LeaderboardDatum[]} layout="vertical" margin={{ left: 8, right: 12, top: 4, bottom: 4 }}>
+            <BarChart data={rows} layout="vertical" margin={BAR_MARGIN}>
               {chartGrid}
               <XAxis type="number" tick={axisTickSm} allowDecimals={false} />
               <YAxis dataKey="name" type="category" tick={axisTickSm} width={112} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-              <Bar dataKey="value" name={seriesLabel} fill={color} radius={[0, 4, 4, 0]} />
+              <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
+              <Bar dataKey="value" name={seriesLabel} fill={color} radius={BAR_RADIUS} />
             </BarChart>
           </ResponsiveContainer>
         </div>

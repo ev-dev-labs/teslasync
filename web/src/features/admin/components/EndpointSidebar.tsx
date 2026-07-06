@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -80,6 +80,13 @@ function TagGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
+  // Reveal the group that owns the currently selected endpoint even when the
+  // selection changes after mount (e.g. history replay picks an endpoint in a
+  // collapsed group) — otherwise the highlighted row stays hidden.
+  useEffect(() => {
+    if (selected?.tag === tag) setOpen(true);
+  }, [selected, tag]);
+
   return (
     <div>
       <UiButton
@@ -90,6 +97,7 @@ function TagGroup({
         className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-left hover:!bg-white/[0.03]"
       >
         <ChevronDown
+          aria-hidden="true"
           className={cn(
             'h-3 w-3 text-[var(--text-muted)] transition-transform duration-normal',
             open && 'rotate-180',
@@ -138,9 +146,10 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return endpoints;
+    const list = endpoints ?? [];
+    if (!search.trim()) return list;
     const q = search.toLowerCase();
-    return endpoints.filter(
+    return list.filter(
       e =>
         (e.path ?? '').toLowerCase().includes(q) ||
         (e.summary ?? '').toLowerCase().includes(q) ||
@@ -167,7 +176,8 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder={t('playground.search', 'Search endpoints...')}
-          icon={<Search className="h-3.5 w-3.5" />}
+          aria-label={t('playground.search', 'Search endpoints...')}
+          icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
           className="!text-xs !py-1.5 !bg-white/[0.03]"
         />
       </div>

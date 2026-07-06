@@ -1,16 +1,33 @@
+/**
+ * A charging session as consumed by the list (`/charging-sessions`) and
+ * single-session (`/charging/{id}`) views.
+ *
+ * Field-alias note — the charging endpoints populate several logically-equal
+ * fields under different keys, so consumers must coalesce rather than assume a
+ * single canonical key:
+ *   - Timestamp: `started_at` is the canonical list key; `start_ts` / `startedAt`
+ *     are dashboard-activity aliases the same row may also carry. Read
+ *     `started_at ?? start_ts`.
+ *   - Cost: `cost_decimal` is the SI-canonical column; `cost` is the legacy
+ *     alias. Read `cost ?? cost_decimal`.
+ * See RecentChargesSection / RecentActivity for the coalescing precedent.
+ */
 export interface ChargingSession {
   id: string;
   vehicle_id: string;
   charger_type: string | null;
   start_soc_pct: number;
   end_soc_pct: number | null;
+  /** Energy added in watt-hours (Wh, SI canonical). */
   total_energy_added_wh: number;
+  /** Peak charger power in watts (W, SI canonical). */
   peak_power_w: number | null;
   cost_decimal: number | null;
   started_at: string;
   ended_at?: string | null;
   start_ts: string;
   startedAt: string;
+  /** Session duration in minutes (display-derived; present on the activity shape). */
   duration_min: number;
   cost?: number | null;
 }

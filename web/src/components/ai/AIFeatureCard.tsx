@@ -46,7 +46,10 @@
 //     wrapped with [AIThinkingDots] (the dots are `aria-hidden`).
 //   - The `disabled` attribute mirrors `!canStart || streaming`,
 //     and is paired with `aria-disabled` for screen-reader parity
-//     (Rule W1-A: never a literal `disabled={true}`).
+//     (Rule W1-A: never a literal `disabled={true}`). While
+//     streaming the button also carries `aria-busy="true"` so
+//     assistive tech announces the in-flight state (idle drops the
+//     attribute entirely rather than emitting `aria-busy="false"`).
 //   - AiOutputPanel is rendered with the same `text/state/error`
 //     props, so `getByTestId('ai-output-panel')` keeps working.
 
@@ -104,7 +107,7 @@ export interface AIFeatureCardProps {
   buttonLabel: string
 
   /**
-   * Optional override for the badge text. Defaults to "AI".
+   * Optional override for the badge text. Defaults to "Helix".
    */
   badgeLabel?: string
 
@@ -284,6 +287,7 @@ export function AIFeatureCard({
       className="gap-1.5 whitespace-nowrap shrink-0 border-cyan-400/40 bg-cyan-500/5 text-cyan-100 dark:border-cyan-400/40 hover:border-cyan-400/70 hover:bg-cyan-500/15 hover:text-[var(--text-primary)] focus-visible:ring-cyan-400/60 transition-all"
       disabled={buttonDisabled}
       aria-disabled={buttonDisabled ? 'true' : 'false'}
+      aria-busy={isStreaming || undefined}
       aria-label={`${askHelixLabel} · ${buttonLabel}`}
       onClick={() => (onAction ? onAction() : stream.start())}
       title={buttonTitle ?? buttonLabel}

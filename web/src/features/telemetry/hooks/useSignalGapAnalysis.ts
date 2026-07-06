@@ -57,5 +57,13 @@ export function useSignalGapAnalysis(vehicleId: number): SignalGapAnalysis {
     [rows],
   );
 
-  return { query, rows, buckets, freshnessPct, topStale };
+  // Return a stable object identity. The whole analysis is handed to memoised
+  // section panels (SignalGapFreshnessPanel / SignalGapHealthPanel) as a single
+  // `analysis` prop; every field is already individually memoised, so this only
+  // prevents a fresh wrapper literal from forcing those panels to re-render when
+  // the page re-renders for an unrelated reason.
+  return useMemo(
+    () => ({ query, rows, buckets, freshnessPct, topStale }),
+    [query, rows, buckets, freshnessPct, topStale],
+  );
 }

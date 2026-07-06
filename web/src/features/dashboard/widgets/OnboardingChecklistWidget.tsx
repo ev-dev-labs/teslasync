@@ -56,8 +56,15 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
     restart,
   } = state
 
+  // Null-safe views over the hook payload before we iterate / divide. The
+  // hook is strongly typed, but guarding here keeps the widget robust if a
+  // future refactor lets a field arrive undefined (house null-safety rule).
+  const tasks = visibleTasks ?? []
+  const completed = completeCount ?? 0
+  const total = totalCount ?? 0
+
   const hidden = shouldHideChecklist({ dismissed, allComplete, completedAt })
-  const progressPct = totalCount === 0 ? 0 : Math.round((completeCount / totalCount) * 100)
+  const progressPct = total === 0 ? 0 : Math.round((completed / total) * 100)
 
   const handleCta = useCallback(
     (ctaTo: string) => {
@@ -121,8 +128,8 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium text-[var(--text-primary)]">
               {t('checklist.progress', '{{done}}/{{total}} complete', {
-                done: completeCount,
-                total: totalCount,
+                done: completed,
+                total,
               })}
             </span>
             <span className="text-[var(--text-muted)] tabular-nums">{progressPct}%</span>
@@ -131,11 +138,11 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
             className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden"
             role="progressbar"
             aria-valuemin={0}
-            aria-valuemax={totalCount}
-            aria-valuenow={completeCount}
+            aria-valuemax={total}
+            aria-valuenow={completed}
             aria-label={t('checklist.progress', '{{done}}/{{total}} complete', {
-              done: completeCount,
-              total: totalCount,
+              done: completed,
+              total,
             })}
           >
             <div
@@ -151,7 +158,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
         </div>
 
         {/* Task list */}
-        {totalCount === 0 ? (
+        {total === 0 ? (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<CheckCircle2 className="h-5 w-5" />}
             message={t('checklist.empty', 'No setup steps available right now.')}
@@ -159,7 +166,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
           />
         ) : (
           <ul className="flex flex-col gap-2" data-testid="onboarding-checklist">
-            {visibleTasks.map((task) => {
+            {tasks.map((task) => {
               const Icon = task.icon
               return (
                 <li

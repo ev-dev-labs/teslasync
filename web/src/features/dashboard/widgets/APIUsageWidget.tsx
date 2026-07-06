@@ -29,6 +29,14 @@ export default function APIUsageWidget({ size }: WidgetProps) {
   const errorRate = data?.errorRate ?? 0;
   const errorCount = data?.errorCount ?? 0;
 
+  // Only replace the whole widget with a full-panel error on the INITIAL
+  // load failure, when there is no cached data to fall back on. This widget
+  // refetches on an interval, so once we have data a transient
+  // background-refetch failure must not blank out otherwise-valid numbers —
+  // it is surfaced through the freshness indicator's error state instead
+  // (WidgetShell forwards `isError` to <DataFreshness>).
+  const blockingError = !data && error ? String(error) : null;
+
   const coreStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
     return [
@@ -66,7 +74,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
     return (
       <WidgetShell
         loading={isLoading}
-        error={error ? String(error) : null}
+        error={blockingError}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -102,7 +110,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
       title={t('widget.apiUsage.title', 'API Usage')}
       icon={<BarChart2 className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      error={blockingError}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}

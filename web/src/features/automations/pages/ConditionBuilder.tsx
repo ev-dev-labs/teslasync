@@ -10,7 +10,7 @@ import {
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
-import { SIGNAL_FIELD_OPTIONS, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
 import type {
   AutomationConditionKind,
   AutomationConditionSignalOp,
@@ -111,6 +111,12 @@ export function createDefaultCondition(kind: AutomationConditionKind): Automatio
       return { kind, place_id: 0, state: 'inside' };
     case 'condition_other_automation':
       return { kind, other_automation_id: 0, state: 'enabled' };
+    default:
+      // Defensive fallback: the declared return type is non-optional, so an
+      // unrecognized kind (e.g. a future step type reaching this code before
+      // its case is added) must still yield a valid condition rather than
+      // `undefined`, which would corrupt the conditions array.
+      return { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 20 };
   }
 }
 
@@ -235,6 +241,8 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
 function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFieldsProps) {
   const { t } = useTranslation();
 
+  const signalOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+
   const operatorOptions = useMemo(() => {
     const isBool = condition.kind === 'condition_signal' && BOOL_FIELD_KEYS.has(condition.signal);
     return CONDITION_SIGNAL_OPERATORS
@@ -271,7 +279,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               i18nKey: 'help.fields.automations.signal',
               content: 'The vehicle telemetry signal this condition reads. Booleans use true/false, "state" uses keywords like online/asleep, all others compare numeric values.',
             }}
-            options={SIGNAL_FIELD_OPTIONS}
+            options={signalOptions}
             value={condition.signal}
             onChange={(event) => {
               const signal = event.target.value;
@@ -358,7 +366,8 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
       );
     }
 
-    case 'condition_time_window':
+    case 'condition_time_window': {
+      const selectedDays = condition.days_of_week ?? [];
       return (
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiInput
@@ -392,7 +401,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             </Text>
             <div className="mt-1 flex gap-1">
               {DAYS.map((label, day) => {
-                const active = condition.days_of_week.includes(day);
+                const active = selectedDays.includes(day);
                 return (
                   <UiButton
                     key={label}
@@ -407,8 +416,8 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
                     }`}
                     onClick={() => {
                       const days = active
-                        ? condition.days_of_week.filter((currentDay) => currentDay !== day)
-                        : [...condition.days_of_week, day].sort();
+                        ? selectedDays.filter((currentDay) => currentDay !== day)
+                        : [...selectedDays, day].sort((a, b) => a - b);
                       onChange({ ...condition, days_of_week: days });
                     }}
                   >
@@ -420,6 +429,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
           </div>
         </div>
       );
+    }
 
     case 'condition_geofence':
       return (

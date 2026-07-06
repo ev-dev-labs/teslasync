@@ -36,9 +36,11 @@ function InnerSection({
   const { t } = useTranslation()
   const numericVehicleId =
     typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)
+  const haveVehicle =
+    Number.isFinite(numericVehicleId) && numericVehicleId > 0
   const body = useMemo(
     () => ({
-      vehicle_id: numericVehicleId || 0,
+      vehicle_id: haveVehicle ? numericVehicleId : 0,
       origin: origin
         ? {
             lat: origin.lat,
@@ -59,6 +61,7 @@ function InnerSection({
       speed_factor: speedFactor ?? 1.0,
     }),
     [
+      haveVehicle,
       numericVehicleId,
       origin,
       destination,
@@ -73,17 +76,42 @@ function InnerSection({
     body,
     onEvent: () => {},
   })
-  const haveInputs =
-    !!vehicleId && origin != null && destination != null
-    return (
+  const haveOrigin = origin != null
+  const haveDestination = destination != null
+  const haveInputs = haveVehicle && haveOrigin && haveDestination
+
+  // Empty-state affordance: when the Draft button is disabled, explain
+  // WHICH precondition is missing rather than leaving a bare, silent
+  // disabled control (never a blank panel). Ordered coarsest-first —
+  // vehicle, then origin, then destination — mirroring the sibling AI
+  // features; AIFeatureCard only shows the hint while canStart is false.
+  const emptyHint = !haveVehicle
+    ? t(
+        'tripPlanner.aiAgent.noVehicle',
+        'Select a vehicle to let Helix draft a trip plan.',
+      )
+    : !haveOrigin
+      ? t(
+          'tripPlanner.aiAgent.noOrigin',
+          'Set a starting point for Helix to plan the route from.',
+        )
+      : !haveDestination
+        ? t(
+            'tripPlanner.aiAgent.noDestination',
+            'Set a destination for Helix to plan the route to.',
+          )
+        : undefined
+
+  return (
     <AIFeatureCard
       title={t('tripPlanner.aiAgent.title', 'Draft a plan with Helix')}
       description={t(
-                'tripPlanner.aiAgent.description',
-                'Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.',
-              )}
+        'tripPlanner.aiAgent.description',
+        'Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.',
+      )}
       buttonLabel={t('tripPlanner.aiAgent.generateButton', 'Draft a plan')}
       badgeLabel={t('tripPlanner.aiAgent.badge', 'Helix')}
+      emptyHint={emptyHint}
       canStart={haveInputs}
       stream={stream}
     />

@@ -24,16 +24,31 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     body,
     onEvent: () => {},
   })
-    return (
+  // The handler-side parser (internal/api/aiyir/handler.go) rejects
+  // vehicle_id <= 0 with a 400 before the LLM is ever invoked, so we
+  // mirror that > 0 contract here. An unresolved active vehicle
+  // (undefined) OR a placeholder 0/negative id keeps the button
+  // disabled instead of firing a request that is guaranteed to fail —
+  // the previous `vehicleId != null` gate wrongly enabled it for id 0.
+  const haveInputs = vehicleId != null && vehicleId > 0
+  return (
     <AIFeatureCard
       title={t('yearReview.aiNarration.title', 'Helix narration')}
       description={t(
-                'yearReview.aiNarration.description',
-                'Get a short, Helix-written recap of your year from the slide data above.',
-              )}
+        'yearReview.aiNarration.description',
+        'Get a short, Helix-written recap of your year from the slide data above.',
+      )}
       buttonLabel={t('yearReview.aiNarration.generateButton', 'Generate narration')}
       badgeLabel={t('yearReview.aiNarration.badge', 'Helix')}
-      canStart={vehicleId != null}
+      emptyHint={
+        haveInputs
+          ? undefined
+          : t(
+              'yearReview.aiNarration.emptyHint',
+              'Select a vehicle above to recap its year.',
+            )
+      }
+      canStart={haveInputs}
       stream={stream}
     />
   )

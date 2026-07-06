@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import {
@@ -25,6 +26,15 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
+  // Null-safe: the drive-detail derivation may hand us `undefined`/`[]` before
+  // telemetry resolves, despite the non-optional prop type. Guard once so the
+  // `.length` check and the recharts `data` prop never touch a nullish value,
+  // and keep a stable reference so <ComposedChart> isn't fed a fresh array.
+  const points = useMemo(() => chartData ?? [], [chartData]);
+  const elevGain = stats?.elevGain ?? 0;
+  const elevLoss = stats?.elevLoss ?? 0;
+  const elevNet = elevGain - elevLoss;
+
   return (
     <FadeIn className="h-full">
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
@@ -34,16 +44,16 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
         height={220}
         className="h-full"
       >
-        {chartData.length > 1 ? (
+        {points.length > 1 ? (
           <>
             <div className="flex items-center gap-4 mb-2 text-xs">
-              <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" />{fmtNumber(stats.elevGain)} m {t('driveDetail.gain', 'gain')}</span>
-              <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" />{fmtNumber(stats.elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
-              <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(stats.elevGain - stats.elevLoss)} m</span>
+              <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevGain)} m {t('driveDetail.gain', 'gain')}</span>
+              <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
+              <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(elevNet)} m</span>
             </div>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
-                data={chartData}
+                data={points}
                 syncId={syncProps.syncId}
                 syncMethod={syncProps.syncMethod}
                 onMouseMove={syncProps.onMouseMove}
@@ -71,8 +81,8 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
             </ResponsiveContainer>
           </>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
+          <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+            <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
             <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
           </div>
         )}

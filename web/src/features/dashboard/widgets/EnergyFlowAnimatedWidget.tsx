@@ -58,9 +58,9 @@ const AMBER = 'text-amber-400';
 
 export default function EnergyFlowAnimatedWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 5_000 });
+  const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 5_000 });
   const state = stateData?.state;
 
   const power = state?.power ?? 0;
@@ -132,7 +132,15 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size }: WidgetProp
     <WidgetShell
       title={t('widget.energyFlowAnimated.title', 'Energy Flow')}
       icon={<Zap className="h-3.5 w-3.5 text-cyan-400" />}
-      loading={isLoading}
+      // Fold the vehicle-list fetch into the loading state so the initial load
+      // shows the shell skeleton instead of flashing the "No energy data"
+      // empty state while the vehicle id is still resolving.
+      loading={isLoading || vehiclesLoading}
+      // Surface a genuine initial-load failure (no state yet) as a real error
+      // panel instead of the misleading "No energy data available" empty state.
+      // With cached state present, a background-refetch error stays a subtle
+      // freshness signal so valid data is never blanked out.
+      error={isError && !state ? String(error ?? t('widget.energyFlowAnimated.error', 'Unable to load energy data')) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}

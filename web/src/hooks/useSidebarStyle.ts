@@ -32,8 +32,11 @@ export const SIDEBAR_STYLES: readonly SidebarStyle[] = ['linear', 'notion', 'leg
 const STORAGE_KEY = 'teslasync:sidebar-style:v1'
 const DEFAULT_STYLE: SidebarStyle = 'linear'
 
+// Derive the runtime guard from the single SIDEBAR_STYLES source of truth so
+// the accepted set can never drift from the exported list — previously adding
+// a style meant editing the union, the array, AND this predicate in lock-step.
 function isSidebarStyle(value: unknown): value is SidebarStyle {
-  return value === 'legacy' || value === 'linear' || value === 'notion'
+  return typeof value === 'string' && (SIDEBAR_STYLES as readonly string[]).includes(value)
 }
 
 function readStyle(): SidebarStyle {

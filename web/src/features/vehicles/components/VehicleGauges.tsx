@@ -49,38 +49,52 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
   const { t } = useTranslation()
   const { unitPrefs, formatDistance } = useUnits()
 
+  // Telemetry numerics can arrive absent (missing signal / cold cache) even
+  // though the wire type says `number`. Coalesce to 0 at the point of use so
+  // the SI→display conversions stay finite and the gauges/bars never receive
+  // NaN (which paints a broken arc / an infinite-width bar).
+  const batteryLevel = state.battery_level ?? 0
+  const ratedRange = state.rated_range ?? 0
+  const speed = state.speed ?? 0
+  const chargeRate = state.charge_rate ?? 0
+  const chargerPower = state.charger_power ?? 0
+
   const chips = [
     {
+      id: 'lock',
       icon: state.is_locked ? Lock : Unlock,
       label: state.is_locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked'),
       color: boolColor(state.is_locked),
     },
     {
+      id: 'sentry',
       icon: Shield,
       label: state.sentry_mode ? t('common.sentryOn', 'Sentry ON') : t('common.sentryOff', 'Sentry OFF'),
       color: state.sentry_mode ? COLOR.BAD : COLOR.MUTED,
     },
     {
+      id: 'climate',
       icon: Wind,
       label: state.is_climate_on ? t('common.climateOn', 'Climate ON') : t('common.climateOff', 'Climate OFF'),
       color: state.is_climate_on ? COLOR.CYAN : COLOR.MUTED,
     },
     {
+      id: 'software',
       icon: Cpu,
-      label: state.software_version || 'N/A',
+      label: state.software_version || t('common.notAvailable', 'N/A'),
       color: COLOR.PURPLE,
     },
   ]
 
   // Pre-convert SI values to user-pref numerics so RadialGauge / MetricBar
   // receive matching value/max pairs in the SAME unit.
-  const rangeDisplay = convertDistanceFromSI(state.rated_range, unitPrefs.distance)
+  const rangeDisplay = convertDistanceFromSI(ratedRange, unitPrefs.distance)
   const rangeMax = convertDistanceFromSI(MAX_RANGE_METERS, unitPrefs.distance)
-  const speedDisplay = convertSpeedFromSI(state.speed, unitPrefs.speed)
+  const speedDisplay = convertSpeedFromSI(speed, unitPrefs.speed)
   const speedMax = convertSpeedFromSI(MAX_SPEED_MPS, unitPrefs.speed)
   // ChargeRate is delivered as distance-per-hour (m/h) — convert through the
   // distance pref, then label as `<unit>/h` to match the Tesla UX.
-  const chargeRateDisplay = convertDistanceFromSI(state.charge_rate, unitPrefs.distance)
+  const chargeRateDisplay = convertDistanceFromSI(chargeRate, unitPrefs.distance)
   const chargeRateMax = convertDistanceFromSI(MAX_CHARGE_RATE_METERS_PER_HOUR, unitPrefs.distance)
 
   return (
@@ -91,12 +105,12 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
           {/* Car visualization */}
           <div className="flex items-center justify-center">
             <TeslaCarViz
-              batteryLevel={state.battery_level}
+              batteryLevel={batteryLevel}
               isCharging={state.is_charging}
               isLocked={state.is_locked}
               isClimateOn={state.is_climate_on}
               sentryMode={state.sentry_mode}
-              speed={state.speed}
+              speed={speed}
               size="lg"
               model={parseModelKey(vehicle?.model)}
             />
@@ -107,11 +121,11 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
             {/* Radial gauge row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 justify-items-center">
               <RadialGauge
-                value={state.battery_level}
+                value={batteryLevel}
                 max={100}
                 label={t('common.battery', 'Battery')}
                 unit="%"
-                color={batteryColor(state.battery_level)}
+                color={batteryColor(batteryLevel)}
                 size={110}
               />
               <RadialGauge
@@ -127,11 +141,11 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 max={Math.round(speedMax)}
                 label={t('common.speed', 'Speed')}
                 unit={unitPrefs.speed}
-                color={state.speed > 0 ? COLOR.PURPLE : COLOR.DARK}
+                color={speed > 0 ? COLOR.PURPLE : COLOR.DARK}
                 size={110}
               />
               <RadialGauge
-                value={state.charger_power}
+                value={chargerPower}
                 max={250}
                 label={t('common.power', 'Power')}
                 unit="kW"
@@ -143,18 +157,18 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
             {/* Metric bars */}
             <div className="space-y-3">
               <MetricBar
-                value={state.battery_level}
+                value={batteryLevel}
                 max={100}
-                color={batteryColor(state.battery_level)}
+                color={batteryColor(batteryLevel)}
                 label={t('common.batteryLevel', 'Battery Level')}
-                sublabel={`${fmtNumber(state.battery_level, 0)}%`}
+                sublabel={`${fmtNumber(batteryLevel, 0)}%`}
               />
               <MetricBar
                 value={rangeDisplay}
                 max={rangeMax}
                 color={COLOR.CYAN}
                 label={t('common.estimatedRange', 'Estimated Range')}
-                sublabel={formatDistance(state.rated_range)}
+                sublabel={formatDistance(ratedRange)}
               />
               {state.is_charging && (
                 <MetricBar
@@ -162,7 +176,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                   max={chargeRateMax}
                   color="#10b981"
                   label={t('common.chargeRate', 'Charge Rate')}
-                  sublabel={`${formatDistance(state.charge_rate)}/h`}
+                  sublabel={`${formatDistance(chargeRate)}/h`}
                 />
               )}
             </div>
@@ -171,10 +185,10 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
             <div className="flex flex-wrap gap-2">
               {chips.map((chip) => (
                 <span
-                  key={chip.label}
+                  key={chip.id}
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border border-white/[0.06] bg-white/[0.02]"
                 >
-                  <chip.icon className="h-3 w-3" style={{ color: chip.color }} />
+                  <chip.icon className="h-3 w-3" style={{ color: chip.color }} aria-hidden="true" />
                   <span className="text-[var(--text-secondary)]">{chip.label}</span>
                 </span>
               ))}

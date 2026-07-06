@@ -16,7 +16,7 @@ const SCORE_COLORS = {
   poor: '#ef4444',
 } as const;
 
-function scoreColor(score: number): string {
+export function scoreColor(score: number): string {
   if (score >= 80) return SCORE_COLORS.excellent;
   if (score >= 60) return SCORE_COLORS.good;
   if (score >= 40) return SCORE_COLORS.fair;
@@ -36,6 +36,13 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isTall = size.rows >= 2;
+
+  // `/drives/score` answers 200 with an all-zero object (grade "F",
+  // total_drives 0) for a vehicle that has no completed drives yet — it never
+  // returns null. A plain truthiness check would therefore render a misleading
+  // "0 / F" gauge for a brand-new vehicle. Gate on the scored-drive count so
+  // the empty state surfaces until there is at least one drive to score.
+  const hasScoredDrives = !!score && (score.totalDrives ?? 0) > 0;
 
   const gauge = useMemo<GaugeHeroConfig>(() => ({
     value: overall,
@@ -75,7 +82,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {score ? (
+      {hasScoredDrives ? (
         <WidgetGaugeHero gauge={gauge} stats={stats} compact={isCompact}>
           {isTall && (
             <div className="flex flex-col gap-2 w-full">

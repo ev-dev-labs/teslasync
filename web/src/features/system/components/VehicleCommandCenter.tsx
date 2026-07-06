@@ -30,7 +30,9 @@ import { CommandSelectDialog } from './CommandSelectDialog';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const parsed = new Date(dateStr).getTime();
+  if (!Number.isFinite(parsed)) return '—';
+  const diff = Date.now() - parsed;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
@@ -259,18 +261,18 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
         {state && (
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1">
-              <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+              <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
               <Text weight="semibold" className={(state.battery_level ?? 0) > 50 ? 'text-emerald-300' : 'text-amber-300'}>
-                {state.battery_level}%
+                {state.battery_level ?? 0}%
               </Text>
             </span>
             <span className="flex items-center gap-1">
-              <Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <Text color="secondary">{fmtNumber(convertDistanceFromSI(state.rated_range, unitPrefs.distance), 0)} {unitPrefs.distance}</Text>
+              <Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+              <Text color="secondary">{fmtNumber(convertDistanceFromSI(state.rated_range ?? 0, unitPrefs.distance), 0)} {unitPrefs.distance}</Text>
             </span>
             {state.inside_temp != null && (
               <span className="flex items-center gap-1">
-                <Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
                 <Text color="secondary">{fmtNumber(convertTempFromSI(state.inside_temp, unitPrefs.temperature), 0)}{unitPrefs.temperature}</Text>
               </span>
             )}
@@ -284,8 +286,8 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
           lastResult.success ? 'bg-neon-green/5 border-neon-green/20' : 'bg-neon-red/5 border-neon-red/20',
         )}>
           {lastResult.success
-            ? <CheckCircle className="h-4 w-4 text-neon-green" />
-            : <AlertTriangle className="h-4 w-4 text-neon-red" />
+            ? <CheckCircle className="h-4 w-4 text-neon-green" aria-hidden="true" />
+            : <AlertTriangle className="h-4 w-4 text-neon-red" aria-hidden="true" />
           }
           <Text size="xs" className={lastResult.success ? 'text-emerald-300' : 'text-rose-300'}>
             {lastResult.message}
@@ -295,7 +297,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
 
       {isAsleep && (
         <GlassPanel className="p-3 mb-4 flex items-center gap-2 bg-neon-amber/5 border-neon-amber/20">
-          <Power className="h-4 w-4 text-neon-amber" />
+          <Power className="h-4 w-4 text-neon-amber" aria-hidden="true" />
           <Text size="xs" className="text-amber-300">
             {t('Vehicle is')} {vehicle.state}. {t('Wake it up first to send commands.')}
           </Text>
@@ -303,7 +305,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
       )}
 
       {isStale && !isAsleep && (
-        <AlertBanner variant="warning" icon={<Clock className="h-4 w-4" />}>
+        <AlertBanner variant="warning" icon={<Clock className="h-4 w-4" aria-hidden="true" />}>
           {t('commands.staleData', 'Vehicle data is {{age}} old. The vehicle may be asleep or offline.', { age: ageLabel })}
         </AlertBanner>
       )}

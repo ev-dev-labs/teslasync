@@ -34,6 +34,7 @@ export interface ApiKeysSummary {
  * band, access-levels panel, and admin highlight stay consistent.
  */
 export function summarizeKeys(keys: readonly APIKey[], now: number = Date.now()): ApiKeysSummary {
+  const list = keys ?? [];
   const byPermission = PERMISSION_ORDER.reduce(
     (acc, perm) => ({ ...acc, [perm]: 0 }),
     {} as Record<ApiKeyPermission, number>,
@@ -44,15 +45,18 @@ export function summarizeKeys(keys: readonly APIKey[], now: number = Date.now())
   let admin = 0;
   let recentlyUsed = 0;
 
-  for (const key of keys) {
+  for (const key of list) {
     if (isKeyExpired(key, now)) expired += 1;
     else active += 1;
     if (key.permissions === 'admin') admin += 1;
     if (isRecentlyUsed(key, undefined, now)) recentlyUsed += 1;
-    if (key.permissions in byPermission) {
+    // `hasOwnProperty.call` (not the `in` operator) so a malformed API value
+    // like `permissions: "toString"` can't match an inherited Object.prototype
+    // member and corrupt the per-permission tally.
+    if (Object.prototype.hasOwnProperty.call(byPermission, key.permissions)) {
       byPermission[key.permissions as ApiKeyPermission] += 1;
     }
   }
 
-  return { total: keys.length, active, expired, admin, recentlyUsed, byPermission };
+  return { total: list.length, active, expired, admin, recentlyUsed, byPermission };
 }

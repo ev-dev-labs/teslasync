@@ -10,6 +10,7 @@ package auditviewersvc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
@@ -17,15 +18,45 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 )
 
+// queryPort is the read-side port the viewer depends on. The concrete
+// *auditdb.AuditLogQueryRepo satisfies it in production; unit tests
+// supply an in-package fake so the service can be exercised without a
+// live PostgreSQL pool (the same test-double approach the database/audit
+// repos use against their DBTX fake).
+type queryPort interface {
+	List(ctx context.Context, q auditdb.AuditLogQuery) ([]auditdb.AuditLogRow, error)
+	DistinctCategories(ctx context.Context) ([]string, error)
+	DistinctActions(ctx context.Context) ([]string, error)
+}
+
+// verifyPort is the hash-chain verification port, satisfied by
+// *audit.Recorder in production.
+type verifyPort interface {
+	VerifyChain(ctx context.Context, since time.Time, limit int) (firstBadID int64, checked int, err error)
+}
+
 // Service is the audit viewer orchestrator.
 type Service struct {
-	repo     *auditdb.AuditLogQueryRepo
-	recorder *audit.Recorder
+	repo     queryPort
+	recorder verifyPort
 }
 
 // New constructs the service.
+//
+// A nil *AuditLogQueryRepo or *audit.Recorder (which is what those
+// constructors return on deployments where the audit read path is not
+// wired) is stored as a genuine nil port rather than a typed-nil
+// interface, so the ErrNotConfigured guards below keep firing instead
+// of dereferencing a nil concrete value.
 func New(repo *auditdb.AuditLogQueryRepo, recorder *audit.Recorder) *Service {
-	return &Service{repo: repo, recorder: recorder}
+	s := &Service{}
+	if repo != nil {
+		s.repo = repo
+	}
+	if recorder != nil {
+		s.recorder = recorder
+	}
+	return s
 }
 
 // ErrNotConfigured is returned when the audit_logs read path is not wired.
@@ -36,15 +67,24 @@ func (s *Service) Query(ctx context.Context, q auditdb.AuditLogQuery) ([]auditdb
 	if s == nil || s.repo == nil {
 		return nil, ErrNotConfigured
 	}
-	return s.repo.List(ctx, q)
+	rows, err := s.repo.List(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("auditviewersvc: query: %w", err)
+	}
+	return rows, nil
 }
 
-// DistinctCategories / DistinctActions feed the filter UI dropdowns.
+// DistinctCategories feeds the filter UI dropdown with the distinct
+// audit categories present in audit_logs.
 func (s *Service) DistinctCategories(ctx context.Context) ([]string, error) {
 	if s == nil || s.repo == nil {
 		return nil, ErrNotConfigured
 	}
-	return s.repo.DistinctCategories(ctx)
+	cats, err := s.repo.DistinctCategories(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("auditviewersvc: distinct categories: %w", err)
+	}
+	return cats, nil
 }
 
 // DistinctActions returns the top-100 most-recent action names.
@@ -52,7 +92,11 @@ func (s *Service) DistinctActions(ctx context.Context) ([]string, error) {
 	if s == nil || s.repo == nil {
 		return nil, ErrNotConfigured
 	}
-	return s.repo.DistinctActions(ctx)
+	actions, err := s.repo.DistinctActions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("auditviewersvc: distinct actions: %w", err)
+	}
+	return actions, nil
 }
 
 // VerifyChain re-derives the SHA256 chain on audit_logs rows since
@@ -64,5 +108,9 @@ func (s *Service) VerifyChain(ctx context.Context, since time.Time, limit int) (
 	if s == nil || s.recorder == nil {
 		return 0, 0, ErrNotConfigured
 	}
-	return s.recorder.VerifyChain(ctx, since, limit)
+	badID, checked, err := s.recorder.VerifyChain(ctx, since, limit)
+	if err != nil {
+		return badID, checked, fmt.Errorf("auditviewersvc: verify chain: %w", err)
+	}
+	return badID, checked, nil
 }

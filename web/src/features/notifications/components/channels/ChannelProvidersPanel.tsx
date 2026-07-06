@@ -5,6 +5,7 @@
  * it adds no new data source and stays null-safe when channels are absent.
  */
 
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, GlassPanel, Heading, Text } from '@/components/ui';
 import type { NotificationChannel } from '@/api/types';
@@ -17,11 +18,21 @@ interface ChannelProvidersPanelProps {
 export function ChannelProvidersPanel({ channels }: ChannelProvidersPanelProps) {
   const { t } = useTranslation();
 
-  const counts = new Map<string, number>();
-  for (const ch of channels ?? []) {
-    counts.set(ch.kind, (counts.get(ch.kind) ?? 0) + 1);
-  }
-  const inUse = CHANNEL_TYPES.reduce((n, p) => n + ((counts.get(p.value) ?? 0) > 0 ? 1 : 0), 0);
+  // Derive per-kind counts + the number of provider types in use once per
+  // `channels` change. Guard against a null/kind-less row so a single
+  // malformed API entry can't crash the whole reference panel.
+  const { counts, inUse } = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const ch of channels ?? []) {
+      if (!ch?.kind) continue;
+      map.set(ch.kind, (map.get(ch.kind) ?? 0) + 1);
+    }
+    const used = CHANNEL_TYPES.reduce(
+      (n, p) => n + ((map.get(p.value) ?? 0) > 0 ? 1 : 0),
+      0,
+    );
+    return { counts: map, inUse: used };
+  }, [channels]);
 
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
@@ -61,7 +72,9 @@ export function ChannelProvidersPanel({ channels }: ChannelProvidersPanelProps) 
                 </Text>
               </div>
               {count > 0 && (
-                <Badge variant="success" size="sm">{count}</Badge>
+                // Decorative reinforcement of the "{{count}} configured"
+                // caption above; hidden from AT to avoid a duplicate reading.
+                <Badge variant="success" size="sm" aria-hidden="true">{count}</Badge>
               )}
             </li>
           );

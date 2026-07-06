@@ -24,6 +24,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -70,16 +71,28 @@ func main() {
 	flag.StringVar(&reportPath, "report", defaultReport, "report path")
 	flag.Parse()
 
+	os.Exit(run(routerPath, catalogPath, reportPath, os.Stdout, os.Stderr))
+}
+
+// run performs the audit end-to-end and returns a process exit code:
+//
+//	0  every user-facing route is covered by an SLO.
+//	1  an IO/parse error prevented the audit from completing.
+//	2  the audit ran but found at least one uncovered route.
+//
+// It is separated from main so tests can drive it with temp fixtures and
+// captured output instead of touching os.Stdout/os.Stderr or os.Exit.
+func run(routerPath, catalogPath, reportPath string, stdout, stderr io.Writer) int {
 	routes, err := loadRoutes(routerPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "load routes failed: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "load routes failed: %v\n", err)
+		return 1
 	}
 
 	transitive, perRoute, err := loadCatalogCoverage(catalogPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "load catalog failed: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "load catalog failed: %v\n", err)
+		return 1
 	}
 
 	rows := make([]rowResult, 0, len(routes))
@@ -105,26 +118,27 @@ func main() {
 
 	report := renderReport(rows, missing, transitive, perRoute)
 	if err := os.MkdirAll(filepath.Dir(reportPath), 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "mkdir failed: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "mkdir failed: %v\n", err)
+		return 1
 	}
 	if err := os.WriteFile(reportPath, []byte(report), 0o644); err != nil {
-		fmt.Fprintf(os.Stderr, "write failed: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "write failed: %v\n", err)
+		return 1
 	}
-	fmt.Print(report)
+	fmt.Fprint(stdout, report)
 
 	if len(missing) > 0 {
-		fmt.Fprintf(os.Stderr, "slo-coverage-audit: %d uncovered route(s) — see report\n", len(missing))
-		os.Exit(2)
+		fmt.Fprintf(stderr, "slo-coverage-audit: %d uncovered route(s) — see report\n", len(missing))
+		return 2
 	}
-	fmt.Fprintf(os.Stderr, "slo-coverage-audit: OK (%d user-facing routes covered)\n", len(rows))
+	fmt.Fprintf(stderr, "slo-coverage-audit: OK (%d user-facing routes covered)\n", len(rows))
+	return 0
 }
 
 func loadRoutes(path string) ([]string, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read router file %s: %w", path, err)
 	}
 	matches := routeLiteralRE.FindAllStringSubmatch(string(body), -1)
 	out := make([]string, 0, len(matches))
@@ -145,7 +159,7 @@ func loadRoutes(path string) ([]string, error) {
 func loadCatalogCoverage(path string) (transitive bool, perRoute map[string]struct{}, err error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("read catalog %s: %w", path, err)
 	}
 	src := string(body)
 	transitive = strings.Contains(src, "teslasync_red_http_requests_total")

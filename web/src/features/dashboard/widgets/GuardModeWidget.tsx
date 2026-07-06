@@ -36,9 +36,18 @@ const EVENT_TYPE_MAP: Record<
 };
 
 function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) => string): EventFeedItem {
-  const mapped = EVENT_TYPE_MAP[ev.event_type] ?? {
+  // `event_type` is a free-form backend string. Guard the lookup with
+  // `hasOwnProperty` so a value that collides with an Object.prototype member
+  // (e.g. "toString", "constructor") resolves to the neutral fallback instead
+  // of an inherited method — which would otherwise surface an `undefined`
+  // icon/color and a raw i18n key as the title.
+  const eventType = ev.event_type ?? '';
+  const known = Object.prototype.hasOwnProperty.call(EVENT_TYPE_MAP, eventType)
+    ? EVENT_TYPE_MAP[eventType]
+    : undefined;
+  const mapped = known ?? {
     icon: <ShieldAlert className="h-3.5 w-3.5" />,
-    label: ev.event_type ?? '—',
+    label: eventType || '—',
     color: '#6b7280',
     severity: 'info' as const,
   };
@@ -46,7 +55,7 @@ function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) =
   return {
     id: ev.id,
     icon: mapped.icon,
-    title: t(`widget.guardEvent.${ev.event_type}`, mapped.label),
+    title: t(`widget.guardEvent.${eventType}`, mapped.label),
     subtitle: isGuardEventAcknowledged(ev)
       ? t('widget.guardAcknowledged', 'Acknowledged')
       : t('widget.guardUnacknowledged', 'Unacknowledged'),
@@ -155,6 +164,7 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
     isFetching: configFetching,
     isStale: configStale,
     isError: configError,
+    error: configErr,
     dataUpdatedAt: configUpdatedAt,
     refetch: refetchConfig,
   } = useGuardConfig(id);
@@ -180,6 +190,12 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
   const isFetching = configFetching || eventsFetching;
   const isStale = configStale || eventsStale;
   const isError = configError || eventsError;
+  // Only blank the whole widget on an INITIAL config load failure — i.e. when
+  // there is no cached config to fall back on. The widget polls on an interval,
+  // so once a config is on screen a transient background-refetch error must not
+  // wipe the panel; it is surfaced through the freshness indicator's error
+  // state instead (WidgetShell forwards `isError` to <DataFreshness>).
+  const blockingError = !config && configErr ? String(configErr) : null;
   const updatedAt = Math.max(configUpdatedAt ?? 0, eventsUpdatedAt ?? 0);
 
   const enabled = config?.enabled ?? false;
@@ -192,6 +208,7 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.guardMode', 'Guard Mode')}
       icon={<Shield className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
+      error={blockingError}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}

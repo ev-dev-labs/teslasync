@@ -53,6 +53,28 @@ function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
 }
 
 /**
+ * Module-cached IANA timezone validity probe. `Intl.DateTimeFormat` throws a
+ * `RangeError` when constructed with an unknown `timeZone`, and the shared
+ * display formatters in `@/lib/dateFormat` (unlike `tzAbbreviation`/`ymdInTz`)
+ * propagate that throw. Caching keeps the check O(1) after a zone is first
+ * seen — this runs once per row on table-heavy pages.
+ */
+const TZ_VALIDITY = new Map<string, boolean>();
+function isValidTimeZone(tz: string): boolean {
+  const cached = TZ_VALIDITY.get(tz);
+  if (cached !== undefined) return cached;
+  let ok = false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(0);
+    ok = true;
+  } catch {
+    ok = false;
+  }
+  TZ_VALIDITY.set(tz, ok);
+  return ok;
+}
+
+/**
  * Renders the timestamp in the IANA timezone resolved from the user's
  * settings + the active vehicle. Always calls `useTimezone` and
  * `useSettings` so React's hook rules are honored regardless of which
@@ -63,7 +85,12 @@ function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
 function DateTimeWithTz({ value, variant = 'full', in: mode, showTz, className }: DateTimeProps) {
   const { settings } = useSettings();
   const effectiveMode = (mode ?? settings.tz_display_default ?? 'vehicle') as TzMode;
-  const tz = useTimezone(effectiveMode);
+  const resolvedTz = useTimezone(effectiveMode);
+  // A malformed IANA zone (e.g. a garbage `vehicle.timezone` that slipped past
+  // resolveTimezone) makes the pure display formatters throw RangeError, which
+  // would crash the whole panel. Degrade an invalid zone to UTC so the
+  // timestamp still renders. Validity is cached, so this stays cheap per row.
+  const tz = isValidTimeZone(resolvedTz) ? resolvedTz : 'UTC';
   const locale = resolveLocale(settings.locale);
   return renderSpan({ value, variant, className, opts: { tz, locale }, showTz, tz });
 }

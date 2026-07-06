@@ -75,10 +75,30 @@ export function invalidateAndBroadcast(
 
 /**
  * Test-only helper: drains any pending coalesce timer immediately.
+ *
+ * Cancels the scheduled timer (if any) and flushes synchronously. `flush`
+ * is a no-op when nothing is queued, so this is safe to call unconditionally
+ * — and it still drains a queued batch even in the (defensive) case where a
+ * timer was never armed, rather than silently stranding the pending keys.
  */
 export function __flushQueryBroadcastForTests(): void {
   if (timer != null) {
     clearTimeout(timer)
-    flush()
+    timer = null
   }
+  flush()
+}
+
+/**
+ * Test-only helper: cancels any pending coalesce timer and drops every queued
+ * invalidation WITHOUT broadcasting. Use in test teardown to isolate the
+ * module-level `pending`/`timer` state between cases (mirrors
+ * `__resetBroadcastForTests` in `./broadcast`).
+ */
+export function __resetQueryBroadcastForTests(): void {
+  if (timer != null) {
+    clearTimeout(timer)
+    timer = null
+  }
+  pending = new Map()
 }

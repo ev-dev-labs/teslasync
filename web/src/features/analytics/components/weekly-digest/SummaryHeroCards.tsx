@@ -33,6 +33,7 @@ export function SummaryHeroCards({
   return (
     <section
       aria-label={t('analytics.weeklyDigest.weekSummary', 'Week Summary')}
+      aria-busy={isLoading ? true : undefined}
       className="space-y-3"
     >
       <SectionTitle>{t('analytics.weeklyDigest.weekSummary', 'Week Summary')}</SectionTitle>

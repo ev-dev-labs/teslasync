@@ -44,7 +44,13 @@ export default function BrowserNotificationsPage() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+          <section
+            aria-label={t(
+              'notifications.browser.controlsAria',
+              'Notification delivery controls',
+            )}
+            className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+          >
             <BrowserPermissionPanel
               className="xl:col-span-2"
               permission={permission}

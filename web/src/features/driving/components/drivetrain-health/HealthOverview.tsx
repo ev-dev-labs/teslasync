@@ -41,6 +41,14 @@ export function HealthOverview({
         ? 'text-amber-300'
         : 'text-rose-300';
 
+  // The parent passes `motorStatus ?? ''`, so an empty (or whitespace-only)
+  // value is the real "unknown" case. Fall back to a placeholder so the label
+  // never dangles as "Motor State:" with nothing after the colon.
+  const motorStatusLabel = motorStatus && motorStatus.trim() ? motorStatus : '—';
+  // A non-finite score (NaN, or a runtime undefined slipping past the type)
+  // would otherwise render "NaN%" in the metric.
+  const safeHealthScore = Number.isFinite(healthScore) ? healthScore : 0;
+
   const showAlert = hasData && !loading && !error && overallHealth !== 'good';
 
   return (
@@ -103,7 +111,7 @@ export function HealthOverview({
                         : t('drivetrain.healthCrit', 'Drivetrain Overheating')}
                   </SectionTitle>
                   <Text as="p" size="sm" color="muted">
-                    {t('drivetrain.motorState', 'Motor State')}: {motorStatus}
+                    {t('drivetrain.motorState', 'Motor State')}: {motorStatusLabel}
                   </Text>
                 </div>
               </div>
@@ -112,7 +120,7 @@ export function HealthOverview({
                   {t(`drivetrain.health.${overallHealth}`, overallHealth.toUpperCase())}
                 </Badge>
                 <MetricValue className={cn('!text-2xl', healthTextClass)}>
-                  <AnimatedNumber value={healthScore} suffix="%" />
+                  <AnimatedNumber value={safeHealthScore} suffix="%" />
                 </MetricValue>
               </div>
             </div>

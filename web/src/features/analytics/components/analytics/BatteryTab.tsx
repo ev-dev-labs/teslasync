@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heart, Battery, TrendingUp, MapPin, Activity } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
@@ -20,8 +21,12 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
-  // backend `range_km` is SI km; convert via meter-floored helper.
-  const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
+  // backend `range_km` is SI km; convert via meter-floored helper. Stable per
+  // distance unit so the memoised chart data below only recomputes on unit change.
+  const fromKm = useCallback(
+    (km: number) => convertDistanceFromSI(km * 1000, distanceUnit),
+    [distanceUnit],
+  );
 
   const { data, isLoading, isError, error, refetch } = query;
   const err = isError ? error : undefined;
@@ -29,6 +34,13 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
   const trend = data?.battery_trend ?? [];
   const latest = trend.length > 0 ? trend[trend.length - 1] : null;
   const isEmpty = trend.length === 0;
+
+  // Range trend is plotted in the user's distance unit; derive once instead of
+  // building a fresh array literal inline on every render.
+  const rangeData = useMemo(
+    () => trend.map((d) => ({ ...d, range: fromKm(safe(d.range_km)) })),
+    [trend, fromKm],
+  );
 
   return (
     <FadeIn className="mt-4 space-y-4 xl:space-y-5">
@@ -89,7 +101,11 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
           emptyIcon={<Battery className="h-10 w-10" />}
         >
-          <div className="h-72 sm:h-80">
+          <div
+            className="h-72 sm:h-80"
+            role="img"
+            aria-label={t('analytics.battery.healthChartAria', 'Battery health score trend over time')}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trend} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -115,7 +131,11 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={isEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={t('analytics.battery.capacityChartAria', 'Battery capacity trend over time')}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -138,10 +158,14 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={isEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={`${t('analytics.battery.rangeChartAria', 'Battery range trend over time')} (${distanceUnit})`}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={trend.map((d) => ({ ...d, range: fromKm(safe(d.range_km)) }))}
+                data={rangeData}
                 margin={chartMarginLabeled}
                 {...chartAnimation}
               >
@@ -166,7 +190,11 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={isEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={t('analytics.battery.degradationChartAria', 'Battery degradation and charge cycle count over time')}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={trend} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, Lock, Unlock, ArrowUpRight } from 'lucide-react';
@@ -14,7 +14,7 @@ const REFRESH_INTERVAL = 5_000;
 
 export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vehicle = vehicleId
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
     : vehicles?.[0];
@@ -23,6 +23,10 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   const { data: security, isLoading: securityLoading } = useSecurityLatest(id, REFRESH_INTERVAL);
   const { data: charging } = useChargingTelemetryLatest(id, REFRESH_INTERVAL);
   const state = stateData?.state;
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const twinState = useMemo(
     () => buildTwinState(security, state, charging),
@@ -58,12 +62,12 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
     <WidgetShell
       title={t('widget.digitalTwin', 'Digital Twin')}
       icon={<Monitor className="h-3.5 w-3.5 text-neon-purple" />}
-      loading={stateLoading || securityLoading}
+      loading={vehiclesLoading || stateLoading || securityLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
       actions={
         <Link
           to="/digital-twin"
@@ -142,7 +146,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
           </div>
 
           <p className="flex-shrink-0 text-xs text-[var(--text-muted)]">
-            {vehicle.display_name || vehicle.vin}
+            {vehicle.display_name || vehicle.vin || t('widget.unknownVehicle', 'Unknown vehicle')}
           </p>
         </div>
       ) : (

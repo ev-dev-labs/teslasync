@@ -58,6 +58,14 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// Stable no-op SSE event handler. This surface accumulates the delta
+// stream through useAiStream's built-in `text` accumulator and has no
+// per-event side effect of its own, so a module-level constant keeps
+// the callback identity stable across renders — an inline `() => {}`
+// would allocate a fresh function every render and needlessly re-run
+// the hook's onEvent ref-sync effect.
+const noopStreamEvent = (): void => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId is the in-scope vehicle the prediction covers.
@@ -122,7 +130,7 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/maintenance/predict',
     body,
-    onEvent: () => {},
+    onEvent: noopStreamEvent,
   })
 
   return (

@@ -105,10 +105,10 @@ type Geofence struct {
 }
 
 // Centroid computes the arithmetic mean of the polygon vertices.
-// Returns (0, 0) if PolygonWKT is empty or unparseable.
+// Returns (0, 0) for a nil receiver or if PolygonWKT is empty or unparseable.
 // WKT convention: coordinates are (longitude latitude).
 func (g *Geofence) Centroid() (lat, lon float64) {
-	if g.PolygonWKT == "" {
+	if g == nil || g.PolygonWKT == "" {
 		return 0, 0
 	}
 	start := strings.Index(g.PolygonWKT, "((")

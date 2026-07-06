@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { GlassPanel, IconBox, PanelTitle, Text } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
 import { cn } from '@/lib/cn';
 import { type NeonColor } from '@/lib/tokens';
 
@@ -43,10 +44,11 @@ const rowClasses = cn(
 export function OnboardingResources({ className }: { className?: string }) {
   const { t } = useTranslation();
 
-  const links: ResourceLink[] = [
+  const links = useMemo<ResourceLink[]>(
+    () => [
     {
       key: 'account',
-      icon: <KeyRound className="h-4 w-4" />,
+      icon: <KeyRound className="h-4 w-4" aria-hidden="true" />,
       color: 'cyan',
       title: t('onboarding.resources.account.title', 'Tesla account'),
       desc: t('onboarding.resources.account.desc', 'Connect or manage your Fleet API access.'),
@@ -54,7 +56,7 @@ export function OnboardingResources({ className }: { className?: string }) {
     },
     {
       key: 'guide',
-      icon: <Radio className="h-4 w-4" />,
+      icon: <Radio className="h-4 w-4" aria-hidden="true" />,
       color: 'green',
       title: t('onboarding.resources.guide.title', 'Fleet Telemetry setup guide'),
       desc: t('onboarding.resources.guide.desc', 'Configure streaming so live data starts arriving.'),
@@ -62,13 +64,15 @@ export function OnboardingResources({ className }: { className?: string }) {
     },
     {
       key: 'docs',
-      icon: <BookOpen className="h-4 w-4" />,
+      icon: <BookOpen className="h-4 w-4" aria-hidden="true" />,
       color: 'purple',
       title: t('onboarding.resources.docs.title', 'Documentation'),
       desc: t('onboarding.resources.docs.desc', 'Guides, reference, and troubleshooting.'),
       href: '/docs/',
     },
-  ];
+    ],
+    [t],
+  );
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
@@ -93,10 +97,15 @@ export function OnboardingResources({ className }: { className?: string }) {
                   </Text>
                 </span>
                 {link.href ? (
-                  <ExternalLink
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-cyan-300"
-                  />
+                  <>
+                    <ExternalLink
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-cyan-300"
+                    />
+                    <VisuallyHidden>
+                      {t('onboarding.resources.newTab', '(opens in a new tab)')}
+                    </VisuallyHidden>
+                  </>
                 ) : (
                   <ChevronRight
                     aria-hidden="true"

@@ -121,31 +121,51 @@ export function ChargingBolt({ size = 32, className = '' }: { size?: number; cla
 }
 
 /**
+ * Inner drawable width of the battery body in the fixed `0 0 48 24` viewBox.
+ * The gauge fill is expressed in viewBox units (0 = empty, 38 = full) so it
+ * stays correct regardless of the rendered `size`, which only scales the
+ * outer <svg>.
+ */
+const BATTERY_FILL_MAX = 38
+
+/**
  * Animated battery fill gauge. The fill animation respects reduced-motion
  * by jumping straight to the target width.
  */
 export function BatteryFillAnimation({ level = 80, size = 48, className = '' }: { level?: number; size?: number; className?: string }) {
-  const barWidth = size * 0.6
-  const fillWidth = (barWidth - 4) * Math.min(level, 100) / 100
-  const color = level >= 60 ? COLOR.GOOD : level >= 30 ? COLOR.WARN : COLOR.BAD
+  // Clamp to a finite 0–100% so an out-of-range, negative, or NaN level can
+  // never produce a negative or overflowing SVG rect width.
+  const clampedLevel = Math.max(0, Math.min(Number.isFinite(level) ? level : 0, 100))
+  // Fill width lives in the fixed viewBox, derived from the clamped percentage
+  // only — never from `size` (which merely scales the rendered <svg>). Scaling
+  // it by `size` made the gauge under-fill at every size other than 48.
+  const fillWidth = (BATTERY_FILL_MAX * clampedLevel) / 100
+  const color = clampedLevel >= 60 ? COLOR.GOOD : clampedLevel >= 30 ? COLOR.WARN : COLOR.BAD
   const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
 
   return (
     <motion.svg width={size} height={size * 0.5} viewBox="0 0 48 24" className={className}
+      role="img"
+      aria-label={t('carAnimation.battery', 'Battery at {{level}} percent', { level: Math.round(clampedLevel) })}
       initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: reduce ? 0 : 0.4 }}>
       {/* Battery outline */}
       <rect x="2" y="4" width="38" height="16" rx="3" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" />
       <rect x="40" y="8" width="4" height="8" rx="1" fill="var(--text-muted)" fillOpacity={0.4} />
       {/* Battery fill */}
-      <motion.rect x="4" y="6" width={fillWidth * (38 / (48 * 0.6 - 4))} height="12" rx="1.5"
+      <motion.rect x="4" y="6" width={fillWidth} height="12" rx="1.5"
         fill={color}
         initial={reduce ? false : { width: 0 }}
-        animate={{ width: fillWidth * (38 / (48 * 0.6 - 4)) }}
+        animate={{ width: fillWidth }}
         transition={reduce ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.3 }}
       />
     </motion.svg>
   )
 }
+
+/** Evenly-spaced spoke angles (degrees) for the WheelSpin hub — hoisted so the
+ * array is allocated once at module load instead of on every render. */
+const WHEEL_SPOKE_ANGLES = [0, 72, 144, 216, 288] as const
 
 /**
  * Spinning wheel animation for drive-related loading states. The continuous
@@ -162,7 +182,7 @@ export function WheelSpin({ size = 24, className = '' }: { size?: number; classN
         animate={reduce ? { rotate: 0 } : { rotate: 360 }}
         transition={reduce ? { duration: 0 } : { duration: 2, repeat: Infinity, ease: 'linear' }}
       >
-        {[0, 72, 144, 216, 288].map(angle => (
+        {WHEEL_SPOKE_ANGLES.map(angle => (
           <line
             key={angle}
             x1="12" y1="5" x2="12" y2="8"

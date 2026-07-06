@@ -31,11 +31,14 @@ interface AutomationSSEClient {
   unsubscribe: (listener: AutomationSSEListener) => void
   onConnect: (listener: ConnectionListener) => void
   offConnect: (listener: ConnectionListener) => void
+  onDisconnect: (listener: ConnectionListener) => void
+  offDisconnect: (listener: ConnectionListener) => void
   getState: () => 'connected' | 'reconnecting'
 }
 
 const eventListeners = new Set<AutomationSSEListener>()
 const connectListeners = new Set<ConnectionListener>()
+const disconnectListeners = new Set<ConnectionListener>()
 let source: EventSource | null = null
 let state: 'connected' | 'reconnecting' = 'reconnecting'
 let failCount = 0
@@ -60,9 +63,24 @@ function emit(type: AutomationSSEEventType, data: AutomationEventData) {
   }
 }
 
+function notifyDisconnect() {
+  for (const fn of disconnectListeners) {
+    try { fn() } catch (e) { console.error('AutomationSSE disconnect listener error:', e) }
+  }
+}
+
 function doConnect() {
   if (connecting) return
   connecting = true
+
+  // A fresh connect supersedes any scheduled backoff reconnect. Without this
+  // a subscribe() during the reconnect window races the pending timer and can
+  // leave two overlapping EventSources open (the timer fires after we already
+  // reconnected, tearing down the healthy stream).
+  if (reconnectTimer !== undefined) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = undefined
+  }
 
   if (source) {
     source.close()
@@ -101,6 +119,11 @@ function doConnect() {
     failCount++
 
     state = 'reconnecting'
+    // Notify subscribers so live "connected" indicators can flip to
+    // "reconnecting" during an outage. Without this the state only ever
+    // transitions forward to 'connected' (via the 'connected' event) and
+    // any status badge stays green through the entire disconnection.
+    notifyDisconnect()
     const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, failCount - 1), MAX_BACKOFF_MS)
     reconnectTimer = window.setTimeout(() => {
       doConnect()
@@ -118,12 +141,26 @@ export const automationSSE: AutomationSSEClient = {
 
   unsubscribe(listener) {
     eventListeners.delete(listener)
-    // Auto-disconnect when no subscribers remain
-    if (eventListeners.size === 0 && source) {
-      source.close()
-      source = null
+    // Fully tear down once the last subscriber leaves. This must run even when
+    // `source` is null (i.e. we are mid-backoff between attempts): otherwise a
+    // pending reconnect timer fires later and opens a zombie stream nobody is
+    // listening to. It must also clear the `connecting` latch — a teardown that
+    // happens before the server's `connected` event would otherwise leave
+    // `connecting === true`, and the next subscribe() (`!source && !connecting`)
+    // would never reopen the stream. Resetting `failCount` lets a later
+    // subscribe() start the backoff schedule fresh from 1s.
+    if (eventListeners.size === 0) {
+      if (source) {
+        source.close()
+        source = null
+      }
+      if (reconnectTimer !== undefined) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = undefined
+      }
+      connecting = false
+      failCount = 0
       state = 'reconnecting'
-      if (reconnectTimer) clearTimeout(reconnectTimer)
     }
   },
 
@@ -133,6 +170,14 @@ export const automationSSE: AutomationSSEClient = {
 
   offConnect(listener) {
     connectListeners.delete(listener)
+  },
+
+  onDisconnect(listener) {
+    disconnectListeners.add(listener)
+  },
+
+  offDisconnect(listener) {
+    disconnectListeners.delete(listener)
   },
 
   getState() { return state },

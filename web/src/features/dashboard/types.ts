@@ -1,4 +1,21 @@
-/* Dashboard feature types — aligned with API responses */
+/**
+ * Dashboard feature DTOs — a curated, consumer-facing subset of the canonical
+ * `@/api/types` shapes (snake_case, matching the Go `json:"…"` tags). Consumed
+ * as props by the dashboard's presentational components (VehicleHero,
+ * FleetStatsBar, RecentActivity, LiveTelemetry) and widgets.
+ *
+ * Heads-up — these DTOs MIX unit systems, which is the main footgun here:
+ *   - SI base units on the wire: Drive.{distance_m (m), duration_s (s),
+ *     energy_used_wh / regen_energy_wh (Wh), *_mps (m/s), avg_power_w (W)},
+ *     ChargingSession.total_energy_added_wh (Wh).
+ *   - Pre-derived DISPLAY units (already converted server-side): FleetAnalytics.
+ *     {total_distance_km, total_energy_kwh, avg_efficiency_wh_km},
+ *     ChargingSession.duration_min, LocationData.{miles_to_arrival,
+ *     minutes_to_arrival}.
+ * Convert SI fields at the render boundary only (useUnits / the injected
+ * `to*Display` callbacks); NEVER re-convert the pre-derived fields. Each field's
+ * runtime semantics are pinned behaviourally in types.test.tsx.
+ */
 
 export interface Vehicle {
   id: number;

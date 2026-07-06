@@ -50,14 +50,14 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
               </div>
               <div>
                 <p className="text-2xs text-[var(--text-muted)]">{t('widget.battery', 'Battery')}</p>
-                <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level}%</p>
+                <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level ?? 0}%</p>
               </div>
               <div>
                 <p className="text-2xs text-[var(--text-muted)]">
                   {t('widget.timeToFull', 'Time to Full')}
                 </p>
                 <p className="text-sm font-bold text-[var(--text-primary)]">
-                  {state.time_to_full_charge > 0
+                  {(state.time_to_full_charge ?? 0) > 0
                     ? `${fmtNumber(state.time_to_full_charge, 1)}h`
                     : '—'}
                 </p>
@@ -71,7 +71,7 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
               {t('widget.notCharging', 'Not Charging')}
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              {state.battery_level}% · {fmtNumber(convertDistanceFromSI(state.rated_range ?? 0, distanceUnit), 0)} {distanceUnit}
+              {state.battery_level ?? 0}% · {fmtNumber(convertDistanceFromSI(state.rated_range ?? 0, distanceUnit), 0)} {distanceUnit}
             </p>
           </div>
         ) : (

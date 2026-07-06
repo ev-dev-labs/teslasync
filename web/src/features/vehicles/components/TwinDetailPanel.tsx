@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { KVList } from '@/components/data-display';
@@ -55,7 +56,12 @@ export function TwinDetailPanel({
   columns = 2,
   className,
 }: TwinDetailPanelProps) {
+  const { t } = useTranslation();
   const ready = !isLoading && !error && !isEmpty;
+  // Defensive: KVList maps over this, so a caller passing `undefined`
+  // (e.g. a query that resolved with a missing collection) must not crash
+  // the whole section.
+  const rows = items ?? [];
 
   return (
     <GlassPanel className={cn('flex flex-col p-4 sm:p-5', className)}>
@@ -63,9 +69,14 @@ export function TwinDetailPanel({
         {icon}
         <span className="truncate">{title}</span>
       </PanelTitle>
-      <div className="flex-1">
+      <div className="flex-1" aria-busy={isLoading ? true : undefined}>
         {isLoading ? (
-          <Skeleton height={132} />
+          <div
+            role="status"
+            aria-label={t('digitalTwin.loadingSection', 'Loading {{section}}', { section: title })}
+          >
+            <Skeleton height={132} />
+          </div>
         ) : error ? (
           <QueryError error={error} onRetry={onRetry} />
         ) : isEmpty ? (
@@ -73,7 +84,7 @@ export function TwinDetailPanel({
              not yet arrived for this vehicle; no explicit recovery action. */
           <EmptyState icon={emptyIcon} message={emptyMessage} />
         ) : (
-          <KVList items={items} columns={columns} />
+          <KVList items={rows} columns={columns} />
         )}
       </div>
       {ready && footer ? (

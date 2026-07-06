@@ -6,6 +6,10 @@ let _globalLocale = 'en-US'
 
 /** Set the global decimal precision (called by useSettings on load) */
 export function setGlobalPrecision(decimals: number) {
+  // Reject non-finite input (NaN / ±Infinity). Without this guard a bad
+  // settings payload could store NaN as the shared precision — which then
+  // makes every downstream `toLocaleString` call throw a RangeError.
+  if (!Number.isFinite(decimals)) return
   _globalPrecision = Math.max(0, Math.min(20, decimals))
 }
 
@@ -44,11 +48,22 @@ export function isFiniteNumber(v: unknown): v is number {
 }
 
 /**
+ * Clamp a requested fraction-digit count to the range `Intl.NumberFormat`
+ * accepts (0–100). A non-finite request (NaN / ±Infinity) falls back to the
+ * global precision so formatters degrade gracefully to a string instead of
+ * throwing a RangeError in the middle of a render.
+ */
+function toFractionDigits(value: number): number {
+  if (!Number.isFinite(value)) return _globalPrecision
+  return Math.min(100, Math.max(0, value))
+}
+
+/**
  * Format a number with locale-aware separators. Uses the global precision
  * and global locale set by `useSettings` unless overridden per-call.
  */
 export function fmtNumber(v: unknown, decimals?: number, locale?: string): string {
-  const d = decimals ?? _globalPrecision
+  const d = toFractionDigits(decimals ?? _globalPrecision)
   const lc = locale ?? _globalLocale
   try {
     return safeNumber(v).toLocaleString(lc, {
@@ -80,7 +95,7 @@ export function fmtInt(v: unknown): string {
 }
 
 /**
- * Compact human-readable number: 12_345 → "12K", 1_234_567 → "1.2M",
+ * Compact human-readable number: 12_345 → "12.3K", 1_234_567 → "1.2M",
  * 1_200_000_000 → "1.2B". Below `threshold` (default 10_000) the value is
  * returned verbatim via `fmtInt` so small numbers stay precise. Used by
  * page hero KPIs that have to gracefully scale from "4 drives" to

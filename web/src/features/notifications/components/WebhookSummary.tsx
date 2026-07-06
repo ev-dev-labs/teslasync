@@ -29,16 +29,21 @@ export interface WebhookSummaryProps {
 /** Responsive KPI grid summarising the configured webhook endpoints. */
 export function WebhookSummary({ query }: WebhookSummaryProps) {
   const { t } = useTranslation();
-  const webhooks = query.data ?? [];
 
   const stats = useMemo(() => {
+    const webhooks = query.data ?? [];
     let enabled = 0;
     let secure = 0;
     const methods = new Set<string>();
     for (const ch of webhooks) {
       if (ch.enabled) enabled += 1;
-      if ((ch.url ?? '').toLowerCase().startsWith('https://')) secure += 1;
-      methods.add((ch.method ?? 'POST').toUpperCase());
+      if ((ch.url ?? '').trim().toLowerCase().startsWith('https://')) secure += 1;
+      // `method` is nominally 'GET' | 'POST' | 'PUT', but a malformed API row can
+      // carry an empty or whitespace value that slips past `??`. Fall back to POST
+      // (the server default) so an endpoint never contributes a blank token —
+      // which would otherwise render the methods card as "" or ", GET".
+      const method = (ch.method ?? '').trim().toUpperCase() || 'POST';
+      methods.add(method);
     }
     return {
       total: webhooks.length,
@@ -46,7 +51,7 @@ export function WebhookSummary({ query }: WebhookSummaryProps) {
       secure,
       methods: Array.from(methods).sort(),
     };
-  }, [webhooks]);
+  }, [query.data]);
 
   const gridClass = 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4';
   const sectionLabel = t('notifications.webhooks.summary.label', 'Webhook endpoints summary');

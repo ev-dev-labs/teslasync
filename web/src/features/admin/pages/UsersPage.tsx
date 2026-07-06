@@ -56,13 +56,18 @@ export default function UsersPage() {
     if (!open) void candidates.refetch()
   }
 
-  const accessMode = status.isLoading
+  // A failed status fetch means we genuinely don't know the access mode or
+  // session state — surface "—" rather than confidently claiming the
+  // forward-auth/idle defaults the discriminated union falls through to.
+  const statusUnknown = status.isLoading || status.isError
+
+  const accessMode = statusUnknown
     ? '—'
     : open
       ? t('impersonation.users.kpi.modeOpen', 'Open')
       : t('impersonation.users.kpi.modeForwardAuth', 'Forward-auth')
 
-  const sessionStatus = status.isLoading
+  const sessionStatus = statusUnknown
     ? '—'
     : active
       ? t('impersonation.users.kpi.active', 'Active')
@@ -100,7 +105,9 @@ export default function UsersPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <MetricCard
                 label={t('impersonation.users.kpi.available', 'Available Subjects')}
-                value={open ? '0' : fmtInt(subjects.length)}
+                /* On a candidates-fetch error the count is unknown, not zero —
+                   "—" avoids implying "0 subjects" next to the table's error. */
+                value={open ? '0' : subjectsError ? '—' : fmtInt(subjects.length)}
                 icon={<Users className="h-5 w-5" aria-hidden="true" />}
                 color="cyan"
               />
@@ -152,7 +159,11 @@ export default function UsersPage() {
             />
           </div>
           <div className="xl:col-span-1">
-            <ImpersonationStatusPanel status={status.data} isLoading={status.isLoading} />
+            <ImpersonationStatusPanel
+              status={status.data}
+              isLoading={status.isLoading}
+              isError={status.isError}
+            />
           </div>
         </section>
       </FadeIn>

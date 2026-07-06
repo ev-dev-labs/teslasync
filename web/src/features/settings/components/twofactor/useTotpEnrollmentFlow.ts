@@ -117,7 +117,12 @@ export function useTotpEnrollmentFlow() {
   const handleRegenerate = useCallback(async () => {
     try {
       const result = await regenMut.mutateAsync()
-      setRevealedCodes(result.backup_codes)
+      // Mirror handleVerify's `?? []` guard: a malformed response missing
+      // `backup_codes` must still leave `revealedCodes` a real array so the
+      // state stays `string[] | null` (never `undefined`) and the
+      // backup-codes modal — which only opens when `codes != null` — still
+      // surfaces rather than silently vanishing after a successful regen.
+      setRevealedCodes(result.backup_codes ?? [])
       setEnrollment(null)
       setDialogStep('backupCodes')
     } catch {

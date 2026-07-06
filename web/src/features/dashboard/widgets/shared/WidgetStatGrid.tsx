@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
@@ -14,7 +15,7 @@ export interface StatGridItem {
 }
 
 interface WidgetStatGridProps {
-  stats: StatGridItem[];
+  stats?: StatGridItem[];
   compact?: boolean;
   cols?: 2 | 3 | 4;
 }
@@ -41,17 +42,24 @@ const containerColsClass: Record<1 | 2 | 3 | 4, string> = {
 };
 
 export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
-  if (stats.length === 0) {
-    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message="No stats available" />;
+  const { t } = useTranslation('dashboard');
+  const items = stats ?? [];
+
+  if (items.length === 0) {
+    return (
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        message={t('widget.statGrid.noStats', 'No stats available')}
+      />
+    );
   }
 
-  const resolvedCols = compact ? 1 : (cols ?? autoCols(stats.length));
+  const resolvedCols = compact ? 1 : (cols ?? autoCols(items.length));
 
   return (
     <div className={cn('grid', containerColsClass[resolvedCols], compact ? 'gap-2' : 'gap-3')}>
-      {stats.map((stat) => (
+      {items.map((stat, index) => (
         <StatCard
-          key={stat.label}
+          key={`${stat.label}-${index}`}
           label={stat.label}
           value={stat.value}
           unit={stat.unit}

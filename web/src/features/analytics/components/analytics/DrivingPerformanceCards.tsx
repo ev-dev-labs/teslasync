@@ -28,12 +28,21 @@ export function DrivingPerformanceCards({ query }: { query: FleetAnalyticsQuery 
 
   const da = data?.drive_analytics;
   const ss = da?.speed_stats;
+  // The `/analytics/fleet` `drive_analytics` payload does not (yet) carry
+  // driving `power_stats` / `regen_stats`, so these two cards degrade to the
+  // em-dash placeholder until the backend surfaces those aggregates. They are
+  // guarded exactly like the stats that are present so nothing throws in the
+  // meantime.
   const ps = da?.power_stats;
   const rs = da?.regen_stats;
   const ds = da?.distance_stats;
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+    <div
+      role="group"
+      aria-label={t('analytics.driving.performanceBand', 'Driving performance metrics')}
+      className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6"
+    >
       <MetricCard
         label={t('analytics.driving.topSpeed', 'Top Speed')}
         value={ss ? fmtNumber(fromKmh(safe(ss.max)), 0) : '—'}

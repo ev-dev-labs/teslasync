@@ -5,6 +5,7 @@
  * single DLQ entry. The panel is always mounted so the loading + empty
  * states render in-place rather than gating the entire surface.
  */
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Caption, DataTable, Text, type Column } from '@/components/ui';
@@ -16,7 +17,7 @@ import type {
 } from '@/types/admin-diagnostics';
 
 interface AuditPanelProps {
-  rows: DLQReplayAuditRecord[];
+  rows?: DLQReplayAuditRecord[] | null;
   loading: boolean;
   scopedDlqId?: number | null;
 }
@@ -32,8 +33,10 @@ const RESULT_VARIANT: Record<DLQReplayResult, 'success' | 'danger' | 'warning' |
 
 export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
   const { t } = useTranslation();
+  const safeRows = rows ?? [];
 
-  const columns: Column<DLQReplayAuditRecord>[] = [
+  const columns = useMemo<Column<DLQReplayAuditRecord>[]>(
+    () => [
     {
       key: 'replayed_at',
       header: t('admin.dlq.audit.cols.replayedAt', 'Replayed at'),
@@ -88,9 +91,11 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
         </Text>
       ),
     },
-  ];
+    ],
+    [t],
+  );
 
-  if (!loading && rows.length === 0) {
+  if (!loading && safeRows.length === 0) {
     return (
       <EmptyState
         title={t('admin.dlq.audit.empty.title', 'No replay attempts yet')}
@@ -115,7 +120,7 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       tableId={scopedDlqId ? 'admin:dlq-audit-scoped' : 'admin:dlq-audit'}
       name="dlq-audit"
       columns={columns}
-      data={rows}
+      data={safeRows}
       keyExtractor={(row) => row.id}
       emptyMessage={
         loading

@@ -94,16 +94,24 @@ export function isRbacOpenMode(
   return data?.mode === 'open'
 }
 
-/** Returns cells whose allowed value changed between two matrix snapshots. */
+/**
+ * Returns cells whose allowed value changed between two matrix snapshots.
+ *
+ * Tolerates a missing/`undefined` snapshot on either side (open-mode or a
+ * still-loading draft) by treating it as an empty matrix, so callers can diff
+ * before the first snapshot lands without a `TypeError` from `Object.keys`.
+ */
 export function diffMatrices(
-  base: Record<string, Record<string, boolean>>,
-  draft: Record<string, Record<string, boolean>>,
+  base: Record<string, Record<string, boolean>> | null | undefined,
+  draft: Record<string, Record<string, boolean>> | null | undefined,
 ): RbacUpsertCell[] {
+  const baseMatrix = base ?? {}
+  const draftMatrix = draft ?? {}
   const cells: RbacUpsertCell[] = []
-  const roleIDs = new Set<string>([...Object.keys(base), ...Object.keys(draft)])
+  const roleIDs = new Set<string>([...Object.keys(baseMatrix), ...Object.keys(draftMatrix)])
   for (const roleID of roleIDs) {
-    const baseRow = base[roleID] ?? {}
-    const draftRow = draft[roleID] ?? {}
+    const baseRow = baseMatrix[roleID] ?? {}
+    const draftRow = draftMatrix[roleID] ?? {}
     const permIDs = new Set<string>([...Object.keys(baseRow), ...Object.keys(draftRow)])
     for (const permID of permIDs) {
       const baseAllowed = baseRow[permID] ?? false

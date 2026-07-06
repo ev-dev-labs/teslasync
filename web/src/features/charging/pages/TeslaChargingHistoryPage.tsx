@@ -35,15 +35,15 @@ import { chartTokens } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 
 /** Compute duration in minutes between two ISO timestamps. */
-function durationMinutes(start: string, stop: string | null): number | null {
+export function durationMinutes(start: string, stop: string | null): number | null {
   if (!stop) return null;
   const ms = new Date(stop).getTime() - new Date(start).getTime();
-  return ms > 0 ? Math.round(ms / 60_000) : null;
+  return Number.isFinite(ms) && ms > 0 ? Math.round(ms / 60_000) : null;
 }
 
 /** Format duration in minutes to "Xh Ym". */
-function formatDurationMinutes(minutes: number | null): string {
-  if (minutes == null) return '—';
+export function formatDurationMinutes(minutes: number | null): string {
+  if (minutes == null || !Number.isFinite(minutes)) return '—';
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (h > 0) return `${h}h ${m}m`;
@@ -51,10 +51,13 @@ function formatDurationMinutes(minutes: number | null): string {
 }
 
 /** Aggregate entries by month for the spending chart. */
-function buildMonthlySpending(entries: TeslaChargingHistoryEntry[]): { month: string; total: number }[] {
+export function buildMonthlySpending(entries: TeslaChargingHistoryEntry[]): { month: string; total: number }[] {
   const map = new Map<string, number>();
   for (const e of entries) {
     const d = new Date(e.charge_start_datetime);
+    // Skip unparseable timestamps so a malformed row can't leak a bogus
+    // "NaN-NaN" bucket onto the chart's X-axis.
+    if (Number.isNaN(d.getTime())) continue;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     map.set(key, (map.get(key) ?? 0) + (e.total_due ?? 0));
   }
@@ -63,7 +66,7 @@ function buildMonthlySpending(entries: TeslaChargingHistoryEntry[]): { month: st
     .map(([month, total]) => ({ month, total }));
 }
 
-interface LocationRollup {
+export interface LocationRollup {
   name: string;
   total: number;
   energyWh: number;
@@ -71,7 +74,7 @@ interface LocationRollup {
 }
 
 /** Roll up entries by charging site, ranked by spend (top 6). */
-function buildTopLocations(entries: TeslaChargingHistoryEntry[]): LocationRollup[] {
+export function buildTopLocations(entries: TeslaChargingHistoryEntry[]): LocationRollup[] {
   const map = new Map<string, LocationRollup>();
   for (const e of entries) {
     const name = e.site_location_name || '—';

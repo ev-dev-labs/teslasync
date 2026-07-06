@@ -2,6 +2,8 @@ package geofence
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -34,29 +36,32 @@ func scanGeofence(row pgx.Row, g *systemmodel.Geofence) error {
 
 // GeofenceRepo provides geofence data access.
 type GeofenceRepo struct {
-	db *database.DB
+	pool geofencePool
 }
 
 func NewGeofenceRepo(db *database.DB) *GeofenceRepo {
-	return &GeofenceRepo{db: db}
+	return &GeofenceRepo{pool: db.Pool}
 }
 
 func (r *GeofenceRepo) Create(ctx context.Context, g *systemmodel.Geofence) error {
 	query := `INSERT INTO geofences (name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $7) RETURNING id`
 	now := time.Now().UTC()
-	return r.db.Pool.QueryRow(ctx, query,
+	if err := r.pool.QueryRow(ctx, query,
 		g.Name, g.PolygonWKT, g.Category,
 		g.Enabled, g.AlertOnEntry, g.AlertOnExit,
 		now,
-	).Scan(&g.ID)
+	).Scan(&g.ID); err != nil {
+		return fmt.Errorf("geofences create: %w", err)
+	}
+	return nil
 }
 
 func (r *GeofenceRepo) GetAll(ctx context.Context) ([]*systemmodel.Geofence, error) {
 	query := `SELECT ` + geofenceColumns + ` FROM geofences ORDER BY name LIMIT 500`
-	rows, err := r.db.Pool.Query(ctx, query)
+	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("geofences get_all query: %w", err)
 	}
 	defer rows.Close()
 
@@ -64,21 +69,27 @@ func (r *GeofenceRepo) GetAll(ctx context.Context) ([]*systemmodel.Geofence, err
 	for rows.Next() {
 		g := &systemmodel.Geofence{}
 		if err := scanGeofence(rows, g); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("geofences get_all scan: %w", err)
 		}
 		geofences = append(geofences, g)
 	}
-	return geofences, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("geofences get_all iter: %w", err)
+	}
+	return geofences, nil
 }
 
 func (r *GeofenceRepo) GetByID(ctx context.Context, id int64) (*systemmodel.Geofence, error) {
 	query := `SELECT ` + geofenceColumns + ` FROM geofences WHERE id=$1`
 	g := &systemmodel.Geofence{}
-	err := scanGeofence(r.db.Pool.QueryRow(ctx, query, id), g)
-	if err == pgx.ErrNoRows {
+	err := scanGeofence(r.pool.QueryRow(ctx, query, id), g)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
-	return g, err
+	if err != nil {
+		return nil, fmt.Errorf("geofences get_by_id %d: %w", id, err)
+	}
+	return g, nil
 }
 
 func (r *GeofenceRepo) Update(ctx context.Context, g *systemmodel.Geofence) error {
@@ -88,17 +99,21 @@ func (r *GeofenceRepo) Update(ctx context.Context, g *systemmodel.Geofence) erro
 		    updated_at=$8
 		WHERE id=$1`
 	now := time.Now().UTC()
-	_, err := r.db.Pool.Exec(ctx, query,
+	if _, err := r.pool.Exec(ctx, query,
 		g.ID, g.Name, g.PolygonWKT, g.Category,
 		g.Enabled, g.AlertOnEntry, g.AlertOnExit,
 		now,
-	)
-	return err
+	); err != nil {
+		return fmt.Errorf("geofences update %d: %w", g.ID, err)
+	}
+	return nil
 }
 
 func (r *GeofenceRepo) Delete(ctx context.Context, id int64) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM geofences WHERE id=$1`, id)
-	return err
+	if _, err := r.pool.Exec(ctx, `DELETE FROM geofences WHERE id=$1`, id); err != nil {
+		return fmt.Errorf("geofences delete %d: %w", id, err)
+	}
+	return nil
 }
 
 // FindByCoordinates finds geofences containing the given point.
@@ -110,9 +125,9 @@ func (r *GeofenceRepo) Delete(ctx context.Context, id int64) error {
 // notification dispatcher) MUST filter g.Enabled themselves.
 func (r *GeofenceRepo) FindByCoordinates(ctx context.Context, lat, lng float64) ([]*systemmodel.Geofence, error) {
 	query := `SELECT ` + geofenceColumns + ` FROM geofences`
-	rows, err := r.db.Pool.Query(ctx, query)
+	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("geofences find_by_coordinates query: %w", err)
 	}
 	defer rows.Close()
 
@@ -120,7 +135,7 @@ func (r *GeofenceRepo) FindByCoordinates(ctx context.Context, lat, lng float64) 
 	for rows.Next() {
 		g := &systemmodel.Geofence{}
 		if err := scanGeofence(rows, g); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("geofences find_by_coordinates scan: %w", err)
 		}
 		cLat, cLon := g.Centroid()
 		radius := g.Radius()
@@ -128,7 +143,10 @@ func (r *GeofenceRepo) FindByCoordinates(ctx context.Context, lat, lng float64) 
 			geofences = append(geofences, g)
 		}
 	}
-	return geofences, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("geofences find_by_coordinates iter: %w", err)
+	}
+	return geofences, nil
 }
 
 // haversineMeters returns the great-circle distance in meters between two points.

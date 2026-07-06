@@ -46,13 +46,16 @@ export function VehiclePicker({ className }: VehiclePickerProps) {
     () =>
       sorted.map((v) => {
         const isPinned = pins.some((p) => String(p.item_id) === String(v.id));
-        const base = v.display_name || v.vin || `Vehicle ${v.id}`;
+        const base =
+          v.display_name ||
+          v.vin ||
+          t('vehiclePicker.fallbackName', 'Vehicle {{id}}', { id: v.id });
         return {
           value: String(v.id),
           label: isPinned ? `📌 ${base}` : base,
         };
       }),
-    [sorted, pins],
+    [sorted, pins, t],
   );
 
   // Hide for fleets of 0 or 1 vehicle — there's nothing meaningful to pick.

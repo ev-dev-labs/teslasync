@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSettings as useSettingsQuery } from '@/api/hooks/useSettings'
 import { subscribe } from '@/lib/broadcast'
@@ -10,6 +10,13 @@ import {
   getGlobalLocale,
   getGlobalPrecision,
 } from '@/lib/numberFormat'
+
+/**
+ * Default decimal precision applied when the persisted `decimal_precision`
+ * setting is absent (null/undefined). Mirrors the formatter default in
+ * `@/lib/numberFormat`.
+ */
+const DEFAULT_DECIMAL_PRECISION = 2
 
 /**
  * Keeps module-level formatter globals
@@ -53,30 +60,25 @@ export function FormatterPrefsBridge(): null {
   const qc = useQueryClient()
   const { data: settings } = useSettingsQuery()
 
-  // Apply globals from the resolved query data. Using `useEffect` here
-  // (rather than during render) so React's commit phase batches the
-  // global updates and StrictMode's double-render doesn't fire two
-  // setGlobalLocale calls per change.
-  const lastLocale = useRef<string | null>(null)
-  const lastDecimals = useRef<number | null>(null)
+  // Apply globals from the resolved query data. Runs in `useEffect`
+  // (not during render) so the writes land in React's commit phase and
+  // are never a side effect of an interrupted/replayed render.
+  //
+  // Settings is the single source of truth for these module-level
+  // globals, so re-assert on every resolve: if a value the bridge did
+  // NOT write drifted in — e.g. a page's own `useSettings()` applied a
+  // transient/stale locale while this bridge stayed mounted — it is
+  // corrected on the next settings resolution. The `!==` guards keep
+  // each write idempotent (no redundant `setGlobal*` when the global
+  // already matches), which also makes StrictMode's double-invoked
+  // effect a no-op on its second pass.
   useEffect(() => {
     if (!settings) return
     const locale = resolveLocale(settings.locale)
-    const decimals = settings.decimal_precision ?? 2
-    if (locale !== lastLocale.current && locale !== getGlobalLocale()) {
-      setGlobalLocale(locale)
-      lastLocale.current = locale
-    } else if (lastLocale.current === null) {
-      // First successful resolve — record what we observed so a later
-      // identical-value refetch doesn't trigger an unnecessary write.
-      lastLocale.current = locale
-    }
-    if (decimals !== lastDecimals.current && decimals !== getGlobalPrecision()) {
-      setGlobalPrecision(decimals)
-      lastDecimals.current = decimals
-    } else if (lastDecimals.current === null) {
-      lastDecimals.current = decimals
-    }
+    if (locale !== getGlobalLocale()) setGlobalLocale(locale)
+
+    const decimals = settings.decimal_precision ?? DEFAULT_DECIMAL_PRECISION
+    if (decimals !== getGlobalPrecision()) setGlobalPrecision(decimals)
   }, [settings])
 
   // Defense in depth: if a peer broadcasts a `settings.changed` topic

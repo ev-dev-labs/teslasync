@@ -21,7 +21,12 @@ export function IncidentTimelineList({ updates }: IncidentTimelineListProps) {
   const { formatDateTime: fmtAbs } = useDateFormat()
   const statusLabel = useIncidentStatusLabel()
 
-  if (updates.length === 0) {
+  // Defensive: the sole caller memoises a reversed array, but a null/undefined
+  // prop (bad data, direct misuse) must degrade to the empty state, never crash
+  // on `.length`/`.map`.
+  const items = updates ?? []
+
+  if (items.length === 0) {
     return (
       <EmptyState
         icon={<MessageSquare className="h-8 w-8" aria-hidden="true" />}
@@ -31,8 +36,8 @@ export function IncidentTimelineList({ updates }: IncidentTimelineListProps) {
   }
 
   return (
-    <ul className="space-y-3">
-      {updates.map((u, idx) => (
+    <ul className="space-y-3" aria-label={t('incidentTimeline.updatesLabel', 'Incident updates')}>
+      {items.map((u, idx) => (
         <li key={`${u.at}-${idx}`} className="flex gap-3 border-l-2 border-[var(--border-subtle)] pl-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -40,7 +45,7 @@ export function IncidentTimelineList({ updates }: IncidentTimelineListProps) {
               <Caption>{fmtAbs(u.at)}</Caption>
               {u.author ? <Caption>· {u.author}</Caption> : null}
             </div>
-            <Text as="p" variant="body" className="mt-1 whitespace-pre-wrap">{u.message}</Text>
+            <Text as="p" variant="body" className="mt-1 whitespace-pre-wrap">{u.message ?? ''}</Text>
           </div>
         </li>
       ))}

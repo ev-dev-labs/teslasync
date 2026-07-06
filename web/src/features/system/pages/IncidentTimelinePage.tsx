@@ -161,7 +161,7 @@ export default function IncidentTimelinePage() {
 
       {/* 2 — Hero overview + details bento */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section aria-label={t('incidentTimeline.overview', 'Incident overview and details')} className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -217,7 +217,7 @@ export default function IncidentTimelinePage() {
 
       {/* 4 — Timeline + append-update bento */}
       <FadeIn delay={0.2}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section aria-label={t('incidentTimeline.timelineRegion', 'Incident timeline and updates')} className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-cyan-300" aria-hidden="true" />

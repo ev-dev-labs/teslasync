@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, CopyButton } from '@/components/ui';
 import { PanelTitle, Caption, Text, Code } from '@/components/ui/Typography';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import type { GDPRExportArtifact } from '@/types/admin-operator-confidence';
@@ -20,11 +20,11 @@ export function GDPRArtifactDetails({ artifact, loading, className }: GDPRArtifa
   const showLoading = Boolean(loading) && !artifact;
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+    <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={showLoading}>
       <PanelTitle className="mb-4">{t('admin.gdprExport.metaTitle', 'Artifact details')}</PanelTitle>
 
       {showLoading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div aria-hidden="true" className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton width="40%" height={12} />
@@ -84,7 +84,14 @@ export function GDPRArtifactDetails({ artifact, loading, className }: GDPRArtifa
             />
           )}
         </dl>
-      ) : null}
+      ) : (
+        <EmptyState
+          message={t(
+            'admin.gdprExport.metaEmpty',
+            'Look up an export artifact to see its metadata here.',
+          )}
+        />
+      )}
     </GlassPanel>
   );
 }

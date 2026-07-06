@@ -1,9 +1,11 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Power } from 'lucide-react'
 
 import { GlassPanel, Badge, Button, Text } from '@/components/ui'
 import type { Vehicle, VehicleStatus } from '@/api/types'
+import { VEHICLE_STATE_LABELS } from '@/types/fsm'
 import { statusVariant } from './helpers'
 
 interface VehicleHeaderProps {
@@ -15,6 +17,26 @@ interface VehicleHeaderProps {
 
 export function VehicleHeader({ vehicle, status, onWake, waking }: VehicleHeaderProps) {
   const { t } = useTranslation()
+
+  // Collapse model + trim into a single clean label: a missing trim must not
+  // leave a trailing space, and an absent vehicle (loading) must not render a
+  // lone-whitespace chip. Falls back to the em-dash placeholder in the JSX.
+  const modelLabel = useMemo(
+    () =>
+      [vehicle?.model, vehicle?.trim_badging]
+        .map((part) => part?.trim())
+        .filter(Boolean)
+        .join(' '),
+    [vehicle?.model, vehicle?.trim_badging],
+  )
+
+  // `??` alone can't rescue an empty-string VIN, so normalise then fall back.
+  const vin = vehicle?.vin?.trim()
+
+  // Localised, capitalised status label (e.g. "online" → "Online"). The label
+  // map covers every VehicleStatus; the `?? status` guard keeps an unexpected
+  // runtime value readable instead of surfacing a raw i18n key.
+  const statusLabel = t(`vehicle.state.${status}`, VEHICLE_STATE_LABELS[status] ?? status)
 
   return (
     <GlassPanel className="p-6">
@@ -29,20 +51,20 @@ export function VehicleHeader({ vehicle, status, onWake, waking }: VehicleHeader
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <Badge variant={statusVariant(status)} dot size="lg">
-              {status}
+              {statusLabel}
             </Badge>
             <Badge variant="neutral" size="sm">
-              {vehicle?.model ?? ''} {vehicle?.trim_badging ?? ''}
+              {modelLabel || '—'}
             </Badge>
           </div>
           <Text as="p" size="sm" color="muted" mono className="mt-1 truncate">
-            {vehicle?.vin ?? ''}
+            {vin || '—'}
           </Text>
         </div>
         <Button
           onClick={onWake}
           loading={waking}
-          icon={<Power className="h-4 w-4" />}
+          icon={<Power className="h-4 w-4" aria-hidden="true" />}
         >
           {t('common.wakeUp', 'Wake Up')}
         </Button>

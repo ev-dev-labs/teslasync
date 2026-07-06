@@ -219,6 +219,52 @@ function saveHistory(entries: HistoryEntry[]) {
   }
 }
 
+/* ─── replay matching ─────────────────────────────────────────────────── */
+
+/**
+ * Tests whether an OpenAPI template path matches a concrete path where the
+ * `{param}` slots have already been substituted. Segment counts must be
+ * equal; a `{param}` segment matches any single non-empty segment; all other
+ * segments must be literally equal.
+ */
+function pathMatchesTemplate(template: string, concrete: string): boolean {
+  if (template === concrete) return true;
+  const tSeg = template.split('/');
+  const cSeg = concrete.split('/');
+  if (tSeg.length !== cSeg.length) return false;
+  for (let i = 0; i < tSeg.length; i++) {
+    const t = tSeg[i];
+    const c = cSeg[i];
+    if (t.startsWith('{') && t.endsWith('}')) {
+      if (c.length === 0) return false;
+      continue;
+    }
+    if (t !== c) return false;
+  }
+  return true;
+}
+
+/**
+ * Resolves the endpoint definition a history entry should re-select.
+ *
+ * A history entry stores the *concrete* path that was sent — path params
+ * already substituted (e.g. `/vehicles/1/state`) — whereas an endpoint's
+ * `path` is the OpenAPI *template* (`/vehicles/{vehicleID}/state`). A plain
+ * equality check therefore fails to replay any endpoint that has path params.
+ * We try an exact match first (fast path, and it disambiguates a literal route
+ * that collides with a templated sibling), then fall back to a segment-wise
+ * template match. Returns `undefined` when nothing matches.
+ */
+export function findReplayEndpoint(
+  endpoints: ParsedEndpoint[],
+  entry: HistoryEntry,
+): ParsedEndpoint | undefined {
+  const sameMethod = (endpoints ?? []).filter((e) => e.method === entry.method);
+  const exact = sameMethod.find((e) => e.path === entry.path);
+  if (exact) return exact;
+  return sameMethod.find((e) => pathMatchesTemplate(e.path, entry.path));
+}
+
 /* ─── main page ───────────────────────────────────────────────────────── */
 
 export default function ApiPlaygroundPage() {
@@ -291,10 +337,10 @@ export default function ApiPlaygroundPage() {
   }, [t]);
 
   const handleReplay = useCallback((entry: HistoryEntry) => {
-    // Find matching endpoint
-    const ep = (endpoints ?? []).find(
-      e => e.method === entry.method && e.path === entry.path,
-    );
+    // Match against the endpoint template so replay still works after path
+    // params were substituted into the stored history path (e.g.
+    // `/vehicles/1/state` must re-select `/vehicles/{vehicleID}/state`).
+    const ep = findReplayEndpoint(endpoints ?? [], entry);
     if (ep) {
       setSelected(ep);
       setResponse(null);
@@ -319,14 +365,14 @@ export default function ApiPlaygroundPage() {
     return { count: history.length, avgMs: Math.round(sum / history.length) };
   }, [history]);
 
-  const kpis: Array<{ key: string; label: string; value: string | number; icon: ReactNode; color: NeonColor }> = [
+  const kpis = useMemo<Array<{ key: string; label: string; value: string | number; icon: ReactNode; color: NeonColor }>>(() => [
     { key: 'total', label: t('playground.kpi.total', 'Total Endpoints'), value: stats.total, icon: <Boxes className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
     { key: 'read', label: t('playground.kpi.read', 'Read (GET)'), value: stats.read, icon: <ArrowDownToLine className="h-5 w-5" aria-hidden="true" />, color: 'green' },
     { key: 'write', label: t('playground.kpi.write', 'Write Ops'), value: stats.write, icon: <ArrowUpToLine className="h-5 w-5" aria-hidden="true" />, color: 'amber' },
     { key: 'groups', label: t('playground.kpi.groups', 'API Groups'), value: stats.groups, icon: <Tags className="h-5 w-5" aria-hidden="true" />, color: 'purple' },
     { key: 'recent', label: t('playground.kpi.recent', 'Recent Requests'), value: historyStats.count, icon: <History className="h-5 w-5" aria-hidden="true" />, color: 'blue' },
     { key: 'latency', label: t('playground.kpi.latency', 'Avg Latency'), value: historyStats.count > 0 ? `${historyStats.avgMs} ms` : '—', icon: <Timer className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
-  ];
+  ], [t, stats, historyStats]);
 
   const actions = (
     <Button

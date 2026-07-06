@@ -22,7 +22,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { formatDateShort, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import type { SleepDrainEvent } from '@/types/energy';
+import type { SleepDrainEvent, SleepEfficiencyData } from '@/types/energy';
 import { convertTempFromSI } from '@/lib/unitConversion';
 
 /* ── Constants ── */
@@ -39,6 +39,97 @@ const STATE_COLORS: Record<string, string> = {
 
 const SENTRY_ON_COLOR = '#f59e0b';
 const SENTRY_OFF_COLOR = '#a855f7';
+
+/** Default rolling window (days) when no explicit range is available. */
+const DEFAULT_RANGE_DAYS = 30;
+
+/* ── Pure derivations (exported for unit testing) ── */
+
+/**
+ * Inclusive day-count for a `[start, end]` calendar window (YYYY-MM-DD).
+ * Falls back to {@link DEFAULT_RANGE_DAYS} when either bound is missing or
+ * unparseable — the raw subtraction previously yielded `NaN`, which then
+ * leaked into the `?days=` query string.
+ */
+export function computeRangeDays(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): number {
+  if (!start || !end) return DEFAULT_RANGE_DAYS;
+  const startMs = new Date(`${start}T00:00:00`).getTime();
+  const endMs = new Date(`${end}T00:00:00`).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return DEFAULT_RANGE_DAYS;
+  const diff = Math.round((endMs - startMs) / 86_400_000) + 1;
+  return Math.max(1, diff);
+}
+
+/** One donut slice: display name, whole-minute value, colour, and hours label. */
+export interface StatePieDatum {
+  name: string;
+  value: number;
+  color: string;
+  hours: string;
+}
+
+/**
+ * Shape the raw per-state minute totals into donut-ready slices. Unknown
+ * states fall back to their raw key + the first chart colour, and a missing
+ * `total_minutes` is treated as 0 (never `NaN`).
+ */
+export function buildStatePieData(
+  distribution: SleepEfficiencyData['state_distribution'] | undefined,
+  stateLabels: Record<string, string>,
+): StatePieDatum[] {
+  return (distribution ?? []).map((s) => ({
+    name: stateLabels[s.state] ?? s.state,
+    value: Math.round(s.total_minutes ?? 0),
+    color: STATE_COLORS[s.state] ?? CHART_COLORS[0],
+    hours: fmtNumber((s.total_minutes ?? 0) / 60),
+  }));
+}
+
+/** One grouped bar: metric name plus the sentry-on / sentry-off values. */
+export interface SentryComparisonRow {
+  name: string;
+  sentry_on: number;
+  sentry_off: number;
+}
+
+/** Localised axis labels for {@link buildSentryComparison}. */
+export interface SentryComparisonLabels {
+  drainRate: string;
+  batteryLost: string;
+}
+
+/**
+ * Pivot the sentry-on / sentry-off drain samples into the two grouped-bar
+ * rows the comparison chart consumes. Absent samples null-safe to 0.
+ */
+export function buildSentryComparison(
+  comparison: SleepEfficiencyData['sentry_comparison'] | undefined,
+  labels: SentryComparisonLabels,
+): SentryComparisonRow[] {
+  const rows = comparison ?? [];
+  const sentryOn = rows.find((s) => s.sentry_mode);
+  const sentryOff = rows.find((s) => !s.sentry_mode);
+  return [
+    {
+      name: labels.drainRate,
+      sentry_on: sentryOn?.avg_drain_rate ?? 0,
+      sentry_off: sentryOff?.avg_drain_rate ?? 0,
+    },
+    {
+      name: labels.batteryLost,
+      sentry_on: sentryOn?.avg_battery_lost ?? 0,
+      sentry_off: sentryOff?.avg_battery_lost ?? 0,
+    },
+  ];
+}
+
+/** True when the comparison carries at least one non-zero value to plot. */
+export function hasSentryData(rows: readonly SentryComparisonRow[]): boolean {
+  return rows.some((d) => d.sentry_on > 0 || d.sentry_off > 0);
+}
 
 /* ── Component ── */
 
@@ -60,13 +151,7 @@ export default function SleepEfficiencyPage() {
     persistKey: 'sleep-efficiency.range',
     defaultPresetId: '30d',
   });
-  const days = useMemo(() => {
-    if (!start || !end) return 30;
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T00:00:00`).getTime();
-    const diff = Math.round((endMs - startMs) / 86_400_000) + 1;
-    return Math.max(1, diff);
-  }, [start, end]);
+  const days = useMemo(() => computeRangeDays(start, end), [start, end]);
 
   const sleepQuery = useSleepEfficiency(vehicleIdStr, days, start, end);
   const { data: sleep, isLoading, isError, error, refetch } = sleepQuery;
@@ -84,33 +169,20 @@ export default function SleepEfficiencyPage() {
 
   /* ── Derived data ── */
 
-  const pieData = useMemo(() =>
-    (sleep?.state_distribution ?? []).map((s) => ({
-      name: stateLabels[s.state] ?? s.state,
-      value: Math.round(s.total_minutes ?? 0),
-      color: STATE_COLORS[s.state] ?? CHART_COLORS[0],
-      hours: fmtNumber((s.total_minutes ?? 0) / 60),
-    })),
+  const pieData = useMemo(
+    () => buildStatePieData(sleep?.state_distribution, stateLabels),
     [sleep?.state_distribution, stateLabels],
   );
 
-  const sentryOn = sleep?.sentry_comparison?.find((s) => s.sentry_mode);
-  const sentryOff = sleep?.sentry_comparison?.find((s) => !s.sentry_mode);
+  const comparisonData = useMemo(
+    () => buildSentryComparison(sleep?.sentry_comparison, {
+      drainRate: t('sleep.drainRate', 'Drain Rate (%/hr)'),
+      batteryLost: t('sleep.avgBatteryLost', 'Avg Battery Lost (%)'),
+    }),
+    [sleep?.sentry_comparison, t],
+  );
 
-  const comparisonData = useMemo(() => [
-    {
-      name: t('sleep.drainRate', 'Drain Rate (%/hr)'),
-      sentry_on: sentryOn?.avg_drain_rate ?? 0,
-      sentry_off: sentryOff?.avg_drain_rate ?? 0,
-    },
-    {
-      name: t('sleep.avgBatteryLost', 'Avg Battery Lost (%)'),
-      sentry_on: sentryOn?.avg_battery_lost ?? 0,
-      sentry_off: sentryOff?.avg_battery_lost ?? 0,
-    },
-  ], [sentryOn, sentryOff, t]);
-
-  const hasComparison = comparisonData.some((d) => d.sentry_on > 0 || d.sentry_off > 0);
+  const hasComparison = hasSentryData(comparisonData);
   const recentEvents = sleep?.recent_events ?? [];
 
   /* ── Drain events table columns ── */
@@ -219,7 +291,7 @@ export default function SleepEfficiencyPage() {
                 <MetricCard
                   icon={<Moon className="h-4 w-4" />}
                   label={t('sleep.efficiency', 'Sleep Efficiency')}
-                  value={`${fmtNumber(sleep?.sleep_efficiency_pct ?? 0)}%`}
+                  value={sleep ? `${fmtNumber(sleep.sleep_efficiency_pct ?? 0)}%` : '—'}
                   color="purple"
                   help={{
                     i18nKey: 'help.sleepEfficiency.body',
@@ -232,7 +304,7 @@ export default function SleepEfficiencyPage() {
                 <MetricCard
                   icon={<Clock className="h-4 w-4" />}
                   label={t('sleep.avgTimeToSleep', 'Avg Time to Sleep')}
-                  value={`${fmtInt(sleep?.time_to_sleep_avg_min ?? 0)} min`}
+                  value={sleep ? `${fmtInt(sleep.time_to_sleep_avg_min ?? 0)} min` : '—'}
                   color="cyan"
                   help={{
                     i18nKey: 'help.sleepEfficiency.timeToSleep',
@@ -244,7 +316,7 @@ export default function SleepEfficiencyPage() {
                 <MetricCard
                   icon={<Eye className="h-4 w-4" />}
                   label={t('sleep.sentryDrainRate', 'Sentry Drain Rate')}
-                  value={`${fmtNumber(sleep?.sentry_on_drain_rate ?? 0)}%/hr`}
+                  value={sleep ? `${fmtNumber(sleep.sentry_on_drain_rate ?? 0)}%/hr` : '—'}
                   color="amber"
                   help={{
                     i18nKey: 'help.sleepEfficiency.sentryDrain',
@@ -257,7 +329,7 @@ export default function SleepEfficiencyPage() {
                 <MetricCard
                   icon={<Gauge className="h-4 w-4" />}
                   label={t('sleep.sentryOffDrainRate', 'Sentry-Off Drain Rate')}
-                  value={`${fmtNumber(sleep?.sentry_off_drain_rate ?? 0)}%/hr`}
+                  value={sleep ? `${fmtNumber(sleep.sentry_off_drain_rate ?? 0)}%/hr` : '—'}
                   color="green"
                   help={{
                     i18nKey: 'help.sleepEfficiency.sentryOffDrain',
@@ -270,7 +342,7 @@ export default function SleepEfficiencyPage() {
                 <MetricCard
                   icon={<Zap className="h-4 w-4" />}
                   label={t('sleep.sentryMonthlyKwh', 'Sentry Monthly kWh')}
-                  value={`${fmtNumber(sleep?.sentry_monthly_kwh ?? 0)} kWh`}
+                  value={sleep ? `${fmtNumber(sleep.sentry_monthly_kwh ?? 0)} kWh` : '—'}
                   color="blue"
                   help={{
                     i18nKey: 'help.sleepEfficiency.sentryKwh',
@@ -282,7 +354,7 @@ export default function SleepEfficiencyPage() {
                 <MetricCard
                   icon={<DollarSign className="h-4 w-4" />}
                   label={t('sleep.sentryMonthlyCost', 'Sentry Monthly Cost')}
-                  value={formatCurrency(sleep?.sentry_monthly_cost ?? 0)}
+                  value={sleep ? formatCurrency(sleep.sentry_monthly_cost ?? 0) : '—'}
                   color="red"
                   help={{
                     i18nKey: 'help.sleepEfficiency.sentryCost',
@@ -394,19 +466,19 @@ export default function SleepEfficiencyPage() {
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <Text as="p" size="lg" weight="bold" className="tabular-nums text-amber-300">
-                    {fmtNumber(sleep?.sentry_extra_drain_rate ?? 0)}%
+                    {sleep ? `${fmtNumber(sleep.sentry_extra_drain_rate ?? 0)}%` : '—'}
                   </Text>
                   <Caption>{t('sleep.extraDrainHr', 'Extra drain/hr')}</Caption>
                 </div>
                 <div>
                   <Text as="p" size="lg" weight="bold" className="tabular-nums text-amber-300">
-                    {fmtNumber(sleep?.sentry_extra_monthly_kwh ?? 0)} kWh
+                    {sleep ? `${fmtNumber(sleep.sentry_extra_monthly_kwh ?? 0)} kWh` : '—'}
                   </Text>
                   <Caption>{t('sleep.extraMonthly', 'Extra monthly')}</Caption>
                 </div>
                 <div>
                   <Text as="p" size="lg" weight="bold" className="tabular-nums text-rose-300">
-                    {formatCurrency(sleep?.sentry_extra_monthly_cost ?? 0)}
+                    {sleep ? formatCurrency(sleep.sentry_extra_monthly_cost ?? 0) : '—'}
                   </Text>
                   <Caption>{t('sleep.extraCostMo', 'Extra cost/mo')}</Caption>
                 </div>

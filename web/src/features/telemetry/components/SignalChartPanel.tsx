@@ -78,9 +78,9 @@ export interface SignalChartPanelProps {
 }
 
 export function SignalChartPanel({
-  selectedSignals,
-  data,
-  stats,
+  selectedSignals = [],
+  data = [],
+  stats = [],
   isLive = false,
   loading = false,
   pointsLoaded,
@@ -117,14 +117,14 @@ export function SignalChartPanel({
       <GlassPanel className={cn('p-4 sm:p-5', className)}>
         <div className="flex items-center gap-2 mb-4">
           {isLive ? (
-            <Radio className="h-4 w-4 text-red-500 animate-pulse" />
+            <Radio className="h-4 w-4 text-red-500 animate-pulse" aria-hidden="true" />
           ) : (
-            <BarChart3 className="h-4 w-4 text-neon-cyan" />
+            <BarChart3 className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
           )}
           <SectionTitle>{resolvedTitle}</SectionTitle>
           {isLive ? (
             <span className="ml-auto flex items-center gap-1.5 text-2xs text-red-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
               {fmtInt(liveEventCount ?? 0)} {t('events')} · {fmtInt(data.length)} {t('points')}
             </span>
           ) : data.length > 0 && pointsLoaded != null ? (
@@ -135,7 +135,7 @@ export function SignalChartPanel({
         </div>
 
         {loading && !isLive ? (
-          <div style={{ height }}>
+          <div style={{ height }} role="status" aria-label={t('Loading chart…')}>
             <Skeleton className="h-full w-full" />
           </div>
         ) : data.length > 0 ? (
@@ -179,16 +179,16 @@ export function SignalChartPanel({
             </ResponsiveContainer>
           )
         ) : isLive ? (
-          <div className="flex items-center justify-center" style={{ height }}>
+          <div className="flex items-center justify-center" style={{ height }} role="status">
             <span className="text-[var(--text-muted)] flex items-center gap-2">
-              <Radio className="h-4 w-4 animate-pulse text-red-500" />
+              <Radio className="h-4 w-4 animate-pulse text-red-500" aria-hidden="true" />
               {t('Waiting for signal data…')}
             </span>
           </div>
         ) : (
-          <div className="flex items-center justify-center" style={{ height }}>
+          <div className="flex items-center justify-center" style={{ height }} role="status">
             <span className="text-[var(--text-muted)] flex items-center gap-2">
-              <Activity className="h-4 w-4" />
+              <Activity className="h-4 w-4" aria-hidden="true" />
               {t('No data for this time range')}
             </span>
           </div>

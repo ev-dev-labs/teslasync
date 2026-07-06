@@ -1,8 +1,10 @@
 /**
  * ChannelStatsBand — full-width KPI strip summarising notification delivery
  * health (total sent, failed, pending, and active-channel ratio). Owns its
- * own loading state: renders four skeletons until the stats query resolves,
- * then four null-safe metric cards.
+ * own loading state: renders four skeletons inside a labelled, `aria-busy`
+ * status region until the stats query resolves, then four null-safe metric
+ * cards. Every value falls back to `0` (and the channel ratio to `0/0`) so the
+ * band never renders a blank or `NaN` cell.
  */
 
 import { useTranslation } from 'react-i18next';
@@ -21,7 +23,12 @@ export function ChannelStatsBand({ stats, isLoading }: ChannelStatsBandProps) {
 
   if (isLoading && !stats) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t('notifications.stats.loading', 'Loading notification statistics')}
+        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+      >
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-[76px]" />
         ))}

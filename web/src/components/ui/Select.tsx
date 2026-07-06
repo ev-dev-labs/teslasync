@@ -1,4 +1,4 @@
-import { forwardRef, type SelectHTMLAttributes } from 'react';
+import { forwardRef, useId, type SelectHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
 import { HelpIcon, type HelpIconProps } from './HelpIcon';
@@ -38,7 +38,12 @@ const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ options, label, help, error, hint, placeholder, size = 'md', className, id, required, ...props }, ref) => {
-    const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    // Fall back to a stable, unique React id so the error/hint nodes and
+    // their `aria-describedby` wiring never collapse to `undefined-error`
+    // (invalid + duplicated across label-less selects) when neither `id`
+    // nor `label` is supplied.
+    const reactId = useId();
+    const selectId = id || label?.toLowerCase().replace(/\s+/g, '-') || `select-${reactId}`;
     return (
       <div className="space-y-1">
         {label && (
@@ -71,7 +76,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           {...props}
         >
           {placeholder && <option value="">{placeholder}</option>}
-          {options.map((opt) => (
+          {(options ?? []).map((opt) => (
             <option key={opt.value} value={opt.value} disabled={opt.disabled}>
               {opt.label}
             </option>

@@ -68,6 +68,14 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   const updatedAt = Math.max(dynUpdatedAt ?? 0, distUpdatedAt ?? 0);
   const isFetching = dynFetching || distFetching;
 
+  // Only replace the whole widget with a full-panel error on the INITIAL
+  // load failure, when there is no cached data to fall back on. Once we have
+  // data, a transient background-refetch failure must not blank out
+  // otherwise-valid numbers — it is surfaced through the freshness
+  // indicator's error state instead (WidgetShell forwards `isError` to
+  // <DataFreshness>).
+  const blockingError = !dynamics && dynError ? String(dynError) : null;
+
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
@@ -101,7 +109,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
     return (
       <WidgetShell
         loading={isLoading}
-        error={dynError ? String(dynError) : null}
+        error={blockingError}
         updatedAt={updatedAt}
         isFetching={isFetching}
         isStale={dynStale}
@@ -142,7 +150,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
       title={t('widget.drivingDynamics.title', 'Driving Dynamics')}
       icon={<Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={dynError ? String(dynError) : null}
+      error={blockingError}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={dynStale}

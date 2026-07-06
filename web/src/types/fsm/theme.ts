@@ -39,7 +39,13 @@ export const VARIANT_THEME: Record<BadgeVariant, StateStyle> = {
 
 /** Resolve a StateEntry to its full visual style (theme + overrides) */
 export function resolveStyle(entry: StateEntry): ResolvedStateStyle {
-  const base = VARIANT_THEME[entry.variant]
+  // Fall back to the neutral theme when the variant isn't in VARIANT_THEME.
+  // Runtime data (API/registry state definitions) can carry an unexpected
+  // variant string; without this guard `base` would be `undefined`, spreading
+  // to nothing and leaving badgeDot/bg/text/dot unset — an unstyled badge.
+  // Neutral keeps every class key populated while the original variant tag is
+  // preserved below for debugging.
+  const base = VARIANT_THEME[entry.variant] ?? VARIANT_THEME.neutral
   return {
     variant: entry.variant,
     ...base,

@@ -28,34 +28,46 @@ import { TOUSettingsModal } from '../components/TOUSettingsModal';
 
 /* ───────── Helpers ───────── */
 
-function fmtEnergy(wh: number | null | undefined): string {
+/** Minimal translate signature (key + English fallback) threaded into the
+ *  label helpers so their user-visible strings stay i18n-driven while the
+ *  helpers remain pure and unit-testable. */
+type TranslateFn = (key: string, fallback: string) => string;
+
+/** Format a Wh energy value as SI-scaled Wh/kWh; nullish → em dash. */
+export function fmtEnergy(wh: number | null | undefined): string {
   if (wh == null) return '—';
   if (Math.abs(wh) >= 1000) return `${fmtNumber(wh / 1000, 1)} kWh`;
   return `${fmtNumber(wh, 0)} Wh`;
 }
 
-function fmtPower(w: number | null | undefined): string {
+/** Format a W power value as SI-scaled W/kW; nullish → em dash. */
+export function fmtPower(w: number | null | undefined): string {
   if (w == null) return '—';
   if (Math.abs(w) >= 1000) return `${fmtNumber(w / 1000, 1)} kW`;
   return `${fmtNumber(w, 0)} W`;
 }
 
-function resourceIcon(type: string) {
+/** Map a Tesla resource_type to its lucide icon (defaults to a generic bolt). */
+export function resourceIcon(type: string) {
   if (type === 'battery') return Battery;
   if (type === 'solar') return Sun;
   return Zap;
 }
 
-function resourceLabel(type: string): string {
-  if (type === 'battery') return 'Powerwall';
-  if (type === 'solar') return 'Solar';
+/** Human label for a Tesla resource_type. Unknown types echo the raw
+ *  (dynamic) value rather than a hardcoded English literal. */
+export function resourceLabel(type: string, t: TranslateFn): string {
+  if (type === 'battery') return t('energy.products.resourceType.powerwall', 'Powerwall');
+  if (type === 'solar') return t('energy.products.resourceType.solar', 'Solar');
   return type;
 }
 
-function operationModeLabel(mode: string | undefined): string {
-  if (mode === 'self_consumption') return 'Self-Powered';
-  if (mode === 'autonomous') return 'Time-Based Control';
-  if (mode === 'backup') return 'Backup Only';
+/** Human label for a site's `default_real_mode`. Unknown/absent modes echo
+ *  the raw value or degrade to an em dash. */
+export function operationModeLabel(mode: string | undefined, t: TranslateFn): string {
+  if (mode === 'self_consumption') return t('energy.siteInfo.mode.selfConsumption', 'Self-Powered');
+  if (mode === 'autonomous') return t('energy.siteInfo.mode.autonomous', 'Time-Based Control');
+  if (mode === 'backup') return t('energy.siteInfo.mode.backup', 'Backup Only');
   return mode ?? '—';
 }
 
@@ -140,7 +152,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoTile label={t('energy.siteInfo.operationMode', 'Operation Mode')}>
               <Text variant="body" className="font-medium">
-                {operationModeLabel(info.default_real_mode)}
+                {operationModeLabel(info.default_real_mode, t)}
               </Text>
             </InfoTile>
             <InfoTile label={t('energy.siteInfo.backupReserve', 'Backup Reserve')}>
@@ -281,7 +293,7 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
               {site.site_name || t('energy.products.unnamed', 'Unnamed Site')}
             </SectionTitle>
             <Text variant="caption" className="block truncate">
-              {resourceLabel(site.resource_type)} · {t('energy.products.siteId', 'ID')} {site.energy_site_id}
+              {resourceLabel(site.resource_type, t)} · {t('energy.products.siteId', 'ID')} {site.energy_site_id}
             </Text>
           </div>
         </div>
@@ -304,7 +316,7 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
         />
         <MetricCard
           label={t('energy.products.type', 'Type')}
-          value={resourceLabel(site.resource_type)}
+          value={resourceLabel(site.resource_type, t)}
           icon={<Activity className="h-4 w-4" />}
           color="blue"
         />

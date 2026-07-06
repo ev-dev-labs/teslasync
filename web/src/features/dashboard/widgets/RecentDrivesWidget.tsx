@@ -20,7 +20,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
   const { unitPrefs } = useUnits();
   const { formatDateShort } = useDateFormat();
 
-  const { data: drives, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
+  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'recent-5'],
     queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=5`),
     enabled: id > 0,
@@ -33,6 +33,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       title={t('widget.recentDrives', 'Recent Drives')}
       icon={<Route className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -57,8 +58,8 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
                     {fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance), 1)} {unitPrefs.distance}
                   </p>
                   <p className="text-2xs text-[var(--text-muted)]">
-                    {fmtInt((d.duration_s ?? 0) / 60)} min · {d.start_soc_pct ?? '?'}% →{' '}
-                    {d.end_soc_pct ?? '?'}%
+                    {fmtInt((d.duration_s ?? 0) / 60)} {t('widget.recentDrives.durationUnit', 'min')} ·{' '}
+                    {d.start_soc_pct ?? '?'}% → {d.end_soc_pct ?? '?'}%
                   </p>
                 </div>
                 <span className="text-2xs text-[var(--text-muted)] shrink-0">

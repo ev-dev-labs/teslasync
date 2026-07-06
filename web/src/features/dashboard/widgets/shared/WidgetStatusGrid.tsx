@@ -56,16 +56,25 @@ export function WidgetStatusGrid({
   emptyMessage = 'No status data available',
   emptyIcon,
 }: WidgetStatusGridProps) {
-  if (cells.length === 0) {
+  // Callers derive `cells` from `data?.field`-shaped sources, so a runtime
+  // `undefined` can reach this list even though the prop type says StatusCell[].
+  // Normalise to an array before touching .length / .map so a missing source
+  // renders the empty state instead of throwing.
+  const items = cells ?? [];
+
+  if (items.length === 0) {
     return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage} icon={emptyIcon} />;
   }
 
   const resolvedCols = compact ? 2 : cols;
 
   return (
-    <div className={cn('grid gap-2', containerColsClass[resolvedCols])}>
-      {cells.map((cell) => {
-        const style = statusStyles[cell.status];
+    <div className={cn('grid gap-2', containerColsClass[resolvedCols] ?? containerColsClass[2])}>
+      {items.map((cell) => {
+        // Fail closed like StatusBadge: a status outside the known union (e.g. a
+        // raw backend string cast to StatusCell['status']) must not dereference
+        // undefined — fall back to the neutral "unknown" styling.
+        const style = statusStyles[cell.status] ?? statusStyles.unknown;
         return (
           <div
             key={cell.id}
@@ -75,16 +84,17 @@ export function WidgetStatusGrid({
               compact && 'px-2 py-1.5',
             )}
           >
-            {/* Status dot — top-right corner */}
+            {/* Decorative status cue — colour reinforces the label/value text,
+                which already carries the meaning for assistive tech. */}
             <span
-              className={cn(
-                'absolute right-2 top-2 size-2 rounded-full',
-                style.dot,
-              )}
+              aria-hidden="true"
+              className={cn('absolute right-2 top-2 size-2 rounded-full', style.dot)}
             />
 
             {cell.icon && (
-              <span className="shrink-0 text-[var(--text-secondary)]">{cell.icon}</span>
+              <span aria-hidden="true" className="shrink-0 text-[var(--text-secondary)]">
+                {cell.icon}
+              </span>
             )}
 
             <div className="min-w-0 flex-1">

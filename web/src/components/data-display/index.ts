@@ -30,14 +30,14 @@ export {
 export { StatusBadge } from './StatusBadge';
 export { ProgressRing } from './ProgressRing';
 export { AnimatedNumber } from './AnimatedNumber';
-export { Timeline } from './Timeline';
+export { Timeline, type TimelineItemData, type TimelineProps } from './Timeline';
 export { RecentActivityFeed, type RecentActivityFeedProps } from './RecentActivityFeed';
 export { MetricCard } from './MetricCard';
 export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
-export { TimelineItem } from './TimelineItem';
+export { TimelineItem, type TimelineItemProps } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
-export { TransitionArrow } from './TransitionArrow';
+export { TransitionArrow, type TransitionArrowProps } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
 export {
   DataFreshness,

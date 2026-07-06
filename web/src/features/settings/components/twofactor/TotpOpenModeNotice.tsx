@@ -12,7 +12,14 @@ import { GlassPanel, IconBox, Heading, HelperText } from '@/components/ui'
 export function TotpOpenModeNotice() {
   const { t } = useTranslation('settings')
   return (
-    <GlassPanel className="space-y-3 p-4 sm:p-5" data-testid="totp-section-open-mode">
+    <GlassPanel
+      // Polite live region: the parent swaps a loading spinner for this notice
+      // once the auth-mode query resolves. Without role="status" that switch is
+      // silent for screen-reader users; with it the guidance is announced.
+      role="status"
+      className="space-y-3 p-4 sm:p-5"
+      data-testid="totp-section-open-mode"
+    >
       <div className="flex items-center gap-3">
         <IconBox color="amber">
           <AlertTriangle className="h-5 w-5" aria-hidden="true" />

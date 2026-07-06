@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Thermometer, Fan, Armchair, CircleDot, Snowflake, Zap, Power,
@@ -18,7 +18,10 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: climateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useClimateLatest(id, 5_000);
   const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, unitPrefs.temperature),
+    [unitPrefs.temperature],
+  );
 
   const tempUnit = unitPrefs.temperature;
 
@@ -109,7 +112,7 @@ interface FullViewProps {
 
 function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
   const hvacOn = (climateData.hvac_power != null && climateData.hvac_power > 0) ||
-    climateData.hvac_ac_enabled === true;
+    climateData.is_ac_on === true;
 
   return (
     <div className="h-full flex flex-col justify-between gap-2.5">
@@ -149,7 +152,7 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
         <MetricCell
           icon={<Fan className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.climatePanel.fanSpeed', 'Fan Speed')}
-          value={climateData.hvac_fan_speed != null ? `${climateData.hvac_fan_speed}` : '—'}
+          value={climateData.fan_speed != null ? `${climateData.fan_speed}` : '—'}
         />
         <MetricCell
           icon={<CircleDot className="h-3 w-3 text-[var(--text-muted)]" />}
@@ -179,7 +182,7 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
             <Snowflake className="h-2.5 w-2.5" /> {t('widget.climatePanel.defrost', 'Defrost')}
           </span>
         )}
-        {climateData.battery_heater_on && (
+        {climateData.battery_heater && (
           <span className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
             <Zap className="h-2.5 w-2.5" /> {t('widget.climatePanel.batHeater', 'Bat Heater')}
           </span>

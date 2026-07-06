@@ -1,5 +1,6 @@
 export { CarAnimation } from './CarAnimation';
 export { FadeIn } from './FadeIn';
+export type { FadeInProps } from './FadeIn';
 export { RouteTransition } from './RouteTransition';
 export type { RouteTransitionProps } from './RouteTransition';
 export { StaggerContainer } from './StaggerContainer';

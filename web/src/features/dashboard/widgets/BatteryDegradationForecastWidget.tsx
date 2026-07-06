@@ -12,9 +12,10 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
 
-/** Map risk factor name to an icon for display */
-function riskIcon(name: string) {
-  const lower = name.toLowerCase();
+/** Map risk factor name to an icon for display. Null-safe: a missing name
+ *  falls through to the generic warning icon rather than throwing. */
+export function riskIcon(name: string | null | undefined) {
+  const lower = (name ?? '').toLowerCase();
   if (lower.includes('temp') || lower.includes('heat') || lower.includes('thermal')) {
     return <Thermometer className="h-3.5 w-3.5" />;
   }
@@ -28,17 +29,42 @@ function riskIcon(name: string) {
 }
 
 /** Classify degradation rate into a health tier */
-function healthTier(ratePctPerMonth: number): { label: string; variant: 'success' | 'warning' | 'danger'; key: string } {
+export function healthTier(ratePctPerMonth: number): { label: string; variant: 'success' | 'warning' | 'danger'; key: string } {
   if (ratePctPerMonth <= 0.05) return { label: 'Healthy', variant: 'success', key: 'healthy' };
   if (ratePctPerMonth <= 0.12) return { label: 'Normal', variant: 'warning', key: 'normal' };
   return { label: 'Accelerated', variant: 'danger', key: 'accelerated' };
 }
 
 /** Risk score → impact level for WidgetTipCards */
-function scoreToImpact(score: number): 'high' | 'medium' | 'low' {
+export function scoreToImpact(score: number): 'high' | 'medium' | 'low' {
   if (score >= 7) return 'high';
   if (score >= 4) return 'medium';
   return 'low';
+}
+
+/** Map an impact level to the matching Badge variant. */
+function impactVariant(impact: 'high' | 'medium' | 'low'): 'danger' | 'warning' | 'success' {
+  if (impact === 'high') return 'danger';
+  if (impact === 'medium') return 'warning';
+  return 'success';
+}
+
+/**
+ * Format an ISO date string as a localized "MMM YYYY" label. Returns an em
+ * dash for a missing or unparseable date so a malformed API value never
+ * throws a RangeError out of `Intl.DateTimeFormat` (which would crash the
+ * whole widget render).
+ */
+export function formatProjectedMonth(dateStr: string | null | undefined, locale: string): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '—';
+  try {
+    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short' }).format(d);
+  } catch {
+    // Malformed BCP-47 locale tag — fall back to en-US so we still render.
+    return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short' }).format(d);
+  }
 }
 
 export default function BatteryDegradationForecastWidget({ vehicleId, size }: WidgetProps) {
@@ -48,7 +74,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   const idStr = id != null ? String(id) : null;
   const { locale } = useDateFormat();
 
-  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } =
+  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } =
     useBatteryDegradation(idStr);
 
   const isCompact = size.cols <= 1;
@@ -56,9 +82,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   const rate = data?.degradation_rate_pct_per_month ?? 0;
   const tier = useMemo(() => healthTier(rate), [rate]);
   const currentHealthPct = data?.current_health_pct ?? data?.current_health ?? null;
-  const projectedDate = data?.projected_80pct_date
-    ? new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short' }).format(new Date(data.projected_80pct_date))
-    : '—';
+  const projectedDate = formatProjectedMonth(data?.projected_80pct_date, locale);
 
   const riskFactors = data?.risk_factors ?? [];
   const recommendations = data?.recommendations ?? [];
@@ -76,13 +100,22 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
     [recommendations, t],
   );
 
-  const hasData = currentHealthPct != null || (data?.projected_80pct_date != null);
+  // Surface the panel whenever the API returned anything meaningful — a
+  // health reading, a projected date, risk factors, or recommendations —
+  // rather than hiding available risk/recommendation data behind the empty
+  // state when the predictive model omits the health/projection fields.
+  const hasData =
+    currentHealthPct != null ||
+    data?.projected_80pct_date != null ||
+    riskFactors.length > 0 ||
+    recommendations.length > 0;
 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.forecast.title', 'Battery Forecast')}
       icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5 text-neon-amber" />}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -138,30 +171,30 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                   {t('widget.forecast.riskFactors', 'Risk Factors')}
                 </p>
                 <ul className="flex flex-col gap-1 overflow-y-auto max-h-40">
-                  {riskFactors.slice(0, 5).map((rf) => (
-                    <li
-                      key={rf.name}
-                      className="flex items-center gap-2 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2 min-h-[44px]"
-                    >
-                      <span className="shrink-0 text-[var(--text-secondary)]">
-                        {riskIcon(rf.name)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm text-[var(--text-primary)] truncate block">
-                          {rf.label ?? rf.name}
-                        </span>
-                        <span className="text-2xs text-[var(--text-muted)] truncate block">
-                          {rf.detail ?? '—'}
-                        </span>
-                      </div>
-                      <Badge
-                        variant={scoreToImpact(rf.score) === 'high' ? 'danger' : scoreToImpact(rf.score) === 'medium' ? 'warning' : 'success'}
-                        size="sm"
+                  {riskFactors.slice(0, 5).map((rf, idx) => {
+                    const impact = scoreToImpact(rf.score ?? 0);
+                    return (
+                      <li
+                        key={`${rf.name ?? 'risk'}-${idx}`}
+                        className="flex items-center gap-2 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2 min-h-[44px]"
                       >
-                        {fmtNumber(rf.score, 0)}
-                      </Badge>
-                    </li>
-                  ))}
+                        <span className="shrink-0 text-[var(--text-secondary)]">
+                          {riskIcon(rf.name)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-[var(--text-primary)] truncate block">
+                            {rf.label ?? rf.name ?? '—'}
+                          </span>
+                          <span className="text-2xs text-[var(--text-muted)] truncate block">
+                            {rf.detail ?? '—'}
+                          </span>
+                        </div>
+                        <Badge variant={impactVariant(impact)} size="sm">
+                          {fmtNumber(rf.score, 0)}
+                        </Badge>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}

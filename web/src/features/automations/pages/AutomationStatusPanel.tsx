@@ -46,30 +46,44 @@ export function AutomationStatusPanel({
   onRetry,
 }: AutomationStatusPanelProps) {
   const { t } = useTranslation();
-  const max = Math.max(stats.total, 1);
+
+  // Null-safety: a malformed / partial API payload can arrive with missing
+  // counts. Coalesce every field to 0 up front so the empty-state guard fires
+  // correctly and the bars never render "NaN · NaN%" from `undefined / max`.
+  const total = stats.total ?? 0;
+  const active = stats.active ?? 0;
+  const disabled = stats.disabled ?? 0;
+  const autoDisabled = stats.autoDisabled ?? 0;
+  const max = Math.max(total, 1);
 
   const rows = useMemo(
-    () => [
-      {
-        key: 'active',
-        label: t('automationList.status.active', 'Active'),
-        value: stats.active,
-        color: STATUS_COLORS.active,
-      },
-      {
-        key: 'disabled',
-        label: t('automationList.status.disabled', 'Disabled'),
-        value: stats.disabled,
-        color: STATUS_COLORS.disabled,
-      },
-      {
-        key: 'autoDisabled',
-        label: t('automationList.status.autoDisabled', 'Auto-disabled'),
-        value: stats.autoDisabled,
-        color: STATUS_COLORS.autoDisabled,
-      },
-    ],
-    [t, stats.active, stats.disabled, stats.autoDisabled],
+    () =>
+      [
+        {
+          key: 'active',
+          label: t('automationList.status.active', 'Active'),
+          value: active,
+          color: STATUS_COLORS.active,
+        },
+        {
+          key: 'disabled',
+          label: t('automationList.status.disabled', 'Disabled'),
+          value: disabled,
+          color: STATUS_COLORS.disabled,
+        },
+        {
+          key: 'autoDisabled',
+          label: t('automationList.status.autoDisabled', 'Auto-disabled'),
+          value: autoDisabled,
+          color: STATUS_COLORS.autoDisabled,
+        },
+      ].map((r) => ({
+        ...r,
+        // Clamp to [0, 100] so an inconsistent payload (a count exceeding the
+        // total) can never surface a nonsensical ">100%" readout.
+        pct: Math.min(100, Math.max(0, Math.round((r.value / max) * 100))),
+      })),
+    [t, active, disabled, autoDisabled, max],
   );
 
   return (
@@ -83,7 +97,7 @@ export function AutomationStatusPanel({
         <Skeleton height={168} />
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : stats.total === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
           icon={<Icons.workflow className="h-8 w-8" />}
           message={t('automationList.status.empty', 'No automations to summarize yet')}
@@ -98,11 +112,11 @@ export function AutomationStatusPanel({
                 value={r.value}
                 max={max}
                 color={r.color}
-                sublabel={`${r.value} · ${Math.round((r.value / max) * 100)}%`}
+                sublabel={`${r.value} · ${r.pct}%`}
               />
             ))}
           </div>
-          {stats.autoDisabled > 0 && (
+          {autoDisabled > 0 && (
             <AlertBanner
               variant="warning"
               icon={<Icons.warning className="h-4 w-4" aria-hidden="true" />}
@@ -111,7 +125,7 @@ export function AutomationStatusPanel({
               {t(
                 'automationList.autoDisabled.body',
                 '{{count}} automation(s) were auto-disabled after repeated failures. Re-enable them from the builder once resolved.',
-                { count: stats.autoDisabled },
+                { count: autoDisabled },
               )}
             </AlertBanner>
           )}

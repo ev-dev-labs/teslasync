@@ -5,8 +5,8 @@ import type { TourStep } from '@/hooks/useTour'
  * Main onboarding tour.
  *
  * The dashboard-focused walkthrough that auto-starts the first time a user
- * lands on `/dashboard` with at least one vehicle linked. Bumping the
- * version below silently invalidates any previously stored completion flag.
+ * lands on the dashboard root (`/`) with at least one vehicle linked. Bumping
+ * the version below silently invalidates any previously stored completion flag.
  */
 
 const STEPS: TourStep[] = [
@@ -70,5 +70,8 @@ export const MAIN_TOUR: TourDefinition = {
   descriptionFallback: 'A quick tour of the dashboard, sidebar, and live data.',
   version: 2,
   steps: STEPS,
-  autoStart: ({ pathname, vehicleCount }) => pathname === '/' && vehicleCount > 0,
+  // Null-safe: a malformed/partial context (missing `vehicleCount`, or no
+  // context at all) must resolve to `false` rather than throw on destructure —
+  // the predicate runs inside a Layout effect on every route change.
+  autoStart: (ctx) => ctx?.pathname === '/' && (ctx?.vehicleCount ?? 0) > 0,
 }

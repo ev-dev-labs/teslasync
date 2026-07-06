@@ -52,8 +52,17 @@ export function deriveSignalRows(
         ? (entry as Record<string, unknown>)
         : { value: entry, timestamp: null };
     const ts = (raw as { timestamp?: string | null }).timestamp ?? null;
-    const staleness = ts ? (now - new Date(ts).getTime()) / 1000 : Infinity;
-    const category: SignalRow['category'] = !ts
+    // A present-but-unparseable timestamp used to slip through as a bogus
+    // "active" row with `NaN` staleness: `NaN > GAP_AGING_MAX_S` is false, so
+    // the category fell to 'active' while `computeGapBuckets` simultaneously
+    // counted the same row as 'stale' (a `NaN` fails both `<` checks). Validate
+    // the parse and treat an unparseable timestamp as "never received" so the
+    // category, the bucket tally, and the rendered "last updated" cell stay
+    // consistent — matching SignalCatalogPanel's own derivation.
+    const parsedMs = ts ? new Date(ts).getTime() : NaN;
+    const hasValidTs = Number.isFinite(parsedMs);
+    const staleness = hasValidTs ? (now - parsedMs) / 1000 : Infinity;
+    const category: SignalRow['category'] = !hasValidTs
       ? 'never'
       : staleness > GAP_AGING_MAX_S
         ? 'stale'
@@ -62,7 +71,7 @@ export function deriveSignalRows(
     return {
       name,
       value: value != null ? String(value) : '—',
-      timestamp: ts,
+      timestamp: hasValidTs ? ts : null,
       staleness,
       category,
     };
@@ -99,9 +108,14 @@ export function computeFreshnessPct(buckets: GapBuckets): number {
 /** Human-readable "…ago" label for a staleness value in seconds. */
 export function formatStaleness(seconds: number): string {
   if (!Number.isFinite(seconds)) return '—';
-  if (seconds < 60) return `${fmtInt(seconds)}s ago`;
-  if (seconds < 3600) return `${fmtInt(seconds / 60)}m ago`;
-  const h = Math.floor(seconds / 3600);
-  const m = (seconds % 3600) / 60;
+  // Floor consistently and clamp clock-skew negatives. `fmtInt` *rounds*, so the
+  // previous `fmtInt(seconds)` / `fmtInt(seconds / 60)` overflowed 59.98 → "60s
+  // ago", 7199 → "1h 60m ago", and a future timestamp printed a nonsensical
+  // "-3s ago". Flooring the integer parts keeps every segment in range.
+  const s = Math.max(0, Math.floor(seconds));
+  if (s < 60) return `${fmtInt(s)}s ago`;
+  if (s < 3600) return `${fmtInt(Math.floor(s / 60))}m ago`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
   return `${h}h ${fmtInt(m)}m ago`;
 }

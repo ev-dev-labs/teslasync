@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 const FOCUSABLE_SELECTOR =
@@ -38,7 +39,8 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * - When `title` is present, the dialog is labelled by the heading via
  *   `aria-labelledby`. Otherwise the caller may pass `ariaLabel`.
  * - Focus is moved into the dialog when it opens (first focusable element, or
- *   the dialog container itself if none exist).
+ *   the dialog container itself if none exist). Focus is set once on open and
+ *   is NOT re-stolen when the parent re-renders (see `onCloseRef` below).
  * - Tab + Shift+Tab are trapped inside the dialog.
  * - Esc closes the dialog (in addition to the existing backdrop click).
  * - Focus returns to the element that triggered the open when the dialog
@@ -46,8 +48,17 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
   ({ open, onClose, title, size = 'md', className, children, ariaLabel, ...props }, ref) => {
+    const { t } = useTranslation();
     const dialogRef = useRef<HTMLDivElement | null>(null);
     const titleId = useId();
+    // Keep the latest onClose in a ref so the focus-trap effect can call the
+    // current callback without listing `onClose` in its dependency array.
+    // Callers routinely pass an inline arrow for `onClose`, so a new reference
+    // arrives on every parent render; depending on it made the effect re-run
+    // and re-focus the first focusable element, yanking focus away from
+    // whatever the user was interacting with inside the open dialog.
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
     // Compose the forwarded ref with our internal ref so callers and the
     // focus-trap effect can both reach the dialog node.
     useImperativeHandle(ref, () => dialogRef.current as HTMLDivElement, []);
@@ -70,7 +81,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           e.stopPropagation();
-          onClose();
+          onCloseRef.current();
           return;
         }
         if (e.key !== 'Tab') return;
@@ -97,7 +108,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
         // Restore focus to the trigger so keyboard users don't lose context.
         previouslyFocused?.focus?.();
       };
-    }, [open, onClose]);
+    }, [open]);
 
     if (!open) return null;
 
@@ -163,7 +174,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
                 <button
                   type="button"
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label={t('modal.close', 'Close')}
                   className={cn(
                     'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
                     'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',

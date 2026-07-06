@@ -37,7 +37,13 @@ export default function CostAnalysisPage() {
   const { isMiles } = useSettings();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  // Stable SI-meters → display-distance converter. Memoized on the distance
+  // preference so the memoized derives inside useCostAnalysisData don't
+  // recompute on every render (this closure is one of their dependencies).
+  const toDistanceDisplay = useCallback(
+    (meters: number) => convertDistanceFromSI(meters, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
   // Header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
 

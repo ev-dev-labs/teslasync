@@ -65,9 +65,35 @@ function markServerMessage() {
   lastMessageAt = Date.now()
 }
 
+/**
+ * Parse an SSE payload without ever throwing. A malformed or empty frame
+ * yields `null` instead of propagating a `SyntaxError` up through the
+ * EventSource dispatch — which would surface as an uncaught error and, for
+ * the `connected` frame, silently skip the `emit` after the state had already
+ * flipped to "connected". Mirrors the defensive, never-throw contract already
+ * used by the typed consumer in `api/sseClient.ts`.
+ */
+function safeParse(raw: unknown): unknown {
+  if (typeof raw !== 'string' || raw.length === 0) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
 function doConnect() {
   if (connecting) return
   connecting = true
+
+  // A fresh connection attempt supersedes any scheduled reconnect. Clearing
+  // the pending backoff timer here prevents a race where an explicit
+  // connect() (or a new subscriber) opens a socket while a queued reconnect
+  // later fires doConnect() again and churns a second EventSource.
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = undefined
+  }
 
   if (source) {
     source.close()
@@ -83,23 +109,22 @@ function doConnect() {
     connecting = false
     everConnected = true
     markServerMessage()
-    const data = JSON.parse(e.data)
-    emit('connected', data)
+    emit('connected', safeParse(e.data))
   })
 
   es.addEventListener('vehicle_update', (e) => {
     markServerMessage()
-    emit('vehicle_update', JSON.parse(e.data))
+    emit('vehicle_update', safeParse(e.data))
   })
 
   es.addEventListener('alert', (e) => {
     markServerMessage()
-    emit('alert', JSON.parse(e.data))
+    emit('alert', safeParse(e.data))
   })
 
   es.addEventListener('export_status', (e) => {
     markServerMessage()
-    emit('export_status', JSON.parse(e.data))
+    emit('export_status', safeParse(e.data))
   })
 
   // Real-time achievement unlocks. The lifetime handler broadcasts one event
@@ -107,14 +132,12 @@ function doConnect() {
   // celebration toast + confetti animation in response.
   es.addEventListener('achievement_unlocked', (e) => {
     markServerMessage()
-    emit('achievement_unlocked', JSON.parse(e.data))
+    emit('achievement_unlocked', safeParse(e.data))
   })
 
   es.addEventListener('heartbeat', (e) => {
     markServerMessage()
-    let payload: unknown = null
-    try { payload = e.data ? JSON.parse(e.data) : null } catch { payload = null }
-    emit('heartbeat', payload)
+    emit('heartbeat', safeParse(e.data))
   })
 
   es.onerror = () => {
@@ -157,9 +180,12 @@ export const sseManager: SSEManager = {
       }
       // Reset connection bookkeeping so a future subscribe re-opens cleanly
       // (previously `connecting` could stay true if the last subscriber left
-      // mid-connect, leaving the next subscriber unable to reconnect).
+      // mid-connect, leaving the next subscriber unable to reconnect). Also
+      // clear the backoff counter so the next lifecycle starts from the base
+      // 1s delay rather than inheriting a stale escalated backoff.
       state = 'reconnecting'
       connecting = false
+      failCount = 0
       if (reconnectTimer) {
         clearTimeout(reconnectTimer)
         reconnectTimer = undefined
@@ -185,5 +211,7 @@ export const sseManager: SSEManager = {
     }
     state = 'reconnecting'
     connecting = false
+    // Explicit teardown resets backoff so a later connect() starts fresh.
+    failCount = 0
   },
 }

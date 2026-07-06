@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Watch, Lock, Unlock } from 'lucide-react';
 import { RadialGauge } from '@/components/charts';
@@ -13,7 +13,9 @@ import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
-function getBatteryColor(level: number): string {
+// Battery state-of-charge health bands → gauge/accent color:
+// healthy (>50%) emerald, low (>20%) amber, critical (≤20%) red.
+export function getBatteryColor(level: number): string {
   if (level > 50) return '#10b981';
   if (level > 20) return '#f59e0b';
   return '#ef4444';
@@ -30,8 +32,6 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const tempUnit = unitPrefs.temperature;
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const isCompact = size.cols <= 1;
   const isLoading = summaryLoading || compLoading;
@@ -45,18 +45,23 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
 
   const displayRange = useMemo(() => {
     if (rangeKm == null) return null;
-    return toDistanceDisplay(rangeKm * 1000);
-  }, [rangeKm, toDistanceDisplay]);
+    // range_km is kilometres; lift to SI metres before the display-unit cast.
+    return convertDistanceFromSI(rangeKm * 1000, distanceUnit);
+  }, [rangeKm, distanceUnit]);
 
   const displayTemp = useMemo(() => {
     if (insideTempC == null) return null;
-    return toTemperatureDisplay(insideTempC);
-  }, [insideTempC, toTemperatureDisplay]);
+    return convertTempFromSI(insideTempC, tempUnit);
+  }, [insideTempC, tempUnit]);
 
   const color = useMemo(
     () => (batteryLevel != null ? getBatteryColor(batteryLevel) : '#374151'),
     [batteryLevel],
   );
+
+  const handleRefresh = useCallback(() => {
+    void refetchSummary();
+  }, [refetchSummary]);
 
   const hasData = summary != null;
 
@@ -69,7 +74,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
         isFetching={summaryFetching}
         isStale={summaryStale}
         isError={summaryError}
-        onRefresh={() => refetchSummary()}
+        onRefresh={handleRefresh}
       >
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-1.5 py-1">
@@ -117,7 +122,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
       isFetching={summaryFetching}
       isStale={summaryStale}
       isError={summaryError}
-      onRefresh={() => refetchSummary()}
+      onRefresh={handleRefresh}
     >
       {hasData ? (
         <div className="h-full flex flex-col gap-3">

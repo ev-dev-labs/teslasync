@@ -85,7 +85,7 @@ interface FormState {
   actions: AutomationActionStepInput[];
 }
 
-function getInitialForm(): FormState {
+export function getInitialForm(): FormState {
   return {
     name: '',
     description: '',
@@ -97,7 +97,7 @@ function getInitialForm(): FormState {
   };
 }
 
-function normalizeTriggerInput(
+export function normalizeTriggerInput(
   trigger: AutomationTriggerStepInput | AutomationTriggerStep,
 ): AutomationTriggerStepInput {
   switch (trigger.kind) {
@@ -133,7 +133,7 @@ function normalizeTriggerInput(
   }
 }
 
-function normalizeConditionInput(
+export function normalizeConditionInput(
   condition: AutomationConditionStepInput | AutomationConditionStep,
 ): AutomationConditionStepInput {
   switch (condition.kind) {
@@ -173,7 +173,7 @@ function normalizeConditionInput(
   }
 }
 
-function normalizeActionInput(
+export function normalizeActionInput(
   action: AutomationActionStepInput | AutomationActionStep,
 ): AutomationActionStepInput {
   switch (action.kind) {
@@ -207,19 +207,19 @@ function normalizeActionInput(
   }
 }
 
-function automationToForm(automation: AutomationFull): FormState {
+export function automationToForm(automation: AutomationFull): FormState {
   return {
     name: automation.name,
     description: automation.description ?? '',
     vehicle_id: automation.vehicle_id,
     enabled: automation.enabled,
-    triggers: automation.triggers.map(normalizeTriggerInput),
-    conditions: automation.conditions.map(normalizeConditionInput),
-    actions: automation.actions.map(normalizeActionInput),
+    triggers: (automation.triggers ?? []).map(normalizeTriggerInput),
+    conditions: (automation.conditions ?? []).map(normalizeConditionInput),
+    actions: (automation.actions ?? []).map(normalizeActionInput),
   };
 }
 
-function formToPayload(form: FormState): AutomationFullInput {
+export function formToPayload(form: FormState): AutomationFullInput {
   return {
     name: form.name.trim(),
     description: form.description.trim(),
@@ -231,15 +231,28 @@ function formToPayload(form: FormState): AutomationFullInput {
   };
 }
 
-function triggerNeedsPlace(trigger: AutomationTriggerStepInput): boolean {
+export function applyDraftToForm(previous: FormState, proposedDraft: AutomationFullInput): FormState {
+  return {
+    ...previous,
+    name: proposedDraft.name,
+    description: proposedDraft.description ?? '',
+    vehicle_id: proposedDraft.vehicle_id ?? null,
+    enabled: proposedDraft.enabled ?? true,
+    triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
+    conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
+    actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
+  };
+}
+
+export function triggerNeedsPlace(trigger: AutomationTriggerStepInput): boolean {
   return trigger.kind === 'trigger_geofence' && trigger.place_id <= 0;
 }
 
-function conditionNeedsPlace(condition: AutomationConditionStepInput): boolean {
+export function conditionNeedsPlace(condition: AutomationConditionStepInput): boolean {
   return condition.kind === 'condition_geofence' && condition.place_id <= 0;
 }
 
-function actionIsIncomplete(action: AutomationActionStepInput): boolean {
+export function actionIsIncomplete(action: AutomationActionStepInput): boolean {
   switch (action.kind) {
     case 'action_command':
       return action.command_name.trim() === '';
@@ -370,13 +383,13 @@ export default function AutomationBuilderPage() {
         description: preset.description,
         vehicle_id: null,
         enabled: true,
-        triggers: preset.triggers.map((trigger) => (
+        triggers: (preset.triggers ?? []).map((trigger) => (
           normalizeTriggerInput(trigger as AutomationTriggerStepInput)
         )),
         conditions: (preset.conditions ?? []).map((condition) => (
           normalizeConditionInput(condition as AutomationConditionStepInput)
         )),
-        actions: preset.actions.map((action) => (
+        actions: (preset.actions ?? []).map((action) => (
           normalizeActionInput(action as AutomationActionStepInput)
         )),
       });
@@ -395,7 +408,20 @@ export default function AutomationBuilderPage() {
     setHydrated(true);
   }, [hasDraft, hydrated, isEdit, presetId]);
 
+  // Reset hydration ONLY when the edited automation / preset actually
+  // changes (e.g. the user navigates from editing #5 to #7 without a
+  // remount). This effect is declared AFTER the three hydrate effects
+  // above, so firing it unconditionally on mount would clobber the
+  // `setHydrated(true)` the brand-new-automation branch performs in the
+  // same commit — permanently wedging `hydrated` at false and silently
+  // disabling draft autosave for new automations. Guarding on a
+  // previous-source-key ref makes the initial mount a no-op while still
+  // re-hydrating on a genuine source switch.
+  const sourceKeyRef = useRef(`${automationId ?? ''}|${presetId ?? ''}`);
   useEffect(() => {
+    const nextKey = `${automationId ?? ''}|${presetId ?? ''}`;
+    if (sourceKeyRef.current === nextKey) return;
+    sourceKeyRef.current = nextKey;
     setHydrated(false);
   }, [automationId, presetId]);
 
@@ -869,24 +895,7 @@ export default function AutomationBuilderPage() {
                   // per-step normalizers so the typed envelope is
                   // byte-equivalent to one the canonical
                   // POST /api/v1/automations handler accepts.
-                  setFormValue((previous) => ({
-                    ...previous,
-                    name: proposedDraft.name,
-                    description: proposedDraft.description ?? '',
-                    vehicle_id: proposedDraft.vehicle_id ?? null,
-                    enabled: proposedDraft.enabled ?? true,
-                    // The LLM-produced AutomationTriggerInput / etc.
-                    // have the same wire shape as the editing-time
-                    // AutomationTriggerStepInput modulo a TS-only
-                    // field-omission difference; the normalizers read
-                    // only the discriminated `kind` fields so the
-                    // structural cast is safe and runtime-equivalent
-                    // to the byte-shape POST /api/v1/automations
-                    // accepts.
-                    triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
-                    conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
-                    actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
-                  }));
+                  setFormValue((previous) => applyDraftToForm(previous, proposedDraft));
                   setDirty(true);
                 }}
               />

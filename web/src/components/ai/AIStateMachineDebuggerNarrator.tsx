@@ -59,6 +59,15 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// The narration card consumes the accumulated delta text through
+// AiOutputPanel and never reacts to individual stream frames, so
+// onEvent is a stable no-op. Hoisting it to module scope keeps the
+// reference identical across renders, which avoids re-running
+// useAiStream's onEvent ref-sync effect every time the parent
+// StateMachineDebuggerPage re-renders (its vehicle/window selectors
+// change frequently). Matches the elevated sibling narrators.
+const noopStreamEvent = (): void => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId is the in-scope vehicle the narration covers.
@@ -150,7 +159,7 @@ function InnerSection({ vehicleId, fromUnix, toUnix }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/system/fsm/narrate',
     body,
-    onEvent: () => {},
+    onEvent: noopStreamEvent,
   })
 
   return (

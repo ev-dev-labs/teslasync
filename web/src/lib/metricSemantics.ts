@@ -74,12 +74,21 @@ export type MetricId = keyof typeof METRIC_SEMANTICS;
 
 /**
  * Resolve a metric input (id or inline object) to a `MetricSemantic`.
- * Falls back to `{ direction: 'neutral' }` for unknown ids so the UI never
- * crashes on a typo.
+ * Falls back to `{ direction: 'neutral' }` for unknown ids — and for a
+ * nullish input — so the UI never crashes on a typo or on loosely-typed
+ * data that slips past the compiler.
  */
 export function resolveSemantic(
-  metric: MetricId | MetricSemantic | { direction: Direction; unit?: MetricUnit },
+  metric:
+    | MetricId
+    | MetricSemantic
+    | { direction: Direction; unit?: MetricUnit }
+    | null
+    | undefined,
 ): MetricSemantic {
+  // Defensive: `null`/`undefined` can reach us from loosely-typed callers.
+  // Guard before the `in` check below, which throws on a nullish operand.
+  if (metric == null) return { id: 'unknown', direction: 'neutral' };
   if (typeof metric === 'string') {
     const found = METRIC_SEMANTICS[metric];
     if (found) return found;

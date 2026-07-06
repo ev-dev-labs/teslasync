@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
@@ -46,12 +46,25 @@ export default function DrivingDynamicsPage() {
 
   /* ---- settings ---- */
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
   const tempUnit = unitPrefs.temperature;
-  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+  // Stable SI→display converters so the memoized derives inside child
+  // sections (e.g. DriveAnalyticsSection's speed/accel useMemos) don't
+  // recompute on every 5s live-motor poll — they only change when the
+  // user actually flips a unit preference.
+  const toDistanceDisplay = useCallback(
+    (value: number) => convertDistanceFromSI(value, distanceUnit),
+    [distanceUnit],
+  );
+  const toSpeedDisplay = useCallback(
+    (value: number) => convertSpeedFromSI(value, speedUnit),
+    [speedUnit],
+  );
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, tempUnit),
+    [tempUnit],
+  );
 
   /* ---- date filter (page-scoped: used by SpeedGear + DriveAnalytics) ---- */
   const [startDate, setStartDate] = useState(() => {
@@ -174,7 +187,7 @@ export default function DrivingDynamicsPage() {
         {/* 8 — Driving style recommendations */}
         <FadeIn delay={0.15}>
           <section aria-label={t('dynamics.recommendations', 'Driving Style Recommendations')}>
-            <DrivingTips motorStats={motorStats} throttleStyle={throttleStyle} />
+            <DrivingTips motorStats={motorStats} />
           </section>
         </FadeIn>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Maximize2, Monitor } from 'lucide-react';
 import {
@@ -10,7 +10,7 @@ import {
   Slider,
 } from '@/components/ui';
 import { FormSection } from '@/components/forms';
-import type { KioskConfig } from '../hooks/useKioskMode';
+import { DEFAULT_KIOSK_CONFIG, type KioskConfig } from '../hooks/useKioskMode';
 import type { SavedDashboard } from '../widgets/types';
 
 interface KioskSettingsModalProps {
@@ -22,39 +22,6 @@ interface KioskSettingsModalProps {
   dashboards: SavedDashboard[];
 }
 
-const ROTATION_OPTIONS = [
-  { value: '0', label: 'Off' },
-  { value: '10', label: '10s' },
-  { value: '15', label: '15s' },
-  { value: '30', label: '30s' },
-  { value: '60', label: '1 min' },
-  { value: '120', label: '2 min' },
-  { value: '300', label: '5 min' },
-];
-
-const CURSOR_TIMEOUT_OPTIONS = [
-  { value: '3', label: '3s' },
-  { value: '5', label: '5s' },
-  { value: '10', label: '10s' },
-  { value: '15', label: '15s' },
-];
-
-const DIM_AFTER_OPTIONS = [
-  { value: '0', label: 'Never' },
-  { value: '5', label: '5 min' },
-  { value: '10', label: '10 min' },
-  { value: '15', label: '15 min' },
-  { value: '30', label: '30 min' },
-  { value: '60', label: '60 min' },
-];
-
-const CLOCK_POSITION_OPTIONS = [
-  { value: 'top-left', label: 'Top Left' },
-  { value: 'top-right', label: 'Top Right' },
-  { value: 'bottom-left', label: 'Bottom Left' },
-  { value: 'bottom-right', label: 'Bottom Right' },
-];
-
 export function KioskSettingsModal({
   open,
   onClose,
@@ -64,29 +31,82 @@ export function KioskSettingsModal({
   dashboards,
 }: KioskSettingsModalProps) {
   const { t } = useTranslation();
+  const safeDashboards = dashboards ?? [];
+  // Merge over defaults so a partial or legacy persisted config never yields
+  // undefined reads (e.g. a NaN brightness slider). Mirrors loadKioskConfig().
+  const cfg = useMemo<KioskConfig>(() => ({ ...DEFAULT_KIOSK_CONFIG, ...config }), [config]);
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(config.dashboardIds.length > 0 ? config.dashboardIds : dashboards.map((d) => d.id)),
+    () => new Set(cfg.dashboardIds.length > 0 ? cfg.dashboardIds : safeDashboards.map((d) => d.id)),
   );
 
-  const toggleDashboard = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+  const rotationOptions = useMemo(
+    () => [
+      { value: '0', label: t('kiosk.rotationOff', 'Off') },
+      { value: '10', label: t('kiosk.rotation10s', '10s') },
+      { value: '15', label: t('kiosk.rotation15s', '15s') },
+      { value: '30', label: t('kiosk.rotation30s', '30s') },
+      { value: '60', label: t('kiosk.rotation1min', '1 min') },
+      { value: '120', label: t('kiosk.rotation2min', '2 min') },
+      { value: '300', label: t('kiosk.rotation5min', '5 min') },
+    ],
+    [t],
+  );
+
+  const cursorTimeoutOptions = useMemo(
+    () => [
+      { value: '3', label: t('kiosk.timeout3s', '3s') },
+      { value: '5', label: t('kiosk.timeout5s', '5s') },
+      { value: '10', label: t('kiosk.timeout10s', '10s') },
+      { value: '15', label: t('kiosk.timeout15s', '15s') },
+    ],
+    [t],
+  );
+
+  const dimAfterOptions = useMemo(
+    () => [
+      { value: '0', label: t('kiosk.dimNever', 'Never') },
+      { value: '5', label: t('kiosk.dim5min', '5 min') },
+      { value: '10', label: t('kiosk.dim10min', '10 min') },
+      { value: '15', label: t('kiosk.dim15min', '15 min') },
+      { value: '30', label: t('kiosk.dim30min', '30 min') },
+      { value: '60', label: t('kiosk.dim60min', '60 min') },
+    ],
+    [t],
+  );
+
+  const clockPositionOptions = useMemo(
+    () => [
+      { value: 'top-left', label: t('kiosk.clockTopLeft', 'Top Left') },
+      { value: 'top-right', label: t('kiosk.clockTopRight', 'Top Right') },
+      { value: 'bottom-left', label: t('kiosk.clockBottomLeft', 'Bottom Left') },
+      { value: 'bottom-right', label: t('kiosk.clockBottomRight', 'Bottom Right') },
+    ],
+    [t],
+  );
+
+  // Persist the selection as a side effect *outside* the state updater. An
+  // impure updater re-runs (and thus double-calls onUpdateConfig) under
+  // React StrictMode / concurrent rendering.
+  const toggleDashboard = useCallback(
+    (id: string) => {
+      const next = new Set(selectedIds);
       if (next.has(id)) {
         if (next.size > 1) next.delete(id);
       } else {
         next.add(id);
       }
-      const ids = Array.from(next);
-      onUpdateConfig({ dashboardIds: ids });
-      return next;
-    });
-  };
+      setSelectedIds(next);
+      onUpdateConfig({ dashboardIds: Array.from(next) });
+    },
+    [selectedIds, onUpdateConfig],
+  );
 
-  const handleEnter = () => {
+  const handleEnter = useCallback(() => {
     onUpdateConfig({ dashboardIds: Array.from(selectedIds) });
     onClose();
     onEnterKiosk();
-  };
+  }, [selectedIds, onUpdateConfig, onClose, onEnterKiosk]);
 
   return (
     <Modal open={open} onClose={onClose} title={t('kiosk.settings', 'Kiosk Settings')} size="lg">
@@ -96,18 +116,18 @@ export function KioskSettingsModal({
           <div className="space-y-3">
             <UiSelect
               label={t('kiosk.rotationInterval', 'Rotation Interval')}
-              options={ROTATION_OPTIONS}
-              value={String(config.rotateInterval)}
+              options={rotationOptions}
+              value={String(cfg.rotateInterval)}
               onChange={(e) => onUpdateConfig({ rotateInterval: Number(e.target.value) })}
             />
 
-            {config.rotateInterval > 0 && dashboards.length > 1 && (
+            {cfg.rotateInterval > 0 && safeDashboards.length > 1 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--text-secondary)]">
                   {t('kiosk.dashboardsToRotate', 'Dashboards to Rotate')}
                 </label>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {dashboards.map((d) => (
+                  {safeDashboards.map((d) => (
                     <label
                       key={d.id}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03]
@@ -142,14 +162,14 @@ export function KioskSettingsModal({
             <div className="space-y-2">
               <Toggle
                 label={t('kiosk.hideCursor', 'Auto-hide Cursor')}
-                checked={config.hideCursor}
+                checked={cfg.hideCursor}
                 onChange={(v) => onUpdateConfig({ hideCursor: v })}
               />
-              {config.hideCursor && (
+              {cfg.hideCursor && (
                 <UiSelect
                   label={t('kiosk.cursorTimeout', 'Hide After')}
-                  options={CURSOR_TIMEOUT_OPTIONS}
-                  value={String(config.cursorTimeout)}
+                  options={cursorTimeoutOptions}
+                  value={String(cfg.cursorTimeout)}
                   onChange={(e) => onUpdateConfig({ cursorTimeout: Number(e.target.value) })}
                 />
               )}
@@ -159,17 +179,17 @@ export function KioskSettingsModal({
             <div className="space-y-2">
               <UiSelect
                 label={t('kiosk.dimAfter', 'Dim Screen After')}
-                options={DIM_AFTER_OPTIONS}
-                value={String(config.dimAfter)}
+                options={dimAfterOptions}
+                value={String(cfg.dimAfter)}
                 onChange={(e) => onUpdateConfig({ dimAfter: Number(e.target.value) })}
               />
-              {config.dimAfter > 0 && (
+              {cfg.dimAfter > 0 && (
                 <Slider
                   label={t('kiosk.brightness', 'Dimmed Brightness')}
                   formatValue={(n) => `${Math.round(n)}%`}
                   min={30}
                   max={90}
-                  value={Math.round(config.dimLevel * 100)}
+                  value={Math.round(cfg.dimLevel * 100)}
                   onChange={(n) => onUpdateConfig({ dimLevel: n / 100 })}
                 />
               )}
@@ -179,14 +199,14 @@ export function KioskSettingsModal({
             <div className="space-y-2">
               <Toggle
                 label={t('kiosk.showClock', 'Show Clock')}
-                checked={config.showClock}
+                checked={cfg.showClock}
                 onChange={(v) => onUpdateConfig({ showClock: v })}
               />
-              {config.showClock && (
+              {cfg.showClock && (
                 <UiSelect
                   label={t('kiosk.clockPosition', 'Clock Position')}
-                  options={CLOCK_POSITION_OPTIONS}
-                  value={config.clockPosition}
+                  options={clockPositionOptions}
+                  value={cfg.clockPosition}
                   onChange={(e) =>
                     onUpdateConfig({
                       clockPosition: e.target.value as KioskConfig['clockPosition'],
@@ -212,7 +232,7 @@ export function KioskSettingsModal({
               min={30}
               max={100}
               step={5}
-              value={Math.round((config.widgetOpacity ?? 1) * 100)}
+              value={Math.round(cfg.widgetOpacity * 100)}
               onChange={(n) => onUpdateConfig({ widgetOpacity: n / 100 })}
             />
             <div className="flex justify-between text-2xs text-[var(--text-muted)]">
@@ -229,7 +249,7 @@ export function KioskSettingsModal({
               min={0}
               max={100}
               step={5}
-              value={Math.round((config.backgroundOpacity ?? 1) * 100)}
+              value={Math.round(cfg.backgroundOpacity * 100)}
               onChange={(n) => onUpdateConfig({ backgroundOpacity: n / 100 })}
             />
             <div className="flex justify-between text-2xs text-[var(--text-muted)]">
@@ -242,13 +262,13 @@ export function KioskSettingsModal({
           <div className="mt-3 p-3 rounded-lg border border-[var(--border-subtle)] relative overflow-hidden">
             <div
               className="absolute inset-0"
-              style={{ backgroundColor: `rgba(10, 10, 20, ${config.backgroundOpacity ?? 1})` }}
+              style={{ backgroundColor: `rgba(10, 10, 20, ${cfg.backgroundOpacity})` }}
             />
             <div
               className="relative rounded-md p-2 text-xs text-[var(--text-secondary)] border border-[var(--border-subtle)]"
               style={{
-                backgroundColor: `rgba(255, 255, 255, ${0.03 + (config.widgetOpacity ?? 1) * 0.17})`,
-                backdropFilter: `blur(${4 + (config.widgetOpacity ?? 1) * 12}px)`,
+                backgroundColor: `rgba(255, 255, 255, ${0.03 + cfg.widgetOpacity * 0.17})`,
+                backdropFilter: `blur(${4 + cfg.widgetOpacity * 12}px)`,
               }}
             >
               {t('kiosk.preview', 'Preview — this is how widgets will look')}

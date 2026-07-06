@@ -22,6 +22,11 @@ import { Icons } from '@/lib/icons';
 import { chartTokens } from '@/lib/tokens';
 import type { HourPoint } from './myActivityAnalytics';
 
+// Hoisted so these object/array literals keep a stable identity across renders
+// instead of being re-created on every pass through the chart branch.
+const TOOLTIP_CURSOR = { fill: 'var(--surface-2)', opacity: 0.4 };
+const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
+
 export interface ActivityHourPanelProps {
   data: HourPoint[];
   isLoading: boolean;
@@ -61,19 +66,26 @@ export function ActivityHourPanel({
             message={t('activity.myActivity.byHour.empty', 'No activity to chart by hour yet.')}
           />
         ) : (
-          <div className="h-56 sm:h-64">
+          <div
+            className="h-56 sm:h-64"
+            role="img"
+            aria-label={t(
+              'activity.myActivity.byHour.chartAria',
+              'Activity counts by hour of day',
+            )}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows}>
                 {chartGrid}
                 <XAxis dataKey="label" tick={axisTickSm} interval={2} />
                 <YAxis tick={axisTickSm} allowDecimals={false} width={32} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.4 }} />
+                <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
                 <Bar
                   dataKey="count"
                   name={t('activity.myActivity.byHour.series', 'Actions')}
                   fill={chartTokens.series[4]}
                   fillOpacity={0.85}
-                  radius={[3, 3, 0, 0]}
+                  radius={BAR_RADIUS}
                 />
               </BarChart>
             </ResponsiveContainer>

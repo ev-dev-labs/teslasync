@@ -25,7 +25,7 @@ interface ParsedUpgrade {
   eligible: boolean;
 }
 
-function parseUpgrades(data: Record<string, unknown> | null | undefined): ParsedUpgrade[] {
+export function parseUpgrades(data: Record<string, unknown> | null | undefined): ParsedUpgrade[] {
   if (!data) return [];
 
   // Handle an "upgrades" array in the envelope
@@ -57,7 +57,7 @@ function parseUpgrades(data: Record<string, unknown> | null | undefined): Parsed
 }
 
 /** Compute days until an expiry date */
-function daysUntil(dateStr: string | null): number | null {
+export function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
   const expiry = new Date(dateStr);
   if (isNaN(expiry.getTime())) return null;
@@ -130,13 +130,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
   // ── Compact layout (1×2): upgrade count ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={upgradesUpdatedAt}
-      isFetching={upgradesFetching}
-      isStale={upgradesStale}
-      isError={upgradesError}
-      onRefresh={() => refetchUpgrades()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           <ArrowUpCircle className="h-4 w-4 text-emerald-400" />
           {upgrades.length > 0 ? (
@@ -173,9 +167,9 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
           </h4>
           {upgrades.length > 0 ? (
             <div className="space-y-2">
-              {upgrades.map((upgrade) => (
+              {upgrades.map((upgrade, index) => (
                 <div
-                  key={upgrade.name}
+                  key={`${upgrade.name}-${index}`}
                   className="flex items-start justify-between gap-2 py-1.5 px-1 border-b border-white/[0.06] last:border-b-0"
                 >
                   <div className="flex-1 min-w-0">
@@ -215,7 +209,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
             </div>
           ) : (
             <div className="flex items-center gap-2 py-3 justify-center">
-              <span className="text-sm text-emerald-400">✅</span>
+              <span className="text-sm text-emerald-400" aria-hidden="true">✅</span>
               <span className="text-sm text-[var(--text-secondary)]">
                 {t('widget.upgrades.allApplied', 'All upgrades applied')}
               </span>

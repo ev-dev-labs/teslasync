@@ -25,7 +25,12 @@ export function SummaryStatsRow({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div
+        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+        role="status"
+        aria-busy="true"
+        aria-label={t('common.loading', 'Loading…')}
+      >
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} height={88} />
         ))}
@@ -55,7 +60,9 @@ export function SummaryStatsRow({
       />
       <MetricCard
         label={t('admin.security.stat.totalEvents', 'Total Events')}
-        value={totalEvents}
+        // fmtInt matches the Sentry Uptime card, adds locale thousands
+        // separators for large histories, and coerces a non-finite count to 0.
+        value={fmtInt(totalEvents)}
         icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
         color="purple"
       />

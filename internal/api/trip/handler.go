@@ -1,6 +1,7 @@
 package trip
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,12 +14,39 @@ import (
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
-type Handler struct {
-	repo *tripdb.TripRepo
+// tripRepository is the narrow port the handler depends on. Declared at the
+// call site so handler tests can inject an in-memory fake without touching
+// Postgres. *tripdb.TripRepo satisfies this interface.
+type tripRepository interface {
+	GetAll(ctx context.Context, limit, offset int, startTime, endTime time.Time) ([]*tripdb.TripSummary, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*tripdb.TripSummary, error)
 }
 
+// Compile-time guard that the production repo still satisfies the port. If a
+// method signature drifts this fails at build time rather than at runtime.
+var _ tripRepository = (*tripdb.TripRepo)(nil)
+
+// Handler serves GET /trips.
+type Handler struct {
+	repo tripRepository
+}
+
+// NewHandler wires the production repo. Panics on a nil db (fail-fast at
+// startup) so a misconfigured router crashes before serving traffic.
 func NewHandler(db *database.DB) *Handler {
-	return &Handler{repo: tripdb.NewTripRepo(db)}
+	if db == nil {
+		panic("trip: NewHandler requires non-nil db")
+	}
+	return newHandler(tripdb.NewTripRepo(db))
+}
+
+// newHandler injects an arbitrary tripRepository. Kept unexported so the public
+// surface stays db-based while handler tests can supply a fake.
+func newHandler(repo tripRepository) *Handler {
+	if repo == nil {
+		panic("trip: newHandler requires non-nil repo")
+	}
+	return &Handler{repo: repo}
 }
 
 type tripSummaryResponse struct {
@@ -83,18 +111,19 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	if vehicleIDStr != "" {
 		vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
-		if err != nil {
+		if err != nil || vehicleID <= 0 {
 			httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 			return
 		}
 		trips, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit, offset, startTime, endTime)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to get trips")
+			log.Error().Err(err).
+				Int64("vehicle_id", vehicleID).
+				Int("limit", limit).
+				Int("offset", offset).
+				Msg("failed to get trips by vehicle")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to get trips")
 			return
-		}
-		if trips == nil {
-			trips = make([]*tripdb.TripSummary, 0)
 		}
 		httpx.WriteJSON(w, http.StatusOK, tripSummaryDTOs(trips))
 		return
@@ -102,12 +131,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	trips, err := h.repo.GetAll(r.Context(), limit, offset, startTime, endTime)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get trips")
+		log.Error().Err(err).
+			Int("limit", limit).
+			Int("offset", offset).
+			Msg("failed to get trips")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get trips")
 		return
-	}
-	if trips == nil {
-		trips = make([]*tripdb.TripSummary, 0)
 	}
 	httpx.WriteJSON(w, http.StatusOK, tripSummaryDTOs(trips))
 }

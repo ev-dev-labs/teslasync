@@ -231,7 +231,7 @@ const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
  *  bar mounted in <Layout>. The bar gives the user a visible "loading"
  *  affordance during chunk download even before the layout-shaped
  *  skeleton paints. */
-function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
+export function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
   const { pathname } = useLocation()
   // key={pathname} guarantees a fresh ErrorBoundary instance on every navigation,
   // so a crash on the previous route can never persist into the next one.
@@ -263,15 +263,15 @@ function SafeRoute({ children, name }: { children: React.ReactNode; name: string
  * `/vehicles/3` and immediately closes the tab still gets that visit
  * captured the next time they open the palette.
  */
-const RECENT_PAGES_RECORD_DELAY_MS = 250
+export const RECENT_PAGES_RECORD_DELAY_MS = 250
 const TITLE_SUFFIX = ' — TeslaSync'
 
-function stripTitleSuffix(t: string): string {
+export function stripTitleSuffix(t: string): string {
   if (t.endsWith(TITLE_SUFFIX)) return t.slice(0, -TITLE_SUFFIX.length)
   return t
 }
 
-function RecentPagesRecorder() {
+export function RecentPagesRecorder() {
   const { pathname } = useLocation()
   // Refs over deps so the same timeout closure can be re-created on
   // every pathname change without re-binding the listener.
@@ -279,8 +279,16 @@ function RecentPagesRecorder() {
 
   useEffect(() => {
     if (lastPathRef.current === pathname) return
-    lastPathRef.current = pathname
     const id = window.setTimeout(() => {
+      // Mark this path recorded only once the delayed write actually
+      // fires — never up-front. Assigning the ref before the timeout
+      // resolves breaks React 18 StrictMode's mount→unmount→mount probe:
+      // the first schedule is cleared by the interleaved cleanup, and the
+      // re-mounted effect would early-return against its own ref and thus
+      // never record the visit (recent-pages silently broken in dev).
+      // Deferring the assignment keeps first-paint recording resilient to
+      // remounts while still de-duplicating a settled pathname.
+      lastPathRef.current = pathname
       const stripped = stripTitleSuffix(getBaseTitle())
       const fromStore = stripped && stripped !== 'TeslaSync' ? stripped : null
       const fromRegistry = resolvePageLabel(pathname)
@@ -293,24 +301,53 @@ function RecentPagesRecorder() {
   return null
 }
 
+/**
+ * Pure resolver for the post-re-authentication return redirect.
+ *
+ * Given the value stashed in `sessionStorage['teslasync-return-url']`
+ * before a ForwardAuth bounce, decide where — if anywhere — the SPA
+ * should navigate once it re-mounts. Returns a router-relative
+ * `pathname + search + hash` string, or `null` when no navigation should
+ * happen: nothing stored, a malformed URL, a cross-origin target, or the
+ * user is already on the stored path.
+ *
+ * Kept pure (no `window` / `sessionStorage` access) so the branch matrix
+ * is unit-testable without a DOM round-trip; {@link App} owns the
+ * imperative read/remove + `navigate()` side effects.
+ */
+export function resolveReturnRedirect(
+  returnUrl: string | null | undefined,
+  currentOrigin: string,
+  currentPathname: string,
+): string | null {
+  if (!returnUrl) return null
+  let url: URL
+  try {
+    url = new URL(returnUrl)
+  } catch {
+    // Malformed value stored — ignore rather than throw on mount.
+    return null
+  }
+  if (url.origin !== currentOrigin) return null
+  if (url.pathname === currentPathname) return null
+  return url.pathname + url.search + url.hash
+}
+
 export default function App() {
   const navigate = useNavigate()
 
-  // After re-authentication, redirect back to the page the user was on
+  // After re-authentication, redirect back to the page the user was on.
   useEffect(() => {
     const returnUrl = sessionStorage.getItem('teslasync-return-url')
-    if (returnUrl) {
-      sessionStorage.removeItem('teslasync-return-url')
-      try {
-        const url = new URL(returnUrl)
-        if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
-          navigate(url.pathname + url.search + url.hash)
-        }
-      } catch {
-        // Invalid URL stored — ignore
-      }
-    }
-  }, [])
+    if (!returnUrl) return
+    sessionStorage.removeItem('teslasync-return-url')
+    const dest = resolveReturnRedirect(
+      returnUrl,
+      window.location.origin,
+      window.location.pathname,
+    )
+    if (dest) navigate(dest)
+  }, [navigate])
 
   return (
     <>

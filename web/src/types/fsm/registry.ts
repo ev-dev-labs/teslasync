@@ -44,33 +44,47 @@ export const FSM_EDGES: Record<string, [string, string][]> = Object.fromEntries(
   Object.entries(FSM_REGISTRY).map(([k, v]) => [k, v.edges]),
 )
 
+/** Project a fully-resolved style down to the 4-class {@link StateStyle} shape
+ *  (drops the `variant` discriminant). Single home for the projection so the
+ *  STATE_COLORS map and {@link getStateColor} can never drift apart. */
+function toStateStyle({ badgeDot, bg, text, dot }: ResolvedStateStyle): StateStyle {
+  return { badgeDot, bg, text, dot }
+}
+
+/**
+ * Guarded lookup shared by {@link getStateColor} and {@link getStateDefinition}.
+ * Resolves an FSM type + state name to its full themed style, tolerating:
+ *   - an unknown `fsmType` (falls back to the vehicle FSM — backward-compat), and
+ *   - a nullish / non-string / unknown `state`, returning the neutral default
+ *     instead of throwing on `state.toLowerCase()`.
+ * Matching is case-insensitive; callers own any trimming (see StateBadge).
+ */
+function resolveStateEntry(fsmType: string, state: string | null | undefined): ResolvedStateStyle {
+  if (typeof state !== 'string') return DEFAULT_STATE
+  const def = FSM_REGISTRY[fsmType as keyof typeof FSM_REGISTRY] ?? FSM_REGISTRY.vehicle
+  const states = def.states as Record<string, StateEntry>
+  const entry = states[state.toLowerCase()]
+  return entry ? resolveStyle(entry) : DEFAULT_STATE
+}
+
 /** Color map per FSM type — resolves theme + overrides (backward-compat) */
 export const STATE_COLORS: Record<string, Record<string, StateStyle>> = Object.fromEntries(
   Object.entries(FSM_REGISTRY).map(([fsmType, def]) => [
     fsmType,
     Object.fromEntries(
-      Object.entries(def.states).map(([state, entry]) => {
-        const resolved = resolveStyle(entry)
-        return [state, { badgeDot: resolved.badgeDot, bg: resolved.bg, text: resolved.text, dot: resolved.dot }]
-      }),
+      Object.entries(def.states).map(([state, entry]) => [state, toStateStyle(resolveStyle(entry))]),
     ),
   ]),
 )
 
-/** Resolve state style for a given FSM type + state name */
-export function getStateColor(fsmType: string, state: string): StateStyle {
-  const def = FSM_REGISTRY[fsmType as keyof typeof FSM_REGISTRY] ?? FSM_REGISTRY.vehicle
-  const states = def.states as Record<string, StateEntry>
-  const entry = states[state.toLowerCase()]
-  if (!entry) return DEFAULT_STATE
-  const resolved = resolveStyle(entry)
-  return { badgeDot: resolved.badgeDot, bg: resolved.bg, text: resolved.text, dot: resolved.dot }
+/** Resolve state style for a given FSM type + state name. Null-safe: a nullish
+ *  or unknown state resolves to the neutral default rather than throwing. */
+export function getStateColor(fsmType: string, state: string | null | undefined): StateStyle {
+  return toStateStyle(resolveStateEntry(fsmType, state))
 }
 
-/** Get the full resolved style (includes badge variant + badgeDot) */
-export function getStateDefinition(fsmType: string, state: string): ResolvedStateStyle {
-  const def = FSM_REGISTRY[fsmType as keyof typeof FSM_REGISTRY] ?? FSM_REGISTRY.vehicle
-  const states = def.states as Record<string, StateEntry>
-  const entry = states[state.toLowerCase()]
-  return entry ? resolveStyle(entry) : DEFAULT_STATE
+/** Get the full resolved style (includes badge variant + badgeDot). Null-safe:
+ *  a nullish or unknown state resolves to the neutral default. */
+export function getStateDefinition(fsmType: string, state: string | null | undefined): ResolvedStateStyle {
+  return resolveStateEntry(fsmType, state)
 }

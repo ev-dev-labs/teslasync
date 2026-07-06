@@ -51,6 +51,13 @@ export function useVehicleSettings(vehicleId: number, options?: { enabled?: bool
     queryKey: vehicleSettingsKeys.detail(vehicleId),
     queryFn: ({ signal }) =>
       request<VehicleSettingsResponse>(`/vehicles/${vehicleId}/settings`, { signal }),
+    // Normalise the envelope so `data.settings` is ALWAYS an array. The
+    // resolver is documented to return the full key whitelist, but a
+    // malformed body (null envelope, missing/non-array `settings`) must
+    // never reach a consumer that iterates without a presence check.
+    select: (raw): VehicleSettingsResponse => ({
+      settings: Array.isArray(raw?.settings) ? raw.settings : [],
+    }),
     enabled: (options?.enabled ?? true) && Number.isFinite(vehicleId) && vehicleId > 0,
     staleTime: 30_000,
   })
@@ -129,5 +136,10 @@ export function findEffectiveSetting(
   payload: VehicleSettingsResponse | undefined,
   key: string,
 ): EffectiveSetting | undefined {
-  return payload?.settings?.find((s) => s.key === key)
+  // Guard against a malformed envelope: `settings` may be absent, null,
+  // or (defensively) a non-array shape leaking through. Calling `.find`
+  // on a non-array would throw and crash the row render, so coerce first.
+  const settings = payload?.settings
+  if (!Array.isArray(settings)) return undefined
+  return settings.find((s) => s?.key === key)
 }

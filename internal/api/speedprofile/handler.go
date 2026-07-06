@@ -1,11 +1,13 @@
 package speedprofile
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -16,13 +18,37 @@ import (
 
 const driveStatsMetersPerMile = 1609.344
 
+// speedProfileDBTimeout bounds the request-triggered database round-trips so a
+// stalled pool can never pin a request goroutine open indefinitely when the
+// client does not cancel. It derives from the inbound request context, so
+// caller cancellation still wins when it fires first. The four analytics
+// queries run sequentially under this single deadline.
+const speedProfileDBTimeout = 15 * time.Second
+
 // SpeedProfileHandler serves speed-distribution and efficiency analytics.
 type SpeedProfileHandler struct {
-	db *database.DB
+	db database.DBTX
 }
 
+// NewSpeedProfileHandler binds the handler to the shared pool.
+//
+// A nil db (or a db with a nil pool) is tolerated: Get degrades to the
+// empty-but-well-formed payload (empty arrays, zero hero aggregates) rather
+// than panicking on a nil pool, mirroring the nil-tolerant contract used by
+// sibling analytics handlers (apikey, gasprice).
 func NewSpeedProfileHandler(db *database.DB) *SpeedProfileHandler {
-	return &SpeedProfileHandler{db: db}
+	var q database.DBTX
+	if db != nil && db.Pool != nil {
+		q = db.Pool
+	}
+	return newSpeedProfileHandler(q)
+}
+
+// newSpeedProfileHandler is the querier-injecting seam shared by
+// NewSpeedProfileHandler and the tests. Keeping construction here lets tests
+// drive the handler against a fake database.DBTX without a live pool.
+func newSpeedProfileHandler(q database.DBTX) *SpeedProfileHandler {
+	return &SpeedProfileHandler{db: q}
 }
 
 // speedBucket fields are SI-canonical; avg_power is averaged in Watts
@@ -72,7 +98,20 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	startTime, endTime := apiparams.ParseDateRange(r)
 	hasRange := !startTime.IsZero() && !endTime.IsZero()
 
-	ctx := r.Context()
+	// A nil querier (unconfigured pool) degrades to the empty-but-well-formed
+	// payload rather than panicking, mirroring the nil-tolerant contract
+	// documented on NewSpeedProfileHandler.
+	if h.db == nil {
+		writeEmptySpeedProfile(w)
+		return
+	}
+
+	// Bound the request's database work: net/http cancels r.Context() when the
+	// client disconnects (caller cancellation still wins), and this deadline
+	// caps a stalled pool so the four sequential analytics queries below cannot
+	// pin the goroutine open indefinitely.
+	ctx, cancel := context.WithTimeout(r.Context(), speedProfileDBTimeout)
+	defer cancel()
 
 	// SI-canonical drives use speed buckets expressed in mps
 	// (1 mph = 0.44704 mps) so the bucket boundary literals 6.7056, 13.4112,
@@ -80,7 +119,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// is averaged in Watts.
 	var distRows pgx.Rows
 	if hasRange {
-		distRows, err = h.db.Pool.Query(ctx, `
+		distRows, err = h.db.Query(ctx, `
 		SELECT
 		  CASE
 		    WHEN avg_speed_mps < 6.7056  THEN '0-15'
@@ -99,7 +138,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		GROUP BY speed_bucket
 		ORDER BY MIN(avg_speed_mps)`, vehicleID, startTime, endTime)
 	} else {
-		distRows, err = h.db.Pool.Query(ctx, `
+		distRows, err = h.db.Query(ctx, `
 		SELECT
 		  CASE
 		    WHEN avg_speed_mps < 6.7056  THEN '0-15'
@@ -151,7 +190,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// distance/duration formula at the response level).
 	var catRows pgx.Rows
 	if hasRange {
-		catRows, err = h.db.Pool.Query(ctx, `
+		catRows, err = h.db.Query(ctx, `
 		SELECT
 		  CASE
 		    WHEN avg_speed_mps < 13.4112 THEN 'City (<30)'
@@ -169,7 +208,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		  AND started_at BETWEEN $4 AND $5
 		GROUP BY category`, vehicleID, driveStatsMetersPerMile, driveStatsMetersPerMile, startTime, endTime)
 	} else {
-		catRows, err = h.db.Pool.Query(ctx, `
+		catRows, err = h.db.Query(ctx, `
 		SELECT
 		  CASE
 		    WHEN avg_speed_mps < 13.4112 THEN 'City (<30)'
@@ -224,7 +263,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// behaviour with no time bound.
 	var ptRows pgx.Rows
 	if hasRange {
-		ptRows, err = h.db.Pool.Query(ctx, `
+		ptRows, err = h.db.Query(ctx, `
 		SELECT avg_speed_mps,
 		  distance_m / $2 AS distance_mi_calc,
 		  CASE WHEN distance_m > 0
@@ -236,7 +275,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		  AND started_at BETWEEN $4 AND $5
 		ORDER BY started_at DESC LIMIT 100`, vehicleID, driveStatsMetersPerMile, 5*driveStatsMetersPerMile, startTime, endTime)
 	} else {
-		ptRows, err = h.db.Pool.Query(ctx, `
+		ptRows, err = h.db.Query(ctx, `
 		SELECT avg_speed_mps,
 		  distance_m / $2 AS distance_mi_calc,
 		  CASE WHEN distance_m > 0
@@ -334,10 +373,10 @@ FROM eligible
 `
 	var heroErr error
 	if hasRange {
-		heroErr = h.db.Pool.QueryRow(ctx, fmt.Sprintf(heroSQL, "AND started_at BETWEEN $2 AND $3"), vehicleID, startTime, endTime).
+		heroErr = h.db.QueryRow(ctx, fmt.Sprintf(heroSQL, "AND started_at BETWEEN $2 AND $3"), vehicleID, startTime, endTime).
 			Scan(&avgMps, &peakMps, &optimalMps)
 	} else {
-		heroErr = h.db.Pool.QueryRow(ctx, fmt.Sprintf(heroSQL, ""), vehicleID).
+		heroErr = h.db.QueryRow(ctx, fmt.Sprintf(heroSQL, ""), vehicleID).
 			Scan(&avgMps, &peakMps, &optimalMps)
 	}
 	if heroErr != nil && !errors.Is(heroErr, pgx.ErrNoRows) {
@@ -366,5 +405,21 @@ FROM eligible
 		"avg_speed_mps":     avgSpeedMps,
 		"peak_speed_mps":    peakSpeedMps,
 		"optimal_speed_mps": optimalSpeedMps,
+	})
+}
+
+// writeEmptySpeedProfile emits the empty-but-well-formed payload used on the
+// nil-querier degradation path. It keeps the exact key set and array-not-null
+// invariant the frontend SpeedProfilePage relies on (the three lists render as
+// empty charts and the RadialGauges read zero), so an unconfigured pool yields
+// a benign 200 rather than a panic or a shape the UI cannot parse.
+func writeEmptySpeedProfile(w http.ResponseWriter) {
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"distribution":      []speedBucket{},
+		"categories":        []efficiencyCategory{},
+		"points":            []efficiencyPoint{},
+		"avg_speed_mps":     0.0,
+		"peak_speed_mps":    0.0,
+		"optimal_speed_mps": 0.0,
 	})
 }

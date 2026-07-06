@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CreditCard } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -10,7 +10,7 @@ import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 
 /** Safely extract a string from an unknown value */
-function asString(val: unknown): string | null {
+export function asString(val: unknown): string | null {
   if (val == null) return null;
   if (typeof val === 'string' && val.length > 0) return val;
   if (typeof val === 'number') return String(val);
@@ -18,7 +18,7 @@ function asString(val: unknown): string | null {
 }
 
 /** Compute days until an expiry date string */
-function daysUntil(dateStr: string | null): number | null {
+export function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
   const expiry = new Date(dateStr);
   if (isNaN(expiry.getTime())) return null;
@@ -36,7 +36,7 @@ const SUBSCRIPTION_TYPES = [
   { key: 'satellite_connectivity', labelKey: 'widget.subscriptions.satellite', fallback: 'Satellite Connectivity' },
 ] as const;
 
-interface ParsedSub {
+export interface ParsedSub {
   name: string;
   active: boolean;
   expiryDate: string | null;
@@ -44,7 +44,7 @@ interface ParsedSub {
   daysLeft: number | null;
 }
 
-function parseSubscriptions(
+export function parseSubscriptions(
   data: Record<string, unknown> | null | undefined,
   t: (k: string, f: string) => string,
 ): ParsedSub[] {
@@ -152,25 +152,33 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
     }));
   }, [parsed, t, fmtDate]);
 
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
+  // An errored INITIAL load (no cached data) surfaces an error panel instead of
+  // the misleading "No subscriptions" empty state. A background-refetch error
+  // over already-loaded data keeps the list on screen — the freshness dot still
+  // flags the error — so a transient blip never blanks out a working widget.
+  const errorMessage =
+    isError && !subsData
+      ? t('widget.subscriptions.error', 'Failed to load subscriptions')
+      : undefined;
+
   const shellProps = {
     loading: isLoading,
+    error: errorMessage,
     updatedAt: dataUpdatedAt ?? 0,
     isFetching,
     isStale,
     isError,
-    onRefresh: () => refetch(),
+    onRefresh: handleRefresh,
   };
 
   // ── Compact layout (1×2): active count + next expiry ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           {parsed.length > 0 ? (
             <>

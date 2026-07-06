@@ -37,22 +37,22 @@ interface ReasonBucket {
 export function ReasonBreakdown({ rows, loading, error, onRetry }: ReasonBreakdownProps) {
   const { t } = useTranslation();
 
-  const buckets = useMemo<ReasonBucket[]>(() => {
+  const { buckets, total } = useMemo(() => {
     const counts = new Map<string, number>();
     for (const row of rows ?? []) {
       const reason = row.parsed_reason?.trim() || t('admin.dlq.reasons.unknown', 'unknown');
       counts.set(reason, (counts.get(reason) ?? 0) + 1);
     }
-    return Array.from(counts.entries())
+    const sorted: ReasonBucket[] = Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([reason, count], i) => ({
         reason,
         count,
         color: chartTokens.series[i % chartTokens.series.length],
       }));
+    const sum = sorted.reduce((acc, b) => acc + b.count, 0);
+    return { buckets: sorted, total: sum };
   }, [rows, t]);
-
-  const total = buckets.reduce((sum, b) => sum + b.count, 0);
 
   if (error) {
     return <QueryError error={error} onRetry={onRetry} />;
@@ -72,7 +72,10 @@ export function ReasonBreakdown({ rows, loading, error, onRetry }: ReasonBreakdo
   }
 
   return (
-    <ul className="space-y-3">
+    <ul
+      className="space-y-3"
+      aria-label={t('admin.dlq.reasons.listLabel', 'Failure reasons breakdown')}
+    >
       {buckets.map((bucket) => (
         <li key={bucket.reason}>
           <MetricBar

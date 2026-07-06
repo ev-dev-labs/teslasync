@@ -77,14 +77,18 @@ function coerceValue(value: unknown, kind: SignalChangeEvent['kind']): SignalCha
       return typeof value === 'boolean' ? value : Boolean(value)
     case 'int':
     case 'float':
-      if (typeof value === 'number') return value
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null
       if (typeof value === 'string') {
         const n = Number(value)
         return Number.isFinite(n) ? n : null
       }
       return null
     default:
-      if (typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number') {
+      // A non-finite number (NaN / ±Infinity) is never a valid signal value —
+      // it would poison downstream charts/formatters — so drop it to null,
+      // matching how the numeric/string branches above reject it.
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null
+      if (typeof value === 'string' || typeof value === 'boolean') {
         return value
       }
       return null

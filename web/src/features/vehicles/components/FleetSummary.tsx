@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Car, Battery, Gauge, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,11 +18,18 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
   const { t } = useTranslation('vehicles');
   const { unitPrefs } = useUnits();
 
+  // Null-safety: a caller can pass hook data that is still `undefined` on the
+  // first render — never call `.map`/`.length` on a possibly-undefined prop.
+  const list = useMemo<Vehicle[]>(() => vehicles ?? [], [vehicles]);
+  // Sorted id set → a query key that is stable across re-renders and only
+  // changes when the fleet membership changes (not on mere re-order).
+  const ids = useMemo(() => list.map((v) => v.id).sort((a, b) => a - b), [list]);
+
   const { data: allStates } = useQuery({
-    queryKey: ['fleet-vehicle-states', vehicles.map(v => v.id).sort()],
+    queryKey: ['fleet-vehicle-states', ids],
     queryFn: async () => {
       const entries = await Promise.all(
-        vehicles.map(async (v) => {
+        list.map(async (v) => {
           try {
             const data = await fetchVehicleState(v.id);
             return data?.state ?? null;
@@ -32,28 +40,34 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
       );
       return entries;
     },
-    enabled: vehicles.length > 0,
+    enabled: list.length > 0,
     refetchInterval: 30_000,
   });
 
-  const states = (allStates ?? []).filter(
-    (s): s is VehicleState => s !== null && s !== undefined,
-  );
-  const avgBattery =
-    states.length > 0
-      ? states.reduce((sum, st) => sum + (st.battery_level ?? 0), 0) / states.length
-      : 0;
-  // Sum is in SI metres (VehicleState.rated_range is metres). Convert at display.
-  const totalRangeMeters = states.reduce((sum, st) => sum + (st.rated_range ?? 0), 0);
-  const chargingCount = states.filter(st => st.is_charging).length;
-  const onlineCount = states.length;
+  const { avgBattery, totalRangeMeters, chargingCount, onlineCount } = useMemo(() => {
+    const states = (allStates ?? []).filter(
+      (s): s is VehicleState => s !== null && s !== undefined,
+    );
+    const avg =
+      states.length > 0
+        ? states.reduce((sum, st) => sum + (st.battery_level ?? 0), 0) / states.length
+        : 0;
+    // Sum is in SI metres (VehicleState.rated_range is metres). Convert at display.
+    const rangeMeters = states.reduce((sum, st) => sum + (st.rated_range ?? 0), 0);
+    return {
+      avgBattery: avg,
+      totalRangeMeters: rangeMeters,
+      chargingCount: states.filter((st) => st.is_charging).length,
+      onlineCount: states.length,
+    };
+  }, [allStates]);
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
-        <Car className="h-5 w-5 text-cyan-400 mx-auto mb-2" />
+        <Car aria-hidden="true" className="h-5 w-5 text-cyan-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-[var(--text-primary)]">
-          <AnimatedNumber value={vehicles.length} />
+          <AnimatedNumber value={list.length} />
         </p>
         <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
           {t('fleet.vehicles', 'Vehicles')}
@@ -61,7 +75,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
       </GlassPanel>
 
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
-        <Battery className="h-5 w-5 text-green-500 mx-auto mb-2" />
+        <Battery aria-hidden="true" className="h-5 w-5 text-green-500 mx-auto mb-2" />
         <p className="text-2xl font-bold text-[var(--text-primary)]">
           <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />
         </p>
@@ -71,7 +85,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
       </GlassPanel>
 
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
-        <Gauge className="h-5 w-5 text-purple-400 mx-auto mb-2" />
+        <Gauge aria-hidden="true" className="h-5 w-5 text-purple-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-[var(--text-primary)]">
           <AnimatedNumber value={Math.round(convertDistanceFromSI(totalRangeMeters, unitPrefs.distance))} />
         </p>
@@ -81,7 +95,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
       </GlassPanel>
 
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
-        <Zap className="h-5 w-5 text-amber-400 mx-auto mb-2" />
+        <Zap aria-hidden="true" className="h-5 w-5 text-amber-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-green-500">
           <AnimatedNumber value={chargingCount} />{' '}
           <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">/ {onlineCount}</span>

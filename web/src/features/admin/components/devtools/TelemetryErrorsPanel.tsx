@@ -66,27 +66,38 @@ export function TelemetryErrorsPanel({
       </div>
     )
   }
-  if (errors.length > 0) {
+  // Null-safety: `errors` is typed as a non-optional array, but this panel
+  // sits at the boundary of a defensively-parsed Tesla response, so guard
+  // against a runtime shape-drift handing us `undefined` before we touch
+  // `.length` / iterate — a blank crash here is worse than an empty state.
+  const rows = errors ?? []
+  if (rows.length > 0) {
     return (
       <div className="space-y-2">
         <DataTable
           tableId="admin:fleet-api-errors"
           columns={columns}
-          data={errors}
+          data={rows}
           keyExtractor={(r) => r.rowKey}
           compact
           pagination={{ defaultPageSize: 50 }}
         />
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => {
-            const blob = new Blob([JSON.stringify(errors, null, 2)], { type: 'application/json' })
+            const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' })
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
             a.download = `telemetry-errors-${vin || 'all'}.json`
+            // Firefox (and some WebKit builds) only honour a synthetic click
+            // when the anchor is attached to the live document; detached
+            // anchors are silently ignored. Attach → click → detach.
+            document.body.appendChild(a)
             a.click()
+            a.remove()
             URL.revokeObjectURL(url)
           }}
           icon={<Icons.download className="h-3.5 w-3.5" />}

@@ -1,4 +1,5 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { HelpTooltip, PinButton } from '@/components/ui';
@@ -56,6 +57,7 @@ export function WidgetShell({
   updatedAt, isFetching, isStale, isError, onRefresh, help,
   widgetId, dashboardId,
 }: WidgetShellProps) {
+  const { t } = useTranslation();
   // Pulse animation on data change
   const [justUpdated, setJustUpdated] = useState(false);
   const prevUpdatedAt = useRef<number | undefined>(undefined);
@@ -77,6 +79,11 @@ export function WidgetShell({
       return () => clearTimeout(timer);
     }
     prevUpdatedAt.current = effectiveUpdatedAt;
+    // Clear any lingering pulse when the effective timestamp is reset or left
+    // unchanged (e.g. a refetch regresses dataUpdatedAt back to 0). The pending
+    // timer from a prior pulse is cancelled by this effect's cleanup, so
+    // without this reset the green glow would stay stuck on.
+    setJustUpdated(false);
   }, [effectiveUpdatedAt]);
 
   if (loading) return <Skeleton className="h-full rounded-xl" />;
@@ -130,7 +137,7 @@ export function WidgetShell({
                 i18nKey={help.i18nKey}
                 defaultValue={help.defaultValue}
                 learnMore={help.learnMore}
-                ariaLabel={`More info about ${title}`}
+                ariaLabel={t('widget.moreInfoAbout', 'More info about {{title}}', { title })}
               />
             )}
           </div>

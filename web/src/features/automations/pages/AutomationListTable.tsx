@@ -11,6 +11,10 @@ import type { Automation } from '@/api/types';
 
 type RowKey = string | number;
 
+/** Shared stable empties so undefined props never re-trigger the sort memo. */
+const EMPTY_AUTOMATIONS: Automation[] = [];
+const EMPTY_VEHICLE_LOOKUP = new Map<number, string>();
+
 interface AutomationListTableProps {
   /** Filtered rows to display (already null-safe from the page). */
   automations: Automation[];
@@ -46,6 +50,11 @@ export function AutomationListTable({
 }: AutomationListTableProps) {
   const { t } = useTranslation();
 
+  // Defensive null-safety: the page contract passes null-safe values, but a
+  // stray undefined must never crash the spread/iteration below.
+  const rows = automations ?? EMPTY_AUTOMATIONS;
+  const lookup = vehicleLookup ?? EMPTY_VEHICLE_LOOKUP;
+
   // Controlled sort — DataTable renders the indicators + calls onSort; the
   // ordering itself is applied here with field-correct accessors so numeric
   // columns (runs, failures) and the timestamp column sort correctly.
@@ -64,13 +73,18 @@ export function AutomationListTable({
     const value = (a: Automation): string | number => {
       switch (sortKey) {
         case 'vehicle':
-          return (a.vehicle_id != null ? vehicleLookup.get(a.vehicle_id) ?? '' : '').toLowerCase();
+          return (a.vehicle_id != null ? lookup.get(a.vehicle_id) ?? '' : '').toLowerCase();
         case 'runs':
           return a.execution_count ?? 0;
         case 'failures':
           return a.failure_count ?? 0;
-        case 'lastTriggered':
-          return a.last_triggered_at ? new Date(a.last_triggered_at).getTime() : 0;
+        case 'lastTriggered': {
+          // Guard against corrupt/non-ISO timestamps: an invalid Date yields
+          // NaN, and a NaN comparator return leaves the sort order undefined.
+          if (!a.last_triggered_at) return 0;
+          const ts = new Date(a.last_triggered_at).getTime();
+          return Number.isFinite(ts) ? ts : 0;
+        }
         case 'status':
           return a.auto_disabled ? 2 : a.enabled ? 0 : 1;
         case 'name':
@@ -78,7 +92,7 @@ export function AutomationListTable({
           return (a.name ?? '').toLowerCase();
       }
     };
-    return [...automations].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       const av = value(a);
       const bv = value(b);
       let cmp = 0;
@@ -86,7 +100,7 @@ export function AutomationListTable({
       else cmp = String(av).localeCompare(String(bv));
       return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [automations, sortKey, sortDir, vehicleLookup]);
+  }, [rows, sortKey, sortDir, lookup]);
 
   const columns = useMemo<Column<Automation>[]>(
     () => [
@@ -119,7 +133,7 @@ export function AutomationListTable({
         render: (a) => (
           <Text as="span" color="secondary">
             {a.vehicle_id != null
-              ? vehicleLookup.get(a.vehicle_id) ??
+              ? lookup.get(a.vehicle_id) ??
                 t('automationList.vehicleUnknown', 'Vehicle #{{id}}', { id: a.vehicle_id })
               : t('automationList.allVehicles', 'All vehicles')}
           </Text>
@@ -191,7 +205,7 @@ export function AutomationListTable({
         },
       },
     ],
-    [t, vehicleLookup],
+    [t, lookup],
   );
 
   return (
@@ -202,12 +216,17 @@ export function AutomationListTable({
       </PanelTitle>
 
       {isLoading ? (
-        <div className="space-y-2" aria-hidden="true">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+        <div role="status" aria-busy="true">
+          <span className="sr-only">
+            {t('automationList.loading', 'Loading automations…')}
+          </span>
+          <div className="space-y-2" aria-hidden="true">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
         </div>
       ) : error ? (
         <QueryError

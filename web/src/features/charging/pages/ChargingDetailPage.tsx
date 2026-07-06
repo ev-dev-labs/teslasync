@@ -987,10 +987,13 @@ export default function ChargingDetailPage() {
                           : '—',
                     },
                     {
+                      // Total range added this session — the SI meters field,
+                      // converted once at the boundary. NOT range_added_meters_per_hour
+                      // (that is the instantaneous rate shown as "Charge Rate" above).
                       label: t('charging.detail.chargeMilesAdded', 'Range Added'),
                       value:
-                        liveCharging.range_added_meters_per_hour != null
-                          ? fmtWithUnit(toDistanceDisplay((liveCharging.range_added_meters_per_hour ?? 0) / 1000), distanceUnit, 1)
+                        liveCharging.range_added_meters != null
+                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters), distanceUnit, 1)
                           : '—',
                     },
                   ]}

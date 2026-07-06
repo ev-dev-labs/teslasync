@@ -32,6 +32,14 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
   const distanceUnit = unitPrefs.distance;
 
   const isCompact = size.cols <= 1;
+  const hasData = !!data;
+  // Only swap the whole widget for a full-panel error on the INITIAL load
+  // failure, when there is no cached data to fall back on. Once data is on
+  // screen, a transient background-refetch failure must not blank out
+  // otherwise-valid numbers — it is surfaced through the freshness
+  // indicator's error state instead (WidgetShell forwards `isError` to
+  // <DataFreshness>).
+  const blockingError = !hasData && error ? String(error) : null;
 
   // Backend `/mileage/stats` returns SI kilometres; multiply by 1000
   // so the SI-canonical `convertDistanceFromSI` (meters in) treats it
@@ -82,19 +90,21 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     ];
   }, [data, dailyAvgDisplay, distanceUnit, milestone, monthsToMilestone, t]);
 
+  const shellProps = {
+    loading: isLoading,
+    error: blockingError,
+    updatedAt: dataUpdatedAt,
+    isFetching,
+    isStale,
+    isError,
+    onRefresh: () => refetch(),
+  };
+
   // Compact: daily avg as large number
   if (isCompact) {
     return (
-      <WidgetShell
-        loading={isLoading}
-        error={error ? String(error) : null}
-        updatedAt={dataUpdatedAt}
-        isFetching={isFetching}
-        isStale={isStale}
-        isError={isError}
-        onRefresh={() => refetch()}
-      >
-        {data ? (
+      <WidgetShell {...shellProps}>
+        {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber
               value={dailyAvgDisplay}
@@ -120,15 +130,9 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     <WidgetShell
       title={t('widget.mileageStats.title', 'Mileage Stats')}
       icon={<TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
-      loading={isLoading}
-      error={error ? String(error) : null}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
+      {...shellProps}
     >
-      {data ? (
+      {hasData ? (
         <WidgetStatGrid stats={stats} cols={2} />
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

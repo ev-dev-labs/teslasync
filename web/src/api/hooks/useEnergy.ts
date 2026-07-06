@@ -101,6 +101,10 @@ export function useVampireDrainStats(vehicleId: string | null) {
     queryKey: ['vampire-drain-stats', vehicleId],
     queryFn: ({ signal }) => request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId !== null,
+    // Deleted backend route → guaranteed 404. Don't burn three
+    // exponential-backoff retries on a known-dead endpoint; surface the
+    // error immediately so the widget renders its graceful fallback.
+    retry: false,
   });
 }
 
@@ -113,6 +117,9 @@ export function useVampireDrainEvents(vehicleId: string | null, limit = 50) {
     queryKey: ['vampire-drain-events', vehicleId, limit],
     queryFn: ({ signal }) => request<VampireDrainEvent[]>(`/vampire-drain?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
     enabled: vehicleId !== null,
+    // Same deleted-route rationale as useVampireDrainStats — fail fast
+    // rather than retrying a guaranteed 404.
+    retry: false,
     select: safeArray,
   });
 }

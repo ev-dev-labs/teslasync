@@ -42,7 +42,9 @@ export function TripOverviewPanel({ trip, isLoading, isError, error, onRetry }: 
         <KVList
           items={[
             { label: t('trips.detail.tripId', 'Trip ID'), value: String(trip.id) },
-            { label: t('trips.detail.name', 'Name'), value: trip.name ?? '—' },
+            // Treat blank / whitespace-only names as "no name" so the row shows
+            // an em-dash instead of an empty cell (the API can emit name: "").
+            { label: t('trips.detail.name', 'Name'), value: trip.name?.trim() ? trip.name : '—' },
             { label: t('trips.detail.vehicle', 'Vehicle'), value: `#${trip.vehicle_id}` },
             { label: t('trips.detail.started', 'Started'), value: <DateTime value={trip.start_date} variant="full" /> },
             {
@@ -60,7 +62,9 @@ export function TripOverviewPanel({ trip, isLoading, isError, error, onRetry }: 
             { label: t('trips.detail.drives', 'Drives'), value: String(trip.drive_count ?? 0) },
             { label: t('trips.detail.charges', 'Charges'), value: String(trip.charge_count ?? 0) },
             { label: t('trips.detail.created', 'Created'), value: <DateTime value={trip.created_at} variant="full" /> },
-            ...(trip.notes ? [{ label: t('trips.detail.notes', 'Notes'), value: trip.notes }] : []),
+            // Only surface the Notes row when there is non-whitespace content —
+            // a whitespace-only note is effectively empty and would render blank.
+            ...(trip.notes?.trim() ? [{ label: t('trips.detail.notes', 'Notes'), value: trip.notes }] : []),
           ]}
         />
       )}

@@ -1,6 +1,7 @@
 package drivingcoach
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
@@ -14,19 +15,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-const (
-	nominalBatteryCapacityWh = 75000.0
-	driveStatsMetersPerMile  = 1609.344
-	driveStatsMpsPerMph      = 0.44704
-)
+const nominalBatteryCapacityWh = 75000.0
 
 // DrivingCoachHandler analyses driving patterns and produces coaching insights.
 type DrivingCoachHandler struct {
-	db *database.DB
+	repo driveCoachingRepository
 }
 
+// driveCoachingRepository is the minimal data-access surface GetCoaching
+// needs. It is declared consumer-side as a port so handler tests can supply
+// an in-memory fake without a live database — mirroring the vampiredrain
+// handler's approach (the codebase has no pgxmock harness).
+type driveCoachingRepository interface {
+	CoachingDrives(ctx context.Context, vehicleID int64, since time.Time) ([]driveAnalysis, error)
+}
+
+// NewDrivingCoachHandler wires the handler to the SI-canonical drives table.
 func NewDrivingCoachHandler(db *database.DB) *DrivingCoachHandler {
-	return &DrivingCoachHandler{db: db}
+	return &DrivingCoachHandler{repo: newDBDriveCoachingRepo(db)}
 }
 
 type coachResponse struct {
@@ -109,50 +115,11 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	since := time.Now().AddDate(0, 0, -days)
 
-	// SI canonical drives (migration 000185). Distance/speed/power
-	// are converted from SI back to legacy display units (mi/mph/kW) at the
-	// SQL boundary so the downstream coaching math (thresholds expressed in
-	// mph/kW/mi/°C) remains untouched per the covenant.
-	rows, err := h.db.Pool.Query(ctx, `
-		SELECT id, started_at,
-		       distance_m / $3 AS distance_mi_calc,
-		       COALESCE(max_speed_mps, 0) / $4 AS max_speed_mph_calc,
-		       COALESCE(avg_speed_mps, 0) / $4 AS avg_speed_mph_calc,
-		       COALESCE(avg_power_w, 0) / 1000.0 AS avg_power_kw_calc,
-		       NULL::double precision,
-		       COALESCE(start_soc_pct, 0)::float8,
-		       COALESCE(end_soc_pct, 0)::float8,
-		       COALESCE(ambient_temp_c_avg, 20)
-		FROM drives
-		WHERE vehicle_id = $1
-		  AND started_at >= $2
-		  AND distance_m > $5
-		ORDER BY started_at DESC`,
-		vehicleID, since,
-		driveStatsMetersPerMile, driveStatsMpsPerMph,
-		0.5*driveStatsMetersPerMile)
+	drives, err := h.repo.CoachingDrives(ctx, vehicleID, since)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("driving-coach: query failed")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).Msg("driving-coach: query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get driving data")
 		return
-	}
-	defer rows.Close()
-
-	var drives []driveAnalysis
-	for rows.Next() {
-		var d driveAnalysis
-		var powerMinPtr *float64
-		if err := rows.Scan(&d.id, &d.date, &d.distance,
-			&d.speedMax, &d.speedAvg, &d.powerMax, &powerMinPtr,
-			&d.socStart, &d.socEnd, &d.outsideTemp); err != nil {
-			log.Warn().Err(err).Msg("driving-coach: scan error")
-			continue
-		}
-		if powerMinPtr != nil {
-			d.powerMin = *powerMinPtr
-			d.hasPowerRange = true
-		}
-		drives = append(drives, d)
 	}
 
 	if len(drives) == 0 {

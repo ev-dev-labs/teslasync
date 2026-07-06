@@ -63,8 +63,11 @@ export function ChatMessageItem({
 }: ChatMessageItemProps) {
   const { t } = useTranslation();
   const isUser = message.role === 'user';
+  // Guard against a malformed payload where `content` is null/undefined —
+  // several paths below call `.trim()` on it, which would otherwise throw.
+  const content = message.content ?? '';
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(message.content);
+  const [draft, setDraft] = useState(content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -76,18 +79,18 @@ export function ChatMessageItem({
   }, [editing]);
 
   const startEdit = () => {
-    setDraft(message.content);
+    setDraft(content);
     setEditing(true);
   };
 
   const cancelEdit = () => {
     setEditing(false);
-    setDraft(message.content);
+    setDraft(content);
   };
 
   const submitEdit = () => {
     const trimmed = draft.trim();
-    if (!trimmed || trimmed === message.content.trim()) {
+    if (!trimmed || trimmed === content.trim()) {
       cancelEdit();
       return;
     }
@@ -105,7 +108,7 @@ export function ChatMessageItem({
     }
   };
 
-  const visibleText = message.streamedText ?? message.content;
+  const visibleText = message.streamedText ?? content;
   const showAvatar = isFirstInGroup;
   const showTimestamp = isLastInGroup && !message.isStreaming;
   const showActions = !message.isStreaming && !actionsDisabled && !editing;
@@ -156,7 +159,7 @@ export function ChatMessageItem({
                 variant="primary"
                 size="sm"
                 onClick={submitEdit}
-                disabled={!draft.trim() || draft.trim() === message.content.trim()}
+                disabled={!draft.trim() || draft.trim() === content.trim()}
                 icon={<Check className="h-3.5 w-3.5" />}
               >
                 {t('chatbot.actions.saveAndResend', 'Save & resend')}
@@ -188,7 +191,7 @@ export function ChatMessageItem({
         {showActions && (
           <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
             <CopyButton
-              text={message.content}
+              text={content}
               iconOnly
               variant="ghost"
               size="sm"

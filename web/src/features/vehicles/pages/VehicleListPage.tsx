@@ -463,19 +463,25 @@ export default function VehicleListPage() {
     };
   }, [fleetStates]);
 
+  /* O(1) live-state lookup by vehicle id, shared by the status breakdown and
+     the card grid so neither rescans the fleet-state array once per row. */
+  const stateById = useMemo(() => {
+    const map = new Map<number, VehicleState | null>();
+    (fleetStates ?? []).forEach((e) => map.set(e.vehicle.id, e.state));
+    return map;
+  }, [fleetStates]);
+
   /* Count vehicles by derived status for the breakdown panel. */
   const statusCounts = useMemo<StatusCount[]>(() => {
-    const byId = new Map<number, VehicleState | null>();
-    (fleetStates ?? []).forEach((e) => byId.set(e.vehicle.id, e.state));
     const counts = new Map<string, number>();
     for (const v of vehicleList) {
-      const status = deriveVehicleStatus(byId.get(v.id) ?? null);
+      const status = deriveVehicleStatus(stateById.get(v.id) ?? null);
       counts.set(status, (counts.get(status) ?? 0) + 1);
     }
     return [...counts.entries()]
       .map(([status, count]) => ({ status, count }))
       .sort((a, b) => b.count - a.count);
-  }, [fleetStates, vehicleList]);
+  }, [stateById, vehicleList]);
 
   /* ── Mutations ── */
   const syncMut = useSyncVehicles();
@@ -642,18 +648,15 @@ export default function VehicleListPage() {
               {t('vehicles.allVehicles', 'All Vehicles')}
             </SectionTitle>
             <StaggerContainer className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
-              {sortedVehicleList.map((vehicle) => {
-                const entry = fleet.entries.find((e) => e.vehicle.id === vehicle.id);
-                return (
-                  <StaggerItem key={vehicle.id} className="h-full">
-                    <VehicleCard
-                      vehicle={vehicle}
-                      state={entry?.state ?? null}
-                      onDelete={setDeleteTarget}
-                    />
-                  </StaggerItem>
-                );
-              })}
+              {sortedVehicleList.map((vehicle) => (
+                <StaggerItem key={vehicle.id} className="h-full">
+                  <VehicleCard
+                    vehicle={vehicle}
+                    state={stateById.get(vehicle.id) ?? null}
+                    onDelete={setDeleteTarget}
+                  />
+                </StaggerItem>
+              ))}
             </StaggerContainer>
           </section>
         </>

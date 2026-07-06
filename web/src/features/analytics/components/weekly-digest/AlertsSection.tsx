@@ -74,13 +74,18 @@ export function AlertsSection({
             <Caption className="block">
               {t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by Severity')}
             </Caption>
-            <div className="grid gap-3">
+            <div
+              className="grid gap-3"
+              role="list"
+              aria-label={t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by Severity')}
+            >
               {Object.entries(byType).map(([severity, count]) => {
                 const Icon =
                   severity === 'critical' ? AlertCircle : severity === 'warning' ? AlertTriangle : Info;
                 return (
                   <GlassPanel
                     key={severity}
+                    role="listitem"
                     className="flex items-center justify-between px-4 py-3"
                   >
                     <span className="flex items-center gap-2">
@@ -106,33 +111,51 @@ export function AlertsSection({
             <Caption className="mb-2 block">
               {t('analytics.weeklyDigest.alertDistribution', 'Alert Distribution')}
             </Caption>
-            <div className="h-56 w-full sm:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={90}
-                    paddingAngle={3}
-                    strokeWidth={0}
-                  >
-                    {pieData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend
-                    verticalAlign="bottom"
-                    iconType="circle"
-                    wrapperStyle={{ fontSize: 12, color: 'var(--text-muted)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            {pieData.length > 0 ? (
+              <div
+                className="h-56 w-full sm:h-64"
+                role="img"
+                aria-label={t(
+                  'analytics.weeklyDigest.alertDistributionChartLabel',
+                  'Pie chart of alerts by severity',
+                )}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      strokeWidth={0}
+                    >
+                      {pieData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: 12, color: 'var(--text-muted)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <EmptyState /* no-action: transient empty state — alerts exist but carry no severity breakdown to chart */
+                icon={<AlertTriangle className="h-8 w-8" />}
+                message={t(
+                  'analytics.weeklyDigest.noAlertBreakdown',
+                  'No severity breakdown to chart.',
+                )}
+                className="py-8"
+              />
+            )}
           </div>
         </div>
       )}

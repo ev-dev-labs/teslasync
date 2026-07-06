@@ -43,7 +43,16 @@ export function LiveSectionState({
     return <Skeleton height={skeletonHeight} />;
   }
   if (status === 'error') {
-    return <QueryError error={error} onRetry={onRetry} />;
+    // `QueryError` renders nothing when `error` is falsy, which would leave the
+    // panel blank — the one outcome this component exists to prevent. Fall back
+    // to a generic error so the error affordance (with its Retry CTA) is always
+    // shown even if a caller flags `status="error"` without an error object.
+    return (
+      <QueryError
+        error={error ?? new Error('Live signal request failed')}
+        onRetry={onRetry}
+      />
+    );
   }
   if (status === 'empty') {
     return <EmptyState icon={emptyIcon} message={emptyMessage} />;

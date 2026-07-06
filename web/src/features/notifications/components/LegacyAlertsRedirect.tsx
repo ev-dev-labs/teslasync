@@ -26,7 +26,14 @@ export default function LegacyAlertsRedirect() {
   const tab = params.get('tab') ?? 'alerts';
   // Strip the tab param from forwarded query — it's now path-encoded.
   params.delete('tab');
-  const target = TAB_TO_ROUTE[tab] ?? '/notifications/alerts';
+  // Guard the lookup with an own-property check. A deep link such as
+  // `?tab=toString` / `?tab=constructor` would otherwise resolve to an
+  // inherited Object.prototype member (a native function — truthy, so the
+  // `??` fallback never fires) and corrupt the redirect target. Unknown tabs
+  // must fall through to the canonical alerts route.
+  const target = Object.prototype.hasOwnProperty.call(TAB_TO_ROUTE, tab)
+    ? TAB_TO_ROUTE[tab]
+    : '/notifications/alerts';
   const qs = params.toString();
   const to = qs ? `${target}?${qs}` : target;
   return <Navigate to={to} replace />;

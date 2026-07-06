@@ -52,15 +52,23 @@ const SPEED_BUCKET_LABELS: Record<string, string> = {
   city: 'City', suburban: 'Suburban', highway: 'Highway',
 };
 
-/** Heatmap cell tint by efficiency (lower Wh/km is better). */
-function effColor(whKm: number): string {
+/**
+ * Heatmap cell tint by efficiency (lower Wh/km is better).
+ * Exported for unit testing of the band thresholds.
+ */
+export function effColor(whKm: number): string {
   if (whKm <= 155) return 'bg-neon-green';
   if (whKm <= 180) return 'bg-emerald-500';
   if (whKm <= 210) return 'bg-neon-amber';
   return 'bg-red-500';
 }
 
-function scenarioIcon(scenario: RangeScenario): ReactNode {
+/**
+ * Pick the glyph that best summarises a scenario (Sentry drain, sub-zero,
+ * high-speed, or the neutral baseline). Exported for unit testing the
+ * precedence of the branches.
+ */
+export function scenarioIcon(scenario: RangeScenario): ReactNode {
   if ((scenario.extras ?? []).includes('sentry')) return <Shield className="h-4 w-4" aria-hidden="true" />;
   if ((scenario.temp_c ?? 0) < 0) return <Snowflake className="h-4 w-4" aria-hidden="true" />;
   if ((scenario.speed_kmh ?? 0) > 90) return <Car className="h-4 w-4" aria-hidden="true" />;
@@ -69,7 +77,17 @@ function scenarioIcon(scenario: RangeScenario): ReactNode {
 
 /* ── "What if" interpolation ── */
 
-function interpolateRange(
+/**
+ * "What-if" range interpolation for the calculator. Looks up the learned
+ * efficiency for the (temp, speed) bucket, falling back to a smooth heuristic
+ * when the driver has no drives in that cell, then derives usable range.
+ *
+ * Exported for unit testing. Guards every arithmetic input: a NaN/Infinity in
+ * a matrix cell — or a nonsense capacity / battery % — must never surface as a
+ * "NaN km" range to the driver. It collapses to a safe efficiency and a
+ * clamped, finite range instead.
+ */
+export function interpolateRange(
   matrix: EfficiencyBucket[],
   speedKmh: number,
   tempC: number,
@@ -81,9 +99,19 @@ function interpolateRange(
 
   const match = matrix.find((b) => b.temp_bucket === tempBucket && b.speed_bucket === speedBucket);
   let eff = match?.wh_km ?? (155 + (speedKmh - 35) * 0.5 + Math.max(0, 20 - tempC) * 1.5);
-  if (eff <= 0) eff = 170;
-  const rangeKm = capacityWh * (batteryPct / 100) / eff;
-  return { effWhKm: Math.round(eff * 10) / 10, rangeKm: Math.round(rangeKm * 10) / 10 };
+  // A non-positive OR non-finite efficiency (NaN/Infinity from a bad matrix
+  // cell) would poison the division below — collapse to a safe default so the
+  // calculator never renders "NaN km".
+  if (!Number.isFinite(eff) || eff <= 0) eff = 170;
+
+  const safePct = Number.isFinite(batteryPct) ? Math.min(Math.max(batteryPct, 0), 100) : 0;
+  const safeCapacity = Number.isFinite(capacityWh) && capacityWh > 0 ? capacityWh : 0;
+  const rangeKm = (safeCapacity * (safePct / 100)) / eff;
+
+  return {
+    effWhKm: Math.round(eff * 10) / 10,
+    rangeKm: Math.round(Math.max(rangeKm, 0) * 10) / 10,
+  };
 }
 
 /* ── Component ── */

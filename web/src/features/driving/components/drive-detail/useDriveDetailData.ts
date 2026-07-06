@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useDrive } from '@/api/hooks/useDriving';
 import { useVehicle } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -21,9 +21,19 @@ export function useDriveDetailData(id: string) {
   // exposes canonical values at the repository boundary.
   const { unitPrefs } = useUnits();
   const { formatTime } = useDateFormat();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  // Stable identities: both feed the `stats` useMemo dependency list, so
+  // recreating them each render would silently defeat that memo (stats would
+  // recompute on every render). useCallback keys them to the only unit pref
+  // each one actually reads.
+  const toDistanceDisplay = useCallback(
+    (value: number) => convertDistanceFromSI(value, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
 
-  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const toSpeedDisplay = useCallback(
+    (value: number) => convertSpeedFromSI(value, unitPrefs.speed),
+    [unitPrefs.speed],
+  );
   // Telemetry / position fields from drive(Telemetry|Position)FieldMappings are
   // strict SI per ADR-004 (m, m/s, °C, Pa). Use the SI-aware converters from
   // @/lib/unitConversion so changing the user's display unit (km/h ↔ mph,
@@ -47,10 +57,17 @@ export function useDriveDetailData(id: string) {
   }, [drive]);
 
   const trail: LatLngExpression[] = useMemo(() => routeSource.map((p) => [p.lat, p.lng]), [routeSource]);
-  const startPos = trail[0] as [number, number] | undefined;
-  const endPos = trail.length > 1 ? (trail[trail.length - 1] as [number, number]) : undefined;
-  const centerPos: [number, number] = startPos
-    ?? (drive?.startLat && drive?.startLon ? [drive.startLat, drive.startLon] : [47.6, -122.3]);
+  // Anchor points feed the leaflet map (MapContainer center / CircleMarker
+  // center); memoise so they keep a stable reference and don't re-center the
+  // map on unrelated re-renders. The fallback chain is unchanged: first trail
+  // point → drive start coord → Seattle default.
+  const { startPos, endPos, centerPos } = useMemo(() => {
+    const start = trail[0] as [number, number] | undefined;
+    const end = trail.length > 1 ? (trail[trail.length - 1] as [number, number]) : undefined;
+    const center: [number, number] = start
+      ?? (drive?.startLat && drive?.startLon ? [drive.startLat, drive.startLon] : [47.6, -122.3]);
+    return { startPos: start, endPos: end, centerPos: center };
+  }, [trail, drive]);
 
   /* Speed-colored segments. routeSource[i].speed is m/s SI (raw VehicleSpeed),
    * so the colour bands are likewise expressed in m/s — see SPEED_SEGMENT_*_MPS

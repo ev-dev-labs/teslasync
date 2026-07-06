@@ -60,7 +60,14 @@ export function useIngestXRay({
   limit = PAGINATION.DEFAULT_LIMIT,
   enabled = true,
 }: UseIngestXRayParams) {
-  const numericId = typeof vehicleId === 'number' && vehicleId > 0 ? vehicleId : 0;
+  // Vehicle IDs are positive int64s (Go `Vehicle.ID`). Reject NaN, 0,
+  // negatives, non-integers, and ±Infinity so a stray value can never
+  // build a malformed `/system/ingest-xray/<junk>` URL; anything invalid
+  // collapses to 0, which the `enabled` gate below turns into a no-op.
+  const numericId =
+    typeof vehicleId === 'number' && Number.isInteger(vehicleId) && vehicleId > 0
+      ? vehicleId
+      : 0;
   return useQuery({
     queryKey: ingestXRayKeys.detail(numericId, window, bucket, limit),
     queryFn: ({ signal }) => {
@@ -83,10 +90,17 @@ export function useIngestXRay({
 }
 
 /**
- * Human-readable label for a `value_kind` integer.
- * Mirrors `protomodel.ValueKind` in the Go ingest path. Unknown values
- * (anything outside this map) render as `kind {n}` so an operator can
- * still cross-reference the raw enum without a UI patch.
+ * Human-readable label for a `value_kind` integer. The canonical order
+ * mirrors `protomodel.ValueKind` (iota) in the Go ingest path and the
+ * `signal_log.value_kind` column (migration 000186):
+ *
+ *   0 unknown · 1 string · 2 bool · 3 int32 · 4 int64 · 5 float32 ·
+ *   6 float64 · 7 enum · 8 compound · 9 time · 10 invalid
+ *
+ * There is deliberately NO "location" kind — location is a `CompoundKind`,
+ * a separate enum, so it must never appear here. Unknown values (anything
+ * outside this map) render as `kind {n}` so an operator can still
+ * cross-reference the raw enum without a UI patch.
  */
 export function formatValueKind(kind: number): string {
   switch (kind) {
@@ -107,11 +121,11 @@ export function formatValueKind(kind: number): string {
     case 7:
       return 'enum';
     case 8:
-      return 'invalid';
+      return 'compound';
     case 9:
       return 'time';
     case 10:
-      return 'location';
+      return 'invalid';
     default:
       return `kind ${kind}`;
   }

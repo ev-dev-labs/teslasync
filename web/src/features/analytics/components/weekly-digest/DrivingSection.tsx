@@ -51,7 +51,11 @@ export function DrivingSection({
         ) : isError ? (
           <QueryError error={error} onRetry={onRetry} />
         ) : hasChart ? (
-          <div className="h-56 sm:h-64 xl:h-72">
+          <div
+            className="h-56 sm:h-64 xl:h-72"
+            role="img"
+            aria-label={t('analytics.weeklyDigest.dailyDistanceChartLabel', 'Bar chart of daily driving distance in kilometres')}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={distanceData} margin={chartMarginLabeled}>
                 {chartGrid}

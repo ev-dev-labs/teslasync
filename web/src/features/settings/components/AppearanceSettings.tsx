@@ -172,13 +172,19 @@ export function AppearanceSettings() {
               for="appearance-density"
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div
+            role="radiogroup"
+            aria-label={t('theme.density.label', 'Information density')}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+          >
             {densityChoices.map(choice => {
               const active = density === choice.id
               return (
                 <Button
                   key={choice.id}
                   variant="ghost"
+                  role="radio"
+                  aria-checked={active}
                   onClick={() => setDensity(choice.id)}
                   disabled={!settings || saveSettings.isPending}
                   className={cn(
@@ -316,13 +322,19 @@ export function AppearanceSettings() {
               for="time-format"
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div
+            role="radiogroup"
+            aria-label={t('theme.timeFormat.label', 'Default time format')}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          >
             {timeFormatChoices.map(choice => {
               const active = timeFormat === choice.id
               return (
                 <Button
                   key={choice.id}
                   variant="ghost"
+                  role="radio"
+                  aria-checked={active}
                   onClick={() => setTimeFormat(choice.id)}
                   disabled={!settings || saveSettings.isPending}
                   className={cn(
@@ -431,6 +443,7 @@ export function AppearanceSettings() {
                 </HelperText>
               </div>
               <Toggle
+                data-testid="statusbar-toggle-enabled"
                 checked={statusBarPrefs.enabled}
                 onChange={(next) => {
                   setStatusBarPrefs({ enabled: next })
@@ -453,8 +466,16 @@ export function AppearanceSettings() {
               </div>
               <Toggle
                 checked={statusBarPrefs.iconOnly}
-                onChange={(next) => setStatusBarPrefs({ iconOnly: next })}
+                onChange={(next) => {
+                  // The icon-only sub-preference is meaningless while the bar
+                  // is hidden: the row is dimmed and marked aria-disabled, so
+                  // make the control truly inert instead of silently mutating
+                  // a preference the user can't see take effect.
+                  if (!statusBarPrefs.enabled) return
+                  setStatusBarPrefs({ iconOnly: next })
+                }}
                 aria-disabled={!statusBarPrefs.enabled}
+                data-testid="statusbar-toggle-icon-only"
               />
             </div>
           </div>
@@ -481,6 +502,7 @@ export function AppearanceSettings() {
                 </HelperText>
               </div>
               <Toggle
+                data-testid="celebration-toggle-toasts"
                 checked={celebrationPrefs.showToasts}
                 onChange={(next) => setAchievementCelebrationPrefs({ showToasts: next })}
               />
@@ -495,6 +517,7 @@ export function AppearanceSettings() {
                 </HelperText>
               </div>
               <Toggle
+                data-testid="celebration-toggle-sound"
                 checked={celebrationPrefs.playSound}
                 onChange={(next) => setAchievementCelebrationPrefs({ playSound: next })}
               />
@@ -509,6 +532,7 @@ export function AppearanceSettings() {
                 </HelperText>
               </div>
               <Toggle
+                data-testid="celebration-toggle-dashboard"
                 checked={celebrationPrefs.showOnDashboard}
                 onChange={(next) => setAchievementCelebrationPrefs({ showOnDashboard: next })}
               />
@@ -523,6 +547,7 @@ export function AppearanceSettings() {
                 </HelperText>
               </div>
               <Toggle
+                data-testid="celebration-toggle-push"
                 checked={celebrationPrefs.pushOnUnlock}
                 onChange={(next) => setAchievementCelebrationPrefs({ pushOnUnlock: next })}
               />

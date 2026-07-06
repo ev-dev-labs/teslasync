@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -37,6 +37,10 @@ interface ResponseViewerProps {
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 
 function formatBytes(bytes: number): string {
+  // Guard against a missing/NaN/Infinity/negative size — the API occasionally
+  // omits Content-Length, and a bare `${bytes}` would render "NaN MB" or a
+  // nonsensical negative size instead of a neutral value.
+  if (!Number.isFinite(bytes) || bytes < 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -54,12 +58,43 @@ function statusBg(status: number): string {
   return 'bg-red-500/10 border-red-500/20';
 }
 
+/* ─── body formatting ─────────────────────────────────────────────────── */
+
+/**
+ * Renders the response payload as display text. JSON bodies are pretty-printed;
+ * everything else falls back to the raw `bodyText`. Hardened against three
+ * runtime hazards a bare `JSON.stringify` would hit:
+ *   - a circular / non-serialisable body (stringify throws) → raw text,
+ *   - an `undefined` body (stringify returns `undefined`) → raw text,
+ *   - a missing `bodyText` → empty string (never a blank `undefined`).
+ */
+function formatBody(response: ApiResponse): string {
+  const isJson = (response.contentType ?? '').includes('json');
+  if (isJson && typeof response.body !== 'string') {
+    try {
+      return JSON.stringify(response.body, null, 2) ?? (response.bodyText ?? '');
+    } catch {
+      return response.bodyText ?? '';
+    }
+  }
+  return response.bodyText ?? '';
+}
+
 /* ─── code snippet generator ──────────────────────────────────────────── */
+
+type SnippetFormat = 'curl' | 'javascript' | 'python' | 'go';
+
+const SNIPPET_FORMATS: ReadonlyArray<{ value: SnippetFormat; label: string }> = [
+  { value: 'curl', label: 'cURL' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'go', label: 'Go' },
+];
 
 function generateSnippet(
   method: string,
   url: string,
-  format: 'curl' | 'javascript' | 'python' | 'go',
+  format: SnippetFormat,
   body?: string,
 ): string {
   const authNote = '# Add auth: -H "X-API-Key: YOUR_KEY" or use session cookies';
@@ -108,17 +143,13 @@ defer resp.Body.Close()`;
 
 function SnippetPanel({ method, url, body }: { method: string; url: string; body?: string }) {
   const { t } = useTranslation();
-  const [format, setFormat] = useState<'curl' | 'javascript' | 'python' | 'go'>('curl');
+  const [format, setFormat] = useState<SnippetFormat>('curl');
   const [open, setOpen] = useState(false);
 
-  const snippet = generateSnippet(method, url, format, body);
-
-  const formats: Array<{ value: typeof format; label: string }> = [
-    { value: 'curl', label: 'cURL' },
-    { value: 'javascript', label: 'JavaScript' },
-    { value: 'python', label: 'Python' },
-    { value: 'go', label: 'Go' },
-  ];
+  const snippet = useMemo(
+    () => generateSnippet(method, url, format, body),
+    [method, url, format, body],
+  );
 
   return (
     <div className="mt-3">
@@ -129,13 +160,13 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
         aria-expanded={open}
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
-        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+        <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.codeSnippet', 'Code Snippet')}
       </UiButton>
       {open && (
         <div className="mt-2 rounded-lg border border-white/[0.06] bg-[var(--surface-overlay)] overflow-hidden">
           <div className="flex items-center gap-1 p-2 border-b border-white/[0.04]">
-            {formats.map(f => (
+            {SNIPPET_FORMATS.map(f => (
               <UiButton
                 key={f.value}
                 type="button"
@@ -162,7 +193,10 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
               className="!text-2xs !px-2 !py-0.5 !h-auto"
             />
           </div>
-          <pre className="p-3 text-xs font-mono text-[var(--text-secondary)] overflow-x-auto whitespace-pre">
+          <pre
+            aria-label={t('playground.codeSnippetContent', 'Generated code snippet')}
+            className="p-3 text-xs font-mono text-[var(--text-secondary)] overflow-x-auto whitespace-pre"
+          >
             {snippet}
           </pre>
         </div>
@@ -189,7 +223,7 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
         aria-expanded={open}
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
-        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+        <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.responseHeaders', 'Response Headers')} ({entries.length})
       </UiButton>
       {open && (
@@ -210,7 +244,8 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
 function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onReplay: (e: HistoryEntry) => void }) {
   const { t } = useTranslation();
 
-  if (history.length === 0) return null;
+  const items = history ?? [];
+  if (items.length === 0) return null;
 
   return (
     <GlassPanel className="p-3">
@@ -218,9 +253,9 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
         {t('playground.history', 'Recent Requests')}
       </Text>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {history.map((h, i) => (
+        {items.map((h, i) => (
           <UiButton
-            key={i}
+            key={`${h.timestamp}-${h.method}-${h.path}-${i}`}
             type="button"
             variant="ghost"
             onClick={() => onReplay(h)}
@@ -255,6 +290,10 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
 export default function ResponseViewer({ response, loading, history, onReplay }: ResponseViewerProps) {
   const { t } = useTranslation();
 
+  // Pretty-printing a large JSON body is non-trivial — memoise so it only
+  // recomputes when a new response actually arrives.
+  const formattedBody = useMemo(() => (response ? formatBody(response) : ''), [response]);
+
   return (
     <div className="space-y-3">
       {/* Response */}
@@ -287,10 +326,12 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
             </div>
 
             {/* Body */}
-            <pre className="text-xs font-mono text-[var(--text-secondary)] overflow-auto max-h-[500px] bg-[var(--surface-overlay)] rounded-lg p-3 border border-white/[0.04]">
-              {(response.contentType ?? '').includes('json') && typeof response.body !== 'string'
-                ? JSON.stringify(response.body, null, 2)
-                : response.bodyText}
+            <pre
+              role="region"
+              aria-label={t('playground.responseBody', 'Response body')}
+              className="text-xs font-mono text-[var(--text-secondary)] overflow-auto max-h-[500px] bg-[var(--surface-overlay)] rounded-lg p-3 border border-white/[0.04]"
+            >
+              {formattedBody}
             </pre>
 
             {/* Response headers */}

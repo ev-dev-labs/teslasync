@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Badge, Button as UiButton, DataTable, type Column } from '@/components/ui'
 import { TimeStamp } from '@/components/data-display'
-import { Skeleton } from '@/components/feedback'
+import { Skeleton, QueryError } from '@/components/feedback'
 import { cn } from '@/lib/cn'
 import {
   useFleetTelemetryErrorVINs, useFleetTelemetryErrors,
@@ -16,13 +16,16 @@ export function FleetTelemetryHealth() {
   const { t } = useTranslation()
   const [selectedVin, setSelectedVin] = useState('')
 
-  const { data: errorVINs, isLoading: vinsLoading } = useFleetTelemetryErrorVINs()
-  const { data: errors, isLoading: errorsLoading } = useFleetTelemetryErrors(selectedVin || undefined)
+  const { data: errorVINs, isLoading: vinsLoading, isError: vinsIsError, error: vinsError, refetch: refetchVINs } = useFleetTelemetryErrorVINs()
+  const { data: errors, isLoading: errorsLoading, isError: errorsIsError, error: errorsError, refetch: refetchErrors } = useFleetTelemetryErrors(selectedVin || undefined)
   const refreshVINs = useRefreshFleetTelemetryErrorVINs()
   const refreshErrors = useRefreshFleetTelemetryErrors()
 
   const vinList = errorVINs ?? []
   const errorList = errors ?? []
+
+  const handleRetryVINs = useCallback(() => { void refetchVINs() }, [refetchVINs])
+  const handleRetryErrors = useCallback(() => { void refetchErrors() }, [refetchErrors])
 
   const isRecent = (dateStr: string | null) => {
     if (!dateStr) return false
@@ -132,6 +135,12 @@ export function FleetTelemetryHealth() {
           </div>
           {vinsLoading ? (
             <Skeleton className="h-24" />
+          ) : vinsIsError ? (
+            <QueryError
+              error={vinsError}
+              onRetry={handleRetryVINs}
+              resourceName={t('devtools.health.errorVinsResource', 'telemetry error VINs')}
+            />
           ) : vinList.length > 0 ? (
             <DataTable
               tableId="admin:fleet-health-vins"
@@ -170,6 +179,12 @@ export function FleetTelemetryHealth() {
           </div>
           {errorsLoading ? (
             <Skeleton className="h-40" />
+          ) : errorsIsError ? (
+            <QueryError
+              error={errorsError}
+              onRetry={handleRetryErrors}
+              resourceName={t('devtools.health.errorLogResource', 'telemetry error log')}
+            />
           ) : errorList.length > 0 ? (
             <DataTable
               tableId="admin:fleet-health-errors"

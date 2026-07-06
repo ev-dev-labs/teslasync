@@ -1,6 +1,7 @@
 import { forwardRef, type HTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Gauge } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -9,6 +10,7 @@ import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Grid } from '@/components/layout/Grid';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { FSM_REGISTRY } from '@/types/fsm';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
@@ -43,8 +45,20 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   className?: string;
 }
 
+/** Stable grid layout for the detail stat cards — hoisted so the object
+ *  reference is identical across renders and never re-triggers <Grid>. */
+const STAT_GRID_COLS = { default: 2, md: 4 } as const;
+
+/**
+ * Coerce an arbitrary state string to a known {@link VehicleStatus}.
+ * Uses an own-property check rather than the `in` operator so inherited
+ * object keys (`toString`, `constructor`, …) fail closed to `offline`
+ * instead of being mistaken for real vehicle states.
+ */
 function toStatus(state: string): VehicleStatus {
-  return state in FSM_REGISTRY.vehicle.states ? (state as VehicleStatus) : 'offline';
+  return Object.prototype.hasOwnProperty.call(FSM_REGISTRY.vehicle.states, state)
+    ? (state as VehicleStatus)
+    : 'offline';
 }
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
@@ -112,70 +126,77 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           </Badge>
         </div>
 
-        {/* Current battery, range, and temperature gauges */}
-        {vs && (
-          <div className="flex flex-wrap items-center justify-center gap-6">
-            <RadialGauge
-              value={vs.battery_level}
-              max={100}
-              label={t('vehicleHero.gauge.battery', 'Battery')}
-              unit="%"
-              color={vs.battery_level > 20 ? '#22d3ee' : '#ef4444'}
-              size={100}
-            />
-            <RadialGauge
-              value={rangeDisplay}
-              max={rangeMax}
-              label={t('vehicleHero.gauge.range', 'Range')}
-              unit={distanceLabel}
-              color="#4ade80"
-              size={100}
-            />
-            <RadialGauge
-              value={insideTempDisplay}
-              max={tempMax}
-              label={t('vehicleHero.gauge.inside', 'Inside')}
-              unit={temperatureLabel}
-              color="#f59e0b"
-              size={100}
-            />
-            <RadialGauge
-              value={outsideTempDisplay}
-              max={tempMax}
-              label={t('vehicleHero.gauge.outside', 'Outside')}
-              unit={temperatureLabel}
-              color="#a78bfa"
-              size={100}
-            />
-          </div>
-        )}
+        {/* Live battery / range / temperature gauges plus the detail cards.
+            When telemetry is absent we render an explicit placeholder instead
+            of collapsing the section, so the panel is never a blank shell. */}
+        {vs ? (
+          <>
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              <RadialGauge
+                value={vs.battery_level ?? 0}
+                max={100}
+                label={t('vehicleHero.gauge.battery', 'Battery')}
+                unit="%"
+                color={(vs.battery_level ?? 0) > 20 ? '#22d3ee' : '#ef4444'}
+                size={100}
+              />
+              <RadialGauge
+                value={rangeDisplay}
+                max={rangeMax}
+                label={t('vehicleHero.gauge.range', 'Range')}
+                unit={distanceLabel}
+                color="#4ade80"
+                size={100}
+              />
+              <RadialGauge
+                value={insideTempDisplay}
+                max={tempMax}
+                label={t('vehicleHero.gauge.inside', 'Inside')}
+                unit={temperatureLabel}
+                color="#f59e0b"
+                size={100}
+              />
+              <RadialGauge
+                value={outsideTempDisplay}
+                max={tempMax}
+                label={t('vehicleHero.gauge.outside', 'Outside')}
+                unit={temperatureLabel}
+                color="#a78bfa"
+                size={100}
+              />
+            </div>
 
-        {/* Detail cards mirror the same display-unit conversions as the gauges */}
-        {vs && (
-          <Grid cols={{ default: 2, md: 4 }} gap={3}>
-            <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside Temp')} value={insideTempDisplay} unit={temperatureLabel} />
-            <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside Temp')} value={outsideTempDisplay} unit={temperatureLabel} />
-            <StatCard
-              label={t('vehicleHero.stat.odometer', 'Odometer')}
-              value={odometerDisplay}
-              unit={distanceLabel}
-            />
-            <StatCard
-              label={t('vehicleHero.stat.range', 'Range')}
-              value={rangeDisplay}
-              unit={distanceLabel}
-            />
-            <StatCard
-              label={t('vehicleHero.stat.status', 'Status')}
-              value={vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
-            />
-            <StatCard
-              label={t('vehicleHero.stat.sentry', 'Sentry')}
-              value={vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
-            />
-            <StatCard label={t('vehicleHero.stat.firmware', 'Firmware')} value={vs.software_version} />
-            <StatCard label={t('vehicleHero.stat.power', 'Power')} value={fmtNumber(vs.power)} unit="kW" />
-          </Grid>
+            {/* Detail cards mirror the same display-unit conversions as the gauges */}
+            <Grid cols={STAT_GRID_COLS} gap={3}>
+              <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside Temp')} value={insideTempDisplay} unit={temperatureLabel} />
+              <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside Temp')} value={outsideTempDisplay} unit={temperatureLabel} />
+              <StatCard
+                label={t('vehicleHero.stat.odometer', 'Odometer')}
+                value={odometerDisplay}
+                unit={distanceLabel}
+              />
+              <StatCard
+                label={t('vehicleHero.stat.range', 'Range')}
+                value={rangeDisplay}
+                unit={distanceLabel}
+              />
+              <StatCard
+                label={t('vehicleHero.stat.status', 'Status')}
+                value={vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
+              />
+              <StatCard
+                label={t('vehicleHero.stat.sentry', 'Sentry')}
+                value={vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
+              />
+              <StatCard label={t('vehicleHero.stat.firmware', 'Firmware')} value={vs.software_version || '—'} />
+              <StatCard label={t('vehicleHero.stat.power', 'Power')} value={fmtNumber(vs.power ?? 0)} unit="kW" />
+            </Grid>
+          </>
+        ) : (
+          <EmptyState
+            icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
+            message={t('vehicleHero.noState', 'Live telemetry unavailable')}
+          />
         )}
 
         {/* Navigation actions for the vehicle */}

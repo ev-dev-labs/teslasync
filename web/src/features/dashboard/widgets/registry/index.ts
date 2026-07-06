@@ -36,8 +36,22 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   ...MAP_WIDGETS,
 ];
 
+// O(1) id → definition index. getWidgetDef runs once per widget instance on
+// every dashboard render (DashboardGrid, MiniGridPreview, TemplateGallery,
+// useDashboardLayout), so a linear WIDGET_REGISTRY.find() rescans all 100+
+// definitions on each lookup. Build the index once at module load, mirroring
+// the WIDGET_BY_ID pattern in WidgetPicker. First occurrence wins, preserving
+// the previous find() semantics for the (currently impossible) duplicate-id case.
+const WIDGET_BY_ID: ReadonlyMap<string, WidgetDef> = (() => {
+  const index = new Map<string, WidgetDef>();
+  for (const widget of WIDGET_REGISTRY) {
+    if (!index.has(widget.id)) index.set(widget.id, widget);
+  }
+  return index;
+})();
+
 export function getWidgetDef(widgetId: string): WidgetDef | undefined {
-  return WIDGET_REGISTRY.find((w) => w.id === widgetId);
+  return WIDGET_BY_ID.get(widgetId);
 }
 
 export {

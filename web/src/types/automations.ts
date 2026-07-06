@@ -200,10 +200,21 @@ export type AutomationStep =
   | AutomationConditionStep
   | AutomationActionStep;
 
-type AutomationStepInput<T extends AutomationStep> = Omit<
-  T,
-  'id' | 'automation_id' | 'step_id'
->;
+// Per-member ("distributive") Omit over a step union.
+//
+// The `T extends unknown ? … : never` wrapper is load-bearing, not cosmetic.
+// A naked `Omit<AutomationTriggerStep, …>` collapses the discriminated union to
+// only its *common* keys (`kind` + `step_order`), silently dropping `signal`,
+// `op`, `place_id`, `command_name`, … . Worse, the collapsed `kind` widens back
+// to the full `AutomationTriggerKind`, so `Extract<…, { kind: 'trigger_signal' }>`
+// resolves to `never` and every per-kind build/narrow site is unusable.
+// Distributing the conditional applies `Omit` to each member individually, so
+// every branch keeps its own fields and a narrowable discriminant. Do not
+// "simplify" this back to a plain `Omit` (see stepInputTypes.ts for the same
+// trap documented at the builder call-sites).
+type AutomationStepInput<T extends AutomationStep> = T extends unknown
+  ? Omit<T, 'id' | 'automation_id' | 'step_id'>
+  : never;
 
 export type AutomationTriggerInput = AutomationStepInput<AutomationTriggerStep>;
 export type AutomationConditionInput = AutomationStepInput<AutomationConditionStep>;

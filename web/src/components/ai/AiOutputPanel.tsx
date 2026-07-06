@@ -12,10 +12,15 @@
 // domain-specific header + body + Generate button.
 //
 // The panel renders nothing when no stream has been started (text
-// empty AND state is idle); once a stream has run at least once,
-// the panel stays visible so the user can re-read the output even
-// after the stream closes. That matches the lifecycle of
+// empty AND state is idle / paused-confirm); once a stream has run
+// at least once, the panel stays visible so the user can re-read the
+// output even after the stream closes. That matches the lifecycle of
 // `useAiStream` (`state` goes idle → streaming → done / error).
+//
+// If the stream finishes (`state === 'done'`) without emitting any
+// text we show an explicit empty-state line rather than an empty
+// paragraph — a completed-but-silent model must never leave a blank
+// panel behind.
 //
 // Markdown rendering is intentionally NOT applied here. The
 // upstream LLM strategies are prompted to emit plain prose (or
@@ -61,7 +66,7 @@ export function AiOutputPanel({
       data-testid="ai-output-panel"
     >
       {state === 'error' ? (
-        <p className="text-sm text-red-300 flex items-start gap-2">
+        <p role="alert" className="text-sm text-red-300 flex items-start gap-2">
           <HelixMark
             className="h-4 w-4 text-red-300 shrink-0 mt-0.5"
             aria-hidden="true"
@@ -77,6 +82,14 @@ export function AiOutputPanel({
         ) : (
           pendingChild
         )
+      ) : text.length === 0 ? (
+        // Reachable only when state === 'done' with no accumulated text
+        // (idle / paused-confirm without text return null above, streaming
+        // and error are handled by the branches above). Show a placeholder
+        // instead of an empty paragraph so the panel is never blank.
+        <p className="text-sm text-[var(--text-muted)]">
+          {t('ai.common.noOutput', 'No output was generated.')}
+        </p>
       ) : (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-primary)]">{text}</p>
       )}

@@ -7,6 +7,7 @@
  * appears so all surfaces stay consistent.
  */
 
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 
@@ -39,14 +40,30 @@ export function SignalSelector({
   const { t } = useTranslation();
   const cap = max ?? Number.POSITIVE_INFINITY;
 
+  // Null-safe: this selector is handed hook data everywhere it appears
+  // (`useSignalsAvailable(...).data`, a not-yet-initialised selection), which is
+  // `undefined` before the first load. Never read `.length` off — or hand
+  // ComboboxMulti — a possibly-undefined list. Memoised so the empty-fallback
+  // keeps a stable reference across renders instead of a fresh `[]` each time.
+  const safeValue = useMemo(() => value ?? [], [value]);
+  const safeOptions = useMemo(() => options ?? [], [options]);
+
+  // Enforce the cap on the way out. ComboboxMulti already blocks additions past
+  // `maxItems`, but slicing here also trims an over-long incoming `value` the
+  // first time the user edits it. Stable identity avoids re-rendering the
+  // combobox when an unrelated parent state change re-runs this component.
+  const handleChange = useCallback(
+    (next: string[]) => onChange(Number.isFinite(cap) ? next.slice(0, cap) : next),
+    [onChange, cap],
+  );
+
   return (
     <div className={cn('w-full', className)}>
       <Label className="flex items-center gap-1 mb-2">
-        {labelOverride ?? (
-          max != null
-            ? `${t('Signals')} (${value.length} / ${max})`
-            : `${t('Signals')} (${value.length})`
-        )}
+        {labelOverride ??
+          (max != null
+            ? `${t('Signals')} (${safeValue.length} / ${max})`
+            : `${t('Signals')} (${safeValue.length})`)}
         {showLayerHelp ? (
           <HelpTooltip
             i18nKey="help.signal.layers"
@@ -61,9 +78,9 @@ export function SignalSelector({
         hideLabel
         placeholder={t('Search signals…')}
         icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
-        value={value}
-        onChange={(next) => onChange(Number.isFinite(cap) ? next.slice(0, cap) : next)}
-        options={options}
+        value={safeValue}
+        onChange={handleChange}
+        options={safeOptions}
         getOptionLabel={(s) => s}
         getOptionKey={(s) => s}
         maxItems={Number.isFinite(cap) ? (cap as number) : undefined}

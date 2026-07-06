@@ -41,7 +41,7 @@ export function buildGrid(sessions: ChargingSession[]): HeatmapModel {
   let favDay = 0;
   let favHour = 0;
 
-  for (const s of sessions) {
+  for (const s of sessions ?? []) {
     const d = new Date(s.started_at);
     if (Number.isNaN(d.getTime())) continue;
     const day = d.getDay();
@@ -97,8 +97,11 @@ export function aggregateLocations(
   unknownLabel: string,
 ): LocationDatum[] {
   const counts: Record<string, number> = {};
-  for (const s of sessions) {
-    const name = s.start_place ?? unknownLabel;
+  for (const s of sessions ?? []) {
+    // Treat null / blank / whitespace-only place names as "unknown" so the
+    // locations chart never renders an empty Y-axis label, and trim so that
+    // "Home" and "Home " collapse into a single row rather than two.
+    const name = s.start_place?.trim() || unknownLabel;
     counts[name] = (counts[name] ?? 0) + 1;
   }
   return Object.entries(counts)
@@ -120,7 +123,7 @@ export function aggregateByDayOfWeek(
   model: HeatmapModel,
   dayLabels: readonly string[],
 ): DayDatum[] {
-  return model.grid.map((row, day) => {
+  return (model?.grid ?? []).map((row, day) => {
     let count = 0;
     let energyWh = 0;
     for (const cell of row) {
@@ -145,13 +148,14 @@ export interface HeatmapInsights {
 
 /** Derive busiest-day / busiest-hour / weekend-split insights from a grid. */
 export function deriveInsights(model: HeatmapModel): HeatmapInsights {
+  const grid = model?.grid ?? [];
   const dayTotals: number[] = new Array(7).fill(0);
   const hourTotals: number[] = new Array(24).fill(0);
   let activeSlots = 0;
 
   for (let day = 0; day < 7; day++) {
     for (let hour = 0; hour < 24; hour++) {
-      const c = model.grid[day]?.[hour]?.count ?? 0;
+      const c = grid[day]?.[hour]?.count ?? 0;
       dayTotals[day] += c;
       hourTotals[hour] += c;
       if (c > 0) activeSlots += 1;

@@ -1,5 +1,7 @@
 package notification
 
+import "encoding/json"
+
 // NotificationLogGroup is a server-grouped bucket of notification_logs
 // rows that share the same group_key (sha256(alert_id || severity)).
 //
@@ -27,4 +29,23 @@ type NotificationLogGroup struct {
 	Count       int              `json:"count"`
 	UnreadCount int              `json:"unread_count"`
 	VehicleIDs  []int64          `json:"vehicle_ids"`
+}
+
+// MarshalJSON enforces the VehicleIDs wire contract documented on the
+// struct: the field is ALWAYS encoded as a JSON array, never `null`. The
+// zero value (or any directly-constructed group) carries a nil VehicleIDs
+// slice, which the stdlib would otherwise emit as `null` and break the
+// frontend's safeArray assumption. Normalising here makes the invariant
+// hold at the type boundary regardless of which producer built the value —
+// complementing, not replacing, the repository's defensive fill.
+//
+// The `type alias` indirection strips the method set so json.Marshal falls
+// back to default field encoding instead of recursing into this method.
+func (g NotificationLogGroup) MarshalJSON() ([]byte, error) {
+	type alias NotificationLogGroup
+	a := alias(g)
+	if a.VehicleIDs == nil {
+		a.VehicleIDs = []int64{}
+	}
+	return json.Marshal(a)
 }

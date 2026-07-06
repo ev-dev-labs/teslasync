@@ -38,8 +38,36 @@ function boolLabel(val: boolean | null | undefined, t: (k: string, fb: string) =
   return val ? t('admin.security.on', 'On') : t('admin.security.off', 'Off');
 }
 
+/** True when a string-enum signal is present and not in an "off" state.
+ *  Narrows to a non-empty string first so we never call `.toLowerCase()`
+ *  on a boolean/number that slipped onto a `string`-typed signal field. */
+function stringSignalActive(val: unknown): boolean {
+  const s = asNonEmptyString(val);
+  return !!s && !s.toLowerCase().includes('off');
+}
+
+/** Resolve a signal that may arrive as a native bool OR a string enum
+ *  (e.g. SpeedLimitMode, CenterDisplay) into a display value + active flag.
+ *  The backend serializes raw `signal.SignalValue`, so a field typed
+ *  `string | boolean | null` can legitimately surface either shape; handling
+ *  both keeps sibling tiles consistent instead of degrading a boolean to "—". */
+function boolOrStringState(
+  val: string | boolean | null | undefined,
+  t: (k: string, fb: string) => string,
+): { value: string; active: boolean } {
+  if (typeof val === 'boolean') {
+    return {
+      value: val ? t('admin.security.on', 'On') : t('admin.security.off', 'Off'),
+      active: val,
+    };
+  }
+  return { value: asNonEmptyString(val) ?? '—', active: stringSignalActive(val) };
+}
+
 function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: string) => string): LiveSignal[] {
   if (!ev) return [];
+  const speedLimit = boolOrStringState(ev.speedLimitMode, t);
+  const centerDisplay = boolOrStringState(ev.centerDisplay, t);
   return [
     {
       key: 'hazards',
@@ -60,10 +88,7 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
       label: t('admin.security.live.turnSignal', 'Turn Signal'),
       icon: <Signal className="h-5 w-5" />,
       value: asNonEmptyString(ev.lightsTurnSignal) ?? '—',
-      active: (() => {
-        const s = asNonEmptyString(ev.lightsTurnSignal);
-        return !!s && !s.toLowerCase().includes('off');
-      })(),
+      active: stringSignalActive(ev.lightsTurnSignal),
     },
     {
       key: 'driverSeat',
@@ -97,15 +122,8 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
       key: 'speedLimit',
       label: t('admin.security.live.speedLimit', 'Speed Limit'),
       icon: <Gauge className="h-5 w-5" />,
-      value: typeof ev.speedLimitMode === 'boolean'
-        ? (ev.speedLimitMode ? t('admin.security.on', 'On') : t('admin.security.off', 'Off'))
-        : (asNonEmptyString(ev.speedLimitMode) ?? '—'),
-      active: typeof ev.speedLimitMode === 'boolean'
-        ? ev.speedLimitMode
-        : (() => {
-            const s = asNonEmptyString(ev.speedLimitMode);
-            return !!s && !s.toLowerCase().includes('off');
-          })(),
+      value: speedLimit.value,
+      active: speedLimit.active,
     },
     {
       key: 'homelinkDevices',
@@ -118,11 +136,8 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
       key: 'centerDisplay',
       label: t('admin.security.live.centerDisplay', 'Center Display'),
       icon: <Monitor className="h-5 w-5" />,
-      value: asNonEmptyString(ev.centerDisplay) ?? '—',
-      active: (() => {
-        const s = asNonEmptyString(ev.centerDisplay);
-        return !!s && !s.toLowerCase().includes('off');
-      })(),
+      value: centerDisplay.value,
+      active: centerDisplay.active,
     },
   ];
 }

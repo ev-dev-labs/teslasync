@@ -7,6 +7,13 @@ import { BatteryPill } from './BatteryPill';
 import { MiniStat } from './MiniStat';
 import type { DigestMetrics } from './types';
 
+// Rough driving-range estimate: ~5.5 km of range gained per unit of charge
+// energy added. The weekly-digest feature treats `chargeEnergyAdded` on the
+// kWh scale (ChargingSection labels the same value "kWh"), so this factor is
+// km-per-kWh and stays consistent with the sibling section — it is deliberately
+// NOT a Wh→km conversion despite the underlying `total_energy_added_wh` field.
+const EST_RANGE_KM_PER_ENERGY_UNIT = 5.5;
+
 interface BatteryHealthSectionProps {
   metrics: DigestMetrics;
   isLoading?: boolean;
@@ -69,7 +76,7 @@ export function BatteryHealthSection({
             />
             <MiniStat
               label={t('analytics.weeklyDigest.estRangeAdded', 'Est. Range Added')}
-              value={`${fmtNumber((metrics.chargeEnergyAdded ?? 0) * 5.5, 0)} km`}
+              value={`${fmtNumber((metrics.chargeEnergyAdded ?? 0) * EST_RANGE_KM_PER_ENERGY_UNIT, 0)} km`}
               icon={<MapPin className="h-4 w-4" />}
             />
           </div>

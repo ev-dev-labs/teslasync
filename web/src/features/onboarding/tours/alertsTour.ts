@@ -11,8 +11,16 @@ import type { TourStep } from '@/hooks/useTour'
 function navigate(href: string) {
   if (typeof window === 'undefined') return
   if (window.location.pathname === href) return
-  window.history.pushState({}, '', href)
-  window.dispatchEvent(new PopStateEvent('popstate'))
+  try {
+    window.history.pushState({}, '', href)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  } catch {
+    // history.pushState throws a SecurityError in sandboxed / cross-origin
+    // contexts. Navigation is best-effort from onShow (invoked inside a
+    // useTour effect with no local error boundary), so a failed push must
+    // never bubble out and tear down the walkthrough — the step still
+    // spotlights whatever page the user is currently on.
+  }
 }
 
 const STEPS: TourStep[] = [

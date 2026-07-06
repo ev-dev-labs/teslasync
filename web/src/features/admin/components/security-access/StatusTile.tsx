@@ -30,7 +30,10 @@ export interface StatusTileProps {
 }
 
 export function StatusTile({ icon, label, value, description, tone, size = 'base', className }: StatusTileProps) {
-  const c = toneClasses[tone];
+  // Fail closed to the neutral chip if an unrecognized tone leaks past the
+  // TS union at runtime (e.g. a widened value from an untyped caller) so the
+  // tile stays legible instead of throwing on `c.chip`.
+  const c = toneClasses[tone] ?? toneClasses.muted;
   return (
     <div
       className={cn(
@@ -53,7 +56,7 @@ export function StatusTile({ icon, label, value, description, tone, size = 'base
         weight="semibold"
         className={cn('mt-2 truncate', c.value)}
       >
-        {value}
+        {value ?? '—'}
       </Text>
       {description && (
         <Text as="p" variant="caption" className="mt-0.5 block truncate">

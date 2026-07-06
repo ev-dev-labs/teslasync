@@ -114,6 +114,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
               )}
       buttonLabel={t('charging.aiClustering.generateButton', 'Explain clusters')}
       badgeLabel={t('charging.aiClustering.badge', 'Helix')}
+      emptyHint={t(
+                'charging.aiClustering.emptyHint',
+                'Select a vehicle to explain its charging-curve clusters.',
+              )}
       canStart={haveInputs}
       stream={stream}
     />

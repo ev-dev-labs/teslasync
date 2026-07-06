@@ -15,7 +15,7 @@ import (
 )
 
 type notificationRepository struct {
-	pool *pgxpool.Pool
+	pool pgxPool
 }
 
 func NewNotificationRepository(pool *pgxpool.Pool) repository.NotificationRepository {
@@ -42,7 +42,11 @@ func (r *notificationRepository) GetByUserID(ctx context.Context, userID string)
 	if err != nil {
 		return nil, fmt.Errorf("querying notifications for user %s: %w", userID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[notification.Notification])
+	notifications, err := pgx.CollectRows(rows, pgx.RowToStructByName[notification.Notification])
+	if err != nil {
+		return nil, fmt.Errorf("collecting notifications for user %s: %w", userID, err)
+	}
+	return notifications, nil
 }
 
 func (r *notificationRepository) GetPending(ctx context.Context, limit int) ([]notification.Notification, error) {
@@ -50,7 +54,11 @@ func (r *notificationRepository) GetPending(ctx context.Context, limit int) ([]n
 	if err != nil {
 		return nil, fmt.Errorf("querying pending notifications: %w", err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[notification.Notification])
+	notifications, err := pgx.CollectRows(rows, pgx.RowToStructByName[notification.Notification])
+	if err != nil {
+		return nil, fmt.Errorf("collecting pending notifications: %w", err)
+	}
+	return notifications, nil
 }
 
 func (r *notificationRepository) GetByIDForUpdate(ctx context.Context, id string) (*notification.Notification, error) {

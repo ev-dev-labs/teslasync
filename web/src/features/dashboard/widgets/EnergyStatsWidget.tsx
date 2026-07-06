@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, BatteryCharging, Leaf, DollarSign, Route, TrendingUp } from 'lucide-react';
 import {
@@ -14,8 +14,31 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import type { DailyEnergy } from '@/types/energy';
 
 const GRADIENT_ID = 'energy-stats-area-grad';
+
+/** A single point on the daily-energy area chart. */
+export interface EnergyChartPoint {
+  date: string;
+  /** Daily energy in kWh, converted from the SI watt-hour source. */
+  energy: number;
+}
+
+/**
+ * Map the SI watt-hour daily breakdown to chart points in kWh. The chart's
+ * axis, tooltip, and series name are all labelled "kWh", so the series values
+ * must be in kWh too — plotting raw watt-hours under a kWh label overstated
+ * every point by 1000×. Null-safe for a missing breakdown or per-day energy.
+ */
+export function buildEnergyChartData(
+  breakdown: DailyEnergy[] | null | undefined,
+): EnergyChartPoint[] {
+  return (breakdown ?? []).map((d) => ({
+    date: d.date,
+    energy: (d.energy_wh ?? 0) / 1000,
+  }));
+}
 
 export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -26,20 +49,20 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
     data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useEnergyStats(id > 0 ? String(id) : null);
 
   const { unitPrefs, formatEnergy } = useUnits();
-  const toEfficiencyDisplay = (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000;
+  const toEfficiencyDisplay = useCallback(
+    (whPerM: number) => (unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000),
+    [unitPrefs.distance],
+  );
 
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  const dailyBreakdown = data?.daily_breakdown ?? [];
+  const dailyBreakdown = data?.daily_breakdown;
 
   const chartData = useMemo(
-    () => dailyBreakdown.map((d) => ({
-      date: d.date,
-      energy: d.energy_wh ?? 0,
-    })),
+    () => buildEnergyChartData(dailyBreakdown),
     [dailyBreakdown],
   );
 
@@ -94,6 +117,10 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
     return items;
   }, [data, isWide, toEfficiencyDisplay, efficiencyUnit, formatEnergy, t]);
 
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
   const shellProps = {
     loading: isLoading,
     error: error ? String(error) : null,
@@ -101,19 +128,13 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
     isFetching,
     isStale,
     isError,
-    onRefresh: () => refetch(),
+    onRefresh: handleRefresh,
   };
 
   // ── Compact (1×2): large number only ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber

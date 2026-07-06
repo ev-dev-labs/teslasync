@@ -7,6 +7,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { cn } from '@/lib/cn';
+import { apiUrl } from '@/api/client';
 import type { ChargingSession } from '@/api/types';
 import { ChargingSessionCard } from '../ChargingSessionCard';
 import type { SortKey, ChargerFilter } from './helpers';
@@ -66,6 +67,10 @@ export function SessionListSection({
   onBulkDelete,
 }: SessionListSectionProps) {
   const { t } = useTranslation();
+
+  // Defensive: callers own the filtered slice, but a nullish value must never
+  // crash the panel on `.length`/`.map` — degrade to an empty list instead.
+  const filtered = filteredSessions ?? [];
 
   const bulkActions = useMemo<BulkAction[]>(() => {
     if (!onBulkDelete) return [];
@@ -171,7 +176,7 @@ export function SessionListSection({
           <h3 className="section-title flex items-center gap-2 flex-1">
             <BatteryCharging className="h-4 w-4 text-neon-green" />
             {t('charging.sessions.allSessions', 'All Sessions')}
-            <span className="text-xs text-[var(--text-muted)] font-normal ml-1">({filteredSessions.length})</span>
+            <span className="text-xs text-[var(--text-muted)] font-normal ml-1">({filtered.length})</span>
           </h3>
           {/* Charger filter */}
           <div className="flex items-center gap-1 rounded-lg bg-white/[0.02] p-1 border border-white/[0.06]">
@@ -187,6 +192,7 @@ export function SessionListSection({
                 variant="ghost"
                 size="sm"
                 onClick={() => onChargerFilterChange(f.key)}
+                aria-pressed={chargerFilter === f.key}
                 className={cn(
                   'px-2.5 py-1 h-auto rounded-md text-xs font-medium transition-all',
                   chargerFilter === f.key
@@ -213,6 +219,7 @@ export function SessionListSection({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleSortClick(k.key)}
+                aria-pressed={sortBy === k.key}
                 className={cn(
                   'px-2.5 py-1 h-auto rounded-md text-xs font-medium transition-all',
                   sortBy === k.key
@@ -221,14 +228,14 @@ export function SessionListSection({
                 )}
               >
                 {k.label}
-                {sortBy === k.key && <span className="ml-0.5">{sortDesc ? '↓' : '↑'}</span>}
+                {sortBy === k.key && <span className="ml-0.5" aria-hidden="true">{sortDesc ? '↓' : '↑'}</span>}
               </Button>
             ))}
           </div>
           {/* Export buttons */}
           <div className="flex items-center gap-2">
             <a
-              href={`/api/v1/export/charging?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
+              href={apiUrl(`/export/charging?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
               download="teslasync-charging.csv"
             >
               <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>
@@ -236,7 +243,7 @@ export function SessionListSection({
               </Button>
             </a>
             <a
-              href={`/api/v1/export/charging?format=json${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
+              href={apiUrl(`/export/charging?format=json${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
               download="teslasync-charging.json"
             >
               <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>
@@ -248,7 +255,7 @@ export function SessionListSection({
       </FadeIn>
 
       {/* Session cards */}
-      {filteredSessions.length === 0 ? (
+      {filtered.length === 0 ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryCharging className="h-8 w-8" />}
           title={t('charging.list.noMatches', 'No sessions match your filters')}
@@ -259,7 +266,7 @@ export function SessionListSection({
           {onBulkDelete && onClearSelection && onToggleSelected && (
             <BulkActionsToolbar
               selectedIds={Array.from(selectedIds ?? [])}
-              total={filteredSessions.length}
+              total={filtered.length}
               onClear={onClearSelection}
               actions={bulkActions}
               itemNoun={{
@@ -269,7 +276,7 @@ export function SessionListSection({
             />
           )}
           <StaggerContainer className="space-y-3">
-            {filteredSessions.map((s) => (
+            {filtered.map((s) => (
               <StaggerItem key={s.id}>
                 <ChargingSessionCard
                   session={s}
@@ -289,8 +296,8 @@ export function SessionListSection({
         page={page}
         pageSize={pageSize}
         total={
-          filteredSessions.length < pageSize
-            ? (page - 1) * pageSize + filteredSessions.length
+          filtered.length < pageSize
+            ? (page - 1) * pageSize + filtered.length
             : page * pageSize + 1
         }
         onPageChange={onPageChange}

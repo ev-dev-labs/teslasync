@@ -22,6 +22,7 @@ interface ChannelsGridProps {
 }
 
 const AUTO_FIT = '[grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]';
+const SKELETON_KEYS = [0, 1, 2] as const;
 
 export function ChannelsGrid({
   channels, isLoading, isError, error, onRetry, onEdit, onAdd,
@@ -30,13 +31,29 @@ export function ChannelsGrid({
   const rows = channels ?? [];
 
   if (isError) {
-    return <QueryError error={error} onRetry={onRetry} resourceName={t('notifications.channels.resource', 'Channels')} />;
+    // `error` can be nullish even while `isError` is true (a query that failed
+    // without capturing a reason). QueryError renders nothing for a falsy
+    // error, which would leave a blank panel — fall back to a real Error so the
+    // user always gets a visible, retryable failure state.
+    const resolvedError = error ?? new Error(t('notifications.channels.loadFailed', 'Failed to load channels'));
+    return (
+      <QueryError
+        error={resolvedError}
+        onRetry={onRetry}
+        resourceName={t('notifications.channels.resource', 'Channels')}
+      />
+    );
   }
 
   if (isLoading && rows.length === 0) {
     return (
-      <div className={`grid gap-3 sm:gap-4 xl:gap-5 ${AUTO_FIT}`}>
-        {[0, 1, 2].map((i) => (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t('notifications.channels.loading', 'Loading channels…')}
+        className={`grid gap-3 sm:gap-4 xl:gap-5 ${AUTO_FIT}`}
+      >
+        {SKELETON_KEYS.map((i) => (
           <Skeleton key={i} className="h-48" />
         ))}
       </div>
@@ -55,7 +72,10 @@ export function ChannelsGrid({
   }
 
   return (
-    <ul className={`grid list-none gap-3 sm:gap-4 xl:gap-5 ${AUTO_FIT}`}>
+    <ul
+      aria-label={t('notifications.channels.listAria', 'Configured channels')}
+      className={`grid list-none gap-3 sm:gap-4 xl:gap-5 ${AUTO_FIT}`}
+    >
       {rows.map((ch) => (
         <li key={ch.id} className="min-w-0">
           <ChannelCard channel={ch} onEdit={onEdit} />

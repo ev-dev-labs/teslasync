@@ -28,7 +28,11 @@ export function ExportStatusBreakdown({
 }: ExportStatusBreakdownProps) {
   const { t } = useTranslation();
 
-  const rows = STATUS_ORDER.filter((s) => stats.byStatus[s] > 0);
+  // Defensive: `byStatus` can be missing a key if the API ever returns a
+  // status outside the known union (the codebase has repeatedly been bitten
+  // by frontend/backend shape drift). Coerce an absent count to 0 so the
+  // filter never produces NaN-driven rows.
+  const rows = STATUS_ORDER.filter((s) => (stats.byStatus?.[s] ?? 0) > 0);
 
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
@@ -38,7 +42,15 @@ export function ExportStatusBreakdown({
       </PanelTitle>
 
       {isLoading ? (
-        <div className="space-y-3">
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t(
+            'exportsList.breakdown.loading',
+            'Loading status breakdown…',
+          )}
+          className="space-y-3"
+        >
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-full" />
@@ -49,7 +61,7 @@ export function ExportStatusBreakdown({
           onRetry={onRetry}
           resourceName={t('exportsList.resource', 'Exports')}
         />
-      ) : stats.total === 0 ? (
+      ) : stats.total === 0 || rows.length === 0 ? (
         <EmptyState /* no-action: transient — nothing to summarize until exports exist */
           icon={<Icons.analytics className="h-8 w-8" aria-hidden="true" />}
           message={t(
@@ -61,7 +73,7 @@ export function ExportStatusBreakdown({
         <div className="flex flex-1 flex-col gap-4">
           <div className="space-y-3">
             {rows.map((status) => {
-              const count = stats.byStatus[status];
+              const count = stats.byStatus?.[status] ?? 0;
               const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
               return (
                 <MetricBar

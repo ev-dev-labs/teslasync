@@ -35,6 +35,8 @@
  * current.
  */
 
+import type { BroadcastMessage } from './broadcast'
+
 /**
  * The full set of broadcast topic identifiers used by the app. The values
  * MUST match the `type` discriminator on {@link BroadcastMessage}.
@@ -48,6 +50,16 @@ export const TOPICS = {
   THEME_CHANGED: 'theme.changed',
   /** Custom theme primary/accent colors changed. */
   THEME_CUSTOM_COLORS: 'theme.customColors',
+  // ── Typography / fonts ───────────────────────────────────────────────────
+  /**
+   * Font family / size / line-height / letter-spacing / heading-weight
+   * preference changed. Emitted by `<FontProvider />`; peer tabs re-read the
+   * persisted `teslasync-font-*` keys and re-apply the CSS vars (the payload
+   * is a hint only). Font sync is owned by `<FontProvider />`, NOT the
+   * formatter bridge, so this topic is intentionally absent from
+   * {@link FORMATTER_AFFECTING_TOPICS}.
+   */
+  FONT_CHANGED: 'font.changed',
   // ── Auth ─────────────────────────────────────────────────────────────────
   AUTH_LOGOUT: 'auth.logout',
   // ── Notifications ────────────────────────────────────────────────────────
@@ -96,7 +108,12 @@ export const TOPICS = {
    * only. Always re-read from the source of truth (`useSettings`).
    */
   SETTINGS_CHANGED: 'settings.changed',
-} as const
+  // `satisfies` makes every value above a compile-time-checked
+  // `BroadcastMessage` discriminator: a typo'd wire string (e.g.
+  // 'theme.chnaged') becomes a `tsc` error here instead of a silently
+  // dropped message. `as const` still wins for the inferred type, so
+  // `Topic` remains the exact string-literal union.
+} as const satisfies Record<string, BroadcastMessage['type']>
 
 /**
  * Union of every concrete topic string. Use this as a parameter type when

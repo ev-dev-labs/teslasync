@@ -9,7 +9,6 @@ import { useYearReview } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
@@ -19,6 +18,13 @@ const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+
+// The year-review endpoint emits distances in kilometres and speeds in km/h
+// (server-side derivations of the SI columns). The SI-canonical converters
+// expect metres / metres-per-second, so lift the API values back to SI before
+// converting to the user's display unit.
+const METERS_PER_KM = 1000;
+const KMH_PER_MPS = 3.6; // 1 m/s === 3.6 km/h
 
 export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -39,15 +45,12 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  // API returns km; convert km → mi (internal) → user pref
-  const distanceMi = (data?.total_distance_km ?? 0) * UNITS.KM_TO_MI;
-  const displayDistance = toDistanceDisplay(distanceMi);
-
-  const longestDriveMi = ((data?.longest_drive?.distance_km ?? 0) * UNITS.KM_TO_MI);
-  const displayLongestDrive = toDistanceDisplay(longestDriveMi);
-
-  const fastestSpeedMph = (data?.fastest_speed_kmh ?? 0) * UNITS.KM_TO_MI;
-  const displayFastestSpeed = toSpeedDisplay(fastestSpeedMph);
+  // Lift the API's km / km/h back to SI (m, m/s), then convert to the user's
+  // display unit. Feeding km straight into convertDistanceFromSI (which
+  // expects metres) previously under-reported every figure by ~1000×.
+  const displayDistance = toDistanceDisplay((data?.total_distance_km ?? 0) * METERS_PER_KM);
+  const displayLongestDrive = toDistanceDisplay((data?.longest_drive?.distance_km ?? 0) * METERS_PER_KM);
+  const displayFastestSpeed = toSpeedDisplay((data?.fastest_speed_kmh ?? 0) / KMH_PER_MPS);
 
   // Find busiest month
   const busiestMonth = useMemo(() => {

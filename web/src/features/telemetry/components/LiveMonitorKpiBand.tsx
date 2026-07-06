@@ -40,8 +40,12 @@ export function LiveMonitorKpiBand({
 }: LiveMonitorKpiBandProps) {
   const { t } = useTranslation();
 
+  const safeBufferCount = bufferCount ?? 0;
   const safeMax = bufferMax > 0 ? bufferMax : 1;
-  const fillPct = Math.min((bufferCount / safeMax) * 100, 100);
+  // Buffer fill is semantically bounded to [0, 100]. Clamp both ends so a
+  // malformed count (negative, NaN, or > capacity) can never surface a
+  // nonsensical "-25%" / "137%" subtitle.
+  const fillPct = Math.max(0, Math.min((safeBufferCount / safeMax) * 100, 100));
 
   return (
     <section
@@ -72,7 +76,7 @@ export function LiveMonitorKpiBand({
       />
       <MetricCard
         label={t('liveMonitor.bufferSize', 'Buffer Size')}
-        value={fmtInt(bufferCount ?? 0)}
+        value={fmtInt(safeBufferCount)}
         subtitle={`/ ${fmtInt(safeMax)} · ${fmtPercent(fillPct, 0)}`}
         color="blue"
         icon={<Boxes className="h-5 w-5" aria-hidden="true" />}

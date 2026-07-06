@@ -1,6 +1,39 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { tableTokens } from '@/lib/tokens'
+
+/**
+ * Pointer capture lets a drag continue when the pointer leaves the ~1.5px
+ * handle, but it is a best-effort convenience: it is unavailable in some
+ * environments (jsdom, older engines) and `set`/`releasePointerCapture` can
+ * throw (`NotFoundError` / `InvalidStateError`) when the pointer is no longer
+ * active. A resize gesture must never break because of it, so both calls are
+ * feature-detected and their throw paths swallowed.
+ */
+function capturePointer(el: Element, pointerId: number) {
+  try {
+    el.setPointerCapture?.(pointerId)
+  } catch {
+    /* capture is optional — the gesture still works via bubbled events */
+  }
+}
+
+function releasePointer(el: Element, pointerId: number) {
+  try {
+    el.releasePointerCapture?.(pointerId)
+  } catch {
+    /* nothing was captured (or unsupported) — safe to ignore */
+  }
+}
 
 interface DataTableResizerProps {
   /** Column key for aria/labels. */
@@ -36,8 +69,15 @@ export function DataTableResizer({
   onResizeEnd,
   label,
 }: DataTableResizerProps) {
+  const { t } = useTranslation()
   const startX = useRef(0)
   const startWidth = useRef(0)
+  // Tracks the most recent width emitted during the gesture so `onResizeEnd`
+  // reports the value the user actually dragged/keyed to — even when the
+  // parent is uncontrolled or updates `width` asynchronously. The keyboard
+  // path already forwards its computed `next`; this keeps the pointer path
+  // consistent instead of echoing a potentially-stale `width` prop.
+  const lastWidth = useRef(width)
   const [dragging, setDragging] = useState(false)
 
   const clamp = useCallback(
@@ -51,8 +91,9 @@ export function DataTableResizer({
       e.stopPropagation()
       startX.current = e.clientX
       startWidth.current = width
+      lastWidth.current = width
       setDragging(true)
-      ;(e.target as HTMLDivElement).setPointerCapture(e.pointerId)
+      capturePointer(e.currentTarget, e.pointerId)
     },
     [width],
   )
@@ -61,7 +102,9 @@ export function DataTableResizer({
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!dragging) return
       const delta = e.clientX - startX.current
-      onResize(clamp(startWidth.current + delta))
+      const next = clamp(startWidth.current + delta)
+      lastWidth.current = next
+      onResize(next)
     },
     [dragging, clamp, onResize],
   )
@@ -70,13 +113,37 @@ export function DataTableResizer({
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!dragging) return
       setDragging(false)
-      ;(e.target as HTMLDivElement).releasePointerCapture(e.pointerId)
-      onResizeEnd?.(width)
+      releasePointer(e.currentTarget, e.pointerId)
+      onResizeEnd?.(lastWidth.current)
     },
-    [dragging, onResizeEnd, width],
+    [dragging, onResizeEnd],
   )
 
-  // Cleanup safety: if the component unmounts mid-drag, release capture flag.
+  const onKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      let next: number | null = null
+      if (e.key === 'ArrowLeft') next = clamp(width - 8)
+      else if (e.key === 'ArrowRight') next = clamp(width + 8)
+      else if (e.key === 'Home') next = clamp(80)
+      else if (e.key === 'End') next = clamp(maxWidth)
+      if (next === null) return
+      e.preventDefault()
+      lastWidth.current = next
+      onResize(next)
+      onResizeEnd?.(next)
+    },
+    [clamp, width, maxWidth, onResize, onResizeEnd],
+  )
+
+  // The handle isn't a button, so swallow clicks to keep header-cell sort
+  // handlers from firing when the user finishes a resize on the boundary.
+  const stopClickPropagation = useCallback(
+    (e: ReactMouseEvent<HTMLDivElement>) => e.stopPropagation(),
+    [],
+  )
+
+  // If the component unmounts mid-drag, drop the dragging flag. The browser
+  // auto-releases any active pointer capture when the element leaves the DOM.
   useEffect(() => () => setDragging(false), [])
 
   return (
@@ -93,7 +160,7 @@ export function DataTableResizer({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label={label ?? `Resize column ${columnKey}`}
+      aria-label={label ?? t('table.columns.resizeLabel', 'Resize column {{col}}', { col: columnKey })}
       aria-valuenow={width}
       aria-valuemin={minWidth}
       aria-valuemax={maxWidth}
@@ -103,31 +170,8 @@ export function DataTableResizer({
       onPointerMove={onPointerMove}
       onPointerUp={finishDrag}
       onPointerCancel={finishDrag}
-      onKeyDown={(e) => {
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault()
-          const next = clamp(width - 8)
-          onResize(next)
-          onResizeEnd?.(next)
-        } else if (e.key === 'ArrowRight') {
-          e.preventDefault()
-          const next = clamp(width + 8)
-          onResize(next)
-          onResizeEnd?.(next)
-        } else if (e.key === 'Home') {
-          e.preventDefault()
-          const next = clamp(80)
-          onResize(next)
-          onResizeEnd?.(next)
-        } else if (e.key === 'End') {
-          e.preventDefault()
-          const next = clamp(maxWidth)
-          onResize(next)
-          onResizeEnd?.(next)
-        }
-      }}
-      // The handle isn't a button so click-bubbling doesn't trigger sort.
-      onClick={(e) => e.stopPropagation()}
+      onKeyDown={onKeyDown}
+      onClick={stopClickPropagation}
     />
     /* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
   )

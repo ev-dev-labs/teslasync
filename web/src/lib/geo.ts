@@ -20,7 +20,14 @@ export function haversineDistance(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
 
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  // `a` is the squared half-chord and is mathematically bounded to [0, 1],
+  // but floating-point rounding can nudge it a hair past 1 for near-antipodal
+  // points — which makes `Math.sqrt(1 - a)` evaluate `sqrt(-ε) = NaN` and
+  // poisons the whole result (and any cumulative sum built from it). Clamp so
+  // antipodal inputs resolve to ~half the Earth's circumference, never NaN.
+  const clamped = a > 1 ? 1 : a < 0 ? 0 : a;
+
+  return R * 2 * Math.atan2(Math.sqrt(clamped), Math.sqrt(1 - clamped));
 }
 
 /** Minimum separation (meters) between two GPS samples for the route to be
@@ -55,12 +62,19 @@ export function isValidLatLng(lat: number, lng: number): boolean {
  *  so 64 odometer/speed samples but one frozen lat/lng).
  *
  *  Short-circuits on the first sample beyond the threshold — O(n) worst case
- *  for fully-stationary input, but typically O(few) for any real drive. */
-export function hasMeaningfulRoute(positions: readonly LatLngLike[]): boolean {
+ *  for fully-stationary input, but typically O(few) for any real drive.
+ *
+ *  Null-safe: a `null`/`undefined` list (or individual `null` samples inside
+ *  it) is treated as "no route" rather than throwing, since position bags come
+ *  straight from telemetry JSON where fields may be absent. */
+export function hasMeaningfulRoute(
+  positions: readonly LatLngLike[] | null | undefined,
+): boolean {
+  if (!positions) return false;
   let anchorIdx = -1;
   for (let i = 0; i < positions.length; i++) {
     const p = positions[i];
-    if (isValidLatLng(p.latitude, p.longitude)) {
+    if (p != null && isValidLatLng(p.latitude, p.longitude)) {
       anchorIdx = i;
       break;
     }
@@ -69,7 +83,7 @@ export function hasMeaningfulRoute(positions: readonly LatLngLike[]): boolean {
   const anchor = positions[anchorIdx];
   for (let i = anchorIdx + 1; i < positions.length; i++) {
     const p = positions[i];
-    if (!isValidLatLng(p.latitude, p.longitude)) continue;
+    if (p == null || !isValidLatLng(p.latitude, p.longitude)) continue;
     const d = haversineDistance(
       anchor.latitude,
       anchor.longitude,
@@ -82,12 +96,16 @@ export function hasMeaningfulRoute(positions: readonly LatLngLike[]): boolean {
 }
 
 /** Returns the index of the first valid coordinate in `positions`, or -1 if
- *  none exists. Pairs with {@link hasMeaningfulRoute} so callers can render a
- *  single representative marker at the cluster centre when no real route is
- *  available. */
-export function firstValidIndex(positions: readonly LatLngLike[]): number {
+ *  none exists (including for a `null`/`undefined` list). Pairs with
+ *  {@link hasMeaningfulRoute} so callers can render a single representative
+ *  marker at the cluster centre when no real route is available. */
+export function firstValidIndex(
+  positions: readonly LatLngLike[] | null | undefined,
+): number {
+  if (!positions) return -1;
   for (let i = 0; i < positions.length; i++) {
-    if (isValidLatLng(positions[i].latitude, positions[i].longitude)) return i;
+    const p = positions[i];
+    if (p != null && isValidLatLng(p.latitude, p.longitude)) return i;
   }
   return -1;
 }

@@ -22,6 +22,9 @@ import (
 type Handler struct {
 	db        *database.DB
 	jwtSecret []byte
+	// now is injectable so token issuance and expiry checks are
+	// deterministic under test. Defaults to time.Now in NewHandler.
+	now func() time.Time
 }
 
 // NewHandler creates a Handler. If jwtSecret is empty, a random
@@ -33,7 +36,16 @@ func NewHandler(db *database.DB, jwtSecret string) *Handler {
 		_, _ = rand.Read(b)
 		secret = b
 	}
-	return &Handler{db: db, jwtSecret: secret}
+	return &Handler{db: db, jwtSecret: secret, now: time.Now}
+}
+
+// clock returns the handler's time source, falling back to time.Now for
+// zero-value Handlers constructed without NewHandler.
+func (h *Handler) clock() time.Time {
+	if h.now != nil {
+		return h.now()
+	}
+	return time.Now()
 }
 
 type userClaims struct {
@@ -64,7 +76,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exp := time.Now().Add(24 * time.Hour)
+	exp := h.clock().Add(24 * time.Hour)
 	token, err := h.signToken(userClaims{
 		UserID:   1,
 		Username: body.Username,
@@ -175,7 +187,7 @@ func (h *Handler) verifyToken(token string) (*userClaims, error) {
 		return nil, fmt.Errorf("unmarshal claims: %w", err)
 	}
 
-	if time.Now().Unix() > c.Exp {
+	if h.clock().Unix() > c.Exp {
 		return nil, fmt.Errorf("token expired")
 	}
 

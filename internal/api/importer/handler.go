@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"context"
 	"encoding/csv"
 	"io"
 	"net/http"
@@ -18,13 +19,40 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ImportHandler handles CSV import endpoints for drives and charging data.
-type ImportHandler struct {
-	driveRepo    *drivedb.DriveRepo
-	chargingRepo *chargingdb.ChargingRepo
+// driveCreator is the narrow write surface ImportDrives needs. It is satisfied
+// by *drivedb.DriveRepo in production and by an in-memory fake in tests, so the
+// CSV parsing and unit-conversion logic can be exercised without a live pgx
+// pool.
+type driveCreator interface {
+	Create(ctx context.Context, d *drivemodel.Drive) error
 }
 
-// NewImportHandler creates a new ImportHandler.
+// chargingCreator is the narrow write surface ImportCharging needs; satisfied
+// by *chargingdb.ChargingRepo and substitutable in tests.
+type chargingCreator interface {
+	Create(ctx context.Context, c *chargingmodel.ChargingSession) error
+}
+
+// notificationLogFetcher is the narrow read surface ExportNotificationLogs
+// needs; satisfied by *dbnotif.NotificationRepo and substitutable in tests.
+type notificationLogFetcher interface {
+	GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error)
+}
+
+// Compile-time proof the concrete repositories satisfy the narrow ports above.
+var (
+	_ driveCreator           = (*drivedb.DriveRepo)(nil)
+	_ chargingCreator        = (*chargingdb.ChargingRepo)(nil)
+	_ notificationLogFetcher = (*dbnotif.NotificationRepo)(nil)
+)
+
+// ImportHandler handles CSV import endpoints for drives and charging data.
+type ImportHandler struct {
+	driveRepo    driveCreator
+	chargingRepo chargingCreator
+}
+
+// NewImportHandler creates a new ImportHandler backed by concrete repositories.
 func NewImportHandler(db *database.DB) *ImportHandler {
 	return &ImportHandler{
 		driveRepo:    drivedb.NewDriveRepo(db),
@@ -116,6 +144,7 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 		imported++
 	}
 
+	log.Info().Int("imported", imported).Int("errors", errors).Msg("drive CSV import complete")
 	httpx.WriteJSON(w, http.StatusOK, map[string]int{"imported": imported, "errors": errors})
 }
 
@@ -167,7 +196,7 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 			errors++
 			continue
 		}
-		energyAdded, err := strconv.ParseFloat(record[3], 64)
+		energyAddedKwh, err := strconv.ParseFloat(record[3], 64)
 		if err != nil {
 			errors++
 			continue
@@ -178,11 +207,16 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		// The upload CSV carries human-friendly kilo units (energy_added_kwh,
+		// charger_power_kw_max) while charging_sessions is SI canonical (Wh, W)
+		// per ADR-004 #2. Convert at this import boundary — mirrors the miles/
+		// minutes/mph → SI conversions performed in ImportDrives.
+		energyAddedWh := energyAddedKwh * 1000.0
 		startSocPct := float64(startBattery)
 		c := &chargingmodel.ChargingSession{
 			VehicleID:          vehicleID,
 			StartedAt:          startDate,
-			TotalEnergyAddedWh: &energyAdded,
+			TotalEnergyAddedWh: &energyAddedWh,
 			StartSocPct:        &startSocPct,
 		}
 
@@ -195,8 +229,9 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 			endSocPct := float64(endBatt)
 			c.EndSocPct = &endSocPct
 		}
-		if power, err := strconv.ParseFloat(record[6], 64); err == nil {
-			c.PeakPowerW = &power
+		if powerKw, err := strconv.ParseFloat(record[6], 64); err == nil {
+			powerW := powerKw * 1000.0
+			c.PeakPowerW = &powerW
 		}
 		if err := h.chargingRepo.Create(r.Context(), c); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to import charging session")
@@ -206,20 +241,32 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 		imported++
 	}
 
+	log.Info().Int("imported", imported).Int("errors", errors).Msg("charging CSV import complete")
 	httpx.WriteJSON(w, http.StatusOK, map[string]int{"imported": imported, "errors": errors})
 }
 
 // ExportNotificationLogs exports notification delivery logs as CSV or JSON.
 func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
-	repo := dbnotif.NewNotificationRepo(db)
+	return exportNotificationLogs(dbnotif.NewNotificationRepo(db))
+}
+
+// exportNotificationLogs is the repository-agnostic core of
+// ExportNotificationLogs. Isolating the fetcher behind notificationLogFetcher
+// lets tests exercise the CSV/JSON rendering and error paths without a live
+// pgx pool.
+func exportNotificationLogs(repo notificationLogFetcher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		format := r.URL.Query().Get("format")
 		if format == "" {
 			format = "csv"
 		}
 
-		logs, err := repo.GetLogs(r.Context(), 10000, 0)
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+		defer cancel()
+
+		logs, err := repo.GetLogs(ctx, 10000, 0)
 		if err != nil {
+			log.Error().Err(err).Msg("failed to fetch notification logs for export")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch notification logs")
 			return
 		}

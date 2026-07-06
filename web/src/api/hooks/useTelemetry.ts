@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
+import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
 import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
@@ -144,7 +145,12 @@ export function useSignalStats(vehicleId: number) {
 export function useSignalHistory(vehicleId: number, signal: string, hours: number) {
   return useQuery({
     queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
-    queryFn: ({ signal }) => request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal }),
+    // Rename the query context's AbortSignal so it does NOT shadow the outer
+    // `signal` (the signal NAME). Destructuring `{ signal }` here would
+    // stringify the AbortSignal into the URL path segment
+    // (`/signals/1/[object AbortSignal]/history`) and drop the name entirely.
+    queryFn: ({ signal: abortSignal }) =>
+      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal: abortSignal }),
     enabled: vehicleId > 0 && !!signal,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -153,9 +159,9 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
 export function useSignalLog(vehicleId: number, signal: string, hours: number, page: number, pageSize: number) {
   return useQuery({
     queryKey: telemetryKeys.signalLog(vehicleId, signal, hours, page),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal: abortSignal }) =>
       request<SignalHistoryResponse>(
-        `/signals/${vehicleId}/${signal}/history?hours=${hours}&page=${page}&page_size=${pageSize}`, { signal }
+        `/signals/${vehicleId}/${signal}/history?hours=${hours}&page=${page}&page_size=${pageSize}`, { signal: abortSignal }
       ),
     enabled: vehicleId > 0 && !!signal,
   });
@@ -164,8 +170,8 @@ export function useSignalLog(vehicleId: number, signal: string, hours: number, p
 export function useSignalDiff(vehicleId: number, signal: string, from: string, to: string) {
   return useQuery({
     queryKey: telemetryKeys.signalDiff(vehicleId, signal, from, to),
-    queryFn: ({ signal }) =>
-      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`, { signal }),
+    queryFn: ({ signal: abortSignal }) =>
+      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`, { signal: abortSignal }),
     enabled: vehicleId > 0 && !!signal && !!from && !!to,
   });
 }
@@ -279,26 +285,14 @@ export function useMQTTStatus() {
     queryKey: telemetryKeys.mqttStatus,
     queryFn: async ({ signal }) => {
       const raw = await request<TelemetryStatus>('/telemetry', { signal });
-      // Backend returns vehicles as Record<vin, VehicleStreamState>.
-      // Normalize to array for the page.
-      const vehiclesRaw = raw.vehicles ?? raw.streaming_vehicles;
-      let vehiclesArr: VehicleTelemetry[] = [];
-      if (Array.isArray(vehiclesRaw)) {
-        vehiclesArr = vehiclesRaw;
-      } else if (vehiclesRaw && typeof vehiclesRaw === 'object') {
-        vehiclesArr = Object.entries(vehiclesRaw).map(([vin, v]) => ({
-          ...v,
-          vin,
-          signalCount: v.signalCount ?? v.signal_count ?? 0,
-          batchCount: v.batchCount ?? v.batch_count ?? 0,
-          signalsPerSecond: v.signalsPerSecond ?? v.signals_per_second,
-          lastReceived: v.lastReceived ?? v.last_received,
-        }));
-      }
+      // The backend has shipped vehicles as an array or a Record<vin, …> map,
+      // under `vehicles` or the older `streaming_vehicles`, in either casing.
+      // telemetryVehicleList() collapses all of that to one normalized array
+      // (and telemetryUptimeSeconds() resolves the dual-shape uptime field).
       return {
         ...raw,
-        uptimeSeconds: raw.uptimeSeconds ?? raw.uptime_seconds,
-        vehicles: vehiclesArr,
+        uptimeSeconds: telemetryUptimeSeconds(raw),
+        vehicles: telemetryVehicleList(raw),
       } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
     },
     refetchInterval: INTERVALS.REALTIME,

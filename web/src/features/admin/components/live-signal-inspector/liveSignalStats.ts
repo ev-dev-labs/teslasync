@@ -179,8 +179,15 @@ export function normalizeSource(source: string | undefined): LiveSourceKey {
   }
 }
 
-/** Compute all page-level aggregates in a single pass. Null-safe. */
-export function computeStats(rows: LiveSignalRow[]): LiveSignalStats {
+/**
+ * Compute all page-level aggregates in a single pass. Null-safe: a nullish
+ * `rows` (e.g. before the first live poll resolves) degrades to a fully
+ * zeroed snapshot rather than throwing.
+ */
+export function computeStats(
+  rows: LiveSignalRow[] | null | undefined,
+): LiveSignalStats {
+  const list = rows ?? [];
   const bySource: Record<LiveSourceKey, number> = {
     l1: 0,
     l2: 0,
@@ -191,7 +198,7 @@ export function computeStats(rows: LiveSignalRow[]): LiveSignalStats {
   let numeric = 0;
   let freshestAgeMs: number | null = null;
 
-  for (const row of rows) {
+  for (const row of list) {
     bySource[normalizeSource(row.source)] += 1;
     const category = classifyKind(row.kind, row.value);
     kindCounts.set(category, (kindCounts.get(category) ?? 0) + 1);
@@ -208,7 +215,7 @@ export function computeStats(rows: LiveSignalRow[]): LiveSignalStats {
   })).filter((bucket) => bucket.count > 0);
 
   return {
-    total: rows.length,
+    total: list.length,
     live: bySource.l1,
     stale: bySource.stale,
     legacy: bySource.l2,

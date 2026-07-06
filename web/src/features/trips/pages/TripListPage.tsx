@@ -54,10 +54,15 @@ function formatDuration(
   if (!endDate) return inProgressLabel;
   const ms = new Date(endDate).getTime() - new Date(startDate).getTime();
   if (!Number.isFinite(ms) || ms <= 0) return '—';
-  const hours = Math.floor(ms / 3600000);
-  const minsRaw = (ms % 3600000) / 60000;
-  if (hours === 0) return `${fmtInt(minsRaw)}m`;
-  return minsRaw >= 0.5 ? `${hours}h ${fmtInt(minsRaw)}m` : `${hours}h`;
+  // Round to whole minutes FIRST, then split into h/m. Rounding the leftover
+  // minutes independently (the old approach) could round a 59.7 remainder up
+  // to 60 and render "1h 60m"; carrying the round through the total makes it
+  // roll into the hour ("2h") instead.
+  const totalMinutes = Math.round(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
 interface SectionStateProps {

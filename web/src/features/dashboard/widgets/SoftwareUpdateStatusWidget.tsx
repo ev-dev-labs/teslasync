@@ -9,6 +9,14 @@ import { useVehicles, useVehicleState, useVehicleConfigLatest } from '@/api/hook
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
+type UpdateStatus =
+  | 'up-to-date'
+  | 'available'
+  | 'downloading'
+  | 'ready'
+  | 'installing'
+  | 'installed';
+
 export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -26,7 +34,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
   const expectedDuration = configData?.software_update_expected_duration ?? null;
   const scheduledStart = configData?.software_update_scheduled_start ?? null;
 
-  const updateStatus = useMemo(() => {
+  const updateStatus = useMemo<UpdateStatus>(() => {
     if (!updateVersion) return 'up-to-date';
     if (installPct != null && installPct > 0 && installPct < 100) return 'installing';
     if (downloadPct != null && downloadPct > 0 && downloadPct < 100) return 'downloading';
@@ -34,6 +42,13 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
     if (downloadPct === 100) return 'ready';
     return 'available';
   }, [updateVersion, downloadPct, installPct]);
+
+  // Show the body when we have EITHER live vehicle state OR a pending update
+  // from the config snapshot. The two queries poll independently, so gating
+  // solely on live state (which can lag or drop out) would hide an in-flight
+  // update behind the empty state — the update section only needs
+  // `updateVersion`, and the current-version row already degrades to "—".
+  const hasData = state != null || updateVersion != null;
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
 
@@ -48,7 +63,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {state ? (
+      {hasData ? (
         <FadeIn>
           {isCompact ? (
             <CompactView
@@ -88,7 +103,7 @@ function CompactView({
   t,
 }: {
   version: string;
-  updateStatus: string;
+  updateStatus: UpdateStatus;
   t: (k: string, f: string) => string;
 }) {
   return (
@@ -120,7 +135,7 @@ function FullView({
   installPct: number | null;
   expectedDuration: number | null;
   scheduledStart: string | null;
-  updateStatus: string;
+  updateStatus: UpdateStatus;
   isTall: boolean;
   t: (k: string, f: string) => string;
 }) {
@@ -216,10 +231,10 @@ function StatusBadgeSmall({
   status,
   t,
 }: {
-  status: string;
+  status: UpdateStatus;
   t: (k: string, f: string) => string;
 }) {
-  const config: Record<string, { variant: 'success' | 'info' | 'warning' | 'neutral'; label: string }> = {
+  const config: Record<UpdateStatus, { variant: 'success' | 'info' | 'warning'; label: string }> = {
     'up-to-date': { variant: 'success', label: t('widget.statusUpToDate', 'Up to date') },
     available: { variant: 'info', label: t('widget.statusAvailable', 'Available') },
     downloading: { variant: 'warning', label: t('widget.statusDownloading', 'Downloading') },
@@ -227,6 +242,6 @@ function StatusBadgeSmall({
     installing: { variant: 'warning', label: t('widget.statusInstalling', 'Installing') },
     installed: { variant: 'success', label: t('widget.statusInstalled', 'Installed') },
   };
-  const { variant, label } = config[status] ?? { variant: 'neutral' as const, label: status };
+  const { variant, label } = config[status];
   return <Badge variant={variant} size="sm" dot>{label}</Badge>;
 }

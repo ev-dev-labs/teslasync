@@ -226,17 +226,24 @@ export default function DrivesListPage() {
   const sortedDrives = useMemo(() => {
     const sorted = [...filteredDrives];
     switch (sortBy) {
-      case 'distance':   return sorted.sort((a, b) => b.distanceM - a.distanceM);
+      case 'distance':   return sorted.sort((a, b) => (b.distanceM ?? 0) - (a.distanceM ?? 0));
       case 'efficiency': return sorted.sort((a, b) => (getEfficiency(a) ?? 999) - (getEfficiency(b) ?? 999));
       default:           return sorted.sort((a, b) => (b.startTs ?? '').localeCompare(a.startTs ?? ''));
     }
   }, [filteredDrives, sortBy]);
 
   /* ---- Pagination ---- */
+  // Clamp the URL-provided page into the valid range. A stale `?page=N`
+  // (left over after a filter, collection switch, or a bulk delete shrinks
+  // the result set) must not strand the user on an out-of-range slice that
+  // renders the "no drives" empty state while results still exist on an
+  // earlier page.
+  const pageCount = Math.max(1, Math.ceil(sortedDrives.length / pageSize));
+  const safePage = Math.min(Math.max(1, Math.floor(page)), pageCount);
   const paginatedDrives = useMemo(() => {
-    const start = (page - 1) * pageSize;
+    const start = (safePage - 1) * pageSize;
     return sortedDrives.slice(start, start + pageSize);
-  }, [sortedDrives, page, pageSize]);
+  }, [sortedDrives, safePage, pageSize]);
 
   /* ---- Date-grouped view of the paginated list ---- */
   const groupedDrives = useMemo<DateGroupedListGroup<Drive>[]>(() => {
@@ -246,7 +253,7 @@ export default function DrivesListPage() {
     // avoiding the off-by-one rendering at midnight boundaries.
     const raw = groupByDate(paginatedDrives, (d) => localDayKey(d.startTs, tz));
     return raw.map((g) => {
-      const distM = g.items.reduce((s, d) => s + d.distanceM, 0);
+      const distM = g.items.reduce((s, d) => s + (d.distanceM ?? 0), 0);
       const distDisplay = fmtNumber(toDistanceDisplay(distM));
       const noun = g.items.length === 1
         ? t('bulk.noun.drive_one', 'drive')
@@ -594,7 +601,11 @@ export default function DrivesListPage() {
 
         {/* Overview KPI card */}
         <FadeIn>
-          {currentStats.count > 0 ? (
+          {isDrivesLoading ? (
+            <GlassPanel id="drives-overview" className="p-4 sm:p-5">
+              <Skeleton className="h-32" />
+            </GlassPanel>
+          ) : currentStats.count > 0 ? (
             <KpiOverviewCard
               id="drives-overview"
               testId="drives-overview"
@@ -870,7 +881,7 @@ export default function DrivesListPage() {
               />
             </StaggerContainer>
             <Pagination
-              page={page}
+              page={safePage}
               pageSize={pageSize}
               total={sortedDrives.length}
               onPageChange={setPage}

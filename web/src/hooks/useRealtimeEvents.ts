@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { sseManager } from '../lib/sseManager'
 
 export type SSEState = 'connected' | 'reconnecting'
+
+const SSE_ENDPOINT = '/api/v1/events'
 
 export interface SSEDiagnostics {
   state: SSEState
@@ -38,6 +40,12 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
   useEffect(() => {
     if (!enabled) return
 
+    // Re-sync with the shared singleton at subscribe time. The connection may
+    // already be open — another consumer opened it, or `enabled` just flipped
+    // false→true — in which case no fresh `connected` event will arrive and the
+    // local state would otherwise remain stale.
+    setState(sseManager.getState())
+
     const onVehicleUpdate = (data: unknown) => callbacksRef.current.onVehicleUpdate?.(data)
     const onAlert = (data: unknown) => callbacksRef.current.onAlert?.(data)
     const onExportStatus = (data: unknown) => callbacksRef.current.onExportStatus?.(data)
@@ -45,7 +53,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     const onConnected = (data: unknown) => {
       setState('connected')
       setLastConnected(new Date())
-      const d = data as { client_id?: string }
+      const d = data as { client_id?: string } | null | undefined
       callbacksRef.current.onConnected?.(d?.client_id ?? '')
     }
     const onDisconnected = () => {
@@ -72,14 +80,19 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     }
   }, [enabled])
 
-  const diagnostics: SSEDiagnostics = {
-    state,
-    connected: state === 'connected',
-    failCount: 0,
-    lastConnected,
-    endpoint: '/api/v1/events',
-    nextRetryIn: null,
-  }
+  const connected = state === 'connected'
 
-  return { connected: state === 'connected', state, diagnostics }
+  const diagnostics = useMemo<SSEDiagnostics>(
+    () => ({
+      state,
+      connected,
+      failCount: 0,
+      lastConnected,
+      endpoint: SSE_ENDPOINT,
+      nextRetryIn: null,
+    }),
+    [state, connected, lastConnected],
+  )
+
+  return useMemo(() => ({ connected, state, diagnostics }), [connected, state, diagnostics])
 }

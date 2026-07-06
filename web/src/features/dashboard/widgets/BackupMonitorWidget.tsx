@@ -12,48 +12,71 @@ import type { WidgetProps } from './types';
 
 type BackupStatus = 'completed' | 'failed' | 'running' | 'queued';
 
-function statusVariant(status: string): 'success' | 'warning' | 'danger' {
+/**
+ * Minimal translate signature — accepts a key, an English fallback, and an
+ * optional interpolation bag. The full i18next `TFunction` is assignable to
+ * this, so callers can pass `useTranslation().t` directly.
+ */
+type TranslateFn = (
+  key: string,
+  fallback: string,
+  options?: Record<string, unknown>,
+) => string;
+
+export function statusVariant(status: string): 'success' | 'warning' | 'danger' {
   if (status === 'completed') return 'success';
   if (status === 'running' || status === 'queued') return 'warning';
   return 'danger';
 }
 
-function statusLabel(status: string, t: (key: string, fallback: string) => string): string {
+export function statusLabel(status: string, t: TranslateFn): string {
   if (status === 'completed') return t('widget.backupMonitor.statusSuccess', 'Success');
   if (status === 'running') return t('widget.backupMonitor.statusRunning', 'Running');
   if (status === 'queued') return t('widget.backupMonitor.statusQueued', 'Queued');
   return t('widget.backupMonitor.statusFailed', 'Failed');
 }
 
-function statusDotColor(status: string): string {
+export function statusDotColor(status: string): string {
   if (status === 'completed') return 'bg-green-500 shadow-green-500/40';
   if (status === 'running' || status === 'queued') return 'bg-amber-400 shadow-amber-400/40';
   return 'bg-red-500 shadow-red-500/40';
 }
 
 /** Format bytes into human-readable size (e.g. "1.2 GB", "450 MB"). */
-function fmtBytes(bytes: number): string {
-  if (bytes <= 0) return '0 B';
+export function fmtBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  // Clamp the unit index into range: sub-1 byte counts yield a negative
+  // exponent and out-of-range values overflow past TB — either would index
+  // `units` out of bounds and render "<n> undefined".
+  const i = Math.max(
+    0,
+    Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1),
+  );
   const val = bytes / Math.pow(1024, i);
   return `${val < 10 ? val.toFixed(1) : Math.round(val)} ${units[i]}`;
 }
 
+/** Parse an ISO timestamp to epoch ms, coercing nullish/invalid input to 0 so sorts stay stable. */
+function toEpoch(iso: string | null | undefined): number {
+  if (!iso) return 0;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
 /** Format ISO timestamp as relative time (e.g. "2m ago", "3h ago", "5d ago"). */
-function fmtRelativeTime(iso: string | null): string {
+export function fmtRelativeTime(iso: string | null, t: TranslateFn): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '—';
   const diffMs = Date.now() - d.getTime();
-  if (diffMs < 0) return 'just now';
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (diffMs < 0 || mins < 1) return t('widget.backupMonitor.relativeNow', 'just now');
+  if (mins < 60) return t('widget.backupMonitor.relativeMinutes', '{{count}}m ago', { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t('widget.backupMonitor.relativeHours', '{{count}}h ago', { count: hrs });
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t('widget.backupMonitor.relativeDays', '{{count}}d ago', { count: days });
 }
 
 export default function BackupMonitorWidget({ size }: WidgetProps) {
@@ -68,8 +91,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
     () =>
       [...runs].sort(
         (a, b) =>
-          new Date(b.completedAt ?? b.createdAt).getTime() -
-          new Date(a.completedAt ?? a.createdAt).getTime(),
+          toEpoch(b.completedAt ?? b.createdAt) - toEpoch(a.completedAt ?? a.createdAt),
       ),
     [runs],
   );
@@ -93,13 +115,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
   // ── Compact layout (1×2) ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         {runs.length === 0 && !isLoading ? (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<HardDrive className="h-5 w-5" />}
@@ -109,6 +125,8 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
         ) : (
           <div className="flex items-center gap-3 min-h-[44px]">
             <span
+              role="img"
+              aria-label={statusLabel(latestRun?.status ?? 'failed', t)}
               className={cn(
                 'inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_6px] shrink-0',
                 statusDotColor(latestRun?.status ?? 'failed'),
@@ -116,7 +134,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
             />
             <div className="min-w-0">
               <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                {fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null)}
+                {fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t)}
               </p>
               <p className="text-2xs text-[var(--text-muted)] truncate">
                 {t('widget.backupMonitor.lastBackup', 'Last backup')}
@@ -147,7 +165,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
           <div className="grid grid-cols-2 gap-3 shrink-0">
             <StatCard
               label={t('widget.backupMonitor.lastBackup', 'Last backup')}
-              value={fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null)}
+              value={fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t)}
             />
             <StatCard
               label={t('widget.backupMonitor.size', 'Backup Size')}
@@ -185,6 +203,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span
+                      aria-hidden="true"
                       className={cn(
                         'inline-block h-2 w-2 rounded-full shadow-[0_0_6px] shrink-0',
                         statusDotColor(run.status),

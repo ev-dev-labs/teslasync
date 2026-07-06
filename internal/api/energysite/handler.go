@@ -1,9 +1,12 @@
 package energysite
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -14,10 +17,36 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// teslaEnergyClient is the narrow slice of *tesla.Client the energy-site
+// handlers depend on. Declaring it at the call site lets handler tests inject a
+// fake without standing up a real Tesla HTTP client + OAuth token.
+type teslaEnergyClient interface {
+	HasValidToken() bool
+	GetProducts(ctx context.Context) ([]byte, int, error)
+	GetEnergySiteInfo(ctx context.Context, energySiteID int64) ([]byte, int, error)
+	SetEnergySiteTOUSettings(ctx context.Context, energySiteID int64, body io.Reader) ([]byte, int, error)
+}
+
+// energySiteStore is the narrow persistence port used by the handlers. It is
+// satisfied by *energydb.TeslaEnergySiteRepo and declared here so tests can
+// substitute an in-memory fake instead of a real pgx pool.
+type energySiteStore interface {
+	GetAll(ctx context.Context) ([]*teslamodel.TeslaEnergySite, error)
+	ReplaceAll(ctx context.Context, sites []*teslamodel.TeslaEnergySite) error
+	GetSiteInfo(ctx context.Context, energySiteID int64) (*string, *time.Time, error)
+	UpdateSiteInfo(ctx context.Context, energySiteID int64, siteInfoJSON string) error
+}
+
+// Compile-time assertions that the production concrete types satisfy the ports.
+var (
+	_ teslaEnergyClient = (*tesla.Client)(nil)
+	_ energySiteStore   = (*energydb.TeslaEnergySiteRepo)(nil)
+)
+
 // EnergySiteHandler serves Tesla energy product (Powerwall, Solar) data.
 type EnergySiteHandler struct {
-	teslaClient *tesla.Client
-	repo        *energydb.TeslaEnergySiteRepo
+	teslaClient teslaEnergyClient
+	repo        energySiteStore
 }
 
 // NewEnergySiteHandler creates a new handler.
@@ -113,10 +142,8 @@ func (h *EnergySiteHandler) SiteInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write envelope with raw JSON data inside to avoid double-serialization
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"data":%s,"fetched_at":"%s"}`, *siteInfoJSON, fetchedAt.Format("2006-01-02T15:04:05Z"))
+	// Write envelope with raw JSON data inside to avoid double-serialization.
+	writeSiteInfoEnvelope(w, *siteInfoJSON, fetchedAt)
 }
 
 // RefreshSiteInfo fetches site_info from Tesla, saves to DB, and returns the data.
@@ -175,9 +202,7 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 	}
 
 	log.Info().Int64("site_id", siteID).Msg("energy site info refresh complete")
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"data":%s,"fetched_at":"%s"}`, *siteInfoJSON, fetchedAt.Format("2006-01-02T15:04:05Z"))
+	writeSiteInfoEnvelope(w, *siteInfoJSON, fetchedAt)
 }
 
 // UpdateTOUSettings proxies a time-of-use rate plan update to the Tesla API.
@@ -295,6 +320,22 @@ func parseProductsResponse(body []byte) ([]*teslamodel.TeslaEnergySite, error) {
 	}
 
 	return sites, nil
+}
+
+// writeSiteInfoEnvelope writes the {"data":<raw>,"fetched_at":<ts|null>}
+// response shape shared by SiteInfo and RefreshSiteInfo. dataJSON is embedded
+// verbatim to avoid re-serializing the stored Tesla payload. fetchedAt is
+// optional: a nil pointer renders `"fetched_at":null` instead of being
+// dereferenced — the previous code panicked (nil-pointer) whenever a row had a
+// non-null site_info_json but a null site_info_fetched_at timestamp.
+func writeSiteInfoEnvelope(w http.ResponseWriter, dataJSON string, fetchedAt *time.Time) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if fetchedAt == nil {
+		fmt.Fprintf(w, `{"data":%s,"fetched_at":null}`, dataJSON)
+		return
+	}
+	fmt.Fprintf(w, `{"data":%s,"fetched_at":"%s"}`, dataJSON, fetchedAt.Format("2006-01-02T15:04:05Z"))
 }
 
 // truncateBody returns the first 500 bytes of a response body for logging.

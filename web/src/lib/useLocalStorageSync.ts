@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { broadcast, subscribe, type BroadcastMessage } from './broadcast'
 
 /**
@@ -22,14 +22,26 @@ export function useLocalStorageSync<T>(
   serialize: (value: T) => string | null,
   msgType: BroadcastMessage['type'],
 ): [T, (next: T) => void] {
-  const read = (): T => {
-    if (typeof window === 'undefined') return parse(null)
+  // parse / serialize / msgType are frequently inline closures at the call
+  // site. Hold the latest ones in refs so the long-lived bus + 'storage'
+  // subscription and the stable `set` callback always invoke the current
+  // variant instead of resurrecting a stale value on the next cross-tab
+  // refresh (the effect deliberately does not re-subscribe on every render).
+  const parseRef = useRef(parse)
+  const serializeRef = useRef(serialize)
+  const msgTypeRef = useRef(msgType)
+  parseRef.current = parse
+  serializeRef.current = serialize
+  msgTypeRef.current = msgType
+
+  const read = useCallback((): T => {
+    if (typeof window === 'undefined') return parseRef.current(null)
     try {
-      return parse(window.localStorage.getItem(key))
+      return parseRef.current(window.localStorage.getItem(key))
     } catch {
-      return parse(null)
+      return parseRef.current(null)
     }
-  }
+  }, [key])
 
   const [value, setValue] = useState<T>(read)
 
@@ -38,7 +50,7 @@ export function useLocalStorageSync<T>(
   useEffect(() => {
     const refresh = () => setValue(read())
     const off = subscribe((m) => {
-      if (m.type === msgType) refresh()
+      if (m.type === msgTypeRef.current) refresh()
     })
     const onStorage = (e: StorageEvent) => {
       if (e.key === key) refresh()
@@ -48,26 +60,29 @@ export function useLocalStorageSync<T>(
       off()
       window.removeEventListener('storage', onStorage)
     }
-  }, [key, msgType])
+  }, [key, read])
 
-  const set = (next: T) => {
-    if (typeof window !== 'undefined') {
-      try {
-        const serialized = serialize(next)
-        if (serialized === null) window.localStorage.removeItem(key)
-        else window.localStorage.setItem(key, serialized)
-      } catch {
-        /* quota / private mode — best-effort */
+  const set = useCallback(
+    (next: T) => {
+      if (typeof window !== 'undefined') {
+        try {
+          const serialized = serializeRef.current(next)
+          if (serialized === null) window.localStorage.removeItem(key)
+          else window.localStorage.setItem(key, serialized)
+        } catch {
+          /* quota / private mode — best-effort */
+        }
       }
-    }
-    setValue(next)
-    // The discriminated union forbids constructing a payload from a bare
-    // type tag — every adapter that uses this helper happens to be one of
-    // the no-payload variants ('checklist.dismissed', 'onboarded',
-    // 'install.dismissed', 'dashboard.layout'). Cast through unknown to
-    // keep this helper generic over those.
-    broadcast({ type: msgType } as unknown as BroadcastMessage)
-  }
+      setValue(next)
+      // The discriminated union forbids constructing a payload from a bare
+      // type tag — every adapter that uses this helper happens to be one of
+      // the no-payload variants ('checklist.dismissed', 'onboarded',
+      // 'install.dismissed', 'dashboard.layout'). Cast through unknown to
+      // keep this helper generic over those.
+      broadcast({ type: msgTypeRef.current } as unknown as BroadcastMessage)
+    },
+    [key],
+  )
 
   return [value, set]
 }

@@ -58,16 +58,17 @@ export function useBreadcrumbs(overrides?: Partial<Record<string, string>>): Bre
       // type is `string | object` and we always pass a string fallback.
       const override = overrides?.[current];
       let label: string = override ?? (t(meta.i18nKey, meta.defaultLabel) as string);
-
-      // Substitute :param placeholders (e.g. "Drive #{{id}}").
-      for (const [key, value] of Object.entries(params)) {
-        if (value) label = label.replace(`{{${key}}}`, value);
-      }
-
-      // Compose href by replacing :params with concrete values.
       let href: string | undefined = current;
+
+      // Resolve dynamic params in a single pass. Substitute EVERY `{{param}}`
+      // placeholder in the label (split/join, not `replace`, so a label that
+      // references a param more than once — e.g. "Drive {{id}} (#{{id}})" —
+      // fully resolves) and replace the `:param` segment in the href with its
+      // concrete value.
       for (const [key, value] of Object.entries(params)) {
-        if (value) href = href.replace(`:${key}`, value);
+        if (!value) continue;
+        label = label.split(`{{${key}}}`).join(value);
+        href = href.replace(`:${key}`, value);
       }
 
       items.unshift({

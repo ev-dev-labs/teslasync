@@ -123,10 +123,7 @@ func (c *GitHubIssuesClient) CreateIssue(ctx context.Context, title, body string
 
 	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		snippet := strings.TrimSpace(string(respBody))
-		if len(snippet) > 200 {
-			snippet = snippet[:200] + "…"
-		}
+		snippet := truncateForError(strings.TrimSpace(string(respBody)), 200)
 		return "", fmt.Errorf("github responded %d: %s", resp.StatusCode, snippet)
 	}
 
@@ -138,4 +135,19 @@ func (c *GitHubIssuesClient) CreateIssue(ctx context.Context, title, body string
 		return "", errors.New("github response missing html_url")
 	}
 	return parsed.HTMLURL, nil
+}
+
+// truncateForError caps an operator-facing error snippet at max runes,
+// appending an ellipsis when truncated. It slices on rune boundaries so a
+// multi-byte UTF-8 sequence in an upstream error body is never split into
+// invalid UTF-8 (a raw byte slice like s[:200] could).
+func truncateForError(s string, max int) string {
+	if max < 0 {
+		max = 0
+	}
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "…"
 }

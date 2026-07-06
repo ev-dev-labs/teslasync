@@ -7,10 +7,62 @@ import { InlineMetric, MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
+import { cn } from '@/lib/cn';
 
 import type { MotorSnapshot } from '@/api/types';
-import { convertTempFromSI } from '@/lib/unitConversion';
+import { convertTempFromSI, type TemperatureUnitPref } from '@/lib/unitConversion';
+
+/** Neutral placeholder for an absent or non-finite reading. */
+const DASH = '—';
+
+/**
+ * Render a finite scalar with a unit suffix, or the neutral placeholder.
+ * A `null` / `undefined` / `NaN` / `±Infinity` reading collapses to "—"
+ * instead of the fabricated "0" that the underlying `safeNumber` coercion
+ * inside `fmtNumber` would otherwise emit.
+ */
+function numberMetric(value: number | null | undefined, unit: string): string {
+  return isFiniteNumber(value) ? `${fmtNumber(value)} ${unit}` : DASH;
+}
+
+/** Integer variant of {@link numberMetric} for whole-count fields (RPM). */
+function intMetric(value: number | null | undefined, unit: string): string {
+  return isFiniteNumber(value) ? `${fmtInt(value)} ${unit}` : DASH;
+}
+
+/** Convert an SI-celsius reading to the display unit, guarding non-finite input. */
+function temperatureMetric(
+  value: number | null | undefined,
+  tempUnit: TemperatureUnitPref,
+): string {
+  return isFiniteNumber(value)
+    ? `${fmtNumber(convertTempFromSI(value, tempUnit))} ${tempUnit}`
+    : DASH;
+}
+
+/** HV isolation reading in kΩ. Only finite, strictly-positive values render. */
+function isolationMetric(value: number | null | undefined): string {
+  return isFiniteNumber(value) && value > 0 ? `${fmtNumber(value)} kΩ` : DASH;
+}
+
+/** Trim a text reading to a non-empty value, or the neutral placeholder. */
+function textMetric(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : DASH;
+}
+
+/**
+ * Icon tint for the HV isolation reading. Non-finite or non-positive
+ * readings are treated as "unknown" (muted) so the glyph never implies a
+ * danger (red) state for a value the cell itself renders as "—".
+ */
+function isolationTint(value: number | null | undefined): string {
+  if (!isFiniteNumber(value) || value <= 0) return 'text-[var(--text-muted)]';
+  if (value >= 500) return 'text-emerald-300';
+  if (value >= 100) return 'text-amber-300';
+  return 'text-rose-300';
+}
 
 interface LiveMotorStatusProps {
   motorLatest: MotorSnapshot | null | undefined;
@@ -21,8 +73,6 @@ interface LiveMotorStatusProps {
 export function LiveMotorStatus({ motorLatest, isolationResistance, loading = false }: LiveMotorStatusProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
   const tempUnit = unitPrefs.temperature;
 
   const hasData = motorLatest != null;
@@ -41,25 +91,25 @@ export function LiveMotorStatus({ motorLatest, isolationResistance, loading = fa
             <Grid cols={{ default: 2, sm: 4 }} gap={3}>
               <MetricCard
                 label={t('drivetrain.shiftState', 'Shift State')}
-                value={motorLatest.shift_state ?? '—'}
+                value={textMetric(motorLatest.shift_state)}
                 icon={<Cog className="h-4 w-4" aria-hidden="true" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('drivetrain.power', 'Power')}
-                value={motorLatest.power_kw != null ? `${fmtNumber(motorLatest.power_kw)} kW` : '—'}
+                value={numberMetric(motorLatest.power_kw, 'kW')}
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
                 color="purple"
               />
               <MetricCard
                 label={t('drivetrain.regen', 'Regen')}
-                value={motorLatest.regen_kw != null ? `${fmtNumber(motorLatest.regen_kw)} kW` : '—'}
+                value={numberMetric(motorLatest.regen_kw, 'kW')}
                 icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
                 color="green"
               />
               <MetricCard
                 label={t('drivetrain.source', 'Source')}
-                value={motorLatest.source ?? '—'}
+                value={textMetric(motorLatest.source)}
                 icon={<Activity className="h-4 w-4" aria-hidden="true" />}
                 color="blue"
               />
@@ -68,96 +118,52 @@ export function LiveMotorStatus({ motorLatest, isolationResistance, loading = fa
               <InlineMetric
                 icon={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                 label={t('drivetrain.rpmFront', 'Front Motor RPM')}
-                value={
-                  motorLatest.motor_rpm_front != null
-                    ? `${fmtInt(motorLatest.motor_rpm_front)} RPM`
-                    : '—'
-                }
+                value={intMetric(motorLatest.motor_rpm_front, 'RPM')}
               />
               <InlineMetric
                 icon={<Activity className="h-4 w-4 text-purple-300" aria-hidden="true" />}
                 label={t('drivetrain.rpmRear', 'Rear Motor RPM')}
-                value={
-                  motorLatest.motor_rpm_rear != null
-                    ? `${fmtInt(motorLatest.motor_rpm_rear)} RPM`
-                    : '—'
-                }
+                value={intMetric(motorLatest.motor_rpm_rear, 'RPM')}
               />
               <InlineMetric
                 icon={<Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                 label={t('drivetrain.torqueFront', 'Front Torque')}
-                value={
-                  motorLatest.torque_nm_front != null
-                    ? `${fmtNumber(motorLatest.torque_nm_front)} Nm`
-                    : '—'
-                }
+                value={numberMetric(motorLatest.torque_nm_front, 'Nm')}
               />
               <InlineMetric
                 icon={<Zap className="h-4 w-4 text-purple-300" aria-hidden="true" />}
                 label={t('drivetrain.torqueRear', 'Rear Torque')}
-                value={
-                  motorLatest.torque_nm_rear != null
-                    ? `${fmtNumber(motorLatest.torque_nm_rear)} Nm`
-                    : '—'
-                }
+                value={numberMetric(motorLatest.torque_nm_rear, 'Nm')}
               />
               <InlineMetric
                 icon={<Thermometer className="h-4 w-4 text-rose-300" aria-hidden="true" />}
                 label={t('drivetrain.motorTempFront', 'Front Motor Temp')}
-                value={
-                  motorLatest.motor_temp_c_front != null
-                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.motor_temp_c_front))} ${tempUnit}`
-                    : '—'
-                }
+                value={temperatureMetric(motorLatest.motor_temp_c_front, tempUnit)}
               />
               <InlineMetric
                 icon={<Thermometer className="h-4 w-4 text-rose-300" aria-hidden="true" />}
                 label={t('drivetrain.motorTempRear', 'Rear Motor Temp')}
-                value={
-                  motorLatest.motor_temp_c_rear != null
-                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.motor_temp_c_rear))} ${tempUnit}`
-                    : '—'
-                }
+                value={temperatureMetric(motorLatest.motor_temp_c_rear, tempUnit)}
               />
               <InlineMetric
                 icon={<Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />}
                 label={t('drivetrain.inverterTemp', 'Inverter Temp')}
-                value={
-                  motorLatest.inverter_temp_c != null
-                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.inverter_temp_c))} ${tempUnit}`
-                    : '—'
-                }
+                value={temperatureMetric(motorLatest.inverter_temp_c, tempUnit)}
               />
               <InlineMetric
                 icon={<Thermometer className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
                 label={t('drivetrain.batteryTemp', 'Battery Temp')}
-                value={
-                  motorLatest.battery_temp_c != null
-                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.battery_temp_c))} ${tempUnit}`
-                    : '—'
-                }
+                value={temperatureMetric(motorLatest.battery_temp_c, tempUnit)}
               />
               <InlineMetric
                 icon={
                   <Shield
                     aria-hidden="true"
-                    className={
-                      isolationResistance == null || isolationResistance <= 0
-                        ? 'h-4 w-4 text-[var(--text-muted)]'
-                        : isolationResistance >= 500
-                          ? 'h-4 w-4 text-emerald-300'
-                          : isolationResistance >= 100
-                            ? 'h-4 w-4 text-amber-300'
-                            : 'h-4 w-4 text-rose-300'
-                    }
+                    className={cn('h-4 w-4', isolationTint(isolationResistance))}
                   />
                 }
                 label={t('drivetrain.isolationResistance', 'HV Isolation')}
-                value={
-                  isolationResistance != null && isolationResistance > 0
-                    ? `${fmtNumber(isolationResistance)} kΩ`
-                    : '—'
-                }
+                value={isolationMetric(isolationResistance)}
               />
             </div>
           </>

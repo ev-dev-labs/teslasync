@@ -1,21 +1,55 @@
 package teslauserconfig
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 
 	"github.com/rs/zerolog/log"
 )
 
+// teslaFetchTimeout bounds a single outbound Tesla Fleet API call made
+// while refreshing user config. An unbounded call would let a hung Tesla
+// edge pin a request goroutine indefinitely; 30s matches the Tesla API
+// timeout budget used elsewhere in the codebase.
+const teslaFetchTimeout = 30 * time.Second
+
+// teslaConfigClient is the subset of *tesla.Client this handler needs.
+// Depending on the port (rather than the concrete client) keeps the
+// handler unit-testable without a live Fleet API or OAuth token.
+type teslaConfigClient interface {
+	HasValidToken() bool
+	GetUserFeatureConfig(ctx context.Context) ([]byte, int, error)
+	GetUserRegion(ctx context.Context) ([]byte, int, error)
+}
+
+// teslaConfigStore is the subset of *tesladb.TeslaUserConfigRepo this
+// handler needs — the persistence port for stored config blobs.
+type teslaConfigStore interface {
+	GetByType(ctx context.Context, configType string) (*teslamodel.TeslaUserConfig, error)
+	Upsert(ctx context.Context, configType, data string) error
+}
+
+// Compile-time guarantees that the production dependencies still satisfy
+// the ports the handler is written against, so an upstream signature
+// drift fails the build here rather than at wiring time in router.go.
+var (
+	_ teslaConfigClient = (*tesla.Client)(nil)
+	_ teslaConfigStore  = (*tesladb.TeslaUserConfigRepo)(nil)
+)
+
 // Handler serves Tesla user-level configuration data (feature flags, region).
 type Handler struct {
-	teslaClient *tesla.Client
-	configRepo  *tesladb.TeslaUserConfigRepo
+	teslaClient teslaConfigClient
+	configRepo  teslaConfigStore
 }
 
 // NewHandler creates a new handler.
@@ -41,9 +75,7 @@ func (h *Handler) FeatureConfig(w http.ResponseWriter, r *http.Request) {
 // RefreshFeatureConfig fetches feature config from Tesla and saves to DB.
 // POST /api/v1/tesla/user/feature-config/refresh
 func (h *Handler) RefreshFeatureConfig(w http.ResponseWriter, r *http.Request) {
-	h.refreshConfig(w, r, "feature_config", func() ([]byte, int, error) {
-		return h.teslaClient.GetUserFeatureConfig(r.Context())
-	})
+	h.refreshConfig(w, r, "feature_config", h.teslaClient.GetUserFeatureConfig)
 }
 
 // Region returns stored region from DB.
@@ -55,9 +87,7 @@ func (h *Handler) Region(w http.ResponseWriter, r *http.Request) {
 // RefreshRegion fetches region from Tesla and saves to DB.
 // POST /api/v1/tesla/user/region/refresh
 func (h *Handler) RefreshRegion(w http.ResponseWriter, r *http.Request) {
-	h.refreshConfig(w, r, "region", func() ([]byte, int, error) {
-		return h.teslaClient.GetUserRegion(r.Context())
-	})
+	h.refreshConfig(w, r, "region", h.teslaClient.GetUserRegion)
 }
 
 // getConfig is a shared helper to return stored config with fetched_at metadata.
@@ -75,15 +105,23 @@ func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request, configType s
 		})
 		return
 	}
+	// Guard against a blank stored blob: an empty json.RawMessage marshals
+	// to invalid JSON and would emit a 200 with a malformed body. The write
+	// path already normalises to "{}", but legacy or hand-inserted rows may
+	// still be empty.
+	data := cfg.Data
+	if strings.TrimSpace(data) == "" {
+		data = "{}"
+	}
 	ts := cfg.FetchedAt.UTC().Format("2006-01-02T15:04:05Z")
 	httpx.WriteJSON(w, http.StatusOK, configEnvelope{
-		Data:      json.RawMessage(cfg.Data),
+		Data:      json.RawMessage(data),
 		FetchedAt: &ts,
 	})
 }
 
 // refreshConfig is a shared helper to fetch from Tesla, unwrap the envelope, persist, and return.
-func (h *Handler) refreshConfig(w http.ResponseWriter, r *http.Request, configType string, fetch func() ([]byte, int, error)) {
+func (h *Handler) refreshConfig(w http.ResponseWriter, r *http.Request, configType string, fetch func(ctx context.Context) ([]byte, int, error)) {
 	if !h.teslaClient.HasValidToken() {
 		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
@@ -91,7 +129,10 @@ func (h *Handler) refreshConfig(w http.ResponseWriter, r *http.Request, configTy
 
 	log.Info().Str("config_type", configType).Msg("refreshing tesla user config")
 
-	body, status, err := fetch()
+	ctx, cancel := context.WithTimeout(r.Context(), teslaFetchTimeout)
+	defer cancel()
+
+	body, status, err := fetch(ctx)
 	if err != nil {
 		log.Error().Err(err).Str("config_type", configType).Msg("tesla user config API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch from Tesla")

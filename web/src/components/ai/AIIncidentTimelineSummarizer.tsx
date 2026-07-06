@@ -51,6 +51,15 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+/**
+ * Stable no-op event handler. The incident summary is accumulated by
+ * useAiStream's built-in `text` field, so this feature needs no
+ * per-event handling. A module-level reference keeps useAiStream's
+ * onEvent effect from re-subscribing on every render (a fresh inline
+ * `() => {}` would).
+ */
+const noop = (): void => {}
+
 interface InnerSectionProps {
   /**
    * incidentId surfaced by the parent IncidentTimelinePage. The
@@ -92,8 +101,15 @@ function InnerSection({ incidentId }: InnerSectionProps) {
 
   const numericIncidentId =
     typeof incidentId === 'number' ? incidentId : Number(incidentId)
+  // A valid incident is a positive INTEGER. The backend parses the
+  // {incidentID} path segment with strconv.ParseInt and 400s on a
+  // fractional / non-numeric value, so the button mirrors that
+  // integer-only contract client-side (fail-closed, same posture as
+  // the `> 0` guard) rather than enabling a click the API would
+  // reject. Number.isInteger also rejects NaN / ±Infinity, covering
+  // undefined and non-numeric strings in one predicate.
   const haveIncident =
-    Number.isFinite(numericIncidentId) && numericIncidentId > 0
+    Number.isInteger(numericIncidentId) && numericIncidentId > 0
 
   // The backend reads incident_id from the URL path; the body is
   // intentionally empty. useMemo keeps the body reference stable so
@@ -110,23 +126,15 @@ function InnerSection({ incidentId }: InnerSectionProps) {
     ? `/ai/system/incidents/${numericIncidentId}/summarize`
     : '/ai/system/incidents/0/summarize'
 
-  const stream = useAiStream({
-    url,
-    body,
-    onEvent: () => {},
-  })
+  const stream = useAiStream({ url, body, onEvent: noop })
 
-  
   return (
     <AIFeatureCard
-      title={t(
-                  'incidentTimeline.aiSummary.title',
-                  'Helix timeline summary',
-                )}
+      title={t('incidentTimeline.aiSummary.title', 'Helix timeline summary')}
       description={t(
-                'incidentTimeline.aiSummary.description',
-                'Get a 3-6 sentence factual summary of this incident\u2019s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.',
-              )}
+        'incidentTimeline.aiSummary.description',
+        'Get a 3-6 sentence factual summary of this incident\u2019s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.',
+      )}
       buttonLabel={t('incidentTimeline.aiSummary.button', 'Summarize')}
       badgeLabel={t('incidentTimeline.aiSummary.badge', 'Helix')}
       canStart={haveIncident}

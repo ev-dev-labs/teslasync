@@ -1,4 +1,4 @@
-import { useId, useRef, type KeyboardEvent } from 'react';
+import { useId, useMemo, useRef, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/cn';
 
 export interface TabItem {
@@ -20,7 +20,10 @@ export interface TabsProps {
  * Accessible tabs (WAI-ARIA Tabs pattern):
  * - `role="tablist"` on the container.
  * - Each tab is `role="tab"` with `aria-selected` and roving `tabindex` so
- *   the tab strip is one stop in the document tab order.
+ *   the tab strip is one stop in the document tab order. The selected tab is
+ *   the tab stop; if `activeTab` matches no enabled tab (unknown key, or the
+ *   selected tab is disabled) the first enabled tab becomes the tab stop so the
+ *   strip never drops out of the keyboard tab order.
  * - Left/Right arrows move focus and activation between tabs (automatic
  *   activation — `onChange` fires immediately). Home/End jump to first/last.
  * - Disabled tabs are skipped during arrow navigation.
@@ -33,7 +36,17 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
   const tablistId = useId();
   const refs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-  const enabledKeys = tabs.filter(t => !t.disabled).map(t => t.key);
+  const items = tabs ?? [];
+  const enabledKeys = useMemo(
+    () => items.filter(t => !t.disabled).map(t => t.key),
+    [items],
+  );
+
+  // Roving tabindex: exactly one tab sits in the document tab order. That is the
+  // selected tab when it is enabled, but if `activeTab` matches no enabled tab
+  // (unknown key, or the selected tab is disabled) we fall back to the first
+  // enabled tab so the tablist never becomes unreachable by keyboard.
+  const focusableKey = enabledKeys.includes(activeTab) ? activeTab : enabledKeys[0];
 
   const moveFocus = (nextKey: string) => {
     onChange(nextKey);
@@ -67,7 +80,7 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
       role="tablist"
       aria-label={ariaLabel}
     >
-      {tabs.map((tab) => {
+      {items.map((tab) => {
         const selected = activeTab === tab.key;
         return (
           <button
@@ -81,7 +94,7 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
             role="tab"
             aria-selected={selected}
             aria-controls={`${tablistId}-panel-${tab.key}`}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={tab.key === focusableKey ? 0 : -1}
             disabled={tab.disabled}
             onClick={() => onChange(tab.key)}
             onKeyDown={(e) => handleKeyDown(e, tab.key)}

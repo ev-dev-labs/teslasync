@@ -35,7 +35,7 @@ function EndpointToggle({ label, desc, enabled, onToggle }: {
         <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">{label}</Text>
         <Caption className="block truncate">{desc}</Caption>
       </div>
-      <Toggle checked={enabled} onChange={() => onToggle()} size="sm" className="shrink-0" />
+      <Toggle checked={enabled} onChange={() => onToggle()} size="sm" className="shrink-0" aria-label={label} />
     </GlassPanel>
   );
 }
@@ -143,6 +143,14 @@ export default function FleetAPIPage() {
   const distinctVinsCount = captureStats?.distinct_vins?.length ?? 0;
   const kpiLoading = settingsQuery.isLoading || pollingQuery.isLoading;
 
+  // A source that has errored (or simply hasn't resolved yet, once the KPI
+  // band is past its own skeleton) must not fabricate a healthy-looking
+  // value. We surface an em-dash instead of "Active" / "0" / "On" so the
+  // KPI never lies about state it doesn't actually know.
+  const EM_DASH = '—';
+  const apiStatusKnown = !!settings;
+  const pollingKnown = !!pollingConfig;
+
   const versionLabel = version
     ? `v${version.chart_version} · ${version.go_version} · ${version.os}/${version.arch}`
     : '';
@@ -180,30 +188,34 @@ export default function FleetAPIPage() {
             <>
               <MetricCard
                 label={t('fleetApi.kpis.apiStatus', 'API Status')}
-                value={apiSuspended ? t('fleetApi.status.suspended', 'Suspended') : t('fleetApi.status.active', 'Active')}
-                icon={apiSuspended ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                color={apiSuspended ? 'red' : 'green'}
+                value={apiStatusKnown
+                  ? (apiSuspended ? t('fleetApi.status.suspended', 'Suspended') : t('fleetApi.status.active', 'Active'))
+                  : EM_DASH}
+                icon={apiStatusKnown && apiSuspended ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                color={!apiStatusKnown ? 'blue' : apiSuspended ? 'red' : 'green'}
                 subtitle={t('fleetApi.kpis.apiStatusHint', 'Tesla Fleet polling')}
               />
               <MetricCard
                 label={t('fleetApi.kpis.endpointsEnabled', 'Endpoints Enabled')}
-                value={`${fmtInt(enabledCount)} / ${fmtInt(totalCount)}`}
+                value={pollingKnown ? `${fmtInt(enabledCount)} / ${fmtInt(totalCount)}` : EM_DASH}
                 icon={<Shield className="h-5 w-5" />}
                 color="cyan"
                 subtitle={t('fleetApi.kpis.endpointsHint', 'Active toggles')}
               />
               <MetricCard
                 label={t('fleetApi.kpis.telemetryCapture', 'Telemetry Capture')}
-                value={captureEnabled ? t('common.on', 'On') : t('common.off', 'Off')}
+                value={pollingKnown ? (captureEnabled ? t('common.on', 'On') : t('common.off', 'Off')) : EM_DASH}
                 icon={<Database className="h-5 w-5" />}
-                color={captureEnabled ? 'purple' : 'blue'}
-                subtitle={mongoEnabled
-                  ? t('fleetApi.kpis.mongoConnected', 'MongoDB connected')
-                  : t('fleetApi.kpis.mongoOff', 'MongoDB not configured')}
+                color={pollingKnown && captureEnabled ? 'purple' : 'blue'}
+                subtitle={mongoStatusKnown
+                  ? (mongoEnabled
+                    ? t('fleetApi.kpis.mongoConnected', 'MongoDB connected')
+                    : t('fleetApi.kpis.mongoOff', 'MongoDB not configured'))
+                  : t('fleetApi.kpis.mongoUnknown', 'Storage status unknown')}
               />
               <MetricCard
                 label={t('fleetApi.kpis.signalsCaptured', 'Signals Captured')}
-                value={fmtInt(totalDocuments)}
+                value={mongoStatusKnown ? fmtInt(totalDocuments) : EM_DASH}
                 icon={<Activity className="h-5 w-5" />}
                 color="amber"
                 subtitle={t('fleetApi.kpis.signalsHint', 'Stored documents')}

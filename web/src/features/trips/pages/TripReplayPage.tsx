@@ -51,7 +51,7 @@ import {
 /** Format ms duration as "HH:MM:SS" or "MM:SS". Non-finite/negative input
  *  collapses to "00:00" so an upstream data bug surfaces as a sane
  *  placeholder instead of "NaN:NaN" leaking into the UI. */
-function fmtDuration(ms: number): string {
+export function fmtDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return '00:00';
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
@@ -62,10 +62,16 @@ function fmtDuration(ms: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-/** Format drive duration in minutes as "Xh Ym" */
-function fmtDriveTime(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
+/** Format drive duration in minutes as "Xh Ym". Rounds to whole minutes
+ *  first so a fractional input (e.g. 59.6 from `durationS / 60`) rolls over
+ *  correctly to "1h 0m" instead of rendering the impossible "60m". Non-finite
+ *  or non-positive input collapses to "0m" so a bad `durationS` can't leak a
+ *  "NaNm" placeholder into the summary band. */
+export function fmtDriveTime(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return '0m';
+  const totalMin = Math.round(min);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
@@ -295,9 +301,12 @@ export default function TripReplayPage() {
   /* ---- Speed + Power timeline data (shared with TripReplayCharts) ---- */
   const timelineData: TripReplayChartPoint[] = useMemo(() => {
     if (positions.length === 0) return [];
-    const t0 = new Date(positions[0].timestamp).getTime();
+    const t0 = positions
+      .map((p) => new Date(p.timestamp).getTime())
+      .find((ts) => Number.isFinite(ts)) ?? 0;
     return positions.map((p, i) => {
-      const elapsedMin = (new Date(p.timestamp).getTime() - t0) / 60_000;
+      const ts = new Date(p.timestamp).getTime();
+      const elapsedMin = Number.isFinite(ts) ? (ts - t0) / 60_000 : 0;
       return {
         index: i,
         time: Number(elapsedMin.toFixed(3)),
@@ -478,7 +487,7 @@ export default function TripReplayPage() {
               <StatCard
                 label={t('replay.summary.efficiency', 'Efficiency')}
                 value={efficiency != null ? fmtNumber(efficiency) : '—'}
-                unit={efficiency != null ? 'Wh/km' : undefined}
+                unit={efficiency != null ? (distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km') : undefined}
                 icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
               />
             </StaggerItem>

@@ -29,10 +29,16 @@ export function PageHeader({
         <div className="flex items-start gap-3">
           {icon && <div className="mt-1">{icon}</div>}
           <div>
-            <Heading level="page" className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">
+            <Heading
+              level="page"
+              className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent forced-colors:text-[CanvasText]"
+            >
               {title}
             </Heading>
-            <div className="mt-1.5 sm:mt-2 h-0.5 w-12 sm:w-16 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple opacity-60" />
+            <div
+              aria-hidden="true"
+              className="mt-1.5 sm:mt-2 h-0.5 w-12 sm:w-16 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple opacity-60"
+            />
             {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[var(--text-secondary)]">{subtitle}</p>}
           </div>
         </div>

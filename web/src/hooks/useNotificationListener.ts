@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { sseManager } from '../lib/sseManager'
 import { useWebPush } from './useWebPush'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
@@ -22,18 +23,38 @@ const DEFAULT_PREFS: WebPushPreferences = {
   exportStatus: true,
 }
 
+// Merge only the known boolean keys from persisted JSON over the defaults.
+// Guards against a corrupt/legacy payload that parses to a non-object (e.g.
+// a bare string or number, which would otherwise spread stray index keys onto
+// the prefs object) or carries non-boolean values for a known key.
+function normalizePrefs(raw: unknown): WebPushPreferences {
+  const out: WebPushPreferences = { ...DEFAULT_PREFS }
+  if (raw && typeof raw === 'object') {
+    const r = raw as Record<string, unknown>
+    if (typeof r.alerts === 'boolean') out.alerts = r.alerts
+    if (typeof r.exportStatus === 'boolean') out.exportStatus = r.exportStatus
+  }
+  return out
+}
+
 function loadPrefs(): WebPushPreferences {
   try {
     const raw = localStorage.getItem(PREFS_KEY)
-    if (!raw) return DEFAULT_PREFS
-    return { ...DEFAULT_PREFS, ...JSON.parse(raw) }
+    if (!raw) return { ...DEFAULT_PREFS }
+    return normalizePrefs(JSON.parse(raw))
   } catch {
-    return DEFAULT_PREFS
+    return { ...DEFAULT_PREFS }
   }
 }
 
 function savePrefs(prefs: WebPushPreferences) {
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
+  } catch {
+    // Quota exceeded / private-mode / storage disabled: keep the in-memory
+    // update so the current tab still reflects the toggle even though it
+    // cannot be persisted across reloads.
+  }
 }
 
 interface AlertEventData {
@@ -75,6 +96,7 @@ interface ExportStatusData {
  */
 export function useNotificationListener() {
   const { permission, sendNotification } = useWebPush()
+  const { t } = useTranslation()
   const [prefs, setPrefsState] = useState<WebPushPreferences>(loadPrefs)
   const navigate = useNavigate()
 
@@ -97,7 +119,7 @@ export function useNotificationListener() {
       const data = raw as AlertEventData
       if (data.quiet_suppressed || data.is_test) return
 
-      const title = data.title ?? 'TeslaSync Alert'
+      const title = data.title ?? t('browserNotifications.toast.alertTitle', 'TeslaSync Alert')
       const body = [data.vehicle_name, data.message].filter(Boolean).join(' — ')
 
       // Build a drill-through URL so clicking the OS notification deep-links
@@ -135,15 +157,19 @@ export function useNotificationListener() {
 
       const data = raw as ExportStatusData
       if (data.status === 'ready') {
-        sendNotification('Export Ready', {
+        sendNotification(t('browserNotifications.toast.exportReadyTitle', 'Export Ready'), {
           body: data.filename
-            ? `${data.filename} is ready for download`
-            : 'Your data export is ready for download',
+            ? t('browserNotifications.toast.exportReadyBody', '{{filename}} is ready for download', {
+                filename: data.filename,
+              })
+            : t('browserNotifications.toast.exportReadyBodyGeneric', 'Your data export is ready for download'),
           tag: 'export-ready',
         })
       } else if (data.status === 'failed') {
-        sendNotification('Export Failed', {
-          body: data.error ?? 'Data export failed. Check the exports page for details.',
+        sendNotification(t('browserNotifications.toast.exportFailedTitle', 'Export Failed'), {
+          body:
+            data.error ??
+            t('browserNotifications.toast.exportFailedBody', 'Data export failed. Check the exports page for details.'),
           tag: 'export-failed',
         })
       }
@@ -156,7 +182,7 @@ export function useNotificationListener() {
       sseManager.unsubscribe('alert', onAlert)
       sseManager.unsubscribe('export_status', onExportStatus)
     }
-  }, [permission, prefs, sendNotification, navigate])
+  }, [permission, prefs, sendNotification, navigate, t])
 
   // Per-channel notification sounds live in their own effect because audio
   // cues are independent of the OS browser

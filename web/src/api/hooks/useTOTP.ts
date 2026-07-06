@@ -164,9 +164,16 @@ export function useTOTPStepUp() {
       // subsequent request from this tab automatically carries the
       // X-Sudo-Token header — same flow as the password reauth path
       // already does in <ReauthDialog>.
+      //
+      // A malformed or absent `expires_at` parses to NaN, and NaN compares
+      // false against Date.now() — so getCachedSudoToken() would treat the
+      // grant as valid forever. Clamp a non-finite expiry to 0 (already
+      // expired) so the reauth interceptor re-challenges on the next
+      // request instead of silently reusing an unbounded sudo token.
+      const expiresAtMs = new Date(result.expires_at).getTime()
       setCachedSudoToken({
         token: result.sudo_token,
-        expiresAtMs: new Date(result.expires_at).getTime(),
+        expiresAtMs: Number.isFinite(expiresAtMs) ? expiresAtMs : 0,
       })
       return result
     },

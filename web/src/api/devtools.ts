@@ -1,4 +1,4 @@
-import { apiUrl, request } from './client'
+import { apiUrl, request, ApiError } from './client'
 import type {
   CaptureStats,
   TelemetryStatus,
@@ -195,16 +195,35 @@ export const getExportJob = (jobId: string) =>
   request<ExportJobSummary>(`/export/jobs/${jobId}`)
 export const getExportJobDownloadUrl = (jobId: string) =>
   apiUrl(`/export/jobs/${jobId}/download`)
-export const submitImportJob = (type: 'import_drives' | 'import_charging', file: File) => {
+export const submitImportJob = async (
+  type: 'import_drives' | 'import_charging',
+  file: File,
+): Promise<ExportJobSubmitResponse> => {
   const formData = new FormData()
   formData.append('type', type)
   formData.append('file', file)
-  // Override Content-Type to let browser set multipart/form-data with boundary
-  return request<ExportJobSubmitResponse>('/export/jobs/import', {
+  // Multipart uploads MUST bypass request(): the shared client's buildHeaders
+  // forces `Content-Type: application/json` on any non-null body, which strips
+  // the `boundary=…` the browser needs to emit for a FormData body and makes
+  // the server's multipart parser reject the upload. Mirror the canonical
+  // raw-fetch pattern in useUploadVehiclePhoto so the browser owns Content-Type.
+  const res = await fetch(apiUrl('/export/jobs/import'), {
     method: 'POST',
     body: formData,
-    headers: {},
   })
+  if (!res.ok) {
+    let message = res.statusText
+    let code: string | undefined
+    try {
+      const body = (await res.json()) as { error?: string; code?: string }
+      if (body.error) message = body.error
+      code = body.code
+    } catch {
+      // Non-JSON error body — keep the status-text fallback.
+    }
+    throw new ApiError(message, res.status, code)
+  }
+  return (await res.json()) as ExportJobSubmitResponse
 }
 
 // === Chatbot ===
@@ -213,7 +232,10 @@ export const sendChatMessage = (message: string, sessionId?: string) =>
   request<ChatResponse>('/chatbot', { method: 'POST', body: JSON.stringify({ message, session_id: sessionId }) })
 /** Fetches the full chat history for a given session. */
 export const getChatHistory = (sessionId: string, opts?: { signal?: AbortSignal | null }) =>
-  request<ChatMessage[]>(`/chatbot/history?session_id=${sessionId}`, { signal: opts?.signal })
+  request<ChatMessage[]>(
+    `/chatbot/history?session_id=${encodeURIComponent(sessionId)}`,
+    { signal: opts?.signal },
+  )
 /** Lists chat sessions with rich metadata (title, message count, timestamps). */
 export const getChatSessions = (opts?: { signal?: AbortSignal | null }) =>
   request<ChatSessionInfo[]>('/chatbot/sessions', { signal: opts?.signal })

@@ -45,7 +45,7 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       label: t('widget.regenEfficiency.freeCharges', 'Free Charges'),
       value: fmtInt(data?.freeCharges ?? 0),
     },
-  ], [data, t]);
+  ], [data, t, formatEnergy, formatPower]);
 
   const gaugeConfig = useMemo(() => ({
     value: Math.round(regenPct),
@@ -67,13 +67,7 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
           {data ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -50,6 +50,9 @@ export default function FeedbackQueuePage() {
   const [statusFilter, setStatusFilter] = useState<'' | FeedbackStatus>('')
   const [categoryFilter, setCategoryFilter] = useState<'' | FeedbackCategory>('')
   const [page, setPage] = useState(0)
+  // DataTable expansion is controlled — without this wiring the row-drawer
+  // triage controls (status change, GitHub URL, forward) are unreachable.
+  const [expandedRows, setExpandedRows] = useState<(string | number)[]>([])
 
   const listQuery = useFeedbackList({
     status: statusFilter || undefined,
@@ -83,6 +86,51 @@ export default function FeedbackQueuePage() {
   const statusError = newQ.error || triagedQ.error || closedQ.error
   const categoryLoading = bugQ.isLoading || featureQ.isLoading || otherQ.isLoading
   const categoryError = bugQ.error || featureQ.error || otherQ.error
+
+  // A page-level refresh reloads the table AND the six whole-queue count
+  // queries so the KPI band + insights stay consistent with the table
+  // (they are independent queries, so refetching only the list left them stale).
+  const isRefreshing =
+    isFetching ||
+    newQ.isFetching ||
+    triagedQ.isFetching ||
+    closedQ.isFetching ||
+    bugQ.isFetching ||
+    featureQ.isFetching ||
+    otherQ.isFetching
+
+  const handleRefreshAll = useCallback(() => {
+    refetch()
+    newQ.refetch()
+    triagedQ.refetch()
+    closedQ.refetch()
+    bugQ.refetch()
+    featureQ.refetch()
+    otherQ.refetch()
+  }, [
+    refetch,
+    newQ.refetch,
+    triagedQ.refetch,
+    closedQ.refetch,
+    bugQ.refetch,
+    featureQ.refetch,
+    otherQ.refetch,
+  ])
+
+  // The triage-progress / category-mix panels are fed by the count queries, not
+  // the table query — so their retry must refetch those facet counts, otherwise
+  // clicking "Retry" silently reloads the list and leaves the panel broken.
+  const handleRetryStatusCounts = useCallback(() => {
+    newQ.refetch()
+    triagedQ.refetch()
+    closedQ.refetch()
+  }, [newQ.refetch, triagedQ.refetch, closedQ.refetch])
+
+  const handleRetryCategoryCounts = useCallback(() => {
+    bugQ.refetch()
+    featureQ.refetch()
+    otherQ.refetch()
+  }, [bugQ.refetch, featureQ.refetch, otherQ.refetch])
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
@@ -187,11 +235,11 @@ export default function FeedbackQueuePage() {
     <Button
       variant="ghost"
       size="sm"
-      onClick={() => refetch()}
-      disabled={isFetching}
+      onClick={handleRefreshAll}
+      disabled={isRefreshing}
       aria-label={t('common.refresh', 'Refresh')}
     >
-      {isFetching ? <Spinner size="sm" /> : <Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+      {isRefreshing ? <Spinner size="sm" /> : <Icons.refresh className="h-4 w-4" aria-hidden="true" />}
       <span className="ml-1">{t('common.refresh', 'Refresh')}</span>
     </Button>
   )
@@ -232,7 +280,7 @@ export default function FeedbackQueuePage() {
             {statusLoading ? (
               <Skeleton height={140} />
             ) : statusError ? (
-              <QueryError error={statusError} onRetry={() => refetch()} />
+              <QueryError error={statusError} onRetry={handleRetryStatusCounts} />
             ) : statusTotal === 0 ? (
               <EmptyState
                 icon={<Icons.workflow className="h-8 w-8" aria-hidden="true" />}
@@ -251,7 +299,7 @@ export default function FeedbackQueuePage() {
             {categoryLoading ? (
               <Skeleton height={120} />
             ) : categoryError ? (
-              <QueryError error={categoryError} onRetry={() => refetch()} />
+              <QueryError error={categoryError} onRetry={handleRetryCategoryCounts} />
             ) : categoryTotal === 0 ? (
               <EmptyState
                 icon={<Icons.pieChart className="h-8 w-8" aria-hidden="true" />}
@@ -316,6 +364,8 @@ export default function FeedbackQueuePage() {
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('feedback.queue.empty', 'No feedback yet')}
                 expandable
+                expandedKeys={expandedRows}
+                onExpandedChange={(next) => setExpandedRows(next)}
                 renderExpanded={(row) => (
                   <FeedbackExpansion
                     row={row}

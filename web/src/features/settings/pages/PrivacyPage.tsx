@@ -20,7 +20,7 @@
  * band and the control panels never drift out of sync across tabs.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { PageContainer } from '@/components/layout'
@@ -63,7 +63,16 @@ export default function PrivacyPage() {
   const [consent, setConsentLocal] = useState<ConsentState>(() => getConsent())
 
   const versionQuery = useVersionInfo()
+  const { refetch: refetchVersion } = versionQuery
   const requireConsent = Boolean(versionQuery.data?.require_cookie_consent)
+
+  // Single stable retry shared by the KPI band and the consent panel — both
+  // surface the same `/system/version` failure, so they must recover through
+  // one identical, referentially-stable callback rather than two inline
+  // closures re-created every render.
+  const handleRetry = useCallback(() => {
+    void refetchVersion()
+  }, [refetchVersion])
 
   // Live-update the row counter so users on the same page in two tabs see the
   // count drop after a clear in either tab.
@@ -120,7 +129,7 @@ export default function PrivacyPage() {
             isLoading={versionQuery.isLoading}
             isError={versionQuery.isError}
             error={versionQuery.error}
-            onRetry={() => void versionQuery.refetch()}
+            onRetry={handleRetry}
           />
         </FadeIn>
 
@@ -135,7 +144,7 @@ export default function PrivacyPage() {
               requireConsent={requireConsent}
               isLoading={versionQuery.isLoading}
               isError={versionQuery.isError}
-              onRetry={() => void versionQuery.refetch()}
+              onRetry={handleRetry}
               onAccept={handleAcceptConsent}
               onDecline={handleDeclineConsent}
               onReset={handleResetConsent}

@@ -5,18 +5,23 @@
  * (solar→amber, battery→emerald, grid→purple, home→blue) so the stacked
  * area chart, flow arrows, and SOC line all stay visually consistent. These
  * hexes feed recharts `stroke`/`fill` and dynamic gauge colours — they are
- * chart-layer values, never inline text styles.
+ * chart-layer values, never inline text styles. Frozen so the shared palette
+ * cannot be mutated in place by a sub-component that reads from it.
  */
-export const FLOW_COLORS = {
+export const FLOW_COLORS = Object.freeze({
   solar: '#f59e0b',
   battery: '#22c55e',
   grid: '#a855f7',
   home: '#3b82f6',
   soc: '#22c55e',
-} as const;
+} as const);
 
-/** RangePicker presets exposed on the history toolbar. */
-export const PRESET_IDS = ['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd'] as const;
+/**
+ * RangePicker presets exposed on the history toolbar. Every id MUST resolve to
+ * a known preset in `@/lib/datePresets` (RangePicker looks each one up); frozen
+ * so the shared toolbar list stays a single immutable source.
+ */
+export const PRESET_IDS = Object.freeze(['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd'] as const);
 
 /**
  * Fixed Tesla Energy site id. A future picker can select from multiple sites;

@@ -35,6 +35,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
 import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import {
@@ -47,16 +48,29 @@ import { RateTimeline } from '../components/RateTimeline';
 import { AISmartChargeScheduleSuggestion } from '@/components/ai/AISmartChargeScheduleSuggestion';
 import type { ChargePlan, OptimizeChargeResponse } from '@/types/charging';
 
-const defaultDepartBy = () => {
+/**
+ * Default "Depart By" value for the datetime-local input: tomorrow at 07:30 in
+ * the user's LOCAL time, formatted `yyyy-MM-ddTHH:mm`.
+ *
+ * A `<input type="datetime-local">` value is interpreted as local wall-clock
+ * time, so it must be built from local calendar fields. The previous
+ * implementation used `toISOString().slice(0, 16)`, which emits UTC and shifted
+ * the default by the user's timezone offset (e.g. a UTC+8 user saw the previous
+ * day at 23:30 instead of tomorrow 07:30, and the value round-tripped back
+ * through `new Date(departBy)` — parsed as local — drifting further each run).
+ * `toLocalDatetimeStr` formats local fields; we trim its `:ss` suffix to the
+ * minute precision the input expects.
+ */
+export const defaultDepartBy = (): string => {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   d.setHours(7, 30, 0, 0);
-  return d.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm for datetime-local input
+  return toLocalDatetimeStr(d).slice(0, 16);
 };
 
 /** Maps a plan lifecycle status onto a shared Badge variant so the History
  *  table conveys state with colour + label (never colour alone). */
-function planStatusVariant(
+export function planStatusVariant(
   status: string,
 ): 'success' | 'info' | 'warning' | 'danger' | 'neutral' {
   switch (status) {

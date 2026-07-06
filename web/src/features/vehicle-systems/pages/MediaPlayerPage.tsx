@@ -46,9 +46,11 @@ const VOLUME_FALLBACK_MAX = 11;
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
-/** Milliseconds → `m:ss` play-time label. */
+/** Milliseconds → `m:ss` play-time label. Non-finite/negative input clamps to
+ *  `0:00` so a malformed elapsed/duration never renders `-1:-01`. */
 function fmtPlayTime(ms: number): string {
-  const totalSec = Math.floor((ms || 0) / 1000);
+  const safeMs = Number.isFinite(ms) && ms > 0 ? ms : 0;
+  const totalSec = Math.floor(safeMs / 1000);
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
@@ -132,8 +134,16 @@ export default function MediaPlayerPage() {
     }, {});
 
     const topSource = Object.entries(sources).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
-    const avgVolume =
-      filtered.reduce((sum, s) => sum + (s.audio_volume ?? 0), 0) / filtered.length;
+
+    // Average only snapshots that actually carry a volume reading. Treating a
+    // missing `audio_volume` as 0 (the old behaviour) dragged the mean down and
+    // reported a dishonest "Avg Volume" whenever some rows lacked the field.
+    const volumes = filtered
+      .map((s) => s.audio_volume)
+      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+    const avgVolume = volumes.length
+      ? volumes.reduce((sum, v) => sum + v, 0) / volumes.length
+      : 0;
 
     return { uniqueTracks: titles.size, topSource, avgVolume };
   }, [filtered]);
@@ -146,6 +156,17 @@ export default function MediaPlayerPage() {
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .map((s) => ({ time: formatDateTime(s.created_at), volume: s.audio_volume ?? 0 }));
   }, [filtered]);
+
+  /* ── Volume axis ceiling ──────────────────────────────────── */
+  // Derive the Y-axis max from the data actually being charted so historical
+  // peaks are never clipped when the latest snapshot is missing or reports a
+  // smaller max than a past reading. Always at least the fallback so a flat
+  // low-volume series still renders against a sensible scale.
+  const volumeAxisMax = useMemo(() => {
+    const dataMax = volumeChartData.reduce((m, d) => Math.max(m, d.volume ?? 0), 0);
+    const knownMax = Math.max(dataMax, latest?.audio_volume_max ?? 0);
+    return knownMax > 0 ? knownMax : VOLUME_FALLBACK_MAX;
+  }, [volumeChartData, latest?.audio_volume_max]);
 
   /* ── Source distribution ──────────────────────────────────── */
 
@@ -270,6 +291,14 @@ export default function MediaPlayerPage() {
       ? Math.min(100, ((latest.now_playing_elapsed ?? 0) / latest.now_playing_duration) * 100)
       : 0;
 
+  // Clamped seconds for the progressbar aria values so a negative or
+  // overrun elapsed can never report a value outside [0, duration].
+  const durationSec = latest?.now_playing_duration ? Math.round(latest.now_playing_duration / 1000) : 0;
+  const elapsedSec = Math.min(
+    durationSec,
+    Math.max(0, Math.round((latest?.now_playing_elapsed ?? 0) / 1000)),
+  );
+
   const noVehicleState = (icon: ReactNode, message: string) => (
     <EmptyState /* no-action: awaiting a vehicle selection — no recovery action */
       icon={icon}
@@ -392,8 +421,8 @@ export default function MediaPlayerPage() {
                       role="progressbar"
                       aria-label={t('media.progress', 'Playback progress')}
                       aria-valuemin={0}
-                      aria-valuemax={Math.round(latest.now_playing_duration / 1000)}
-                      aria-valuenow={Math.round((latest.now_playing_elapsed ?? 0) / 1000)}
+                      aria-valuemax={durationSec}
+                      aria-valuenow={elapsedSec}
                     >
                       <Text as="span" variant="caption" className="tabular-nums">
                         {fmtPlayTime(latest.now_playing_elapsed ?? 0)}
@@ -515,7 +544,7 @@ export default function MediaPlayerPage() {
                     <YAxis
                       {...axisTickSm}
                       allowDecimals={false}
-                      domain={[0, latest?.audio_volume_max ?? VOLUME_FALLBACK_MAX]}
+                      domain={[0, volumeAxisMax]}
                     />
                     <Tooltip content={<ChartTooltip />} />
                     <Area

@@ -21,7 +21,7 @@ export { PinButton, type PinButtonProps } from './PinButton';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { IconBox } from './IconBox';
 export { Icon, type IconProps, type IconSize } from './Icon';
-export { TabNav } from './TabNav';
+export { TabNav, type TabNavProps, type TabNavItem } from './TabNav';
 export { Accordion } from './Accordion';
 export { Pagination } from './Pagination';
 export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Column, type PaginationConfig } from './DataTable';

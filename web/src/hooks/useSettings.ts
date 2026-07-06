@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getSettings } from '@/api/settings'
 import type { AppSettings } from '@/api/types'
@@ -58,6 +58,18 @@ const defaults: AppSettings = {
 }
 
 /**
+ * Clamp the backend `decimal_precision` to a value that is always safe to
+ * hand to `Number.prototype.toFixed` / `Intl.NumberFormat` — both throw a
+ * `RangeError` outside 0..20 or on a non-finite input. Mirrors the clamp
+ * inside `setGlobalPrecision` so the value returned to consumers never
+ * diverges from the one pushed into the module-level formatter globals.
+ */
+function sanitizePrecision(v: number | null | undefined): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return 2
+  return Math.max(0, Math.min(20, Math.trunc(v)))
+}
+
+/**
  * React hook providing application settings.
  *
  * Fetches settings from the API (cached for 5 min) and returns settings state
@@ -73,21 +85,24 @@ export function useSettings() {
     retry: 1,
   })
 
-  const raw = settings ?? defaults
   // Backend may return `locale: ''` when the column has never been
   // written. `??` does NOT catch empty strings, so any consumer that
   // does `settings.locale ?? 'en-US'` (or passes it directly to
   // `Intl.NumberFormat`) would break. Normalise once, here, so every
-  // downstream consumer sees a valid BCP-47 tag.
-  const s: AppSettings = raw.locale && raw.locale.trim().length > 0
-    ? raw
-    : { ...raw, locale: defaults.locale }
-  const decimals = s.decimal_precision ?? 2
-  const locale = resolveLocale(s.locale)
-  const density: 'compact' | 'comfortable' | 'spacious' =
-    s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable'
+  // downstream consumer sees a valid BCP-47 tag. Memoised on the raw
+  // query object so `s` (and everything derived from it) keeps a stable
+  // reference across renders that don't change settings.
+  const s: AppSettings = useMemo(() => {
+    const raw = settings ?? defaults
+    return raw.locale && raw.locale.trim().length > 0
+      ? raw
+      : { ...raw, locale: defaults.locale }
+  }, [settings])
 
-    // Sync global precision/locale after render so formatters stay aligned with settings.
+  const decimals = sanitizePrecision(s.decimal_precision)
+  const locale = resolveLocale(s.locale)
+
+  // Sync global precision/locale after render so formatters stay aligned with settings.
   useEffect(() => {
     setGlobalPrecision(decimals)
     setGlobalLocale(locale)
@@ -101,20 +116,23 @@ export function useSettings() {
     })
   }, [refetch])
 
-  const isMiles = s.unit_of_length === 'mi'
-  const isFahrenheit = s.unit_of_temp === 'F'
-  const isPSI = (s.unit_of_pressure ?? 'bar') === 'psi'
-
-  const rangeType = s.preferred_range as 'rated' | 'ideal'
-
-  return {
-    settings: s,
-    isMiles,
-    isFahrenheit,
-    isPSI,
-    decimals,
-    locale,
-    density,
-    rangeType,
-  }
+  return useMemo(() => {
+    const density: 'compact' | 'comfortable' | 'spacious' =
+      s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable'
+    // `preferred_range` is a free-form string on the wire; validate it at
+    // the boundary instead of blind-casting so an empty/unknown value
+    // degrades to the 'rated' default rather than leaking an invalid union
+    // member to consumers (mirrors the `density` guard above).
+    const rangeType: 'rated' | 'ideal' = s.preferred_range === 'ideal' ? 'ideal' : 'rated'
+    return {
+      settings: s,
+      isMiles: s.unit_of_length === 'mi',
+      isFahrenheit: s.unit_of_temp === 'F',
+      isPSI: (s.unit_of_pressure ?? 'bar') === 'psi',
+      decimals,
+      locale,
+      density,
+      rangeType,
+    }
+  }, [s, decimals, locale])
 }

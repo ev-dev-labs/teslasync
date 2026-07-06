@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -30,14 +30,20 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
     data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useRouteEfficiency(vehicleIdStr);
 
   const { unitPrefs } = useUnits();
-  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+  const isMiles = unitPrefs.distance === 'mi';
+  // Stable across renders (keyed on the unit only) so the `items` memo below
+  // is not defeated by a fresh closure on every render.
+  const toEfficiencyDisplay = useCallback(
+    (whPerKm: number) => (isMiles ? whPerKm * 1.609344 : whPerKm),
+    [isMiles],
+  );
 
-  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const efficiencyUnit = isMiles ? 'Wh/mi' : 'Wh/km';
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  const routes = data?.routes ?? [];
+  const routes = useMemo(() => data?.routes ?? [], [data]);
 
   const items: RankedItem[] = useMemo(() => {
     const bestRaw = routes.length > 0
@@ -69,6 +75,10 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
     });
   }, [routes, toEfficiencyDisplay, efficiencyUnit, isWide, t]);
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const shellProps = {
     loading: isLoading,
     error: error ? String(error) : null,
@@ -76,18 +86,12 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
     isFetching,
     isStale,
     isError,
-    onRefresh: () => refetch(),
+    onRefresh: handleRefresh,
   };
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col min-h-[44px]">
           {routes.length > 0 ? (
             <WidgetRankedList

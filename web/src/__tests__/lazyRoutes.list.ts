@@ -182,4 +182,23 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'ActiveSessions', load: () => import('../features/settings/pages/ActiveSessionsPage') },
   { name: 'Privacy', load: () => import('../features/settings/pages/PrivacyPage') },
   { name: 'SharingTrips', load: () => import('../features/sharing/pages/SharingTripsPage') },
+
+  // Phase-45 / Phase-50 admin, settings & explore surfaces — wired into
+  // App.tsx after this list was first authored. Mirrored here so the parity
+  // check in lazyRoutes.smoke.test.ts stays green and every chunk is exercised
+  // by the smoke import (the file's whole reason to exist). Kept in App.tsx
+  // order so the parity counter stays honest.
+  { name: 'DLQInspector', load: () => import('../features/admin/pages/DLQInspectorPage') },
+  { name: 'FeatureFlagsAdmin', load: () => import('../features/admin/pages/FeatureFlagsPage') },
+  { name: 'IngestXRay', load: () => import('../features/admin/pages/IngestXRayPage') },
+  { name: 'LiveSignalInspector', load: () => import('../features/admin/pages/LiveSignalInspectorPage') },
+  { name: 'SchemaDrift', load: () => import('../features/admin/pages/SchemaDriftPage') },
+  { name: 'SlowQueriesAdmin', load: () => import('../features/admin/pages/SlowQueriesPage') },
+  { name: 'VehicleCostAdmin', load: () => import('../features/admin/pages/VehicleCostPage') },
+  { name: 'DiskForecast', load: () => import('../features/admin/pages/DiskForecastPage') },
+  { name: 'SecretRotation', load: () => import('../features/admin/pages/SecretRotationPage') },
+  { name: 'AuditLogAdmin', load: () => import('../features/admin/pages/AuditLogPage') },
+  { name: 'GDPRExportAdmin', load: () => import('../features/admin/pages/GDPRExportPage') },
+  { name: 'Helix', load: () => import('../features/settings/pages/HelixPage') },
+  { name: 'Explore', load: () => import('../features/explore/pages/ExplorePage') },
 ]

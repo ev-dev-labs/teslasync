@@ -165,6 +165,21 @@ function InnerSection({
   // the captured proposal mid-stream.
   const { cancel: cancelStream } = stream
 
+  // Stable content keys for the scope-change cleanup below. The
+  // cleanup must fire on the CONTENT of severities / ruleIds, not
+  // on the array *reference*: parents routinely pass a freshly
+  // built array on every render (e.g. `severities={filters.severities}`
+  // or `ruleIds={selected.map(...)}`). Depending on the raw arrays
+  // would run the cleanup on every unrelated parent re-render —
+  // aborting an in-flight stream and wiping a just-captured
+  // proposal. Mirrors the ruleIdsKey pattern in
+  // AICrossRuleConflictDetection.
+  const severitiesKey = useMemo(
+    () => (severities ?? []).join(','),
+    [severities],
+  )
+  const ruleIdsKey = useMemo(() => (ruleIds ?? []).join(','), [ruleIds])
+
   // Cancel + reset whenever the inbox scope changes so a stale
   // stream from a previous filter cannot bleed proposals into the
   // current view. Dedicated effect so the cleanup deps stay
@@ -174,7 +189,7 @@ function InnerSection({
       cancelStream()
       setProposal(null)
     }
-  }, [vehicleId, windowDays, severities, ruleIds, cancelStream])
+  }, [vehicleId, windowDays, severitiesKey, ruleIdsKey, cancelStream])
 
   const isBusy = stream.state === 'streaming' || stream.state === 'paused-confirm'
 
@@ -267,7 +282,9 @@ function InnerSection({
                   data-testid={`ai-feature-inbox-auto-categorization-bucket-${bucket.category}`}
                 >
                   <span>{bucket.category}</span>
-                  <span className="text-emerald-300/70">·</span>
+                  <span className="text-emerald-300/70" aria-hidden="true">
+                    ·
+                  </span>
                   <span>{bucket.count}</span>
                 </li>
               ))}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PieChart as PieChartIcon, Trophy, Radar as RadarIcon, BarChart3 } from 'lucide-react';
 import {
@@ -28,18 +28,36 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
-  // backend efficiency is Wh/km — convert to Wh/mi when the user prefers miles.
-  const whPerKmToDisplay = (whPerKm: number) =>
-    distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+  // Backend efficiency is Wh/km — project to Wh/mi when the user prefers miles.
+  // Stable per active unit so the memoised derives below only recompute when the
+  // preference actually changes.
+  const whPerKmToDisplay = useCallback(
+    (whPerKm: number) => (distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm),
+    [distanceUnit],
+  );
 
   const { data, isLoading, isError, error, refetch } = query;
   const err = isError ? error : undefined;
   const vehicles = data?.vehicle_comparison ?? [];
 
   const leaderboard = useMemo(() => {
+    // Rank most-efficient first: efficiency is Wh/km, so a lower value is better.
     const sorted = [...vehicles].sort((a, b) => safe(a.efficiency) - safe(b.efficiency));
-    const maxEff = sorted.length > 0 ? safe(sorted[sorted.length - 1].efficiency) : 1;
-    return sorted.map((v) => ({ ...v, pct: maxEff > 0 ? (safe(v.efficiency) / maxEff) * 100 : 0 }));
+    // The bar length must encode "how good", consistent with the radar spoke
+    // that inverts efficiency below. The leader (smallest positive Wh/km) fills
+    // the bar and less-efficient vehicles taper off proportionally. The previous
+    // `efficiency / maxEfficiency` ratio inverted the meaning — it gave the
+    // *worst* vehicle the fullest bar. Guard against non-positive/edge values.
+    const bestEff = sorted.reduce((best, v) => {
+      const e = safe(v.efficiency);
+      return e > 0 && e < best ? e : best;
+    }, Infinity);
+    const hasBest = Number.isFinite(bestEff);
+    return sorted.map((v) => {
+      const eff = safe(v.efficiency);
+      const pct = hasBest && eff > 0 ? Math.min(100, (bestEff / eff) * 100) : 0;
+      return { ...v, pct };
+    });
   }, [vehicles]);
 
   const radarData = useMemo(() => {
@@ -70,6 +88,19 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
     });
   }, [vehicles, t]);
 
+  // Fleet-usage donut plots each vehicle's distance share. Backend distance is
+  // SI-floor km, so project to the active unit at the boundary. Derived once per
+  // data/unit change instead of rebuilding a fresh array literal inline on every
+  // render (which would defeat any downstream chart memoisation).
+  const pieData = useMemo(
+    () =>
+      vehicles.map((v) => ({
+        name: v.name,
+        value: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit),
+      })),
+    [vehicles, distanceUnit],
+  );
+
   return (
     <>
       {/* Fleet Usage Donut */}
@@ -82,11 +113,15 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
         isEmpty={vehicles.length === 0}
         emptyMessage={t('analytics.overview.noVehicles', 'No vehicle data')}
       >
-        <div className="h-64 sm:h-72">
+        <div
+          className="h-64 sm:h-72"
+          role="img"
+          aria-label={`${t('analytics.overview.fleetUsageAria', 'Fleet distance share by vehicle')} (${distanceUnit})`}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={vehicles.map((v) => ({ name: v.name, value: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit) }))}
+                data={pieData}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
@@ -127,7 +162,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
                   {fmtNumber(whPerKmToDisplay(safe(v.efficiency)), 1)} {efficiencyUnit}
                 </Text>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]" aria-hidden="true">
                 <div
                   className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
                   style={{ width: `${v.pct}%` }}
@@ -148,7 +183,11 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
         isEmpty={radarData.length === 0}
         emptyMessage={t('analytics.overview.noComparison', 'Need 2+ vehicles for comparison')}
       >
-        <div className="h-64 sm:h-72">
+        <div
+          className="h-64 sm:h-72"
+          role="img"
+          aria-label={t('analytics.overview.vehicleComparisonAria', 'Normalized vehicle metric comparison')}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
               <PolarGrid stroke="var(--glass-border)" />
@@ -180,7 +219,11 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
         isEmpty={vehicles.length === 0}
         emptyMessage={t('analytics.overview.noVehicles', 'No vehicle data')}
       >
-        <div className="h-64 sm:h-72">
+        <div
+          className="h-64 sm:h-72"
+          role="img"
+          aria-label={t('analytics.overview.energyActivityAria', 'Energy and drive count by vehicle')}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={vehicles} margin={chartMarginLabeled} {...chartAnimation}>
               {chartGrid}

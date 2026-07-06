@@ -156,7 +156,7 @@ export default function VampireDrainPage() {
       <Button
         variant="ghost"
         onClick={() => { void statsQuery.refetch(); void eventsQuery.refetch(); }}
-        aria-label={t('vampireDrain.refresh', 'Refresh')}
+        aria-label={t('vampireDrain.refresh', 'Refresh vampire drain')}
         icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
       />
     </>
@@ -236,7 +236,10 @@ export default function VampireDrainPage() {
 
       {/* 2 — Primary bento: trend (hero) + rate gauge */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section
+          aria-label={t('vampireDrain.sections.trend', 'Drain rate trend and gauge')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <TrendingDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -308,7 +311,10 @@ export default function VampireDrainPage() {
 
       {/* 3 — Secondary bento: daily drain + tips */}
       <FadeIn delay={0.2}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section
+          aria-label={t('vampireDrain.sections.daily', 'Daily drain and reduction tips')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BatteryWarning className="h-4 w-4 text-cyan-300" aria-hidden="true" />

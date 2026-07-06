@@ -18,7 +18,13 @@ interface RecentPagesPanelProps {
  */
 export function RecentPagesPanel({ count, onClear }: RecentPagesPanelProps) {
   const { t } = useTranslation()
-  const isEmpty = count === 0
+
+  // `count` is sourced from `getRecentPages().length` today, but a non-finite,
+  // negative, or fractional value must never leak into the label
+  // ("NaN entries stored") or wrongly enable the clear button. Clamp to a
+  // non-negative integer at the display boundary.
+  const safeCount = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
+  const isEmpty = safeCount === 0
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="privacy-recent-section">
@@ -43,9 +49,14 @@ export function RecentPagesPanel({ count, onClear }: RecentPagesPanelProps) {
             as="p"
             variant="bodySm"
             className="tabular-nums"
+            role="status"
+            aria-live="polite"
             data-testid="privacy-recent-count"
           >
-            {t('recentPages.storedCount', { count, defaultValue: `${count} entries stored` })}
+            {t('recentPages.storedCount', {
+              count: safeCount,
+              defaultValue: '{{count}} entries stored',
+            })}
           </Text>
           {isEmpty && (
             <Text as="p" variant="caption" className="mt-1">

@@ -5,7 +5,7 @@ import { GlassPanel, Badge } from '@/components/ui';
 import { PanelTitle, Caption } from '@/components/ui/Typography';
 import { RadialGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, safeNumber } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import type { FeatureFlagSummary } from './parseFeatureFlags';
 
@@ -35,6 +35,16 @@ export function FeatureConfigDistribution({
 }: FeatureConfigDistributionProps) {
   const { t } = useTranslation();
 
+  // Defensive normalisation. The parent always hands us a well-formed
+  // summary from `summarizeFeatureEntries`, but a partial/malformed object
+  // (or a future caller) must degrade to zeros + the empty state rather than
+  // throw a TypeError mid-render — this panel owns its own states and must
+  // never crash the surrounding bento grid.
+  const total = safeNumber(summary?.total);
+  const enabled = safeNumber(summary?.enabled);
+  const disabled = safeNumber(summary?.disabled);
+  const enabledRate = safeNumber(summary?.enabledRate);
+
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
@@ -46,7 +56,7 @@ export function FeatureConfigDistribution({
         <Skeleton height={200} />
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : summary.total === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
           /* no-action: transient — no feature-config synced yet; the header Refresh CTA owns recovery */
           icon={<PieChartIcon className="h-8 w-8" aria-hidden="true" />}
@@ -55,7 +65,7 @@ export function FeatureConfigDistribution({
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-2">
           <RadialGauge
-            value={summary.enabledRate}
+            value={enabledRate}
             max={100}
             unit="%"
             decimals={0}
@@ -65,10 +75,10 @@ export function FeatureConfigDistribution({
           />
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Badge variant="success" dot>
-              {t('featureConfig.enabled', 'Enabled')}: {fmtInt(summary.enabled)}
+              {t('featureConfig.enabled', 'Enabled')}: {fmtInt(enabled)}
             </Badge>
             <Badge variant="neutral" dot>
-              {t('featureConfig.disabled', 'Disabled')}: {fmtInt(summary.disabled)}
+              {t('featureConfig.disabled', 'Disabled')}: {fmtInt(disabled)}
             </Badge>
           </div>
         </div>

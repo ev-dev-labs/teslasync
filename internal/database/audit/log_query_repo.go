@@ -49,8 +49,13 @@ type AuditLogRow struct {
 }
 
 // AuditLogQueryRepo is the read-side repo.
+//
+// exec is the database.DBTX execution seam (satisfied by *pgxpool.Pool
+// in production). Holding the interface rather than the concrete pool
+// lets List/DistinctCategories/DistinctActions be unit tested against
+// the in-repo DBTX fake.
 type AuditLogQueryRepo struct {
-	db *database.DB
+	exec database.DBTX
 }
 
 // NewAuditLogQueryRepo constructs the repo. Returns nil when db is nil.
@@ -58,7 +63,7 @@ func NewAuditLogQueryRepo(db *database.DB) *AuditLogQueryRepo {
 	if db == nil || db.Pool == nil {
 		return nil
 	}
-	return &AuditLogQueryRepo{db: db}
+	return &AuditLogQueryRepo{exec: db.Pool}
 }
 
 // List returns audit rows matching the filter ordered by ts DESC.
@@ -118,7 +123,7 @@ SELECT id, ts, actor, category, action, entity_type, entity_id, detail,
  ORDER BY ts DESC, id DESC
  LIMIT $%d OFFSET $%d`, where, len(args)-1, len(args))
 
-	rows, err := r.db.Pool.Query(ctx, sql, args...)
+	rows, err := r.exec.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("audit_log_query: list: %w", err)
 	}
@@ -148,7 +153,7 @@ func (r *AuditLogQueryRepo) DistinctCategories(ctx context.Context) ([]string, e
 	if r == nil {
 		return nil, nil
 	}
-	rows, err := r.db.Pool.Query(ctx,
+	rows, err := r.exec.Query(ctx,
 		`SELECT DISTINCT category FROM audit_logs WHERE category IS NOT NULL ORDER BY category LIMIT 100`)
 	if err != nil {
 		return nil, fmt.Errorf("audit_log_query: distinct categories: %w", err)
@@ -163,7 +168,7 @@ func (r *AuditLogQueryRepo) DistinctActions(ctx context.Context) ([]string, erro
 	if r == nil {
 		return nil, nil
 	}
-	rows, err := r.db.Pool.Query(ctx,
+	rows, err := r.exec.Query(ctx,
 		`SELECT action FROM audit_logs GROUP BY action ORDER BY MAX(ts) DESC LIMIT 100`)
 	if err != nil {
 		return nil, fmt.Errorf("audit_log_query: distinct actions: %w", err)

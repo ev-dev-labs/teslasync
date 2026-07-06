@@ -20,7 +20,14 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
 
-interface DailyEfficiency {
+/**
+ * Colour for the rolling-average series (amber). Shared by the reference
+ * line, the rolling-average area stroke, and the legend swatch so the three
+ * stay in lockstep if the accent ever changes.
+ */
+const ROLLING_AVG_COLOR = '#f59e0b';
+
+export interface DailyEfficiency {
   date: string;
   label: string;
   efficiency: number;
@@ -28,7 +35,7 @@ interface DailyEfficiency {
 }
 
 /** Estimate Wh/km for a single drive from energy + distance data. */
-function estimateEfficiency(d: Drive): number | null {
+export function estimateEfficiency(d: Drive): number | null {
   const distanceKm = convertDistanceFromSI(d.distance_m ?? 0, 'km');
   if (!distanceKm || distanceKm < 0.8) return null; // skip tiny drives
 
@@ -50,7 +57,7 @@ function estimateEfficiency(d: Drive): number | null {
 }
 
 /** Group drives by date and compute daily averages + rolling average. */
-function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtShortDate: (iso: string) => string): DailyEfficiency[] {
+export function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtShortDate: (iso: string) => string): DailyEfficiency[] {
   const byDate = new Map<string, number[]>();
 
   for (const d of drives) {
@@ -206,7 +213,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             {overallAvg != null && (
               <ReferenceLine
                 y={overallAvg}
-                stroke="#f59e0b"
+                stroke={ROLLING_AVG_COLOR}
                 strokeDasharray="4 4"
                 strokeOpacity={0.5}
               />
@@ -221,7 +228,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             <Area
               {...AREA_DEFAULTS}
               dataKey="rollingAvg"
-              stroke="#f59e0b"
+              stroke={ROLLING_AVG_COLOR}
               fill="none"
               strokeWidth={1.5}
               strokeDasharray="4 2"
@@ -245,7 +252,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
         <div className="flex items-center gap-1">
           <span
             className="inline-block h-2 w-2 rounded-full"
-            style={{ background: '#f59e0b' }}
+            style={{ background: ROLLING_AVG_COLOR }}
           />
           <span className="text-2xs text-[var(--text-secondary)]">
             {t('widget.driveEfficiencyChart.rolling', '7-day avg')}

@@ -17,6 +17,22 @@ function formatBytes(bytes: number): string {
   return `${fmtNumber(bytes / (1024 * 1024 * 1024), 2)} GB`;
 }
 
+// The `/system/version` endpoint reports process uptime as `uptime_seconds`
+// (a number), not a pre-formatted `uptime` string. Format it here into the
+// app's canonical "Nd Nh Nm" ladder, guarding non-finite / non-positive input
+// (missing field, freshly-booted server) so the row shows an em dash instead
+// of "NaNm".
+function formatUptime(seconds: number): string {
+  const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  if (total === 0) return '—';
+  const days = Math.floor(total / 86_400);
+  const hours = Math.floor((total % 86_400) / 3_600);
+  const mins = Math.floor((total % 3_600) / 60);
+  if (days > 0) return `${days}d ${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
 export default function VersionInfoWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
 
@@ -33,7 +49,8 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
   const goVersion = (versionData as { go_version?: string }).go_version ?? '—';
   const buildDate = (versionData as { build_date?: string }).build_date ?? '—';
   const gitSha = (versionData as { git_commit?: string }).git_commit;
-  const uptime = (versionData as { uptime?: string }).uptime ?? '—';
+  const uptimeSeconds = (versionData as { uptime_seconds?: number }).uptime_seconds ?? 0;
+  const uptime = formatUptime(uptimeSeconds);
   const osInfo = (versionData as { os?: string }).os ?? '—';
   const archInfo = (versionData as { arch?: string }).arch ?? '—';
 

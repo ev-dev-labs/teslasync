@@ -62,7 +62,7 @@ import type { Drive } from '@/types/driving';
 /* ------------------------------------------------------------------ */
 
 /** Per-drive score computed on the client when the API score is absent. */
-interface ComputedScore {
+export interface ComputedScore {
   total: number;
   efficiency: number;
   smoothness: number;
@@ -71,7 +71,7 @@ interface ComputedScore {
   whPerKm: number;
 }
 
-interface ScoredDrive {
+export interface ScoredDrive {
   drive: Drive;
   score: ComputedScore;
 }
@@ -121,7 +121,7 @@ const DRIVES_PER_PAGE = 10;
 /*  Scoring algorithm                                                  */
 /* ------------------------------------------------------------------ */
 
-function scoreDrive(drive: Drive): ComputedScore {
+export function scoreDrive(drive: Drive): ComputedScore {
   const battUsed = (drive.startBatteryPct ?? 50) - (drive.endBatteryPct ?? 45);
   const energyKwh =
     drive.energyUsedWh != null ? drive.energyUsedWh / 1000 : (battUsed / 100) * 75;
@@ -162,7 +162,7 @@ function scoreDrive(drive: Drive): ComputedScore {
   };
 }
 
-function gradeFromScore(score: number): string {
+export function gradeFromScore(score: number): string {
   return score >= 90
     ? 'A+'
     : score >= 80
@@ -180,14 +180,14 @@ function gradeFromScore(score: number): string {
 /*  Presentation helpers                                               */
 /* ------------------------------------------------------------------ */
 
-function gradeVariant(grade: string): 'success' | 'info' | 'warning' | 'danger' {
+export function gradeVariant(grade: string): 'success' | 'info' | 'warning' | 'danger' {
   if (grade === 'A+' || grade === 'A') return 'success';
   if (grade === 'B') return 'info';
   if (grade === 'C') return 'warning';
   return 'danger';
 }
 
-function gradeColor(grade: string): string {
+export function gradeColor(grade: string): string {
   return GRADE_COLORS[grade] ?? '#94a3b8';
 }
 
@@ -212,13 +212,13 @@ function scoreTextClass(score: number | null): string {
   return 'text-rose-300';
 }
 
-function getDefaultStartDate(): string {
+export function getDefaultStartDate(): string {
   const d = new Date();
   d.setDate(d.getDate() - 30);
   return d.toISOString().slice(0, 10);
 }
 
-function getDefaultEndDate(): string {
+export function getDefaultEndDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
@@ -232,7 +232,7 @@ interface Tip {
   icon: ReactNode;
 }
 
-function buildTips(t: (key: string, fallback: string) => string): Tip[] {
+export function buildTips(t: (key: string, fallback: string) => string): Tip[] {
   return [
     {
       key: t(
@@ -321,7 +321,7 @@ interface Achievement {
   check: (scores: ComputedScore[], drives: Drive[]) => boolean;
 }
 
-function buildAchievements(
+export function buildAchievements(
   t: (key: string, fallback: string) => string,
 ): Achievement[] {
   return [
@@ -417,6 +417,111 @@ function buildAchievements(
       check: (scores) => scores.filter((s) => s.speed >= 28).length >= 5,
     },
   ];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Period statistics                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Weekly / monthly roll-up derived from the scored drives in range. */
+export interface PeriodStats {
+  thisWeekAvg: number | null;
+  lastWeekAvg: number | null;
+  thisMonthAvg: number | null;
+  lastMonthAvg: number | null;
+  bestWeek: { avg: number; label: string };
+  bestMonth: { avg: number; label: string };
+  totalDrives: number;
+  aOrBetter: number;
+}
+
+/**
+ * Aggregate weekly / monthly averages, best week / month, and the A-or-better
+ * count from the scored drives. `now` is injected (not read from the clock)
+ * so the window boundaries are deterministic and unit-testable.
+ *
+ * Returns `null` when there are no scored drives so callers render an empty
+ * state instead of a grid of zeros.
+ */
+export function computePeriodStats(
+  scoredDrives: ScoredDrive[],
+  now: Date,
+): PeriodStats | null {
+  if (scoredDrives.length === 0) return null;
+
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  const lastWeekStart = new Date(weekStart);
+  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  const avg = (items: ScoredDrive[]): number | null =>
+    items.length > 0
+      ? Math.round(items.reduce((s, d) => s + d.score.total, 0) / items.length)
+      : null;
+
+  const thisWeekDrives = scoredDrives.filter(
+    (sd) => new Date(sd.drive.startTs) >= weekStart,
+  );
+  const lastWeekDrives = scoredDrives.filter((sd) => {
+    const d = new Date(sd.drive.startTs);
+    return d >= lastWeekStart && d < weekStart;
+  });
+  const thisMonthDrives = scoredDrives.filter(
+    (sd) => new Date(sd.drive.startTs) >= monthStart,
+  );
+  const lastMonthDrives = scoredDrives.filter((sd) => {
+    const d = new Date(sd.drive.startTs);
+    return d >= lastMonthStart && d <= lastMonthEnd;
+  });
+
+  const weekMap = new Map<string, ScoredDrive[]>();
+  const monthMap = new Map<string, ScoredDrive[]>();
+  scoredDrives.forEach((sd) => {
+    const d = new Date(sd.drive.startTs);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const weekOfMonth = Math.ceil(
+      (d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7,
+    );
+    // Key the week bucket by year-MONTH-week. Keying by week-of-month alone
+    // collapsed the same week number across different months (e.g. Jun-W3 and
+    // Jul-W3) into one bucket, averaging unrelated drives together and
+    // corrupting the "Best Week" aggregate + its label.
+    const wk = `${d.getFullYear()}-${month}-W${weekOfMonth}`;
+    const mo = `${d.getFullYear()}-${month}`;
+    if (!weekMap.has(wk)) weekMap.set(wk, []);
+    weekMap.get(wk)!.push(sd);
+    if (!monthMap.has(mo)) monthMap.set(mo, []);
+    monthMap.get(mo)!.push(sd);
+  });
+
+  let bestWeek = { avg: 0, label: '—' };
+  weekMap.forEach((items, label) => {
+    const a = avg(items);
+    if (a != null && a > bestWeek.avg) bestWeek = { avg: a, label };
+  });
+  let bestMonth = { avg: 0, label: '—' };
+  monthMap.forEach((items, label) => {
+    const a = avg(items);
+    if (a != null && a > bestMonth.avg) bestMonth = { avg: a, label };
+  });
+
+  const aOrBetter = scoredDrives.filter(
+    (sd) => sd.score.grade === 'A+' || sd.score.grade === 'A',
+  ).length;
+
+  return {
+    thisWeekAvg: avg(thisWeekDrives),
+    lastWeekAvg: avg(lastWeekDrives),
+    thisMonthAvg: avg(thisMonthDrives),
+    lastMonthAvg: avg(lastMonthDrives),
+    bestWeek,
+    bestMonth,
+    totalDrives: scoredDrives.length,
+    aOrBetter,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -696,77 +801,10 @@ export default function DriveScorePage() {
   );
 
   /* ---- weekly / monthly averages ---- */
-  const periodStats = useMemo(() => {
-    if (scoredDrives.length === 0) return null;
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay());
-    const lastWeekStart = new Date(weekStart);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-
-    const avg = (items: ScoredDrive[]) =>
-      items.length > 0
-        ? Math.round(items.reduce((s, d) => s + d.score.total, 0) / items.length)
-        : null;
-
-    const thisWeekDrives = scoredDrives.filter(
-      (sd) => new Date(sd.drive.startTs) >= weekStart,
-    );
-    const lastWeekDrives = scoredDrives.filter((sd) => {
-      const d = new Date(sd.drive.startTs);
-      return d >= lastWeekStart && d < weekStart;
-    });
-    const thisMonthDrives = scoredDrives.filter(
-      (sd) => new Date(sd.drive.startTs) >= monthStart,
-    );
-    const lastMonthDrives = scoredDrives.filter((sd) => {
-      const d = new Date(sd.drive.startTs);
-      return d >= lastMonthStart && d <= lastMonthEnd;
-    });
-
-    const weekMap = new Map<string, ScoredDrive[]>();
-    const monthMap = new Map<string, ScoredDrive[]>();
-    scoredDrives.forEach((sd) => {
-      const d = new Date(sd.drive.startTs);
-      const wk = `${d.getFullYear()}-W${Math.ceil(
-        (d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7,
-      )}`;
-      const mo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!weekMap.has(wk)) weekMap.set(wk, []);
-      weekMap.get(wk)!.push(sd);
-      if (!monthMap.has(mo)) monthMap.set(mo, []);
-      monthMap.get(mo)!.push(sd);
-    });
-
-    let bestWeek = { avg: 0, label: '—' };
-    weekMap.forEach((items, label) => {
-      const a = avg(items);
-      if (a != null && a > bestWeek.avg) bestWeek = { avg: a, label };
-    });
-    let bestMonth = { avg: 0, label: '—' };
-    monthMap.forEach((items, label) => {
-      const a = avg(items);
-      if (a != null && a > bestMonth.avg) bestMonth = { avg: a, label };
-    });
-
-    const aOrBetter = allScores.filter(
-      (s) => s.grade === 'A+' || s.grade === 'A',
-    ).length;
-
-    return {
-      thisWeekAvg: avg(thisWeekDrives),
-      lastWeekAvg: avg(lastWeekDrives),
-      thisMonthAvg: avg(thisMonthDrives),
-      lastMonthAvg: avg(lastMonthDrives),
-      bestWeek,
-      bestMonth,
-      totalDrives: scoredDrives.length,
-      aOrBetter,
-    };
-  }, [scoredDrives, allScores]);
+  const periodStats = useMemo(
+    () => computePeriodStats(scoredDrives, new Date()),
+    [scoredDrives],
+  );
 
   /* ---- drive history rows (flat, for shared DataTable) ---- */
   const historyRows = useMemo<HistoryRow[]>(

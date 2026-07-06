@@ -19,8 +19,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -45,68 +47,155 @@ var requiredMetrics = []string{
 // coverage signal.
 var routeRE = regexp.MustCompile(`(?m)^\s*r(?:outer)?\.(?:Get|Post|Put|Patch|Delete|Head|Options|Method|Mount|Handle|HandleFunc)\s*\(`)
 
+// auditConfig captures the resolved input/output paths for a single audit
+// run. The source paths default to the repository-relative constants above
+// but are overridable via flags so the audit can be pointed at fixtures
+// (and unit-tested) without touching the real tree.
+type auditConfig struct {
+	middlewarePath string
+	routerPath     string
+	reportPath     string
+}
+
 func main() {
-	var reportPath string
-	flag.StringVar(&reportPath, "report", defaultReport, "report path")
-	flag.Parse()
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
 
-	findings := []string{}
-	statuses := map[string]string{}
-
-	// 1. Verify metric definitions in middleware.go.
-	mw, err := os.ReadFile(middlewarePath)
+// run is the test-friendly entry point. argv is the program args (NOT
+// including os.Args[0]); stdout / stderr are injected so tests can assert
+// on output without swapping the os.Std* globals. It returns the process
+// exit code:
+//
+//	0  no coverage gaps
+//	1  the report could not be written (IO error)
+//	2  at least one coverage gap, or a flag-parse error
+func run(argv []string, stdout, stderr io.Writer) int {
+	cfg, err := parseArgs(argv, stderr)
 	if err != nil {
-		findings = append(findings, fmt.Sprintf("MISSING_METRIC: cannot read %s: %v", middlewarePath, err))
+		// flag already printed usage/context to stderr. -h/-help is not
+		// a failure; a genuine bad flag maps to the same non-zero code
+		// the stdlib flag package uses (2).
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
+		return 2
+	}
+
+	statuses, routeCount, findings := audit(cfg)
+
+	report := renderReport(routeCount, statuses, findings)
+	if err := writeReport(cfg.reportPath, report); err != nil {
+		fmt.Fprintf(stderr, "metric-coverage-audit: %v\n", err)
+		return 1
+	}
+	fmt.Fprint(stdout, report)
+
+	if len(findings) > 0 {
+		fmt.Fprintf(stderr, "metric-coverage-audit: %d gap(s) — see report\n", len(findings))
+		return 2
+	}
+	fmt.Fprintln(stderr, "metric-coverage-audit: OK")
+	return 0
+}
+
+// parseArgs is broken out so tests can exercise flag handling without
+// invoking the rest of run().
+func parseArgs(argv []string, stderr io.Writer) (auditConfig, error) {
+	fs := flag.NewFlagSet("metric-coverage-audit", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	cfg := auditConfig{}
+	fs.StringVar(&cfg.reportPath, "report", defaultReport, "report output path")
+	fs.StringVar(&cfg.middlewarePath, "middleware", middlewarePath, "path to the middleware source declaring the RED metric series")
+	fs.StringVar(&cfg.routerPath, "router", routerPath, "path to the chi router source registering the metrics middleware")
+	if err := fs.Parse(argv); err != nil {
+		return auditConfig{}, err
+	}
+	return cfg, nil
+}
+
+// audit performs the static analysis and returns per-metric statuses, the
+// route count, and any findings. It owns the file IO so the pure checks
+// (checkMetrics / checkRouter) stay testable in isolation.
+func audit(cfg auditConfig) (statuses map[string]string, routeCount int, findings []string) {
+	statuses = map[string]string{}
+
+	// 1. Verify metric definitions in the middleware source.
+	if mw, err := os.ReadFile(cfg.middlewarePath); err != nil {
+		findings = append(findings, fmt.Sprintf("MISSING_METRIC: cannot read %s: %v", cfg.middlewarePath, err))
 	} else {
-		for _, m := range requiredMetrics {
-			if !strings.Contains(string(mw), m) {
-				findings = append(findings, fmt.Sprintf("MISSING_METRIC: %s not declared in %s", m, middlewarePath))
-				statuses[m] = "MISSING"
-			} else {
-				statuses[m] = "OK"
-			}
+		var mf []string
+		statuses, mf = checkMetrics(string(mw), cfg.middlewarePath)
+		findings = append(findings, mf...)
+	}
+
+	// 2. Verify the metrics middleware is registered before the first
+	//    route, and count routes for an honest coverage figure. On a read
+	//    error we stop here: running the position/count heuristics against
+	//    an unread file would emit misleading "regex broken or file empty"
+	//    findings for what is really an IO failure.
+	if rt, err := os.ReadFile(cfg.routerPath); err != nil {
+		findings = append(findings, fmt.Sprintf("MISSING_METRIC: cannot read %s: %v", cfg.routerPath, err))
+	} else {
+		var rf []string
+		routeCount, rf = checkRouter(string(rt), cfg.routerPath)
+		findings = append(findings, rf...)
+	}
+
+	return statuses, routeCount, findings
+}
+
+// checkMetrics confirms every required RED metric series literal appears in
+// the middleware source. It returns a per-metric status map (OK / MISSING)
+// and a finding for each missing series.
+func checkMetrics(src, path string) (map[string]string, []string) {
+	statuses := map[string]string{}
+	var findings []string
+	for _, m := range requiredMetrics {
+		if strings.Contains(src, m) {
+			statuses[m] = "OK"
+		} else {
+			statuses[m] = "MISSING"
+			findings = append(findings, fmt.Sprintf("MISSING_METRIC: %s not declared in %s", m, path))
 		}
 	}
+	return statuses, findings
+}
 
-	// 2. Verify MetricsMiddleware is registered before the first route.
-	rt, err := os.ReadFile(routerPath)
-	if err != nil {
-		findings = append(findings, fmt.Sprintf("MISSING_METRIC: cannot read %s: %v", routerPath, err))
-	}
-	rtBody := string(rt)
-	mwIdx := strings.Index(rtBody, "MetricsMiddleware")
-	firstRouteMatch := routeRE.FindStringIndex(rtBody)
+// checkRouter confirms the metrics middleware is registered before the first
+// route declaration and counts route declarations. It returns the route
+// count and any findings.
+func checkRouter(src, path string) (int, []string) {
+	var findings []string
+	mwIdx := strings.Index(src, "MetricsMiddleware")
+	firstRoute := routeRE.FindStringIndex(src)
 	if mwIdx < 0 {
-		findings = append(findings, fmt.Sprintf("MISSING_METRIC: r.Use(MetricsMiddleware) not registered in %s", routerPath))
+		findings = append(findings, fmt.Sprintf("MISSING_METRIC: r.Use(MetricsMiddleware) not registered in %s", path))
 	}
-	if firstRouteMatch == nil {
-		findings = append(findings, fmt.Sprintf("MISSING_METRIC: zero routes detected in %s — regex broken or file empty", routerPath))
-	} else if mwIdx >= 0 && mwIdx > firstRouteMatch[0] {
+	if firstRoute == nil {
+		findings = append(findings, fmt.Sprintf("MISSING_METRIC: zero routes detected in %s — regex broken or file empty", path))
+	} else if mwIdx >= 0 && mwIdx > firstRoute[0] {
 		findings = append(findings, "MISSING_METRIC: MetricsMiddleware appears AFTER the first route declaration — earlier routes will skip RED metrics")
 	}
 
-	// 3. Count routes for an honest coverage figure.
-	routeCount := len(routeRE.FindAllStringIndex(rtBody, -1))
+	routeCount := len(routeRE.FindAllStringIndex(src, -1))
 	if routeCount < minRoutes {
-		findings = append(findings, fmt.Sprintf("MISSING_METRIC: only %d routes detected in %s (expected ≥%d) — middleware coverage may be incomplete", routeCount, routerPath, minRoutes))
+		findings = append(findings, fmt.Sprintf("MISSING_METRIC: only %d routes detected in %s (expected ≥%d) — middleware coverage may be incomplete", routeCount, path, minRoutes))
 	}
+	return routeCount, findings
+}
 
-	report := renderReport(routeCount, statuses, findings)
-	if err := os.MkdirAll(filepath.Dir(reportPath), 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "mkdir failed: %v\n", err)
-		os.Exit(1)
+// writeReport creates the report's parent directory (if any) and writes the
+// rendered report, wrapping IO errors with context for the caller to log.
+func writeReport(path, report string) error {
+	if dir := filepath.Dir(path); dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("create report dir %s: %w", dir, err)
+		}
 	}
-	if err := os.WriteFile(reportPath, []byte(report), 0o644); err != nil {
-		fmt.Fprintf(os.Stderr, "write failed: %v\n", err)
-		os.Exit(1)
+	if err := os.WriteFile(path, []byte(report), 0o644); err != nil {
+		return fmt.Errorf("write report %s: %w", path, err)
 	}
-	fmt.Print(report)
-
-	if len(findings) > 0 {
-		fmt.Fprintf(os.Stderr, "metric-coverage-audit: %d gap(s) — see report\n", len(findings))
-		os.Exit(2)
-	}
-	fmt.Fprintln(os.Stderr, "metric-coverage-audit: OK")
+	return nil
 }
 
 func renderReport(routeCount int, statuses map[string]string, findings []string) string {

@@ -94,9 +94,13 @@ function ageLabel(
   months: number,
   t: (k: string, opts?: Record<string, unknown>) => string,
 ): string {
-  if (months < 12) return t('{{count}} months', { count: months });
-  const years = Math.floor(months / 12);
-  const rem = months % 12;
+  /* Sanitise once: a missing/NaN/negative/fractional age must never surface
+     as "NaN years" or "undefined months" — clamp to a whole, non-negative
+     month count before formatting. */
+  const m = Number.isFinite(months) ? Math.max(0, Math.round(months)) : 0;
+  if (m < 12) return t('{{count}} months', { count: m });
+  const years = Math.floor(m / 12);
+  const rem = m % 12;
   return rem > 0
     ? t('{{y}}y {{m}}m', { y: years, m: rem })
     : t('{{y}} years', { y: years });
@@ -319,7 +323,9 @@ export default function BatteryDegradationPage() {
               {t('battery.degradation.healthTitle', 'Battery Health')}
             </PanelTitle>
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-2">
-              {healthQuery.isLoading ? (
+              {healthQuery.error ? (
+                <QueryError error={healthQuery.error} />
+              ) : healthQuery.isLoading ? (
                 <Skeleton height={200} />
               ) : (
                 <>

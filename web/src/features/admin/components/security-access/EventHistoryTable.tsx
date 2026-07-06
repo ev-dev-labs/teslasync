@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { Badge, GlassPanel, PanelTitle, DataTable, type Column } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, DataTable, useSortToggle, type Column } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import type { SecurityEvent } from '@/types/admin';
 import { asNonEmptyString } from '@/lib/typeGuards';
-import { doorClosed, allWindowsClosed, windowSummary } from './helpers';
+import { doorClosed, allWindowsClosed, windowSummary, isSentryActive } from './helpers';
 
 interface EventHistoryTableProps {
   history: SecurityEvent[];
@@ -19,6 +19,7 @@ interface EventHistoryTableProps {
 
 export function EventHistoryTable({ history, isLoading, error, onRetry, className }: EventHistoryTableProps) {
   const { t } = useTranslation();
+  const { sortKey, sortDir, onSort, sortFn } = useSortToggle();
 
   const eventColumns: Column<SecurityEvent>[] = useMemo(
     () => [
@@ -42,11 +43,18 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
       {
         key: 'sentryMode',
         header: t('admin.security.col.sentry', 'Sentry'),
-        render: (row) => (
-          <Badge variant={row.sentryMode ? 'success' : 'neutral'} size="sm">
-            {row.sentryMode ? t('admin.security.on', 'On') : t('admin.security.off', 'Off')}
-          </Badge>
-        ),
+        render: (row) => {
+          // `sentryMode` arrives as a string enum ("SentryModeStateOff") or a
+          // native bool. A bare `row.sentryMode ? …` truthiness check treats the
+          // non-empty "…Off" string as active and mislabels a disarmed vehicle
+          // as "On" — classify through the shared guard instead.
+          const active = isSentryActive(row.sentryMode);
+          return (
+            <Badge variant={active ? 'success' : 'neutral'} size="sm">
+              {active ? t('admin.security.on', 'On') : t('admin.security.off', 'Off')}
+            </Badge>
+          );
+        },
       },
       {
         key: 'doorState',
@@ -70,6 +78,21 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
     [t],
   );
 
+  // Null-safe view of the (untyped-at-runtime) history feed, wired to the
+  // "Time" column's sort affordance. `useSortToggle` starts with no active
+  // key, so the initial order matches what the parent supplies; clicking the
+  // header sorts chronologically by `createdAt` (invalid/missing timestamps
+  // sort as epoch 0 rather than throwing).
+  const rows = useMemo(
+    () =>
+      sortFn(history ?? [], (row) => {
+        const iso = asNonEmptyString(row.createdAt);
+        const ts = iso ? Date.parse(iso) : NaN;
+        return Number.isFinite(ts) ? ts : 0;
+      }),
+    [history, sortFn],
+  );
+
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3">{t('admin.security.eventHistory', 'Security Event History')}</PanelTitle>
@@ -81,11 +104,14 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
         <DataTable<SecurityEvent>
           tableId="admin:security-events"
           columns={eventColumns}
-          data={history}
+          data={rows}
           keyExtractor={(row) => row.id}
           emptyMessage={t('admin.security.noEvents', 'No security events recorded yet.')}
           compact
           pagination={{ defaultPageSize: 50 }}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={onSort}
         />
       )}
     </GlassPanel>

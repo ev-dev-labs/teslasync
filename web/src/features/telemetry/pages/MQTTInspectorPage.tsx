@@ -41,6 +41,17 @@ function formatUptime(seconds: number): string {
   return `${Math.floor(seconds / 3600)}h ${fmtInt((seconds % 3600) / 60)}m`;
 }
 
+/**
+ * A vehicle is "stale" when it has never reported (`lastReceived` missing) or
+ * its last signal is older than {@link STALE_THRESHOLD} seconds. Single source
+ * of truth shared by the per-row status Badge and the header "N stale" count so
+ * the two can never disagree.
+ */
+function isVehicleStale(v: VehicleTelemetry): boolean {
+  if (!v.lastReceived) return true;
+  return (Date.now() - new Date(v.lastReceived).getTime()) / 1000 > STALE_THRESHOLD;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Vehicle table columns                                              */
 /* ------------------------------------------------------------------ */
@@ -91,7 +102,7 @@ function buildVehicleColumns(
       header: t('mqtt.status', 'Status'),
       className: 'text-center',
       render: (v) => {
-        const isStale = !v.lastReceived || (Date.now() - new Date(v.lastReceived).getTime()) / 1000 > STALE_THRESHOLD;
+        const isStale = isVehicleStale(v);
         return <Badge variant={isStale ? 'warning' : 'success'} size="sm" dot>{isStale ? t('mqtt.stale', 'Stale') : t('mqtt.live', 'Live')}</Badge>;
       },
     },
@@ -114,7 +125,7 @@ export default function MQTTInspectorPage() {
   const totalSignals = vehicles.reduce((sum, v) => sum + (v.signalCount ?? 0), 0);
   const totalBatches = vehicles.reduce((sum, v) => sum + (v.batchCount ?? 0), 0);
   const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSecond ?? 0), 0);
-  const topics = status?.topics ?? [];
+  const topics = Array.isArray(status?.topics) ? status.topics : [];
 
   /* ---- throughput history (local UI-derived series, not a data fetch) ---- */
   const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([]);
@@ -130,13 +141,7 @@ export default function MQTTInspectorPage() {
     }
   }, [totalSignals, formatTime]);
 
-  const staleVehicles = useMemo(
-    () => vehicles.filter((v) => {
-      if (!v.lastReceived) return true;
-      return (Date.now() - new Date(v.lastReceived).getTime()) / 1000 > STALE_THRESHOLD;
-    }),
-    [vehicles],
-  );
+  const staleVehicles = useMemo(() => vehicles.filter(isVehicleStale), [vehicles]);
 
   const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative]);
 

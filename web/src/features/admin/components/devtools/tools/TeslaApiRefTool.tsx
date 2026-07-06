@@ -1,18 +1,27 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BookOpen } from 'lucide-react'
-import { Input, Badge, DataTable, type Column } from '@/components/ui'
+import { Input, Badge, DataTable, CopyButton, type Column } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '@/components/ui'
 import { TESLA_ENDPOINTS } from '../constants'
+
+interface TeslaEndpoint {
+  method: string
+  path: string
+  desc: string
+}
 
 export function TeslaApiRefTool() {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
 
+  const searchLabel = t('Search Endpoints')
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return TESLA_ENDPOINTS
-    const q = search.toLowerCase()
+    // Trim before matching so stray leading/trailing whitespace in the query
+    // (e.g. a pasted " wake ") doesn't silently reduce every row to no match.
+    const q = search.trim().toLowerCase()
+    if (!q) return TESLA_ENDPOINTS
     return TESLA_ENDPOINTS.filter(
       (e) =>
         e.method.toLowerCase().includes(q) ||
@@ -21,7 +30,7 @@ export function TeslaApiRefTool() {
     )
   }, [search])
 
-  const columns: Column<{ method: string; path: string; desc: string }>[] = useMemo(
+  const columns: Column<TeslaEndpoint>[] = useMemo(
     () => [
       {
         key: 'method',
@@ -51,16 +60,19 @@ export function TeslaApiRefTool() {
     <ToolCard icon={BookOpen} color="cyan" title={t('Tesla Api Ref')} description={t('Tesla Api Ref Desc')}>
       <div className="space-y-3">
         <Input
-          placeholder={t('Search Endpoints')}
+          type="search"
+          aria-label={searchLabel}
+          placeholder={searchLabel}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          icon={<BookOpen className="h-4 w-4" />}
+          icon={<BookOpen aria-hidden="true" className="h-4 w-4" />}
         />
         <DataTable
           tableId="admin:tesla-api-ref"
           columns={columns}
           data={filtered}
           keyExtractor={(r) => r.path}
+          emptyMessage={t('devtools.teslaApiRef.noResults', 'No endpoints match your search')}
           compact
           pagination
         />

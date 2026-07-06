@@ -65,6 +65,10 @@ export function vehiclePhotoUrl(
   meta: VehiclePhotoMeta | null | undefined,
 ): string | null {
   if (!meta || !meta.has_photo) return null;
+  // A non-finite id (NaN from a bad `Number(...)`, Infinity) would render a
+  // broken `/vehicles/NaN/photo/...` <img src>. Treat it like "no photo" so
+  // the caller falls back to the stock render instead of a 404'd image.
+  if (!Number.isFinite(vehicleId)) return null;
   const base = apiUrl(`/vehicles/${vehicleId}/photo/${size}`);
   if (!meta.uploaded_at) return base;
   const ts = Date.parse(meta.uploaded_at);
@@ -82,11 +86,17 @@ export function vehiclePhotoUrl(
  * three-way (loading/error/data) branch.
  */
 export function useVehiclePhoto(vehicleId: number | null | undefined) {
+  // Normalise to a valid numeric id or null. `vehicleId != null` alone let a
+  // NaN (e.g. from `Number(undefined)`) slip through as "enabled", firing a
+  // doomed request to `/vehicles/NaN/photo`. Collapsing non-finite values to
+  // null keeps the query disabled and the key stable.
+  const numericId =
+    typeof vehicleId === 'number' && Number.isFinite(vehicleId) ? vehicleId : null;
   return useQuery({
-    queryKey: vehicleId == null ? vehiclePhotoKeys.all : vehiclePhotoKeys.detail(vehicleId),
+    queryKey: numericId == null ? vehiclePhotoKeys.all : vehiclePhotoKeys.detail(numericId),
     queryFn: ({ signal }) =>
-      request<VehiclePhotoMeta>(`/vehicles/${vehicleId}/photo`, { signal }),
-    enabled: vehicleId != null,
+      request<VehiclePhotoMeta>(`/vehicles/${numericId}/photo`, { signal }),
+    enabled: numericId != null,
     staleTime: 60_000,
   });
 }
@@ -176,12 +186,12 @@ export function useDeleteVehiclePhoto() {
       return vehicleId;
     },
     onSuccess: (vehicleId) => {
+      invalidateAndBroadcast(queryClient, { queryKey: vehiclePhotoKeys.detail(vehicleId) });
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.detail(String(vehicleId)) });
       queryClient.setQueryData<VehiclePhotoMeta>(
         vehiclePhotoKeys.detail(vehicleId),
         { has_photo: false },
       );
-      invalidateAndBroadcast(queryClient, { queryKey: vehiclePhotoKeys.detail(vehicleId) });
-      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.detail(String(vehicleId)) });
     },
   });
 }

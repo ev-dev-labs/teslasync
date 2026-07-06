@@ -75,16 +75,20 @@ export function TripReplayCharts({
   syncId = 'trip-replay',
   height = 220,
 }: TripReplayChartsProps) {
+  // Defend the `.length` / `.map` / index access downstream against an
+  // `undefined` data prop (the type says non-null, but a caller mid-load can
+  // still pass nothing) — both children then fall back to the empty state.
+  const safeData = data ?? [];
   return (
     <ChartTimeRangeProvider syncId={syncId} syncMethod="value">
       <TimelineChart
-        data={data}
+        data={safeData}
         currentIndex={currentIndex}
         speedUnit={speedUnit}
         onSeekToIndex={onSeekToIndex}
         height={height}
       />
-      <ChartCursorBridge data={data} onSeekToIndex={onSeekToIndex} />
+      <ChartCursorBridge data={safeData} onSeekToIndex={onSeekToIndex} />
     </ChartTimeRangeProvider>
   );
 }
@@ -261,7 +265,7 @@ export function nearestIndexByTime(
   data: TripReplayChartPoint[],
   target: number,
 ): number {
-  if (data.length === 0) return 0;
+  if (!data || data.length === 0) return 0;
   let lo = 0;
   let hi = data.length - 1;
   while (lo < hi) {

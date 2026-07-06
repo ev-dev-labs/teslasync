@@ -1,5 +1,19 @@
-import { deriveEdges, type TransitionRow, type StateEntry, type FSMDefinition } from './types'
+import { deriveEdges, type TransitionRow, type StateEntry, type FSMDefinition, type Edge } from './types'
 
+/**
+ * Automation FSM — one automation rule's execution lifecycle.
+ *
+ * Flow: `idle → evaluating → (executing | skipped) →
+ * (succeeded | partial | failed)`, with `failed → retrying → (executing |
+ * gave_up)` recovery, a `cooldown` rate-limit after a run, and a `disabled`
+ * state reached from `gave_up`. Every state can walk back to `idle`, so the
+ * graph is live (no trap states) and fully reachable from `idle`.
+ *
+ * Triggers are intentionally single-valued (`manual`): the runtime engine —
+ * not this static table — decides when each edge fires (mirrors the
+ * telemetry-connection FSM). Structural invariants are locked by the
+ * co-located `__tests__/automation.test.ts` and the shared FSM suites.
+ */
 export const AUTOMATION_STATES = [
   'idle', 'evaluating', 'executing', 'succeeded', 'partial',
   'failed', 'retrying', 'gave_up', 'skipped', 'cooldown', 'disabled',
@@ -45,7 +59,7 @@ export const AUTOMATION_TRANSITIONS: TransitionRow<AutomationState, AutomationTr
   { from: 'disabled',   to: 'idle',       trigger: 'manual', guard: null, timing: 'immediate' },
 ]
 
-export const AUTOMATION_EDGES = deriveEdges(AUTOMATION_TRANSITIONS)
+export const AUTOMATION_EDGES: Edge<AutomationState>[] = deriveEdges(AUTOMATION_TRANSITIONS)
 
 export const AUTOMATION_FSM: FSMDefinition<AutomationState, AutomationTrigger> = {
   states: AUTOMATION_STATE_ENTRIES,

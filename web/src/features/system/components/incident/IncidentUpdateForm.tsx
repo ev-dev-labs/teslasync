@@ -50,12 +50,19 @@ export function IncidentUpdateForm({ incident }: IncidentUpdateFormProps) {
       setNextStatus('')
       toast.success(t('incidentTimeline.updateAdded', 'Update added.'))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('incidentTimeline.updateFailed', 'Failed to append update'))
+      // Fall back to a friendly default when the failure carries no message
+      // (e.g. `new Error('')`) so the operator never sees an empty error toast.
+      const fallback = t('incidentTimeline.updateFailed', 'Failed to append update')
+      toast.error(err instanceof Error && err.message ? err.message : fallback)
     }
   }
 
   return (
-    <form onSubmit={handleAppend} className="space-y-3">
+    <form
+      onSubmit={handleAppend}
+      className="space-y-3"
+      aria-label={t('incidentTimeline.formLabel', 'Add incident update')}
+    >
       <Textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}

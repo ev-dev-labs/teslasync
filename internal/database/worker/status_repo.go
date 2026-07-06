@@ -168,12 +168,12 @@ func (s *RedisWorkerStatusStore) GetMany(ctx context.Context, workers []string) 
 		if raw == nil {
 			continue
 		}
-		s, ok := raw.(string)
-		if !ok || s == "" {
+		str, ok := raw.(string)
+		if !ok || str == "" {
 			continue
 		}
 		var hb WorkerHeartbeat
-		if err := json.Unmarshal([]byte(s), &hb); err != nil {
+		if err := json.Unmarshal([]byte(str), &hb); err != nil {
 			// A poisoned key shouldn't take down the whole
 			// panel; log-and-skip semantics live at the
 			// caller (handler) which surfaces "down" with a

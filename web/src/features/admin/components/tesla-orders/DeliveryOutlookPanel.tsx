@@ -5,7 +5,7 @@
  * upcoming delivery, how many orders are upgradable, the distinct model count,
  * VIN-assignment progress, and when the orders were last synced from Tesla.
  */
-import { type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CalendarClock } from 'lucide-react';
 
@@ -37,42 +37,45 @@ export function DeliveryOutlookPanel({
   const { t } = useTranslation();
   const { formatDateWithDay } = useDateFormat();
 
-  const items = [
-    {
-      label: t('admin.teslaOrders.outlook.upgradable', 'Upgradable orders'),
-      value: (
-        <Text as="span" weight="semibold" color="primary" className="tabular-nums">
-          {stats.upgradable}
-        </Text>
-      ),
-    },
-    {
-      label: t('admin.teslaOrders.outlook.models', 'Distinct models'),
-      value: (
-        <Text as="span" weight="semibold" color="primary" className="tabular-nums">
-          {stats.models}
-        </Text>
-      ),
-    },
-    {
-      label: t('admin.teslaOrders.outlook.vin', 'VIN assigned'),
-      value: (
-        <Text as="span" weight="semibold" color="primary" className="tabular-nums">
-          {stats.withVin} / {stats.total}
-        </Text>
-      ),
-    },
-    {
-      label: t('admin.teslaOrders.outlook.lastSynced', 'Last synced'),
-      value: fetchedAt ? (
-        <TimeStamp value={fetchedAt} format="relative" />
-      ) : (
-        <Text as="span" color="muted">
-          —
-        </Text>
-      ),
-    },
-  ];
+  const items = useMemo(
+    () => [
+      {
+        label: t('admin.teslaOrders.outlook.upgradable', 'Upgradable orders'),
+        value: (
+          <Text as="span" weight="semibold" color="primary" className="tabular-nums">
+            {stats.upgradable ?? 0}
+          </Text>
+        ),
+      },
+      {
+        label: t('admin.teslaOrders.outlook.models', 'Distinct models'),
+        value: (
+          <Text as="span" weight="semibold" color="primary" className="tabular-nums">
+            {stats.models ?? 0}
+          </Text>
+        ),
+      },
+      {
+        label: t('admin.teslaOrders.outlook.vin', 'VIN assigned'),
+        value: (
+          <Text as="span" weight="semibold" color="primary" className="tabular-nums">
+            {stats.withVin ?? 0} / {stats.total ?? 0}
+          </Text>
+        ),
+      },
+      {
+        label: t('admin.teslaOrders.outlook.lastSynced', 'Last synced'),
+        value: fetchedAt ? (
+          <TimeStamp value={fetchedAt} format="relative" />
+        ) : (
+          <Text as="span" color="muted">
+            —
+          </Text>
+        ),
+      },
+    ],
+    [t, stats, fetchedAt],
+  );
 
   return (
     <GlassPanel className="p-4 sm:p-5">

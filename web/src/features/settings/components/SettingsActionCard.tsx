@@ -55,7 +55,7 @@ export function SettingsActionCard({
     >
       <IconBox color={iconColor}>{icon}</IconBox>
       <div className="min-w-0 flex-1">
-        <Heading level="panel" className="truncate">
+        <Heading level="panel" className="truncate" title={title}>
           {title}
         </Heading>
         <Text as="p" variant="caption" className="mt-0.5">

@@ -133,7 +133,7 @@ export function AutomationActivityFeed({
 }: AutomationActivityFeedProps) {
   const { t } = useTranslation();
 
-  const recentLive = useMemo(() => liveEvents.slice(0, 5), [liveEvents]);
+  const recentLive = useMemo(() => (liveEvents ?? []).slice(0, 5), [liveEvents]);
   const items = history ?? [];
 
   return (

@@ -178,12 +178,22 @@ export function TripReplayMap({
     return segs;
   }, [positions, hasRoute]);
 
-  /* Heading angle for the playhead arrow */
+  /* Heading angle for the playhead arrow.
+   *
+   * `currentIndex` is owned by the page above and, during scrubber resets or
+   * a positions swap, can transiently fall outside `[0, len-1]`. Clamp it
+   * before indexing so an out-of-range value can't read `positions[undefined]`
+   * and crash `computeHeading` — the playhead itself is null in that window,
+   * so the exact angle is moot; not throwing is what matters. */
   const heading = useMemo(() => {
     if (!hasRoute || positions.length < 2) return 0;
-    const next = currentIndex < positions.length - 1 ? currentIndex + 1 : currentIndex;
+    const clamped = Math.min(Math.max(currentIndex, 0), positions.length - 1);
+    const next = clamped < positions.length - 1 ? clamped + 1 : clamped;
     const prev = next > 0 ? next - 1 : 0;
-    return computeHeading(positions[prev], positions[next]);
+    const from = positions[prev];
+    const to = positions[next];
+    if (!from || !to) return 0;
+    return computeHeading(from, to);
   }, [currentIndex, positions, hasRoute]);
 
   const currentPosition = hasRoute ? positions[currentIndex] ?? null : null;
@@ -202,6 +212,8 @@ export function TripReplayMap({
 
   return (
     <GlassPanel
+      role="region"
+      aria-label={t('replay.map.ariaLabel', 'Trip route map')}
       className={`relative overflow-hidden rounded-xl ${className ?? ''}`}
       style={{ height: heightStyle }}
       data-testid="trip-replay-map"

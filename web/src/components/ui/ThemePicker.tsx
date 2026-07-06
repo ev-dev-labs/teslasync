@@ -70,7 +70,7 @@ export function ThemePicker({
   const groupedModes = useMemo(() => {
     const q = modeQuery.trim().toLowerCase()
     const list = (Object.values(allModes) as ModeTheme[]).filter(
-      m => !q || m.name.toLowerCase().includes(q) || (m.category ?? '').toLowerCase().includes(q),
+      m => !q || (m.name ?? '').toLowerCase().includes(q) || (m.category ?? '').toLowerCase().includes(q),
     )
     const byCat = new Map<string, ModeTheme[]>()
     for (const m of list) {
@@ -127,6 +127,7 @@ export function ThemePicker({
             value={modeQuery}
             onChange={e => setModeQuery(e.target.value)}
             placeholder={t('theme.searchModes', 'Search display modes…')}
+            aria-label={t('theme.searchModes', 'Search display modes…')}
             className="mb-3"
           />
           <div className={cn('space-y-5 overflow-y-auto pr-1', compact ? 'max-h-72' : 'max-h-[28rem]')}>
@@ -145,6 +146,7 @@ export function ThemePicker({
                     <Button
                       key={m.id}
                       variant="ghost"
+                      aria-pressed={modeId === m.id}
                       onClick={() => handleMode(m.id as ModeId, m.name)}
                       className={cn(
                         'flex items-center gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start',
@@ -176,7 +178,7 @@ export function ThemePicker({
                         </div>
                       </div>
                       {modeId === m.id && (
-                        <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
+                        <CheckCircle aria-hidden="true" className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
                       )}
                     </Button>
                   ))}
@@ -196,6 +198,7 @@ export function ThemePicker({
             <Button
               key={thm.id}
               variant="ghost"
+              aria-pressed={themeId === thm.id}
               onClick={() => handleTheme(thm.id as ThemeId, thm.name)}
               className={cn(
                 'group relative rounded-xl border p-4 text-left h-auto transition-all duration-normal justify-start items-start flex-col',
@@ -216,7 +219,7 @@ export function ThemePicker({
               <p className="text-xs font-medium text-[var(--text-primary)]">{thm.name}</p>
               {themeId === thm.id && (
                 <div className="absolute top-2.5 right-2.5">
-                  <CheckCircle className="h-4 w-4" style={{ color: thm.primary }} />
+                  <CheckCircle aria-hidden="true" className="h-4 w-4" style={{ color: thm.primary }} />
                 </div>
               )}
             </Button>
@@ -225,6 +228,7 @@ export function ThemePicker({
           {showCustom && (
             <Button
               variant="ghost"
+              aria-pressed={themeId === 'custom'}
               onClick={() => {
                 handleCustom(customPrimary, customAccent)
                 toast.info(`${t('theme.theme', 'Theme')}: ${t('theme.custom', 'Custom')}`)
@@ -248,7 +252,7 @@ export function ThemePicker({
               <p className="text-xs font-medium text-[var(--text-primary)]">{t('theme.custom', 'Custom')}</p>
               {themeId === 'custom' && (
                 <div className="absolute top-2.5 right-2.5">
-                  <CheckCircle className="h-4 w-4" style={{ color: customPrimary }} />
+                  <CheckCircle aria-hidden="true" className="h-4 w-4" style={{ color: customPrimary }} />
                 </div>
               )}
             </Button>
@@ -262,6 +266,7 @@ export function ThemePicker({
               <Input
                 type="color"
                 value={customPrimary}
+                aria-label={t('theme.primary', 'Primary')}
                 onChange={e => {
                   setCustomPrimary(e.target.value)
                   handleCustom(e.target.value, customAccent)
@@ -275,6 +280,7 @@ export function ThemePicker({
               <Input
                 type="color"
                 value={customAccent}
+                aria-label={t('theme.accent', 'Accent')}
                 onChange={e => {
                   setCustomAccent(e.target.value)
                   handleCustom(customPrimary, e.target.value)

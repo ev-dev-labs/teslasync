@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, MapPin, Clock, Thermometer, TrendingUp, Timer, Activity } from 'lucide-react';
 import {
@@ -35,7 +35,51 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
   const tempEff = da?.temp_vs_efficiency ?? [];
   const dailyTrend = da?.daily_trend ?? [];
   const durationDist = da?.duration_distribution ?? [];
-  const effTrend = useMemo(() => dailyTrend.filter((d) => safe(d.efficiency) > 0), [dailyTrend]);
+
+  // Display-unit projectors. Backend distance fields are SI-floor km and
+  // efficiency is Wh/km; both must be projected into the active user unit
+  // before they are plotted under a user-unit axis label — otherwise raw km /
+  // Wh/km leaks under an "mi" / "Wh/mi" label. Stable per active unit so the
+  // memoised chart data below only recomputes when the preference changes.
+  const fromKm = useCallback(
+    (km: number) => convertDistanceFromSI(km * 1000, distanceUnit),
+    [distanceUnit],
+  );
+  const fromWhPerKm = useCallback(
+    (whPerKm: number) => (distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm),
+    [distanceUnit],
+  );
+
+  // Project the hourly + daily distance series into the user's distance unit so
+  // the plotted magnitude matches the axis label. Derived once per data/unit
+  // change instead of building a fresh array literal inline on every render.
+  const hourlyData = useMemo(
+    () => hourly.map((d) => ({ ...d, distance: fromKm(safe(d.distance)) })),
+    [hourly, fromKm],
+  );
+  const dailyTrendData = useMemo(
+    () => dailyTrend.map((d) => ({ ...d, distance: fromKm(safe(d.distance)) })),
+    [dailyTrend, fromKm],
+  );
+  // Scatter points carry SI °C / Wh/km / km — convert each axis at the boundary.
+  const tempEffData = useMemo(
+    () =>
+      tempEff.map((d) => ({
+        temp: convertTempFromSI(safe(d.temp), tempUnit),
+        efficiency: fromWhPerKm(safe(d.efficiency)),
+        distance: fromKm(safe(d.distance)),
+      })),
+    [tempEff, tempUnit, fromWhPerKm, fromKm],
+  );
+  // Keep only points with a positive efficiency, then project the survivors into
+  // the user's efficiency unit (Wh/mi vs Wh/km) to match the axis label.
+  const effTrend = useMemo(
+    () =>
+      dailyTrend
+        .filter((d) => safe(d.efficiency) > 0)
+        .map((d) => ({ ...d, efficiency: fromWhPerKm(safe(d.efficiency)) })),
+    [dailyTrend, fromWhPerKm],
+  );
 
   return (
     <FadeIn className="mt-4 space-y-4 xl:space-y-5">
@@ -55,7 +99,11 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={speedDist.length === 0}
           emptyMessage={t('analytics.driving.noSpeed', 'No speed data')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={t('analytics.driving.speedDistAria', 'Trip count by speed range')}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={speedDist} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -78,7 +126,11 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={distDist.length === 0}
           emptyMessage={t('analytics.driving.noDistDist', 'No distance distribution data')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={t('analytics.driving.distDistAria', 'Trip count by distance range')}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={distDist} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -101,9 +153,13 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={hourly.length === 0}
           emptyMessage={t('analytics.driving.noHourly', 'No hourly data')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={t('analytics.driving.hourlyPatternAria', 'Drives and distance by hour of day')}
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={hourly} margin={chartMarginLabeled} {...chartAnimation}>
+              <ComposedChart data={hourlyData} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
                 <XAxis dataKey="hour" tick={axisTickSm} tickFormatter={(h: number) => `${h}:00`} />
                 <YAxis yAxisId="left" tick={axisTick} />
@@ -127,7 +183,11 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={tempEff.length === 0}
           emptyMessage={t('analytics.driving.noTempEff', 'No temperature data')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={`${t('analytics.driving.tempVsEffAria', 'Efficiency versus outside temperature')} (${efficiencyUnit})`}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={chartMarginLabeled}>
                 {chartGrid}
@@ -135,15 +195,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
                 <YAxis dataKey="efficiency" name={t('analytics.driving.efficiency', 'Efficiency')} tick={axisTick} unit={` ${efficiencyUnit}`} type="number" />
                 <ZAxis dataKey="distance" range={[30, 300]} name={distanceUnit} />
                 <Tooltip content={<ChartTooltip />} />
-                <Scatter
-                  data={tempEff.map((d) => ({
-                    // backend `temp_vs_efficiency` is { °C, Wh/km, km } — convert at boundary.
-                    temp: convertTempFromSI(safe(d.temp), tempUnit),
-                    efficiency: distanceUnit === 'mi' ? safe(d.efficiency) * KM_PER_MILE : safe(d.efficiency),
-                    distance: convertDistanceFromSI(safe(d.distance) * 1000, distanceUnit),
-                  }))}
-                  fill={CHART_COLORS[1]}
-                />
+                <Scatter data={tempEffData} fill={CHART_COLORS[1]} />
               </ScatterChart>
             </ResponsiveContainer>
           </div>
@@ -159,9 +211,13 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={dailyTrend.length === 0}
           emptyMessage={t('analytics.driving.noDailyTrend', 'No daily trend data')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={`${t('analytics.driving.dailyTrendAria', 'Daily driving distance and drive count')} (${distanceUnit})`}
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={dailyTrend} margin={chartMarginLabeled} {...chartAnimation}>
+              <ComposedChart data={dailyTrendData} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
                 <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
                 <YAxis yAxisId="left" tick={axisTick} />
@@ -188,7 +244,11 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={durationDist.length === 0}
           emptyMessage={t('analytics.driving.noDurationData', 'Not enough drive data for distribution chart')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={t('analytics.driving.durationDistAria', 'Drive count by duration range')}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={durationDist} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -212,7 +272,11 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           isEmpty={effTrend.length === 0}
           emptyMessage={t('analytics.driving.noEffTrend', 'No efficiency trend data')}
         >
-          <div className="h-64 sm:h-72">
+          <div
+            className="h-64 sm:h-72"
+            role="img"
+            aria-label={`${t('analytics.driving.effTrendAria', 'Daily efficiency trend')} (${efficiencyUnit})`}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={effTrend} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}

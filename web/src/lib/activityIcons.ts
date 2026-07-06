@@ -134,6 +134,90 @@ const REGISTRY: Record<string, ActivityVisual> = {
     i18nKey: 'activity.action.automationDelete',
     fallback: 'Automation deleted',
   },
+  // The Go backend (internal/automation/audit.go) records PAST-TENSE lifecycle
+  // actions in audit_logs, so the imperative keys above never match a real feed
+  // entry on their own — every automation event used to collapse onto the
+  // generic `automation` entry below. Mirror the actual emitted vocabulary here
+  // so each event gets its own icon + label; unlisted verbs still degrade to the
+  // domain-level `automation` entry via the prefix walk.
+  'automation.created': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationCreated',
+    fallback: 'Automation created',
+  },
+  'automation.updated': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationUpdated',
+    fallback: 'Automation updated',
+  },
+  'automation.deleted': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationDeleted',
+    fallback: 'Automation deleted',
+  },
+  'automation.enabled': {
+    icon: Icons.workflow,
+    color: 'text-emerald-300',
+    i18nKey: 'activity.action.automationEnabled',
+    fallback: 'Automation enabled',
+  },
+  'automation.disabled': {
+    icon: Icons.workflow,
+    color: 'text-[var(--text-muted)]',
+    i18nKey: 'activity.action.automationDisabled',
+    fallback: 'Automation disabled',
+  },
+  'automation.re_enabled': {
+    icon: Icons.workflow,
+    color: 'text-emerald-300',
+    i18nKey: 'activity.action.automationReEnabled',
+    fallback: 'Automation re-enabled',
+  },
+  'automation.test_run': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationTestRun',
+    fallback: 'Automation test run',
+  },
+  'automation.undo': {
+    icon: Icons.undo,
+    color: 'text-amber-300',
+    i18nKey: 'activity.action.automationUndo',
+    fallback: 'Automation undone',
+  },
+  'automation.imported': {
+    icon: Icons.download,
+    color: 'text-teal-300',
+    i18nKey: 'activity.action.automationImported',
+    fallback: 'Automations imported',
+  },
+  'automation.exported': {
+    icon: Icons.upload,
+    color: 'text-teal-300',
+    i18nKey: 'activity.action.automationExported',
+    fallback: 'Automations exported',
+  },
+  'automation.executed': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationExecuted',
+    fallback: 'Automation ran',
+  },
+  'automation.failed': {
+    icon: Icons.error,
+    color: 'text-rose-300',
+    i18nKey: 'activity.action.automationFailed',
+    fallback: 'Automation failed',
+  },
+  'automation.auto_disabled': {
+    icon: Icons.workflow,
+    color: 'text-amber-300',
+    i18nKey: 'activity.action.automationAutoDisabled',
+    fallback: 'Automation auto-disabled',
+  },
   'automation': {
     icon: Icons.workflow,
     color: 'text-cyan-300',
@@ -224,19 +308,40 @@ const FALLBACK: ActivityVisual = {
 };
 
 /**
+ * Own-property lookup into REGISTRY.
+ *
+ * REGISTRY is a plain object literal, so it inherits `Object.prototype`
+ * members (`toString`, `constructor`, `hasOwnProperty`, `valueOf`,
+ * `__proto__`, …). A bare `REGISTRY[key]` truthy check would resolve those
+ * inherited functions for any action that happens to share one of those
+ * names — returning a `Function`/`Object.prototype` masquerading as an
+ * `ActivityVisual` and crashing consumers that read `.icon`/`.color` off it
+ * (React renders `<undefined />`). Restricting lookups to the registry's own
+ * keys makes such actions fall through to FALLBACK like any other unknown.
+ */
+function lookup(key: string): ActivityVisual | undefined {
+  return Object.prototype.hasOwnProperty.call(REGISTRY, key)
+    ? REGISTRY[key]
+    : undefined;
+}
+
+/**
  * Resolves an action string to its visual descriptor, falling back to
  * progressively shorter prefixes. `vehicle.command.wake` matches first;
  * if absent, `vehicle.command`, then `vehicle`, then the generic fallback.
  */
-export function getActivityVisual(action: string): ActivityVisual {
+export function getActivityVisual(action: string | null | undefined): ActivityVisual {
   if (!action) return FALLBACK;
   const normalized = action.trim();
-  if (REGISTRY[normalized]) return REGISTRY[normalized];
+  if (!normalized) return FALLBACK;
+
+  const exact = lookup(normalized);
+  if (exact) return exact;
 
   const parts = normalized.split('.');
   for (let i = parts.length - 1; i > 0; i--) {
-    const prefix = parts.slice(0, i).join('.');
-    if (REGISTRY[prefix]) return REGISTRY[prefix];
+    const match = lookup(parts.slice(0, i).join('.'));
+    if (match) return match;
   }
   return FALLBACK;
 }

@@ -206,23 +206,45 @@ export default function EnergyPage() {
   const { data: liveCharging } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived metrics ──────────────────────────────────────────── */
-  const totalEnergy = sessions?.reduce((s, c) => s + c.total_energy_added_wh, 0) ?? 0;
+  const totalEnergy = sessions?.reduce((s, c) => s + (c.total_energy_added_wh ?? 0), 0) ?? 0;
   const totalCost = sessions?.reduce((s, c) => s + (c.cost_decimal ?? 0), 0) ?? 0;
   const avgEfficiency = stats?.avg_efficiency_wh_per_m ?? 0;
   const totalDistance = stats?.total_distance_m ?? 0;
   const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
 
-  const periodDays = Math.max(
-    1,
-    Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000),
-  );
+  // Guard against hand-edited / malformed `from`/`to` URL params: an invalid
+  // Date yields NaN which `Math.max(1, NaN)` propagates (NaN), corrupting every
+  // downstream projection and the "Last {days} Days" labels. Fall back to the
+  // 30-day default window instead.
+  const startMs = new Date(startDate).getTime();
+  const endMs = new Date(endDate).getTime();
+  const periodDays = Number.isFinite(startMs) && Number.isFinite(endMs)
+    ? Math.max(1, Math.ceil((endMs - startMs) / 86400000))
+    : 30;
   const costPerKm = totalDistance > 0 ? totalCost / totalDistance : 0;
   const costPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
-  const gasEquivalent = totalDistance * 0.12;
+  // `total_distance_m` is SI meters post phase-42; convert to the user's display
+  // distance before applying the per-unit gas estimate, otherwise the gas
+  // "equivalent" balloons ~1000× (e.g. $24k for a 200 km month).
+  const gasEquivalent = toDistanceDisplay(totalDistance) * 0.12;
   const monthlyProjectedCost = costPerKm > 0 ? costPerKm * (totalDistance / periodDays) * 30 : 0;
   const yearlyProjectedCost = monthlyProjectedCost * 12;
 
   const dailyEnergy = stats?.daily_breakdown ?? [];
+
+  /* The API daily breakdown is SI (Wh, Wh/m, m). Convert once to the user's
+     display units so both synced daily charts plot values that match their
+     axis + legend labels (kWh, Wh/mi|Wh/km, mi|km) instead of raw SI. */
+  const dailyChartData = useMemo(
+    () =>
+      dailyEnergy.map((d) => ({
+        date: d.date,
+        energy: convertEnergyFromSI(d.energy_wh ?? 0, energyUnit),
+        efficiency: (d.efficiency_wh_per_m ?? 0) * (distanceUnit === 'mi' ? 1609.344 : 1000),
+        distance: convertDistanceFromSI(d.distance_m ?? 0, distanceUnit),
+      })),
+    [dailyEnergy, energyUnit, distanceUnit],
+  );
 
   /* ── No-data banner gate ───────────────────────────────────────────
    * Replay vehicles + brand-new accounts have no charging sessions and
@@ -255,10 +277,16 @@ export default function EnergyPage() {
       const hour = new Date(s.started_at).getHours();
       const idx = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
       buckets[labels[idx]].count++;
-      buckets[labels[idx]].energy += s.total_energy_added_wh;
+      buckets[labels[idx]].energy += s.total_energy_added_wh ?? 0;
     });
-    return labels.map((name) => ({ name, ...buckets[name] }));
-  }, [sessions, t]);
+    // Buckets accumulate SI watt-hours; expose the display-unit energy so the
+    // "Energy (kWh)" bar plots values that match its label.
+    return labels.map((name) => ({
+      name,
+      count: buckets[name].count,
+      energy: convertEnergyFromSI(buckets[name].energy, energyUnit),
+    }));
+  }, [sessions, t, energyUnit]);
 
   /* ── Charger-type breakdown ───────────────────────────────────── */
   const chargerBreakdown = useMemo(() => {
@@ -271,7 +299,7 @@ export default function EnergyPage() {
         : s.charger_type ? 'DC Fast' : 'Home/AC';
       if (!types[key]) types[key] = { count: 0, energy: 0, cost: 0 };
       types[key].count++;
-      types[key].energy += s.total_energy_added_wh;
+      types[key].energy += s.total_energy_added_wh ?? 0;
       types[key].cost += s.cost_decimal ?? 0;
     });
     const chargerLabels: Record<string, string> = {
@@ -459,7 +487,7 @@ export default function EnergyPage() {
                   color="#00f0ff"
                 />
                 <RadialGauge
-                  value={toEfficiencyDisplay(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000) / totalDistance : 0))}
+                  value={toEfficiencyDisplay(avgEfficiency || (totalDistance > 0 ? totalEnergy / totalDistance : 0))}
                   max={toEfficiencyDisplay(300)}
                   label={t('energy.gauge.efficiency', 'Efficiency')}
                   unit={efficiencyUnit}
@@ -551,12 +579,12 @@ export default function EnergyPage() {
             >
               {({ annotations: chartAnnotations }) => (
                 <div className="h-56 sm:h-64">
-                  {dailyEnergy.length > 0 ? (
+                  {dailyChartData.length > 0 ? (
                     <EnergyChartSync>
                       {({ sync, syncedX }) => (
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart
-                            data={dailyEnergy}
+                            data={dailyChartData}
                             syncId={sync.syncId}
                             syncMethod={sync.syncMethod}
                             onMouseMove={sync.onMouseMove}
@@ -573,22 +601,22 @@ export default function EnergyPage() {
                             {renderAnnotationLines(chartAnnotations, (ts) => ts)}
                             <Bar
                               yAxisId="left"
-                              dataKey="energy_wh"
+                              dataKey="energy"
                               name={t('energy.chart.energy', 'Energy')}
                               fill="url(#energyBarGrad)"
                               fillOpacity={0.6}
                               radius={[3, 3, 0, 0]}
                               animationDuration={800}
-                              hide={energyCostHidden.isHidden('energy_wh')}
+                              hide={energyCostHidden.isHidden('energy')}
                             />
                             <Line
                               {...AREA_DEFAULTS}
                               yAxisId="right"
-                              dataKey="efficiency_wh_per_m"
+                              dataKey="efficiency"
                               name={efficiencyUnit}
                               stroke="#10b981"
                               animationDuration={800}
-                              hide={energyCostHidden.isHidden('efficiency_wh_per_m')}
+                              hide={energyCostHidden.isHidden('efficiency')}
                             />
                             {syncedX != null && (
                               <ReferenceLine
@@ -601,7 +629,7 @@ export default function EnergyPage() {
                                 isFront
                               />
                             )}
-                            {dailyEnergy.length > 14 && (
+                            {dailyChartData.length > 14 && (
                               <Brush
                                 dataKey="date"
                                 height={20}
@@ -633,12 +661,12 @@ export default function EnergyPage() {
               exportFilename="efficiency-trend"
             >
               <div className="h-56 sm:h-64">
-                {dailyEnergy.length > 0 ? (
+                {dailyChartData.length > 0 ? (
                   <EnergyChartSync>
                     {({ sync, syncedX }) => (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
-                          data={dailyEnergy}
+                          data={dailyChartData}
                           syncId={sync.syncId}
                           syncMethod={sync.syncMethod}
                           onMouseMove={sync.onMouseMove}
@@ -653,7 +681,7 @@ export default function EnergyPage() {
                           <Tooltip content={<ChartTooltip />} />
                           <Area
                             {...AREA_DEFAULTS}
-                            dataKey="efficiency_wh_per_m"
+                            dataKey="efficiency"
                             name={efficiencyUnit}
                             stroke="#10b981"
                             fill="url(#effGrad)"
@@ -661,7 +689,7 @@ export default function EnergyPage() {
                           />
                           <Area
                             {...AREA_DEFAULTS}
-                            dataKey="distance_m"
+                            dataKey="distance"
                             name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' })}
                             stroke="#00f0ff"
                             fill="url(#distGrad2)"

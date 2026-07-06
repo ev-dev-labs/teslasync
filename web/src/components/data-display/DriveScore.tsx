@@ -2,10 +2,24 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { GlassPanel } from '@/components/ui'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { COLOR } from '@/lib/colors'
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))
+}
+
+/**
+ * Coerce a possibly-null / NaN / Infinity value to a finite number.
+ *
+ * Drive fields arrive from a live telemetry flush and can be `null` (column
+ * never written) or — after a partial/streamed flush — a non-finite `number`.
+ * `??` alone only guards null/undefined, so a `NaN` distance used to propagate
+ * straight through every arithmetic step and surface as a literal "NaN" in the
+ * gauge (and an invalid `stroke-dashoffset` that collapses the SVG arc).
+ */
+function num(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback
 }
 
 type DriveLike = {
@@ -22,16 +36,19 @@ type DriveLike = {
   [key: string]: unknown
 }
 
-export function computeDriveScore(drive: DriveLike): { total: number; efficiency: number; speed: number; range: number; trip: number } {
-  // Drive fields are SI canonical: meters, seconds, and m/s.
-  const distanceM = drive.distance_m ?? drive.distanceM ?? 0
+export function computeDriveScore(drive: DriveLike | null | undefined): { total: number; efficiency: number; speed: number; range: number; trip: number } {
+  // Drive fields are SI canonical: meters, seconds, and m/s. Every input is
+  // funnelled through num() so a null or non-finite value can never poison the
+  // score — see the num() docblock above.
+  const d: DriveLike = drive ?? {}
+  const distanceM = num(d.distance_m ?? d.distanceM, 0)
   const distanceKm = distanceM / 1000
-  const durationS = drive.duration_s ?? drive.durationS ?? 0
+  const durationS = num(d.duration_s ?? d.durationS, 0)
   const durationHours = durationS / 3600
   const avgSpeedMps = durationS > 0 ? distanceM / durationS : 0
-  const maxSpeedMps = drive.max_speed_mps ?? drive.maxSpeedMps ?? avgSpeedMps
-  const startBattery = drive.start_battery_pct ?? drive.startBatteryPct ?? 100
-  const endBattery = drive.end_battery_pct ?? drive.endBatteryPct ?? startBattery
+  const maxSpeedMps = num(d.max_speed_mps ?? d.maxSpeedMps, avgSpeedMps)
+  const startBattery = num(d.start_battery_pct ?? d.startBatteryPct, 100)
+  const endBattery = num(d.end_battery_pct ?? d.endBatteryPct, startBattery)
 
   // Efficiency component (40 pts): closer to optimal 150 Wh/km is better
   const batteryUsed = Math.max(startBattery - endBattery, 0)
@@ -63,6 +80,10 @@ export function computeDriveScore(drive: DriveLike): { total: number; efficiency
 }
 
 export function getScoreColor(score: number): string {
+  // A non-finite score (NaN/Infinity from malformed data) is unverifiable, so
+  // fail closed to the "bad" tier. Left to JS defaults, `NaN < 40` is false and
+  // the score would misleadingly render as reassuring green.
+  if (!Number.isFinite(score)) return COLOR.BAD
   if (score < 40) return COLOR.BAD
   if (score < 70) return COLOR.WARN
   return COLOR.GOOD
@@ -70,6 +91,7 @@ export function getScoreColor(score: number): string {
 
 export function DriveScore({ drive }: { drive: DriveLike }) {
   const { t } = useTranslation()
+  const { reduce } = useMotionPreference()
   const score = useMemo(() => computeDriveScore(drive), [drive])
   const color = getScoreColor(score.total)
 
@@ -77,12 +99,24 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
   const circumference = 2 * Math.PI * radius
   const dashOffset = circumference - (score.total / 100) * circumference
 
+  const breakdown = useMemo(
+    () => [
+      { key: 'efficiency', label: t('driveScore.efficiency', 'Efficiency'), value: score.efficiency, max: 40, color: '#00f0ff' },
+      { key: 'speed', label: t('driveScore.speedDiscipline', 'Speed Discipline'), value: score.speed, max: 20, color: '#a855f7' },
+      { key: 'range', label: t('driveScore.rangePreservation', 'Range Preservation'), value: score.range, max: 20, color: '#10b981' },
+      { key: 'trip', label: t('driveScore.tripLength', 'Trip Length'), value: score.trip, max: 20, color: '#f59e0b' },
+    ],
+    [t, score.efficiency, score.speed, score.range, score.trip],
+  )
+
+  const gaugeLabel = t('driveScore.gaugeLabel', 'Drive score: {{score}} out of 100', { score: score.total })
+
   return (
     <GlassPanel className="p-5">
       <div className="flex items-center gap-6">
         {/* Animated circular gauge */}
-        <div className="relative flex-shrink-0">
-          <svg width="130" height="130" viewBox="0 0 130 130">
+        <div className="relative flex-shrink-0" role="img" aria-label={gaugeLabel}>
+          <svg width="130" height="130" viewBox="0 0 130 130" aria-hidden="true">
             {/* Background circle */}
             <circle
               cx="65" cy="65" r={radius}
@@ -94,9 +128,9 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
               fill="none" stroke={color} strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={circumference}
-              initial={{ strokeDashoffset: circumference }}
+              initial={reduce ? false : { strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: dashOffset }}
-              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: reduce ? 0 : 1.2, ease: [0.16, 1, 0.3, 1] }}
               transform="rotate(-90 65 65)"
               style={{ filter: `drop-shadow(0 0 6px ${color}60)` }}
             />
@@ -105,9 +139,9 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
             <motion.span
               className="text-3xl font-bold"
               style={{ color }}
-              initial={{ opacity: 0 }}
+              initial={reduce ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: reduce ? 0 : 0.5 }}
             >
               {score.total}
             </motion.span>
@@ -118,23 +152,25 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
         {/* Breakdown */}
         <div className="flex-1 space-y-2">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('driveScore.title', 'Drive Score')}</h3>
-          {[
-            { label: t('driveScore.efficiency', 'Efficiency'), value: score.efficiency, max: 40, color: '#00f0ff' },
-            { label: t('driveScore.speedDiscipline', 'Speed Discipline'), value: score.speed, max: 20, color: '#a855f7' },
-            { label: t('driveScore.rangePreservation', 'Range Preservation'), value: score.range, max: 20, color: '#10b981' },
-            { label: t('driveScore.tripLength', 'Trip Length'), value: score.trip, max: 20, color: '#f59e0b' },
-          ].map(item => (
-            <div key={item.label}>
+          {breakdown.map(item => (
+            <div key={item.key}>
               <div className="flex justify-between text-xs mb-0.5">
                 <span className="text-[var(--text-secondary)]">{item.label}</span>
                 <span style={{ color: item.color }} className="font-medium">{item.value}/{item.max}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+              <div
+                className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden"
+                role="progressbar"
+                aria-label={item.label}
+                aria-valuenow={item.value}
+                aria-valuemin={0}
+                aria-valuemax={item.max}
+              >
                 <motion.div
                   className="h-full rounded-full"
-                  initial={{ width: 0 }}
+                  initial={reduce ? false : { width: 0 }}
                   animate={{ width: `${(item.value / item.max) * 100}%` }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+                  transition={{ duration: reduce ? 0 : 0.8, ease: [0.16, 1, 0.3, 1], delay: reduce ? 0 : 0.3 }}
                   style={{ background: item.color, boxShadow: `0 0 4px ${item.color}40` }}
                 />
               </div>

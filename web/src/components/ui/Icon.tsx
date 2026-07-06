@@ -47,13 +47,25 @@ export function Icon({
   'aria-hidden': ariaHidden,
   ...rest
 }: IconProps) {
+  // Leaf design-system primitive rendered in hundreds of places — a missing
+  // icon reference must degrade to rendering nothing rather than crashing the
+  // whole subtree with React's "Element type is invalid" error.
+  if (!IconComponent) return null;
+
+  // Guard against out-of-range `size` values arriving from untyped/dynamic
+  // data so the icon never renders without its sizing box.
+  const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.md;
+
   const a11y = ariaLabel
     ? { 'aria-label': ariaLabel, role: 'img' as const }
     : { 'aria-hidden': ariaHidden ?? true };
 
   return (
     <IconComponent
-      className={cn(SIZE_CLASSES[size], 'shrink-0', className)}
+      className={cn(sizeClass, 'shrink-0', className)}
+      // Decorative SVGs must never become a legacy-browser tab stop; callers
+      // can still override via `...rest` when the icon is genuinely focusable.
+      focusable={false}
       {...a11y}
       {...rest}
     />

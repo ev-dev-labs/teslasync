@@ -54,6 +54,13 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// Stable no-op event sink. This narrator only renders the accumulated
+// `delta.text` that useAiStream already exposes as `stream.text`, so it
+// has no need for per-event callbacks. Hoisting the handler to module
+// scope keeps its identity stable across renders so useAiStream's
+// onEvent-tracking effect does not re-subscribe on every render.
+const noopEvent = () => {}
+
 interface InnerSectionProps {
   /**
    * vehicleId surfaced by the parent CostAnalysisPage. Optional
@@ -113,19 +120,20 @@ function InnerSection({ vehicleId, months }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/charging/costs/forecast/narrate',
     body,
-    onEvent: () => {},
+    onEvent: noopEvent,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-    return (
+
+  return (
     <AIFeatureCard
       title={t(
-                  'costAnalysis.aiNarrative.title',
-                  'Narrate the charging-cost forecast',
-                )}
+        'costAnalysis.aiNarrative.title',
+        'Narrate the charging-cost forecast',
+      )}
       description={t(
-                'costAnalysis.aiNarrative.description',
-                'Ask Helix to explain the deterministic charging-cost forecast \u2014 the historical trend, the projected cost / cost_low / cost_high band, the home-vs-supercharger split, and the deterministic insight. The dollar amounts are the same the chart below shows; the narrator only explains them and is honest that the band is an APPROXIMATE prediction interval, not a strict 95% confidence interval.',
-              )}
+        'costAnalysis.aiNarrative.description',
+        'Ask Helix to explain the deterministic charging-cost forecast \u2014 the historical trend, the projected cost / cost_low / cost_high band, the home-vs-supercharger split, and the deterministic insight. The dollar amounts are the same the chart below shows; the narrator only explains them and is honest that the band is an APPROXIMATE prediction interval, not a strict 95% confidence interval.',
+      )}
       buttonLabel={t('costAnalysis.aiNarrative.generateButton', 'Narrate forecast')}
       badgeLabel={t('costAnalysis.aiNarrative.badge', 'Helix')}
       canStart={haveInputs}

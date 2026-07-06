@@ -37,7 +37,13 @@ export function DigitalTwinPanel({
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading && !hasData ? (
-        <Skeleton height={220} />
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('common.loading', 'Loading…')}
+        >
+          <Skeleton height={220} />
+        </div>
       ) : hasData ? (
         <div className="flex items-center justify-center py-2">
           <VehicleTwin {...twinState} size="sm" interactive vehicleId={vehicleId} />

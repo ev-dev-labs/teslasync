@@ -1,3 +1,4 @@
+import { useCallback, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Button as ControlButton, GlassPanel, Text } from '@/components/ui';
@@ -23,49 +24,92 @@ export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, is
   const { t } = useTranslation();
   const Icon = def.icon;
   const variant = def.variant ?? 'default';
+  const label = t(def.labelKey, def.labelFallback);
 
-  const handleClick = () => {
+  const handleActivate = useCallback(() => {
     if (loading) return;
     onRequestDialog(def);
-  };
+  }, [loading, onRequestDialog, def]);
+
+  // The tile is a clickable surface, so mirror native button keyboard
+  // semantics (Enter/Space) — otherwise the command is mouse-only.
+  const handleKeyDown = useCallback(
+    (e: ReactKeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleActivate();
+      }
+    },
+    [handleActivate],
+  );
+
+  const handleToggleFavorite = useCallback(
+    (e: ReactMouseEvent) => {
+      e.stopPropagation();
+      onToggleFavorite();
+    },
+    [onToggleFavorite],
+  );
 
   return (
     <GlassPanel
+      role="button"
+      tabIndex={loading ? -1 : 0}
+      aria-label={label}
+      aria-busy={loading || undefined}
+      aria-disabled={loading || undefined}
+      onClick={handleActivate}
+      onKeyDown={handleKeyDown}
       className={cn(
-        'p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[100px] justify-center cursor-pointer relative group',
-        hoverStyles[variant],
-        loading && 'opacity-50',
+        'p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[100px] justify-center cursor-pointer relative group select-none',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+        hoverStyles[variant] ?? hoverStyles.default,
+        loading && 'opacity-50 cursor-not-allowed',
       )}
-      onClick={handleClick}
     >
       <ControlButton
         type="button"
         variant="ghost"
         size="sm"
-        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+        onClick={handleToggleFavorite}
+        aria-pressed={isFavorite}
         className={cn(
           'absolute left-1.5 top-1.5 h-auto rounded p-0.5 transition-opacity hover:bg-transparent',
           isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-[var(--text-muted)]',
         )}
         aria-label={t('commands.toggleFavorite', 'Toggle favorite')}
       >
-        <Star className={cn('h-3 w-3', isFavorite && 'fill-current')} />
+        <Star className={cn('h-3 w-3', isFavorite && 'fill-current')} aria-hidden="true" />
       </ControlButton>
 
       <div className="rounded-xl p-2.5 transition-colors bg-[var(--surface-2)] text-[var(--text-muted)]">
-        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
+        {loading ? (
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+        ) : Icon ? (
+          // Guard a missing icon reference: CommandDef is config-driven, and one
+          // undefined `icon` would otherwise throw "Element type is invalid" and
+          // blank the whole command grid rather than just this tile.
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        ) : null}
       </div>
       <div>
-        <Text size="xs" weight="medium" color="primary" className="block">{t(def.labelKey, def.labelFallback)}</Text>
+        <Text size="xs" weight="medium" color="primary" className="block">{label}</Text>
         {def.sublabelFallback && (
           <Text size="2xs" weight="medium" color="muted" className="mt-0.5 block">
             {t(def.sublabelKey ?? '', def.sublabelFallback)}
           </Text>
         )}
         {lastStatus && (
-          <Text size="2xs" className={cn('mt-0.5 block',
-            lastStatus.startsWith('✓') ? 'text-emerald-300' : 'text-rose-300',
-          )}>{lastStatus}</Text>
+          <Text
+            size="2xs"
+            aria-live="polite"
+            className={cn(
+              'mt-0.5 block',
+              lastStatus.startsWith('✓') ? 'text-emerald-300' : 'text-rose-300',
+            )}
+          >
+            {lastStatus}
+          </Text>
         )}
       </div>
     </GlassPanel>

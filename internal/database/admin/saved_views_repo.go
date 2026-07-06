@@ -20,11 +20,11 @@ import (
 // PinnedRepo: a `*int64` user scope (NULL meaning the install-wide
 // bucket) rather than enforcing a non-zero user id.
 type SavedViewsRepo struct {
-	db *database.DB
+	pool adminPool
 }
 
 func NewSavedViewsRepo(db *database.DB) *SavedViewsRepo {
-	return &SavedViewsRepo{db: db}
+	return &SavedViewsRepo{pool: db.Pool}
 }
 
 // SavedViewListFilter narrows a List call to a (user, route) bucket.
@@ -49,7 +49,7 @@ func (r *SavedViewsRepo) List(ctx context.Context, f SavedViewListFilter) ([]*da
 		  AND route = $2
 		ORDER BY is_pinned DESC, sort_order ASC, id ASC`
 
-	rows, err := r.db.Pool.Query(ctx, query, f.UserID, f.Route)
+	rows, err := r.pool.Query(ctx, query, f.UserID, f.Route)
 	if err != nil {
 		return nil, fmt.Errorf("saved_views list query: %w", err)
 	}
@@ -83,7 +83,7 @@ func (r *SavedViewsRepo) GetByID(ctx context.Context, id int64) (*dashboardmodel
 		WHERE id = $1`
 
 	v := &dashboardmodel.SavedView{}
-	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&v.ID, &v.UserID, &v.Name, &v.Route, &v.Query,
 		&v.IsDefault, &v.IsPinned, &v.SortOrder,
 		&v.CreatedAt, &v.UpdatedAt,
@@ -102,7 +102,7 @@ func (r *SavedViewsRepo) GetByID(ctx context.Context, id int64) (*dashboardmodel
 // false in the same transaction so the partial unique index is never
 // violated.
 func (r *SavedViewsRepo) Create(ctx context.Context, v *dashboardmodel.SavedView) error {
-	tx, err := r.db.Pool.Begin(ctx)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("saved_views create begin: %w", err)
 	}
@@ -148,7 +148,7 @@ type SavedViewUpdate struct {
 // Update applies a partial patch to a saved view. Returns pgx.ErrNoRows
 // when the id is unknown so the handler can return 404 cleanly.
 func (r *SavedViewsRepo) Update(ctx context.Context, id int64, patch SavedViewUpdate) (*dashboardmodel.SavedView, error) {
-	tx, err := r.db.Pool.Begin(ctx)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("saved_views update begin: %w", err)
 	}
@@ -211,7 +211,7 @@ func (r *SavedViewsRepo) Update(ctx context.Context, id int64, patch SavedViewUp
 // Delete removes a saved view by id. Returns pgx.ErrNoRows when the row
 // was already gone so the handler can return 404 cleanly.
 func (r *SavedViewsRepo) Delete(ctx context.Context, id int64) error {
-	tag, err := r.db.Pool.Exec(ctx, `DELETE FROM saved_views WHERE id = $1`, id)
+	tag, err := r.pool.Exec(ctx, `DELETE FROM saved_views WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("saved_views delete: %w", err)
 	}

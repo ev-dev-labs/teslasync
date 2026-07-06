@@ -34,7 +34,15 @@ const KIOSK_CONFIG_KEY = 'teslasync-kiosk-config';
 function loadKioskConfig(): KioskConfig {
   try {
     const saved = localStorage.getItem(KIOSK_CONFIG_KEY);
-    if (saved) return { ...DEFAULT_KIOSK_CONFIG, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved) as unknown;
+      // Only merge a genuine object. A corrupted primitive/array in storage
+      // must not smuggle junk keys (e.g. array indices) into the config or
+      // leave a non-array `dashboardIds` behind for the memo below.
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return { ...DEFAULT_KIOSK_CONFIG, ...(parsed as Partial<KioskConfig>) };
+      }
+    }
   } catch { /* ignore */ }
   return DEFAULT_KIOSK_CONFIG;
 }
@@ -59,11 +67,16 @@ export function useKioskMode(
   const dimTimer = useRef<ReturnType<typeof setTimeout>>();
   const rotateTimer = useRef<ReturnType<typeof setInterval>>();
 
-  // Sanitize dashboardIds against actual dashboards
+  // Sanitize dashboardIds against actual dashboards. Both inputs are guarded
+  // before any array method runs: `dashboards` can arrive undefined before the
+  // saved layouts hydrate, and `config.dashboardIds` originates from untrusted
+  // localStorage and may be corrupted into a non-array.
   const validIds = useMemo(() => {
-    const existingIds = new Set(dashboards.map((d) => d.id));
-    const filtered = config.dashboardIds.filter((id) => existingIds.has(id));
-    return filtered.length > 0 ? filtered : dashboards.map((d) => d.id);
+    const allIds = (Array.isArray(dashboards) ? dashboards : []).map((d) => d.id);
+    const existingIds = new Set(allIds);
+    const configuredIds = Array.isArray(config.dashboardIds) ? config.dashboardIds : [];
+    const filtered = configuredIds.filter((id) => existingIds.has(id));
+    return filtered.length > 0 ? filtered : allIds;
   }, [config.dashboardIds, dashboards]);
 
   // Derive current rotation index from activeId

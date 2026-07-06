@@ -55,7 +55,14 @@ export function TimeMarker({
   ifOverflow = 'extendDomain',
   yAxisId,
 }: TimeMarkerProps) {
-  if (x == null || x === '') return null;
+  // A null/undefined/empty `x` means "no alert moment to mark". A non-finite
+  // numeric `x` has no valid chart coordinate either — a failed
+  // `Number(timestamp)` parse yields NaN and a bad domain calc yields
+  // ±Infinity; both would position the ReferenceLine at an undefined spot, so
+  // render nothing rather than hand recharts a broken coordinate.
+  if (x == null || x === '' || (typeof x === 'number' && !Number.isFinite(x))) {
+    return null;
+  }
   const sev = normalizeSeverity(severity ?? 'warn');
   const stroke = SEVERITY_STROKE[sev] ?? SEVERITY_STROKE.warn;
   return (

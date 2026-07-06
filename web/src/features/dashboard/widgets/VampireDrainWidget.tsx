@@ -11,15 +11,29 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
-function drainColor(pctPerDay: number): string {
-  if (pctPerDay < 1) return '#10b981';   // green
-  if (pctPerDay < 3) return '#f59e0b';   // amber
-  return '#ef4444';                       // red
+/**
+ * Idle-drain severity colour ramp (hex, for inline SVG/icon fills):
+ * `<1%/day` green, `1–3%/day` amber, `>=3%/day` red. A non-finite input (e.g.
+ * a NaN drain rate from a malformed payload, or `avg_drain_rate * 24` where the
+ * rate is NaN) is treated as 0 so it renders "safe" green rather than falsely
+ * alarming red.
+ */
+export function drainColor(pctPerDay: number): string {
+  const p = Number.isFinite(pctPerDay) ? pctPerDay : 0;
+  if (p < 1) return '#10b981';   // green
+  if (p < 3) return '#f59e0b';   // amber
+  return '#ef4444';               // red
 }
 
-function formatDuration(hours: number, t: (k: string, d: string) => string): string {
-  if (hours < 1) return `${fmtNumber(hours * 60, 0)}${t('widget.vampireDrain.min', 'm')}`;
-  return `${fmtNumber(hours, 1)}${t('widget.vampireDrain.hr', 'h')}`;
+/**
+ * Compact idle-duration label: sub-hour spans render as whole minutes ("30m"),
+ * longer spans as fractional hours ("2.5h"). Non-finite or negative inputs
+ * coalesce to "0m" so a malformed duration never leaks "NaNm" / "-30m".
+ */
+export function formatDuration(hours: number, t: (k: string, d: string) => string): string {
+  const h = Number.isFinite(hours) && hours > 0 ? hours : 0;
+  if (h < 1) return `${fmtNumber(h * 60, 0)}${t('widget.vampireDrain.min', 'm')}`;
+  return `${fmtNumber(h, 1)}${t('widget.vampireDrain.hr', 'h')}`;
 }
 
 export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
@@ -48,7 +62,10 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
     refetch: refetchEvents,
   } = useVampireDrainEvents(idStr, 30);
 
-  const events = rawEvents ?? [];
+  // Stable reference so the `eventItems` / `sparklineData` memos only recompute
+  // when the underlying query data actually changes (a bare `?? []` would mint
+  // a fresh empty array every render).
+  const events = useMemo(() => rawEvents ?? [], [rawEvents]);
   const isLoading = statsLoading || eventsLoading;
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;

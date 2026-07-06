@@ -78,9 +78,16 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
     </span>
   );
 
+  // The accessible name is the single source of truth for assistive tech —
+  // BOTH the "update available" and "unseen changelog" states must live here.
+  // The coloured dots below are decorative (aria-hidden); an aria-label on a
+  // role-less <span> is not reliably announced, so relying on the dots alone
+  // left the update state invisible to screen-reader users.
   const ariaLabel = `${t('statusBar.version.aria', 'TeslaSync version')}: v${appVersion}${
     sha && sha !== 'dev' ? ` (${sha})` : ''
-  }${hasUnseen ? `, ${t('changelog.unseenAria', 'unseen changelog')}` : ''}`;
+  }${updateAvailable ? `, ${t('statusBar.version.updateAvailable', 'Update available')}` : ''}${
+    hasUnseen ? `, ${t('changelog.unseenAria', 'unseen changelog')}` : ''
+  }`;
 
   return (
     <>
@@ -89,6 +96,7 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
           type="button"
           aria-label={ariaLabel}
           aria-haspopup="dialog"
+          aria-expanded={open}
           onClick={() => setOpen(true)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
@@ -103,13 +111,13 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
               {updateAvailable && (
                 <span
                   className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-400"
-                  aria-label={t('statusBar.version.updateAvailable', 'Update available')}
+                  aria-hidden="true"
                 />
               )}
               {hasUnseen && !updateAvailable && (
                 <span
                   className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400"
-                  aria-label={t('changelog.unseenAria', 'unseen changelog')}
+                  aria-hidden="true"
                 />
               )}
             </>

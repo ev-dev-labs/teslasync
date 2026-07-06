@@ -58,6 +58,28 @@ export interface SettingsResetResult {
 }
 
 /**
+ * Coerces a raw reset receipt into a fully-populated shape so every
+ * consumer can rely on `reset` being a number and `sections` being an
+ * array.
+ *
+ * Two real wire cases make this necessary:
+ *   • Go marshals a nil `[]SettingsResetSectionResult` slice as JSON
+ *     `null`, not `[]` — a `result.sections.length` read (as done in
+ *     <ResetSection>) would then throw.
+ *   • A no-content edge (`204`) leaves `request` resolving `undefined`.
+ * Normalising once at the hook boundary protects every current and
+ * future call site instead of scattering `?? []` guards downstream.
+ */
+function normalizeResetResult(
+  raw: SettingsResetResult | null | undefined,
+): SettingsResetResult {
+  return {
+    reset: raw?.reset ?? 0,
+    sections: raw?.sections ?? [],
+  };
+}
+
+/**
  * Mutation hook for a single-section reset.
  *
  * `section` is the canonical lower-snake-case name as listed in
@@ -71,11 +93,13 @@ export function useResetSection(section: string) {
   const qc = useQueryClient();
   const { error } = useMutationToast();
   return useMutation<SettingsResetResult, Error, void>({
-    mutationFn: () =>
-      request<SettingsResetResult>('/settings/reset', {
-        method: 'POST',
-        body: JSON.stringify({ section }),
-      }),
+    mutationFn: async () =>
+      normalizeResetResult(
+        await request<SettingsResetResult>('/settings/reset', {
+          method: 'POST',
+          body: JSON.stringify({ section }),
+        }),
+      ),
     onSuccess: (result) => {
       qc.setQueryData<SettingsResetResult>(settingsResetKeys.lastReset, result);
       // Reset can touch any preference / rule / channel cache
@@ -100,11 +124,13 @@ export function useResetAllSettings() {
   const qc = useQueryClient();
   const { error } = useMutationToast();
   return useMutation<SettingsResetResult, Error, void>({
-    mutationFn: () =>
-      request<SettingsResetResult>('/settings/reset', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      }),
+    mutationFn: async () =>
+      normalizeResetResult(
+        await request<SettingsResetResult>('/settings/reset', {
+          method: 'POST',
+          body: JSON.stringify({}),
+        }),
+      ),
     onSuccess: (result) => {
       qc.setQueryData<SettingsResetResult>(settingsResetKeys.lastReset, result);
       qc.invalidateQueries();

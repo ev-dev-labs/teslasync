@@ -4,25 +4,40 @@ import { AlertBanner } from '@/components/feedback';
 import type { AutomationConflict } from '@/api/types';
 
 interface ConflictWarningsProps {
-  conflicts: AutomationConflict[];
+  conflicts?: AutomationConflict[];
 }
 
 export function ConflictWarnings({ conflicts }: ConflictWarningsProps) {
   const { t } = useTranslation();
-  if (conflicts.length === 0) return null;
+  const items = conflicts ?? [];
+  if (items.length === 0) return null;
+
+  const title = t('automations.builder.conflict', 'Potential Conflict');
 
   return (
     <div className="space-y-2">
-      {conflicts.map((c, i) => (
-        <AlertBanner
-          key={`${c.automation_id}-${i}`}
-          variant={c.severity === 'warning' ? 'warning' : 'info'}
-          icon={c.severity === 'warning' ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
-          title={t('automations.builder.conflict', 'Potential Conflict')}
-        >
-          {`"${c.automation_name}": ${c.reason}`}
-        </AlertBanner>
-      ))}
+      {items.map((c, i) => {
+        const isWarning = c.severity === 'warning';
+        const name = c.automation_name ?? '—';
+        const reason = c.reason ?? '';
+        return (
+          <AlertBanner
+            key={`${c.automation_id ?? 'conflict'}-${i}`}
+            role="alert"
+            variant={isWarning ? 'warning' : 'info'}
+            icon={
+              isWarning ? (
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Info className="h-4 w-4" aria-hidden="true" />
+              )
+            }
+            title={title}
+          >
+            {reason ? `"${name}": ${reason}` : `"${name}"`}
+          </AlertBanner>
+        );
+      })}
     </div>
   );
 }

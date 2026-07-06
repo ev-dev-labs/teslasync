@@ -28,14 +28,19 @@ interface VariantConfig {
 
 export function ConnectionSegment({ iconOnly = false }: ConnectionSegmentProps) {
   const { t } = useTranslation();
-  const { status, latencyMs } = useApiHealth();
+  const { status: rawStatus, latencyMs } = useApiHealth();
 
+  const short = t('statusBar.connection.short', 'API');
   const cfg: Record<ApiHealthStatus, VariantConfig> = {
-    ok: { icon: Activity, text: 'text-emerald-300', dot: 'bg-emerald-400', short: t('statusBar.connection.short', 'API') },
-    degraded: { icon: AlertTriangle, text: 'text-amber-300', dot: 'bg-amber-400', short: t('statusBar.connection.short', 'API') },
-    offline: { icon: CircleSlash, text: 'text-rose-300', dot: 'bg-rose-400', short: t('statusBar.connection.short', 'API') },
-    unknown: { icon: HelpCircle, text: 'text-[var(--text-muted)]', dot: 'bg-[var(--surface-2)]', short: t('statusBar.connection.short', 'API') },
+    ok: { icon: Activity, text: 'text-emerald-300', dot: 'bg-emerald-400', short },
+    degraded: { icon: AlertTriangle, text: 'text-amber-300', dot: 'bg-amber-400', short },
+    offline: { icon: CircleSlash, text: 'text-rose-300', dot: 'bg-rose-400', short },
+    unknown: { icon: HelpCircle, text: 'text-[var(--text-muted)]', dot: 'bg-[var(--surface-2)]', short },
   };
+  // Defensive: an out-of-contract status (a bad cast or a future union member)
+  // degrades to the neutral "unknown" variant instead of throwing on
+  // `cfg[status].icon`. Every downstream lookup then uses this safe value.
+  const status: ApiHealthStatus = rawStatus in cfg ? rawStatus : 'unknown';
   const v = cfg[status];
   const Icon = v.icon;
 

@@ -271,6 +271,16 @@ export const alertRuleSchema = z
         path: ['value_num'],
         message: 'A value is required for this operator',
       })
+    } else if (present > 1) {
+      // More than one typed value is ambiguous: the backend compares
+      // against a single value and cannot infer which type to use when
+      // e.g. both value_num and value_text are set. Reject it here so
+      // the "exactly one" contract above is actually enforced.
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['value_num'],
+        message: 'Provide exactly one value (number, text, or boolean) for this operator',
+      })
     }
   })
 

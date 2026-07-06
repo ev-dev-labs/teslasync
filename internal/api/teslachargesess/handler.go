@@ -1,6 +1,7 @@
 package teslachargesess
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,10 +16,33 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// teslaChargingSessionClient is the narrow slice of *tesla.Client the
+// fleet-charging-session handlers depend on. Declaring the port at the call
+// site lets handler tests inject a fake without standing up a real Tesla HTTP
+// client + OAuth token.
+type teslaChargingSessionClient interface {
+	GetChargingSessions(ctx context.Context, vin, dateFrom, dateTo string, limit, offset int) ([]byte, int, error)
+}
+
+// teslaChargingSessionStore is the narrow persistence port used by the
+// handlers. It is satisfied by *tesladb.TeslaChargingSessionRepo and declared
+// here so tests can substitute an in-memory fake instead of a real pgx pool.
+type teslaChargingSessionStore interface {
+	GetAll(ctx context.Context, vin string, limit, offset int) ([]*teslamodel.TeslaChargingSession, error)
+	GetSummary(ctx context.Context, vin string) (*teslamodel.TeslaChargingSessionSummary, error)
+	UpsertBatch(ctx context.Context, sessions []*teslamodel.TeslaChargingSession) (int, error)
+}
+
+// Compile-time assertions that the production concrete types satisfy the ports.
+var (
+	_ teslaChargingSessionClient = (*tesla.Client)(nil)
+	_ teslaChargingSessionStore  = (*tesladb.TeslaChargingSessionRepo)(nil)
+)
+
 // TeslaChargingSessionHandler serves Tesla fleet charging sessions (business accounts only).
 type TeslaChargingSessionHandler struct {
-	teslaClient *tesla.Client
-	repo        *tesladb.TeslaChargingSessionRepo
+	teslaClient teslaChargingSessionClient
+	repo        teslaChargingSessionStore
 }
 
 // NewTeslaChargingSessionHandler creates a new handler with the given Tesla client and DB.

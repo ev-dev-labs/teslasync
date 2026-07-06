@@ -6,7 +6,7 @@
  * example JSON response. Pure presentation — the parent page owns the data.
  */
 
-import { type ReactNode } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GlassPanel, Badge, Accordion, CopyButton, Text, Caption } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -31,7 +31,22 @@ export function StatusApiEndpointCard({
   icon,
 }: StatusApiEndpointCardProps) {
   const { t } = useTranslation()
-  const json = JSON.stringify(example ?? {}, null, 2)
+
+  // Serialize the example once per `example` change. JSON.stringify can throw
+  // on inputs the type system can't rule out at the call boundary (circular
+  // references, BigInt), and a single malformed example must not crash the
+  // whole reference grid — so guard it and fall back to a placeholder. An
+  // empty example likewise renders a placeholder instead of a bare "{}".
+  const { json, isEmpty, failed } = useMemo(() => {
+    const value = example ?? {}
+    const empty =
+      value == null || typeof value !== 'object' || Object.keys(value).length === 0
+    try {
+      return { json: JSON.stringify(value, null, 2), isEmpty: empty, failed: false }
+    } catch {
+      return { json: '', isEmpty: empty, failed: true }
+    }
+  }, [example])
 
   return (
     <GlassPanel hover glow="cyan" className="flex h-full flex-col gap-3 p-4 sm:p-5">
@@ -49,7 +64,7 @@ export function StatusApiEndpointCard({
           text={path}
           iconOnly
           size="sm"
-          ariaLabel={t('statusApi.copyPath', 'Copy endpoint path')}
+          ariaLabel={t('statusApi.copyPath', 'Copy endpoint path {{path}}', { path })}
           className="ml-auto shrink-0"
         />
       </div>
@@ -72,16 +87,24 @@ export function StatusApiEndpointCard({
         className="mt-auto"
         bodyClassName="p-0"
       >
-        <pre
-          className={cn(
-            'max-h-72 overflow-auto p-3 leading-relaxed bg-[var(--surface-overlay)]',
-            typography.family.mono,
-            typography.size['2xs'],
-            typography.color.secondary,
-          )}
-        >
-          {json}
-        </pre>
+        {failed || isEmpty ? (
+          <Text as="p" size="sm" color="muted" className="p-3">
+            {failed
+              ? t('statusApi.exampleUnavailable', 'Example response is unavailable.')
+              : t('statusApi.exampleEmpty', 'No example response available.')}
+          </Text>
+        ) : (
+          <pre
+            className={cn(
+              'max-h-72 overflow-auto p-3 leading-relaxed bg-[var(--surface-overlay)]',
+              typography.family.mono,
+              typography.size['2xs'],
+              typography.color.secondary,
+            )}
+          >
+            {json}
+          </pre>
+        )}
       </Accordion>
     </GlassPanel>
   )

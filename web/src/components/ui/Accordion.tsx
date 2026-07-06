@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useCallback, useId, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../../lib/cn'
 import { ChevronDown } from 'lucide-react'
@@ -43,30 +43,58 @@ export function Accordion({
   const isControlled = openProp !== undefined && onOpenChange !== undefined
   const [internalOpen, setInternalOpen] = useState(defaultOpen)
   const open = isControlled ? openProp : internalOpen
-  const setOpen = (next: boolean) => {
-    if (isControlled) onOpenChange?.(next)
-    else setInternalOpen(next)
-  }
+
+  // Stable, unique ids wire the trigger to its panel for assistive tech
+  // (WAI-ARIA disclosure pattern) and survive remounts / SSR hydration.
+  const reactId = useId()
+  const titleId = `${reactId}-title`
+  const panelId = `${reactId}-panel`
+
+  const handleToggle = useCallback(() => {
+    // Controlled: hand the next value to the parent (source of truth).
+    // Uncontrolled: use a functional update so rapid toggles can't race a
+    // stale `open` captured in this closure.
+    if (isControlled) onOpenChange?.(!openProp)
+    else setInternalOpen((prev) => !prev)
+  }, [isControlled, onOpenChange, openProp])
+
   return (
     <div className={cn('rounded-xl border border-white/[0.06] overflow-hidden', className)}>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={handleToggle}
         aria-expanded={open}
+        aria-controls={panelId}
         className={cn(
           'flex w-full items-center gap-3 text-left hover:bg-white/[0.02] transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-inset',
           headerClassName ?? 'px-4 py-3',
         )}
       >
-        {icon && <div className="text-[var(--text-muted)]">{icon}</div>}
-        <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">{title}</span>
+        {icon && (
+          <div className="text-[var(--text-muted)] shrink-0" aria-hidden="true">
+            {icon}
+          </div>
+        )}
+        <span id={titleId} className="flex-1 text-sm font-medium text-[var(--text-primary)]">
+          {title}
+        </span>
         {badge}
         {headerExtra}
-        <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal', open && 'rotate-180')} />
+        <ChevronDown
+          aria-hidden="true"
+          className={cn(
+            'h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-normal',
+            open && 'rotate-180',
+          )}
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
+            id={panelId}
+            role="region"
+            aria-labelledby={titleId}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}

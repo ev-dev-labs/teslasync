@@ -6,10 +6,36 @@ import { formatDurationClock } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-function ProgressBar({ elapsed, duration }: { elapsed: number; duration: number }) {
-  const pct = duration > 0 ? Math.min((elapsed / duration) * 100, 100) : 0;
+/**
+ * Clamp a raw percentage into the inclusive 0–100 range. A non-finite input
+ * (e.g. a divide-by-zero) collapses to 0 so a bar width is never `NaN%`.
+ */
+function clampPct(pct: number): number {
+  if (!Number.isFinite(pct)) return 0;
+  return Math.min(100, Math.max(0, pct));
+}
+
+/** Playback progress as a 0–100 %. Returns 0 when the track duration is unknown. */
+export function progressPercent(elapsed: number, duration: number): number {
+  return duration > 0 ? clampPct((elapsed / duration) * 100) : 0;
+}
+
+/** Audio volume as a 0–100 %. Returns 0 when the scale max is unusable (≤ 0). */
+export function volumePercent(volume: number, max: number): number {
+  return max > 0 ? clampPct((volume / max) * 100) : 0;
+}
+
+function ProgressBar({ elapsed, duration, label }: { elapsed: number; duration: number; label: string }) {
+  const pct = progressPercent(elapsed, duration);
   return (
-    <div className="w-full h-1 rounded-full bg-[var(--surface-2)] overflow-hidden">
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(pct)}
+      className="w-full h-1 rounded-full bg-[var(--surface-2)] overflow-hidden"
+    >
       <div
         className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
         style={{ width: `${pct}%` }}
@@ -42,7 +68,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.nowPlaying', 'Now Playing')}
-      icon={<Music className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Music className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
@@ -54,7 +80,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
         isCompact ? (
           /* ── Compact 1×1 ── */
           <div className="flex flex-col items-center justify-center h-full gap-1 text-center px-1">
-            <Music className="h-5 w-5 text-neon-cyan shrink-0" />
+            <Music className="h-5 w-5 text-neon-cyan shrink-0" aria-hidden="true" />
             <p className="text-xs font-semibold text-[var(--text-primary)] truncate w-full">{title}</p>
             <p className="text-2xs text-[var(--text-secondary)] truncate w-full">{artist}</p>
           </div>
@@ -63,7 +89,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
           <div className="flex flex-col gap-2 h-full">
             <div className="flex items-start gap-3 min-w-0">
               <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-neon-cyan/10 shrink-0">
-                <Music className="h-5 w-5 text-neon-cyan" />
+                <Music className="h-5 w-5 text-neon-cyan" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[var(--text-primary)] truncate">{title}</p>
@@ -81,7 +107,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
 
             {duration > 0 && (
               <div className="space-y-1">
-                <ProgressBar elapsed={elapsed} duration={duration} />
+                <ProgressBar elapsed={elapsed} duration={duration} label={t('widget.playbackProgress', 'Playback progress')} />
                 <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
                   <span>{formatDurationClock(elapsed)}</span>
                   <span>{formatDurationClock(duration)}</span>
@@ -93,17 +119,24 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
               <div className="space-y-1.5 mt-auto">
                 {source && (
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                    <Radio className="h-3 w-3 shrink-0" />
+                    <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
                     <span className="truncate">{source}</span>
                   </div>
                 )}
                 {volume != null && (
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                    <Volume2 className="h-3 w-3 shrink-0" />
-                    <div className="flex-1 h-1 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                    <Volume2 className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <div
+                      role="progressbar"
+                      aria-label={t('widget.volume', 'Volume')}
+                      aria-valuemin={0}
+                      aria-valuemax={volumeMax}
+                      aria-valuenow={volume}
+                      className="flex-1 h-1 rounded-full bg-[var(--surface-2)] overflow-hidden"
+                    >
                       <div
-                        className="h-full rounded-full bg-[var(--surface-2)]"
-                        style={{ width: `${Math.min((volume / volumeMax) * 100, 100)}%` }}
+                        className="h-full rounded-full bg-[var(--text-secondary)]"
+                        style={{ width: `${volumePercent(volume, volumeMax)}%` }}
                       />
                     </div>
                     <span className="text-2xs tabular-nums">{volume}</span>
@@ -114,7 +147,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
 
             {!isTall && source && (
               <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mt-auto">
-                <Radio className="h-3 w-3 shrink-0" />
+                <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
                 <span className="truncate">{source}</span>
               </div>
             )}
@@ -122,7 +155,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
         )
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Music className="h-5 w-5" />}
+          icon={<Music className="h-5 w-5" aria-hidden="true" />}
           message={t('widget.noMedia', 'Nothing playing')}
           className="py-4"
         />

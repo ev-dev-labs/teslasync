@@ -4,21 +4,33 @@ import { DollarSign, Fuel, Zap } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { AnimatedNumber, MetricBar } from '@/components/data-display';
 import { useFormatting } from '@/hooks/useFormatting';
+import { safeNumber } from '@/lib/numberFormat';
 import type { YearReview } from '@/api/types';
 
 interface Props {
   data: YearReview;
 }
 
+/** Rough price of one cup of coffee, in the user's currency, for the fun note. */
+const COFFEE_PRICE = 5;
+
 /** Money saved by driving electric, vs. the gas-car equivalent. */
 export function YearSavingsPanel({ data }: Props) {
   const { t } = useTranslation();
   const { formatCurrency, currencySymbol } = useFormatting();
 
-  const savings = data.gas_savings ?? 0;
-  const electric = data.total_charging_cost ?? 0;
+  // The API types these as non-null numbers, but a partial Year-in-Review
+  // payload can surface null/NaN at runtime, so every read goes through
+  // safeNumber (nullish/NaN/±Infinity → 0) before it reaches the display.
+  const savings = safeNumber(data.gas_savings);
+  const electric = safeNumber(data.total_charging_cost);
   const gasEquiv = savings + electric;
-  const coffees = Math.round(savings / 5);
+  // MetricBar divides value by max; keep it strictly positive so an all-zero
+  // payload can't produce a NaN/Infinity bar width.
+  const barMax = gasEquiv > 0 ? gasEquiv : 1;
+  // Never a negative or NaN cup count — a non-positive saving reads "0 cups"
+  // instead of the nonsensical "-12 cups of coffee!".
+  const coffees = Math.max(0, Math.round(savings / COFFEE_PRICE));
 
   return (
     <GlassPanel className="flex h-full flex-col gap-4 p-4 sm:p-5">
@@ -42,14 +54,14 @@ export function YearSavingsPanel({ data }: Props) {
       <div className="mt-auto space-y-3">
         <MetricBar
           value={gasEquiv}
-          max={gasEquiv > 0 ? gasEquiv : 1}
+          max={barMax}
           color="#fb7185"
           label={t('yearReview.gasCost', 'Gas would cost')}
           sublabel={formatCurrency(gasEquiv, 0)}
         />
         <MetricBar
           value={electric}
-          max={gasEquiv > 0 ? gasEquiv : 1}
+          max={barMax}
           color="#34d399"
           label={t('yearReview.electricCost', 'Electric cost')}
           sublabel={formatCurrency(electric, 0)}

@@ -112,7 +112,11 @@ export default function SlowQueriesPage() {
 
   const query = useSlowQueries(orderBy, limit);
   const subsystemMissing = isApiError(query.error) && query.error.status === 503;
-  const showError = query.isError && !subsystemMissing;
+  // A failed *background* refetch (after data has already loaded) leaves
+  // `isError` true while TanStack Query keeps the last-good `data`. Gate the
+  // error UI on `data === undefined` so a transient poll blip never blanks the
+  // populated KPIs / chart / cache / table — mirrors IngestXRayPage's contract.
+  const showError = query.isError && !subsystemMissing && query.data === undefined;
   const isLoading = query.isLoading;
   const rows = query.data?.slow_queries ?? [];
   const retry = () => query.refetch();

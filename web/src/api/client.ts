@@ -271,6 +271,21 @@ function isSudoRequired(err: unknown): err is ApiError {
 }
 
 /**
+ * True when a thrown value is a cancellation — a DOMException or plain
+ * Error whose `name` is 'AbortError'. DOMException does not extend Error
+ * in every runtime (notably some jsdom builds), so we read `name` off the
+ * raw value rather than relying on `instanceof Error`. Mirrors the abort
+ * detection in resilience.ts.
+ */
+function isAbortError(err: unknown): boolean {
+  if (err instanceof Error) return err.name === 'AbortError'
+  return (
+    typeof (err as { name?: unknown } | null)?.name === 'string' &&
+    (err as { name: string }).name === 'AbortError'
+  )
+}
+
+/**
  * Resolves a credential challenge through the registered provider.
  * Throws {@link SudoCanceledError} if no provider is registered (the
  * dialog never mounted) so callers fail closed instead of looping on
@@ -338,6 +353,14 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
       directResponseType,
     )
   } catch (err) {
+    // Caller-initiated cancellation (route change / unmount via the
+    // `signal` option) must short-circuit the entire pipeline: never open
+    // the reauth dialog and never re-enter resilientFetch's retry loop.
+    // Propagate the original AbortError unchanged so downstream consumers
+    // can distinguish it from an HTTP 408 timeout — matching the
+    // cancellation contract documented on ApiRequestOptions.signal.
+    if (isAbortError(err)) throw err
+
     if (isSudoRequired(err)) {
       let cred: SudoCredential
       try {

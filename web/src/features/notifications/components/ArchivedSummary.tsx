@@ -35,16 +35,19 @@ interface ArchivedStats {
 /** Responsive KPI grid summarising the archived notification backlog. */
 export function ArchivedSummary({ query }: ArchivedSummaryProps) {
   const { t } = useTranslation();
-  const rows = query.data ?? [];
 
   const stats = useMemo<ArchivedStats>(() => {
+    const rows = query.data ?? [];
     let critical = 0;
     let warn = 0;
     let info = 0;
     let unread = 0;
     let lastTs = 0;
     for (const row of rows) {
-      const severity = row.severity ?? '';
+      // `severity` is typed loosely (`string`) and, while the primary write
+      // path lowercases it, legacy rows and alternate insert paths may not —
+      // normalise here so the KPI counts never silently undercount.
+      const severity = (row.severity ?? '').trim().toLowerCase();
       if (severity === 'critical') critical += 1;
       else if (severity === 'warn') warn += 1;
       else if (severity === 'info') info += 1;
@@ -53,7 +56,7 @@ export function ArchivedSummary({ query }: ArchivedSummaryProps) {
       if (Number.isFinite(ts) && ts > lastTs) lastTs = ts;
     }
     return { total: rows.length, critical, warn, info, unread, lastTs };
-  }, [rows]);
+  }, [query.data]);
 
   const gridClass = 'grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6';
   const sectionLabel = t('notifications.archived.summary.label', 'Archived summary');

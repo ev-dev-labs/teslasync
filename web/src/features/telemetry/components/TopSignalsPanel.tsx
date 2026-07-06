@@ -7,6 +7,7 @@
  * page; this component never fetches.
  */
 
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListOrdered } from 'lucide-react';
 
@@ -42,10 +43,25 @@ const TYPE_VARIANT: Record<SignalEntry['type'], BadgeProps['variant']> = {
   string: 'success',
 };
 
+// Stable empty reference so an absent `signals` prop doesn't churn the memo
+// dependency (and therefore the derived scale) on every render.
+const EMPTY_SIGNALS: readonly TopSignal[] = [];
+
 export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
   const { t } = useTranslation();
-  const rows = signals ?? [];
-  const maxCount = rows.reduce((m, s) => (s.count > m ? s.count : m), 0) || 1;
+  const rows = signals ?? EMPTY_SIGNALS;
+
+  // The bar scale is the busiest signal's arrival count. Coalesce each count so
+  // a malformed entry never poisons the reduce, and `|| 1` guarantees a
+  // non-zero divisor so a bar can never render a NaN/Infinity width.
+  const maxCount = useMemo(
+    () =>
+      rows.reduce((m, s) => {
+        const c = s.count ?? 0;
+        return c > m ? c : m;
+      }, 0) || 1,
+    [rows],
+  );
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
@@ -60,26 +76,35 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
           message={t('liveMonitor.noBuffer', 'No signals buffered yet')}
         />
       ) : (
-        <ul className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 2xl:grid-cols-3">
-          {rows.map((s) => (
-            <li key={s.name} className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <Code className="truncate" title={s.name}>
-                  {s.name}
-                </Code>
-                <Badge variant={TYPE_VARIANT[s.type] ?? 'neutral'} size="sm">
-                  {fmtInt(s.count)}×
-                </Badge>
-              </div>
-              <MetricBar
-                label={t('liveMonitor.latest', 'Latest')}
-                value={s.count}
-                max={maxCount}
-                color={TYPE_COLOR[s.type] ?? chartTokens.series[0]}
-                sublabel={s.value || '—'}
-              />
-            </li>
-          ))}
+        <ul
+          className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 2xl:grid-cols-3"
+          aria-label={t(
+            'liveMonitor.topSignalsList',
+            'Most active signals ranked by arrival frequency',
+          )}
+        >
+          {rows.map((s) => {
+            const count = s.count ?? 0;
+            return (
+              <li key={s.name} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Code className="truncate" title={s.name}>
+                    {s.name}
+                  </Code>
+                  <Badge variant={TYPE_VARIANT[s.type] ?? 'neutral'} size="sm">
+                    {fmtInt(count)}×
+                  </Badge>
+                </div>
+                <MetricBar
+                  label={t('liveMonitor.latest', 'Latest')}
+                  value={count}
+                  max={maxCount}
+                  color={TYPE_COLOR[s.type] ?? chartTokens.series[0]}
+                  sublabel={s.value || '—'}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
     </GlassPanel>

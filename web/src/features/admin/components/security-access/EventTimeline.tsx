@@ -38,6 +38,10 @@ function timelineIcon(ev: TimelineEvent) {
       return ev.variant === 'positive'
         ? <DoorClosed className="h-4 w-4" />
         : <DoorOpen className="h-4 w-4" />;
+    default:
+      // Defensive: an unrecognised kind (e.g. a future backend enum) renders
+      // no glyph rather than an empty broken chip.
+      return null;
   }
 }
 
@@ -72,6 +76,15 @@ function useTimelineLabels() {
             ? t('admin.security.closed', 'Closed')
             : t('admin.security.open', 'Open')),
         };
+      default:
+        // Defensive: a malformed row whose `kind` falls outside the known
+        // union must degrade to a neutral label instead of returning
+        // `undefined` and crashing the whole panel when the caller
+        // destructures `{ title, subtitle }`.
+        return {
+          title: t('admin.security.timeline.unknown', 'State Change'),
+          subtitle: t('admin.security.timeline.unknownDesc', 'Vehicle state updated'),
+        };
     }
   };
 }
@@ -91,6 +104,7 @@ interface EventTimelineProps {
 export function EventTimeline({ timelineEvents, isLoading, error, onRetry, className }: EventTimelineProps) {
   const { t } = useTranslation();
   const getLabels = useTimelineLabels();
+  const events = timelineEvents ?? [];
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
@@ -99,9 +113,9 @@ export function EventTimeline({ timelineEvents, isLoading, error, onRetry, class
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading ? (
         <Skeleton lines={8} />
-      ) : timelineEvents.length > 0 ? (
+      ) : events.length > 0 ? (
         <ul className="max-h-96 space-y-3 overflow-y-auto pr-1">
-          {timelineEvents.map((ev) => {
+          {events.map((ev) => {
             const { title, subtitle } = getLabels(ev);
             return (
               <li key={ev.id} className="flex items-start gap-3 rounded-lg bg-white/[0.02] p-3">

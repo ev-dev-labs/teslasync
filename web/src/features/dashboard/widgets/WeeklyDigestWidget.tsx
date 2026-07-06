@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -6,11 +6,10 @@ import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import { WidgetComparisonCard, type ComparisonMetric } from './shared';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 
 export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -21,27 +20,28 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
     data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useWeeklyDigest(String(id));
 
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-
   const distanceUnit = unitPrefs.distance;
-  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const isCompact = size.cols <= 1;
 
   const metrics = useMemo((): ComparisonMetric[] => {
     if (!data) return [];
 
-    const distMi = (data.distanceKm ?? 0) * UNITS.KM_TO_MI;
-    const prevDistMi = (data.prevDistanceKm ?? 0) * UNITS.KM_TO_MI;
-    const dist = toDistanceDisplay(distMi);
-    const prevDist = toDistanceDisplay(prevDistMi);
+    // distanceKm arrives in kilometres — lift to SI metres first, then to the
+    // user's display unit. convertDistanceFromSI expects metres, so feeding it
+    // km-or-miles directly (the previous behaviour) skewed distance ~1609×.
+    const toDistance = (km: number) =>
+      convertDistanceFromSI(convertDistanceToSI(km, 'km'), distanceUnit);
+    const dist = toDistance(data.distanceKm ?? 0);
+    const prevDist = toDistance(data.prevDistanceKm ?? 0);
 
-    // Efficiency stored as Wh/km → convert to Wh/mi for toEfficiencyDisplay
-    const effWhMi = (data.efficiency ?? 0) * UNITS.MI_TO_KM;
-    const prevEffWhMi = (data.prevEfficiency ?? 0) * UNITS.MI_TO_KM;
-    const eff = toEfficiencyDisplay(effWhMi);
-    const prevEff = toEfficiencyDisplay(prevEffWhMi);
+    // efficiency arrives in Wh/km. One display distance-unit spans this many
+    // kilometres (1 for km, 1.609344 for mi), so Wh per display-unit is
+    // Wh/km × that span — derived via the lib, never a hardcoded mile factor.
+    const kmPerDisplayUnit = convertDistanceFromSI(convertDistanceToSI(1, distanceUnit), 'km');
+    const eff = (data.efficiency ?? 0) * kmPerDisplayUnit;
+    const prevEff = (data.prevEfficiency ?? 0) * kmPerDisplayUnit;
 
     const energy = data.energyKwh ?? 0;
     const prevEnergy = data.prevEnergyKwh ?? 0;
@@ -82,19 +82,23 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
         higherIsBetter: false,
       },
     ];
-  }, [data, toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit, t]);
+  }, [data, distanceUnit, efficiencyUnit, t]);
+
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.weeklyDigest.title', 'This Week')}
       icon={isCompact ? undefined : <CalendarDays className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      error={error && !data ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       {metrics.length > 0 ? (
         <WidgetComparisonCard metrics={metrics} compact={isCompact} />

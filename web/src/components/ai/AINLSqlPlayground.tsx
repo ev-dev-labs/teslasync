@@ -13,11 +13,12 @@
 //     prompt input and a "Draft SQL" button that POSTs to
 //     /api/v1/ai/power/sql/draft. The SSE response stream
 //     accumulates into the shared AiOutputPanel; when the LLM
-//     emits a `tool_result` for `draft_readonly_sql`, the typed
-//     draft is captured locally and an "Apply to editor" button
-//     appears, which copies the draft into the page state via
-//     the `onApply` prop. The LLM never edits editor state
-//     directly (ADR-015 §I8 propose-only).
+//     emits a SUCCESSFUL (ok) `tool_result` for
+//     `draft_readonly_sql`, the typed draft is captured locally
+//     and an "Apply to editor" button appears, which copies the
+//     draft into the page state via the `onApply` prop. The LLM
+//     never edits editor state directly (ADR-015 §I8
+//     propose-only).
 //
 // The component does NOT replace the deterministic manual SQL
 // editor or curated catalog viewer on SqlPlaygroundPage. That
@@ -40,6 +41,9 @@
 //     callback, which the SqlPlaygroundPage wires into its
 //     existing setSql state setter. The component itself does no
 //     global state writes.
+//   - Editing the prompt after a draft is captured clears the
+//     captured draft, so the "Apply to editor" button can never
+//     copy a proposal that no longer matches the visible prompt.
 //
 // ADR-015 alignment:
 //   - I3 baseline intact: this component never replaces the
@@ -58,7 +62,7 @@
 //     baseline editor's state, then explicitly click the
 //     baseline Run button to execute.
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
@@ -125,7 +129,11 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
   const body = useMemo(() => ({ prompt: trimmed }), [trimmed])
 
   const onEvent = useCallback((ev: AiStreamEvent) => {
-    if (ev.type === 'tool_result' && ev.name === 'draft_readonly_sql') {
+    // Only a SUCCESSFUL (ok) draft_readonly_sql tool_result carries an
+    // applicable proposal. A failed tool call (ok === false) reports an
+    // error payload, never a draft, so it must not populate the editor
+    // hand-off — mirrors the ok gate the sibling capture paths use.
+    if (ev.type === 'tool_result' && ev.name === 'draft_readonly_sql' && ev.ok) {
       const parsed = parseReadonlySQLDraft(ev.data)
       if (parsed) setDraft(parsed)
     }
@@ -152,6 +160,19 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
     onApply(draft)
   }, [canApply, draft, onApply])
 
+  const handlePromptChange = useCallback(
+    (e: ChangeEvent<HTMLTextAreaElement>) => {
+      setPrompt(e.target.value)
+      // Editing the request invalidates any previously captured proposal:
+      // the "Apply to editor" hand-off must never copy SQL that no longer
+      // matches the prompt the user is now looking at. Bail out of the
+      // state update when there is nothing to clear so ordinary keystrokes
+      // don't trigger a needless re-render.
+      setDraft((current) => (current === null ? current : null))
+    },
+    [],
+  )
+
   return (
     <AIFeatureCard
       title={t('powerSql.aiDrafter.title', 'Helix natural-language SQL drafter')}
@@ -167,7 +188,7 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
       inputSlot={
         <Textarea
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={handlePromptChange}
           placeholder={t(
             'powerSql.aiDrafter.promptPlaceholder',
             'e.g. how many drives did I take last week',

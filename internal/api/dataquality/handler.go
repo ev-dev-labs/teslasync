@@ -11,6 +11,12 @@ import (
 // Handler serves data quality + lineage endpoints.
 type Handler struct {
 	scorer *dqpkg.Scorer
+	// buildLineage is the injection seam for the static lineage graph
+	// builder. Production wires it to dqpkg.BuildLineage in NewHandler;
+	// tests substitute a stub to exercise the 500 error branch. A nil
+	// value falls back to dqpkg.BuildLineage, so a zero-value Handler
+	// still serves lineage.
+	buildLineage func() (*dqpkg.LineageGraph, error)
 }
 
 // NewHandler wires the handler. Pass nil for scorer when the signal_log
@@ -18,7 +24,7 @@ type Handler struct {
 // endpoint but still serves the static lineage graph (which has no DB
 // dependency).
 func NewHandler(scorer *dqpkg.Scorer) *Handler {
-	return &Handler{scorer: scorer}
+	return &Handler{scorer: scorer, buildLineage: dqpkg.BuildLineage}
 }
 
 // Score is GET /admin/observability/data-quality.
@@ -42,7 +48,11 @@ func (h *Handler) Score(w http.ResponseWriter, r *http.Request) {
 // Lineage is GET /admin/observability/lineage. Static so available on
 // every deployment even if signal_log scoring is offline.
 func (h *Handler) Lineage(w http.ResponseWriter, _ *http.Request) {
-	graph, err := dqpkg.BuildLineage()
+	build := dqpkg.BuildLineage
+	if h != nil && h.buildLineage != nil {
+		build = h.buildLineage
+	}
+	graph, err := build()
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return

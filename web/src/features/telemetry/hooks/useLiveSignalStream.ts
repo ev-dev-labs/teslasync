@@ -68,6 +68,20 @@ function detectType(value: unknown): 'number' | 'string' | 'boolean' {
   return 'string';
 }
 
+/**
+ * Running per-signal aggregate for the chart stats slice. Stored instead of a
+ * raw number[] so a long live session (2 Hz for hours) stays O(1) in memory
+ * and never risks the `Math.min(...values)` spread blowing the call-stack once
+ * the buffer grows past the JS argument limit. Values are identical to the
+ * previous array-backed min/max/avg/count.
+ */
+interface ChartAgg {
+  min: number;
+  max: number;
+  sum: number;
+  count: number;
+}
+
 export function useLiveSignalStream({
   enabled,
   vehicleId,
@@ -78,7 +92,7 @@ export function useLiveSignalStream({
   const [chartData, setChartData] = useState<Record<string, unknown>[]>([]);
   const [chartStats, setChartStats] = useState<SignalStat[]>([]);
   const chartBufferRef = useRef<Record<string, unknown>[]>([]);
-  const chartAccRef = useRef<Map<string, number[]>>(new Map());
+  const chartAccRef = useRef<Map<string, ChartAgg>>(new Map());
   const lastFlushRef = useRef(0);
   const chartPointCountRef = useRef(0);
   const [chartPointCount, setChartPointCount] = useState(0);
@@ -144,6 +158,10 @@ export function useLiveSignalStream({
   // ── SSE handler — drives both chart and tail off one subscription ──
   const handleVehicleUpdate = useCallback((raw: unknown) => {
     if (!enabledRef.current) return;
+    // A malformed SSE frame (JSON null, a bare string/number, etc.) must
+    // never throw inside this shared handler — that would bubble through
+    // sseManager and tear down the single subscription both slices ride on.
+    if (raw === null || typeof raw !== 'object') return;
     const data = raw as {
       signals?: Record<string, unknown>;
       cold?: unknown;
@@ -179,9 +197,15 @@ export function useLiveSignalStream({
           if (!Number.isNaN(num)) {
             point[sig] = num;
             hasValue = true;
-            const arr = chartAccRef.current.get(sig) ?? [];
-            arr.push(num);
-            chartAccRef.current.set(sig, arr);
+            const agg = chartAccRef.current.get(sig);
+            if (agg) {
+              if (num < agg.min) agg.min = num;
+              if (num > agg.max) agg.max = num;
+              agg.sum += num;
+              agg.count += 1;
+            } else {
+              chartAccRef.current.set(sig, { min: num, max: num, sum: num, count: 1 });
+            }
           }
         }
       }
@@ -200,14 +224,14 @@ export function useLiveSignalStream({
           setChartData([...chartBufferRef.current]);
           setChartPointCount(chartPointCountRef.current);
           const stats: SignalStat[] = [];
-          for (const [signal, values] of chartAccRef.current) {
-            if (values.length === 0) continue;
+          for (const [signal, agg] of chartAccRef.current) {
+            if (agg.count === 0) continue;
             stats.push({
               signal,
-              min: Math.min(...values),
-              max: Math.max(...values),
-              avg: values.reduce((a, b) => a + b, 0) / values.length,
-              count: values.length,
+              min: agg.min,
+              max: agg.max,
+              avg: agg.sum / agg.count,
+              count: agg.count,
             });
           }
           setChartStats(stats);

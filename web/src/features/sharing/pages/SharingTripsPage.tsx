@@ -11,11 +11,14 @@
 // while every deterministic section keeps rendering.
 //
 // Selection model:
-//   - The user picks one trip from the recent-trips list. The picked trip's
-//     id feeds BOTH the SelectedTripPreview panel and the AI card's tripId
-//     prop. While no trip is selected the AI card still renders (so the
-//     positive-control on-mode test can see it) but its button is disabled
-//     with an emptyHint guiding the user to pick a trip first.
+//   - The user picks one trip from the recent-trips list. The *resolved*
+//     selected trip (looked up in the current list) feeds BOTH the
+//     SelectedTripPreview panel and the AI card's tripId prop, so the two can
+//     never disagree: if the pick falls out of the list (e.g. a vehicle switch
+//     swaps the trips) both fall back to the empty state. While no trip is
+//     resolved the AI card still renders (so the positive-control on-mode test
+//     can see it) but its button is disabled with an emptyHint guiding the user
+//     to pick a trip first.
 //
 // Deliberate non-goals on this page:
 //   - It does NOT replace the per-drive Share button workflow on
@@ -24,7 +27,7 @@
 //     surface drafts an image prompt; the user still uses the existing
 //     per-drive Share workflow to publish a static share card.
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Route as RouteIcon, Share2, Zap, Car, RefreshCw } from 'lucide-react'
 
@@ -67,11 +70,29 @@ export default function SharingTripsPage() {
 
   const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips])
   const coldLoading = isLoading && allTrips.length === 0
+  // Surface the destructive error banner only when there is nothing cached to
+  // show. On a background-refetch failure TanStack Query keeps the last good
+  // data, so we keep rendering it (the header freshness badge already signals
+  // the staleness) instead of blowing the list + totals away with a full-panel
+  // error.
+  const showError = !!error && allTrips.length === 0
 
-  const vehicleOptions = vehicles.map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }))
+  const vehicleOptions = useMemo(
+    () =>
+      vehicles.map((v) => ({
+        value: String(v.id),
+        label: v.display_name || v.vin,
+      })),
+    [vehicles],
+  )
+
+  const handleVehicleChange = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) => {
+      const n = Number(e.target.value)
+      if (Number.isFinite(n) && n > 0) setVehicleId(n)
+    },
+    [setVehicleId],
+  )
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -79,10 +100,7 @@ export default function SharingTripsPage() {
         <Select
           options={vehicleOptions}
           value={vehicleId != null ? String(vehicleId) : ''}
-          onChange={(e) => {
-            const n = Number(e.target.value)
-            if (Number.isFinite(n) && n > 0) setVehicleId(n)
-          }}
+          onChange={handleVehicleChange}
           placeholder={t('sharing.trips.selectVehicle', 'Select vehicle')}
           aria-label={t('sharing.trips.selectVehicle', 'Select vehicle')}
         />
@@ -107,43 +125,55 @@ export default function SharingTripsPage() {
       actions={actions}
       query={tripsQuery}
     >
-      {/* 1 — KPI band: full-width responsive metric grid */}
+      {/* 1 — KPI band: full-width responsive metric grid. On a hard error
+          (nothing cached) the band degrades to a QueryError panel instead of
+          showing misleading zero totals. */}
       <FadeIn>
-        <section
-          aria-label={t('sharing.trips.kpis', 'Trip totals')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          {coldLoading ? (
-            [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[74px] rounded-xl" />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('sharing.trips.kpi.shareable', 'Shareable trips')}
-                value={fmtInt(kpis.count)}
-                icon={<Share2 className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('sharing.trips.kpi.distance', 'Total distance')}
-                value={formatDistance(kpis.totalDistanceM)}
-                icon={<RouteIcon className="h-5 w-5" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('sharing.trips.kpi.energy', 'Total energy')}
-                value={formatEnergy(kpis.totalEnergyWh)}
-                icon={<Zap className="h-5 w-5" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('sharing.trips.kpi.drives', 'Total drives')}
-                value={fmtInt(kpis.totalDrives)}
-                icon={<Car className="h-5 w-5" />}
-                color="purple"
-              />
-            </>
-          )}
-        </section>
+        {showError ? (
+          <GlassPanel className="p-4 sm:p-5">
+            <QueryError
+              error={error}
+              onRetry={() => refetch()}
+              resourceName={t('sharing.trips.resource', 'Trips')}
+            />
+          </GlassPanel>
+        ) : (
+          <section
+            aria-label={t('sharing.trips.kpis', 'Trip totals')}
+            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          >
+            {coldLoading ? (
+              [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[74px] rounded-xl" />)
+            ) : (
+              <>
+                <MetricCard
+                  label={t('sharing.trips.kpi.shareable', 'Shareable trips')}
+                  value={fmtInt(kpis.count)}
+                  icon={<Share2 className="h-5 w-5" />}
+                  color="cyan"
+                />
+                <MetricCard
+                  label={t('sharing.trips.kpi.distance', 'Total distance')}
+                  value={formatDistance(kpis.totalDistanceM)}
+                  icon={<RouteIcon className="h-5 w-5" />}
+                  color="green"
+                />
+                <MetricCard
+                  label={t('sharing.trips.kpi.energy', 'Total energy')}
+                  value={formatEnergy(kpis.totalEnergyWh)}
+                  icon={<Zap className="h-5 w-5" />}
+                  color="amber"
+                />
+                <MetricCard
+                  label={t('sharing.trips.kpi.drives', 'Total drives')}
+                  value={fmtInt(kpis.totalDrives)}
+                  icon={<Car className="h-5 w-5" />}
+                  color="purple"
+                />
+              </>
+            )}
+          </section>
+        )}
       </FadeIn>
 
       {/* 2 — Main bento: recent-trips list (hero) + share preview / static hint */}
@@ -160,7 +190,7 @@ export default function SharingTripsPage() {
                   <Skeleton key={i} className="h-16 rounded-xl" />
                 ))}
               </div>
-            ) : error ? (
+            ) : showError ? (
               <QueryError
                 error={error}
                 onRetry={() => refetch()}
@@ -223,9 +253,13 @@ export default function SharingTripsPage() {
 
       {/* 3 — AI section — withAiFeature gates visibility. In off mode this
           renders null and is invisible to the DOM (ADR-015 §I5). In on mode it
-          surfaces the propose-only Helix share-card image-prompt drafting card. */}
+          surfaces the propose-only Helix share-card image-prompt drafting card.
+          Feeds the *derived* selected trip's id (never the raw selection state)
+          so a stale pick — e.g. after a vehicle switch swaps the list — cleanly
+          disables the card instead of drafting against a trip that is no longer
+          on screen, keeping it in lock-step with the SelectedTripPreview. */}
       <FadeIn delay={0.2}>
-        <AITripPostcardShareCardImageGeneration tripId={selectedTripId} />
+        <AITripPostcardShareCardImageGeneration tripId={selectedTrip?.id} />
       </FadeIn>
     </PageContainer>
   )

@@ -18,32 +18,45 @@ const STATE_COLORS: Record<string, string> = {
   offline: '#ef4444',   // red-500
 };
 
-function stateColor(state: string): string {
-  return STATE_COLORS[state.toLowerCase()] ?? '#6b7280';
+export function stateColor(state: string | null | undefined): string {
+  // Null-safe: an absent/empty state falls through to the neutral grey rather
+  // than throwing on `undefined.toLowerCase()` at a mis-mapped call site.
+  return STATE_COLORS[(state ?? '').toLowerCase()] ?? '#6b7280';
 }
 
 /* ── Duration formatter ─────────────────────────────────────────── */
-function fmtDuration(totalMin: number, t: (k: string, d: string) => string): string {
-  const hrs = Math.floor(totalMin / 60);
-  const mins = Math.round(totalMin % 60);
+export function fmtDuration(totalMin: number, t: (k: string, d: string) => string): string {
+  // Round to whole minutes *before* splitting into hours + minutes so a value
+  // like 59.6 rolls over to "1h 0m" instead of the buggy "60m" (and 119.6 →
+  // "2h 0m" rather than "1h 60m") that per-part rounding produced. Non-finite
+  // or negative inputs coalesce to zero.
+  const safe = Number.isFinite(totalMin) && totalMin > 0 ? Math.round(totalMin) : 0;
+  const hrs = Math.floor(safe / 60);
+  const mins = safe % 60;
   if (hrs === 0) return `${mins}${t('widget.stateTimeline.min', 'm')}`;
   return `${hrs}${t('widget.stateTimeline.hr', 'h')} ${mins}${t('widget.stateTimeline.min', 'm')}`;
 }
 
 /* ── Stacked bar data builder ───────────────────────────────────── */
-interface StateSegment {
+export interface StateSegment {
   state: string;
   pct: number;
   totalMin: number;
   count: number;
 }
 
-function buildSegments(
-  data: Array<{ state: string; totalMin: number; count: number }>,
+export function buildSegments(
+  data:
+    | Array<{ state?: string | null; totalMin?: number | null; count?: number | null }>
+    | null
+    | undefined,
 ): StateSegment[] {
-  const totalMin = data.reduce((sum, d) => sum + (d.totalMin ?? 0), 0);
-  if (totalMin === 0) return [];
-  return data.map((d) => ({
+  const items = data ?? [];
+  const totalMin = items.reduce((sum, d) => sum + (d.totalMin ?? 0), 0);
+  // Guard an empty payload *and* nonsensical non-positive totals so we never
+  // divide by zero (or a negative) when computing per-state percentages.
+  if (totalMin <= 0) return [];
+  return items.map((d) => ({
     state: d.state ?? '—',
     pct: ((d.totalMin ?? 0) / totalMin) * 100,
     totalMin: d.totalMin ?? 0,

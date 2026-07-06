@@ -93,7 +93,10 @@ export default function ChargingListPage() {
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = useCallback(
-    (km: number) => convertDistanceFromSI(km, unitPrefs.distance),
+    // convertDistanceFromSI expects metres (SI canonical); callers pass km, so
+    // scale up before converting — otherwise the per-session "range added" badge
+    // renders 1000× too small (e.g. a 50 km charge showed as "+0 km").
+    (km: number) => convertDistanceFromSI(km * 1000, unitPrefs.distance),
     [unitPrefs.distance],
   );
   const { formatCurrency, currencySymbol } = useFormatting();
@@ -957,7 +960,7 @@ export default function ChargingListPage() {
   );
 }
 
-function formatHour(h: number): string {
+export function formatHour(h: number): string {
   if (h === 0) return '12 AM';
   if (h === 12) return '12 PM';
   if (h < 12) return `${h} AM`;

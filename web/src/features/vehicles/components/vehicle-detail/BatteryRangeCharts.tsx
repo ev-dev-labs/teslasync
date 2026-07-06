@@ -30,10 +30,17 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
 
+  // Runtime null-safety: `VehicleState` types these as `number`, but the Go
+  // API can serialise a genuine `null` for a vehicle that has never reported
+  // battery/range. Coerce once so every downstream consumer (gauge, chart,
+  // headline) shares the same non-NaN value.
+  const batteryLevel = state.battery_level ?? 0
+  const ratedRange = state.rated_range ?? 0
+
   const batteryChartData = useMemo(() => [
-    { name: t('common.current', 'Current'), value: state.battery_level },
-    { name: t('common.remaining', 'Remaining'), value: 100 - state.battery_level },
-  ], [state.battery_level, t])
+    { name: t('common.current', 'Current'), value: batteryLevel },
+    { name: t('common.remaining', 'Remaining'), value: Math.max(0, 100 - batteryLevel) },
+  ], [batteryLevel, t])
 
   const driveChartData = useMemo(() =>
     (drives ?? []).map((d) => ({
@@ -42,6 +49,11 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
       duration: Math.round((d.duration_s ?? 0) / 60),
     })).reverse(),
   [drives, unitPrefs.distance])
+
+  const ratedRangeDisplay = useMemo(
+    () => convertDistanceFromSI(ratedRange, unitPrefs.distance),
+    [ratedRange, unitPrefs.distance],
+  )
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -53,22 +65,22 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
         </PanelTitle>
         <div className="flex items-center gap-4 mb-4">
           <RadialGauge
-            value={state.battery_level}
+            value={batteryLevel}
             max={100}
             label={t('common.battery', 'Battery')}
             unit="%"
-            color={batteryColor(state.battery_level)}
+            color={batteryColor(batteryLevel)}
             size={100}
           />
           <div className="flex-1">
             <GlassPanel className="p-3 mb-2">
               <Text variant="caption">{t('common.battery', 'Battery')}</Text>
-              <AnimatedNumber value={state.battery_level} suffix="%" className={valueClass} />
+              <AnimatedNumber value={batteryLevel} suffix="%" className={valueClass} />
             </GlassPanel>
             <GlassPanel className="p-3">
               <Text variant="caption">{t('common.range', 'Range')}</Text>
               <AnimatedNumber
-                value={convertDistanceFromSI(state.rated_range, unitPrefs.distance)}
+                value={ratedRangeDisplay}
                 decimals={0}
                 suffix={` ${unitPrefs.distance}`}
                 className={valueClass}

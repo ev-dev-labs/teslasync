@@ -124,11 +124,21 @@ function InnerSection({
     stream.start()
   }, [isBusy, stream])
 
+  // A proposal is applicable only when the validator accepted it
+  // (status 'ok') AND it carries a non-empty name. Defensive against
+  // a backend anomaly where an 'ok' envelope arrives with a blank
+  // proposed_name: the baseline form must never receive an empty
+  // label from the AI panel.
+  const canApply = useMemo(
+    () => !!draft && draft.status === 'ok' && draft.proposed_name.trim().length > 0,
+    [draft],
+  )
+
   const handleApply = useCallback(() => {
-    if (draft && draft.status === 'ok') {
+    if (canApply && draft) {
       onApplyName(draft.proposed_name)
     }
-  }, [draft, onApplyName])
+  }, [canApply, draft, onApplyName])
 
   return (
     <AIFeatureCard
@@ -158,6 +168,7 @@ function InnerSection({
         <div
           className="rounded-md border border-cyan-300/30 bg-cyan-300/5 p-3 text-sm"
           data-testid="ai-feature-auto-name-unnamed-locations-draft"
+          aria-live="polite"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
@@ -165,7 +176,7 @@ function InnerSection({
                 {t('locations.aiAutoName.proposalLabel', 'Proposed name')}
               </div>
               <div className="font-medium text-[var(--text-primary)]">
-                {draft.proposed_name}
+                {draft.proposed_name.trim() || '—'}
               </div>
               {draft.reason && (
                 <div className="text-xs text-[var(--text-secondary)]">{draft.reason}</div>
@@ -183,8 +194,8 @@ function InnerSection({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={draft.status !== 'ok'}
-                aria-disabled={draft.status !== 'ok' ? 'true' : 'false'}
+                disabled={!canApply}
+                aria-disabled={!canApply ? 'true' : 'false'}
                 onClick={handleApply}
                 data-testid="ai-feature-auto-name-unnamed-locations-apply"
               >

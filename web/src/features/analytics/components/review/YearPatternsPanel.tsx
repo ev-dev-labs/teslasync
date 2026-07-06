@@ -13,6 +13,19 @@ interface Props {
 
 const KM_PER_MILE = 1.609344;
 
+/**
+ * Convert an hour-of-day into 12-hour clock parts. Telemetry can surface a
+ * non-finite, fractional, negative, or out-of-range hour; truncating and
+ * wrapping into [0, 23] keeps the label sane (never "NaN AM" / "-1 AM") while
+ * preserving the correct label for every valid 0-23 input.
+ */
+function to12Hour(rawHour: number | null | undefined): { hour12: number; isPM: boolean } {
+  const truncated = typeof rawHour === 'number' && Number.isFinite(rawHour) ? Math.trunc(rawHour) : 0;
+  const hour = ((truncated % 24) + 24) % 24;
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return { hour12, isPM: hour >= 12 };
+}
+
 /** When and how the vehicle was driven across the year. */
 export function YearPatternsPanel({ data }: Props) {
   const { t } = useTranslation();
@@ -24,9 +37,8 @@ export function YearPatternsPanel({ data }: Props) {
   const avgEfficiency = distanceUnit === 'mi'
     ? (data.avg_efficiency_wh_km ?? 0) * KM_PER_MILE
     : (data.avg_efficiency_wh_km ?? 0);
-  const hour = data.most_active_hour ?? 0;
-  const meridiem = hour >= 12 ? t('yearReview.pm', 'PM') : t('yearReview.am', 'AM');
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  const { hour12, isPM } = to12Hour(data.most_active_hour);
+  const meridiem = isPM ? t('yearReview.pm', 'PM') : t('yearReview.am', 'AM');
 
   const rows = [
     { icon: CalendarDays, label: t('yearReview.favoriteDay', 'Favorite driving day'), value: data.most_active_day_of_week || '—' },

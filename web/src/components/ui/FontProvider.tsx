@@ -10,6 +10,7 @@ import {
 import { getApiBase } from '@/lib/resilience'
 import { request } from '@/api/client'
 import { broadcast, subscribe } from '@/lib/broadcast'
+import { TOPICS } from '@/lib/broadcastTopics'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FontProvider — user-selectable typography, mirroring ThemeProvider.
@@ -141,22 +142,45 @@ function coerceWeight(n: number): number {
   return Math.min(900, Math.max(300, Math.round(n / 100) * 100))
 }
 
-/** Resolve the CSS font stack for the current sans preference. */
-export function resolveSansStack(sans: FontFamilyId, customSans: string): string {
-  if (sans === 'custom') {
-    const c = customSans.trim()
-    return c ? `${c}, ${CUSTOM_SANS_FALLBACK}` : FONT_SANS_STACKS.inter
-  }
-  return FONT_SANS_STACKS[sans]
+/**
+ * Parse a persisted numeric string. Returns null for absent, blank, or
+ * non-finite values so the caller falls back to the default instead of
+ * coercing a blank slot to a clamped floor — `Number('')` is `0`, which
+ * `clampScale`/`clampLeading` would otherwise pin to their MIN bound.
+ */
+function parseStoredNumber(raw: string | null): number | null {
+  if (raw == null) return null
+  const trimmed = raw.trim()
+  if (trimmed === '') return null
+  const n = Number(trimmed)
+  return Number.isFinite(n) ? n : null
 }
 
-/** Resolve the CSS font stack for the current monospace preference. */
+/**
+ * Resolve the CSS font stack for the current sans preference. Falls back to
+ * the Inter stack for a blank custom entry OR an unrecognised preset id, so a
+ * corrupt `sans` value can never write `undefined` to `--font-sans` (this
+ * runs from the pre-React FOUC bootstrap in main.tsx).
+ */
+export function resolveSansStack(sans: FontFamilyId, customSans: string): string {
+  if (sans === 'custom') {
+    const c = (customSans ?? '').trim()
+    return c ? `${c}, ${CUSTOM_SANS_FALLBACK}` : FONT_SANS_STACKS.inter
+  }
+  return FONT_SANS_STACKS[sans] ?? FONT_SANS_STACKS.inter
+}
+
+/**
+ * Resolve the CSS font stack for the current monospace preference. Falls back
+ * to the JetBrains Mono stack for a blank custom entry OR an unrecognised
+ * preset id, mirroring {@link resolveSansStack}.
+ */
 export function resolveMonoStack(mono: MonoFamilyId, customMono: string): string {
   if (mono === 'custom') {
-    const c = customMono.trim()
+    const c = (customMono ?? '').trim()
     return c ? `${c}, ${CUSTOM_MONO_FALLBACK}` : FONT_MONO_STACKS.jetbrains
   }
-  return FONT_MONO_STACKS[mono]
+  return FONT_MONO_STACKS[mono] ?? FONT_MONO_STACKS.jetbrains
 }
 
 /**
@@ -179,18 +203,18 @@ export function applyFontCSS(prefs: FontPrefs): void {
 export function readStoredFontPrefs(): FontPrefs {
   if (typeof localStorage === 'undefined') return { ...DEFAULT_FONT_PREFS }
   try {
-    const scale = Number(localStorage.getItem(LS_SCALE))
-    const leading = Number(localStorage.getItem(LS_LEADING))
-    const weight = Number(localStorage.getItem(LS_HEADING_WEIGHT))
+    const scale = parseStoredNumber(localStorage.getItem(LS_SCALE))
+    const leading = parseStoredNumber(localStorage.getItem(LS_LEADING))
+    const weight = parseStoredNumber(localStorage.getItem(LS_HEADING_WEIGHT))
     return {
       sans: coerceSans(localStorage.getItem(LS_SANS)) ?? DEFAULT_FONT_PREFS.sans,
       mono: coerceMono(localStorage.getItem(LS_MONO)) ?? DEFAULT_FONT_PREFS.mono,
       customSans: localStorage.getItem(LS_CUSTOM_SANS) ?? DEFAULT_FONT_PREFS.customSans,
       customMono: localStorage.getItem(LS_CUSTOM_MONO) ?? DEFAULT_FONT_PREFS.customMono,
-      scale: localStorage.getItem(LS_SCALE) != null ? clampScale(scale) : DEFAULT_FONT_PREFS.scale,
-      leading: localStorage.getItem(LS_LEADING) != null ? clampLeading(leading) : DEFAULT_FONT_PREFS.leading,
+      scale: scale != null ? clampScale(scale) : DEFAULT_FONT_PREFS.scale,
+      leading: leading != null ? clampLeading(leading) : DEFAULT_FONT_PREFS.leading,
       tracking: localStorage.getItem(LS_TRACKING) ?? DEFAULT_FONT_PREFS.tracking,
-      headingWeight: localStorage.getItem(LS_HEADING_WEIGHT) != null ? coerceWeight(weight) : DEFAULT_FONT_PREFS.headingWeight,
+      headingWeight: weight != null ? coerceWeight(weight) : DEFAULT_FONT_PREFS.headingWeight,
     }
   } catch {
     return { ...DEFAULT_FONT_PREFS }
@@ -324,7 +348,7 @@ export function FontProvider({ children }: { children: ReactNode }) {
       prefsRef.current = next
       persistLocal(next)
       saveToBackend(next)
-      broadcast({ type: 'font.changed' })
+      broadcast({ type: TOPICS.FONT_CHANGED })
       setPrefs(next)
     },
     [saveToBackend],
@@ -346,7 +370,7 @@ export function FontProvider({ children }: { children: ReactNode }) {
   // or re-persist to the backend, which would loop and duplicate writes.
   useEffect(() => {
     return subscribe((m) => {
-      if (m.type === 'font.changed') {
+      if (m.type === TOPICS.FONT_CHANGED) {
         const fresh = readStoredFontPrefs()
         prefsRef.current = fresh
         setPrefs(fresh)

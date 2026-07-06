@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { HeartPulse } from 'lucide-react';
@@ -18,6 +19,10 @@ export function HealthProbesSection() {
     refetchInterval: 30_000,
   });
 
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   if (isLoading) {
     return (
       <AccordionSection
@@ -34,7 +39,10 @@ export function HealthProbesSection() {
     );
   }
 
-  if (error) {
+  // Only surface a full-panel error on the INITIAL load (no cached data). A
+  // failed background refetch keeps the last good probe readings on screen
+  // instead of blanking the whole section over a transient network blip.
+  if (error && !data) {
     return (
       <AccordionSection
         icon={<HeartPulse className="h-5 w-5" />}
@@ -42,7 +50,7 @@ export function HealthProbesSection() {
         description={t('Liveness and readiness checks')}
         defaultOpen
       >
-        <QueryError error={error as Error} onRetry={() => refetch()} />
+        <QueryError error={error} onRetry={handleRetry} />
       </AccordionSection>
     );
   }

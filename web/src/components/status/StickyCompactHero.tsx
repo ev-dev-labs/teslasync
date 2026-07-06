@@ -63,7 +63,15 @@ export function StickyCompactHero({
     if (!target) return
 
     const observer = new IntersectionObserver(
-      ([entry]) => setVisible(!entry.isIntersecting),
+      ([entry]) => {
+        // Only reveal the compact bar once the hero has scrolled ABOVE the
+        // viewport. Without this guard the bar would also appear while the
+        // hero is still BELOW the fold on first paint of a long page — a
+        // false positive, since IntersectionObserver reports isIntersecting
+        // = false in both directions.
+        const scrolledPast = entry.boundingClientRect.top < 0
+        setVisible(!entry.isIntersecting && scrolledPast)
+      },
       { rootMargin: `-${topOffset}px 0px 0px 0px`, threshold: 0 },
     )
     observer.observe(target)
@@ -71,14 +79,27 @@ export function StickyCompactHero({
   }, [targetId, topOffset])
 
   const handleScrollTop = useCallback(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // The app's primary scroll container is <main id="main-content">
+    // (Layout.tsx); window.scrollY stays 0 there, so window.scrollTo would
+    // be a no-op. Scroll the real container, falling back to window for
+    // pages rendered outside the standard layout (and jsdom).
+    const scrollEl = document.getElementById('main-content')
+    if (scrollEl) {
+      scrollEl.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }, [])
 
   if (!visible) return null
 
-  const Icon = ICON_FOR_STATUS[status]
-  const text = TEXT_FOR_STATUS[status]
-  const headline = SHORT_HEADLINE[status]
+  // Defensive: a status outside the HeroStatus union (e.g. an unmapped value
+  // crossing the API boundary) would otherwise dereference to `undefined` and
+  // crash the icon render. Fall back to the neutral "unknown" treatment.
+  const safeStatus: HeroStatus = ICON_FOR_STATUS[status] ? status : 'unknown'
+  const Icon = ICON_FOR_STATUS[safeStatus]
+  const text = TEXT_FOR_STATUS[safeStatus]
+  const headline = SHORT_HEADLINE[safeStatus]
 
   return (
     <div
@@ -94,12 +115,12 @@ export function StickyCompactHero({
           className="flex flex-1 items-center gap-2 text-left transition-colors hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 rounded"
           aria-label="Scroll to top of page"
         >
-          <Icon className={cn('h-4 w-4 shrink-0', text)} />
+          <Icon className={cn('h-4 w-4 shrink-0', text)} aria-hidden />
           <Text as="span" size="sm" weight="semibold" className={text}>{headline}</Text>
           {lastCheckedLabel && (
             <Text as="span" variant="caption">· {lastCheckedLabel}</Text>
           )}
-          <ArrowUp className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />
+          <ArrowUp className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden />
         </button>
 
         {onRefresh && (
@@ -115,7 +136,7 @@ export function StickyCompactHero({
               refreshing && 'opacity-60',
             )}
           >
-            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden />
           </button>
         )}
       </div>

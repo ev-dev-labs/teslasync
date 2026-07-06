@@ -35,6 +35,18 @@ export interface PreferredRangeResult {
 const FALLBACK_TYPE: RangeType = 'rated'
 
 /**
+ * Normalise a raw range field to a finite SI-metre value or `null`.
+ *
+ * Guards the display boundary against `NaN`/`±Infinity` leaking through as
+ * `"NaN km"` / `"∞ km"`: non-finite (and missing) inputs collapse to `null`
+ * so consumers render their empty state instead of a broken number. A
+ * legitimate `0` is preserved (an empty battery still has a valid `0 m`).
+ */
+function finiteMeters(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+/**
  * Pick the preferred range value + label from a vehicle/charge state
  * snapshot. Defaults to `'rated'` when the preference is missing or
  * mistyped, matching the backend default in `useSettings`.
@@ -44,7 +56,7 @@ export function selectPreferredRange(
   rangeType: string | null | undefined,
 ): PreferredRangeResult {
   const type: RangeType = rangeType === 'ideal' ? 'ideal' : FALLBACK_TYPE
-  const meters = type === 'ideal' ? state?.ideal_range ?? null : state?.rated_range ?? null
+  const meters = finiteMeters(type === 'ideal' ? state?.ideal_range : state?.rated_range)
   return type === 'ideal'
     ? { meters, source: 'ideal', labelKey: 'idealRange', defaultLabel: 'Ideal Range' }
     : { meters, source: 'rated', labelKey: 'ratedRange', defaultLabel: 'Rated Range' }

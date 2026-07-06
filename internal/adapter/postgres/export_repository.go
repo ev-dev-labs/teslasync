@@ -15,7 +15,7 @@ import (
 )
 
 type exportRepository struct {
-	pool *pgxpool.Pool
+	pool pgxPool
 }
 
 func NewExportJobRepository(pool *pgxpool.Pool) repository.ExportJobRepository {
@@ -42,7 +42,11 @@ func (r *exportRepository) GetByUserID(ctx context.Context, userID string) ([]ex
 	if err != nil {
 		return nil, fmt.Errorf("querying export jobs for user %s: %w", userID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[export.ExportJob])
+	jobs, err := pgx.CollectRows(rows, pgx.RowToStructByName[export.ExportJob])
+	if err != nil {
+		return nil, fmt.Errorf("collecting export jobs for user %s: %w", userID, err)
+	}
+	return jobs, nil
 }
 
 func (r *exportRepository) GetByIDForUpdate(ctx context.Context, id string) (*export.ExportJob, error) {

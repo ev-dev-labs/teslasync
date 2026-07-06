@@ -8,8 +8,10 @@
 
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, Info, ChevronRight } from 'lucide-react'
 import { Text } from '@/components/ui'
+import { VisuallyHidden } from '@/components/a11y'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 
@@ -31,7 +33,10 @@ export interface ActionItemProps {
 }
 
 export function ActionItem({ severity, title, description, cta }: ActionItemProps) {
-  const cfg = SEVERITY_CFG[severity]
+  // Fall back to the neutral `info` config when an unexpected severity slips
+  // through at runtime (untyped API-derived values) — a missing config would
+  // otherwise crash the whole panel on `cfg.icon`.
+  const cfg = SEVERITY_CFG[severity] ?? SEVERITY_CFG.info
   const Icon = cfg.icon
 
   return (
@@ -59,6 +64,7 @@ export function ActionItem({ severity, title, description, cta }: ActionItemProp
 }
 
 function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['cta']>; severityText: string }) {
+  const { t } = useTranslation()
   const baseClasses = cn(
     'inline-flex items-center gap-1 shrink-0 rounded-md px-3 py-1.5',
     typography.size.xs,
@@ -73,14 +79,15 @@ function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['ct
       return (
         <a href={cta.to} target="_blank" rel="noopener noreferrer" className={baseClasses}>
           {cta.label}
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          <VisuallyHidden>{t('common.opensInNewTab', '(opens in a new tab)')}</VisuallyHidden>
         </a>
       )
     }
     return (
       <Link to={cta.to} className={baseClasses}>
         {cta.label}
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden />
       </Link>
     )
   }
@@ -89,7 +96,7 @@ function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['ct
     return (
       <button type="button" onClick={cta.onClick} className={baseClasses}>
         {cta.label}
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden />
       </button>
     )
   }

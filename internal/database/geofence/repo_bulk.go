@@ -3,8 +3,6 @@ package geofence
 import (
 	"context"
 	"fmt"
-
-	"github.com/jackc/pgx/v5"
 )
 
 // FilterExistingIDs returns the subset of `ids` that exist in the
@@ -14,7 +12,7 @@ func (r *GeofenceRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]in
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	rows, err := r.db.Pool.Query(ctx, `SELECT id FROM geofences WHERE id = ANY($1)`, ids)
+	rows, err := r.pool.Query(ctx, `SELECT id FROM geofences WHERE id = ANY($1)`, ids)
 	if err != nil {
 		return nil, fmt.Errorf("geofences-repo-filter-existing: %w", err)
 	}
@@ -23,30 +21,38 @@ func (r *GeofenceRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]in
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("geofences-repo-filter-existing scan: %w", err)
 		}
 		out = append(out, id)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("geofences-repo-filter-existing iter: %w", err)
+	}
+	return out, nil
 }
 
 // BulkDelete removes geofences whose IDs are in `ids`, all inside a single
 // transaction. Returns the rows-affected count.
+//
+// The DELETE runs in an explicit transaction so a caller that later chains
+// additional statements (e.g. an audit write) can share the same fate; the
+// deferred Rollback is a no-op once Commit succeeds.
 func (r *GeofenceRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	var deleted int64
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `DELETE FROM geofences WHERE id = ANY($1)`, ids)
-		if err != nil {
-			return err
-		}
-		deleted = tag.RowsAffected()
-		return nil
-	})
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("geofences-repo-bulk-delete begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `DELETE FROM geofences WHERE id = ANY($1)`, ids)
 	if err != nil {
 		return 0, fmt.Errorf("geofences-repo-bulk-delete: %w", err)
 	}
-	return deleted, nil
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("geofences-repo-bulk-delete commit: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

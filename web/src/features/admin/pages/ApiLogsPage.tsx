@@ -240,7 +240,12 @@ export default function ApiLogsPage() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `teslasync-api-logs-${new Date().toISOString().split('T')[0]}.json`;
+    // Firefox only fires the download when the anchor is connected to the
+    // document — append + remove mirrors the app's other export helpers
+    // (lib/export.ts, lib/csvExport.ts, useSettingsBackup.ts).
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     URL.revokeObjectURL(url);
   }, [logs]);
 

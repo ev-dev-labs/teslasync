@@ -26,14 +26,28 @@ function windowOpenCount(s: SecurityEvent): number {
   return open
 }
 
+// normalizeDoorState coerces the raw door_state signal into a display string
+// (or null → the card's "Closed" fallback). The backend serializes a raw
+// signal.SignalValue, so door_state can arrive as a native boolean
+// (true = a door is open) or a string enum — a boolean must map to Open/Closed
+// semantics rather than stringify to the literal "true"/"false".
+function normalizeDoorState(
+  v: SecurityEvent['door_state'],
+  openLabel: string,
+): string | null {
+  if (v == null) return null
+  if (typeof v === 'boolean') return v ? openLabel : null
+  const s = String(v).trim()
+  return s === '' ? null : s
+}
+
 export function SecuritySection({ securityData, state }: SecuritySectionProps) {
   const { t } = useTranslation()
 
   const windowsOpen = securityData ? windowOpenCount(securityData) : 0
-  const doorState =
-    securityData?.door_state != null && securityData.door_state !== ''
-      ? String(securityData.door_state)
-      : null
+  const doorState = securityData
+    ? normalizeDoorState(securityData.door_state, t('common.open', 'Open'))
+    : null
 
   return (
     <GlassPanel className="p-6">
@@ -46,19 +60,25 @@ export function SecuritySection({ securityData, state }: SecuritySectionProps) {
           <MetricCard
             label={t('common.locked', 'Locked')}
             value={state.is_locked ? t('common.yes', 'Yes') : t('common.no', 'No')}
-            icon={state.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+            icon={
+              state.is_locked ? (
+                <Lock className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Unlock className="h-4 w-4" aria-hidden="true" />
+              )
+            }
             color={state.is_locked ? 'green' : 'cyan'}
           />
           <MetricCard
             label={t('common.sentry', 'Sentry')}
             value={state.sentry_mode ? t('common.active', 'Active') : t('common.off', 'Off')}
-            icon={<Eye className="h-4 w-4" />}
+            icon={<Eye className="h-4 w-4" aria-hidden="true" />}
             color={state.sentry_mode ? 'green' : 'cyan'}
           />
           <MetricCard
             label={t('vehicles.detail.doors', 'Doors')}
             value={doorState ?? t('common.closed', 'Closed')}
-            icon={<DoorClosed className="h-4 w-4" />}
+            icon={<DoorClosed className="h-4 w-4" aria-hidden="true" />}
             color={doorState ? 'cyan' : 'green'}
           />
           <MetricCard
@@ -68,7 +88,7 @@ export function SecuritySection({ securityData, state }: SecuritySectionProps) {
                 ? t('vehicles.detail.windowsOpen', '{{count}} open', { count: windowsOpen })
                 : t('common.closed', 'Closed')
             }
-            icon={<Car className="h-4 w-4" />}
+            icon={<Car className="h-4 w-4" aria-hidden="true" />}
             color={windowsOpen > 0 ? 'cyan' : 'green'}
           />
         </div>

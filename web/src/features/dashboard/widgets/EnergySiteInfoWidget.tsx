@@ -13,6 +13,7 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
   const {
     data: sites,
     isLoading: sitesLoading,
+    error: sitesError,
     isFetching: sitesFetching,
     isStale: sitesStale,
     isError: sitesIsError,
@@ -47,13 +48,9 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
   const info = infoResponse?.data ?? null;
   const hasSites = (sites ?? []).length > 0;
 
-  // Format installation date if present
-  const installDate = (() => {
-    const raw = info?.installation_time_zone;
-    // installation_time_zone is just a timezone string, not a date
-    // The actual install date may come from other fields; show timezone as location context
-    return raw ?? null;
-  })();
+  // `installation_time_zone` is a timezone string (location context), not a
+  // date — surfaced under the "Installation Timezone" label below.
+  const installTimezone = info?.installation_time_zone ?? null;
 
   const solarKw = info?.nameplate_power != null
     ? fmtNumber(info.nameplate_power / 1000, 1)
@@ -89,7 +86,7 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
     });
     entries.push({
       label: t('widget.energySiteInfo.timezone', 'Installation Timezone'),
-      value: installDate,
+      value: installTimezone,
     });
   }
 
@@ -98,7 +95,9 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
       title={isCompact ? undefined : t('widget.energySiteInfo.title', 'Energy Site')}
       icon={isCompact ? undefined : <Home className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
-      error={infoError ? String(infoError) : null}
+      error={
+        sitesError ? String(sitesError) : infoError ? String(infoError) : null
+      }
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -99,8 +100,14 @@ type AuditRevealEvent struct {
 
 // AuditRepo wraps the database pool with a narrow, well-typed surface
 // for the reveal-audit write path.
+//
+// exec is the database.DBTX execution seam (satisfied by *pgxpool.Pool
+// in production and by pgx.Tx). Holding the narrow interface rather than
+// the concrete pool lets the reveal/impersonation write paths be unit
+// tested against the in-repo DBTX fake without a live PostgreSQL, in the
+// same style as internal/database/drive's txRecorder.
 type AuditRepo struct {
-	pool *pgxpool.Pool
+	exec database.DBTX
 	now  func() time.Time
 }
 
@@ -108,11 +115,22 @@ type AuditRepo struct {
 // The `now` function is overridable so tests can pin timestamps; in
 // production callers pass `time.Now` (via the convenience wrapper
 // NewAuditRepoWithDB).
+//
+// A nil pool yields a repo whose write methods return the "not
+// configured" error rather than panicking — the open-mode wiring path
+// depends on that guard. The nil check is deliberate: assigning a typed
+// nil *pgxpool.Pool straight into the database.DBTX interface would
+// produce a non-nil interface value wrapping a nil pointer, defeating
+// the `exec == nil` guards in the write methods.
 func NewAuditRepo(pool *pgxpool.Pool, now func() time.Time) *AuditRepo {
 	if now == nil {
 		now = time.Now
 	}
-	return &AuditRepo{pool: pool, now: now}
+	var exec database.DBTX
+	if pool != nil {
+		exec = pool
+	}
+	return &AuditRepo{exec: exec, now: now}
 }
 
 // NewAuditRepoWithDB is the convenience constructor for production
@@ -138,7 +156,7 @@ func NewAuditRepoWithDB(db *database.DB) *AuditRepo {
 //   - IP/UserAgent are persisted as NULL when empty (matching the
 //     redaction maintenance worker's existing convention).
 func (r *AuditRepo) WriteRevealEvent(ctx context.Context, evt AuditRevealEvent) error {
-	if r == nil || r.pool == nil {
+	if r == nil || r.exec == nil {
 		return errors.New("audit repo not configured")
 	}
 
@@ -146,20 +164,15 @@ func (r *AuditRepo) WriteRevealEvent(ctx context.Context, evt AuditRevealEvent) 
 	if variant == "" {
 		return ErrAuditRevealVariantRequired
 	}
-	if len(variant) > MaxAuditRevealVariantLen {
-		variant = variant[:MaxAuditRevealVariantLen]
-	}
+	variant = capText(variant, MaxAuditRevealVariantLen)
 
-	kind := strings.TrimSpace(evt.Kind)
-	if len(kind) > MaxAuditRevealKindLen {
-		kind = kind[:MaxAuditRevealKindLen]
-	}
+	kind := capText(strings.TrimSpace(evt.Kind), MaxAuditRevealKindLen)
 
 	const query = `
 		INSERT INTO audit_logs (ts, actor, action, entity_type, entity_id, detail, ip, user_agent)
 		VALUES ($1, $2, $3, $4, NULL, $5, $6, $7)`
 
-	_, err := r.pool.Exec(ctx, query,
+	_, err := r.exec.Exec(ctx, query,
 		r.now().UTC(),
 		evt.Actor,
 		AuditRevealAction,
@@ -226,7 +239,7 @@ func (r *AuditRepo) WriteImpersonationEnd(ctx context.Context, evt AuditImperson
 // and End. Centralising the validation + INSERT keeps the two action
 // constants the only divergence between the two write paths.
 func (r *AuditRepo) writeImpersonationEvent(ctx context.Context, action string, evt AuditImpersonationEvent) error {
-	if r == nil || r.pool == nil {
+	if r == nil || r.exec == nil {
 		return errors.New("audit repo not configured")
 	}
 
@@ -238,18 +251,14 @@ func (r *AuditRepo) writeImpersonationEvent(ctx context.Context, action string, 
 	if target == "" {
 		return errors.New("audit_logs impersonation: target required")
 	}
-	if len(actor) > MaxAuditImpersonationSubjectLen {
-		actor = actor[:MaxAuditImpersonationSubjectLen]
-	}
-	if len(target) > MaxAuditImpersonationSubjectLen {
-		target = target[:MaxAuditImpersonationSubjectLen]
-	}
+	actor = capText(actor, MaxAuditImpersonationSubjectLen)
+	target = capText(target, MaxAuditImpersonationSubjectLen)
 
 	const query = `
 		INSERT INTO audit_logs (ts, actor, action, entity_type, entity_id, detail, ip, user_agent)
 		VALUES ($1, $2, $3, 'impersonation', NULL, $4, $5, $6)`
 
-	_, err := r.pool.Exec(ctx, query,
+	_, err := r.exec.Exec(ctx, query,
 		r.now().UTC(),
 		actor,
 		action,
@@ -263,6 +272,24 @@ func (r *AuditRepo) writeImpersonationEvent(ctx context.Context, action string, 
 	return nil
 }
 
+// capText returns s unchanged when it already fits within maxBytes;
+// otherwise it truncates to at most maxBytes bytes, backing off to the
+// nearest whole UTF-8 rune boundary. A naive s[:maxBytes] slice can cut
+// a multi-byte rune in half, producing invalid UTF-8 that PostgreSQL's
+// UTF-8 TEXT columns reject at INSERT time — the length caps exist to
+// stop a misbehaving caller ballooning a row, so they must not
+// themselves corrupt an otherwise-writable value.
+func capText(s string, maxBytes int) string {
+	if maxBytes <= 0 || len(s) <= maxBytes {
+		return s
+	}
+	truncated := s[:maxBytes]
+	for len(truncated) > 0 && !utf8.ValidString(truncated) {
+		truncated = truncated[:len(truncated)-1]
+	}
+	return truncated
+}
+
 // ListDistinctActiveSubjects returns the set of subjects that have at
 // least one non-revoked auth_sessions row, sorted alphabetically for
 // stable rendering. Used by the impersonation candidates endpoint until
@@ -272,7 +299,7 @@ func (r *AuditRepo) writeImpersonationEvent(ctx context.Context, action string, 
 // is the handler's job because the handler also has to enforce
 // "exclude self when impersonating" semantics.
 func (r *AuditRepo) ListDistinctActiveSubjects(ctx context.Context) ([]string, error) {
-	if r == nil || r.pool == nil {
+	if r == nil || r.exec == nil {
 		return nil, errors.New("audit repo not configured")
 	}
 	const query = `
@@ -280,7 +307,7 @@ func (r *AuditRepo) ListDistinctActiveSubjects(ctx context.Context) ([]string, e
 		FROM auth_sessions
 		WHERE revoked_at IS NULL
 		ORDER BY subject ASC`
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := r.exec.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("auth_sessions distinct subjects: %w", err)
 	}

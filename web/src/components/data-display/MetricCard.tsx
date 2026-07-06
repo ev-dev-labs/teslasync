@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { type NeonColor, neonColorMap } from '../../lib/tokens'
 import { HelpTooltip, type HelpTooltipProps } from '../ui/HelpTooltip'
@@ -40,7 +41,10 @@ interface MetricCardProps {
 
 /** Compact metric display card with icon, value, label, and optional trend. */
 export function MetricCard({ label, value, icon, color = 'cyan', change, delta, subtitle, className, help }: MetricCardProps) {
-  const c = neonColorMap[color]
+  const { t } = useTranslation()
+  // Fall back to cyan if a caller passes an unregistered colour (e.g. a
+  // value driven from API data) so `c.bg`/`c.ring` never throw on undefined.
+  const c = neonColorMap[color] ?? neonColorMap.cyan
   const numericValue = typeof value === 'number' ? value : Number(value)
   const deltaCurrent = delta?.current ?? (Number.isFinite(numericValue) ? numericValue : null)
   return (
@@ -53,7 +57,7 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
               <HelpTooltip
                 size="xs"
                 {...help}
-                ariaLabel={help.ariaLabel ?? `More info about ${label}`}
+                ariaLabel={help.ariaLabel ?? t('metricCard.moreInfoAbout', 'More info about {{label}}', { label })}
               />
             )}
           </p>

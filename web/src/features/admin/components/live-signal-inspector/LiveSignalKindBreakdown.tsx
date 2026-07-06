@@ -50,14 +50,23 @@ export function LiveSignalKindBreakdown({
 
   const data = useMemo(
     () =>
-      stats.byKind.map((bucket) => ({
-        category: bucket.category,
-        label: t(
-          KIND_LABELS[bucket.category].key,
-          KIND_LABELS[bucket.category].fallback,
-        ),
-        value: bucket.count,
-      })),
+      (stats.byKind ?? []).map((bucket) => {
+        // `stats` is a prop, so a malformed/legacy category from an
+        // upstream contract violation must degrade to a readable label
+        // rather than crashing the whole panel on `undefined.key`.
+        const meta: { key: string; fallback: string } | undefined =
+          KIND_LABELS[bucket.category];
+        return {
+          category: bucket.category,
+          label: meta
+            ? t(meta.key, meta.fallback)
+            : t(
+                `admin.liveSignals.kind.${bucket.category}`,
+                String(bucket.category ?? '—'),
+              ),
+          value: bucket.count ?? 0,
+        };
+      }),
     [stats.byKind, t],
   );
 
@@ -83,7 +92,14 @@ export function LiveSignalKindBreakdown({
           'No live signals to categorise yet.',
         )}
       >
-        <div className="h-56 sm:h-64">
+        <div
+          className="h-56 sm:h-64"
+          role="img"
+          aria-label={t(
+            'admin.liveSignals.kinds.chartAria',
+            'Bar chart of live signal counts grouped by value kind.',
+          )}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: -12 }}>
               <CartesianGrid

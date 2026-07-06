@@ -76,8 +76,10 @@ export function deriveEdges<S extends string, T extends string>(
 ): Edge<S>[] {
   const seen = new Set<string>()
   const edges: Edge<S>[] = []
-  for (const { from, to } of transitions) {
-    const key = `${from}→${to}`
+  for (const { from, to } of transitions ?? []) {
+    // Composite JSON key avoids delimiter collisions when a state name itself
+    // contains the separator (e.g. from:'a→b',to:'c' vs from:'a',to:'b→c').
+    const key = JSON.stringify([from, to])
     if (!seen.has(key)) {
       seen.add(key)
       edges.push([from, to])
@@ -91,5 +93,5 @@ export function isValidTransition<S extends string>(
   from: S,
   to: S,
 ): CoverageCell {
-  return coverage[from]?.[to] ?? null
+  return coverage?.[from]?.[to] ?? null
 }

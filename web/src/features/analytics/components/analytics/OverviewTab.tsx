@@ -32,7 +32,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
 
   const vehicleDistData = useMemo(
     // backend `vehicle_comparison[].distance` is SI km — convert via meter floor.
-    () => vehicles.map((v) => ({ name: v.name, distance: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit) })),
+    () => vehicles.map((v) => ({ name: v.name ?? '—', distance: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit) })),
     [vehicles, distanceUnit],
   );
 
@@ -130,7 +130,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
           {QUICK_LINKS.map((link) => (
             <Link key={link.href} to={link.href} className="block">
               <GlassPanel hover glow="cyan" className="flex items-center gap-3 p-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]" aria-hidden="true">
                   {link.icon}
                 </div>
                 <Text size="sm" weight="medium" color="primary" className="min-w-0 flex-1 truncate">

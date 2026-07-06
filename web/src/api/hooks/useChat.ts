@@ -7,7 +7,7 @@ import {
   deleteChatSession,
 } from '@/api/devtools';
 import { useMutationToast } from './_toastHelpers';
-import type { ChatSessionInfo } from '@/api/types';
+import type { ChatResponse, ChatSessionInfo } from '@/api/types';
 
 /**
  * TanStack Query hooks for the AI assistant.
@@ -94,15 +94,24 @@ export function useDeleteChatSession() {
  * duplicate the mutation wiring; `onSuccess` is left to the caller because
  * ChatbotPage needs to push the assistant reply into local state for the
  * typewriter reveal.
+ *
+ * `onError` is optional: when the caller omits it we fall back to a toast so a
+ * failed send is never silent (matching the sibling rename/delete mutations
+ * and the mutation-toast convention). A caller that supplies its own
+ * `onError` owns feedback entirely and the fallback is not used.
  */
 export function useSendChatMessage(opts?: {
-  onSuccess?: (data: { response: string; session_id: string }) => void;
+  onSuccess?: (data: ChatResponse) => void;
   onError?: (err: unknown) => void;
 }) {
+  const { error } = useMutationToast();
+
   return useMutation({
     mutationFn: ({ message, sessionId }: { message: string; sessionId?: string }) =>
       sendChatMessage(message, sessionId),
     onSuccess: opts?.onSuccess,
-    onError: opts?.onError,
+    onError:
+      opts?.onError ??
+      ((e) => error(e, 'toast.chatbot.send.error', 'Failed to send message')),
   });
 }

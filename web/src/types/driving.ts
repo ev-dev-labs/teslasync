@@ -138,15 +138,15 @@ export interface SpeedProfileData {
 }
 
 export interface SpeedBucket {
+  /** Bucket label as sent by the API, e.g. "20-40" (snake_case original). */
   speed_bucket: string;
+  /** camelCase alias exposed by camelCaseKeys() over the API response. */
   speedBucket?: string;
   readings: number;
-  avg_power_kw?: number;
-  avgPowerKw?: number;
-  // Legacy field names (may not exist from API)
-  range?: string;
-  percentage?: number;
-  driveCount?: number;
+  /** Average power for the bucket in watts (W, SI canonical). */
+  avg_power_w?: number;
+  /** camelCase alias exposed by camelCaseKeys() over the API response. */
+  avgPowerW?: number;
 }
 
 export interface RegenEfficiencyData {

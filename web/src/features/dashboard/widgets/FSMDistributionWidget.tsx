@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from '@/components/charts';
@@ -40,8 +40,8 @@ interface DonutSegment {
   pct: number;
 }
 
-function buildDonutData(stats: Record<string, number>): DonutSegment[] {
-  const entries = Object.entries(stats).filter(([, v]) => (v ?? 0) > 0);
+function buildDonutData(stats: Record<string, number> | undefined): DonutSegment[] {
+  const entries = Object.entries(stats ?? {}).filter(([, v]) => (v ?? 0) > 0);
   const total = entries.reduce((sum, [, v]) => sum + (v ?? 0), 0);
   if (total === 0) return [];
   return entries
@@ -116,33 +116,66 @@ function TransitionRow({
 /* ── Main widget ───────────────────────────────────────────────── */
 export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : '';
 
-  const statsQuery = useFSMStats(idStr);
-  const transitionsQuery = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
+  const {
+    data: statsData,
+    error: statsError,
+    isLoading: statsLoading,
+    isFetching: statsFetching,
+    isStale: statsStale,
+    isError: statsIsError,
+    dataUpdatedAt: statsUpdatedAt,
+    refetch: refetchStats,
+  } = useFSMStats(idStr);
+
+  const {
+    data: transitionsData,
+    isLoading: transitionsLoading,
+    isFetching: transitionsFetching,
+    isStale: transitionsStale,
+    isError: transitionsIsError,
+    dataUpdatedAt: transitionsUpdatedAt,
+    refetch: refetchTransitions,
+  } = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
 
   const isCompact = size.cols <= 1;
 
   const segments = useMemo(
-    () => buildDonutData(statsQuery.data?.stats ?? {}),
-    [statsQuery.data],
+    () => buildDonutData(statsData?.stats),
+    [statsData],
   );
 
-  const transitions = useMemo(
-    () => (transitionsQuery.data?.data ?? []).slice(0, isCompact ? 3 : 5),
-    [transitionsQuery.data, isCompact],
-  );
+  const transitions = useMemo(() => {
+    const rows = transitionsData?.data;
+    const list = Array.isArray(rows) ? rows : [];
+    return list.slice(0, isCompact ? 3 : 5);
+  }, [transitionsData, isCompact]);
 
   const hasData = segments.length > 0;
 
   /* Freshness: merge from both queries */
-  const updatedAt = Math.max(statsQuery.dataUpdatedAt ?? 0, transitionsQuery.dataUpdatedAt ?? 0);
-  const isFetching = statsQuery.isFetching || transitionsQuery.isFetching;
-  const isStale = statsQuery.isStale || transitionsQuery.isStale;
-  const isError = statsQuery.isError || transitionsQuery.isError;
-  const isLoading = statsQuery.isLoading || transitionsQuery.isLoading;
+  const updatedAt = Math.max(statsUpdatedAt ?? 0, transitionsUpdatedAt ?? 0);
+  const isFetching = statsFetching || transitionsFetching;
+  const isStale = statsStale || transitionsStale;
+  const isError = statsIsError || transitionsIsError;
+  // Keep the skeleton up while the default vehicle is still resolving from
+  // useVehicles: the FSM queries are disabled for an empty id and would report
+  // "not loading", so without this gate the widget flashes its empty state
+  // before the first fetch can even start.
+  const isLoading =
+    statsLoading || transitionsLoading || (vehicleId == null && vehiclesLoading);
+  // Surface the primary (stats) fetch failure through the shell so a genuine
+  // error is distinguishable from a legitimately-empty distribution instead of
+  // both collapsing into the same "no data" placeholder.
+  const shellError = statsError ? String(statsError) : null;
+
+  const handleRefresh = useCallback(() => {
+    refetchStats();
+    refetchTransitions();
+  }, [refetchStats, refetchTransitions]);
 
   /* Compact view: current state badge + time in current state */
   if (isCompact) {
@@ -152,14 +185,12 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
     return (
       <WidgetShell
         loading={isLoading}
+        error={shellError}
         updatedAt={updatedAt}
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => {
-          statsQuery.refetch();
-          transitionsQuery.refetch();
-        }}
+        onRefresh={handleRefresh}
       >
         {hasData ? (
           <div className="flex flex-col items-center justify-center gap-2 h-full py-2">
@@ -191,14 +222,12 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
       title={t('widget.fsmDistribution.title', 'State Distribution')}
       icon={<GitBranch className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
+      error={shellError}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => {
-        statsQuery.refetch();
-        transitionsQuery.refetch();
-      }}
+      onRefresh={handleRefresh}
     >
       {hasData ? (
         <div className="flex flex-col gap-3 h-full">

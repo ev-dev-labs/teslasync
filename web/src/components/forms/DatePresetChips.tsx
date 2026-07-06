@@ -8,9 +8,11 @@
  * (signal-log time window, alert history, etc.).
  */
 
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-import { DATE_PRESETS, DEFAULT_PRESET_IDS } from '@/lib/datePresets';
+import { cn } from '@/lib/cn';
+import { DEFAULT_PRESET_IDS, getDatePreset, type DatePreset } from '@/lib/datePresets';
 
 export interface DatePresetSelection {
   id: string;
@@ -42,12 +44,41 @@ export function DatePresetChips({
   className,
 }: DatePresetChipsProps) {
   const { t } = useTranslation();
-  const ids = new Set(presetIds);
-  const presets = DATE_PRESETS.filter(p => ids.has(p.id));
+
+  // Resolve the requested ids to presets, honouring the CALLER'S order and
+  // de-duplicating while dropping unknown ids. The previous implementation
+  // filtered DATE_PRESETS directly, which silently re-ordered chips to the
+  // canonical preset order (ignoring the order the caller asked for) and
+  // could not honour a custom sequence.
+  const presets = useMemo<DatePreset[]>(() => {
+    const seen = new Set<string>();
+    const out: DatePreset[] = [];
+    for (const id of presetIds ?? []) {
+      if (seen.has(id)) continue;
+      const preset = getDatePreset(id);
+      if (!preset) continue;
+      seen.add(id);
+      out.push(preset);
+    }
+    return out;
+  }, [presetIds]);
+
+  const handleSelect = useCallback(
+    (preset: DatePreset) => {
+      const { start, end } = preset.resolve();
+      onSelect({ id: preset.id, start, end });
+    },
+    [onSelect],
+  );
+
+  // Nothing resolvable to show → render nothing rather than an empty,
+  // labelled group (an announced-but-empty group is a11y noise). Matches
+  // the sibling <ActiveFilterChips> hide-when-empty convention.
+  if (presets.length === 0) return null;
 
   return (
     <div
-      className={['flex flex-wrap items-center gap-1', className].filter(Boolean).join(' ')}
+      className={cn('flex flex-wrap items-center gap-1', className)}
       role="group"
       aria-label={ariaLabel ?? t('date.preset.label', 'Quick date range')}
     >
@@ -59,10 +90,7 @@ export function DatePresetChips({
             type="button"
             size={size}
             variant={active ? 'primary' : 'ghost'}
-            onClick={() => {
-              const r = p.resolve();
-              onSelect({ id: p.id, start: r.start, end: r.end });
-            }}
+            onClick={() => handleSelect(p)}
             aria-pressed={active}
           >
             {t(p.i18nKey, p.fallback)}

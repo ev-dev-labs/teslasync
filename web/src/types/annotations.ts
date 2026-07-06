@@ -75,6 +75,11 @@ export interface ChartAnnotationRow {
  * Project a backend row onto the chart-render shape. The numeric `id` is
  * stringified so it can flow through the existing `<AnnotationList>` and
  * `<ReferenceLine>` consumers without change.
+ *
+ * `scope` is read defensively: a nil Go slice (`models.ChartAnnotation.Scope`)
+ * marshals to JSON `null` rather than `[]`, so indexing it directly would throw
+ * a `TypeError` at the wire boundary. A missing/empty scope collapses to a
+ * blank context instead of crashing the chart overlay.
  */
 export function toDataAnnotation(row: ChartAnnotationRow): DataAnnotation {
   return {
@@ -83,7 +88,7 @@ export function toDataAnnotation(row: ChartAnnotationRow): DataAnnotation {
     label: row.title,
     description: row.description ?? undefined,
     category: row.category,
-    context: row.scope[0] ?? '',
+    context: row.scope?.[0] ?? '',
     vehicleId: row.vehicle_id ?? undefined,
     createdAt: row.created_at,
   };

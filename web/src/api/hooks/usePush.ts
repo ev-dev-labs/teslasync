@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { request } from '../client';
+import { request, isApiError } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
@@ -32,13 +32,20 @@ export function usePushPublicKey() {
     queryKey: pushKeys.publicKey,
     queryFn: async ({ signal }): Promise<string | null> => {
       try {
-        const res = await request<{ publicKey: string }>('/push/public-key', { signal });
-        return res.publicKey || null;
+        const res = await request<{ publicKey?: string } | null>('/push/public-key', { signal });
+        // Null-safe: a null/empty body (or an empty key) is "disabled",
+        // not a crash — `res?.publicKey` guards the missing-object case.
+        return res?.publicKey || null;
       } catch (err) {
         // 404 from the server means VAPID is unconfigured — surface as
         // "disabled" rather than an error so the channel card can render
-        // its explanatory empty state.
-        if (err instanceof Error && /404|not configured/i.test(err.message)) {
+        // its explanatory empty state. Prefer the structured HTTP status
+        // (robust against copy changes); fall back to message-matching
+        // for non-ApiError rejections.
+        if (isApiError(err) && err.status === 404) {
+          return null;
+        }
+        if (err instanceof Error && /not configured/i.test(err.message)) {
           return null;
         }
         throw err;

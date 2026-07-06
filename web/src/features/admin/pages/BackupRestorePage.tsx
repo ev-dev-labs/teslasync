@@ -28,7 +28,7 @@ import { formatDurationMsCompact, formatRelative } from '@/lib/dateFormat';
 import { formatBytes, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
-import { request, getApiBase } from '@/api/client';
+import { request, apiUrl } from '@/api/client';
 import { Icons } from '@/lib/icons';
 // Settings JSON bundle export/import — reused from features/settings to
 // give the dedicated /backup page a single canonical home for "backup &
@@ -337,9 +337,12 @@ export default function BackupRestorePage() {
 
   const verifyMutation = useMutation({
     mutationFn: (runId: number) =>
-      request<{ verified: boolean }>(`/backup/runs/${runId}/verify`, { method: 'POST' }),
+      // The endpoint may answer 204 (no body) on some deployments — request()
+      // resolves that to `undefined`, so the response is modelled as nullable
+      // and read defensively below rather than assuming `{ verified }` exists.
+      request<{ verified: boolean } | null>(`/backup/runs/${runId}/verify`, { method: 'POST' }),
     onSuccess: (data) => {
-      if (data.verified) toast.success(t('backup.checksumVerified', 'Checksum verified'));
+      if (data?.verified) toast.success(t('backup.checksumVerified', 'Checksum verified'));
       else toast.warning(t('backup.checksumMismatch', 'Checksum mismatch'));
     },
     onError: () => toast.error(t('backup.verifyFailed', 'Verification failed')),
@@ -384,8 +387,10 @@ export default function BackupRestorePage() {
 
   const handleDownload = useCallback((runId: number) => {
     // Direct browser navigation (not the request() client) needs the fully
-    // qualified path including the /api/v1 base that request() would add.
-    window.open(`${getApiBase()}/api/v1/backup/runs/${runId}/download`, '_blank');
+    // qualified URL. apiUrl() is the canonical builder that prepends the
+    // /api/v1 base exactly the way request() does, so downloads can never
+    // drift out of sync with the client or double-prefix the path.
+    window.open(apiUrl(`/backup/runs/${runId}/download`), '_blank');
   }, []);
 
   const handlePreview = useCallback(async (runId: number) => {

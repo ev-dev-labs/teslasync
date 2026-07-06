@@ -10,14 +10,26 @@ import type { Automation } from '@/api/types';
 
 function formatRelativeTime(dateStr: string | null, t: (k: string, f: string) => string): string {
   if (!dateStr) return '—';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
+  const ts = new Date(dateStr).getTime();
+  // Guard unparseable timestamps so a malformed value renders as an em dash
+  // instead of "NaNd ago".
+  if (Number.isNaN(ts)) return '—';
+  const diff = Date.now() - ts;
+  // `next_fire_time` is a future instant, so `diff` is negative there. Render
+  // future times as "in Xm" rather than collapsing every one of them to the
+  // past-tense "Just now".
+  const future = diff < 0;
+  const minutes = Math.floor(Math.abs(diff) / 60_000);
   if (minutes < 1) return t('widget.justNow', 'Just now');
-  if (minutes < 60) return `${minutes}m ${t('widget.ago', 'ago')}`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${t('widget.ago', 'ago')}`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ${t('widget.ago', 'ago')}`;
+  const value =
+    minutes < 60
+      ? `${minutes}m`
+      : minutes < 1_440
+        ? `${Math.floor(minutes / 60)}h`
+        : `${Math.floor(minutes / 1_440)}d`;
+  return future
+    ? `${t('widget.in', 'in')} ${value}`
+    : `${value} ${t('widget.ago', 'ago')}`;
 }
 
 function getStatusBadge(
@@ -83,14 +95,20 @@ function AutomationRow({
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           {lastRun && (
-            <span className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5">
-              <Clock className="h-2.5 w-2.5" />
+            <span
+              className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5"
+              title={t('widget.lastRun', 'Last run')}
+            >
+              <Clock className="h-2.5 w-2.5" aria-hidden="true" />
               {formatRelativeTime(lastRun, t)}
             </span>
           )}
           {automation.next_fire_time && (
-            <span className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5">
-              ⏰ {formatRelativeTime(automation.next_fire_time, t)}
+            <span
+              className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5"
+              title={t('widget.nextRun', 'Next run')}
+            >
+              <span aria-hidden="true">⏰</span> {formatRelativeTime(automation.next_fire_time, t)}
             </span>
           )}
         </div>

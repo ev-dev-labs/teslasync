@@ -118,7 +118,7 @@ function humaniseCategory(raw: string): string {
  */
 export function deriveMyActivityAnalytics(
   entries: readonly UserActivityEntry[] | null | undefined,
-  range: { start: string; end: string },
+  range: { start: string; end: string } | null | undefined,
 ): MyActivityAnalytics {
   const safe = Array.isArray(entries) ? entries : [];
   const total = safe.length;
@@ -156,11 +156,16 @@ export function deriveMyActivityAnalytics(
     const action = (entry?.action ?? '').trim() || 'unknown';
     actionCounts.set(action, (actionCounts.get(action) ?? 0) + 1);
 
-    const category = entry?.entity_type ?? OTHER_CATEGORY;
+    // Treat null, undefined, and blank/whitespace-only entity types uniformly
+    // as the "other" bucket (mirroring the `action` handling above) so a stray
+    // empty string can't spawn a label-less category slice or inflate the
+    // distinct-entity count.
+    const entityType = (entry?.entity_type ?? '').trim();
+    const category = entityType || OTHER_CATEGORY;
     categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
 
-    if (entry?.entity_type) {
-      entitySet.add(`${entry.entity_type}:${entry.entity_id ?? ''}`);
+    if (entityType) {
+      entitySet.add(`${entityType}:${entry?.entity_id ?? ''}`);
     }
   }
 
@@ -172,7 +177,7 @@ export function deriveMyActivityAnalytics(
     lastActivityTs,
   };
 
-  const dailyTrend: TrendPoint[] = enumerateDays(range.start, range.end).map((day) => ({
+  const dailyTrend: TrendPoint[] = enumerateDays(range?.start ?? '', range?.end ?? '').map((day) => ({
     day,
     label: formatDayKey(day, { style: 'short' }),
     count: dayCounts.get(day) ?? 0,

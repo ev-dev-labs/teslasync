@@ -39,6 +39,16 @@ function ComparisonCard({ label, value, valueClass, sub, glow = 'none' }: Compar
   );
 }
 
+/**
+ * Coerce a possibly non-finite number to a controlled-input-safe value. React
+ * logs "Received NaN for the `value` attribute" and drops the field back to
+ * uncontrolled if a number input's `value` is ever NaN/Infinity, so fall back
+ * to the field's default whenever the incoming prop isn't finite.
+ */
+function finiteOr(value: number, fallback: number): number {
+  return Number.isFinite(value) ? value : fallback;
+}
+
 export function SavingsCalculator({
   gasComparison,
   gasPrice,
@@ -54,6 +64,10 @@ export function SavingsCalculator({
 }: SavingsCalculatorProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+  // Display-boundary guard: the per-distance labels embed the unit in a
+  // template literal, so a blank/undefined unit would render "$0.15/" or
+  // "$0.15/undefined". Fall back to the metric default.
+  const unit = distanceUnit?.trim() ? distanceUnit : 'km';
 
   return (
     <CostSection
@@ -70,25 +84,26 @@ export function SavingsCalculator({
           <Input
             type="number"
             label={t('costAnalysis.calculator.gasPrice', 'Gas Price ($/gal)')}
-            value={gasPrice}
+            value={finiteOr(gasPrice, DEFAULT_GAS_PRICE)}
             onChange={(e) => onGasPriceChange(Number(e.target.value) || 0)}
             suffix="$/gal"
           />
           <Input
             type="number"
             label={t('costAnalysis.calculator.mpg', 'Gas Car MPG')}
-            value={mpg}
+            value={finiteOr(mpg, DEFAULT_MPG)}
             onChange={(e) => onMpgChange(Number(e.target.value) || 1)}
             suffix="mpg"
           />
           <Input
             type="number"
             label={t('costAnalysis.calculator.elecRate', 'Electricity Rate ($/kWh)')}
-            value={electricityRate}
+            value={finiteOr(electricityRate, DEFAULT_ELECTRICITY_RATE)}
             onChange={(e) => onElectricityRateChange(Number(e.target.value) || 0)}
             suffix="$/kWh"
           />
           <Button
+            type="button"
             className="mt-2 w-full"
             onClick={() => {
               onGasPriceChange(DEFAULT_GAS_PRICE);
@@ -101,7 +116,7 @@ export function SavingsCalculator({
         </div>
 
         {/* Side-by-side comparison — self-manages loading / error / empty. */}
-        <div className="space-y-3 xl:col-span-2">
+        <div className="space-y-3 xl:col-span-2" aria-busy={isLoading || undefined}>
           <Text as="h4" variant="label">
             {t('costAnalysis.calculator.comparison', 'Comparison')}
           </Text>
@@ -115,13 +130,13 @@ export function SavingsCalculator({
                 label={t('costAnalysis.calculator.gasCost', 'Gas Cost (equivalent)')}
                 value={formatCurrency(gasComparison.gasCost, 2)}
                 valueClass="text-rose-300"
-                sub={`${formatCurrency(gasComparison.costPerMileGas, 3)}/${distanceUnit}`}
+                sub={`${formatCurrency(gasComparison.costPerMileGas, 3)}/${unit}`}
               />
               <ComparisonCard
                 label={t('costAnalysis.calculator.evCost', 'EV Cost (actual)')}
                 value={formatCurrency(gasComparison.actualCost, 2)}
                 valueClass="text-cyan-300"
-                sub={`${formatCurrency(gasComparison.costPerMileEV, 3)}/${distanceUnit}`}
+                sub={`${formatCurrency(gasComparison.costPerMileEV, 3)}/${unit}`}
               />
               <ComparisonCard
                 glow="green"

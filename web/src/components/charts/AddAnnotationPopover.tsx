@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Flag, Wrench, MapPin, AlertTriangle, ArrowUpCircle, Tag,
@@ -13,7 +13,7 @@ import { ANNOTATION_COLORS } from '@/types/annotations';
  * `<input type="date">`. Returns an empty string when parsing fails so the
  * input renders empty rather than NaN.
  */
-function toDateInputValue(timestamp: string): string {
+export function toDateInputValue(timestamp: string): string {
   if (!timestamp) return '';
   const d = new Date(timestamp);
   if (Number.isNaN(d.getTime())) {
@@ -27,7 +27,7 @@ function toDateInputValue(timestamp: string): string {
 }
 
 /** Inverse of `toDateInputValue` — pins a YYYY-MM-DD value to UTC midnight. */
-function toIsoTimestamp(date: string): string {
+export function toIsoTimestamp(date: string): string {
   if (!date) return '';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return '';
   return `${date}T00:00:00Z`;
@@ -65,6 +65,7 @@ export function AddAnnotationPopover({
   editableDate = false,
 }: AddAnnotationPopoverProps) {
   const { t } = useTranslation();
+  const categoryLabelId = useId();
   const [label, setLabel] = useState('');
   const [category, setCategory] = useState<AnnotationCategory>('milestone');
   const [description, setDescription] = useState('');
@@ -128,10 +129,10 @@ export function AddAnnotationPopover({
 
         {/* Category pills */}
         <div>
-          <Text as="span" variant="subhead" className="mb-1.5 block">
+          <Text as="span" variant="subhead" className="mb-1.5 block" id={categoryLabelId}>
             {t('annotation.category', 'Category')}
           </Text>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={categoryLabelId}>
             {CATEGORY_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const isSelected = category === opt.value;
@@ -140,6 +141,7 @@ export function AddAnnotationPopover({
                   key={opt.value}
                   type="button"
                   onClick={() => setCategory(opt.value)}
+                  aria-pressed={isSelected}
                   className={cn(
                     'flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors',
                     isSelected

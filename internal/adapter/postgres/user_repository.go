@@ -15,7 +15,7 @@ import (
 )
 
 type userRepository struct {
-	pool *pgxpool.Pool
+	pool pgxPool
 }
 
 func NewUserRepository(pool *pgxpool.Pool) repository.UserRepository {

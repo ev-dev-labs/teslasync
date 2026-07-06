@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, BellOff } from 'lucide-react';
 import {
@@ -40,6 +41,17 @@ export function BrowserPermissionPanel({
 }: BrowserPermissionPanelProps) {
   const { t } = useTranslation();
 
+  // `requestPermission()` returns a Promise that can reject in some browsers
+  // (e.g. when the permission prompt is dismissed by a policy). Catch it so a
+  // click never surfaces an unhandled rejection — the resolved permission
+  // flows back in through the `permission` prop, so there is nothing to do on
+  // failure beyond letting the user retry.
+  const handleEnable = useCallback(() => {
+    requestPermission().catch(() => {
+      /* prompt failed — state stays 'default'; the button remains for retry */
+    });
+  }, [requestPermission]);
+
   return (
     <GlassPanel className={className} data-tour="settings-notifications">
       <div className="space-y-4 p-4 sm:p-5">
@@ -72,7 +84,7 @@ export function BrowserPermissionPanel({
                 <Button
                   variant="primary"
                   icon={<Bell className="h-4 w-4" aria-hidden="true" />}
-                  onClick={() => void requestPermission()}
+                  onClick={handleEnable}
                 >
                   {t('browserNotifications.enable', 'Enable Browser Notifications')}
                 </Button>
@@ -95,7 +107,7 @@ export function BrowserPermissionPanel({
                 <Label>{t('browserNotifications.events', 'Notify me about')}</Label>
                 <Toggle
                   label={t('browserNotifications.alerts', 'Alerts')}
-                  checked={pushPrefs.alerts}
+                  checked={pushPrefs.alerts ?? false}
                   onChange={(checked) =>
                     setPushPrefs((prev) => ({ ...prev, alerts: checked }))
                   }
@@ -103,7 +115,7 @@ export function BrowserPermissionPanel({
                 />
                 <Toggle
                   label={t('browserNotifications.exportStatus', 'Export completions')}
-                  checked={pushPrefs.exportStatus}
+                  checked={pushPrefs.exportStatus ?? false}
                   onChange={(checked) =>
                     setPushPrefs((prev) => ({ ...prev, exportStatus: checked }))
                   }

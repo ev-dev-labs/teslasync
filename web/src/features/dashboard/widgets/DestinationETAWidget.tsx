@@ -58,9 +58,17 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
   const locBadge = locationBadge(snapshot, t);
 
+  // Only blank the whole widget on an INITIAL load failure — i.e. when there is
+  // no cached snapshot to fall back on. This widget refetches on an interval, so
+  // once a snapshot is on screen a transient background-refetch error must not
+  // wipe otherwise-valid numbers; it is surfaced through the freshness
+  // indicator's error state instead (WidgetShell forwards `isError` to
+  // <DataFreshness>).
+  const blockingError = !snapshot && error ? String(error) : null;
+
   const shellProps = {
     loading: isLoading,
-    error: error ? String(error) : null,
+    error: blockingError,
     updatedAt: dataUpdatedAt ?? 0,
     isFetching,
     isStale,
@@ -72,13 +80,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     if (!snapshot) {
       return (
-        <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+        <WidgetShell {...shellProps}>
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Navigation2 className="h-5 w-5" />}
             message={t('widget.destinationETA.noData', 'No location data')}
@@ -90,13 +92,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
     if (isNavigating) {
       return (
-        <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+        <WidgetShell {...shellProps}>
           <WidgetBigNumber
             value={Math.round(minutesToArrival)}
             unit={t('widget.destinationETA.min', 'min')}
@@ -107,13 +103,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
     }
 
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
           <span className="text-2xl" role="img" aria-label={locBadge.label}>
             {locBadge.emoji}
@@ -211,7 +201,14 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
         {/* Progress bar */}
         <div className="flex flex-col gap-1">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+          <div
+            className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
+            role="progressbar"
+            aria-valuenow={Math.round(progressPercent)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t('widget.destinationETA.progress', 'Trip progress')}
+          >
             <div
               className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-slow"
               style={{ width: `${progressPercent}%` }}

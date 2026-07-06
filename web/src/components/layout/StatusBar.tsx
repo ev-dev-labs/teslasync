@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionSegment } from './status-bar/ConnectionSegment';
 import { LiveTelemetrySegment } from './status-bar/LiveTelemetrySegment';
@@ -6,6 +6,7 @@ import { ActiveVehicleSegment } from './status-bar/ActiveVehicleSegment';
 import { BackgroundWorkSegment } from './status-bar/BackgroundWorkSegment';
 import { VersionSegment } from './status-bar/VersionSegment';
 import { HelpSegment } from './status-bar/HelpSegment';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
 
 /**
@@ -112,18 +113,16 @@ function Divider() {
 // Viewport breakpoint hook
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * True when the viewport is narrower than Tailwind's `lg` (1024px) breakpoint —
+ * the same threshold the sidebar uses to collapse. Delegates to the shared,
+ * SSR/`matchMedia`-safe {@link useMediaQuery} so the status bar never assumes
+ * `window.matchMedia` exists: older embedded webviews (and the jsdom test
+ * environment) don't provide it, and an unguarded call throws a `TypeError`
+ * that would crash the whole shell before the bar could render.
+ */
 function useNarrowViewport(): boolean {
-  const [narrow, setNarrow] = useState<boolean>(() =>
-    typeof window === 'undefined' ? false : window.matchMedia('(max-width: 1023px)').matches,
-  );
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(max-width: 1023px)');
-    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return narrow;
+  return useMediaQuery('(max-width: 1023px)');
 }
 
 // ────────────────────────────────────────────────────────────────────────────

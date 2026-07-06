@@ -3,6 +3,7 @@
  * counts across the selected window, so the user can see their busy vs quiet
  * days at a glance. Owns its loading / empty / error states.
  */
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
@@ -32,6 +33,22 @@ export interface ActivityTrendPanelProps {
   className?: string;
 }
 
+/** Recharts hover cursor — hoisted so the <Tooltip> prop keeps a stable identity. */
+const TOOLTIP_CURSOR = { fill: 'var(--surface-2)', opacity: 0.4 } as const;
+
+/**
+ * Stable, non-null error so an `isError` window can never collapse to a blank
+ * panel: {@link QueryError} renders `null` for a falsy `error`, so a caller that
+ * flags an error without a payload would otherwise leave only the title behind.
+ * A bare Error carries no status, so QueryError shows its generic retry state.
+ */
+const FALLBACK_ERROR = new Error('activity trend failed to load');
+
+/** Coerce a possibly-nullish / NaN / negative count to a finite, non-negative integer. */
+function safeCount(value: number | null | undefined): number {
+  return Number.isFinite(value) && (value as number) > 0 ? Math.trunc(value as number) : 0;
+}
+
 export function ActivityTrendPanel({
   data,
   isLoading,
@@ -42,7 +59,21 @@ export function ActivityTrendPanel({
   className,
 }: ActivityTrendPanelProps) {
   const { t } = useTranslation();
-  const rows = data ?? [];
+
+  // Sanitise once per data change so recharts never receives a NaN bar and the
+  // derived totals can power the chart's accessible name.
+  const { rows, days, total } = useMemo(() => {
+    const safeRows = (Array.isArray(data) ? data : []).map((point) => ({
+      day: point?.day ?? '',
+      label: point?.label ?? '—',
+      count: safeCount(point?.count),
+    }));
+    return {
+      rows: safeRows,
+      days: safeRows.length,
+      total: safeRows.reduce((sum, point) => sum + point.count, 0),
+    };
+  }, [data]);
 
   return (
     <GlassPanel className={className}>
@@ -54,14 +85,22 @@ export function ActivityTrendPanel({
         {isLoading ? (
           <Skeleton height={260} />
         ) : isError ? (
-          <QueryError error={error} onRetry={onRetry} />
+          <QueryError error={error ?? FALLBACK_ERROR} onRetry={onRetry} />
         ) : isEmpty || rows.length === 0 ? (
           <EmptyState
             icon={<Icons.analytics className="h-8 w-8" />}
             message={t('activity.myActivity.trend.empty', 'No activity recorded in this window.')}
           />
         ) : (
-          <div className="h-56 sm:h-64 xl:h-72">
+          <div
+            className="h-56 sm:h-64 xl:h-72"
+            role="img"
+            aria-label={t(
+              'activity.myActivity.trend.aria',
+              '{{total}} actions across {{days}} days',
+              { total, days },
+            )}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows}>
                 {chartGrid}
@@ -72,7 +111,7 @@ export function ActivityTrendPanel({
                   minTickGap={24}
                 />
                 <YAxis tick={axisTickSm} allowDecimals={false} width={32} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.4 }} />
+                <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
                 <Bar
                   dataKey="count"
                   name={t('activity.myActivity.trend.series', 'Actions')}

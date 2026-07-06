@@ -20,17 +20,58 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 )
 
+// slowQueriesPort is the narrow slow-query surface Service depends on.
+// Satisfied by *dbobs.SlowQueriesRepo in production and by a fake in
+// tests, so the ErrPgStatStatementsUnavailable -> ErrNotConfigured
+// mapping can be exercised without a live pg_stat_statements.
+type slowQueriesPort interface {
+	TopLive(ctx context.Context, orderBy dbobs.SlowQueryOrderBy, limit int) ([]dbobs.SlowQuery, error)
+}
+
+// hypertablePort is the narrow disk-forecast surface Service depends on.
+type hypertablePort interface {
+	Forecast(ctx context.Context, quotaBytes int64) ([]dbobs.HypertableSize, error)
+}
+
+// ingestXRayPort is the narrow per-vehicle-cost surface Service depends
+// on.
+type ingestXRayPort interface {
+	VehicleCostReport(ctx context.Context, since time.Time, limit int) (*dbobs.VehicleCostReport, error)
+}
+
+// rotationPort is the narrow secret-rotation surface Service depends on.
+type rotationPort interface {
+	Status(ctx context.Context) ([]rotation.Status, error)
+}
+
+// Compile-time proof that the production repos satisfy the ports. These
+// catch signature drift the moment a repo method changes shape.
+var (
+	_ slowQueriesPort = (*dbobs.SlowQueriesRepo)(nil)
+	_ hypertablePort  = (*dbobs.HypertableMetricsRepo)(nil)
+	_ ingestXRayPort  = (*dbobs.IngestXRayRepo)(nil)
+	_ rotationPort    = (*rotation.Tracker)(nil)
+)
+
 // Service is the orchestrator. All fields are optional so the App can
 // pass nil for any subsystem that is not configured (e.g. timescale
 // not installed) and the handler returns 503 for just that route.
+//
+// The repo dependencies are held as narrow interfaces (ports) rather
+// than concrete pointers so each method's error-mapping and defaulting
+// logic is unit-testable with in-memory fakes. New performs a non-nil
+// guard when wiring the concrete repos so a nil *repo argument leaves
+// the port as a genuinely-nil interface (not a non-nil interface value
+// wrapping a nil pointer), preserving the nil == ErrNotConfigured
+// contract every method relies on.
 type Service struct {
 	now           func() time.Time
-	rotation      *rotation.Tracker
+	rotation      rotationPort
 	schemaRepo    schemacheck.Querier
 	schemaSeed    schemacheck.Fingerprint
-	slowQueries   *dbobs.SlowQueriesRepo
-	hypertable    *dbobs.HypertableMetricsRepo
-	ingestXRay    *dbobs.IngestXRayRepo
+	slowQueries   slowQueriesPort
+	hypertable    hypertablePort
+	ingestXRay    ingestXRayPort
 	auditRecorder *audit.Recorder
 	excludeTables []string
 	quotaBytes    int64
@@ -51,6 +92,13 @@ type Options struct {
 }
 
 // New constructs the service.
+//
+// Concrete repo pointers are copied into the interface-typed fields
+// only when non-nil. A direct assignment of a nil *Repo into an
+// interface field would produce a non-nil interface wrapping a nil
+// pointer, defeating the `field == nil` guard each method uses to
+// return ErrNotConfigured; the explicit guards below keep an unwired
+// subsystem as a genuinely-nil interface.
 func New(opt Options) *Service {
 	if opt.Now == nil {
 		opt.Now = time.Now
@@ -60,18 +108,27 @@ func New(opt Options) *Service {
 		// via the env-driven cfg.
 		opt.QuotaBytes = 100 * 1024 * 1024 * 1024
 	}
-	return &Service{
+	s := &Service{
 		now:           opt.Now,
-		rotation:      opt.Rotation,
 		schemaRepo:    opt.SchemaPool,
 		schemaSeed:    opt.SchemaSeed,
-		slowQueries:   opt.SlowQueries,
-		hypertable:    opt.Hypertable,
-		ingestXRay:    opt.IngestXRay,
 		auditRecorder: opt.AuditRecorder,
 		excludeTables: opt.ExcludeTables,
 		quotaBytes:    opt.QuotaBytes,
 	}
+	if opt.Rotation != nil {
+		s.rotation = opt.Rotation
+	}
+	if opt.SlowQueries != nil {
+		s.slowQueries = opt.SlowQueries
+	}
+	if opt.Hypertable != nil {
+		s.hypertable = opt.Hypertable
+	}
+	if opt.IngestXRay != nil {
+		s.ingestXRay = opt.IngestXRay
+	}
+	return s
 }
 
 // SchemaDriftResult is the wire shape for SchemaDrift.

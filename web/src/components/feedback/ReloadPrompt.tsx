@@ -31,6 +31,7 @@ export default function ReloadPrompt() {
   const { t } = useTranslation()
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const updateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -38,11 +39,16 @@ export default function ReloadPrompt() {
   } = useRegisterSW({
     onRegisteredSW(_swUrl: string, registration?: ServiceWorkerRegistration) {
       if (registration) {
-        setInterval(() => registration.update(), UPDATE_CHECK_INTERVAL_MS)
+        // Keep a handle so the interval can be torn down on unmount —
+        // otherwise it keeps calling registration.update() forever, even
+        // after this component leaves the tree, leaking a timer per mount.
+        updateIntervalRef.current = setInterval(() => {
+          void registration.update()
+        }, UPDATE_CHECK_INTERVAL_MS)
       }
     },
-    onRegisterError(_error: unknown) {
-      console.error('[SW] Registration error:', _error)
+    onRegisterError(error: unknown) {
+      console.error('[SW] Registration error:', error)
     },
   })
 
@@ -81,17 +87,30 @@ export default function ReloadPrompt() {
     return clearCountdown
   }, [needRefresh, updateServiceWorker, clearCountdown])
 
+  // Tear down the periodic service-worker update poll on unmount so a
+  // remounted prompt never stacks multiple update() intervals.
+  useEffect(
+    () => () => {
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current)
+        updateIntervalRef.current = null
+      }
+    },
+    [],
+  )
+
   if (!needRefresh) return null
 
   return (
     <div
       role="alert"
       aria-live="polite"
+      data-testid="reload-prompt"
       className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 fade-in duration-normal"
     >
       <GlassPanel className="!p-4 flex items-center gap-3 border border-neon-cyan/30 shadow-lg shadow-neon-cyan/10 max-w-sm">
         <div className="rounded-lg bg-neon-cyan/10 p-2">
-          <RefreshCw className="h-5 w-5 text-neon-cyan animate-spin" />
+          <RefreshCw className="h-5 w-5 text-neon-cyan animate-spin" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -105,6 +124,7 @@ export default function ReloadPrompt() {
           variant="ghost"
           size="sm"
           onClick={dismiss}
+          data-testid="reload-prompt-dismiss"
           className="shrink-0 text-[var(--text-secondary)]"
         >
           {t('pwa.later', 'Later')}
@@ -113,6 +133,7 @@ export default function ReloadPrompt() {
           variant="primary"
           size="sm"
           onClick={doReload}
+          data-testid="reload-prompt-reload"
           className="shrink-0"
         >
           {t('pwa.reloadNow', 'Reload Now')}

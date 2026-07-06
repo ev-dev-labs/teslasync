@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigation, Thermometer, Gauge, Mountain } from 'lucide-react';
 import { AnimatedNumber } from '@/components/data-display';
@@ -30,7 +30,13 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
     data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useProjectedRange(idStr);
 
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  // Stable across renders unless the distance preference changes, so the
+  // derived range memos below actually cache instead of recomputing every
+  // render (they list this converter in their dependency arrays).
+  const toDistanceDisplay = useCallback(
+    (value: number) => convertDistanceFromSI(value, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
 
   const distanceUnit = unitPrefs.distance;
 
@@ -213,7 +219,14 @@ function ComparisonBar({
           {t('widget.projectedRange.epa', 'EPA')}: {epaRange != null ? `${fmtNumber(epaRange, 0)} ${distanceUnit}` : '—'}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={rangePct ?? undefined}
+        aria-label={t('widget.projectedRange.rangeComparison', 'Projected range vs EPA rated')}
+        className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden"
+      >
         <div
           className="h-full rounded-full transition-all duration-slow"
           style={{

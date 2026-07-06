@@ -21,6 +21,28 @@ type DBTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
+// pinger is the minimal pgxpool subset Health needs. It is declared locally so
+// unit tests can drive the ping success/failure branches with an in-memory fake
+// instead of a live PostgreSQL — the same interface seam used by the sibling
+// repositories in internal/database/*. *pgxpool.Pool satisfies it in production.
+type pinger interface {
+	Ping(ctx context.Context) error
+}
+
+// txBeginner is the minimal pgxpool subset WithTx needs to open a transaction.
+// Declared locally for the same testability reason as pinger; *pgxpool.Pool
+// satisfies it in production.
+type txBeginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
+// Compile-time guards so a future pgx release that changes one of these method
+// signatures fails loudly here rather than at an injection site.
+var (
+	_ pinger     = (*pgxpool.Pool)(nil)
+	_ txBeginner = (*pgxpool.Pool)(nil)
+)
+
 // DB wraps a pgx connection pool.
 type DB struct {
 	Pool *pgxpool.Pool
@@ -80,15 +102,28 @@ func (db *DB) Close() {
 
 // Health checks database connectivity with a 3-second deadline.
 func (db *DB) Health(ctx context.Context) error {
+	return healthPing(ctx, db.Pool)
+}
+
+// healthPing pings p under a 3-second deadline derived from ctx. Extracted so
+// the timeout/error behaviour can be unit tested against a fake pinger.
+func healthPing(ctx context.Context, p pinger) error {
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	return db.Pool.Ping(checkCtx)
+	return p.Ping(checkCtx)
 }
 
 // WithTx executes fn within a database transaction.
 // It commits on success and rolls back on error or panic.
 func (db *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
-	tx, err := db.Pool.Begin(ctx)
+	return withTx(ctx, db.Pool, fn)
+}
+
+// withTx runs fn inside a transaction opened from pool, committing on success
+// and rolling back on error or panic. Extracted so every branch (begin error,
+// fn error, panic, commit) can be unit tested against a fake txBeginner.
+func withTx(ctx context.Context, pool txBeginner, fn func(tx pgx.Tx) error) error {
+	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}

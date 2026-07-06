@@ -29,9 +29,14 @@ export function WidgetChartSummary({
     return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={emptyIcon} message={emptyMessage ?? 'No data available'} />;
   }
 
+  // Null-safety: a caller may hand us a possibly-undefined array (e.g. `data?.stats`).
+  // Coalesce before any `.length` / `.map` so a missing source degrades to a
+  // chart-only render instead of throwing.
+  const safeStats = stats ?? [];
+
   return (
     <div className="flex h-full flex-col">
-      {stats.length > 0 && (
+      {safeStats.length > 0 && (
         <div
           className={cn(
             // Stat row: 2-col grid by default (mobile-safe). On wider widgets
@@ -42,11 +47,11 @@ export function WidgetChartSummary({
               : 'grid grid-cols-2 gap-2 @sm:flex @sm:gap-4',
           )}
         >
-          {stats.map((stat) => (
-            <div key={stat.label} className="flex min-w-0 flex-col">
+          {safeStats.map((stat, index) => (
+            <div key={`${stat.label}-${index}`} className="flex min-w-0 flex-col">
               <span className="truncate text-2xs text-[var(--text-muted)]">{stat.label}</span>
               <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                {stat.value}
+                {stat.value ?? '—'}
                 {stat.unit && (
                   <span className="ml-0.5 text-2xs font-normal text-[var(--text-muted)]">
                     {stat.unit}

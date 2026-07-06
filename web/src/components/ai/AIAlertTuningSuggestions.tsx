@@ -116,6 +116,14 @@ function InnerSection({
       if (typeof proposed.op === 'string' && proposed.op !== '') {
         patch.op = proposed.op
       }
+      // Guard against an all-invalid `proposed` object yielding an
+      // empty patch: surfacing a "Proposed patch" panel with an empty
+      // list and a no-op "Apply to form" button is a worse experience
+      // than showing nothing. Only capture a proposal once at least
+      // one scalar field survived type-validation.
+      if (Object.keys(patch).length === 0) {
+        return
+      }
       setProposal(patch)
     }
   }, [])
@@ -200,7 +208,11 @@ function InnerSection({
               )}
             </Button>
           </div>
-          <div className="rounded-md border border-emerald-300/30 bg-emerald-300/5 p-3 text-sm text-emerald-300">
+          <div
+            role="status"
+            data-testid="ai-feature-alert-tuning-suggestions-preview"
+            className="rounded-md border border-emerald-300/30 bg-emerald-300/5 p-3 text-sm text-emerald-300"
+          >
             <div className="font-medium">
               {t(
                 'notifications.alertStudio.aiTuning.previewLabel',

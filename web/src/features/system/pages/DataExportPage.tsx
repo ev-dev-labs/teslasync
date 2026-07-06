@@ -134,6 +134,14 @@ const STATUS_CONFIG: Record<ExportStatus, {
   expired: { icon: Icons.alertCircle, badgeVariant: 'warning', labelKey: 'dataExport.status.expired', label: 'Expired' },
 };
 
+/** Shape of a single {@link STATUS_CONFIG} entry — used so `StatusBadge` can
+ *  do a defensive, runtime-honest lookup. The backend `status` field is typed
+ *  `ExportStatus` at compile time, but a newer server could emit a value the
+ *  SPA union doesn't know yet (e.g. `cancelled`); indexing the record with
+ *  that string returns `undefined`, and reading `.icon` off it would crash the
+ *  whole history table. */
+type StatusConfigEntry = (typeof STATUS_CONFIG)[ExportStatus];
+
 const TYPE_BADGE_VARIANT: Record<ExportType, 'info' | 'success' | 'warning' | 'danger' | 'neutral'> = {
   drives: 'info',
   charging: 'success',
@@ -283,7 +291,19 @@ function DatePresetSelector({
 
 function StatusBadge({ status }: { status: ExportStatus }) {
   const { t } = useTranslation();
-  const cfg = STATUS_CONFIG[status];
+  // Defensive lookup: an unrecognized status (server ahead of the SPA union)
+  // must degrade to a neutral chip rather than throw on `undefined.icon` and
+  // take the entire export-history table down with it.
+  const cfg: StatusConfigEntry | undefined =
+    (STATUS_CONFIG as Record<string, StatusConfigEntry>)[status];
+  if (!cfg) {
+    return (
+      <Badge variant="neutral" size="sm">
+        <Icons.alertCircle className="h-3 w-3" aria-hidden="true" />
+        {status ? String(status) : '—'}
+      </Badge>
+    );
+  }
   const Icon = cfg.icon;
   return (
     <Badge variant={cfg.badgeVariant} size="sm">
@@ -305,11 +325,15 @@ function TypeBadge({ type }: { type: ExportType }) {
 }
 
 function FormatBadge({ format }: { format: ExportFormat }) {
+  // `format` is `ExportFormat` at compile time but arrives from the API, so a
+  // missing/unknown value must not blow up on `.toUpperCase()`.
+  const label = typeof format === 'string' && format.length > 0 ? format.toUpperCase() : '—';
+  const variant = format === 'csv' ? 'info' : format === 'json' ? 'warning' : 'neutral';
   return (
-    <Badge variant={format === 'csv' ? 'info' : 'warning'} size="sm">
+    <Badge variant={variant} size="sm">
       {format === 'csv' && <Icons.fileSpreadsheet className="h-3 w-3" aria-hidden="true" />}
       {format === 'json' && <Icons.fileJson className="h-3 w-3" aria-hidden="true" />}
-      {format.toUpperCase()}
+      {label}
     </Badge>
   );
 }
@@ -703,7 +727,7 @@ function ColumnPickerSection({
       </div>
     );
   }
-  if (isError || !data || !data.supports_selection || data.columns.length === 0) {
+  if (isError || !data || !data.supports_selection || (data.columns?.length ?? 0) === 0) {
     return null;
   }
 

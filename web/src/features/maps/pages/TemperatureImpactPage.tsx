@@ -71,7 +71,12 @@ const TEMP_BUCKETS_C = [
 
 function getTempBucketIndex(temp: number): number {
   const idx = TEMP_BUCKETS_C.findIndex((b) => temp >= b.min && temp < b.max);
-  return idx >= 0 ? idx : 2;
+  if (idx >= 0) return idx;
+  // Out-of-range readings (sensor spikes, absurd ambient values, or the exact
+  // upper edge of the last bucket) clamp to the nearest edge bucket instead of
+  // silently landing in the middle — otherwise an extreme-heat drive would be
+  // miscounted as "moderate" and skew the best/worst analysis.
+  return temp < TEMP_BUCKETS_C[0].min ? 0 : TEMP_BUCKETS_C.length - 1;
 }
 
 function bucketLabel(
@@ -285,7 +290,12 @@ export default function TemperatureImpactPage() {
   const sectionFallback = useCallback(
     (isEmpty: boolean, opts: { skeletonHeight: number; icon: ReactNode }): ReactNode | null => {
       if (isLoading) return <Skeleton height={opts.skeletonHeight} />;
-      if (isError) return <QueryError error={query.error} onRetry={() => query.refetch()} />;
+      // Only surface the error panel when there is no retained data to fall
+      // back on. TanStack Query keeps the last successful `data` across a
+      // failed background refetch — in that case each section keeps rendering
+      // its last-good content and the header freshness chip owns the degraded
+      // signal, rather than collapsing the whole page into retry panels.
+      if (isError && isEmpty) return <QueryError error={query.error} onRetry={() => query.refetch()} />;
       if (isEmpty) {
         return (
           <EmptyState
@@ -357,7 +367,10 @@ export default function TemperatureImpactPage() {
 
       {/* ── Row A: scatter hero + optimal analysis ───────────── */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section
+          aria-label={t('tempImpact.regionScatter', 'Temperature vs efficiency analysis')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -470,7 +483,10 @@ export default function TemperatureImpactPage() {
 
       {/* ── Row B: bucket line + monthly seasonal trend ──────── */}
       <FadeIn delay={0.2}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section
+          aria-label={t('tempImpact.regionTrends', 'Efficiency and seasonal trends')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+        >
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -559,7 +575,10 @@ export default function TemperatureImpactPage() {
 
       {/* ── Row C: recommendations + recent drives ───────────── */}
       <FadeIn delay={0.3}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section
+          aria-label={t('tempImpact.regionRecs', 'Recommendations and recent drives')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />

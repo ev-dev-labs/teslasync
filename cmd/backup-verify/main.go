@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -31,20 +32,40 @@ import (
 	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
 )
 
+// verifier is the narrow surface runWithDeps needs from
+// *backupverify.Verifier. Carving it out as an interface keeps the
+// verify/emit/exit-decision core decoupled from the concrete verifier
+// (and its *database.DB dependency closure) so main_test.go can exercise
+// the success/failure branches without a real database or storage provider.
+type verifier interface {
+	VerifyLatest(ctx context.Context) (*backupverify.Result, error)
+}
+
 func main() {
+	os.Exit(run(os.Stdout, os.Stderr, os.Getenv))
+}
+
+// run wires the real dependencies (config, database, backup processor,
+// repos) then delegates the testable core to runWithDeps. It returns the
+// process exit code so callers control os.Exit and deferred cleanup
+// (db.Close, context cancel) always runs. stdout/stderr/getenv are
+// injected so the boundary stays explicit and side-effect-free to import.
+func run(stdout, stderr io.Writer, getenv func(string) string) int {
 	zerolog.TimeFieldFormat = time.RFC3339
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: stderr, TimeFormat: time.RFC3339})
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal().Err(err).Msg("config load failed")
+		log.Error().Err(err).Msg("config load failed")
+		return 1
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	db, err := database.New(ctx, cfg.Database)
 	if err != nil {
-		log.Fatal().Err(err).Msg("database connect failed")
+		log.Error().Err(err).Msg("database connect failed")
+		return 1
 	}
 	defer db.Close()
 
@@ -52,30 +73,39 @@ func main() {
 	runsRepo := dbbackup.NewBackupRunRepo(db)
 	configsRepo := dbbackup.NewBackupConfigRepo(db)
 
-	criticals := parseCriticals(os.Getenv("BACKUP_VERIFY_CRITICAL_TABLES"))
-	maxAge := parseDuration(os.Getenv("BACKUP_VERIFY_MAX_AGE"), 7*24*time.Hour)
+	criticals := parseCriticals(getenv("BACKUP_VERIFY_CRITICAL_TABLES"))
+	maxAge := parseDuration(getenv("BACKUP_VERIFY_MAX_AGE"), 7*24*time.Hour)
 
 	v := backupverify.NewVerifier(processor, runsRepo, configsRepo, criticals, maxAge)
-	res, err := v.VerifyLatest(ctx)
-	emit(res)
-	if err != nil || res == nil || !res.OK {
-		log.Error().Err(err).Msg("backup verification FAILED")
-		os.Exit(1)
-	}
-	log.Info().Int64("run_id", res.RunID).Int64("duration_ms", res.DurationMs).Msg("backup verification OK")
+	return runWithDeps(ctx, v, stdout)
 }
 
-func emit(res *backupverify.Result) {
+// runWithDeps is the dependency-injected core: run one verification pass,
+// emit the JSON result line to stdout (cron-friendly), and translate the
+// outcome into an exit code. Returns 1 when the verifier errors, returns a
+// nil result, or reports Result.OK == false; 0 only on a clean pass.
+func runWithDeps(ctx context.Context, v verifier, stdout io.Writer) int {
+	res, err := v.VerifyLatest(ctx)
+	emit(stdout, res)
+	if err != nil || res == nil || !res.OK {
+		log.Error().Err(err).Msg("backup verification FAILED")
+		return 1
+	}
+	log.Info().Int64("run_id", res.RunID).Int64("duration_ms", res.DurationMs).Msg("backup verification OK")
+	return 0
+}
+
+func emit(w io.Writer, res *backupverify.Result) {
 	if res == nil {
-		fmt.Fprintln(os.Stdout, `{"ok":false,"error":"nil result"}`)
+		fmt.Fprintln(w, `{"ok":false,"error":"nil result"}`)
 		return
 	}
 	body, err := json.Marshal(res)
 	if err != nil {
-		fmt.Fprintf(os.Stdout, `{"ok":false,"error":"marshal: %s"}`+"\n", err)
+		fmt.Fprintf(w, `{"ok":false,"error":"marshal: %s"}`+"\n", err)
 		return
 	}
-	fmt.Fprintln(os.Stdout, string(body))
+	fmt.Fprintln(w, string(body))
 }
 
 func parseCriticals(raw string) []string {

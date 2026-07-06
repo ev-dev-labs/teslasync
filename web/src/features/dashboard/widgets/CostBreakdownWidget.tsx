@@ -23,7 +23,7 @@ interface DonutSegment {
   color: string;
 }
 
-function CostTooltip({
+export function CostTooltip({
   active,
   payload,
   formatCurrency,
@@ -175,7 +175,14 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
       {hasData ? (
         <div className="flex flex-col gap-3">
           {/* Donut chart */}
-          <div className="h-[140px]">
+          <div
+            className="h-[140px]"
+            role="img"
+            aria-label={t(
+              'widget.costBreakdown.chartLabel',
+              'Monthly EV charging cost breakdown',
+            )}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -189,8 +196,8 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
                   paddingAngle={2}
                   strokeWidth={0}
                 >
-                  {donutData.map((seg) => (
-                    <Cell key={seg.name} fill={seg.color} />
+                  {donutData.map((seg, i) => (
+                    <Cell key={`${seg.name}-${i}`} fill={seg.color} />
                   ))}
                 </Pie>
                 <Tooltip

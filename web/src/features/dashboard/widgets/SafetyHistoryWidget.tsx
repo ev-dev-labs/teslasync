@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertOctagon, ShieldAlert, AlertTriangle, CarFront, Navigation } from 'lucide-react';
 import { StatCard } from '@/components/data-display';
@@ -12,76 +12,104 @@ import { WidgetEventFeed } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
-type Severity = 'info' | 'warning' | 'critical';
+export type Severity = 'info' | 'warning' | 'critical';
 
-interface SafetyEvent {
-  type: string;
-  title: string;
-  icon: React.ReactNode;
+/** Stable machine key for the dominant safety event in a snapshot. Drives both
+ *  the feed styling and the stats rollup, so it must stay i18n-free. */
+export type SafetyEventType = 'aeb' | 'fcw' | 'lane' | 'bsw' | 'elda' | 'general';
+
+/** Minimal translator surface these helpers need — the `(key, defaultValue)`
+ *  overload of react-i18next's `t`, narrowed so the pure helpers don't carry
+ *  the full `TFunction` generics. */
+type Translate = (key: string, fallback: string) => string;
+
+export interface SafetyClassification {
+  type: SafetyEventType;
+  icon: ReactNode;
   color: string;
   severity: Severity;
 }
 
-function classifySnapshot(snap: Record<string, unknown>): SafetyEvent {
+/** Classify a raw safety snapshot into its dominant event. Precedence is
+ *  highest-severity-first: AEB → FCW → lane departure → blind spot → emergency
+ *  lane departure → generic state update. Pure and i18n-free. */
+export function classifySnapshot(snap: Record<string, unknown>): SafetyClassification {
   if (snap.automatic_emergency_braking_off === true) {
-    return {
-      type: 'aeb',
-      title: 'AEB Activation',
-      icon: <AlertOctagon className="h-3.5 w-3.5" />,
-      color: '#ef4444',
-      severity: 'critical',
-    };
+    return { type: 'aeb', icon: <AlertOctagon className="h-3.5 w-3.5" />, color: '#ef4444', severity: 'critical' };
   }
   if (isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning')) {
-    return {
-      type: 'fcw',
-      title: `FCW: ${cleanSafetyEnum(snap.forward_collision_warning, 'forward_collision_warning')}`,
-      icon: <ShieldAlert className="h-3.5 w-3.5" />,
-      color: '#f59e0b',
-      severity: 'warning',
-    };
+    return { type: 'fcw', icon: <ShieldAlert className="h-3.5 w-3.5" />, color: '#f59e0b', severity: 'warning' };
   }
   if (isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance')) {
-    return {
-      type: 'lane',
-      title: `Lane Departure: ${cleanSafetyEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance')}`,
-      icon: <Navigation className="h-3.5 w-3.5" />,
-      color: '#3b82f6',
-      severity: 'warning',
-    };
+    return { type: 'lane', icon: <Navigation className="h-3.5 w-3.5" />, color: '#3b82f6', severity: 'warning' };
   }
   if (snap.blind_spot_collision_warning === true) {
-    return {
-      type: 'bsw',
-      title: 'Blind Spot Warning',
-      icon: <CarFront className="h-3.5 w-3.5" />,
-      color: '#f59e0b',
-      severity: 'warning',
-    };
+    return { type: 'bsw', icon: <CarFront className="h-3.5 w-3.5" />, color: '#f59e0b', severity: 'warning' };
   }
   if (snap.emergency_lane_departure_avoidance === true) {
-    return {
-      type: 'elda',
-      title: 'Emergency Lane Departure Avoidance',
-      icon: <AlertTriangle className="h-3.5 w-3.5" />,
-      color: '#ef4444',
-      severity: 'critical',
-    };
+    return { type: 'elda', icon: <AlertTriangle className="h-3.5 w-3.5" />, color: '#ef4444', severity: 'critical' };
   }
-  return {
-    type: 'general',
-    title: 'Safety State Update',
-    icon: <AlertOctagon className="h-3.5 w-3.5" />,
-    color: '#6b7280',
-    severity: 'info',
-  };
+  return { type: 'general', icon: <AlertOctagon className="h-3.5 w-3.5" />, color: '#6b7280', severity: 'info' };
 }
 
-function buildSubtitle(snap: Record<string, unknown>): string {
+/** i18n title for a classified event. FCW / lane events append the cleaned enum
+ *  detail — funnelled through `cleanSafetyEnum` so a raw
+ *  `ForwardCollisionSensitivity…` / `LaneAssistLevel…` string never leaks. */
+export function safetyEventTitle(
+  type: SafetyEventType,
+  snap: Record<string, unknown>,
+  t: Translate,
+): string {
+  switch (type) {
+    case 'aeb':
+      return t('widget.safety.aeb', 'AEB Activation');
+    case 'fcw':
+      return `${t('widget.safety.fcw', 'FCW')}: ${cleanSafetyEnum(snap.forward_collision_warning, 'forward_collision_warning')}`;
+    case 'lane':
+      return `${t('widget.safety.lane', 'Lane Departure')}: ${cleanSafetyEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance')}`;
+    case 'bsw':
+      return t('widget.safety.bsw', 'Blind Spot Warning');
+    case 'elda':
+      return t('widget.safety.elda', 'Emergency Lane Departure Avoidance');
+    default:
+      return t('widget.safety.general', 'Safety State Update');
+  }
+}
+
+/** Short i18n label for a safety event type — used by the "Most Common" stat
+ *  and the compact tile. */
+export function safetyTypeLabel(type: SafetyEventType, t: Translate): string {
+  switch (type) {
+    case 'aeb':
+      return t('widget.safety.aebShort', 'AEB');
+    case 'fcw':
+      return t('widget.safety.fcwShort', 'FCW');
+    case 'lane':
+      return t('widget.safety.laneShort', 'Lane Departure');
+    case 'bsw':
+      return t('widget.safety.bswShort', 'Blind Spot');
+    case 'elda':
+      return t('widget.safety.eldaShort', 'Emergency Lane');
+    default:
+      return t('widget.safety.generalShort', 'General');
+  }
+}
+
+/** Build the feed-row subtitle from a snapshot's advisory fields. Enum fields
+ *  are funnelled through `cleanSafetyEnum` per the safetyEnum contract, so raw
+ *  `SpeedAssistLevel…` / `FollowDistance…` values never reach the UI and a
+ *  boolean advisory renders as "On"/"Off" rather than "true"/"false". */
+export function buildSubtitle(snap: Record<string, unknown>, t: Translate): string {
   const parts: string[] = [];
-  if (snap.speed_limit_warning != null) parts.push(`Speed Limit: ${String(snap.speed_limit_warning)}`);
-  if (snap.cruise_follow_distance != null) parts.push(`Follow: ${String(snap.cruise_follow_distance)}`);
-  if (snap.pin_to_drive_enabled != null) parts.push(snap.pin_to_drive_enabled ? 'PIN to Drive' : '');
+  if (snap.speed_limit_warning != null) {
+    parts.push(`${t('widget.safety.speedLimit', 'Speed Limit')}: ${cleanSafetyEnum(snap.speed_limit_warning, 'speed_limit_warning')}`);
+  }
+  if (snap.cruise_follow_distance != null) {
+    parts.push(`${t('widget.safety.follow', 'Follow')}: ${cleanSafetyEnum(snap.cruise_follow_distance, 'cruise_follow_distance')}`);
+  }
+  if (snap.pin_to_drive_enabled === true) {
+    parts.push(t('widget.safety.pinToDrive', 'PIN to Drive'));
+  }
   return parts.filter(Boolean).join(' · ') || '—';
 }
 
@@ -130,6 +158,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
   const {
     data: history,
     isLoading,
+    error,
     isFetching,
     isStale,
     isError,
@@ -138,23 +167,26 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
   } = useSafetyHistory(vidStr ?? '');
 
   const isCompact = size.cols <= 1;
-  const list = history ?? [];
+  const list = useMemo(() => history ?? [], [history]);
 
   const feedItems = useMemo<EventFeedItem[]>(
     () =>
-      list.map((snap) => {
-        const event = classifySnapshot(snap as unknown as Record<string, unknown>);
+      list.map((snap, i) => {
+        const rec = snap as unknown as Record<string, unknown>;
+        const event = classifySnapshot(rec);
         return {
-          id: snap.id ?? Math.random(),
+          // Stable index-derived key when the row has no id — never
+          // Math.random(), which would remount every row on each refetch.
+          id: snap.id ?? `safety-${i}`,
           icon: event.icon,
-          title: event.title,
-          subtitle: buildSubtitle(snap as unknown as Record<string, unknown>),
+          title: safetyEventTitle(event.type, rec, t),
+          subtitle: buildSubtitle(rec, t),
           timestamp: snap.created_at ?? new Date(0).toISOString(),
           color: event.color,
           severity: event.severity,
         };
       }),
-    [list],
+    [list, t],
   );
 
   // Stats: 30-day total, most common type, trend
@@ -178,16 +210,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
     }
 
     const sorted = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
-    const mostCommonType = sorted[0]?.[0] ?? '—';
-
-    const typeLabels: Record<string, string> = {
-      aeb: 'AEB',
-      fcw: 'FCW',
-      lane: 'Lane Departure',
-      bsw: 'Blind Spot',
-      elda: 'Emergency Lane',
-      general: 'General',
-    };
+    const mostCommonType = sorted[0]?.[0] as SafetyEventType | undefined;
 
     const recentCount = recent.length;
     const priorCount = prior.length;
@@ -198,16 +221,17 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
 
     return {
       totalEvents: recentCount,
-      mostCommon: typeLabels[mostCommonType] ?? mostCommonType,
+      mostCommon: mostCommonType ? safetyTypeLabel(mostCommonType, t) : '—',
       trend,
     };
-  }, [list]);
+  }, [list, t]);
 
   return (
     <WidgetShell
       title={t('widget.safetyHistory', 'Safety History')}
       icon={<AlertOctagon className="h-3.5 w-3.5 text-red-400" />}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}

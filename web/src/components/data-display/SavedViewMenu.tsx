@@ -43,9 +43,11 @@ import type { SavedView } from '@/api/types';
  *   On mount, when the URL has no querystring AND a default view exists
  *     for this route, the default is auto-applied exactly once. A ref
  *     guards against re-applying after the user clears it manually.
- *   The popover closes on outside click, on Escape, and after every
- *     successful action (pin / set-default / rename / delete) so the
- *     menu doesn't linger after a destructive choice.
+ *   The popover closes on outside click, on Escape, when a view is
+ *     applied, and when the rename or delete flow is launched (each of
+ *     those opens its own dialog). Pin and set-default intentionally
+ *     keep the popover open so several can be toggled in a row and the
+ *     list can visibly reorder.
  */
 export interface SavedViewMenuProps {
   /** The SPA pathname this menu manages views for (e.g. '/drives'). */
@@ -73,7 +75,7 @@ export function SavedViewMenu({
   className,
 }: SavedViewMenuProps) {
   const { t } = useTranslation();
-  const { data: viewsRaw } = useSavedViews(route);
+  const { data: viewsRaw, isLoading, isError } = useSavedViews(route);
   const createMut = useCreateSavedView();
   const updateMut = useUpdateSavedView();
   const deleteMut = useDeleteSavedView();
@@ -210,7 +212,18 @@ export function SavedViewMenu({
               )}
             </div>
 
-            {views.length === 0 ? (
+            {isError ? (
+              <div
+                role="alert"
+                className="px-1 py-6 text-center text-sm text-[var(--text-secondary)]"
+              >
+                {t('savedViews.error', 'Unable to load saved views')}
+              </div>
+            ) : isLoading && views.length === 0 ? (
+              <div className="px-1 py-6 text-center text-sm text-[var(--text-muted)]">
+                {t('savedViews.loading', 'Loading saved views…')}
+              </div>
+            ) : views.length === 0 ? (
               <div className="py-3">
                 <EmptyState
                   message={t('savedViews.empty', 'No saved views yet')}

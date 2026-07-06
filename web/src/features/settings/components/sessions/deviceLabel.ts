@@ -32,10 +32,14 @@ export function parseUserAgent(userAgent: string | null | undefined): ParsedDevi
   else if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) browser = 'Safari'
 
   let os: string | null = null
+  // Order matters: iOS UAs carry the literal "like Mac OS X" token, so the
+  // iPhone/iPad/iPod probe MUST precede the macOS probe or every Apple mobile
+  // device is misbucketed as macOS. Likewise Android UAs also contain "Linux",
+  // so Android precedes the generic Linux probe.
   if (/Windows NT/.test(ua)) os = 'Windows'
+  else if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS'
   else if (/Mac OS X/.test(ua) || /Macintosh/.test(ua)) os = 'macOS'
   else if (/Android/.test(ua)) os = 'Android'
-  else if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS'
   else if (/Linux/.test(ua)) os = 'Linux'
 
   return { browser, os }

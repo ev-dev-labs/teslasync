@@ -45,14 +45,14 @@ export function WeekOverWeekSummary({
             label={t('analytics.weeklyDigest.distance', 'Distance')}
             value={fmtNumber(metrics.totalDistance ?? 0, 1)}
             unit="km"
-            icon={<Car className="h-4 w-4" />}
+            icon={<Car className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.totalDistance ?? 0, metrics.prevDistance ?? 0)}
           />
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.drives', 'Drives')}
             value={fmtInt(metrics.totalDrives ?? 0)}
-            icon={<Activity className="h-4 w-4" />}
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.totalDrives ?? 0, metrics.prevDriveCount ?? 0)}
           />
           <StatCard
@@ -60,14 +60,14 @@ export function WeekOverWeekSummary({
             label={t('analytics.weeklyDigest.energy', 'Energy')}
             value={fmtNumber(metrics.energyUsed ?? 0, 1)}
             unit="kWh"
-            icon={<Zap className="h-4 w-4" />}
+            icon={<Zap className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.energyUsed ?? 0, metrics.prevEnergy ?? 0, true)}
           />
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.cost', 'Cost')}
             value={formatCurrency(metrics.chargingCost ?? 0, 2)}
-            icon={<Fuel className="h-4 w-4" />}
+            icon={<Fuel className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.chargingCost ?? 0, metrics.prevChargingCost ?? 0, true)}
           />
           <StatCard
@@ -75,7 +75,7 @@ export function WeekOverWeekSummary({
             label={t('analytics.weeklyDigest.efficiency', 'Efficiency')}
             value={fmtNumber(metrics.avgEfficiency ?? 0, 1)}
             unit="Wh/km"
-            icon={<BarChart3 className="h-4 w-4" />}
+            icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.avgEfficiency ?? 0, metrics.prevAvgEfficiency ?? 0, true)}
           />
           <StatCard
@@ -83,7 +83,7 @@ export function WeekOverWeekSummary({
             label={t('analytics.weeklyDigest.co2', 'CO₂ Saved')}
             value={fmtNumber(metrics.co2Saved ?? 0, 1)}
             unit="kg"
-            icon={<Leaf className="h-4 w-4" />}
+            icon={<Leaf className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.co2Saved ?? 0, metrics.prevCo2 ?? 0)}
           />
         </div>

@@ -7,7 +7,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Info, Send, ShieldCheck, Webhook } from 'lucide-react';
 import { Badge, Code, GlassPanel, IconBox, PanelTitle, Text } from '@/components/ui';
 
@@ -31,6 +31,13 @@ interface PayloadField {
 
 export function WebhookGuide() {
   const { t } = useTranslation();
+
+  // Stable ids so the panel is a properly named landmark and each labelled
+  // sub-list is announced with its heading text by assistive technology.
+  const baseId = useId();
+  const titleId = `${baseId}-title`;
+  const referenceLabelId = `${baseId}-reference`;
+  const payloadLabelId = `${baseId}-payload`;
 
   const steps: GuideStep[] = [
     {
@@ -101,13 +108,13 @@ export function WebhookGuide() {
   ];
 
   return (
-    <GlassPanel className="space-y-4 p-4 sm:p-5">
+    <GlassPanel className="space-y-4 p-4 sm:p-5" role="region" aria-labelledby={titleId}>
       <div className="flex items-center gap-3">
         <IconBox color="cyan">
           <Info className="h-5 w-5" aria-hidden="true" />
         </IconBox>
         <div className="min-w-0">
-          <PanelTitle>{t('notifications.webhooks.guide.title', 'How webhooks work')}</PanelTitle>
+          <PanelTitle id={titleId}>{t('notifications.webhooks.guide.title', 'How webhooks work')}</PanelTitle>
           <Text as="p" variant="caption">
             {t('notifications.webhooks.guide.subtitle', 'Forward events to any HTTP receiver, signed and verifiable.')}
           </Text>
@@ -126,10 +133,10 @@ export function WebhookGuide() {
       </ul>
 
       <div className="space-y-2 border-t border-[var(--border-subtle)] pt-4">
-        <Text as="p" variant="label">
+        <Text as="p" variant="label" id={referenceLabelId}>
           {t('notifications.webhooks.guide.referenceTitle', 'Delivery reference')}
         </Text>
-        <ul className="space-y-2">
+        <ul className="space-y-2" aria-labelledby={referenceLabelId}>
           {reference.map((row) => (
             <li key={row.key} className="flex flex-wrap items-center justify-between gap-2">
               <Text as="span" variant="bodySm">
@@ -142,10 +149,10 @@ export function WebhookGuide() {
       </div>
 
       <div className="space-y-2 border-t border-[var(--border-subtle)] pt-4">
-        <Text as="p" variant="label">
+        <Text as="p" variant="label" id={payloadLabelId}>
           {t('notifications.webhooks.guide.payloadTitleLabel', 'Payload fields')}
         </Text>
-        <ul className="space-y-2">
+        <ul className="space-y-2" aria-labelledby={payloadLabelId}>
           {payload.map((row) => (
             <li key={row.key} className="flex items-center gap-2">
               <Badge variant="info" size="sm" className="shrink-0">

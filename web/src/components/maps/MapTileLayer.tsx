@@ -159,7 +159,7 @@ export function MapFullscreenControl({
       // shadows = 600… leaflet's own controls live at 800; we use
       // 800 here so the button stays clickable above marker
       // popups too).
-      className={`leaflet-control absolute z-[800] m-2 pointer-events-auto ${POSITION_CLASS[position]}`}
+      className={`leaflet-control absolute z-[800] m-2 pointer-events-auto ${POSITION_CLASS[position] ?? POSITION_CLASS.topright}`}
       // The leaflet container uses pointer-events for map drags —
       // the wrapper here MUST re-enable them on the button so
       // clicks register.

@@ -11,15 +11,19 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
 }
 
+// Hoisted to module scope so the padding map is allocated once instead of
+// on every render (mirrors the `sizes` map in Checkbox.tsx). Keeping it a
+// stable reference also keeps the class list deterministic per `padding`.
+const PADDINGS: Record<NonNullable<CardProps['padding']>, string> = {
+  none: '',
+  sm: 'p-3',
+  md: 'p-4',
+  lg: 'p-6',
+  auto: 'px-d-pad-x py-d-pad-y',
+};
+
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ padding = 'md', hover, className, children, ...props }, ref) => {
-    const paddings: Record<NonNullable<CardProps['padding']>, string> = {
-      none: '',
-      sm: 'p-3',
-      md: 'p-4',
-      lg: 'p-6',
-      auto: 'px-d-pad-x py-d-pad-y',
-    };
     return (
       <div
         ref={ref}
@@ -30,7 +34,9 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           // is suppressed entirely. Pin the boundary to a system color so
           // cards remain perceivable in Windows High Contrast.
           'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
-          paddings[padding],
+          // Fall back to the default `md` scale if an out-of-union value
+          // is passed at runtime, so a card never renders edge-to-edge.
+          PADDINGS[padding] ?? PADDINGS.md,
           hover && 'cursor-pointer transition-shadow hover:shadow-md',
           className,
         )}
@@ -54,7 +60,7 @@ export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
     <div className="mb-4 flex items-center justify-between">
       <div>
         <h3 className="text-base font-semibold">{title}</h3>
-        {subtitle && <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-[var(--text-muted)]">{subtitle}</p>}
       </div>
       {action}
     </div>

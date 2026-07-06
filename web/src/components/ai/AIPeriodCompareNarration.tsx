@@ -13,6 +13,14 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
+// This feature renders its narrative purely through useAiStream's
+// built-in delta-text accumulator (surfaced by AiOutputPanel), so it
+// has no per-event work to do. A module-level no-op keeps the onEvent
+// callback identity stable across renders instead of allocating a
+// fresh closure in the render path (which would re-run useAiStream's
+// onEvent-ref effect on every render).
+const noop = (): void => {}
+
 interface InnerSectionProps {
   /** Optional until active-vehicle context resolves; disables Narrate when absent. */
   vehicleId?: string | number
@@ -63,21 +71,26 @@ function InnerSection({ vehicleId, daysA, daysB }: InnerSectionProps) {
   const stream = useAiStream({
     url: '/ai/analytics/period-compare/narrate',
     body,
-    onEvent: () => {},
+    onEvent: noop,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-    return (
+  return (
     <AIFeatureCard
-      title={t(
-                  'compare.aiNarrative.title',
-                  'Narrate the period comparison',
-                )}
+      title={t('compare.aiNarrative.title', 'Narrate the period comparison')}
       description={t(
-                'compare.aiNarrative.description',
-                'Ask Helix to explain the deterministic period-over-period analytics \u2014 which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign. The numbers are the same the chart and table below show; the narrator only explains them and is honest about zero-baseline windows and best-effort cost figures.',
-              )}
+        'compare.aiNarrative.description',
+        'Ask Helix to explain the deterministic period-over-period analytics \u2014 which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign. The numbers are the same the chart and table below show; the narrator only explains them and is honest about zero-baseline windows and best-effort cost figures.',
+      )}
       buttonLabel={t('compare.aiNarrative.generateButton', 'Narrate comparison')}
       badgeLabel={t('compare.aiNarrative.badge', 'Helix')}
+      emptyHint={
+        haveInputs
+          ? undefined
+          : t(
+              'compare.aiNarrative.noVehicleHint',
+              'Pick a vehicle to enable Helix narration.',
+            )
+      }
       canStart={haveInputs}
       stream={stream}
     />

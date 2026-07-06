@@ -13,24 +13,13 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 
-/** Variant for DetailEntry badges (WidgetDetailCard maps 'error' → 'danger' internally) */
-function detailBadgeVariant(status: string): 'success' | 'warning' | 'error' | 'neutral' {
-  switch (status) {
-    case 'completed':
-      return 'success';
-    case 'active':
-    case 'scheduled':
-      return 'warning';
-    case 'failed':
-    case 'cancelled':
-      return 'error';
-    default:
-      return 'neutral';
-  }
-}
-
-/** Variant for direct Badge component usage */
-function badgeVariant(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
+/**
+ * Maps a charge-plan status to a semantic <Badge> variant. Exported for direct
+ * Badge usage (which speaks 'danger'). A `null`/`undefined`/unknown status
+ * collapses to the neutral tone rather than throwing, so a partially-populated
+ * plan from the API still renders.
+ */
+export function badgeVariant(status: string | null | undefined): 'success' | 'warning' | 'danger' | 'neutral' {
   switch (status) {
     case 'completed':
       return 'success';
@@ -43,6 +32,34 @@ function badgeVariant(status: string): 'success' | 'warning' | 'danger' | 'neutr
     default:
       return 'neutral';
   }
+}
+
+/**
+ * Variant for DetailEntry badges. `WidgetDetailCard` speaks 'error' where the
+ * raw Badge speaks 'danger', so this thin adapter reuses {@link badgeVariant}
+ * and remaps the single differing tone — keeping one source of truth for the
+ * status→tone mapping.
+ */
+export function detailBadgeVariant(status: string | null | undefined): 'success' | 'warning' | 'error' | 'neutral' {
+  const variant = badgeVariant(status);
+  return variant === 'danger' ? 'error' : variant;
+}
+
+/**
+ * Compose a "date time" cell from an already-formatted date + time pair,
+ * collapsing to a single "—" when either side is the placeholder. Without this
+ * an unscheduled plan rendered the nonsensical double placeholder "— —", since
+ * both `formatDate` and `formatTime` independently return "—" for an
+ * empty/invalid timestamp.
+ */
+export function joinDateTime(datePart: string, timePart: string): string {
+  const FALLBACK = '—';
+  const hasDate = Boolean(datePart) && datePart !== FALLBACK;
+  const hasTime = Boolean(timePart) && timePart !== FALLBACK;
+  if (!hasDate && !hasTime) return FALLBACK;
+  if (!hasTime) return datePart;
+  if (!hasDate) return timePart;
+  return `${datePart} ${timePart}`;
 }
 
 export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
@@ -106,12 +123,12 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
 
     items.push({
       label: t('widget.chargePlans.schedStart', 'Scheduled Start'),
-      value: `${formatDate(activePlan.scheduled_start)} ${formatTime(activePlan.scheduled_start)}`,
+      value: joinDateTime(formatDate(activePlan.scheduled_start), formatTime(activePlan.scheduled_start)),
     });
 
     items.push({
       label: t('widget.chargePlans.schedEnd', 'Scheduled End'),
-      value: `${formatDate(activePlan.scheduled_end)} ${formatTime(activePlan.scheduled_end)}`,
+      value: joinDateTime(formatDate(activePlan.scheduled_end), formatTime(activePlan.scheduled_end)),
     });
 
     items.push({

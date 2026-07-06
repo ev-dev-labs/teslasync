@@ -16,6 +16,36 @@ export interface AchievementUnlockedEvent {
 }
 
 /**
+ * Upper bound on the in-memory unlock queue. Keeps memory bounded if the
+ * backend ever fires a burst (e.g. seed data on first run). Exported so
+ * consumers and tests can reason about the cap without re-declaring the
+ * literal.
+ */
+export const MAX_RECENT = 25
+
+/**
+ * Runtime type-guard for an inbound `achievement_unlocked` SSE frame.
+ *
+ * The SSE stream is untyped (`unknown`) and — unlike resilientFetch responses
+ * — is NOT run through `camelCaseKeys`, so keys arrive snake_case exactly as
+ * the Go `achievementUnlockedEvent` struct emits them. A malformed or partial
+ * frame (non-object, missing `achievement`, or a missing / blank / non-string
+ * `id`) must be rejected rather than queued: the celebration toast renders
+ * `achievement.*` fields directly, and dismissal keys on `achievement.id`, so
+ * an entry without a usable string id could never be dismissed and would
+ * render a badge with `undefined` content.
+ */
+export function isAchievementUnlockedEvent(
+  data: unknown,
+): data is AchievementUnlockedEvent {
+  if (!data || typeof data !== 'object') return false
+  const achievement = (data as { achievement?: unknown }).achievement
+  if (!achievement || typeof achievement !== 'object') return false
+  const id = (achievement as { id?: unknown }).id
+  return typeof id === 'string' && id.length > 0
+}
+
+/**
  * useAchievementUnlocks — subscribes to the realtime `achievement_unlocked`
  * SSE stream and exposes an in-memory queue of unlocks received during the
  * current browser session.
@@ -33,10 +63,8 @@ export interface AchievementUnlockedEvent {
  *
  * Consumers (`AchievementUnlockListener`) should `dismiss(id)` an entry once
  * the toast for it has been shown, so re-renders don't re-show toasts for
- * already-acknowledged unlocks.
+ *   already-acknowledged unlocks.
  */
-const MAX_RECENT = 25
-
 export function useAchievementUnlocks(): {
   recent: AchievementUnlockedEvent[]
   dismiss: (achievementId: string) => void
@@ -45,15 +73,16 @@ export function useAchievementUnlocks(): {
 
   useEffect(() => {
     const onUnlock = (data: unknown) => {
-      const payload = data as AchievementUnlockedEvent | null | undefined
-      if (!payload || !payload.achievement || !payload.achievement.id) return
+      if (!isAchievementUnlockedEvent(data)) return
+      const payload = data
       setRecent(prev => {
         // De-dup: if we've already queued this id, ignore the new event
         // rather than pushing a duplicate.
         if (prev.some(e => e.achievement.id === payload.achievement.id)) return prev
         const next = [payload, ...prev]
-        if (next.length > MAX_RECENT) next.length = MAX_RECENT
-        return next
+        // Keep the queue bounded newest-first: retain the MAX_RECENT most
+        // recent unlocks and drop the oldest overflow.
+        return next.length > MAX_RECENT ? next.slice(0, MAX_RECENT) : next
       })
     }
 

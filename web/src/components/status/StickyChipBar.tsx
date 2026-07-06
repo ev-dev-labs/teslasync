@@ -24,7 +24,7 @@ export interface StickyChipBarProps {
   className?: string
 }
 
-export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBarProps) {
+export function StickyChipBar({ chips = [], topOffset = 0, className }: StickyChipBarProps) {
   const [activeId, setActiveId] = useState<string>(chips[0]?.id ?? '')
   const navRef = useRef<HTMLElement>(null)
 

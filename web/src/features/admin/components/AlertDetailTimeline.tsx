@@ -34,7 +34,11 @@ export function AlertDetailTimeline({ events, className }: AlertDetailTimelinePr
   const items = useMemo(() => {
     if (!events?.length) return [];
     return events.map((ev) => {
-      const actor = ev.actor && ev.actor.trim().length > 0 ? ev.actor : null;
+      // Trim before both the anonymity check AND display — the raw actor can
+      // carry leading/trailing whitespace from the audit log, which would
+      // otherwise leak into the interpolated title (e.g. "Acknowledged by   x  ").
+      const trimmedActor = ev.actor?.trim();
+      const actor = trimmedActor && trimmedActor.length > 0 ? trimmedActor : null;
       const titleKey = actor
         ? `alerts.timeline.kind.${ev.kind}`
         : `alerts.timeline.kindAnonymous.${ev.kind}`;
@@ -42,9 +46,10 @@ export function AlertDetailTimeline({ events, className }: AlertDetailTimelinePr
         ? defaultTitleWithActor(ev.kind, actor)
         : defaultTitleAnonymous(ev.kind);
       const title = t(titleKey, fallback, actor ? { actor } : undefined);
+      const note = ev.note?.trim();
       return {
         title,
-        subtitle: ev.note ?? undefined,
+        subtitle: note && note.length > 0 ? note : undefined,
         time: formatDateTime(ev.occurred_at),
         color: KIND_COLOR[ev.kind] ?? KIND_COLOR.created,
         icon: kindIcon(ev.kind),
@@ -55,6 +60,7 @@ export function AlertDetailTimeline({ events, className }: AlertDetailTimelinePr
   if (!events || events.length === 0) {
     return (
       <EmptyState /* no-action: an alert always has a synthetic 'created' entry — empty is only possible while loading */
+        className={className}
         icon={<Icons.notifications className="h-6 w-6" />}
         title={t('alerts.timeline.title', 'Audit timeline')}
         message={t('alerts.timeline.empty', 'No events yet')}

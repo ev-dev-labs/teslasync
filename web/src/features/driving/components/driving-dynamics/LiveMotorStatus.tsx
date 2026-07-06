@@ -81,6 +81,9 @@ export default function LiveMotorStatus({ motorLatest, toTemperatureDisplay, tem
               <Badge
                 variant={motorLatest.shift_state === 'D' ? 'success' : 'neutral'}
                 size="lg"
+                aria-label={`${t('dynamics.shiftState', 'Shift State')}: ${
+                  motorLatest.shift_state ?? t('dynamics.unknown', 'Unknown')
+                }`}
               >
                 <Cog className="mr-1 h-4 w-4" aria-hidden="true" />
                 {motorLatest.shift_state ?? t('dynamics.unknown', 'Unknown')}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, FileJson, Zap } from 'lucide-react';
 
@@ -217,6 +217,14 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
     }
   }
 
+  // Clear any stale validation error when the user moves between the
+  // preset/custom tabs — otherwise a preset error keeps shouting at the
+  // user after they've switched to the custom-JSON editor (and vice versa).
+  const handleTabChange = useCallback((key: string) => {
+    setActiveTab(key);
+    setError('');
+  }, []);
+
   return (
     <Modal open={open} onClose={handleClose} title={t('energy.tou.title', 'Update Rate Plan')} size="lg">
       <div className="space-y-4">
@@ -227,7 +235,7 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
           )}
         </Text>
 
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
 
         {activeTab === 'preset' ? (
           <div className="space-y-3">

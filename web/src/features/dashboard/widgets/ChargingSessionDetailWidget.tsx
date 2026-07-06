@@ -22,12 +22,25 @@ interface ChartDatum {
   soc: number | null;
 }
 
-function classifyCharger(chargerType: string | null): { label: string; variant: 'warning' | 'neutral' } {
-  if (!chargerType) return { label: 'AC / Home', variant: 'neutral' };
+type ChargerKind = 'supercharger' | 'dcFast' | 'acHome';
+
+interface ChargerClass {
+  kind: ChargerKind;
+  variant: 'warning' | 'neutral';
+}
+
+/**
+ * Classify a raw charger-type string into a stable, translatable `kind` plus a
+ * Badge variant. Returning a discriminator (rather than a baked-in English
+ * label) keeps this pure/testable and defers the user-visible copy to the
+ * render boundary via `t()`.
+ */
+function classifyCharger(chargerType: string | null): ChargerClass {
+  if (!chargerType) return { kind: 'acHome', variant: 'neutral' };
   const ct = chargerType.toLowerCase();
-  if (ct.includes('supercharger') || ct.includes('tesla')) return { label: 'Supercharger', variant: 'warning' };
-  if (ct && ct !== '<invalid>' && ct !== '') return { label: 'DC Fast', variant: 'warning' };
-  return { label: 'AC / Home', variant: 'neutral' };
+  if (ct.includes('supercharger') || ct.includes('tesla')) return { kind: 'supercharger', variant: 'warning' };
+  if (ct !== '<invalid>' && ct !== '') return { kind: 'dcFast', variant: 'warning' };
+  return { kind: 'acHome', variant: 'neutral' };
 }
 
 export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetProps) {
@@ -63,6 +76,14 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
+  // Only replace the whole widget with a full-panel error on the INITIAL load
+  // failure, when there is no cached detail to fall back on. The session detail
+  // query polls while a charge is live, so a transient background-refetch
+  // failure must not blank out otherwise-valid numbers — it is surfaced through
+  // the freshness indicator's error state instead (WidgetShell forwards
+  // `isError` to <DataFreshness>).
+  const blockingError = !detail && detailError ? String(detailError) : null;
+
   const chartData = useMemo((): ChartDatum[] => {
     const points = telemetry ?? [];
     return points.map((p) => {
@@ -94,6 +115,17 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     [detail],
   );
 
+  const chargerLabel = useMemo(() => {
+    switch (charger.kind) {
+      case 'supercharger':
+        return t('widget.chargingSessionDetail.chargerSupercharger', 'Supercharger');
+      case 'dcFast':
+        return t('widget.chargingSessionDetail.chargerDcFast', 'DC Fast');
+      default:
+        return t('widget.chargingSessionDetail.chargerAcHome', 'AC / Home');
+    }
+  }, [charger, t]);
+
   const stats = useMemo((): ChartSummaryStat[] => {
     if (!detail) return [];
     return [
@@ -113,10 +145,10 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       },
       {
         label: t('widget.chargingSessionDetail.charger', 'Charger'),
-        value: charger.label,
+        value: chargerLabel,
       },
     ];
-  }, [detail, durationStr, peakPower, charger, t]);
+  }, [detail, durationStr, peakPower, chargerLabel, t]);
 
   const tick = isWide ? axisTick : axisTickSm;
 
@@ -194,7 +226,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     return (
       <WidgetShell
         loading={isLoading}
-        error={detailError ? String(detailError) : null}
+        error={blockingError}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -210,7 +242,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
               {t('widget.chargingSessionDetail.unitKwh', 'kWh added')}
             </span>
             <Badge variant={charger.variant} size="sm">
-              {charger.label}
+              {chargerLabel}
             </Badge>
           </div>
         ) : (
@@ -230,7 +262,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       title={t('widget.chargingSessionDetail.title', 'Charge Session Detail')}
       icon={<Zap className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
-      error={detailError ? String(detailError) : null}
+      error={blockingError}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}

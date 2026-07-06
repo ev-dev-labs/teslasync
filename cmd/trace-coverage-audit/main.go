@@ -37,12 +37,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 )
+
+// defaultReportPath is where the generated audit report is written unless
+// overridden with -report.
+const defaultReportPath = "docs/runbooks/phase-44-trace-coverage-audit.md"
 
 type flow struct {
 	Name          string
@@ -147,11 +152,11 @@ var flows = []flow{
 		Name:        "sse_broadcast",
 		Description: "SSE BroadcastWithContext + Redis fanout per-payload span",
 		GlobPatterns: []string{
-			"internal/api/sse_handler.go",
+			"internal/api/sse/handler.go",
 		},
 		MinSpanFiles: 1,
 		RequiredFiles: []string{
-			"internal/api/sse_handler.go",
+			"internal/api/sse/handler.go",
 		},
 	},
 	{
@@ -257,13 +262,24 @@ var spanRE = regexp.MustCompile(`tracer\.Start\(|otel\.Tracer\(|otelhttp\.NewHan
 
 func main() {
 	var reportPath string
-	flag.StringVar(&reportPath, "report", "docs/runbooks/phase-44-trace-coverage-audit.md", "report path")
+	var root string
+	flag.StringVar(&reportPath, "report", defaultReportPath, "report path")
+	flag.StringVar(&root, "root", ".", "repository root to audit paths against")
 	flag.Parse()
 
-	results := make([]flowResult, 0, len(flows))
+	os.Exit(run(os.Stdout, os.Stderr, root, reportPath, flows))
+}
+
+// run performs the audit for every flow in fs against files rooted at root,
+// writes the rendered report to reportPath, echoes it to stdout, and returns
+// the process exit code: 0 when every flow is OK, 2 when any flow has a gap,
+// and 1 when the report could not be written. Keeping this separate from main
+// isolates the os.Exit boundary so the audit is unit-testable.
+func run(stdout, stderr io.Writer, root, reportPath string, fs []flow) int {
+	results := make([]flowResult, 0, len(fs))
 	hasGap := false
-	for _, f := range flows {
-		r := auditFlow(f)
+	for _, f := range fs {
+		r := auditFlow(root, f)
 		results = append(results, r)
 		if r.Status != "OK" {
 			hasGap = true
@@ -272,16 +288,17 @@ func main() {
 
 	report := renderReport(results)
 	if err := writeReport(reportPath, report); err != nil {
-		fmt.Fprintf(os.Stderr, "report write failed: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "report write failed: %v\n", err)
+		return 1
 	}
 
-	fmt.Print(report)
+	fmt.Fprint(stdout, report)
 	if hasGap {
-		fmt.Fprintln(os.Stderr, "trace-coverage-audit: GAPS FOUND — see report")
-		os.Exit(2)
+		fmt.Fprintln(stderr, "trace-coverage-audit: GAPS FOUND — see report")
+		return 2
 	}
-	fmt.Fprintln(os.Stderr, "trace-coverage-audit: ALL FLOWS OK")
+	fmt.Fprintln(stderr, "trace-coverage-audit: ALL FLOWS OK")
+	return 0
 }
 
 type flowResult struct {
@@ -291,27 +308,27 @@ type flowResult struct {
 	Status       string
 }
 
-func auditFlow(f flow) flowResult {
+func auditFlow(root string, f flow) flowResult {
 	matched := map[string]struct{}{}
 	for _, pattern := range f.GlobPatterns {
-		paths, err := expandGlob(pattern)
+		paths, err := expandGlob(root, pattern)
 		if err != nil {
 			continue
 		}
-		for _, p := range paths {
-			body, err := os.ReadFile(p)
+		for _, rel := range paths {
+			body, err := os.ReadFile(filepath.Join(root, rel))
 			if err != nil {
 				continue
 			}
 			if spanRE.Match(body) {
-				matched[filepath.ToSlash(p)] = struct{}{}
+				matched[filepath.ToSlash(rel)] = struct{}{}
 			}
 		}
 	}
 
 	missing := []string{}
 	for _, req := range f.RequiredFiles {
-		body, err := os.ReadFile(req)
+		body, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(req)))
 		if err != nil || !spanRE.Match(body) {
 			missing = append(missing, req)
 		}
@@ -340,7 +357,7 @@ func auditFlow(f flow) flowResult {
 	}
 }
 
-func expandGlob(pattern string) ([]string, error) {
+func expandGlob(root, pattern string) ([]string, error) {
 	pattern = filepath.FromSlash(pattern)
 	if strings.Contains(pattern, "**") {
 		// Manual recursive walk: split at "**".
@@ -349,19 +366,41 @@ func expandGlob(pattern string) ([]string, error) {
 		suffix := strings.TrimPrefix(pattern, base+string(os.PathSeparator)+"**")
 		suffix = strings.TrimPrefix(suffix, string(os.PathSeparator))
 		var out []string
-		err := filepath.Walk(base, func(p string, info os.FileInfo, err error) error {
+		walkRoot := filepath.Join(root, base)
+		err := filepath.Walk(walkRoot, func(p string, info os.FileInfo, err error) error {
 			if err != nil || info.IsDir() {
 				return nil
 			}
 			ok, _ := filepath.Match(suffix, filepath.Base(p))
 			if ok {
-				out = append(out, p)
+				out = append(out, relOrRaw(root, p))
 			}
 			return nil
 		})
-		return out, err
+		if err != nil {
+			return out, fmt.Errorf("walk %q: %w", walkRoot, err)
+		}
+		return out, nil
 	}
-	return filepath.Glob(pattern)
+	matches, err := filepath.Glob(filepath.Join(root, pattern))
+	if err != nil {
+		return nil, fmt.Errorf("glob %q: %w", pattern, err)
+	}
+	out := make([]string, 0, len(matches))
+	for _, m := range matches {
+		out = append(out, relOrRaw(root, m))
+	}
+	return out, nil
+}
+
+// relOrRaw returns p expressed relative to root. It falls back to p unchanged
+// when a relative path cannot be computed (for example across Windows volumes),
+// so a matched file is never silently dropped from the audit.
+func relOrRaw(root, p string) string {
+	if rel, err := filepath.Rel(root, p); err == nil {
+		return rel
+	}
+	return p
 }
 
 func renderReport(results []flowResult) string {
@@ -392,8 +431,12 @@ func renderReport(results []flowResult) string {
 }
 
 func writeReport(path, body string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create report dir %q: %w", dir, err)
 	}
-	return os.WriteFile(path, []byte(body), 0o644)
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		return fmt.Errorf("write report %q: %w", path, err)
+	}
+	return nil
 }

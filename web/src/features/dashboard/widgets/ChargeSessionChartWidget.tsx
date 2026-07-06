@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Zap } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt, safe,
 } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
@@ -17,7 +17,7 @@ import type { ChargingSession } from '@/api/types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 
 /** Classify a charging session into a charger-type bucket for color-coding. */
-function classifyChargerType(session: ChargingSession): string {
+export function classifyChargerType(session: ChargingSession): string {
   const ft = (session.charger_type ?? '').toLowerCase();
 
   if (ft.includes('supercharger') || ft.includes('tesla')) return 'supercharger';
@@ -56,7 +56,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
         label: s.started_at
           ? formatDateShort(s.started_at)
           : `#${i + 1}`,
-        energy: convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'),
+        energy: safe(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh')),
         type: classifyChargerType(s),
       }))
       .reverse(),
@@ -121,45 +121,55 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
         emptyIcon={<Zap className="h-5 w-5" />}
         stats={stats}
         chart={
-          <div className="h-full w-full px-2 pb-1">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
-                <YAxis
-                  tick={tick}
-                  tickLine={false}
-                  axisLine={false}
-                  width={36}
-                  tickFormatter={(v: number) => `${fmt(v, 0)}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: 'rgba(0,0,0,0.85)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
-                    `${fmt(value, 1)} kWh`,
-                    CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? '',
-                  ]}
-                  labelFormatter={(label: string) => label}
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                />
-                <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
-                  {chartData.map((d, i) => (
-                    <Cell key={i} fill={CHARGER_COLORS[d.type] ?? '#6366f1'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="flex h-full w-full flex-col px-2 pb-1">
+            <div
+              role="img"
+              aria-label={t(
+                'widget.chargeSessionChart.chartLabel',
+                'Bar chart of energy added per charge session',
+              )}
+              className="min-h-0 flex-1"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+                  {chartGrid}
+                  <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
+                  <YAxis
+                    tick={tick}
+                    tickLine={false}
+                    axisLine={false}
+                    width={36}
+                    tickFormatter={(v: number) => `${fmt(v, 0)}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(0,0,0,0.85)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
+                      `${fmt(value, 1)} kWh`,
+                      CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? '',
+                    ]}
+                    labelFormatter={(label: string) => label}
+                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  />
+                  <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                    {chartData.map((d, i) => (
+                      <Cell key={i} fill={CHARGER_COLORS[d.type] ?? '#6366f1'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
             {/* Legend */}
             <div className="flex items-center justify-center gap-3 pb-1">
               {(['home', 'supercharger', 'dc'] as const).map((type) => (
                 <div key={type} className="flex items-center gap-1">
                   <span
+                    aria-hidden="true"
                     className="inline-block h-2 w-2 rounded-full"
                     style={{ background: CHARGER_COLORS[type] }}
                   />

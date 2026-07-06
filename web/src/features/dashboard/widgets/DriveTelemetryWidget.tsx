@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
@@ -37,6 +37,11 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const {
     data: drives,
     isLoading: drivesLoading,
+    error: drivesError,
+    isError: drivesIsError,
+    isFetching: drivesFetching,
+    dataUpdatedAt: drivesUpdatedAt,
+    refetch: refetchDrives,
   } = useDrives(vid > 0 ? String(vid) : undefined);
 
   const latestDrive = useMemo(() => {
@@ -64,6 +69,20 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
+  // Surface failures from BOTH data sources. A `/drives` fetch error used to be
+  // swallowed (only its loading flag was read) and rendered as the "No recent
+  // drives" empty state, masking an outage as "no data". Fold the drives +
+  // telemetry error / freshness signals together so the shell shows a real
+  // error and the refresh control retries whichever query failed.
+  const combinedError = drivesError ?? error;
+  const combinedIsError = drivesIsError || isError;
+  const combinedIsFetching = drivesFetching || isFetching;
+  const combinedUpdatedAt = Math.max(dataUpdatedAt ?? 0, drivesUpdatedAt ?? 0);
+  const handleRefresh = useCallback(() => {
+    refetchDrives();
+    refetch();
+  }, [refetchDrives, refetch]);
+
   // Chart series colors derive from the active theme.
   const palette = useThemeChartPalette();
 
@@ -86,12 +105,12 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     const items: ChartSummaryStat[] = [
       {
         label: t('widget.driveTelemetry.distance', 'Distance'),
-        value: fmtNumber(convertDistanceFromSI(latestDrive.distanceM, unitPrefs.distance), 1),
+        value: fmtNumber(convertDistanceFromSI(latestDrive.distanceM ?? 0, unitPrefs.distance), 1),
         unit: unitPrefs.distance,
       },
       {
         label: t('widget.driveTelemetry.duration', 'Duration'),
-        value: fmtInt(latestDrive.durationS / 60),
+        value: fmtInt((latestDrive.durationS ?? 0) / 60),
         unit: t('widget.driveTelemetry.min', 'min'),
       },
     ];
@@ -213,12 +232,12 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell
         loading={isLoading}
-        error={error ? String(error) : null}
-        updatedAt={dataUpdatedAt}
-        isFetching={isFetching}
+        error={combinedError ? String(combinedError) : null}
+        updatedAt={combinedUpdatedAt}
+        isFetching={combinedIsFetching}
         isStale={isStale}
-        isError={isError}
-        onRefresh={() => refetch()}
+        isError={combinedIsError}
+        onRefresh={handleRefresh}
       >
         <WidgetChartSummary
           stats={stats}
@@ -238,13 +257,13 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.driveTelemetry.title', 'Drive Telemetry')}
       icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      error={combinedError ? String(combinedError) : null}
       noPadding
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
+      updatedAt={combinedUpdatedAt}
+      isFetching={combinedIsFetching}
       isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
+      isError={combinedIsError}
+      onRefresh={handleRefresh}
     >
       {latestDrive ? (
         <div className="flex h-full flex-col px-4 pb-3">

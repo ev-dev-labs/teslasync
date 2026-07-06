@@ -1,6 +1,7 @@
 package teslaenergyhist
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -21,12 +22,50 @@ var validEnergyPeriods = map[string]bool{
 	"day": true, "week": true, "month": true, "year": true,
 }
 
+// teslaRefreshTimeout bounds every outbound Tesla Fleet API refresh call
+// (plus its follow-on upsert/read-back) so a hung upstream can never pin
+// a request goroutine. 30s matches the Tesla API budget documented in
+// go-backend.instructions.md.
+const teslaRefreshTimeout = 30 * time.Second
+
+// The interfaces below are the minimal ports Handler depends on. Defining
+// them here (rather than referencing the concrete *tesla.Client and
+// *energydb.* repos) lets the handler tests inject fakes without a live
+// database or network — the same testability pattern used by the
+// vehiclestates handler. Production wiring in NewTeslaEnergyHistoryHandler
+// still passes the concrete implementations, which satisfy these ports.
+
+// energyHistoryClient is the slice of the Tesla Fleet API client the
+// refresh handlers use to pull calendar_history and telemetry_history.
+type energyHistoryClient interface {
+	GetEnergySiteCalendarHistory(ctx context.Context, energySiteID int64, kind, startDate, endDate, period, timeZone string) ([]byte, int, error)
+	GetEnergySiteTelemetryHistory(ctx context.Context, energySiteID int64, kind, startDate, endDate, timeZone string) ([]byte, int, error)
+}
+
+// energyHistoryStore is the persistence port for energy measurements.
+type energyHistoryStore interface {
+	GetByRange(ctx context.Context, siteID int64, period string, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyHistory, error)
+	UpsertBatch(ctx context.Context, entries []*teslamodel.TeslaEnergyHistory) (int, error)
+}
+
+// backupEventStore is the persistence port for off-grid backup events.
+type backupEventStore interface {
+	GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyBackupEvent, error)
+	UpsertBatch(ctx context.Context, entries []*teslamodel.TeslaEnergyBackupEvent) (int, error)
+}
+
+// wcChargingStore is the persistence port for wall connector charging.
+type wcChargingStore interface {
+	GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyWCCharging, error)
+	UpsertBatch(ctx context.Context, entries []*teslamodel.TeslaEnergyWCCharging) (int, error)
+}
+
 // TeslaEnergyHistoryHandler serves Tesla energy site history (energy, backup, WC charging).
 type TeslaEnergyHistoryHandler struct {
-	teslaClient *tesla.Client
-	energyRepo  *energydb.TeslaEnergyHistoryRepo
-	backupRepo  *energydb.TeslaEnergyBackupEventRepo
-	wcRepo      *energydb.TeslaEnergyWCChargingRepo
+	teslaClient energyHistoryClient
+	energyRepo  energyHistoryStore
+	backupRepo  backupEventStore
+	wcRepo      wcChargingStore
 }
 
 // NewTeslaEnergyHistoryHandler creates a new handler.
@@ -94,7 +133,10 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 
 	log.Info().Int64("site_id", siteID).Str("period", period).Str("start", startDate).Str("end", endDate).Msg("refreshing energy history from Tesla")
 
-	body, status, err := h.teslaClient.GetEnergySiteCalendarHistory(r.Context(), siteID, "energy", startDate, endDate, period, tz)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaRefreshTimeout)
+	defer cancel()
+
+	body, status, err := h.teslaClient.GetEnergySiteCalendarHistory(ctx, siteID, "energy", startDate, endDate, period, tz)
 	if err != nil {
 		log.Error().Err(err).Msg("tesla energy history API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch energy history from Tesla")
@@ -113,7 +155,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 		return
 	}
 
-	upserted, err := h.energyRepo.UpsertBatch(r.Context(), entries)
+	upserted, err := h.energyRepo.UpsertBatch(ctx, entries)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert energy history")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to save energy history")
@@ -124,7 +166,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 
 	since, until := energyDateRange(r)
 	limit := energyLimit(r)
-	stored, err := h.energyRepo.GetByRange(r.Context(), siteID, period, since, until, limit)
+	stored, err := h.energyRepo.GetByRange(ctx, siteID, period, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query energy history after refresh")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query energy history")
@@ -183,7 +225,10 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 
 	log.Info().Int64("site_id", siteID).Str("start", startDate).Str("end", endDate).Msg("refreshing backup history from Tesla")
 
-	body, status, err := h.teslaClient.GetEnergySiteCalendarHistory(r.Context(), siteID, "backup", startDate, endDate, period, tz)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaRefreshTimeout)
+	defer cancel()
+
+	body, status, err := h.teslaClient.GetEnergySiteCalendarHistory(ctx, siteID, "backup", startDate, endDate, period, tz)
 	if err != nil {
 		log.Error().Err(err).Msg("tesla backup history API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch backup history from Tesla")
@@ -202,7 +247,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 		return
 	}
 
-	upserted, err := h.backupRepo.UpsertBatch(r.Context(), entries)
+	upserted, err := h.backupRepo.UpsertBatch(ctx, entries)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert backup history")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to save backup history")
@@ -213,7 +258,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 
 	since, until := energyDateRange(r)
 	limit := energyLimit(r)
-	stored, err := h.backupRepo.GetByRange(r.Context(), siteID, since, until, limit)
+	stored, err := h.backupRepo.GetByRange(ctx, siteID, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query backup history after refresh")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query backup history")
@@ -263,7 +308,10 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 
 	log.Info().Int64("site_id", siteID).Str("start", startDate).Str("end", endDate).Msg("refreshing wc charging history from Tesla")
 
-	body, status, err := h.teslaClient.GetEnergySiteTelemetryHistory(r.Context(), siteID, "charge", startDate, endDate, tz)
+	ctx, cancel := context.WithTimeout(r.Context(), teslaRefreshTimeout)
+	defer cancel()
+
+	body, status, err := h.teslaClient.GetEnergySiteTelemetryHistory(ctx, siteID, "charge", startDate, endDate, tz)
 	if err != nil {
 		log.Error().Err(err).Msg("tesla wc charging history API error")
 		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch charging history from Tesla")
@@ -282,7 +330,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 		return
 	}
 
-	upserted, err := h.wcRepo.UpsertBatch(r.Context(), entries)
+	upserted, err := h.wcRepo.UpsertBatch(ctx, entries)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert wc charging history")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to save charging history")
@@ -293,7 +341,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 
 	since, until := energyDateRange(r)
 	limit := energyLimit(r)
-	stored, err := h.wcRepo.GetByRange(r.Context(), siteID, since, until, limit)
+	stored, err := h.wcRepo.GetByRange(ctx, siteID, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query wc charging history after refresh")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query charging history")
@@ -308,9 +356,16 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 	})
 }
 
-// parseSiteID extracts {siteID} URL parameter as int64.
+// parseSiteID extracts {siteID} URL parameter as a positive int64.
 func parseSiteID(r *http.Request) (int64, error) {
-	return strconv.ParseInt(chi.URLParam(r, "siteID"), 10, 64)
+	id, err := strconv.ParseInt(chi.URLParam(r, "siteID"), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse site_id: %w", err)
+	}
+	if id <= 0 {
+		return 0, fmt.Errorf("site_id must be a positive integer, got %d", id)
+	}
+	return id, nil
 }
 
 // energyDateRange extracts since/until and defaults to the last 30 days.

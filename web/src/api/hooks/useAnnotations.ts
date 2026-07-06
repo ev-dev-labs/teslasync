@@ -91,17 +91,23 @@ export function useChartAnnotations(params: AnnotationListParams = {}) {
  * `DataAnnotation` shape the existing `<AnnotationList>` and
  * `renderAnnotationLines()` consumers expect. The projected list is memoised
  * so chart consumers don't re-render every poll cycle.
+ *
+ * `isError` / `error` are passed through so a consumer that renders ONLY the
+ * annotation overlay (and never touches {@link useChartAnnotations} directly)
+ * can still surface a failed fetch instead of silently showing an empty list.
  */
 export function useChartAnnotationsAsData(params: AnnotationListParams = {}): {
   annotations: DataAnnotation[];
   isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
 } {
-  const { data, isLoading } = useChartAnnotations(params);
+  const { data, isLoading, isError, error } = useChartAnnotations(params);
   const annotations = useMemo<DataAnnotation[]>(
     () => (data ?? []).map(toDataAnnotation),
     [data],
   );
-  return { annotations, isLoading };
+  return { annotations, isLoading, isError, error };
 }
 
 export function useCreateAnnotation() {

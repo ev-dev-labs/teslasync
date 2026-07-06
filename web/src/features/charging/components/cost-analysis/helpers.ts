@@ -12,10 +12,17 @@ export function categorizeCharger(session: ChargingSession): string {
 
 export function gasEquivalentCost(
   energyKwh: number,
-  mpg: number,
+  _mpg: number,
   gasPrice: number,
 ): number {
-  const gallonsEquiv = energyKwh / KWH_PER_GALLON;
-  const milesEquiv = gallonsEquiv * mpg;
-  return (milesEquiv / mpg) * gasPrice;
+  // Energy-content equivalence: the gasoline (in gallons) that holds the same
+  // energy as `energyKwh`, priced at `gasPrice`. This mirrors coreStats.gasCost
+  // and the Go lifetime handler (gallons × gasPrice). Vehicle mpg does not
+  // affect this equivalence, so `_mpg` is intentionally unused — the previous
+  // `× mpg ÷ mpg` round-trip both obscured that and returned 0 / 0 = NaN when
+  // mpg was 0. Non-finite inputs collapse to 0 so a bad upstream value can
+  // never poison the monthly savings columns with NaN.
+  const kwh = Number.isFinite(energyKwh) ? energyKwh : 0;
+  const price = Number.isFinite(gasPrice) ? gasPrice : 0;
+  return (kwh / KWH_PER_GALLON) * price;
 }

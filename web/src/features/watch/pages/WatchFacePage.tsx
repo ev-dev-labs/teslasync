@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Spinner } from '@/components/feedback';
 import { Badge, Button as ControlButton } from '@/components/ui';
@@ -36,6 +37,7 @@ import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
  *   see it.
  */
 export default function WatchFacePage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const vehicleIdParam = searchParams.get('vehicle_id');
   const vehicleId = vehicleIdParam ? Number(vehicleIdParam) : undefined;
@@ -43,9 +45,13 @@ export default function WatchFacePage() {
   const commandMutation = useWatchCommand();
   const { unitPrefs } = useUnits();
 
-  const sendCommand = (command: string) => {
-    commandMutation.mutate({ vehicleId, command });
-  };
+  const { mutate: sendWatchCommand } = commandMutation;
+  const sendCommand = useCallback(
+    (command: string) => {
+      sendWatchCommand({ vehicleId, command });
+    },
+    [sendWatchCommand, vehicleId],
+  );
 
   // Render the wearable WatchShell first as the primary surface;
   // the opt-in Helix narrator is appended as a sibling AFTER so
@@ -58,7 +64,7 @@ export default function WatchFacePage() {
   } else if (error || !data) {
     watchContent = (
       <p className="text-[var(--text-secondary)] text-sm text-center px-4">
-        {error ? String(error) : 'No vehicle found'}
+        {error ? String(error) : t('watch.noVehicle', 'No vehicle found')}
       </p>
     );
   } else {
@@ -66,14 +72,15 @@ export default function WatchFacePage() {
     // watch_handler.go as RatedRange*1.60934. Multiply by 1000 before
     // passing it to convertDistanceFromSI.
     const displayRange = convertDistanceFromSI(
-      data.range_km * 1000,
+      (data.range_km ?? 0) * 1000,
       unitPrefs.distance,
     );
     // SI boundary: backend `inside_temp_c` is already °C (SI for temp).
     const displayInsideTemp = convertTempFromSI(
-      data.inside_temp_c,
+      data.inside_temp_c ?? 0,
       unitPrefs.temperature,
     );
+    const batteryLevel = data.battery_level ?? 0;
 
     watchContent = (
       <>
@@ -85,7 +92,7 @@ export default function WatchFacePage() {
         {/* Battery gauge — center focus */}
         <div className="flex-1 flex flex-col items-center justify-center min-h-0">
           <BatteryGauge
-            level={data.battery_level}
+            level={batteryLevel}
             rangeDisplay={displayRange}
             distanceUnit={unitPrefs.distance}
           />
@@ -94,7 +101,11 @@ export default function WatchFacePage() {
           {data.is_charging && (
             <div className="mt-2 flex items-center gap-1 text-emerald-400 text-xs">
               <Zap className="h-3 w-3" />
-              <span>{Math.round(data.time_to_full)}m to full</span>
+              <span>
+                {t('watch.timeToFull', '{{minutes}}m to full', {
+                  minutes: Math.round(data.time_to_full ?? 0),
+                })}
+              </span>
             </div>
           )}
 
@@ -114,6 +125,11 @@ export default function WatchFacePage() {
             icon={data.is_locked ? Lock : Unlock}
             active={data.is_locked}
             color={data.is_locked ? 'emerald' : 'red'}
+            ariaLabel={
+              data.is_locked
+                ? t('watch.action.unlock', 'Unlock vehicle')
+                : t('watch.action.lock', 'Lock vehicle')
+            }
             onClick={() => sendCommand(data.is_locked ? 'unlock' : 'lock')}
             loading={commandMutation.isPending}
           />
@@ -121,6 +137,11 @@ export default function WatchFacePage() {
             icon={Thermometer}
             active={data.is_climate_on}
             label={`${Math.round(displayInsideTemp)}°`}
+            ariaLabel={
+              data.is_climate_on
+                ? t('watch.action.climateOff', 'Turn climate off')
+                : t('watch.action.climateOn', 'Turn climate on')
+            }
             onClick={() => sendCommand(data.is_climate_on ? 'climate_off' : 'climate_on')}
             loading={commandMutation.isPending}
           />
@@ -128,6 +149,11 @@ export default function WatchFacePage() {
             icon={Shield}
             active={data.sentry_mode}
             color={data.sentry_mode ? 'amber' : undefined}
+            ariaLabel={
+              data.sentry_mode
+                ? t('watch.sentryOn', 'Sentry mode on')
+                : t('watch.sentryOff', 'Sentry mode off')
+            }
           />
         </div>
 
@@ -170,7 +196,7 @@ function WatchShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BatteryGauge({
+export function BatteryGauge({
   level,
   rangeDisplay,
   distanceUnit,
@@ -209,16 +235,22 @@ function BatteryGauge({
   );
 }
 
-interface StatusIconProps {
+export interface StatusIconProps {
   icon: React.ComponentType<{ className?: string }>;
   active: boolean;
   color?: 'emerald' | 'red' | 'amber';
   label?: string;
+  /**
+   * Accessible name for the control. Icon-only buttons (lock, sentry) carry no
+   * visible text, so an explicit label is required for screen readers; when
+   * omitted we fall back to the visible `label`.
+   */
+  ariaLabel?: string;
   onClick?: () => void;
   loading?: boolean;
 }
 
-function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: StatusIconProps) {
+export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClick, loading }: StatusIconProps) {
   const colorClasses = {
     emerald: 'text-emerald-400',
     red: 'text-red-400',
@@ -239,17 +271,17 @@ function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: Stat
         onClick && 'active:scale-95',
         loading && 'opacity-50',
       )}
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
     >
       <Icon className="h-4 w-4" />
-      {label && <span className="text-2xs mt-0.5">{label}</span>}
+      {label && <span className="text-2xs mt-0.5" aria-hidden="true">{label}</span>}
     </ControlButton>
   );
 }
 
 // --- PWA Meta ---
 
-function WatchPWAMeta() {
+export function WatchPWAMeta() {
   useEffect(() => {
     const setMeta = (name: string, content: string) => {
       let tag = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
@@ -303,19 +335,19 @@ function WatchPWAMeta() {
 
 // --- Utilities ---
 
-function getBatteryColor(level: number): string {
+export function getBatteryColor(level: number): string {
   if (level > 40) return '#22c55e'; // green
   if (level > 20) return '#f59e0b'; // amber
   return '#ef4444'; // red
 }
 
-function watchStateVariant(state: string): 'info' | 'success' | 'neutral' {
+export function watchStateVariant(state: string): 'info' | 'success' | 'neutral' {
   if (state === 'driving') return 'info';
   if (state === 'charging') return 'success';
   return 'neutral';
 }
 
-function watchStateClassName(state: string): string {
+export function watchStateClassName(state: string): string {
   switch (state) {
     case 'driving':
       return 'bg-blue-500/20 text-blue-400';
@@ -330,10 +362,11 @@ function watchStateClassName(state: string): string {
   }
 }
 
-function formatRelativeTime(isoTimestamp: string): string {
+export function formatRelativeTime(isoTimestamp: string): string {
   if (!isoTimestamp) return '';
   const now = Date.now();
   const then = new Date(isoTimestamp).getTime();
+  if (Number.isNaN(then)) return '';
   const diffSec = Math.floor((now - then) / 1000);
 
   if (diffSec < 60) return 'just now';

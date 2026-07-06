@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Modal,
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { SavedDashboard, DashboardSettings } from '../widgets/types';
-import { DEFAULT_DASHBOARD_SETTINGS } from '../widgets/types';
+import { mergeDashboardSettings } from '../widgets/types';
 
 /* ─── Emoji picker ─── */
 const DASHBOARD_EMOJIS = [
@@ -20,12 +20,14 @@ const DASHBOARD_EMOJIS = [
 function EmojiPicker({
   selected,
   onSelect,
+  label,
 }: {
   selected: string;
   onSelect: (emoji: string) => void;
+  label: string;
 }) {
   return (
-    <div className="grid grid-cols-8 gap-1">
+    <div className="grid grid-cols-8 gap-1" role="group" aria-label={label}>
       {DASHBOARD_EMOJIS.map((emoji) => (
         <UiButton
           key={emoji}
@@ -39,6 +41,7 @@ function EmojiPicker({
             selected === emoji && 'bg-[var(--surface-2)] ring-1 ring-[var(--theme-primary)]',
           )}
           aria-label={emoji}
+          aria-pressed={selected === emoji}
         >
           {emoji}
         </UiButton>
@@ -85,8 +88,8 @@ export function DashboardSettingsModal({
 }: DashboardSettingsModalProps) {
   const { t } = useTranslation('dashboard');
 
-  const [settings, setSettings] = useState<DashboardSettings>(
-    dashboard.settings ?? { ...DEFAULT_DASHBOARD_SETTINGS },
+  const [settings, setSettings] = useState<DashboardSettings>(() =>
+    mergeDashboardSettings(dashboard.settings),
   );
   const [name, setName] = useState(dashboard.name);
   const [icon, setIcon] = useState(dashboard.icon ?? '📊');
@@ -94,7 +97,7 @@ export function DashboardSettingsModal({
   // Reset form state when modal opens or target dashboard changes
   useEffect(() => {
     if (open) {
-      setSettings(dashboard.settings ?? { ...DEFAULT_DASHBOARD_SETTINGS });
+      setSettings(mergeDashboardSettings(dashboard.settings));
       setName(dashboard.name);
       setIcon(dashboard.icon ?? '📊');
     }
@@ -111,10 +114,25 @@ export function DashboardSettingsModal({
     onClose();
   };
 
-  const vehicleOptions = [
-    { value: '', label: t('dashSettings.allVehicles', 'All Vehicles') },
-    ...vehicles.map((v) => ({ value: v.id.toString(), label: v.display_name })),
-  ];
+  const vehicleOptions = useMemo(
+    () => [
+      { value: '', label: t('dashSettings.allVehicles', 'All Vehicles') },
+      ...(vehicles ?? []).map((v) => ({
+        value: v.id.toString(),
+        label: v.display_name,
+      })),
+    ],
+    [vehicles, t],
+  );
+
+  const refreshOptions = useMemo(
+    () =>
+      REFRESH_OPTIONS.map((o) => ({
+        value: o.value,
+        label: t(`dashSettings.refresh${o.value}`, o.label),
+      })),
+    [t],
+  );
 
   return (
     <Modal
@@ -140,7 +158,11 @@ export function DashboardSettingsModal({
               <p className="text-xs text-[var(--text-muted)] mb-2">
                 {t('dashSettings.iconLabel', 'Icon')}
               </p>
-              <EmojiPicker selected={icon} onSelect={setIcon} />
+              <EmojiPicker
+                selected={icon}
+                onSelect={setIcon}
+                label={t('dashSettings.iconLabel', 'Icon')}
+              />
             </div>
           </div>
         </div>
@@ -157,6 +179,7 @@ export function DashboardSettingsModal({
             )}
           </p>
           <UiSelect
+            aria-label={t('dashSettings.vehicleFilter', 'Vehicle Filter')}
             value={settings.vehicleId?.toString() ?? ''}
             onChange={(e) =>
               setSettings((s) => ({
@@ -174,14 +197,12 @@ export function DashboardSettingsModal({
             {t('dashSettings.refresh', 'Auto-Refresh')}
           </h3>
           <UiSelect
+            aria-label={t('dashSettings.refresh', 'Auto-Refresh')}
             value={settings.refreshInterval.toString()}
             onChange={(e) =>
               setSettings((s) => ({ ...s, refreshInterval: Number(e.target.value) }))
             }
-            options={REFRESH_OPTIONS.map((o) => ({
-              value: o.value,
-              label: t(`dashSettings.refresh${o.value}`, o.label),
-            }))}
+            options={refreshOptions}
           />
         </div>
 

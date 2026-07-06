@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { Modal } from '@/components/ui'
@@ -78,7 +78,7 @@ const GROUP_PRIORITY: Record<string, number> = {
 }
 
 function groupRank(label: string): number {
-  const key = label.toLowerCase().split(/\s|[(]/)[0]
+  const key = (label ?? '').toLowerCase().split(/\s|[(]/)[0]
   return GROUP_PRIORITY[key] ?? 0
 }
 
@@ -99,7 +99,7 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
     const needle = search.trim().toLowerCase()
     const pathname = location.pathname
 
-    const visible = allShortcuts.filter((def) => {
+    const visible = (allShortcuts ?? []).filter((def) => {
       // Scope filter
       if (mode === 'global' && def.scope !== 'global') return false
       if (mode === 'page' && def.scope === 'global') return false
@@ -138,16 +138,19 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
       })
   }, [allShortcuts, mode, search, location.pathname])
 
-  const handleFilter = (next: FilterMode) => {
+  const handleFilter = useCallback((next: FilterMode) => {
     setMode(next)
     writeStoredFilter(next)
-  }
+  }, [])
 
-  const FILTER_OPTIONS: Array<{ id: FilterMode; label: string }> = [
-    { id: 'all', label: t('shortcuts.filter.all', 'All') },
-    { id: 'global', label: t('shortcuts.filter.global', 'Global') },
-    { id: 'page', label: t('shortcuts.filter.page', 'This page') },
-  ]
+  const filterOptions = useMemo<Array<{ id: FilterMode; label: string }>>(
+    () => [
+      { id: 'all', label: t('shortcuts.filter.all', 'All') },
+      { id: 'global', label: t('shortcuts.filter.global', 'Global') },
+      { id: 'page', label: t('shortcuts.filter.page', 'This page') },
+    ],
+    [t],
+  )
 
   return (
     <Modal
@@ -166,10 +169,10 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
           />
           <div
             role="tablist"
-            aria-label={t('shortcuts.filter.all', 'All')}
+            aria-label={t('shortcuts.filter.label', 'Filter shortcuts')}
             className="inline-flex items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-0.5"
           >
-            {FILTER_OPTIONS.map((opt) => {
+            {filterOptions.map((opt) => {
               const active = opt.id === mode
               return (
                 <button
@@ -213,7 +216,7 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
                         {s.description}
                       </span>
                       <div className="flex items-center gap-1">
-                        {s.keys.map((key, i) => (
+                        {(s.keys ?? []).map((key, i) => (
                           <span key={i} className="flex items-center gap-1">
                             {i > 0 && (
                               <span className="text-[var(--text-muted)] text-xs">+</span>

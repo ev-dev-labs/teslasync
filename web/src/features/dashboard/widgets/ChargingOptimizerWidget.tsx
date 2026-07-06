@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/feedback';
 import { useChargingOptimizer } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { safeArray } from '@/lib/safeArray';
 import { cn } from '@/lib/cn';
 import { WidgetShell } from './WidgetShell';
 import { WidgetTipCards, type TipItem } from './shared';
@@ -18,9 +19,12 @@ const PRIORITY_IMPACT: Record<string, 'high' | 'medium' | 'low'> = {
 };
 
 function formatHour(hour: number): string {
-  if (hour === 0 || hour === 24) return '12 AM';
-  if (hour === 12) return '12 PM';
-  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+  // Normalize to a 0–23 clock hour so malformed data (NaN, negative, or a
+  // stray 24+/decimal hour) degrades to a valid label instead of "NaN PM".
+  const h = Number.isFinite(hour) ? ((Math.round(hour) % 24) + 24) % 24 : 0;
+  if (h === 0) return '12 AM';
+  if (h === 12) return '12 PM';
+  return h < 12 ? `${h} AM` : `${h - 12} PM`;
 }
 
 export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps) {
@@ -38,29 +42,33 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
 
   const schedule = data?.current_schedule;
   const costAnalysis = data?.cost_analysis;
-  const recommendations = data?.recommendations ?? [];
+  const recommendations = safeArray(data?.recommendations);
 
   const optimalStartHour = schedule?.most_common_start_hour ?? 0;
   const targetSoc = schedule?.avg_charge_to_pct ?? 0;
   const monthlySavings = costAnalysis?.potential_monthly_savings ?? 0;
   const peakPct = costAnalysis?.sessions_during_peak_pct ?? 0;
-  const offpeakHours = costAnalysis?.offpeak_hours ?? [];
-  const peakHours = costAnalysis?.peak_hours ?? [];
+  const offpeakHours = safeArray(costAnalysis?.offpeak_hours);
+  const peakHours = safeArray(costAnalysis?.peak_hours);
 
   const scheduleMatchesOptimal = peakPct < 30;
 
   const tips: TipItem[] = useMemo(
     () =>
-      recommendations.map((rec, i) => ({
-        id: i,
-        icon: <Sparkles className="h-4 w-4" />,
-        title: rec.title ?? '—',
-        description: rec.detail ?? '—',
-        impact: PRIORITY_IMPACT[rec.priority] ?? undefined,
-        impactLabel: rec.priority
-          ? t(`widget.chargingOptimizer.priority.${rec.priority}`, rec.priority)
-          : undefined,
-      })),
+      recommendations.map((rec, i) => {
+        // Guard each entry: a malformed payload may carry null/partial recs.
+        const priority = rec?.priority;
+        return {
+          id: i,
+          icon: <Sparkles className="h-4 w-4" />,
+          title: rec?.title ?? '—',
+          description: rec?.detail ?? '—',
+          impact: priority ? PRIORITY_IMPACT[priority] : undefined,
+          impactLabel: priority
+            ? t(`widget.chargingOptimizer.priority.${priority}`, priority)
+            : undefined,
+        };
+      }),
     [recommendations, t],
   );
 
@@ -77,13 +85,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
   // ── Compact (1 col) ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
-    >
+      <WidgetShell {...shellProps}>
         {!data ? (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Sparkles className="h-5 w-5" />}
@@ -176,7 +178,11 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
               <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.chargingOptimizer.rateTimeline', '24h Rate Timeline')}
               </span>
-              <div className="flex h-6 rounded-md overflow-hidden border border-white/[0.06]">
+              <div
+                className="flex h-6 rounded-md overflow-hidden border border-white/[0.06]"
+                role="img"
+                aria-label={t('widget.chargingOptimizer.rateTimeline', '24h Rate Timeline')}
+              >
                 {Array.from({ length: 24 }, (_, h) => {
                   const isPeak = peakHours.includes(h);
                   const isOffpeak = offpeakHours.includes(h);
@@ -194,7 +200,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
                     >
                       {isCurrentStart && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <Zap className="h-3 w-3 text-emerald-300" />
+                          <Zap className="h-3 w-3 text-emerald-300" aria-hidden="true" />
                         </div>
                       )}
                     </div>

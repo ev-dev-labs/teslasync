@@ -39,6 +39,7 @@ export function NotificationSoundChannelRow({
       <Button
         variant="ghost"
         size="sm"
+        type="button"
         icon={<Play className="h-3.5 w-3.5" aria-hidden="true" />}
         onClick={onTest}
         aria-label={t('notificationSounds.testAria', 'Test {{name}} sound', { name: label })}

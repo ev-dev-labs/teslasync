@@ -79,7 +79,16 @@ function startOfYear(d: Date): Date {
 export function useCompareWindow(window: CompareWindow, anchor: Date = new Date()): CompareWindowResult {
   const { t } = useTranslation();
 
+  // Key the memo on the numeric instant rather than the `Date` object itself.
+  // `Date` instances compare by reference, so a caller that passes a fresh
+  // `new Date(sameInstant)` on every render would otherwise bust the memo each
+  // time. `getTime()` also collapses an invalid anchor to `NaN`, which we fall
+  // back from below instead of emitting `Invalid Date` ranges downstream.
+  const anchorMs = anchor.getTime();
+
   return useMemo(() => {
+    const base = Number.isNaN(anchorMs) ? new Date() : new Date(anchorMs);
+
     let currentStart: Date;
     let currentEnd: Date;
     let previousStart: Date;
@@ -90,7 +99,7 @@ export function useCompareWindow(window: CompareWindow, anchor: Date = new Date(
 
     switch (window) {
       case 'day': {
-        currentStart = startOfDay(anchor);
+        currentStart = startOfDay(base);
         currentEnd = addDays(currentStart, 1);
         previousStart = addDays(currentStart, -1);
         previousEnd = currentStart;
@@ -100,7 +109,7 @@ export function useCompareWindow(window: CompareWindow, anchor: Date = new Date(
         break;
       }
       case 'week': {
-        currentStart = startOfIsoWeek(anchor);
+        currentStart = startOfIsoWeek(base);
         currentEnd = addDays(currentStart, 7);
         previousStart = addDays(currentStart, -7);
         previousEnd = currentStart;
@@ -110,7 +119,7 @@ export function useCompareWindow(window: CompareWindow, anchor: Date = new Date(
         break;
       }
       case 'month': {
-        currentStart = startOfMonth(anchor);
+        currentStart = startOfMonth(base);
         currentEnd = addMonths(currentStart, 1);
         previousStart = addMonths(currentStart, -1);
         previousEnd = currentStart;
@@ -121,7 +130,7 @@ export function useCompareWindow(window: CompareWindow, anchor: Date = new Date(
       }
       case 'year':
       default: {
-        currentStart = startOfYear(anchor);
+        currentStart = startOfYear(base);
         currentEnd = addYears(currentStart, 1);
         previousStart = addYears(currentStart, -1);
         previousEnd = currentStart;
@@ -139,5 +148,5 @@ export function useCompareWindow(window: CompareWindow, anchor: Date = new Date(
       currentRange: { start: currentStart, end: currentEnd },
       previousRange: { start: previousStart, end: previousEnd },
     };
-  }, [window, anchor, t]);
+  }, [window, anchorMs, t]);
 }

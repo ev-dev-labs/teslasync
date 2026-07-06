@@ -6,6 +6,9 @@ import type { FeedbackStatus } from '@/api/types'
 
 import { STATUS_COLORS, type FeedbackCounts } from './constants'
 
+/** Fixed display order — active work first: new → triaged → closed. */
+const ORDER: readonly FeedbackStatus[] = ['new', 'triaged', 'closed']
+
 /** Proportional new / triaged / closed bar + a labelled legend with counts. */
 export function StatusDistribution({ counts, total }: { counts: FeedbackCounts; total: number }) {
   const { t } = useTranslation()
@@ -14,14 +17,17 @@ export function StatusDistribution({ counts, total }: { counts: FeedbackCounts; 
     triaged: t('feedback.queue.status.triaged', 'Triaged'),
     closed: t('feedback.queue.status.closed', 'Closed'),
   }
-  const order: FeedbackStatus[] = ['new', 'triaged', 'closed']
-  const segments = order.map((key) => ({
-    key,
-    label: label[key],
-    count: counts[key] ?? 0,
-    color: STATUS_COLORS[key],
-    pct: total > 0 ? ((counts[key] ?? 0) / total) * 100 : 0,
-  }))
+  const segments = ORDER.map((key) => {
+    const count = counts[key] ?? 0
+    // Percentage is relative to the caller-supplied status total. Clamp to
+    // [0, 100] so a stale/degenerate `total` (smaller than a facet count)
+    // can never overflow the flex track or surface a ">100%" legend reading.
+    // For a consistent total (the sole caller passes the exact sum) this is a
+    // no-op.
+    const raw = total > 0 ? (count / total) * 100 : 0
+    const pct = Math.min(100, Math.max(0, raw))
+    return { key, label: label[key], count, color: STATUS_COLORS[key], pct }
+  })
 
   return (
     <div className="space-y-4">

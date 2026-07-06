@@ -75,13 +75,13 @@ const SEVERITY_RANK: Record<string, number> = {
 
 /** Human label for a rule's monitored subject — the signal name for signal
  *  rules, the metric id for computed-metric rules. */
-function subjectOf(r: AlertRule): string {
+export function subjectOf(r: AlertRule): string {
   if (r.kind === 'computed_metric') return r.metric_id ?? '—';
   return r.signal_name ?? '—';
 }
 
 /** Whether a rule is currently snoozed (snoozed_until in the future). */
-function isSnoozed(r: AlertRule, now: number): boolean {
+export function isSnoozed(r: AlertRule, now: number): boolean {
   if (!r.snoozed_until) return false;
   const ts = new Date(r.snoozed_until).getTime();
   return Number.isFinite(ts) && ts > now;
@@ -235,6 +235,36 @@ export default function AlertRulesPage() {
     [confirm, deleteOne, t],
   );
 
+  // Bulk enable/disable share a shape: fire the mutation, clear the selection
+  // on success, and — critically — swallow a rejected `mutateAsync` so a failed
+  // batch never surfaces as an unhandled promise rejection (the async onClick
+  // used to `await` directly). The failure toast is already raised by the
+  // mutation's own `onError`; we deliberately KEEP the selection on failure so
+  // the user can retry the batch.
+  const handleBulkEnable = useCallback(
+    async (ids: number[]) => {
+      try {
+        await bulkEnable.mutateAsync(ids);
+        setSelectedKeys([]);
+      } catch {
+        /* keep selection; toast surfaced by the hook's onError */
+      }
+    },
+    [bulkEnable],
+  );
+
+  const handleBulkDisable = useCallback(
+    async (ids: number[]) => {
+      try {
+        await bulkDisable.mutateAsync(ids);
+        setSelectedKeys([]);
+      } catch {
+        /* keep selection; toast surfaced by the hook's onError */
+      }
+    },
+    [bulkDisable],
+  );
+
   const renderBulkActions = useCallback(
     (selected: AlertRule[]) => {
       const ids = selected.map((r) => r.id);
@@ -245,10 +275,7 @@ export default function AlertRulesPage() {
             size="sm"
             icon={<Icons.play className="h-4 w-4" aria-hidden="true" />}
             loading={bulkEnable.isPending}
-            onClick={async () => {
-              await bulkEnable.mutateAsync(ids);
-              setSelectedKeys([]);
-            }}
+            onClick={() => handleBulkEnable(ids)}
           >
             {t('alertRules.bulk.enable', 'Enable')}
           </Button>
@@ -257,10 +284,7 @@ export default function AlertRulesPage() {
             size="sm"
             icon={<Icons.pause className="h-4 w-4" aria-hidden="true" />}
             loading={bulkDisable.isPending}
-            onClick={async () => {
-              await bulkDisable.mutateAsync(ids);
-              setSelectedKeys([]);
-            }}
+            onClick={() => handleBulkDisable(ids)}
           >
             {t('alertRules.bulk.disable', 'Disable')}
           </Button>
@@ -275,7 +299,7 @@ export default function AlertRulesPage() {
         </>
       );
     },
-    [bulkEnable, bulkDisable, handleBulkDelete, t],
+    [bulkEnable, bulkDisable, handleBulkEnable, handleBulkDisable, handleBulkDelete, t],
   );
 
   /* ─── Table columns ─── */

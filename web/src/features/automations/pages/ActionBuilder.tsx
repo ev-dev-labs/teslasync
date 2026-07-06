@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Input as UiInput,
@@ -226,7 +226,7 @@ function actionWithSettingValue(
   };
 }
 
-export function ActionBuilder({ actions, channels, onChange }: ActionBuilderProps) {
+export function ActionBuilder({ actions = [], channels = [], onChange }: ActionBuilderProps) {
   const { t } = useTranslation();
 
   const defaultChannelId = useMemo(
@@ -292,6 +292,7 @@ export function ActionBuilder({ actions, channels, onChange }: ActionBuilderProp
               <div className="flex flex-wrap items-end gap-3">
                 <UiSelect
                   label={index === 0 ? t('automations.builder.actionType', 'Action Type') : undefined}
+                  aria-label={index === 0 ? undefined : t('automations.builder.actionType', 'Action Type')}
                   options={actionTypeOptions}
                   value={action.kind}
                   onChange={(event) => replaceAction(
@@ -355,7 +356,17 @@ export function ActionBuilder({ actions, channels, onChange }: ActionBuilderProp
 
 function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
   const { t } = useTranslation();
-  const [paramsText, setParamsText] = useState('');
+  // Initialise the params editor once from the action's stored params. The
+  // parent remounts this component (its GlassPanel key includes action.kind
+  // and the row index) whenever the kind changes or rows are reordered, so a
+  // lazy initialiser is enough — and it avoids the previous effect that
+  // re-stringified (pretty-printed) the textarea on every keystroke, which
+  // clobbered in-progress input the instant it became valid JSON.
+  const [paramsText, setParamsText] = useState<string>(() => (
+    action.kind === 'action_command' && action.command_params
+      ? JSON.stringify(action.command_params, null, 2)
+      : ''
+  ));
   const [paramsError, setParamsError] = useState<string | null>(null);
 
   const commandOptions = useMemo(
@@ -371,16 +382,6 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
     ],
     [t],
   );
-
-  useEffect(() => {
-    if (action.kind !== 'action_command') {
-      setParamsText('');
-      setParamsError(null);
-      return;
-    }
-    setParamsText(action.command_params ? JSON.stringify(action.command_params, null, 2) : '');
-    setParamsError(null);
-  }, [action]);
 
   switch (action.kind) {
     case 'action_command':

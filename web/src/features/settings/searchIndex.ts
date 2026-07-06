@@ -594,12 +594,13 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
  * of `needle` appears in `haystack` in order (e.g. "lng" → "Language").
  *
  * Empty needles never match (the caller is expected to short-circuit on
- * empty queries) and an empty haystack only matches the empty needle.
+ * empty queries), so an empty haystack never matches anything either.
+ * Nullish inputs are coerced to empty strings rather than throwing.
  */
 export function fuzzyMatch(needle: string, haystack: string): boolean {
-  if (needle.length === 0) return false;
+  if (!needle) return false;
   const n = needle.toLowerCase();
-  const h = haystack.toLowerCase();
+  const h = (haystack ?? '').toLowerCase();
   let i = 0;
   for (const ch of n) {
     const found = h.indexOf(ch, i);
@@ -618,15 +619,15 @@ export function fuzzyMatch(needle: string, haystack: string): boolean {
  * cap the list (e.g. `.slice(0, 8)`) before rendering.
  */
 export function searchSettings(index: readonly SettingsEntry[], query: string): SettingsEntry[] {
-  const q = query.trim().toLowerCase();
+  const q = (query ?? '').trim().toLowerCase();
   if (q.length === 0) return [];
 
   type Scored = { entry: SettingsEntry; score: number };
   const scored: Scored[] = [];
 
-  for (const entry of index) {
-    const title = entry.title.toLowerCase();
-    const desc = entry.description.toLowerCase();
+  for (const entry of index ?? []) {
+    const title = (entry.title ?? '').toLowerCase();
+    const desc = (entry.description ?? '').toLowerCase();
     const keywordHit = (entry.keywords ?? []).some((k) => k.toLowerCase().includes(q));
 
     let score = 0;
@@ -635,8 +636,8 @@ export function searchSettings(index: readonly SettingsEntry[], query: string): 
     else if (title.includes(q)) score = 600;
     else if (keywordHit) score = 400;
     else if (desc.includes(q)) score = 300;
-    else if (fuzzyMatch(q, entry.title)) score = 200;
-    else if (fuzzyMatch(q, entry.description)) score = 100;
+    else if (fuzzyMatch(q, title)) score = 200;
+    else if (fuzzyMatch(q, desc)) score = 100;
 
     if (score > 0) scored.push({ entry, score });
   }

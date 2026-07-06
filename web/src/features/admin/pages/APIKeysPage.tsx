@@ -86,7 +86,16 @@ export default function APIKeysPage() {
                 <Skeleton key={i} height={84} className="rounded-xl" />
               ))
             : kpis.map((k) => (
-                <MetricCard key={k.key} label={k.label} value={k.value} icon={k.icon} color={k.color} />
+                // On error the query holds no data — surface the em-dash
+                // placeholder instead of a fabricated "0" so the KPI band
+                // never reports counts that don't actually exist.
+                <MetricCard
+                  key={k.key}
+                  label={k.label}
+                  value={isError ? '—' : k.value}
+                  icon={k.icon}
+                  color={k.color}
+                />
               ))}
         </section>
       </FadeIn>

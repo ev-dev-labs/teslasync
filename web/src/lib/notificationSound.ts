@@ -345,6 +345,41 @@ function resolveAudioContextCtor(): typeof AudioContext | null {
   return w.AudioContext ?? w.webkitAudioContext ?? null
 }
 
+/**
+ * Create (and, when possible, resume) the shared AudioContext *without*
+ * emitting any sound.
+ *
+ * Browsers only allow an AudioContext to start from inside a user gesture
+ * (click / tap / keypress). Call this from a real gesture handler — e.g. the
+ * moment the user enables notification sounds — so a later, non-gesture
+ * SSE-driven cue can play instead of being silently blocked by the autoplay
+ * policy. Warming up by calling `playNotificationSound` at volume 0 does *not*
+ * work: it short-circuits on the zero-volume guard before the context is ever
+ * constructed.
+ *
+ * Safe to call repeatedly (the context is cached) and never throws.
+ *
+ * @returns true when a live AudioContext is available afterwards.
+ */
+export function primeNotificationAudio(): boolean {
+  const Ctor = resolveAudioContextCtor()
+  if (!Ctor) return false
+  try {
+    const ctx = cachedCtx ?? new Ctor()
+    cachedCtx = ctx
+    // A context constructed outside a gesture (or after the tab was
+    // backgrounded) can start 'suspended'; resume it while we still hold the
+    // user gesture so the next cue is audible.
+    if (ctx.state === 'suspended') {
+      void ctx.resume()
+    }
+    return true
+  } catch {
+    cachedCtx = null
+    return false
+  }
+}
+
 export interface PlayResult {
   played: boolean
   reason?:

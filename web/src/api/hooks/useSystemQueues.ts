@@ -12,17 +12,39 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { request } from '@/api/client'
 import type { QueueJobsResponse, QueueStatusResponse } from '@/api/types'
 
-export const queueKeys = {
-  root: ['system', 'queues'] as const,
-  status: ['system', 'queues', 'status'] as const,
-  jobs: (worker: string) => ['system', 'queues', 'jobs', worker] as const,
-}
-
 export const QUEUE_STATUS_REFETCH_INTERVAL_MS = 30_000
 export const QUEUE_STATUS_STALE_TIME_MS = 15_000
 export const QUEUE_JOBS_REFETCH_INTERVAL_MS = 60_000
 export const QUEUE_JOBS_STALE_TIME_MS = 30_000
 export const QUEUE_JOBS_DEFAULT_LIMIT = 25
+/**
+ * Upper bound the backend enforces on the jobs `limit` query param. We
+ * clamp client-side to the same ceiling so the request URL and the
+ * cache key never carry a value the server would silently reject.
+ */
+export const QUEUE_JOBS_MAX_LIMIT = 200
+
+/**
+ * Normalises a caller-supplied jobs `limit` into a whole number the
+ * backend accepts: floored, clamped to [1, QUEUE_JOBS_MAX_LIMIT], and
+ * falling back to QUEUE_JOBS_DEFAULT_LIMIT for non-finite input
+ * (NaN / ±Infinity). Exported so the request URL and the query key are
+ * always derived from the identical sanitised value.
+ */
+export function clampJobsLimit(limit: number): number {
+  if (!Number.isFinite(limit)) return QUEUE_JOBS_DEFAULT_LIMIT
+  const floored = Math.floor(limit)
+  if (floored < 1) return 1
+  if (floored > QUEUE_JOBS_MAX_LIMIT) return QUEUE_JOBS_MAX_LIMIT
+  return floored
+}
+
+export const queueKeys = {
+  root: ['system', 'queues'] as const,
+  status: ['system', 'queues', 'status'] as const,
+  jobs: (worker: string, limit: number = QUEUE_JOBS_DEFAULT_LIMIT) =>
+    ['system', 'queues', 'jobs', worker, limit] as const,
+}
 
 type QueueStatusOptions = Omit<
   UseQueryOptions<QueueStatusResponse, Error>,
@@ -33,7 +55,7 @@ type QueueJobsOptions = Omit<
   UseQueryOptions<QueueJobsResponse, Error>,
   'queryKey' | 'queryFn'
 > & {
-  /** Maximum number of jobs to fetch (clamped to [1, 200] server-side). */
+  /** Maximum number of jobs to fetch. Clamped to [1, 200] both client- and server-side. */
   limit?: number
 }
 
@@ -67,11 +89,15 @@ export function useQueueJobs(
   worker: string,
   { limit = QUEUE_JOBS_DEFAULT_LIMIT, ...options }: QueueJobsOptions = {},
 ) {
+  // Derive the URL and the cache key from the SAME sanitised value so
+  // two callers passing different (or malformed) limits never collide
+  // on one cache entry while fetching different `?limit=` URLs.
+  const safeLimit = clampJobsLimit(limit)
   return useQuery<QueueJobsResponse, Error>({
-    queryKey: queueKeys.jobs(worker),
+    queryKey: queueKeys.jobs(worker, safeLimit),
     queryFn: ({ signal }) =>
       request<QueueJobsResponse>(
-        `/system/queues/${encodeURIComponent(worker)}/jobs?limit=${limit}`,
+        `/system/queues/${encodeURIComponent(worker)}/jobs?limit=${safeLimit}`,
         { signal },
       ),
     refetchInterval: QUEUE_JOBS_REFETCH_INTERVAL_MS,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -40,11 +41,9 @@ func workerTracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
 func main() {
 	// Built-in healthcheck for distroless containers
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		resp, err := http.Get("http://localhost:8082/healthz")
-		if err != nil || resp.StatusCode != 200 {
-			os.Exit(1)
-		}
-		os.Exit(0)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		os.Exit(healthcheckExitCode(ctx, http.DefaultClient, healthcheckURL(resolveHealthPort())))
 	}
 
 	cfg, err := config.Load()
@@ -172,14 +171,7 @@ func main() {
 				}
 				span.SetAttributes(attribute.Int("backup.due_count", len(dueConfigs)))
 				for _, cfg := range dueConfigs {
-					run := &backupmodel.BackupRun{
-						ConfigID:   &cfg.ID,
-						RunType:    "backup",
-						BackupType: cfg.BackupType,
-						Status:     "queued",
-						Provider:   cfg.Provider,
-						Metadata:   []byte(`{"trigger": "scheduled"}`),
-					}
+					run := newScheduledBackupRun(cfg)
 					if err := backupRunRepo.Create(tickCtx, run); err != nil {
 						span.RecordError(err)
 						log.Error().Err(err).Int64("config_id", cfg.ID).Msg("backup: failed to create scheduled run")
@@ -216,20 +208,9 @@ func main() {
 	log.Info().Msg("export worker running (MQTT consumer + job cleanup)")
 
 	// Health endpoint for Kubernetes probes.
-	healthPort := os.Getenv("HEALTH_PORT")
-	if healthPort == "" {
-		healthPort = "8082"
-	}
+	healthPort := resolveHealthPort()
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Health(r.Context()); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintf(w, `{"status":"unhealthy","error":"%s"}`, err.Error())
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"status":"ok"}`)
-	})
+	healthMux.HandleFunc("/healthz", newHealthHandler(db))
 	go func() {
 		log.Info().Str("port", healthPort).Msg("health endpoint listening")
 		if err := http.ListenAndServe(":"+healthPort, healthMux); err != nil && err != http.ErrServerClosed {
@@ -269,5 +250,85 @@ func setupLogger(level string) {
 	zerolog.SetGlobalLevel(lvl)
 	if os.Getenv("TESLASYNC_DEV") == "true" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+}
+
+// resolveHealthPort returns the TCP port the health endpoint binds to. It
+// honors HEALTH_PORT and falls back to 8082 (the port the image EXPOSEs). The
+// same value is used by both the server and the in-container healthcheck probe
+// so a custom port stays consistent across the two.
+func resolveHealthPort() string {
+	if p := os.Getenv("HEALTH_PORT"); p != "" {
+		return p
+	}
+	return "8082"
+}
+
+// healthcheckURL builds the loopback URL the container healthcheck probe hits.
+func healthcheckURL(port string) string {
+	return fmt.Sprintf("http://localhost:%s/healthz", port)
+}
+
+// healthcheckExitCode performs the distroless container liveness probe. It GETs
+// url and returns 0 only when the endpoint answers 200; any request-build
+// failure, transport error, non-200 status, or context expiry yields 1. The
+// response body is always closed to avoid leaking the connection, and the
+// caller-supplied context bounds the request so the probe can never hang.
+func healthcheckExitCode(ctx context.Context, client *http.Client, url string) int {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return 1
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 1
+	}
+	return 0
+}
+
+// healthChecker is the minimal surface newHealthHandler needs from the database
+// pool, letting the handler be exercised without a live connection.
+type healthChecker interface {
+	Health(ctx context.Context) error
+}
+
+// newHealthHandler returns the /healthz handler. It responds 200 with
+// {"status":"ok"} when the dependency is reachable and 503 with a JSON error
+// body otherwise. The error string is JSON-encoded (not string-interpolated) so
+// a driver message containing quotes cannot produce a malformed body, and
+// Content-Type is set on both paths.
+func newHealthHandler(hc healthChecker) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := hc.Health(r.Context()); err != nil {
+			body, _ := json.Marshal(map[string]string{
+				"status": "unhealthy",
+				"error":  err.Error(),
+			})
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write(body)
+			return
+		}
+		body, _ := json.Marshal(map[string]string{"status": "ok"})
+		_, _ = w.Write(body)
+	}
+}
+
+// newScheduledBackupRun builds the queued BackupRun the scheduler persists for a
+// due config. ConfigID points at the config's ID so the run is attributable to
+// its schedule, and the metadata records that a scheduled tick (not a manual
+// request) triggered it.
+func newScheduledBackupRun(cfg *backupmodel.BackupConfig) *backupmodel.BackupRun {
+	return &backupmodel.BackupRun{
+		ConfigID:   &cfg.ID,
+		RunType:    "backup",
+		BackupType: cfg.BackupType,
+		Status:     "queued",
+		Provider:   cfg.Provider,
+		Metadata:   []byte(`{"trigger": "scheduled"}`),
 	}
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 
@@ -114,6 +114,10 @@ export function SessionsTable({
     [t, formatDateTime, onRevoke, revokingId],
   )
 
+  // Stable identity so `DataTable`'s internal row-key/selection memos don't
+  // recompute on every parent render.
+  const keyExtractor = useCallback((row: ActiveSession) => row.id, [])
+
   return (
     <section aria-label={t('account.sessions.tableAria', 'Active devices')}>
       <GlassPanel className="p-4 sm:p-5" data-testid="active-sessions-section">
@@ -128,8 +132,8 @@ export function SessionsTable({
           <DataTable<ActiveSession>
             tableId="settings:active-sessions"
             columns={columns}
-            data={sessions}
-            keyExtractor={(row) => row.id}
+            data={sessions ?? []}
+            keyExtractor={keyExtractor}
             emptyMessage={t('account.sessions.empty', 'No active sessions for this account.')}
           />
         )}

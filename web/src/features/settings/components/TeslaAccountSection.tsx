@@ -56,7 +56,11 @@ export function TeslaAccountSection() {
 
   function handleLogin() {
     authUrlMut.mutate(undefined, {
-      onSuccess: (data) => { window.location.href = data.auth_url },
+      onSuccess: (data) => {
+        // Guard the redirect: a 2xx with a malformed/empty body must not
+        // navigate the tab to "/undefined" and strand the user.
+        if (data?.auth_url) window.location.href = data.auth_url
+      },
     })
   }
 
@@ -101,11 +105,16 @@ export function TeslaAccountSection() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)]">
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="tesla-connection-status"
+          className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)]"
+        >
           {auth?.authenticated && !pillDisconnected ? (
             <>
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-green/10">
-                <CheckCircle className="h-4 w-4 text-neon-green" />
+                <CheckCircle className="h-4 w-4 text-neon-green" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -130,7 +139,7 @@ export function TeslaAccountSection() {
           ) : (
             <>
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-red/10">
-                <XCircle className="h-4 w-4 text-neon-red" />
+                <XCircle className="h-4 w-4 text-neon-red" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-rose-300 font-medium">
@@ -178,7 +187,7 @@ export function TeslaAccountSection() {
 
         {syncMut.isSuccess && (
           <p className="text-sm text-emerald-300 animate-in fade-in">
-            {t('tesla.synced', 'Synced {{count}} vehicle(s).', { count: syncMut.data.synced })}
+            {t('tesla.synced', 'Synced {{count}} vehicle(s).', { count: syncMut.data?.synced ?? 0 })}
           </p>
         )}
       </GlassPanel>

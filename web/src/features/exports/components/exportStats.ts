@@ -54,9 +54,14 @@ export interface ExportStats {
 }
 
 /** Derive the aggregate counts + storage total the KPI band and breakdown
- *  panel render. Null-safe: missing file_size contributes 0 bytes and an
- *  empty list yields all-zero stats (never NaN). */
-export function deriveExportStats(jobs: ExportJobSummary[]): ExportStats {
+ *  panel render. Always null-safe: a null/undefined list, array holes, an
+ *  unrecognised status, and a missing/non-finite/negative file_size all
+ *  contribute nothing — so an absent or empty list yields all-zero stats and
+ *  totalBytes is never NaN. */
+export function deriveExportStats(
+  jobs: ExportJobSummary[] | null | undefined,
+): ExportStats {
+  const list = (jobs ?? []).filter(Boolean);
   const byStatus: Record<ExportJobSummary['status'], number> = {
     ready: 0,
     processing: 0,
@@ -65,12 +70,22 @@ export function deriveExportStats(jobs: ExportJobSummary[]): ExportStats {
     expired: 0,
   };
   let totalBytes = 0;
-  for (const job of jobs) {
-    if (job.status in byStatus) byStatus[job.status] += 1;
-    totalBytes += job.file_size ?? 0;
+  for (const job of list) {
+    // Own-key membership (not `in`) so a status string colliding with an
+    // Object.prototype member — e.g. a malformed "toString" — can't turn a
+    // counter into NaN by incrementing an inherited function slot.
+    if (Object.prototype.hasOwnProperty.call(byStatus, job.status)) {
+      byStatus[job.status] += 1;
+    }
+    // Guard non-finite / negative sizes so one malformed row can't poison the
+    // storage KPI with NaN or a nonsensical negative total.
+    const size = job.file_size;
+    if (typeof size === 'number' && Number.isFinite(size) && size > 0) {
+      totalBytes += size;
+    }
   }
   return {
-    total: jobs.length,
+    total: list.length,
     ready: byStatus.ready,
     inProgress: byStatus.processing + byStatus.queued,
     failed: byStatus.failed,
