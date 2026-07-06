@@ -6549,7 +6549,8 @@
       "avgDailyDistance": "Avg Daily Distance",
       "lifetime": "lifetime",
       "noData": "No lifetime data",
-      "title": "Lifetime Stats"
+      "title": "Lifetime Stats",
+      "error": "Unable to load lifetime stats"
     },
     "recentlyUnlocked": {
       "title": "Recently Unlocked",
