@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sun, Battery, Home, Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -41,10 +41,10 @@ export default function LivePowerFlowWidget({ size }: WidgetProps) {
 
   const hasSites = (sites ?? []).length > 0;
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refetchSites();
     if (siteId) refetchLive();
-  };
+  }, [refetchSites, refetchLive, siteId]);
 
   const solarW = liveStatus?.solar_power ?? 0;
   const batteryW = liveStatus?.battery_power ?? 0;
@@ -115,8 +115,10 @@ export default function LivePowerFlowWidget({ size }: WidgetProps) {
       });
     }
 
-    // Solar → Battery (excess solar charging battery)
-    if (solarKw > 0 && batteryW > 0) {
+    // Solar → Battery (excess solar charging the battery). Tesla live-status
+    // reports battery_power in SI watts where a NEGATIVE value means the pack
+    // is charging — the canonical convention shared with PowerFlowDashboardPage.
+    if (solarKw > 0 && batteryW < 0) {
       result.push({
         from: 'solar',
         to: 'battery',
@@ -126,8 +128,8 @@ export default function LivePowerFlowWidget({ size }: WidgetProps) {
       });
     }
 
-    // Battery → Home (discharging, batteryW < 0)
-    if (batteryW < 0) {
+    // Battery → Home (pack discharging to loads, batteryW > 0)
+    if (batteryW > 0) {
       result.push({
         from: 'battery',
         to: 'home',
@@ -159,8 +161,8 @@ export default function LivePowerFlowWidget({ size }: WidgetProps) {
       });
     }
 
-    // Grid → Battery (charging from grid, batteryW > 0 && no solar)
-    if (batteryW > 0 && solarKw <= 0) {
+    // Grid → Battery (pack charging from the grid with no solar available)
+    if (batteryW < 0 && solarKw <= 0) {
       result.push({
         from: 'grid',
         to: 'battery',
@@ -183,7 +185,7 @@ export default function LivePowerFlowWidget({ size }: WidgetProps) {
         isFetching={sitesFetching}
         isStale={sitesStale}
         isError={sitesIsError}
-        onRefresh={() => refetchSites()}
+        onRefresh={handleRefresh}
       >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           message={t('widget.livePowerFlow.noSite', 'No Tesla Energy site linked')}
