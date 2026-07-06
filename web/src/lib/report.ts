@@ -1,15 +1,43 @@
 import { formatDate, formatDateTime } from './dateFormat'
 import { fmtNumber } from './numberFormat'
 
-export function generateDriveReport(drive: any, vehicle: any) {
+/**
+ * Escape a value for safe interpolation into report HTML. Report windows are
+ * populated via `document.write` with template literals, so any string that
+ * originates from vehicle/user data (e.g. a vehicle's display name) is
+ * HTML-escaped here to prevent markup/script injection into the print document.
+ */
+function escapeHtml(value: unknown): string {
+  if (value == null) return ''
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Open a print-ready Drive report in a new window. Returns `false` when the
+ * browser blocks the popup (so callers can surface a "popup blocked" hint) and
+ * `true` once the report has been written and sent to `print()`.
+ */
+export function generateDriveReport(drive: any, vehicle: any): boolean {
   const printWindow = window.open('', '_blank')
-  if (!printWindow) return
+  if (!printWindow) return false
+
+  const d = drive ?? {}
+  const v = vehicle ?? {}
+  const durationMin = Number(d.duration_min) || 0
+  const avgSpeed = durationMin > 0
+    ? `${fmtNumber((Number(d.distance) || 0) / (durationMin / 60), 0)} km/h`
+    : '—'
 
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Drive Report - ${formatDate(drive.start_date)}</title>
+      <title>Drive Report - ${escapeHtml(formatDate(d.start_date))}</title>
       <style>
         body { font-family: system-ui, sans-serif; padding: 40px; color: #1a1a2e; }
         h1 { color: #0077b6; border-bottom: 2px solid #0077b6; padding-bottom: 8px; }
@@ -26,39 +54,48 @@ export function generateDriveReport(drive: any, vehicle: any) {
     </head>
     <body>
       <h1>TeslaSync — Drive Report</h1>
-      <p><strong>Vehicle:</strong> ${vehicle?.display_name || 'N/A'} | <strong>Date:</strong> ${formatDateTime(drive.start_date)}</p>
+      <p><strong>Vehicle:</strong> ${escapeHtml(v.display_name || 'N/A')} | <strong>Date:</strong> ${escapeHtml(formatDateTime(d.start_date))}</p>
 
       <div>
-        <div class="stat"><div class="stat-value">${drive.distance != null ? fmtNumber(drive.distance, 1) : '—'}</div><div class="stat-label">km Distance</div></div>
-        <div class="stat"><div class="stat-value">${Math.round(drive.duration_min || 0)}</div><div class="stat-label">min Duration</div></div>
-        <div class="stat"><div class="stat-value">${drive.speed_max != null ? fmtNumber(drive.speed_max, 0) : '—'}</div><div class="stat-label">km/h Max Speed</div></div>
-        <div class="stat"><div class="stat-value">${drive.start_battery_level ?? '?'}→${drive.end_battery_level ?? '?'}</div><div class="stat-label">% Battery</div></div>
+        <div class="stat"><div class="stat-value">${d.distance != null ? fmtNumber(d.distance, 1) : '—'}</div><div class="stat-label">km Distance</div></div>
+        <div class="stat"><div class="stat-value">${Math.round(durationMin)}</div><div class="stat-label">min Duration</div></div>
+        <div class="stat"><div class="stat-value">${d.speed_max != null ? fmtNumber(d.speed_max, 0) : '—'}</div><div class="stat-label">km/h Max Speed</div></div>
+        <div class="stat"><div class="stat-value">${d.start_battery_level ?? '?'}→${d.end_battery_level ?? '?'}</div><div class="stat-label">% Battery</div></div>
       </div>
 
       <h2>Details</h2>
       <table>
-        <tr><td>Start Time</td><td>${formatDateTime(drive.start_date)}</td></tr>
-        <tr><td>End Time</td><td>${drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</td></tr>
-        <tr><td>Distance</td><td>${fmtNumber(drive.distance, 1)} km</td></tr>
-        <tr><td>Duration</td><td>${Math.floor((drive.duration_min || 0) / 60)}h ${Math.round((drive.duration_min || 0) % 60)}m</td></tr>
-        <tr><td>Average Speed</td><td>${fmtNumber((drive.distance || 0) / ((drive.duration_min || 1) / 60), 0)} km/h</td></tr>
-        <tr><td>Max Speed</td><td>${drive.speed_max != null ? fmtNumber(drive.speed_max, 0) : '—'} km/h</td></tr>
-        <tr><td>Battery Used</td><td>${(drive.start_battery_level || 0) - (drive.end_battery_level || 0)}%</td></tr>
-        <tr><td>Start Range</td><td>${drive.start_range_km != null ? fmtNumber(drive.start_range_km, 0) : '—'} km</td></tr>
-        <tr><td>End Range</td><td>${drive.end_range_km != null ? fmtNumber(drive.end_range_km, 0) : '—'} km</td></tr>
+        <tr><td>Start Time</td><td>${escapeHtml(formatDateTime(d.start_date))}</td></tr>
+        <tr><td>End Time</td><td>${d.end_date ? escapeHtml(formatDateTime(d.end_date)) : 'In progress'}</td></tr>
+        <tr><td>Distance</td><td>${d.distance != null ? `${fmtNumber(d.distance, 1)} km` : '—'}</td></tr>
+        <tr><td>Duration</td><td>${Math.floor(durationMin / 60)}h ${Math.round(durationMin % 60)}m</td></tr>
+        <tr><td>Average Speed</td><td>${avgSpeed}</td></tr>
+        <tr><td>Max Speed</td><td>${d.speed_max != null ? `${fmtNumber(d.speed_max, 0)} km/h` : '—'}</td></tr>
+        <tr><td>Battery Used</td><td>${(d.start_battery_level || 0) - (d.end_battery_level || 0)}%</td></tr>
+        <tr><td>Start Range</td><td>${d.start_range_km != null ? `${fmtNumber(d.start_range_km, 0)} km` : '—'}</td></tr>
+        <tr><td>End Range</td><td>${d.end_range_km != null ? `${fmtNumber(d.end_range_km, 0)} km` : '—'}</td></tr>
       </table>
 
-      <div class="footer">Generated by TeslaSync · ${new Date().toLocaleString()}</div>
+      <div class="footer">Generated by TeslaSync · ${escapeHtml(new Date().toLocaleString())}</div>
     </body>
     </html>
   `)
   printWindow.document.close()
   printWindow.print()
+  return true
 }
 
-export function generateMonthlyReport(stats: any, vehicles: any[]) {
+/**
+ * Open a print-ready fleet monthly summary in a new window. Returns `false`
+ * when the browser blocks the popup and `true` once the report has been written
+ * and sent to `print()`.
+ */
+export function generateMonthlyReport(stats: any, vehicles: any[]): boolean {
   const printWindow = window.open('', '_blank')
-  if (!printWindow) return
+  if (!printWindow) return false
+
+  const s = stats ?? {}
+  const vehicleCount = vehicles?.length ?? 0
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -76,20 +113,21 @@ export function generateMonthlyReport(stats: any, vehicles: any[]) {
     </head>
     <body>
       <h1>TeslaSync — Monthly Summary</h1>
-      <p>Generated: ${new Date().toLocaleString()}</p>
+      <p>Generated: ${escapeHtml(new Date().toLocaleString())}</p>
       <table>
         <tr><th>Metric</th><th>Value</th></tr>
-        <tr><td>Total Vehicles</td><td>${vehicles?.length || 0}</td></tr>
-        <tr><td>Total Distance</td><td>${fmtNumber(stats?.total_distance_km, 0)} km</td></tr>
-        <tr><td>Total Drives</td><td>${stats?.total_drives || 0}</td></tr>
-        <tr><td>Total Energy</td><td>${fmtNumber(stats?.total_energy_kwh, 0)} kWh</td></tr>
-        <tr><td>Total Cost</td><td>$${fmtNumber(stats?.total_cost, 2)}</td></tr>
-        <tr><td>Avg Efficiency</td><td>${fmtNumber(stats?.avg_efficiency_wh_km, 0)} Wh/km</td></tr>
+        <tr><td>Total Vehicles</td><td>${vehicleCount}</td></tr>
+        <tr><td>Total Distance</td><td>${fmtNumber(s.total_distance_km, 0)} km</td></tr>
+        <tr><td>Total Drives</td><td>${s.total_drives || 0}</td></tr>
+        <tr><td>Total Energy</td><td>${fmtNumber(s.total_energy_kwh, 0)} kWh</td></tr>
+        <tr><td>Total Cost</td><td>$${fmtNumber(s.total_cost, 2)}</td></tr>
+        <tr><td>Avg Efficiency</td><td>${fmtNumber(s.avg_efficiency_wh_km, 0)} Wh/km</td></tr>
       </table>
-      <div class="footer">Generated by TeslaSync · ${new Date().toLocaleString()}</div>
+      <div class="footer">Generated by TeslaSync · ${escapeHtml(new Date().toLocaleString())}</div>
     </body>
     </html>
   `)
   printWindow.document.close()
   printWindow.print()
+  return true
 }
