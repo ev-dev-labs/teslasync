@@ -77,42 +77,54 @@ function setScrollTop(target: HTMLElement | null, top: number): void {
 export function ScrollRestoration() {
   const location = useLocation();
   const navType = useNavigationType();
-  const lastKey = useRef<string | null>(null);
+
+  // Scroll key for the current location (path + search).
+  const key = keyFor(location.pathname, location.search);
+
+  // Id of a pending rAF-throttled save. Shared across both effects so the
+  // restore pass can cancel a save scheduled on the OUTGOING route before it
+  // resets the scroll — otherwise that rAF fires after the reset and clobbers
+  // the stored position with 0. 0 means "nothing scheduled".
+  const pendingSave = useRef(0);
 
   // Persist the current scrollTop while the user scrolls. Throttled with
   // requestAnimationFrame so we write at most once per paint regardless of
   // scroll velocity.
   useEffect(() => {
-    const key = keyFor(location.pathname, location.search);
-    lastKey.current = key;
-
     const target = getScrollEl();
-    let scheduled = false;
     const scrollSource: HTMLElement | Window = target ?? window;
 
     const onScroll = () => {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        scheduled = false;
-        if (lastKey.current) writeSaved(lastKey.current, getScrollTop(target));
+      if (pendingSave.current) return;
+      pendingSave.current = requestAnimationFrame(() => {
+        pendingSave.current = 0;
+        writeSaved(key, getScrollTop(target));
       });
     };
 
     scrollSource.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      // Final flush of the current position before unmount/route change.
-      if (lastKey.current) writeSaved(lastKey.current, getScrollTop(target));
+      if (pendingSave.current) {
+        cancelAnimationFrame(pendingSave.current);
+        pendingSave.current = 0;
+      }
       scrollSource.removeEventListener('scroll', onScroll);
     };
-  }, [location.pathname, location.search]);
+  }, [key]);
 
   // Restore (or scroll-to-top) on every navigation. Use useLayoutEffect so
   // the scroll position is set before the browser paints — otherwise the
   // user briefly sees the top of the page before it jumps.
   useLayoutEffect(() => {
     const target = getScrollEl();
-    const key = keyFor(location.pathname, location.search);
+
+    // A save scheduled on the previous route must not survive into this one:
+    // it would fire after the scroll reset below and overwrite the stored
+    // position with 0.
+    if (pendingSave.current) {
+      cancelAnimationFrame(pendingSave.current);
+      pendingSave.current = 0;
+    }
 
     if (navType === 'POP') {
       const saved = readSaved(key);
@@ -121,7 +133,16 @@ export function ScrollRestoration() {
       // PUSH or REPLACE — fresh navigation. Always start at the top.
       setScrollTop(target, 0);
     }
-  }, [location.pathname, location.search, navType]);
+
+    return () => {
+      // Final flush of the outgoing position BEFORE the next route resets it.
+      // This cleanup runs in the commit's layout phase, ahead of the next
+      // restore — so the scroll is still at the user's position here. A
+      // passive (useEffect) cleanup would instead run after the reset and
+      // persist 0, silently breaking back/forward restoration.
+      writeSaved(key, getScrollTop(target));
+    };
+  }, [key, navType]);
 
   return null;
 }
