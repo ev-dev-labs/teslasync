@@ -25,6 +25,7 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const {
     data,
     isLoading,
+    error,
     isFetching,
     isStale,
     isError,
@@ -75,6 +76,7 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
           'Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.',
       }}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
