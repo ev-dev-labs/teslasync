@@ -15,7 +15,7 @@ export const DRIVE_SESSION_STATE_ENTRIES: Record<DriveSessionState, StateEntry> 
 }
 
 export const DRIVE_SESSION_TRIGGERS = [
-  'start_snapshot_ready', 'pod_restart', 'drive_ending',
+  'start_snapshot_ready', 'start_snapshot_timeout', 'pod_restart', 'drive_ending',
   'end_snapshot_ready', 'end_snapshot_timeout', 'signals_flowing',
 ] as const
 export type DriveSessionTrigger = (typeof DRIVE_SESSION_TRIGGERS)[number]
@@ -38,6 +38,10 @@ export interface DriveSignalContext {
 
 export const DRIVE_SESSION_TRANSITIONS: TransitionRow<DriveSessionState, DriveSessionTrigger>[] = [
   { from: 'pending',   to: 'active',    trigger: 'start_snapshot_ready',  guard: 'has_required_start_fields', timing: 'immediate' },
+  // Backend drive.TriggerStartTimeout: after StartSnapshotTimeout (30s) the sub-FSM
+  // proceeds to Active with partial start data — the start-side mirror of
+  // end_snapshot_timeout. No guard: this is the fallback when start fields never arrive.
+  { from: 'pending',   to: 'active',    trigger: 'start_snapshot_timeout', guard: null,                       timing: 'immediate' },
   { from: 'pending',   to: 'recovered', trigger: 'pod_restart',           guard: null,                        timing: 'immediate' },
   { from: 'active',    to: 'ending',    trigger: 'drive_ending',          guard: null,                        timing: 'immediate' },
   { from: 'active',    to: 'recovered', trigger: 'pod_restart',           guard: null,                        timing: 'immediate' },
