@@ -49,19 +49,27 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
     let activeCount = 0;
     let staleCount = 0;
     let latestTimestamp: string | null = null;
+    let latestMs: number | null = null;
     const gapSignals: GapSignal[] = [];
 
     for (const [name, entry] of Object.entries(liveEntries)) {
       const ts = entry?.timestamp ?? null;
-      if (ts) {
-        const age = now - new Date(ts).getTime();
+      const parsedMs = ts ? new Date(ts).getTime() : Number.NaN;
+      // A missing OR unparseable timestamp is a signal gap: it must count as
+      // stale (never "active"), and it must not poison the freshness reading
+      // with NaN via the newest-timestamp comparison below. Comparing parsed
+      // millis (not the raw ISO strings) also keeps ordering correct when
+      // timestamps differ in precision (e.g. with/without milliseconds).
+      if (ts && Number.isFinite(parsedMs)) {
+        const age = now - parsedMs;
         if (age > STALE_THRESHOLD_MS) {
           staleCount++;
           gapSignals.push({ name, lastSeen: ts, isStale: true });
         } else {
           activeCount++;
         }
-        if (!latestTimestamp || ts > latestTimestamp) {
+        if (latestMs === null || parsedMs > latestMs) {
+          latestMs = parsedMs;
           latestTimestamp = ts;
         }
       } else {
@@ -78,9 +86,10 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
       return new Date(a.lastSeen).getTime() - new Date(b.lastSeen).getTime();
     });
 
-    // Freshness age in seconds
-    const freshnessAge = latestTimestamp
-      ? Math.max(0, Math.floor((now - new Date(latestTimestamp).getTime()) / 1000))
+    // Freshness age in seconds, derived from the newest VALID timestamp so an
+    // unparseable value can never surface as "NaN…" in the freshness label.
+    const freshnessAge = latestMs !== null
+      ? Math.max(0, Math.floor((now - latestMs) / 1000))
       : null;
 
     return { totalSignals, activeCount, staleCount, gapSignals, freshnessAge, latestTimestamp };
