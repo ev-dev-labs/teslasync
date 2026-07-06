@@ -6306,6 +6306,7 @@
       "savedVsGas": "Saved {{amount}} vs gas",
       "saving": "Saving",
       "noData": "No cost data",
+      "chartLabel": "Monthly EV charging cost breakdown",
       "title": "Cost Breakdown",
       "totalCost": "Total Cost",
       "costPerDist": "Cost / {{unit}}",
