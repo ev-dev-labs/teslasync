@@ -61,12 +61,15 @@ export const CHARGE_SESSION_DISALLOWED: DisallowedTransition<ChargeSessionState>
   { from: 'pending', to: 'done',   reason: 'Must accumulate via Active first' },
 ]
 
+// The four CHARGE_SESSION_DISALLOWED pairs are marked 'disallowed' (not null) so
+// isValidTransition() surfaces the forbidden-with-reason edges instead of an
+// ambiguous "no info" null — mirroring the vehicle FSM's coverage contract.
 export const CHARGE_SESSION_COVERAGE: CoverageMatrix<ChargeSessionState> = {
-  pending:    { pending: 'self', active: 'valid',  completing: null,    done: null,    recovered: 'valid' },
-  active:     { pending: null,   active: 'self',   completing: 'valid', done: null,    recovered: 'valid' },
-  completing: { pending: null,   active: null,     completing: 'self',  done: 'valid', recovered: null },
-  done:       { pending: null,   active: null,     completing: null,    done: 'self',  recovered: null },
-  recovered:  { pending: null,   active: 'valid',  completing: 'valid', done: null,    recovered: 'self' },
+  pending:    { pending: 'self',       active: 'valid',      completing: null,    done: 'disallowed', recovered: 'valid' },
+  active:     { pending: 'disallowed', active: 'self',       completing: 'valid', done: null,         recovered: 'valid' },
+  completing: { pending: null,         active: null,         completing: 'self',  done: 'valid',      recovered: null },
+  done:       { pending: 'disallowed', active: 'disallowed', completing: null,    done: 'self',       recovered: null },
+  recovered:  { pending: null,         active: 'valid',      completing: 'valid', done: null,         recovered: 'self' },
 }
 
 export const CHARGE_SESSION_SCENARIOS: Scenario<ChargeSessionState>[] = [
