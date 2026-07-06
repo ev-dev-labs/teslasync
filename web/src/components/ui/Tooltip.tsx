@@ -152,13 +152,23 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
   // assistive tech reads the tooltip after the trigger name. This works when
   // children is a single React element (the common case — wrapping one
   // <button>/<IconBox>/etc.). For text-only or multiple children we fall back
-  // to the wrapper span, which still satisfies role="tooltip" semantics.
-  const child = Children.count(children) === 1 ? Children.only(children) : null;
+  // to rendering `children` verbatim; the bubble still carries role="tooltip".
+  //
+  // `Children.only` is deliberately avoided here: it THROWS on a lone
+  // non-element child ("React.Children.only expected to receive a single React
+  // element child"), so `<Tooltip>Save</Tooltip>` (a bare string trigger) or a
+  // single-item array crashed the whole subtree — a plain `Children.count() ===
+  // 1` guard is not enough to prove the child is a clonable element.
+  // `Children.toArray` normalises away null/boolean children and lets us prove
+  // both "exactly one renderable node" AND "that node is a valid element"
+  // before cloning.
+  const childArray = Children.toArray(children);
+  const soleChild = childArray.length === 1 ? childArray[0] : null;
   const enrichedChild =
-    child && isValidElement(child)
-      ? (cloneElement(child as ReactElement<{ 'aria-describedby'?: string }>, {
+    soleChild && isValidElement(soleChild)
+      ? (cloneElement(soleChild as ReactElement<{ 'aria-describedby'?: string }>, {
           'aria-describedby': [
-            (child.props as { 'aria-describedby'?: string })['aria-describedby'],
+            (soleChild.props as { 'aria-describedby'?: string })['aria-describedby'],
             tooltipId,
           ]
             .filter(Boolean)
