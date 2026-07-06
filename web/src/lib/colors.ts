@@ -19,6 +19,7 @@
  *     pref-derived — "good = green" must stay green even in tesla-red.
  */
 
+import { useMemo } from 'react'
 import { useTheme, type ColorTheme, type ModeTheme } from '@/components/ui/ThemeProvider'
 
 /**
@@ -177,8 +178,8 @@ export function degradationColor(percent: number): string {
 }
 
 /** Color for vehicle activity level (polling engine) */
-export function activityColor(activity: string): string {
-  switch (activity) {
+export function activityColor(activity: string | undefined | null): string {
+  switch (activity ?? '') {
     case 'active': case 'critical': return COLOR.GOOD
     case 'moderate': return '#3b82f6'
     case 'low': return COLOR.WARN
@@ -188,9 +189,13 @@ export function activityColor(activity: string): string {
   }
 }
 
-/** Color for system status string */
-export function statusHexColor(status: string): string {
-  switch (status.toLowerCase()) {
+/**
+ * Color for system status string. Accepts null/undefined defensively — status
+ * values arrive from API payloads where a field may be absent, and calling
+ * `.toLowerCase()` on a missing value would throw. Mirrors `stateHexColor`.
+ */
+export function statusHexColor(status: string | undefined | null): string {
+  switch ((status ?? '').toLowerCase()) {
     case 'ok': case 'healthy': case 'connected': case 'active': return COLOR.GOOD
     case 'warning': case 'degraded': case 'slow': return COLOR.WARN
     case 'error': case 'critical': case 'down': case 'failed': return COLOR.BAD
@@ -328,5 +333,9 @@ export function buildChartPalette(theme: ColorTheme, mode: ModeTheme): ChartPale
  */
 export function useThemeChartPalette(): ChartPalette {
   const { theme, mode } = useTheme()
-  return buildChartPalette(theme, mode)
+  // Memoise so consumers (chart widgets) receive a referentially stable
+  // palette object across re-renders; buildChartPalette allocates a fresh
+  // `series` array on every call, which would otherwise defeat downstream
+  // `useMemo`/`React.memo` guards on the charts that consume it.
+  return useMemo(() => buildChartPalette(theme, mode), [theme, mode])
 }
