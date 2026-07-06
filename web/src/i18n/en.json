@@ -6272,7 +6272,8 @@
       "efficiency": "Efficiency",
       "notCharging": "Not currently charging",
       "title": "Charging Telemetry",
-      "charger": "Charger"
+      "charger": "Charger",
+      "error": "Unable to load charging telemetry"
     },
     "climatePanel": {
       "seatFL": "FL",
