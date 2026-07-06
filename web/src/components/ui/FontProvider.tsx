@@ -10,6 +10,7 @@ import {
 import { getApiBase } from '@/lib/resilience'
 import { request } from '@/api/client'
 import { broadcast, subscribe } from '@/lib/broadcast'
+import { TOPICS } from '@/lib/broadcastTopics'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FontProvider — user-selectable typography, mirroring ThemeProvider.
@@ -347,7 +348,7 @@ export function FontProvider({ children }: { children: ReactNode }) {
       prefsRef.current = next
       persistLocal(next)
       saveToBackend(next)
-      broadcast({ type: 'font.changed' })
+      broadcast({ type: TOPICS.FONT_CHANGED })
       setPrefs(next)
     },
     [saveToBackend],
@@ -369,7 +370,7 @@ export function FontProvider({ children }: { children: ReactNode }) {
   // or re-persist to the backend, which would loop and duplicate writes.
   useEffect(() => {
     return subscribe((m) => {
-      if (m.type === 'font.changed') {
+      if (m.type === TOPICS.FONT_CHANGED) {
         const fresh = readStoredFontPrefs()
         prefsRef.current = fresh
         setPrefs(fresh)
