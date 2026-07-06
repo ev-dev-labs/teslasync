@@ -9,7 +9,7 @@ import { useExportJobs } from '@/api/hooks/useAdmin';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
-import type { ExportJob as ExportJobExport } from '@/types/export';
+import { exportJobStatus, type ExportJob as ExportJobExport } from '@/types/export';
 import type { ExportJob as ExportJobAdmin } from '@/types/admin';
 
 // ── Normalised job shape used within this widget ─────────────────────
@@ -45,14 +45,6 @@ function fromAdminHook(j: ExportJobAdmin): NormalisedJob {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 type JobStatus = 'queued' | 'processing' | 'ready' | 'failed';
-
-function normaliseStatusFromExport(fsmState: string | undefined): JobStatus {
-  const s = (fsmState ?? '').toLowerCase();
-  if (s === 'processing' || s === 'running') return 'processing';
-  if (s === 'ready' || s === 'done' || s === 'completed') return 'ready';
-  if (s === 'failed' || s === 'error') return 'failed';
-  return 'queued';
-}
 
 function normaliseStatusFromAdmin(status: string | undefined): JobStatus {
   const s = (status ?? '').toLowerCase();
@@ -254,7 +246,7 @@ export default function ExportStatusWidget({ size }: WidgetProps) {
     const byId = new Map<string, { job: NormalisedJob; status: JobStatus }>();
 
     for (const j of (exports ?? [])) {
-      byId.set(j.id, { job: fromExportHook(j), status: normaliseStatusFromExport(j.fsmState) });
+      byId.set(j.id, { job: fromExportHook(j), status: exportJobStatus(j) });
     }
     for (const j of (adminJobs ?? [])) {
       byId.set(j.id, { job: fromAdminHook(j), status: normaliseStatusFromAdmin(j.status) });
