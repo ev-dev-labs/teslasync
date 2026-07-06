@@ -6187,7 +6187,13 @@
       "avg": "Avg",
       "sessions": "Sessions",
       "empty": "No charge sessions yet",
-      "title": "Charge Sessions"
+      "title": "Charge Sessions",
+      "chartLabel": "Bar chart of energy added per charge session",
+      "type": {
+        "home": "Home / AC",
+        "supercharger": "Supercharger",
+        "dc": "DC Fast"
+      }
     },
     "chargeStatusLive": "Charge Status",
     "noChargeData": "No charge data",
