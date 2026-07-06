@@ -13,17 +13,24 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
+/**
+ * Resolve a human-readable trip label. A trip can arrive with a `null`,
+ * empty, or whitespace-only `name`; all of those collapse to the shared
+ * "unnamed" fallback so a row never renders a blank line.
+ */
+function tripName(name: string | null | undefined, fallback: string): string {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
 export default function TripSummaryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-
   const distanceUnit = unitPrefs.distance;
   const { formatDateShort: formatDate } = useDateFormat();
 
-  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useTrips({
-    limit: 5,
-  });
+  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } =
+    useTrips({ limit: 5 });
 
   const trips = useMemo(() => data ?? [], [data]);
   const lastTrip = trips[0] ?? null;
@@ -31,13 +38,15 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const displayDist = (meters: number) => toDistanceDisplay(meters ?? 0);
+  const displayDist = (meters: number | null | undefined) =>
+    convertDistanceFromSI(meters ?? 0, distanceUnit);
 
   return (
     <WidgetShell
       title={t('widget.tripSummary', 'Trip Summary')}
       icon={<Navigation className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -65,14 +74,14 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
 
               {/* Start → End */}
               <p className="text-xs text-[var(--text-secondary)] truncate mb-2">
-                {lastTrip.name ?? t('widget.tripUnnamed', 'Unnamed trip')}
+                {tripName(lastTrip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
               </p>
 
               {/* Stats grid */}
               <div className={isCompact ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-4 gap-2'}>
                 <StatCard
                   label={t('widget.distance', 'Distance')}
-                  value={`${fmtNumber(displayDist(lastTrip.total_distance_m ?? 0), 1)} ${distanceUnit}`}
+                  value={`${fmtNumber(displayDist(lastTrip.total_distance_m), 1)} ${distanceUnit}`}
                   icon={<MapPin className="h-3 w-3" />}
                 />
                 <StatCard
@@ -107,7 +116,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-[var(--text-secondary)] truncate">
-                      {trip.name ?? t('widget.tripUnnamed', 'Unnamed trip')}
+                      {tripName(trip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
                     </p>
                     <p className="text-2xs text-[var(--text-muted)]">
                       {formatDate(trip.start_date)}
@@ -116,7 +125,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                   {!isCompact && (
                     <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                       <span className="text-xs text-[var(--text-secondary)] tabular-nums">
-                        {fmtNumber(displayDist(trip.total_distance_m ?? 0), 1)} {distanceUnit}
+                        {fmtNumber(displayDist(trip.total_distance_m), 1)} {distanceUnit}
                       </span>
                       <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                         {formatDurationRange(trip.start_date, trip.end_date)}
@@ -128,7 +137,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                   )}
                   {isCompact && (
                     <span className="text-xs text-[var(--text-secondary)] tabular-nums flex-shrink-0 ml-2">
-                      {fmtNumber(displayDist(trip.total_distance_m ?? 0), 1)} {distanceUnit}
+                      {fmtNumber(displayDist(trip.total_distance_m), 1)} {distanceUnit}
                     </span>
                   )}
                 </div>
