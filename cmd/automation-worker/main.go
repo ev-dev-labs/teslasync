@@ -27,6 +27,7 @@ import (
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -293,15 +294,7 @@ func main() {
 	// ── Health Endpoint ───────────────────────────────────────────────
 	port := healthPort()
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Health(r.Context()); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintf(w, `{"status":"unhealthy","error":"%s"}`, err.Error())
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"status":"ok"}`)
-	})
+	healthMux.HandleFunc("/healthz", healthHandler(db))
 	go func() {
 		log.Info().Str("port", port).Msg("health endpoint listening")
 		if err := http.ListenAndServe(":"+port, healthMux); err != nil && err != http.ErrServerClosed {
@@ -354,6 +347,37 @@ func healthPort() string {
 	return port
 }
 
+// healthChecker is the minimal database surface the health endpoint needs.
+// Narrowing to this port keeps the handler unit-testable with a fake.
+type healthChecker interface {
+	Health(ctx context.Context) error
+}
+
+// healthHandler returns the /healthz handler. It responds 200 with
+// {"status":"ok"} when the checker is healthy and 503 with a JSON-encoded
+// {"status":"unhealthy","error":...} otherwise. The error message is
+// marshalled rather than string-interpolated so a checker error containing
+// quotes or newlines still produces valid, non-injectable JSON, and the
+// JSON Content-Type is set on both the success and failure paths.
+func healthHandler(checker healthChecker) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := checker.Health(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			body, mErr := json.Marshal(struct {
+				Status string `json:"status"`
+				Error  string `json:"error"`
+			}{Status: "unhealthy", Error: err.Error()})
+			if mErr != nil {
+				body = []byte(`{"status":"unhealthy"}`)
+			}
+			_, _ = w.Write(body)
+			return
+		}
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}
+}
+
 func safePrefix(token string) string {
 	if len(token) <= 8 {
 		return token[:len(token)/2] + "***"
@@ -361,15 +385,22 @@ func safePrefix(token string) string {
 	return token[:8] + "***"
 }
 
-// variableRepoAdapter wraps dbauto.AutomationVariableRepo to satisfy action.VariableRepo.
+// variableStore is the persistence surface variableRepoAdapter needs.
+// *dbauto.AutomationVariableRepo satisfies it in production; tests use a fake.
+type variableStore interface {
+	Get(ctx context.Context, key string) (*automationmodel.AutomationVariable, error)
+	Set(ctx context.Context, key, value string, vehicleID *int64) error
+}
+
+// variableRepoAdapter wraps a variableStore to satisfy action.VariableRepo.
 type variableRepoAdapter struct {
-	repo *dbauto.AutomationVariableRepo
+	repo variableStore
 }
 
 func (a *variableRepoAdapter) Get(ctx context.Context, key string) (*action.VariableEntry, error) {
 	v, err := a.repo.Get(ctx, key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get automation variable %q: %w", key, err)
 	}
 	if v == nil {
 		return nil, nil
@@ -378,7 +409,10 @@ func (a *variableRepoAdapter) Get(ctx context.Context, key string) (*action.Vari
 }
 
 func (a *variableRepoAdapter) Set(ctx context.Context, key, value string, vehicleID *int64) error {
-	return a.repo.Set(ctx, key, value, vehicleID)
+	if err := a.repo.Set(ctx, key, value, vehicleID); err != nil {
+		return fmt.Errorf("set automation variable %q: %w", key, err)
+	}
+	return nil
 }
 
 func setupLogger(level string) {
