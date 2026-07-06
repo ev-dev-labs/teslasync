@@ -14,6 +14,7 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/elevation"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
@@ -24,7 +25,10 @@ import (
 )
 
 // NewHandler creates a handler for fleet telemetry ingestion.
-func NewHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder) *Handler {
+// elevationProvider may be nil (treated as elevation.NoopProvider by
+// NewTelemetrySessionTracker) — see internal/app.newElevationProvider for
+// the production construction from config.ElevationConfig.
+func NewHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder, elevationProvider elevation.Provider) *Handler {
 	var eventBus *events.Bus
 	if mc != nil {
 		eventBus = events.NewBus(mc.Underlying())
@@ -43,7 +47,7 @@ func NewHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, staleTimeou
 		mqttClient:     mc,
 		logRepo:        systemdb.NewAPICallLogRepo(db),
 		eventHub:       hub,
-		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
+		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil, elevationProvider),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client {
 			if mc != nil {
 				return mc.Underlying()

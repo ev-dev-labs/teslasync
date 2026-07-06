@@ -18,6 +18,7 @@ import (
 	telemetry "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/elevation"
 	platformdb "github.com/ev-dev-labs/teslasync/internal/platform/database"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
@@ -253,7 +254,7 @@ func buildHandler(t *testing.T, db *database.DB) *telemetry.Handler {
 	t.Helper()
 
 	pipelineWriters := map[router.Destination]router.Writer{
-		router.DestPositions:         writers.NewPositionsWriter(db.Pool),
+		router.DestPositions:         writers.NewPositionsWriter(db.Pool, elevation.NoopProvider{}),
 		router.DestClimateSnapshot:   writers.NewClimateWriter(db.Pool),
 		router.DestMotorSnapshot:     writers.NewMotorWriter(db.Pool),
 		router.DestTirePressure:      writers.NewTirePressureWriter(db.Pool),
@@ -278,7 +279,7 @@ func buildHandler(t *testing.T, db *database.DB) *telemetry.Handler {
 	logger := zerolog.Nop()
 	pipeline := normalize.New(unitRepo, pipelineRouter, logger)
 
-	h := telemetry.NewHandler(db, nil, nil, time.Minute, nil)
+	h := telemetry.NewHandler(db, nil, nil, time.Minute, nil, nil)
 	h.SetPipeline(pipeline)
 	return h
 }

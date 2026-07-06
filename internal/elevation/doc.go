@@ -35,4 +35,6 @@
 // write. NoopProvider is the zero-configuration default so operators
 // who have not deployed a self-hosted elevation service see no
 // behavior change.
+//
+// Layer: platform
 package elevation

@@ -259,7 +259,18 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	batteryLevel, hasBat := t.resolveInt(vehicleID, signals, accumulatedSignals, "BatteryLevel", "Soc")
 	odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
 	lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
-	elevation, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Elevation")
+	// Tesla Fleet Telemetry never emits an Elevation signal (see
+	// internal/elevation's package doc) — resolveFloat(..., "Elevation")
+	// would always be a dead read. elevation is instead looked up
+	// directly from the position we just resolved, so it degrades
+	// gracefully (hasElev=false) whenever hasLoc is false or the
+	// elevation service has no data, instead of ever fabricating a
+	// zero.
+	var elevation float64
+	var hasElev bool
+	if hasLoc {
+		elevation, hasElev = t.resolveElevation(ctx, lat, lon)
+	}
 	ratedRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "RatedRange")
 	idealRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "IdealBatteryRange")
 	estRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "EstBatteryRange")
@@ -352,8 +363,10 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 		sd.StartLongitude = floatPtr(lon)
 		sd.LastLongitude = floatPtr(lon)
 	}
-	sd.StartElevation = floatPtr(elevation)
-	sd.LastElevation = floatPtr(elevation)
+	if hasElev {
+		sd.StartElevation = floatPtr(elevation)
+		sd.LastElevation = floatPtr(elevation)
+	}
 	sd.StartRatedRange = floatPtr(ratedRange)
 	sd.StartIdealRange = floatPtr(idealRange)
 	sd.StartEstRange = floatPtr(estRange)
@@ -500,7 +513,7 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 	t.updateDriveTempStats(active, signals)
 
 	// Elevation
-	t.updateDriveElevation(active, signals)
+	t.updateDriveElevation(ctx, active, signals)
 
 	// Position
 	if la, lo, ok := signalLatLon(signals); ok {
@@ -609,9 +622,19 @@ func (t *TelemetrySessionTracker) updateDriveTempStats(active *streamingDrive, s
 	}
 }
 
-func (t *TelemetrySessionTracker) updateDriveElevation(active *streamingDrive, signals map[string]interface{}) {
-	elev, ok := signalFloat(signals, "Elevation")
-	if !ok || elev == 0 {
+func (t *TelemetrySessionTracker) updateDriveElevation(ctx context.Context, active *streamingDrive, signals map[string]interface{}) {
+	// Same-batch-only lat/lon (signalLatLon, not the robust
+	// resolveLatLon), matching the adjacent Position-tracking block a
+	// few lines below in updateActiveDriveLocked: only firing when a
+	// fresh pair genuinely lands together in one payload bounds how
+	// often this calls out to the elevation service during a drive,
+	// rather than on every single telemetry batch.
+	lat, lon, hasLoc := signalLatLon(signals)
+	if !hasLoc {
+		return
+	}
+	elev, ok := t.resolveElevation(ctx, lat, lon)
+	if !ok {
 		return
 	}
 	if active.LastElevation != nil {
@@ -860,6 +883,25 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if active.LastOdometer != nil {
 		enhancedFields["end_odometer_m"] = *active.LastOdometer
 	}
+	// Elevation (migration 000021_drive_charge_enhancements columns).
+	// active.StartElevation/LastElevation are populated by
+	// startDriveLocked/tryMergeDriveLocked/updateDriveElevation via
+	// resolveElevation — they stay nil (never a fabricated 0) whenever no
+	// elevation service is configured or a lookup never succeeded during
+	// the drive, in which case backfillDriveValues' nearest-position
+	// fallback is the second chance to fill elevation_start/elevation_end
+	// from positions.altitude_m. ElevationGain/ElevationLoss are plain
+	// floats (not pointers) defaulting to 0 — a drive with no observed
+	// elevation change (or no elevation data at all) correctly persists
+	// zero gain/loss rather than leaving the column NULL.
+	if active.StartElevation != nil {
+		enhancedFields["elevation_start"] = *active.StartElevation
+	}
+	if active.LastElevation != nil {
+		enhancedFields["elevation_end"] = *active.LastElevation
+	}
+	enhancedFields["elevation_gain"] = active.ElevationGain
+	enhancedFields["elevation_loss"] = active.ElevationLoss
 	if speedAvg != nil {
 		// speedAvg is m/s. Writing to avg_speed_mph would trigger
 		// translatePartialFieldsToSI to
@@ -1280,7 +1322,7 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 
 	// --- Backfill start values ---
 	startNeedsBackfill := active.StartSoc == nil || *active.StartSoc == 0 ||
-		active.StartLatitude == nil
+		active.StartLatitude == nil || active.StartElevation == nil
 
 	if startNeedsBackfill {
 		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
@@ -1291,6 +1333,15 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 			if active.StartLatitude == nil && startPos.Lat != 0 {
 				backfill["start_lat"] = startPos.Lat
 				backfill["start_lng"] = startPos.Lng
+			}
+			// active.StartElevation is nil whenever the drive's start
+			// lat/lon and elevation service lookup never lined up in the
+			// same batch (see startDriveLocked/tryMergeDriveLocked) — the
+			// nearest position row already carries a real altitude_m
+			// (from positionsWriter's own elevation lookup) for
+			// essentially the same fix, so it is a reliable fallback.
+			if active.StartElevation == nil && startPos.Elevation != nil {
+				backfill["elevation_start"] = *startPos.Elevation
 			}
 		}
 	}
@@ -1321,6 +1372,9 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 		if active.LastLatitude == nil && endPos.Lat != 0 {
 			backfill["end_lat"] = endPos.Lat
 			backfill["end_lng"] = endPos.Lng
+		}
+		if active.LastElevation == nil && endPos.Elevation != nil {
+			backfill["elevation_end"] = *endPos.Elevation
 		}
 	}
 
@@ -1482,7 +1536,14 @@ func (t *TelemetrySessionTracker) tryMergeDriveLocked(ctx context.Context, vehic
 	// Resolve current-batch values for live tracking (Last* fields used during the resumed leg).
 	odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
 	lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
-	elevation, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Elevation")
+	// See startDriveLocked's identical comment: Tesla Fleet Telemetry
+	// never emits Elevation, so it is looked up directly from the
+	// resolved position rather than read as a dead signal.
+	var elevation float64
+	var hasElev bool
+	if hasLoc {
+		elevation, hasElev = t.resolveElevation(ctx, lat, lon)
+	}
 
 	sd := &streamingDrive{
 		DriveID:            prev.ID,
@@ -1524,7 +1585,9 @@ func (t *TelemetrySessionTracker) tryMergeDriveLocked(ctx context.Context, vehic
 		sd.LastLatitude = floatPtr(lat)
 		sd.LastLongitude = floatPtr(lon)
 	}
-	sd.LastElevation = floatPtr(elevation)
+	if hasElev {
+		sd.LastElevation = floatPtr(elevation)
+	}
 
 	t.activeDrives[vehicleID] = sd
 	metrics.DriveSessionsActive.Inc()

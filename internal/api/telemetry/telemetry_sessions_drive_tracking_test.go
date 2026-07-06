@@ -446,6 +446,179 @@ func TestDriveTracking_GearAndLocationCarryForward(t *testing.T) {
 	}
 }
 
+// fakeElevationProvider is an in-file elevation.Provider test double that
+// records every Lookup call (args + how many times) and returns a
+// scripted (meters, ok, err) result. Mirrors the equivalent fake in
+// internal/tesla/router/writers/positions_writer_test.go — kept local to
+// this package rather than exported/shared because both are small,
+// package-private test doubles with no shared production caller.
+type fakeElevationProvider struct {
+	mu     sync.Mutex
+	calls  []struct{ lat, lon float64 }
+	meters float64
+	ok     bool
+	err    error
+}
+
+func (f *fakeElevationProvider) Lookup(_ context.Context, lat, lon float64) (float64, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, struct{ lat, lon float64 }{lat, lon})
+	return f.meters, f.ok, f.err
+}
+
+func (f *fakeElevationProvider) callCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.calls)
+}
+
+// TestResolveElevation_NilProviderReturnsNotOK covers the defensive
+// nil-check documented on TelemetrySessionTracker.elevationProvider:
+// tests (and any future caller) that construct &TelemetrySessionTracker{}
+// directly, bypassing NewTelemetrySessionTracker, must not panic.
+func TestResolveElevation_NilProviderReturnsNotOK(t *testing.T) {
+	tracker := &TelemetrySessionTracker{}
+	meters, ok := tracker.resolveElevation(context.Background(), 37.4, -122.1)
+	if ok {
+		t.Errorf("resolveElevation with nil provider: ok = true, want false")
+	}
+	if meters != 0 {
+		t.Errorf("resolveElevation with nil provider: meters = %v, want 0", meters)
+	}
+}
+
+// TestResolveElevation_DelegatesToProvider verifies the success and
+// failure paths both delegate to elevationProvider.Lookup with the exact
+// (lat, lon) supplied, and that a provider error does not panic or get
+// swallowed silently (it's logged at DEBUG — see resolveElevation's doc).
+func TestResolveElevation_DelegatesToProvider(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		fake := &fakeElevationProvider{meters: 123.45, ok: true}
+		tracker := &TelemetrySessionTracker{elevationProvider: fake}
+		meters, ok := tracker.resolveElevation(context.Background(), 37.4, -122.1)
+		if !ok || meters != 123.45 {
+			t.Errorf("resolveElevation = (%v, %v), want (123.45, true)", meters, ok)
+		}
+		if fake.callCount() != 1 {
+			t.Errorf("Lookup called %d times, want 1", fake.callCount())
+		}
+	})
+	t.Run("failure", func(t *testing.T) {
+		fake := &fakeElevationProvider{ok: false, err: errors.New("elevation: circuit breaker is open")}
+		tracker := &TelemetrySessionTracker{elevationProvider: fake}
+		meters, ok := tracker.resolveElevation(context.Background(), 37.4, -122.1)
+		if ok || meters != 0 {
+			t.Errorf("resolveElevation on failure = (%v, %v), want (0, false)", meters, ok)
+		}
+	})
+}
+
+// TestUpdateDriveElevation_NoLocationInBatchSkips verifies
+// updateDriveElevation is a no-op — no provider call, no state mutation
+// — when the current batch carries no lat/lon pair. This bounds how
+// often the elevation service is consulted during a drive to "only when
+// Location genuinely lands in this payload" (see the function's doc
+// comment) rather than every telemetry batch regardless of content.
+func TestUpdateDriveElevation_NoLocationInBatchSkips(t *testing.T) {
+	fake := &fakeElevationProvider{meters: 100, ok: true}
+	tracker := &TelemetrySessionTracker{elevationProvider: fake}
+	active := &streamingDrive{}
+
+	tracker.updateDriveElevation(context.Background(), active, map[string]interface{}{"VehicleSpeed": 42.0})
+
+	if fake.callCount() != 0 {
+		t.Errorf("Lookup called %d times, want 0 (no location in batch)", fake.callCount())
+	}
+	if active.LastElevation != nil {
+		t.Errorf("LastElevation = %v, want nil", *active.LastElevation)
+	}
+}
+
+// TestUpdateDriveElevation_FirstFixSeedsLastElevationOnly verifies the
+// first successful lookup during a drive seeds LastElevation without
+// touching ElevationGain/ElevationLoss — there is nothing to diff
+// against yet.
+func TestUpdateDriveElevation_FirstFixSeedsLastElevationOnly(t *testing.T) {
+	fake := &fakeElevationProvider{meters: 500, ok: true}
+	tracker := &TelemetrySessionTracker{elevationProvider: fake}
+	active := &streamingDrive{}
+
+	tracker.updateDriveElevation(context.Background(), active, map[string]interface{}{
+		"LocationLatitude": 37.4, "LocationLongitude": -122.1,
+	})
+
+	if active.LastElevation == nil || *active.LastElevation != 500 {
+		t.Fatalf("LastElevation = %v, want 500", active.LastElevation)
+	}
+	if active.ElevationGain != 0 || active.ElevationLoss != 0 {
+		t.Errorf("gain/loss = (%v, %v), want (0, 0) on first fix", active.ElevationGain, active.ElevationLoss)
+	}
+}
+
+// TestUpdateDriveElevation_AccumulatesGainAndLoss simulates a short climb
+// followed by a descent across three fixes and asserts ElevationGain /
+// ElevationLoss accumulate independently (gain never decreases loss and
+// vice versa) while LastElevation always tracks the most recent fix.
+func TestUpdateDriveElevation_AccumulatesGainAndLoss(t *testing.T) {
+	fake := &fakeElevationProvider{ok: true}
+	tracker := &TelemetrySessionTracker{elevationProvider: fake}
+	active := &streamingDrive{}
+	loc := map[string]interface{}{"LocationLatitude": 37.4, "LocationLongitude": -122.1}
+
+	setElev := func(m float64) { fake.mu.Lock(); fake.meters = m; fake.mu.Unlock() }
+
+	setElev(100)
+	tracker.updateDriveElevation(context.Background(), active, loc) // seed: 100
+	setElev(150)
+	tracker.updateDriveElevation(context.Background(), active, loc) // +50 gain
+	setElev(120)
+	tracker.updateDriveElevation(context.Background(), active, loc) // -30 (30 loss)
+	setElev(140)
+	tracker.updateDriveElevation(context.Background(), active, loc) // +20 gain
+
+	if active.ElevationGain != 70 {
+		t.Errorf("ElevationGain = %v, want 70 (50 + 20)", active.ElevationGain)
+	}
+	if active.ElevationLoss != 30 {
+		t.Errorf("ElevationLoss = %v, want 30", active.ElevationLoss)
+	}
+	if active.LastElevation == nil || *active.LastElevation != 140 {
+		t.Fatalf("LastElevation = %v, want 140", active.LastElevation)
+	}
+}
+
+// TestUpdateDriveElevation_ProviderFailureLeavesStateUnchanged verifies
+// that when the elevation provider fails mid-drive, LastElevation /
+// ElevationGain / ElevationLoss are left exactly as they were — a
+// transient outage must not reset accumulated gain/loss to zero, nor
+// fabricate a fake elevation reading.
+func TestUpdateDriveElevation_ProviderFailureLeavesStateUnchanged(t *testing.T) {
+	fake := &fakeElevationProvider{meters: 100, ok: true}
+	tracker := &TelemetrySessionTracker{elevationProvider: fake}
+	active := &streamingDrive{}
+	loc := map[string]interface{}{"LocationLatitude": 37.4, "LocationLongitude": -122.1}
+
+	tracker.updateDriveElevation(context.Background(), active, loc)
+	if active.LastElevation == nil || *active.LastElevation != 100 {
+		t.Fatalf("setup: LastElevation = %v, want 100", active.LastElevation)
+	}
+
+	fake.mu.Lock()
+	fake.ok = false
+	fake.err = errors.New("elevation: request failed")
+	fake.mu.Unlock()
+
+	tracker.updateDriveElevation(context.Background(), active, loc)
+
+	if active.LastElevation == nil || *active.LastElevation != 100 {
+		t.Errorf("LastElevation after failed lookup = %v, want unchanged 100", active.LastElevation)
+	}
+	if active.ElevationGain != 0 || active.ElevationLoss != 0 {
+		t.Errorf("gain/loss after failed lookup = (%v, %v), want (0, 0) unchanged", active.ElevationGain, active.ElevationLoss)
+	}
+}
+
 // TestDriveTracking_PropagatesError pins the error-handling contract on
 // the new StateReader-backed enrichment path: when state.State returns a
 // transport error (e.g. pgx connection drop), the production code in

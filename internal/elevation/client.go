@@ -51,6 +51,22 @@ type Client struct {
 	baseURL    string
 }
 
+// NewProviderOrNoop is the standard way production wiring turns an
+// optional elevation-service setting into a Provider: an empty
+// serviceURL returns NoopProvider{} (elevation stays unavailable, no
+// behavior change for operators who haven't deployed one), otherwise it
+// returns a *Client. Mirrors internal/geocoding.NewGeocoder's "no API
+// key configured -> still works" pattern. Used by both
+// internal/app (the primary production wiring, which has an
+// httputil.APICallSink to pass) and internal/api.NewRouter's
+// standalone-handler fallback path (sink may be nil there).
+func NewProviderOrNoop(serviceURL string, timeout time.Duration, sink httputil.APICallSink) Provider {
+	if serviceURL == "" {
+		return NoopProvider{}
+	}
+	return NewClient(Config{ServiceURL: serviceURL, Timeout: timeout, Sink: sink})
+}
+
 // NewClient builds a Client for the elevation service at cfg.ServiceURL.
 // Panics if cfg.ServiceURL is empty — a Client with no target is a
 // wiring bug; callers that want elevation lookups disabled should wire

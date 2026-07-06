@@ -1,6 +1,11 @@
 package telemetry
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"github.com/rs/zerolog/log"
+)
 
 // eventTimeOrNow returns ts if non-zero (in UTC), else falls back to
 // wall-clock time.Now().UTC(). Drive/charge session helpers thread
@@ -14,6 +19,34 @@ func eventTimeOrNow(ts time.Time) time.Time {
 		return time.Now().UTC()
 	}
 	return ts.UTC()
+}
+
+// resolveElevation looks up terrain elevation for (lat, lon) via the
+// tracker's elevationProvider. Tesla Fleet Telemetry never emits an
+// Elevation signal on the wire — unlike every other resolve* helper in
+// this file, there is no "batch → accumulated → SignalStore" signal to
+// read, only an out-of-band lookup keyed by the already-resolved
+// position (see internal/elevation's package doc for why).
+//
+// Returns ok=false — never a fabricated 0 — when elevationProvider is
+// nil (tests that construct &TelemetrySessionTracker{} directly, or
+// production wiring with no elevation service configured), when the
+// provider itself reports no data, or on any lookup failure. A failure
+// is logged at DEBUG (not WARN): elevation is best-effort by design,
+// so a struggling elevation service is expected, bounded, non-fatal
+// noise, not an operator-actionable event on its own — the provider's
+// own circuit breaker already surfaces sustained outages via its
+// metrics/logs.
+func (t *TelemetrySessionTracker) resolveElevation(ctx context.Context, lat, lon float64) (float64, bool) {
+	if t.elevationProvider == nil {
+		return 0, false
+	}
+	meters, ok, err := t.elevationProvider.Lookup(ctx, lat, lon)
+	if err != nil {
+		log.Debug().Err(err).Float64("lat", lat).Float64("lon", lon).
+			Msg("telemetry: elevation lookup failed")
+	}
+	return meters, ok
 }
 
 // resolveFloat gets a float signal from batch → accumulated → SignalStore (last-known).

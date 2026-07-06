@@ -217,6 +217,7 @@ import (
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
+	"github.com/ev-dev-labs/teslasync/internal/elevation"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -1989,7 +1990,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
-		telemetryHandler = apitelem.NewHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
+		telemetryHandler = apitelem.NewHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey), elevation.NewProviderOrNoop(cfg.Elevation.ServiceURL, cfg.Elevation.Timeout, nil))
 	} else {
 		// Reusing handler from main ╬ô├ç├╢ wire the eventHub created by the router
 		telemetryHandler.SetEventHub(eventHub)

@@ -295,6 +295,15 @@ var DrivePartialAllowed = map[string]string{
 	// values in meters directly.
 	"start_odometer_m": "start_odometer_m",
 	"end_odometer_m":   "end_odometer_m",
+	// Elevation columns (migration 000021_drive_charge_enhancements).
+	// Tesla Fleet Telemetry never emits Elevation on the wire; these are
+	// populated from internal/elevation.Provider lookups made against the
+	// resolved drive start/end/live positions (see
+	// TelemetrySessionTracker.resolveElevation and completeDriveLocked).
+	"elevation_start": "elevation_start",
+	"elevation_end":   "elevation_end",
+	"elevation_gain":  "elevation_gain",
+	"elevation_loss":  "elevation_loss",
 }
 
 // PartialUpdate updates only the provided fields on a drive. The fields map

@@ -120,6 +120,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initOutboundSinks()
 	a.initWebPush()
 	a.initStateReader()
+	a.ElevationProvider = a.newElevationProvider()
 
 	if err := a.initTelemetryHandler(ctx); err != nil {
 		return a, err
@@ -662,6 +663,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		nil,
 		a.Cfg.FleetTelemetry.StaleTimeout,
 		geocoding.NewGeocoder(a.Cfg.GoogleMaps.APIKey, a.Cfg.AzureMaps.APIKey),
+		a.ElevationProvider,
 	)
 	a.TelemetryHandler.SetTimings(
 		a.Cfg.FleetTelemetry.SnapshotWriteInterval,
@@ -797,23 +799,17 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 	return nil
 }
 
-// newElevationProvider builds the elevation.Provider passed to
-// writers.NewPositionsWriter. Config.Elevation.ServiceURL empty means
-// "not configured" — falls back to elevation.NoopProvider so operators
+// newElevationProvider builds the shared elevation.Provider (see
+// App.ElevationProvider). Config.Elevation.ServiceURL empty means "not
+// configured" — falls back to elevation.NoopProvider so operators
 // who have not deployed a self-hosted elevation service (e.g.
 // akhenakh/gedtm30api; see docker-compose.yml's `elevation` service)
-// see altitude_m stay NULL exactly as before this feature existed.
-// Threads the shared outbound api_call_logs sink through like every
-// other httputil-based adapter (see initOutboundSinks).
+// see altitude_m / drive elevation stats stay exactly as before this
+// feature existed. Threads the shared outbound api_call_logs sink
+// through like every other httputil-based adapter (see
+// initOutboundSinks).
 func (a *App) newElevationProvider() elevation.Provider {
-	if a.Cfg.Elevation.ServiceURL == "" {
-		return elevation.NoopProvider{}
-	}
-	return elevation.NewClient(elevation.Config{
-		ServiceURL: a.Cfg.Elevation.ServiceURL,
-		Timeout:    a.Cfg.Elevation.Timeout,
-		Sink:       a.OutboundAPILogSink,
-	})
+	return elevation.NewProviderOrNoop(a.Cfg.Elevation.ServiceURL, a.Cfg.Elevation.Timeout, a.OutboundAPILogSink)
 }
 
 // initPipelineSubscriber wires the telemetry ingest stack:
@@ -825,7 +821,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 	pipelineLogger := log.With().Str("component", "tesla_pipeline").Logger()
 
 	pipelineWriters := map[router.Destination]router.Writer{
-		router.DestPositions:         writers.NewPositionsWriter(a.DB.Pool, a.newElevationProvider()),
+		router.DestPositions:         writers.NewPositionsWriter(a.DB.Pool, a.ElevationProvider),
 		router.DestClimateSnapshot:   writers.NewClimateWriter(a.DB.Pool),
 		router.DestMotorSnapshot:     writers.NewMotorWriter(a.DB.Pool),
 		router.DestTirePressure:      writers.NewTirePressureWriter(a.DB.Pool),

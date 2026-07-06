@@ -23,6 +23,7 @@ import (
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
+	"github.com/ev-dev-labs/teslasync/internal/elevation"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -83,6 +84,18 @@ type App struct {
 	APILogRepo         *systemdb.APICallLogRepo
 	InboundAPILogger   api.APICallLogger
 	OutboundAPILogSink httputil.APICallSink
+
+	// ElevationProvider resolves terrain elevation for a (lat, lon) fix.
+	// Constructed once (see newElevationProvider) and shared between
+	// writers.NewPositionsWriter and apitelem.NewHandler's
+	// TelemetrySessionTracker so both consult the same underlying
+	// *elevation.Client (one HTTP client, one circuit breaker) rather
+	// than each opening an independent connection to the elevation
+	// service. Set unconditionally (even when cfg.FleetTelemetry is
+	// disabled) because it is cheap to construct (no network I/O until
+	// the first Lookup) and NewRouter's standalone-handler fallback path
+	// also wants a Provider.
+	ElevationProvider elevation.Provider
 
 	// Telemetry pipeline (set only when cfg.FleetTelemetry.Enabled)
 	TelemetryHandler    *apitelem.Handler
