@@ -95,7 +95,18 @@ export function useAchievementCelebrationPrefs(): AchievementCelebrationPrefs {
  * current value.
  */
 export function setAchievementCelebrationPrefs(patch: Partial<AchievementCelebrationPrefs>): void {
-  const next: AchievementCelebrationPrefs = { ...cachedPrefs, ...patch }
+  // Merge only keys whose value is an actual boolean. `Partial<…>` also admits
+  // `undefined` for every key, so a caller forwarding a `boolean | undefined`
+  // value (e.g. `{ showToasts: maybeUndefined }`) would otherwise write
+  // `undefined` into the in-memory snapshot while `JSON.stringify` silently
+  // drops that key from the persisted copy — leaving the live store and
+  // localStorage disagreeing until the next reload coerces the missing key
+  // back to its default.
+  const next: AchievementCelebrationPrefs = { ...cachedPrefs }
+  if (typeof patch.showToasts === 'boolean') next.showToasts = patch.showToasts
+  if (typeof patch.playSound === 'boolean') next.playSound = patch.playSound
+  if (typeof patch.showOnDashboard === 'boolean') next.showOnDashboard = patch.showOnDashboard
+  if (typeof patch.pushOnUnlock === 'boolean') next.pushOnUnlock = patch.pushOnUnlock
   const serialized = JSON.stringify(next)
   if (serialized === cachedSerialized) return
   try {
