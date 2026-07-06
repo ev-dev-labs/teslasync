@@ -56,13 +56,20 @@ export function useWebPush() {
   useEffect(() => {
     if (!isPushAPISupported) return
     let cancelled = false
-    void navigator.serviceWorker.getRegistration().then(async (reg) => {
-      if (!reg || cancelled) return
-      const sub = await reg.pushManager.getSubscription()
-      if (cancelled) return
-      setIsSubscribed(!!sub)
-      setCurrentEndpoint(sub?.endpoint ?? null)
-    })
+    void navigator.serviceWorker
+      .getRegistration()
+      .then(async (reg) => {
+        if (!reg || cancelled) return
+        const sub = await reg.pushManager.getSubscription()
+        if (cancelled) return
+        setIsSubscribed(!!sub)
+        setCurrentEndpoint(sub?.endpoint ?? null)
+      })
+      .catch(() => {
+        // A failed registration/subscription lookup just means "unknown /
+        // not subscribed on this device" — never surface it as an
+        // unhandled promise rejection.
+      })
     return () => {
       cancelled = true
     }
@@ -128,16 +135,28 @@ export function useWebPush() {
       if (perm !== 'granted') return false
     }
 
-    const reg = await navigator.serviceWorker.getRegistration()
-    if (!reg) return false
+    let sub: PushSubscription | null = null
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      if (!reg) return false
 
-    let sub = await reg.pushManager.getSubscription()
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      })
+      sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        })
+      }
+    } catch {
+      // The browser refused or could not complete the subscription
+      // (push service unavailable, AbortError, permission race, …).
+      // Honour this function's documented "returns true on success,
+      // false otherwise" contract so callers can render a retry
+      // affordance instead of crashing on an unhandled rejection.
+      return false
     }
+
+    if (!sub) return false
 
     const json = sub.toJSON() as {
       endpoint?: string
@@ -169,9 +188,19 @@ export function useWebPush() {
    */
   const unsubscribe = useCallback(async (): Promise<boolean> => {
     if (!isPushAPISupported) return false
-    const reg = await navigator.serviceWorker.getRegistration()
-    if (!reg) return false
-    const sub = await reg.pushManager.getSubscription()
+
+    let sub: PushSubscription | null = null
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      if (!reg) return false
+      sub = await reg.pushManager.getSubscription()
+    } catch {
+      // Could not read the browser's registration/subscription state.
+      // Report failure rather than throwing (mirrors subscribe()'s
+      // "never throws" contract).
+      return false
+    }
+
     if (!sub) {
       setIsSubscribed(false)
       setCurrentEndpoint(null)
@@ -184,7 +213,13 @@ export function useWebPush() {
       // so the user gets the immediate effect they asked for. The
       // mutation already toasted.
     }
-    await sub.unsubscribe()
+    try {
+      await sub.unsubscribe()
+    } catch {
+      // Browser-side unsubscribe failed (rare). Still clear local state
+      // so the UI reflects the user's intent; the next mount re-syncs
+      // against pushManager truth.
+    }
     setIsSubscribed(false)
     setCurrentEndpoint(null)
     return true
