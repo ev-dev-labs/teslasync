@@ -2,6 +2,7 @@ package tesla
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/enums"
@@ -39,7 +40,7 @@ func mapVehicleState(data json.RawMessage) (external.VehicleState, error) {
 	}
 
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return external.VehicleState{}, err
+		return external.VehicleState{}, fmt.Errorf("unmarshaling vehicle state: %w", err)
 	}
 
 	speed := 0.0

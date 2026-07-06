@@ -1,9 +1,11 @@
 package tesla
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -12,6 +14,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
+
+// defaultTimeout is applied when the configured Tesla API timeout is unset or
+// non-positive. Passing a zero/negative duration to context.WithTimeout yields
+// an already-expired context that would fail every request immediately.
+const defaultTimeout = 30 * time.Second
 
 // Client implements external.TeslaClient with rate limiting and circuit breaker.
 type Client struct {
@@ -29,12 +36,17 @@ func NewClient(cfg config.TeslaConfig) *Client {
 		Config: httputil.DefaultRetryConfig(),
 	}
 
+	timeout := cfg.Timeout
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
+
 	return &Client{
 		httpClient: &http.Client{Transport: otelhttp.NewTransport(transport)},
 		baseURL:    cfg.BaseURL,
 		authURL:    cfg.AuthURL,
 		cb:         httputil.NewCircuitBreaker("tesla_api", httputil.DefaultCircuitBreakerConfig()),
-		timeout:    cfg.Timeout,
+		timeout:    timeout,
 	}
 }
 
@@ -95,7 +107,14 @@ func (c *Client) GetVehicleData(ctx context.Context, vin string) (map[string]int
 		}
 		defer resp.Body.Close()
 
-		return json.NewDecoder(resp.Body).Decode(&data)
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("tesla API returned status %d", resp.StatusCode)
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			return fmt.Errorf("decoding response: %w", err)
+		}
+		return nil
 	})
 
 	if err != nil {
@@ -132,15 +151,33 @@ func (c *Client) SendCommand(ctx context.Context, vin string, command string, pa
 
 	return c.cb.Execute(func() error {
 		url := fmt.Sprintf("%s/api/1/vehicles/%s/command/%s", c.baseURL, vin, command)
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+
+		var body io.Reader
+		if len(params) > 0 {
+			payload, err := json.Marshal(params)
+			if err != nil {
+				return fmt.Errorf("marshaling command params: %w", err)
+			}
+			body = bytes.NewReader(payload)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 		if err != nil {
 			return fmt.Errorf("creating command request: %w", err)
 		}
+		if body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("executing command: %w", err)
 		}
-		resp.Body.Close()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("command %s returned status %d", command, resp.StatusCode)
+		}
 		return nil
 	})
 }
