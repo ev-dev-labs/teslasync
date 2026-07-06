@@ -14,7 +14,7 @@ const REFRESH_INTERVAL = 5_000;
 
 export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vehicle = vehicleId
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
     : vehicles?.[0];
@@ -24,7 +24,9 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
   const { data: vehicleStateData, isLoading: stateLoading, isFetching: stateFetching, isStale: stateStale, isError: stateError, dataUpdatedAt: stateUpdatedAt, refetch: refetchState } = useVehicleState(id, { refetchInterval: REFRESH_INTERVAL });
   const { data: chargingData } = useChargingTelemetryLatest(id, REFRESH_INTERVAL);
 
-  const isLoading = secLoading || stateLoading;
+  // Include the vehicle-list load so the shell shows a skeleton during the
+  // initial fetch instead of flashing the "No vehicle data" empty state.
+  const isLoading = vehiclesLoading || secLoading || stateLoading;
   const vehicleState = vehicleStateData?.state ?? null;
 
   const twinState = useMemo(
@@ -68,7 +70,13 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
           {/* Status badges — shown unless very cramped */}
           {!isCompact || size.rows >= 2 ? (
             <div className="flex-shrink-0 flex flex-wrap gap-1.5 justify-center">
-              <Badge variant={twinState.locked === false ? 'danger' : 'success'}>
+              <Badge
+                variant={
+                  // Unknown lock state stays neutral — a green "success" chip
+                  // here would falsely signal a secured vehicle.
+                  twinState.locked === false ? 'danger' : twinState.locked ? 'success' : 'neutral'
+                }
+              >
                 {twinState.locked === false ? (
                   <Unlock className="h-2.5 w-2.5 mr-0.5" />
                 ) : (
