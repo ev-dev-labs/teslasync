@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -53,10 +54,18 @@ func Get[T any](ctx context.Context, c *Client, key string) (T, bool) {
 	var zero T
 	val, err := c.rdb.Get(ctx, c.prefix+key).Bytes()
 	if err != nil {
+		// redis.Nil is an ordinary cache miss; anything else (connection
+		// failure, timeout) is a degraded read worth surfacing for diagnostics.
+		// Either way the cache-aside contract returns (zero, false) so callers
+		// fall through to the source of truth.
+		if !errors.Is(err, redis.Nil) {
+			log.Debug().Err(err).Str("key", key).Msg("cache get failed")
+		}
 		return zero, false
 	}
 	var result T
 	if err := json.Unmarshal(val, &result); err != nil {
+		log.Debug().Err(err).Str("key", key).Msg("cache value unmarshal failed")
 		return zero, false
 	}
 	return result, true
@@ -71,12 +80,18 @@ func Set[T any](ctx context.Context, c *Client, key string, val T, ttl time.Dura
 	if err != nil {
 		return fmt.Errorf("marshaling cache value for key %s: %w", key, err)
 	}
-	return c.rdb.Set(ctx, c.prefix+key, data, ttl).Err()
+	if err := c.rdb.Set(ctx, c.prefix+key, data, ttl).Err(); err != nil {
+		return fmt.Errorf("setting cache key %s: %w", key, err)
+	}
+	return nil
 }
 
 // Delete removes a key from the cache.
 func Delete(ctx context.Context, c *Client, key string) error {
-	return c.rdb.Del(ctx, c.prefix+key).Err()
+	if err := c.rdb.Del(ctx, c.prefix+key).Err(); err != nil {
+		return fmt.Errorf("deleting cache key %s: %w", key, err)
+	}
+	return nil
 }
 
 // Invalidate removes all keys matching a prefix pattern.
@@ -87,14 +102,20 @@ func (c *Client) Invalidate(ctx context.Context, pattern string) error {
 			return fmt.Errorf("deleting key %s: %w", iter.Val(), err)
 		}
 	}
-	return iter.Err()
+	if err := iter.Err(); err != nil {
+		return fmt.Errorf("scanning cache keys for pattern %s: %w", pattern, err)
+	}
+	return nil
 }
 
 // Health checks Redis connectivity.
 func (c *Client) Health(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	return c.rdb.Ping(checkCtx).Err()
+	if err := c.rdb.Ping(checkCtx).Err(); err != nil {
+		return fmt.Errorf("redis health check: %w", err)
+	}
+	return nil
 }
 
 // Close shuts down the Redis client.
