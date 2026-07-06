@@ -14,13 +14,22 @@ import type { WidgetProps } from './types';
 
 export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading, isError: vehiclesError } = useVehicles();
   const vehicle = vehicleId
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
     : vehicles?.[0];
 
   const id = vehicle?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
+  const {
+    data: stateData,
+    isLoading,
+    error,
+    isFetching,
+    isStale,
+    isError,
+    dataUpdatedAt,
+    refetch,
+  } = useVehicleState(id);
   const state = stateData?.state;
   /* SI-floor: state.ideal_range in METERS, state.{inside,outside}_temp in °C. */
   const { unitPrefs } = useUnits();
@@ -53,11 +62,29 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
     [state, tempUnit],
   );
 
+  // Loading spans two async sources. Before any vehicle is known the state
+  // query runs with id 0 (disabled) and therefore reports `isLoading: false`,
+  // which used to flash the "No vehicle data" empty state on first paint while
+  // the fleet list was still in flight. Guard on the fleet load until a vehicle
+  // resolves so the shell shows its skeleton instead.
+  const loading = isLoading || (vehiclesLoading && !vehicle);
+
+  // Surface failures as a real error panel (with the shell's built-in chrome)
+  // rather than a misleading empty/stale tile: a fleet-load failure with no
+  // vehicle to fall back on, or — mirroring the sibling range/motor tiles — a
+  // state-query failure for the resolved vehicle.
+  const errorMessage = error
+    ? String(error)
+    : vehiclesError && !vehicle
+      ? t('widget.loadError', 'Failed to load vehicle')
+      : null;
+
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.vehicleHeroCard', 'Vehicle')}
       icon={isCompact ? undefined : <Car className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={isLoading}
+      loading={loading}
+      error={errorMessage}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -205,7 +232,7 @@ function FullView({
       {/* Charging banner — shown when actively charging */}
       {isCharging && (
         <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-neon-green/5 border border-neon-green/10">
-          <span className="text-emerald-300 animate-pulse text-xs">⚡</span>
+          <span aria-hidden="true" className="text-emerald-300 animate-pulse text-xs">⚡</span>
           <span className="text-xs font-medium text-emerald-300">
             {t('widget.charging', 'Charging')}
           </span>
