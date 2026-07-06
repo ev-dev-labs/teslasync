@@ -1,5 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import type { DrivePosition } from '@/types/driving';
+
+/** Shared empty array so `positions ?? EMPTY` keeps a stable identity when a
+ *  caller passes `undefined` — otherwise a fresh `[]` each render would make
+ *  the timeline memo and the reset effect churn on every commit. */
+const EMPTY: readonly DrivePosition[] = [];
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -43,8 +48,8 @@ export interface ReplayControls {
 /** Parse position timestamps into ms-since-drive-start offsets. Positions
  *  whose timestamps don't parse are skipped so a single bad row can't
  *  poison `totalTime` (NaN propagates and produces "NaN:NaN" in the UI). */
-function buildTimeline(positions: DrivePosition[]): number[] {
-  if (positions.length === 0) return [];
+export function buildTimeline(positions: readonly DrivePosition[]): number[] {
+  if (!positions || positions.length === 0) return [];
   let t0 = NaN;
   for (const p of positions) {
     const t = new Date(p.timestamp).getTime();
@@ -61,7 +66,7 @@ function buildTimeline(positions: DrivePosition[]): number[] {
 }
 
 /** Binary-search for the index whose offset is closest to `target`. */
-function indexAtTime(offsets: number[], target: number): number {
+export function indexAtTime(offsets: number[], target: number): number {
   if (offsets.length === 0) return 0;
   let lo = 0;
   let hi = offsets.length - 1;
@@ -96,57 +101,91 @@ export function useTripReplay(
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeedState] = useState<ReplaySpeed>(1);
   const [currentIndex, setCurrentIndex] = useState(0);
+  // `elapsedTime` is reactive state (not just a ref) so `progress` and the
+  // returned `elapsedTime` re-render on EVERY playhead change — including a
+  // seek that lands on the same frame index. Reading it from a ref made the
+  // scrubber freeze (and the consumer's URL-sync effect miss updates) whenever
+  // `currentIndex` didn't change.
+  const [elapsedTime, setElapsedTime] = useState(0);
 
-  // Precompute timeline offsets once when positions change
-  const offsetsRef = useRef<number[]>([]);
-  const totalTimeRef = useRef(0);
-
-  useEffect(() => {
-    const offsets = buildTimeline(positions);
-    offsetsRef.current = offsets;
-    totalTimeRef.current = offsets.length > 0 ? offsets[offsets.length - 1] : 0;
+  // Timeline is derived synchronously during render so `totalTime`/`offsets`
+  // are correct on the very first render. A ref populated inside useEffect
+  // lagged by one commit and surfaced as a "0:00 / 0:00" scrubber until some
+  // unrelated state change forced a re-render.
+  const { offsets, totalTime } = useMemo(() => {
+    const offs = buildTimeline(positions ?? EMPTY);
+    return { offsets: offs, totalTime: offs.length > 0 ? offs[offs.length - 1] : 0 };
   }, [positions]);
 
-  // Mutable refs for the animation loop (avoids stale closures)
+  // A stable signature of the timeline's *content* (length + endpoints). The
+  // reset effect keys off this rather than the array's referential identity so
+  // a caller that rebuilds an equal `positions` array every render doesn't nuke
+  // the playhead — only a genuinely different drive triggers a rewind.
+  const timelineKey = useMemo(() => {
+    const src = positions ?? EMPTY;
+    if (src.length === 0) return '';
+    return `${src.length}:${src[0].timestamp}:${src[src.length - 1].timestamp}`;
+  }, [positions]);
+
+  // Latest-value mirrors so the stable ([]-dep) control callbacks and the
+  // interval loop never close over stale timeline data.
+  const offsetsRef = useRef(offsets);
+  offsetsRef.current = offsets;
+  const totalRef = useRef(totalTime);
+  totalRef.current = totalTime;
+
+  // Mutable refs for the animation loop (avoids stale closures).
   const elapsedRef = useRef(0);
+  const currentIndexRef = useRef(0);
   const speedRef = useRef<ReplaySpeed>(1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Keep speedRef in sync
+  // Keep speedRef in sync so the interval tick uses the live multiplier.
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
 
+  // Commit a playhead position to BOTH the reactive state (drives a re-render
+  // → fresh progress/elapsed for consumers and their effects) and the refs
+  // (read by the animation loop without waiting for the commit).
+  const commit = useCallback((index: number, ms: number) => {
+    currentIndexRef.current = index;
+    elapsedRef.current = ms;
+    setCurrentIndex(index);
+    setElapsedTime(ms);
+  }, []);
+
+  // A new trip rewinds the playhead. Without this, a stale index/elapsed from a
+  // previous (possibly longer) drive would point past the new array — a blank
+  // marker plus a scrubber pinned at the old end. Keyed on the content
+  // signature so incidental array-identity churn doesn't reset mid-playback.
+  useEffect(() => {
+    setIsPlaying(false);
+    commit(0, 0);
+  }, [timelineKey, commit]);
+
   const tick = useCallback(() => {
-    const offsets = offsetsRef.current;
-    const total = totalTimeRef.current;
-    if (offsets.length === 0 || total === 0) return;
+    const offs = offsetsRef.current;
+    const total = totalRef.current;
+    if (offs.length === 0 || total === 0) return;
 
-    elapsedRef.current += TICK_MS * speedRef.current;
+    const next = elapsedRef.current + TICK_MS * speedRef.current;
 
-    if (elapsedRef.current >= total) {
-      // Reached end — stop
-      elapsedRef.current = total;
-      setCurrentIndex(offsets.length - 1);
+    if (next >= total) {
+      // Reached end — pin to the last frame and stop (the isPlaying effect
+      // tears the interval down on the next commit).
+      commit(offs.length - 1, total);
       setIsPlaying(false);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
       return;
     }
 
-    setCurrentIndex(indexAtTime(offsets, elapsedRef.current));
-  }, []);
+    commit(indexAtTime(offs, next), next);
+  }, [commit]);
 
-  // Start / stop the interval when isPlaying changes
+  // Start / stop the interval when isPlaying changes.
   useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(tick, TICK_MS);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    if (!isPlaying) return undefined;
+    intervalRef.current = setInterval(tick, TICK_MS);
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -158,22 +197,20 @@ export function useTripReplay(
   /* ---- Controls ---- */
 
   const play = useCallback(() => {
-    const total = totalTimeRef.current;
-    // If at end, restart
+    const total = totalRef.current;
+    // If parked at the end, rewind before playing.
     if (total > 0 && elapsedRef.current >= total) {
-      elapsedRef.current = 0;
-      setCurrentIndex(0);
+      commit(0, 0);
     }
     setIsPlaying(true);
-  }, []);
+  }, [commit]);
 
   const pause = useCallback(() => setIsPlaying(false), []);
 
   const stop = useCallback(() => {
     setIsPlaying(false);
-    elapsedRef.current = 0;
-    setCurrentIndex(0);
-  }, []);
+    commit(0, 0);
+  }, [commit]);
 
   const setSpeed = useCallback((s: ReplaySpeed) => {
     setSpeedState(s);
@@ -189,44 +226,41 @@ export function useTripReplay(
   }, []);
 
   const seekTo = useCallback((index: number) => {
-    const offsets = offsetsRef.current;
-    const clamped = Math.max(0, Math.min(index, offsets.length - 1));
-    elapsedRef.current = offsets[clamped] ?? 0;
-    setCurrentIndex(clamped);
-  }, []);
+    const offs = offsetsRef.current;
+    if (offs.length === 0) {
+      commit(0, 0);
+      return;
+    }
+    const clamped = Math.max(0, Math.min(index, offs.length - 1));
+    commit(clamped, offs[clamped] ?? 0);
+  }, [commit]);
 
   const seekToProgress = useCallback((progress: number) => {
-    const total = totalTimeRef.current;
-    const offsets = offsetsRef.current;
+    const total = totalRef.current;
+    const offs = offsetsRef.current;
     const targetMs = Math.max(0, Math.min(1, progress)) * total;
-    elapsedRef.current = targetMs;
-    setCurrentIndex(indexAtTime(offsets, targetMs));
-  }, []);
+    commit(indexAtTime(offs, targetMs), targetMs);
+  }, [commit]);
 
   const seekBy = useCallback((deltaSeconds: number) => {
-    const total = totalTimeRef.current;
-    const offsets = offsetsRef.current;
-    if (total <= 0 || offsets.length === 0) return;
+    const total = totalRef.current;
+    const offs = offsetsRef.current;
+    if (total <= 0 || offs.length === 0) return;
     const targetMs = Math.max(0, Math.min(total, elapsedRef.current + deltaSeconds * 1000));
-    elapsedRef.current = targetMs;
-    setCurrentIndex(indexAtTime(offsets, targetMs));
-  }, []);
+    commit(indexAtTime(offs, targetMs), targetMs);
+  }, [commit]);
 
   const stepFrame = useCallback((delta: number) => {
-    const offsets = offsetsRef.current;
-    if (offsets.length === 0) return;
-    setCurrentIndex((prev) => {
-      const next = Math.max(0, Math.min(offsets.length - 1, prev + delta));
-      elapsedRef.current = offsets[next] ?? 0;
-      return next;
-    });
-  }, []);
+    const offs = offsetsRef.current;
+    if (offs.length === 0) return;
+    const next = Math.max(0, Math.min(offs.length - 1, currentIndexRef.current + delta));
+    commit(next, offs[next] ?? 0);
+  }, [commit]);
 
   /* ---- Derived state ---- */
 
-  const totalTime = totalTimeRef.current;
-  const progress = totalTime > 0 ? elapsedRef.current / totalTime : 0;
-  const currentPosition = positions[currentIndex] ?? null;
+  const progress = totalTime > 0 ? elapsedTime / totalTime : 0;
+  const currentPosition = (positions ?? EMPTY)[currentIndex] ?? null;
 
   return [
     {
@@ -235,7 +269,7 @@ export function useTripReplay(
       currentIndex,
       progress: Math.min(progress, 1),
       currentPosition,
-      elapsedTime: elapsedRef.current,
+      elapsedTime,
       totalTime,
     },
     { play, pause, stop, setSpeed, setSpeedRelative, seekTo, seekToProgress, seekBy, stepFrame },
