@@ -4,11 +4,13 @@ import { ScrollText, Pause, Play } from 'lucide-react';
 import { Badge, Button } from '@/components/ui';
 import { useSignalObservations, useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { safeNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, WidgetBigNumber } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import type { SignalObservation } from '@/types/signals';
+import type { VehicleTelemetry } from '@/types/telemetry';
 
 // ── Source → visual mapping ──────────────────────────────────────────
 
@@ -26,11 +28,35 @@ const SOURCE_LABELS: Record<string, string> = {
   backfill: 'Cache',
 };
 
-function formatSignalValue(obs: SignalObservation): string {
-  if (obs.value_numeric != null) return String(obs.value_numeric);
-  if (obs.value_text != null) return obs.value_text;
+/**
+ * Render a single observation's value for the feed subtitle.
+ *
+ * Guards the numeric branch with `isFiniteNumber` so a `NaN` / `Infinity`
+ * value_numeric (which the `number` type still permits) can never leak
+ * "NaN" / "Infinity" into the UI — such rows fall through to the text /
+ * bool branches and ultimately the "—" placeholder.
+ */
+export function formatSignalValue(obs: SignalObservation): string {
+  if (isFiniteNumber(obs.value_numeric)) return String(obs.value_numeric);
+  if (obs.value_text != null && obs.value_text !== '') return obs.value_text;
   if (obs.value_bool != null) return obs.value_bool ? 'true' : 'false';
   return '—';
+}
+
+/**
+ * Sum the per-vehicle signal ingest rate across the fleet for the compact
+ * "signals/sec" hero. Prefers the camelCase field, falls back to the
+ * snake_case alias, and coerces every entry through `safeNumber` so a junk /
+ * missing rate on one vehicle cannot poison the total into `NaN`.
+ */
+export function deriveSignalRate(
+  vehicles: VehicleTelemetry[] | null | undefined,
+): number {
+  const list = vehicles ?? [];
+  return list.reduce(
+    (sum, v) => sum + safeNumber(v?.signalsPerSecond ?? v?.signals_per_second),
+    0,
+  );
 }
 
 // ── Compact layout (1×2): big number for signals/sec ─────────────────
@@ -79,7 +105,10 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
     const list = observations ?? [];
     return list.map((obs, i) => {
       const source = obs.source ?? 'backfill';
-      const sourceLabel = SOURCE_LABELS[source] ?? source;
+      const sourceLabel = t(
+        `widget.signalLog.source.${source}`,
+        SOURCE_LABELS[source] ?? source,
+      );
       return {
         id: `${obs.ts}-${obs.signal_name}-${i}`,
         icon: (
@@ -97,7 +126,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
         severity: 'info' as const,
       };
     });
-  }, [observations]);
+  }, [observations, t]);
 
   // Freeze display when paused
   const displayItems = useMemo(() => {
@@ -116,13 +145,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
   }, [paused, feedItems]);
 
   // Aggregate signals/sec from MQTT status for compact view
-  const rate = useMemo(() => {
-    const vList = mqttData?.vehicles ?? [];
-    return vList.reduce(
-      (sum, v) => sum + (v.signalsPerSecond ?? v.signals_per_second ?? 0),
-      0,
-    );
-  }, [mqttData]);
+  const rate = useMemo(() => deriveSignalRate(mqttData?.vehicles), [mqttData]);
 
   const pauseAction = (
     <Button
