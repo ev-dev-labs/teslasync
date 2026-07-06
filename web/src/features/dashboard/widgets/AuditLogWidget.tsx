@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileSearch, Info, AlertTriangle, AlertOctagon, ShieldAlert } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -25,6 +25,9 @@ const SEVERITY_COLOR = {
 
 type Severity = 'info' | 'warning' | 'critical';
 
+/** Minimal translate signature — structurally compatible with i18next's `t`. */
+type TFn = (key: string, fallback: string) => string;
+
 function inferAuditSeverity(action: string): Severity {
   const lower = (action ?? '').toLowerCase();
   if (lower.includes('delete') || lower.includes('revoke') || lower.includes('fail')) return 'critical';
@@ -38,26 +41,49 @@ function inferSecuritySeverity(event: { locked: boolean | null; sentryMode: stri
   return 'info';
 }
 
-function buildSecurityTitle(event: {
-  locked: boolean | null;
-  sentryMode: string | boolean | null;
-  doorState: string | boolean | null;
-  guestMode: boolean | null;
-  valetModeEnabled: boolean | null;
-}): string {
+function buildSecurityTitle(
+  event: {
+    locked: boolean | null;
+    sentryMode: string | boolean | null;
+    doorState: string | boolean | null;
+    guestMode: boolean | null;
+    valetModeEnabled: boolean | null;
+  },
+  t: TFn,
+): string {
   const parts: string[] = [];
-  if (event.locked !== null) parts.push(event.locked ? 'Vehicle locked' : 'Vehicle unlocked');
+  if (event.locked !== null) {
+    parts.push(
+      event.locked
+        ? t('widget.securityLocked', 'Vehicle locked')
+        : t('widget.securityUnlocked', 'Vehicle unlocked'),
+    );
+  }
   if (event.sentryMode) {
-    const sentryLabel = typeof event.sentryMode === 'string' ? event.sentryMode : 'On';
-    parts.push(`Sentry: ${sentryLabel}`);
+    const sentryLabel =
+      typeof event.sentryMode === 'string' ? event.sentryMode : t('widget.securityOn', 'On');
+    parts.push(`${t('widget.securitySentry', 'Sentry')}: ${sentryLabel}`);
   }
   if (event.doorState) {
-    const doorLabel = typeof event.doorState === 'string' ? event.doorState : 'Open';
-    parts.push(`Door: ${doorLabel}`);
+    const doorLabel =
+      typeof event.doorState === 'string' ? event.doorState : t('widget.securityDoorOpen', 'Open');
+    parts.push(`${t('widget.securityDoor', 'Door')}: ${doorLabel}`);
   }
-  if (event.guestMode !== null) parts.push(event.guestMode ? 'Guest mode on' : 'Guest mode off');
-  if (event.valetModeEnabled !== null) parts.push(event.valetModeEnabled ? 'Valet mode on' : 'Valet mode off');
-  return parts.length > 0 ? parts[0] : 'Security event';
+  if (event.guestMode !== null) {
+    parts.push(
+      event.guestMode
+        ? t('widget.securityGuestOn', 'Guest mode on')
+        : t('widget.securityGuestOff', 'Guest mode off'),
+    );
+  }
+  if (event.valetModeEnabled !== null) {
+    parts.push(
+      event.valetModeEnabled
+        ? t('widget.securityValetOn', 'Valet mode on')
+        : t('widget.securityValetOff', 'Valet mode off'),
+    );
+  }
+  return parts.length > 0 ? parts[0] : t('widget.auditSecurityEvent', 'Security event');
 }
 
 // ── Compact layout (1×2) ─────────────────────────────────────────────
@@ -69,7 +95,7 @@ function CompactView({
 }: {
   totalEvents24h: number;
   worstSeverity: Severity;
-  t: (key: string, fallback: string) => string;
+  t: TFn;
 }) {
   const badgeLabel = worstSeverity === 'critical'
     ? t('widget.auditCritical', 'Critical')
@@ -100,6 +126,7 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
     isFetching: auditFetching,
     isStale: auditStale,
     isError: auditIsError,
+    error: auditError,
     dataUpdatedAt: auditUpdatedAt,
     refetch: auditRefetch,
   } = useAuditLogs();
@@ -110,6 +137,7 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
     isFetching: secFetching,
     isStale: secStale,
     isError: secIsError,
+    error: secError,
     dataUpdatedAt: secUpdatedAt,
     refetch: secRefetch,
   } = useSecurityEvents(vidStr);
@@ -118,9 +146,18 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
   const isFetching = auditFetching || secFetching;
   const isStale = auditStale || secStale;
   const isError = auditIsError || secIsError;
+  // Surface a genuine initial-load failure as a real error panel instead of a
+  // misleading "no events" empty state (TanStack keeps `error` null while cached
+  // data is present, so a transient background-refetch failure still shows data).
+  const error = auditError ?? secError;
   const updatedAt = Math.max(auditUpdatedAt ?? 0, secUpdatedAt ?? 0);
 
   const isCompact = size.cols <= 1;
+
+  const handleRefresh = useCallback(() => {
+    auditRefetch();
+    secRefetch();
+  }, [auditRefetch, secRefetch]);
 
   const feedItems = useMemo<EventFeedItem[]>(() => {
     const logs = (auditLogs ?? []).map((entry) => {
@@ -141,7 +178,7 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
       return {
         id: `sec-${event.id}`,
         icon: <ShieldAlert className="h-3.5 w-3.5" />,
-        title: buildSecurityTitle(event),
+        title: buildSecurityTitle(event, t),
         subtitle: t('widget.auditSecurityEvent', 'Security event'),
         timestamp: event.createdAt ?? new Date(0).toISOString(),
         color: SEVERITY_COLOR[sev],
@@ -170,11 +207,12 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.auditLog', 'Audit Log')}
       icon={<FileSearch className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => { auditRefetch(); secRefetch(); }}
+      onRefresh={handleRefresh}
     >
       {isCompact ? (
         feedItems.length > 0 ? (
