@@ -111,11 +111,47 @@ export interface DashboardSettings {
   compactMode: boolean;
 }
 
-export const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
+/**
+ * Canonical defaults for a dashboard's user-tunable settings.
+ *
+ * Frozen because it is a shared, module-level object: a stray in-place mutation
+ * (`DEFAULT_DASHBOARD_SETTINGS.refreshInterval = 30`) would silently corrupt the
+ * defaults for every other dashboard. Always fold it into a fresh object via
+ * {@link mergeDashboardSettings} rather than mutating it.
+ */
+export const DEFAULT_DASHBOARD_SETTINGS: Readonly<DashboardSettings> = Object.freeze({
   refreshInterval: 0,
   showWidgetBorders: false,
   compactMode: false,
-};
+});
+
+/**
+ * Merge a partial / persisted settings object over {@link DEFAULT_DASHBOARD_SETTINGS},
+ * returning a complete {@link DashboardSettings}.
+ *
+ * A plain `{ ...DEFAULT_DASHBOARD_SETTINGS, ...partial }` spread is unsafe for
+ * persisted or legacy data: once a dashboard round-trips through JSON a value
+ * can come back as an explicit `undefined`/`null`, which a spread copies over
+ * the default — so a later `settings.refreshInterval.toString()` throws. Each
+ * required field therefore falls back with `??`, which (unlike `||`) preserves a
+ * deliberate falsy value such as `refreshInterval: 0` ("use the per-widget
+ * default") or a `false` display toggle. `vehicleId` stays optional and is
+ * carried through only when a real id is present (absent = all vehicles).
+ */
+export function mergeDashboardSettings(
+  partial?: Partial<DashboardSettings> | null,
+): DashboardSettings {
+  const merged: DashboardSettings = {
+    refreshInterval: partial?.refreshInterval ?? DEFAULT_DASHBOARD_SETTINGS.refreshInterval,
+    showWidgetBorders:
+      partial?.showWidgetBorders ?? DEFAULT_DASHBOARD_SETTINGS.showWidgetBorders,
+    compactMode: partial?.compactMode ?? DEFAULT_DASHBOARD_SETTINGS.compactMode,
+  };
+  if (partial?.vehicleId != null) {
+    merged.vehicleId = partial.vehicleId;
+  }
+  return merged;
+}
 
 export interface SavedDashboard {
   id: string;
