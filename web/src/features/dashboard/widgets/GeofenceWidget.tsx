@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Crosshair } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -14,7 +14,7 @@ import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 
 /** Haversine distance in meters between two lat/lon points */
-function haversineMeters(
+export function haversineMeters(
   lat1: number, lon1: number,
   lat2: number, lon2: number,
 ): number {
@@ -72,7 +72,13 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const isStale = stateStale || fenceStale;
   const isError = stateIsError || fenceIsError;
   const updatedAt = Math.max(stateUpdatedAt ?? 0, fenceUpdatedAt ?? 0);
-  const onRefresh = () => { stateRefetch(); fenceRefetch(); };
+  // Both sources feed every layout (the compact zone badge is derived from the
+  // geofence list AND the vehicle position), so a manual refresh must refetch
+  // both — refetching state alone left a failed geofence fetch un-retried.
+  const onRefresh = useCallback(() => {
+    stateRefetch();
+    fenceRefetch();
+  }, [stateRefetch, fenceRefetch]);
 
   const state = stateData?.state;
   const vLat = state?.latitude ?? 0;
@@ -82,23 +88,29 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const fences: FenceStatus[] = useMemo(() => {
     const raw = geofences ?? [];
     return raw.map((g) => {
+      const gLat = g.latitude ?? 0;
+      const gLon = g.longitude ?? 0;
+      const radius = g.radius ?? 0;
       const dist = hasCoords
-        ? haversineMeters(vLat, vLon, g.latitude, g.longitude)
+        ? haversineMeters(vLat, vLon, gLat, gLon)
         : Infinity;
       return {
         id: g.id,
         name: g.name ?? '—',
-        radius: g.radius ?? 0,
-        latitude: g.latitude,
-        longitude: g.longitude,
+        radius,
+        latitude: gLat,
+        longitude: gLon,
         enabled: g.enabled ?? true,
-        inside: dist <= (g.radius ?? 0),
+        inside: dist <= radius,
         distanceM: dist,
       };
     });
   }, [geofences, vLat, vLon, hasCoords]);
 
-  const currentZone = fences.find((f) => f.inside && f.enabled);
+  const currentZone = useMemo(
+    () => fences.find((f) => f.inside && f.enabled),
+    [fences],
+  );
   const isCompact = size.cols <= 1;
   const isEmpty = fences.length === 0;
 
@@ -119,15 +131,9 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   // ─── Compact layout (1×2) ───
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={stateUpdatedAt}
-      isFetching={stateFetching}
-      isStale={stateStale}
-      isError={stateIsError}
-      onRefresh={() => stateRefetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
-          <Crosshair className="h-5 w-5 text-neon-cyan" />
+          <Crosshair aria-hidden="true" className="h-5 w-5 text-neon-cyan" />
           {currentZone ? (
             <Badge variant="success" size="sm">
               {currentZone.name}
@@ -148,13 +154,13 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.geofence.title', 'Geofence Status')}
-      icon={<Crosshair className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Crosshair aria-hidden="true" className="h-3.5 w-3.5 text-neon-cyan" />}
       noPadding={showMap}
       {...shellProps}
     >
       {isEmpty ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Crosshair className="h-5 w-5" />}
+          icon={<Crosshair aria-hidden="true" className="h-5 w-5" />}
           message={t('widget.geofence.noFences', 'No geofences configured')}
           className="py-4"
         />
