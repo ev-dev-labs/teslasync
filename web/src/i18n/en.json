@@ -6156,7 +6156,8 @@
       "gasSavings": "vs Gas Savings",
       "savingsNote": "30-day estimate",
       "configureGas": "Set gas price in settings",
-      "saved": "Saved {{amount}} vs gas"
+      "saved": "Saved {{amount}} vs gas",
+      "error": "Failed to load charge data"
     },
     "chargeHistory": {
       "title": "Charge History",
