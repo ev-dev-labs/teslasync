@@ -6258,7 +6258,10 @@
       "soc": "SoC %",
       "unitKwh": "kWh added",
       "empty": "No charge sessions",
-      "title": "Charge Session Detail"
+      "title": "Charge Session Detail",
+      "chargerSupercharger": "Supercharger",
+      "chargerDcFast": "DC Fast",
+      "chargerAcHome": "AC / Home"
     },
     "chargingTelemetry": {
       "voltage": "Voltage",
