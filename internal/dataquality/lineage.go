@@ -40,12 +40,28 @@ func BuildLineage() (*LineageGraph, error) {
 		return nil, err
 	}
 	nodes := make(map[string]LineageNode)
+	edgeSet := make(map[string]struct{})
 	edges := []LineageEdge{}
 
 	addNode := func(n LineageNode) {
 		if _, ok := nodes[n.ID]; !ok {
 			nodes[n.ID] = n
 		}
+	}
+
+	// addEdge deduplicates edges the same way addNode deduplicates
+	// nodes. Many fields share a destination (routing.yaml routes
+	// well over a hundred fields to signal_log and dozens to drop),
+	// so without deduplication the router→writer and writer→table
+	// edges for those shared destinations would be emitted once per
+	// field, flooding the Sankey/DAG with identical parallel edges.
+	addEdge := func(from, to string) {
+		key := from + "\x00" + to
+		if _, ok := edgeSet[key]; ok {
+			return
+		}
+		edgeSet[key] = struct{}{}
+		edges = append(edges, LineageEdge{From: from, To: to})
 	}
 
 	for _, e := range entries {
@@ -59,20 +75,16 @@ func BuildLineage() (*LineageGraph, error) {
 		addNode(LineageNode{ID: writerID, Label: string(e.Destination), Kind: "writer"})
 		addNode(LineageNode{ID: tableID, Label: string(e.Destination), Kind: "table"})
 
-		edges = append(edges,
-			LineageEdge{From: sourceID, To: routerID},
-			LineageEdge{From: routerID, To: writerID},
-			LineageEdge{From: writerID, To: tableID},
-		)
+		addEdge(sourceID, routerID)
+		addEdge(routerID, writerID)
+		addEdge(writerID, tableID)
 		if e.ToColdLogToo {
 			slWriter := "writer:signal_log_dual"
 			slTable := "table:signal_log"
 			addNode(LineageNode{ID: slWriter, Label: "signal_log (dual)", Kind: "writer"})
 			addNode(LineageNode{ID: slTable, Label: "signal_log", Kind: "table"})
-			edges = append(edges,
-				LineageEdge{From: routerID, To: slWriter},
-				LineageEdge{From: slWriter, To: slTable},
-			)
+			addEdge(routerID, slWriter)
+			addEdge(slWriter, slTable)
 		}
 	}
 
