@@ -549,7 +549,10 @@ func TestEnergyStatsResponse(t *testing.T) {
 // *service.EnergyService into the interface-typed seam. A nil pool is safe
 // at construction time; the handler only touches it on a request.
 func TestNewEnergyHandler(t *testing.T) {
-	svc := service.NewEnergyService(nil)
+	// A zero-value service pointer is enough to prove NewEnergyHandler wires
+	// its dependency; NewEnergyService(nil) would eagerly panic constructing a
+	// repo, which is unrelated to what this test asserts.
+	svc := &service.EnergyService{}
 	h := NewEnergyHandler(svc)
 	if h == nil {
 		t.Fatal("NewEnergyHandler returned nil")

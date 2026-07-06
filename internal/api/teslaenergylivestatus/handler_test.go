@@ -12,7 +12,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // ── Test doubles ────────────────────────────────────────────────────────────
@@ -141,7 +143,7 @@ func wantContentTypeJSON(t *testing.T, rec *httptest.ResponseRecorder) {
 // constructor only stores the *database.DB pointer, so a nil pool is safe here
 // (no query is issued) and lets us verify field wiring without a live Postgres.
 func TestNewHandler(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(&tesla.Client{}, &database.DB{})
 	if h == nil {
 		t.Fatal("NewHandler returned nil")
 	}
@@ -425,15 +427,15 @@ func TestRefreshLiveStatus(t *testing.T) {
 	const validBody = `{"response":{"solar_power":1500.25,"grid_status":"Active","timestamp":"2026-07-01T12:00:00Z"}}`
 
 	tests := []struct {
-		name        string
-		siteID      string
-		fetchFn     func(ctx context.Context, id int64) ([]byte, int, error)
-		createFn    func(ctx context.Context, s *teslamodel.TeslaEnergyLiveStatus) error
-		wantStatus  int
-		wantErrMsg  string
-		wantFetch   int
-		wantCreate  int
-		check       func(t *testing.T, m map[string]any, repo *fakeLiveStatusRepo, fetcher *fakeLiveStatusFetcher)
+		name       string
+		siteID     string
+		fetchFn    func(ctx context.Context, id int64) ([]byte, int, error)
+		createFn   func(ctx context.Context, s *teslamodel.TeslaEnergyLiveStatus) error
+		wantStatus int
+		wantErrMsg string
+		wantFetch  int
+		wantCreate int
+		check      func(t *testing.T, m map[string]any, repo *fakeLiveStatusRepo, fetcher *fakeLiveStatusFetcher)
 	}{
 		{
 			name:       "invalid site id short-circuits before calling Tesla",

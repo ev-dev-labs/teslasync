@@ -16,7 +16,9 @@ import (
 )
 
 type tripRepository struct {
-	pool *pgxpool.Pool
+	// pool is the pgxPool seam (satisfied in production by *pgxpool.Pool),
+	// matching every sibling repo in this package so tests can inject a fake.
+	pool pgxPool
 }
 
 func NewTripRepository(pool *pgxpool.Pool) repository.TripRepository {
@@ -44,7 +46,11 @@ func (r *tripRepository) GetByVehicleID(ctx context.Context, vehicleID string) (
 	if err != nil {
 		return nil, fmt.Errorf("querying trips for vehicle %s: %w", vehicleID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	trips, err := pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	if err != nil {
+		return nil, fmt.Errorf("collecting trips for vehicle %s: %w", vehicleID, err)
+	}
+	return trips, nil
 }
 
 func (r *tripRepository) ListByDateRange(ctx context.Context, vehicleID string, from, to time.Time) ([]trip.Trip, error) {
@@ -52,7 +58,11 @@ func (r *tripRepository) ListByDateRange(ctx context.Context, vehicleID string, 
 	if err != nil {
 		return nil, fmt.Errorf("listing trips for vehicle %s: %w", vehicleID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	trips, err := pgx.CollectRows(rows, pgx.RowToStructByName[trip.Trip])
+	if err != nil {
+		return nil, fmt.Errorf("collecting trips for vehicle %s: %w", vehicleID, err)
+	}
+	return trips, nil
 }
 
 func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip.Trip, error) {

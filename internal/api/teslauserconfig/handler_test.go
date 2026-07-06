@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -144,7 +145,7 @@ func decodeErrBody(t *testing.T, body []byte) map[string]string {
 
 func TestNewHandler_Wiring(t *testing.T) {
 	tc := tesla.NewClient(config.TeslaConfig{BaseURL: "http://localhost", Timeout: time.Second})
-	h := NewHandler(tc, nil)
+	h := NewHandler(tc, &database.DB{})
 	if h == nil {
 		t.Fatal("NewHandler returned nil")
 	}

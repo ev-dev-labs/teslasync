@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
 )
@@ -189,7 +191,7 @@ func TestNewTeslaChargingHistoryHandler_WiresPorts(t *testing.T) {
 	// (nil) pool without dereferencing it and the client pointer is only
 	// dereferenced on use. This proves the constructor never leaves a port
 	// unset (a nil repo would nil-panic on the first request).
-	h := NewTeslaChargingHistoryHandler(nil, nil)
+	h := NewTeslaChargingHistoryHandler(&tesla.Client{}, &database.DB{})
 	if h == nil {
 		t.Fatal("constructor returned nil")
 	}
@@ -487,8 +489,12 @@ func TestList(t *testing.T) {
 		entries := []*teslamodel.TeslaChargingHistoryEntry{{SessionID: 1, VIN: "5YJ"}, {SessionID: 2, VIN: "5YJ"}}
 		summary := &teslamodel.TeslaChargingHistorySummary{TotalSessions: 2, TotalWh: f64p(1000), TotalSpend: f64p(20), AvgCostPerKWh: f64p(0.2)}
 		store := &fakeChargeHistoryStore{
-			getAllFn:  func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) { return entries, nil },
-			summaryFn: func(_ context.Context, _ string) (*teslamodel.TeslaChargingHistorySummary, error) { return summary, nil },
+			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) {
+				return entries, nil
+			},
+			summaryFn: func(_ context.Context, _ string) (*teslamodel.TeslaChargingHistorySummary, error) {
+				return summary, nil
+			},
 		}
 		h := newHandler(&fakeChargeHistoryAPI{}, store)
 
@@ -521,7 +527,9 @@ func TestList(t *testing.T) {
 
 	t.Run("nil entries serialise as empty array not null", func(t *testing.T) {
 		store := &fakeChargeHistoryStore{
-			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) { return nil, nil },
+			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) {
+				return nil, nil
+			},
 		}
 		h := newHandler(&fakeChargeHistoryAPI{}, store)
 
@@ -558,8 +566,12 @@ func TestList(t *testing.T) {
 
 	t.Run("GetSummary error returns 500", func(t *testing.T) {
 		store := &fakeChargeHistoryStore{
-			getAllFn:  func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) { return nil, nil },
-			summaryFn: func(_ context.Context, _ string) (*teslamodel.TeslaChargingHistorySummary, error) { return nil, errors.New("agg fail") },
+			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) {
+				return nil, nil
+			},
+			summaryFn: func(_ context.Context, _ string) (*teslamodel.TeslaChargingHistorySummary, error) {
+				return nil, errors.New("agg fail")
+			},
 		}
 		h := newHandler(&fakeChargeHistoryAPI{}, store)
 
@@ -585,7 +597,9 @@ func TestRefresh(t *testing.T) {
 		}
 		final := []*teslamodel.TeslaChargingHistoryEntry{{SessionID: 1}, {SessionID: 2}}
 		store := &fakeChargeHistoryStore{
-			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) { return final, nil },
+			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) {
+				return final, nil
+			},
 		}
 		h := newHandler(api, store)
 
@@ -869,7 +883,9 @@ func TestRefresh(t *testing.T) {
 			},
 		}
 		store := &fakeChargeHistoryStore{
-			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) { return nil, nil },
+			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) {
+				return nil, nil
+			},
 		}
 		h := newHandler(api, store)
 

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
@@ -175,7 +176,7 @@ func sampleProfile() *teslamodel.TeslaUserProfile {
 // ports and never panic, even with nil dependencies (it only stores them).
 // Behavioural coverage lives in the Profile/RefreshProfile tests via the ports.
 func TestNewHandler(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, &database.DB{})
 	if h == nil {
 		t.Fatal("constructor returned nil handler")
 	}
@@ -310,9 +311,9 @@ func TestHandler_Profile_FetchedAtNormalizedToUTC(t *testing.T) {
 
 func TestHandler_RefreshProfile_ErrorBranches(t *testing.T) {
 	tests := []struct {
-		name    string
-		client  *fakeProfileClient
-		store   *fakeProfileStore
+		name       string
+		client     *fakeProfileClient
+		store      *fakeProfileStore
 		wantStatus int
 		wantMsg    string
 		// expected call counts to prove the handler short-circuits correctly.

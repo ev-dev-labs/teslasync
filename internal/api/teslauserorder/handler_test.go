@@ -12,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog"
 )
 
@@ -164,7 +166,7 @@ func TestNewHandler_WiresPorts(t *testing.T) {
 	// (nil) pool without dereferencing it, and the client pointer is only
 	// dereferenced on use. This proves the constructor never leaves a port
 	// unset (a nil port would nil-panic on the first request).
-	h := NewHandler(nil, nil)
+	h := NewHandler(&tesla.Client{}, &database.DB{})
 	if h == nil {
 		t.Fatal("constructor returned nil")
 	}

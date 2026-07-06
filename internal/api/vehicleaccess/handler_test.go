@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
@@ -215,7 +216,7 @@ func decodeErr(t *testing.T, body []byte) map[string]string {
 
 func TestNewHandler_Wiring(t *testing.T) {
 	tc := tesla.NewClient(config.TeslaConfig{BaseURL: "http://localhost", Timeout: time.Second})
-	h := NewHandler(tc, nil)
+	h := NewHandler(tc, &database.DB{})
 	if h == nil {
 		t.Fatal("NewHandler returned nil")
 	}
@@ -719,10 +720,12 @@ func TestRefreshDrivers(t *testing.T) {
 			wantTeslaCalled: true,
 		},
 		{
-			name:            "tesla non-2xx",
-			hasToken:        true,
-			param:           "7",
-			teslaFn:         func(context.Context, string) ([]byte, int, error) { return []byte(`{"error":"x"}`), http.StatusForbidden, nil },
+			name:     "tesla non-2xx",
+			hasToken: true,
+			param:    "7",
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"error":"x"}`), http.StatusForbidden, nil
+			},
 			wantStatus:      http.StatusBadGateway,
 			wantErrCode:     "ERROR",
 			wantTeslaCalled: true,
@@ -737,19 +740,23 @@ func TestRefreshDrivers(t *testing.T) {
 			wantTeslaCalled: true,
 		},
 		{
-			name:            "parse error",
-			hasToken:        true,
-			param:           "7",
-			teslaFn:         func(context.Context, string) ([]byte, int, error) { return []byte(`this is not json`), http.StatusOK, nil },
+			name:     "parse error",
+			hasToken: true,
+			param:    "7",
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`this is not json`), http.StatusOK, nil
+			},
 			wantStatus:      http.StatusInternalServerError,
 			wantErrCode:     "INTERNAL_ERROR",
 			wantTeslaCalled: true,
 		},
 		{
-			name:              "replace error",
-			hasToken:          true,
-			param:             "7",
-			teslaFn:           func(context.Context, string) ([]byte, int, error) { return []byte(`{"response":[]}`), http.StatusOK, nil },
+			name:     "replace error",
+			hasToken: true,
+			param:    "7",
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"response":[]}`), http.StatusOK, nil
+			},
 			replaceErr:        errors.New("tx failed"),
 			wantStatus:        http.StatusInternalServerError,
 			wantErrCode:       "INTERNAL_ERROR",
@@ -760,7 +767,9 @@ func TestRefreshDrivers(t *testing.T) {
 			name:     "list after refresh error",
 			hasToken: true,
 			param:    "7",
-			teslaFn:  func(context.Context, string) ([]byte, int, error) { return []byte(`{"response":[]}`), http.StatusOK, nil },
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"response":[]}`), http.StatusOK, nil
+			},
 			listAfterFn: func(context.Context, int64) ([]*teslamodel.TeslaVehicleDriver, error) {
 				return nil, errors.New("select failed")
 			},
@@ -912,10 +921,12 @@ func TestRefreshInvitations(t *testing.T) {
 			wantTeslaCalled: true,
 		},
 		{
-			name:            "tesla non-2xx",
-			hasToken:        true,
-			param:           "7",
-			teslaFn:         func(context.Context, string) ([]byte, int, error) { return []byte(`{"error":"x"}`), http.StatusInternalServerError, nil },
+			name:     "tesla non-2xx",
+			hasToken: true,
+			param:    "7",
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"error":"x"}`), http.StatusInternalServerError, nil
+			},
 			wantStatus:      http.StatusBadGateway,
 			wantErrCode:     "ERROR",
 			wantTeslaCalled: true,
@@ -930,10 +941,12 @@ func TestRefreshInvitations(t *testing.T) {
 			wantTeslaCalled: true,
 		},
 		{
-			name:              "replace error",
-			hasToken:          true,
-			param:             "7",
-			teslaFn:           func(context.Context, string) ([]byte, int, error) { return []byte(`{"response":[]}`), http.StatusOK, nil },
+			name:     "replace error",
+			hasToken: true,
+			param:    "7",
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"response":[]}`), http.StatusOK, nil
+			},
 			replaceErr:        errors.New("tx failed"),
 			wantStatus:        http.StatusInternalServerError,
 			wantErrCode:       "INTERNAL_ERROR",
@@ -944,7 +957,9 @@ func TestRefreshInvitations(t *testing.T) {
 			name:     "list after refresh error",
 			hasToken: true,
 			param:    "7",
-			teslaFn:  func(context.Context, string) ([]byte, int, error) { return []byte(`{"response":[]}`), http.StatusOK, nil },
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"response":[]}`), http.StatusOK, nil
+			},
 			listAfterFn: func(context.Context, int64) ([]*teslamodel.TeslaVehicleInvitation, error) {
 				return nil, errors.New("select failed")
 			},
@@ -954,10 +969,12 @@ func TestRefreshInvitations(t *testing.T) {
 			wantReplaceCalled: true,
 		},
 		{
-			name:              "success",
-			hasToken:          true,
-			param:             "7",
-			teslaFn:           func(context.Context, string) ([]byte, int, error) { return []byte(`{"response":[]}`), http.StatusOK, nil },
+			name:     "success",
+			hasToken: true,
+			param:    "7",
+			teslaFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"response":[]}`), http.StatusOK, nil
+			},
 			wantStatus:        http.StatusOK,
 			wantTeslaCalled:   true,
 			wantReplaceCalled: true,
@@ -1247,10 +1264,12 @@ func TestCreateInvitation(t *testing.T) {
 			wantCreateCalled: true,
 		},
 		{
-			name:             "tesla non-2xx",
-			hasToken:         true,
-			param:            "7",
-			createFn:         func(context.Context, string) ([]byte, int, error) { return []byte(`{"error":"x"}`), http.StatusBadRequest, nil },
+			name:     "tesla non-2xx",
+			hasToken: true,
+			param:    "7",
+			createFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"error":"x"}`), http.StatusBadRequest, nil
+			},
 			wantStatus:       http.StatusBadGateway,
 			wantErrCode:      "ERROR",
 			wantCreateCalled: true,
@@ -1265,10 +1284,12 @@ func TestCreateInvitation(t *testing.T) {
 			wantCreateCalled: true,
 		},
 		{
-			name:             "insert error",
-			hasToken:         true,
-			param:            "7",
-			createFn:         func(context.Context, string) ([]byte, int, error) { return []byte(`{"response":{"id":"c1","status":"pending"}}`), http.StatusOK, nil },
+			name:     "insert error",
+			hasToken: true,
+			param:    "7",
+			createFn: func(context.Context, string) ([]byte, int, error) {
+				return []byte(`{"response":{"id":"c1","status":"pending"}}`), http.StatusOK, nil
+			},
 			insertErr:        errors.New("unique violation"),
 			wantStatus:       http.StatusInternalServerError,
 			wantErrCode:      "INTERNAL_ERROR",

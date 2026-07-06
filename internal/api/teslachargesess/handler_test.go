@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
@@ -210,7 +211,7 @@ func sessionsEnvelope(t *testing.T, items []teslaChargingSessionItem, totalResul
 // stores them). Behavioural coverage lives in the List/Refresh tests via the
 // unexported ports.
 func TestNewTeslaChargingSessionHandler(t *testing.T) {
-	h := NewTeslaChargingSessionHandler(nil, nil)
+	h := NewTeslaChargingSessionHandler(nil, &database.DB{})
 	if h == nil {
 		t.Fatal("constructor returned nil handler")
 	}
