@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingDown } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
-  Tooltip, CartesianGrid, ReferenceLine,
+  Tooltip, ReferenceLine,
   chartGrid, axisTickSm, useThemeChartPalette,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
@@ -22,16 +22,16 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
 
-  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useBatteryDegradation(idStr);
+  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = useBatteryDegradation(idStr);
 
   const chartData = useMemo(() => {
     const trend = data?.monthly_trend ?? [];
     if (trend.length === 0) return [];
-    const originalRange = trend[0].avg_range;
+    const originalRange = trend[0]?.avg_range ?? 0;
     return trend.map((entry) => ({
-      month: entry.month,
-      range: entry.avg_range,
-      health: entry.avg_health,
+      month: entry.month ?? '',
+      range: entry.avg_range ?? 0,
+      health: entry.avg_health ?? 0,
       original: originalRange,
     }));
   }, [data]);
@@ -64,11 +64,15 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
     return items;
   }, [currentHealth, degradationRate, totalCycles, t]);
 
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
   const chart = chartData.length > 1 ? (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
         {areaGradient('degradation-grad', palette.series[1])}
-        <CartesianGrid {...chartGrid} />
+        {chartGrid}
         <XAxis dataKey="month" {...axisTickSm} />
         <YAxis
           domain={['dataMin - 2', 100]}
@@ -99,11 +103,12 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       title={isCompact ? undefined : t('widget.batteryDegradation', 'Battery Degradation')}
       icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5 text-neon-amber" />}
       loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       <WidgetChartSummary
         stats={stats}
