@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -31,6 +31,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
     isStale: errorsStale,
     isError: errorsIsError,
     dataUpdatedAt: errorsUpdatedAt,
+    refetch: refetchErrors,
   } = useFleetTelemetryErrors();
 
   const isCompact = size.cols <= 1;
@@ -78,16 +79,35 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
     ? t('widget.telemetryErrors.errors', 'Errors')
     : t('widget.telemetryErrors.healthy', 'Healthy');
 
+  const isErrored = vinsError || errorsIsError;
+
+  // Only escalate to a full error panel when there is nothing to show. While we
+  // still hold data we degrade gracefully — stale content plus the freshness
+  // error dot — rather than blanking the widget or (worse) implying "healthy"
+  // via the empty state.
+  const errorMessage = isErrored && !hasData
+    ? t('widget.telemetryErrors.loadError', 'Failed to load telemetry errors')
+    : undefined;
+
+  // Refresh BOTH sources. The error feed is driven by useFleetTelemetryErrors,
+  // so refetching only the VIN summary left the feed stale after a manual
+  // refresh.
+  const handleRefresh = useCallback(() => {
+    void refetchVINs();
+    void refetchErrors();
+  }, [refetchVINs, refetchErrors]);
+
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.telemetryErrors.title', 'Telemetry Errors')}
       icon={<AlertCircle className="h-3.5 w-3.5 text-red-400" />}
       loading={loading}
+      error={errorMessage}
       updatedAt={Math.max(vinsUpdatedAt ?? 0, errorsUpdatedAt ?? 0)}
       isFetching={vinsFetching || errorsFetching}
       isStale={vinsStale || errorsStale}
-      isError={vinsError || errorsIsError}
-      onRefresh={() => refetchVINs()}
+      isError={isErrored}
+      onRefresh={handleRefresh}
     >
       {!hasData ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
