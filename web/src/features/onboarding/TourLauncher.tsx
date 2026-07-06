@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, PlayCircle, RotateCcw, Sparkles, X } from 'lucide-react'
 
 import { Modal, Button } from '@/components/ui'
+import { EmptyState } from '@/components/feedback'
 import { cn } from '@/lib/cn'
 import {
   TOUR_OPEN_LAUNCHER_EVENT,
@@ -60,26 +61,31 @@ export function TourLauncher() {
     return () => window.removeEventListener(TOUR_START_EVENT, handler as EventListener)
   }, [])
 
-  const tours = listTours()
+  // The registry is static, so derive the ordered list once. Completion state
+  // is read per-row via isTourCompleted() below, so re-renders triggered by
+  // versionTick still pick up freshly-written localStorage flags.
+  const tours = useMemo(() => listTours() ?? [], [])
 
-  const handleStart = (def: TourDefinition) => {
+  const handleStart = useCallback((def: TourDefinition) => {
     setOpen(false)
     // Defer the dispatch one tick so Layout's tour state machine sees the
     // event after the modal-close re-render settles. Without the timeout,
     // React batches the two state updates and the modal's portal can still
     // be in the DOM when the spotlight tries to query its target.
     window.setTimeout(() => dispatchTourStart(def.id), 0)
-  }
+  }, [])
 
-  const handleResetAll = () => {
+  const handleResetAll = useCallback(() => {
     resetAllTours()
     setVersionTick((n) => n + 1)
-  }
+  }, [])
+
+  const handleClose = useCallback(() => setOpen(false), [])
 
   return (
     <Modal
       open={open}
-      onClose={() => setOpen(false)}
+      onClose={handleClose}
       title={t('tour.launcher.title', 'Take a tour')}
       size="md"
     >
@@ -91,6 +97,11 @@ export function TourLauncher() {
           )}
         </p>
 
+        {tours.length === 0 ? (
+          <EmptyState
+            message={t('tour.launcher.empty', 'No tours are available yet.')}
+          />
+        ) : (
         <ul className="space-y-2">
           {tours.map((def) => {
             const completed = isTourCompleted(def.id, def.version)
@@ -169,6 +180,7 @@ export function TourLauncher() {
             )
           })}
         </ul>
+        )}
 
         <div className="flex items-center justify-between border-t border-[var(--glass-border)] pt-3">
           <button
@@ -179,7 +191,7 @@ export function TourLauncher() {
             <RotateCcw className="h-3.5 w-3.5" aria-hidden />
             {t('tour.launcher.resetAll', 'Reset all tours')}
           </button>
-          <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+          <Button variant="ghost" size="sm" onClick={handleClose}>
             <X className="mr-1 h-3.5 w-3.5" aria-hidden />
             {t('tour.launcher.close', 'Close')}
           </Button>
