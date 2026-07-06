@@ -758,4 +758,55 @@ describe('useDashboardLayout — migration + resilience', () => {
     expect(result.current.dashboards.some((d) => d.id === 'corrupt')).toBe(true);
     expect(result.current.dashboards.find((d) => d.id === 'corrupt')?.widgets).toEqual([]);
   });
+
+  it('scales pre-v2 row heights up by 2.25× and stamps the current version', () => {
+    // localStorage was cleared in beforeEach, so the row-height version key is
+    // absent → treated as v1 → the 180px→80px migration runs on first load.
+    localStorage.setItem(
+      DASHBOARDS_KEY,
+      JSON.stringify([
+        savedDashboard({
+          id: 'legacy-heights',
+          layouts: { lg: [{ i: 's1', x: 1, y: 4, w: 2, h: 3, minH: 2, maxH: 6 }] },
+        }),
+      ]),
+    );
+
+    render();
+
+    // The version is stamped forward so the (one-way) migration runs exactly once.
+    expect(localStorage.getItem(ROW_VERSION_KEY)).toBe('2');
+
+    // migrateRowHeight rewrites DASHBOARDS_KEY with h/y/minH/maxH scaled ×2.25
+    // (h & minH floored at 2), before reconcile — so the persisted snapshot
+    // carries the rescaled vertical geometry while widths are left untouched.
+    const persisted = lsDashboards()[0].layouts.lg[0];
+    expect(persisted.h).toBe(7); // round(3 × 2.25) = 7
+    expect(persisted.y).toBe(9); // round(4 × 2.25) = 9
+    expect(persisted.minH).toBe(5); // round(2 × 2.25) = 5
+    expect(persisted.maxH).toBe(14); // round(6 × 2.25) = 14
+    expect(persisted.w).toBe(2); // width is not a row-height concern
+  });
+
+  it('leaves already-migrated (v2) layouts untouched', () => {
+    localStorage.setItem(ROW_VERSION_KEY, '2'); // already on the current row height
+    localStorage.setItem(
+      DASHBOARDS_KEY,
+      JSON.stringify([
+        savedDashboard({
+          id: 'v2-heights',
+          layouts: { lg: [{ i: 's1', x: 0, y: 0, w: 1, h: 3, minH: 2, maxH: 6 }] },
+        }),
+      ]),
+    );
+
+    render();
+
+    // Version already current → early return: no rescale and no rewrite, so the
+    // persisted geometry is byte-for-byte what we seeded.
+    expect(localStorage.getItem(ROW_VERSION_KEY)).toBe('2');
+    const persisted = lsDashboards()[0].layouts.lg[0];
+    expect(persisted.h).toBe(3);
+    expect(persisted.maxH).toBe(6);
+  });
 });
