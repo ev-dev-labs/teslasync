@@ -6600,7 +6600,8 @@
       "thisMonth": "This Month",
       "total12m": "12-Mo Total",
       "title": "Monthly Mileage",
-      "distance": "Distance"
+      "distance": "Distance",
+      "error": "Unable to load mileage data"
     },
     "motorHistory": {
       "torque": "Torque",
