@@ -17,6 +17,24 @@
  * If you change any of the Go structs above, update this file in lock-step.
  */
 
+/**
+ * Runtime membership test shared by every `isX` guard in this module. Each
+ * guard delegates here so it reads as a named, intention-revealing predicate
+ * at the call site (`isIngestXRayWindow(x)`) while the narrowing logic lives
+ * in exactly one place.
+ *
+ * The `readonly string[]` widening is deliberate: `Array.includes` on an
+ * `as const` literal tuple would otherwise reject an arbitrary `string`
+ * argument at the type level — but testing arbitrary, untrusted input against
+ * the accepted set is the entire point of a guard.
+ */
+function isLiteralMember<T extends string>(
+  members: readonly T[],
+  value: unknown,
+): value is T {
+  return typeof value === 'string' && (members as readonly string[]).includes(value);
+}
+
 // ============================================================================
 // DLQ Inspector
 // ============================================================================
@@ -24,7 +42,8 @@
 /**
  * Stable string codes returned in `DLQReplayResponse.result` and
  * `DLQReplayAuditRecord.result`. Mirrors the constants block at the top
- * of `internal/database/dlq_replay_audit_repo.go`.
+ * of `internal/database/dlq_replay_audit_repo.go` and is the single source
+ * of truth for the {@link DLQReplayResult} union below.
  *
  * - `ok`             — replay published successfully
  * - `publish_failed` — MQTT publish errored
@@ -33,13 +52,31 @@
  * - `not_found`      — entry id no longer exists (deleted between list and replay)
  * - `unparseable`    — DLQ row was missing source topic / unparseable inner payload
  */
-export type DLQReplayResult =
-  | 'ok'
-  | 'publish_failed'
-  | 'rate_limited'
-  | 'disabled'
-  | 'not_found'
-  | 'unparseable';
+export const DLQ_REPLAY_RESULTS = [
+  'ok',
+  'publish_failed',
+  'rate_limited',
+  'disabled',
+  'not_found',
+  'unparseable',
+] as const;
+
+export type DLQReplayResult = (typeof DLQ_REPLAY_RESULTS)[number];
+
+/** Narrows an untrusted wire value to a known {@link DLQReplayResult}. */
+export function isDLQReplayResult(value: unknown): value is DLQReplayResult {
+  return isLiteralMember(DLQ_REPLAY_RESULTS, value);
+}
+
+/**
+ * True only for the single success code (`'ok'`); every other member of
+ * {@link DLQ_REPLAY_RESULTS} is a rejection or failure. Centralises the
+ * "did the replay actually publish?" decision that `DLQInspectorPage` makes
+ * inline (`result.result === 'ok'`) so it has one tested definition.
+ */
+export function isDLQReplaySuccess(result: DLQReplayResult): boolean {
+  return result === 'ok';
+}
 
 /**
  * Summary row in the DLQ list view. Heavy raw_payload / inner_payload
@@ -113,7 +150,14 @@ export interface DLQAuditResponse {
 // ============================================================================
 
 /** Operation enum from `internal/database/feature_flag_changes_repo.go`. */
-export type FeatureFlagOperation = 'set' | 'delete';
+export const FEATURE_FLAG_OPERATIONS = ['set', 'delete'] as const;
+
+export type FeatureFlagOperation = (typeof FEATURE_FLAG_OPERATIONS)[number];
+
+/** Narrows an untrusted wire value to a known {@link FeatureFlagOperation}. */
+export function isFeatureFlagOperation(value: unknown): value is FeatureFlagOperation {
+  return isLiteralMember(FEATURE_FLAG_OPERATIONS, value);
+}
 
 /** Flag value is stored as JSON in Postgres and surfaces here as `unknown`. */
 export type FeatureFlagValue = unknown;
@@ -166,10 +210,24 @@ export interface FeatureFlagChangesResponse {
 // ============================================================================
 
 /** Allowed window literals — server rejects anything else with 400. */
-export type IngestXRayWindow = '5m' | '15m' | '1h' | '6h' | '24h';
+export const INGEST_XRAY_WINDOWS = ['5m', '15m', '1h', '6h', '24h'] as const;
+
+export type IngestXRayWindow = (typeof INGEST_XRAY_WINDOWS)[number];
+
+/** Narrows an untrusted wire/UI value to a known {@link IngestXRayWindow}. */
+export function isIngestXRayWindow(value: unknown): value is IngestXRayWindow {
+  return isLiteralMember(INGEST_XRAY_WINDOWS, value);
+}
 
 /** Allowed bucket literals — server rejects anything else with 400. */
-export type IngestXRayBucket = '30s' | '1m' | '5m' | '15m' | '1h';
+export const INGEST_XRAY_BUCKETS = ['30s', '1m', '5m', '15m', '1h'] as const;
+
+export type IngestXRayBucket = (typeof INGEST_XRAY_BUCKETS)[number];
+
+/** Narrows an untrusted wire/UI value to a known {@link IngestXRayBucket}. */
+export function isIngestXRayBucket(value: unknown): value is IngestXRayBucket {
+  return isLiteralMember(INGEST_XRAY_BUCKETS, value);
+}
 
 /**
  * `value_kind` matches `protomodel.ValueKind` in the Go ingest path.
@@ -205,7 +263,14 @@ export interface IngestXRayResponse {
 // ============================================================================
 
 /** Allowed diagnostic windows — server rejects anything else with 400. */
-export type DriveDiagnosticWindow = '30s' | '60s' | '5m' | '15m';
+export const DRIVE_DIAGNOSTIC_WINDOWS = ['30s', '60s', '5m', '15m'] as const;
+
+export type DriveDiagnosticWindow = (typeof DRIVE_DIAGNOSTIC_WINDOWS)[number];
+
+/** Narrows an untrusted wire/UI value to a known {@link DriveDiagnosticWindow}. */
+export function isDriveDiagnosticWindow(value: unknown): value is DriveDiagnosticWindow {
+  return isLiteralMember(DRIVE_DIAGNOSTIC_WINDOWS, value);
+}
 
 export interface DriveDiagnosticTransition {
   id: number;
