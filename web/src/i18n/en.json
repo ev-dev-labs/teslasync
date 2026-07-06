@@ -4660,6 +4660,58 @@
     "kpis": "Cost summary",
     "mpg": "MPG"
   },
+  "carbon": {
+    "title": "Carbon Intelligence",
+    "subtitle": "Grid-aware CO₂ accounting for every charge — and when to charge greener",
+    "selectVehicle": "Select a vehicle to see its carbon footprint.",
+    "noData": "No charging data yet — charge a session to see your CO₂ footprint.",
+    "kpis": "Carbon summary",
+    "saved": "CO₂ Saved vs Gas",
+    "savedSubtitle": "Lifetime, vs an equivalent gas car",
+    "totalCo2": "Charging CO₂",
+    "totalCo2Subtitle": "{{kwh}} kWh over {{n}} sessions",
+    "periodCo2": "This Period CO₂",
+    "gasEquiv": "Gas-Car Equivalent",
+    "gasEquivSubtitle": "ICE baseline @ 0.192 kg CO₂/km",
+    "greenScore": "Green Charging Score",
+    "gaugeLabel": "Green score",
+    "scoreHelp": "100 = you always charge at the greenest hour; 0 = the dirtiest.",
+    "score": {
+      "excellent": "Excellent timing",
+      "good": "Good timing",
+      "fair": "Room to improve",
+      "poor": "Mostly peak-hour charging"
+    },
+    "curve": {
+      "title": "Grid Carbon Intensity by Hour",
+      "subtitle": "When the grid is cleanest to charge (gCO₂/kWh)",
+      "aria": "24-hour grid carbon intensity area chart with greenest and peak hours marked",
+      "greenest": "Greenest",
+      "peak": "Peak",
+      "series": "Grid intensity",
+      "empty": "Grid intensity model unavailable."
+    },
+    "monthly": {
+      "title": "Monthly CO₂ Trend",
+      "subtitle": "Attributed charging emissions per month (kg)",
+      "aria": "Monthly attributed charging CO₂ bar chart",
+      "series": "CO₂ emitted"
+    },
+    "rec": {
+      "title": "Greenest Charging Window",
+      "charge": "Charge",
+      "cut": "Cut ~{{pct}}% ({{kg}}) vs your current timing",
+      "already": "You're already charging in the greenest window — nice!",
+      "current": "Your avg intensity",
+      "window": "Window avg intensity",
+      "footnote": "Estimated over your observed charging energy."
+    },
+    "legend": {
+      "green": "Greenest hours — cleanest grid, best time to charge",
+      "peak": "Peak hours — dirtiest grid, avoid if you can",
+      "model": "Built-in diurnal grid model — no external API required"
+    }
+  },
   "automations": {
     "builder": {
       "aiBuilder": {

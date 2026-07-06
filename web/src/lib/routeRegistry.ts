@@ -42,6 +42,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/alerts', name: 'LegacyAlertsRedirect', label: 'Legacy Alerts Redirect', i18nKey: 'routes.legacyAlertsRedirect' },
   { path: '/analytics', name: 'Analytics', label: 'Analytics', i18nKey: 'routes.analytics' },
   { path: '/analytics/anomalies', name: 'AnomalyDashboard', label: 'Anomaly Dashboard', i18nKey: 'routes.anomalyDashboard' },
+  { path: '/analytics/carbon', name: 'CarbonIntelligence', label: 'Carbon Intelligence', i18nKey: 'routes.carbonIntelligence' },
   { path: '/analytics/range', name: 'ProjectedRange', label: 'Projected Range', i18nKey: 'routes.projectedRange' },
   { path: '/analytics/tco', name: 'TrueCostOwnership', label: 'True Cost Ownership', i18nKey: 'routes.trueCostOwnership' },
   { path: '/anomaly-detection', name: 'AnomalyDashboard', label: 'Anomaly Dashboard', i18nKey: 'routes.anomalyDashboard' },

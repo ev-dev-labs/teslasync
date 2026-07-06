@@ -75,6 +75,7 @@ const Statistics = lazy(() => import('./features/analytics/pages/StatisticsPage'
 const PeriodCompare = lazy(() => import('./features/analytics/pages/PeriodComparePage'))
 const Mileage = lazy(() => import('./features/analytics/pages/MileagePage'))
 const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCostPage'))
+const CarbonIntelligence = lazy(() => import('./features/analytics/pages/CarbonIntelligencePage'))
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
 const FleetCompare = lazy(() => import('./features/analytics/pages/FleetComparePage'))
@@ -579,6 +580,8 @@ export default function App() {
             RouteSet.Frontend entry land users on the deterministic baseline
             without surprising 404s. */}
         <Route path="analytics/tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
+        {/* Carbon Intelligence — grid-aware CO₂ accounting; sibling of /analytics/tco (money) */}
+        <Route path="analytics/carbon" element={<SafeRoute name="CarbonIntelligence"><CarbonIntelligence /></SafeRoute>} />
         <Route path="vehicle-comparison" element={<SafeRoute name="FleetCompare"><FleetCompare /></SafeRoute>} />
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />

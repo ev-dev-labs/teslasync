@@ -91,6 +91,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterydegradation"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterypassport"
+	apicarbon "github.com/ev-dev-labs/teslasync/internal/api/carbon"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	"github.com/ev-dev-labs/teslasync/internal/api/chargeplanner"
@@ -820,6 +821,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	regenHandler := apiregen.NewRegenHandler(db)
 	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
 	batteryPassportHandler := batterypassport.NewBatteryPassportHandler(db)
+	carbonHandler := apicarbon.NewCarbonHandler(db)
 	auditHandler := apiaudit.NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
@@ -2928,6 +2930,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/time-machine", timeMachineHandler.State)
 				r.Get("/time-machine/range", timeMachineHandler.Range)
 
+				// Carbon Intelligence — grid-aware CO2 accounting for
+				// charging. /summary attributes CO2 to each session by its
+				// charging hour and scores the timing vs a gas-car baseline;
+				// /recommendation surfaces the greenest charging window. Both
+				// are read-only and rate-limit-free (the SPA reads them on page
+				// load; the diurnal grid model is a tiny 24-row table). The
+				// vehicle-independent curve is served at the top-level
+				// GET /api/v1/carbon/intensity route below.
+				r.Get("/carbon/summary", carbonHandler.Summary)
+				r.Get("/carbon/recommendation", carbonHandler.Recommendation)
+
 				// Vehicle access: drivers & share invitations
 				r.Route("/drivers", func(r chi.Router) {
 					r.Get("/", vehicleAccessHandler.ListDrivers)
@@ -3319,6 +3332,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Analytics
 		r.Get("/analytics/fleet", analyticsHandler.Fleet)
 		r.Get("/analytics/tco", tcoHandler.GetTCO)
+
+		// Carbon Intelligence — the vehicle-independent diurnal grid
+		// carbon-intensity model (seeded, admin-editable). Mounted as a
+		// top-level /api/v1 route because the curve is shared by every
+		// vehicle; the per-vehicle carbon summary/recommendation live under
+		// /vehicles/{vehicleID}/carbon/* above.
+		r.Get("/carbon/intensity", carbonHandler.Intensity)
 		r.Get("/analytics/sleep", sleepHandler.GetSleepAnalytics)
 		r.Get("/analytics/regen", regenHandler.Stats)
 		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
