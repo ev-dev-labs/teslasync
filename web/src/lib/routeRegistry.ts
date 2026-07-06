@@ -56,6 +56,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/battery', name: 'BatteryHealth', label: 'Battery Health', i18nKey: 'routes.batteryHealth' },
   { path: '/battery-cells', name: 'BatteryCells', label: 'Battery Cells', i18nKey: 'routes.batteryCells' },
   { path: '/battery-degradation', name: 'BatteryDegradation', label: 'Battery Degradation', i18nKey: 'routes.batteryDegradation' },
+  { path: '/battery-passport', name: 'BatteryPassport', label: 'Battery Passport', i18nKey: 'routes.batteryPassport' },
   { path: '/battery/health', name: 'BatteryHealth', label: 'Battery Health', i18nKey: 'routes.batteryHealth' },
   { path: '/charging', name: 'Charging', label: 'Charging', i18nKey: 'routes.charging' },
   { path: '/charging-curve', name: 'ChargingCurve', label: 'Charging Curve', i18nKey: 'routes.chargingCurve' },

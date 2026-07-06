@@ -90,6 +90,7 @@ import (
 	apibattery "github.com/ev-dev-labs/teslasync/internal/api/battery"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterydegradation"
+	"github.com/ev-dev-labs/teslasync/internal/api/batterypassport"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	"github.com/ev-dev-labs/teslasync/internal/api/chargeplanner"
@@ -818,6 +819,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
 	regenHandler := apiregen.NewRegenHandler(db)
 	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
+	batteryPassportHandler := batterypassport.NewBatteryPassportHandler(db)
 	auditHandler := apiaudit.NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
@@ -2906,6 +2908,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/battery", batteryHandler.Report)
 				r.Get("/battery/cells", batteryCellsHandler.GetByVehicle)
 				r.Get("/battery/projected-range", rangeProjectionHandler.GetByVehicle)
+
+				// Battery Passport — a verifiable, tamper-evident SoH
+				// provenance certificate. Both routes are read-only: the
+				// GET builds the certificate (and best-effort appends an
+				// audit-ledger snapshot), and /verify recomputes the
+				// provenance hash so a buyer can detect tampering. No rate
+				// limit — the SPA reads them on page load and the ledger
+				// write is off the read's critical path.
+				r.Get("/battery-passport", batteryPassportHandler.Get)
+				r.Get("/battery-passport/verify", batteryPassportHandler.Verify)
 				r.Get("/weekly-digest", weeklyDigestHandler.Get)
 
 				// Vehicle Time Machine — reconstruct the complete signal

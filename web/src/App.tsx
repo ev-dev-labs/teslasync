@@ -52,6 +52,7 @@ const EnergyProducts = lazy(() => import('./features/battery/pages/EnergyProduct
 const VampireDrain = lazy(() => import('./features/battery/pages/VampireDrainPage'))
 const ProjectedRange = lazy(() => import('./features/battery/pages/ProjectedRangePage'))
 const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficiencyPage'))
+const BatteryPassport = lazy(() => import('./features/battery/pages/BatteryPassportPage'))
 
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
@@ -569,6 +570,7 @@ export default function App() {
                 <Route path="drive-dna" element={<SafeRoute name="DriveDNA"><DriveDNA /></SafeRoute>} />
                 <Route path="what-if" element={<SafeRoute name="WhatIf"><WhatIf /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
+        <Route path="battery-passport" element={<SafeRoute name="BatteryPassport"><BatteryPassport /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
             against frontend route `/analytics/tco`; the canonical app path
