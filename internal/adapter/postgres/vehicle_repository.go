@@ -15,7 +15,7 @@ import (
 )
 
 type vehicleRepository struct {
-	pool *pgxpool.Pool
+	pool pgxPool
 }
 
 func NewVehicleRepository(pool *pgxpool.Pool) repository.VehicleRepository {
@@ -35,7 +35,11 @@ func (r *vehicleRepository) GetByUserID(ctx context.Context, userID string) ([]v
 	if err != nil {
 		return nil, fmt.Errorf("querying vehicles for user %s: %w", userID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[vehicle.Vehicle])
+	vehicles, err := pgx.CollectRows(rows, pgx.RowToStructByName[vehicle.Vehicle])
+	if err != nil {
+		return nil, fmt.Errorf("collecting vehicles for user %s: %w", userID, err)
+	}
+	return vehicles, nil
 }
 
 func (r *vehicleRepository) GetByIDForUpdate(ctx context.Context, id string) (*vehicle.Vehicle, error) {

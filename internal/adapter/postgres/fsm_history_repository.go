@@ -12,7 +12,7 @@ import (
 )
 
 type fsmHistoryRepository struct {
-	pool *pgxpool.Pool
+	pool pgxPool
 }
 
 func NewFSMHistoryRepository(pool *pgxpool.Pool) repository.FSMHistoryRepository {
@@ -35,7 +35,11 @@ func (r *fsmHistoryRepository) GetHistory(ctx context.Context, entityID string, 
 	if err != nil {
 		return nil, fmt.Errorf("querying FSM history for entity %s: %w", entityID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[repository.FSMTransitionRecord])
+	records, err := pgx.CollectRows(rows, pgx.RowToStructByName[repository.FSMTransitionRecord])
+	if err != nil {
+		return nil, fmt.Errorf("collecting FSM history for entity %s: %w", entityID, err)
+	}
+	return records, nil
 }
 
 func (r *fsmHistoryRepository) GetByEntityID(ctx context.Context, entityID string) ([]repository.FSMTransitionRecord, error) {
@@ -43,5 +47,9 @@ func (r *fsmHistoryRepository) GetByEntityID(ctx context.Context, entityID strin
 	if err != nil {
 		return nil, fmt.Errorf("querying FSM history for entity %s: %w", entityID, err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[repository.FSMTransitionRecord])
+	records, err := pgx.CollectRows(rows, pgx.RowToStructByName[repository.FSMTransitionRecord])
+	if err != nil {
+		return nil, fmt.Errorf("collecting FSM history for entity %s: %w", entityID, err)
+	}
+	return records, nil
 }
