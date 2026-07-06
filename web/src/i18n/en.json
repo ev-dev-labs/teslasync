@@ -2309,7 +2309,8 @@
     "filter": {
       "all": "All",
       "global": "Global",
-      "page": "This page"
+      "page": "This page",
+      "label": "Filter shortcuts"
     },
     "group": {
       "global": "Global",
