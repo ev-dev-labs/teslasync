@@ -1,11 +1,27 @@
 import type { TourDefinition } from '@/lib/tourRegistry'
 import type { TourStep } from '@/hooks/useTour'
 
+/**
+ * Client-side navigation used by a step's `onShow` so the spotlight lands on a
+ * page that actually contains the step target. `history.pushState` does not emit
+ * `popstate` on its own, so we dispatch it manually to nudge the router.
+ *
+ * Wrapped in try/catch because `onShow` runs inside a React effect: an
+ * unguarded throw (e.g. a `SecurityError` from `pushState` in a sandboxed frame,
+ * or a listener blowing up on the synthetic `popstate`) would propagate out of
+ * the effect and tear down the whole tour overlay. Navigation here is a
+ * convenience — failing it should skip the hop, never crash the tour. Mirrors
+ * the defensive style already used across `@/lib/tourRegistry`.
+ */
 function navigate(href: string) {
   if (typeof window === 'undefined') return
   if (window.location.pathname === href) return
-  window.history.pushState({}, '', href)
-  window.dispatchEvent(new PopStateEvent('popstate'))
+  try {
+    window.history.pushState({}, '', href)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  } catch {
+    /* non-fatal — a failed convenience navigation must not crash the tour */
+  }
 }
 
 const STEPS: TourStep[] = [
