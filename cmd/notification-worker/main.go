@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
@@ -48,6 +48,69 @@ var Version = "dev"
 const tracerName = "cmd/notification-worker"
 
 func workerTracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
+
+// ── Ports ────────────────────────────────────────────────────────────
+// Small consumer-defined interfaces keep the computed-metric tick loop and
+// the health endpoint unit-testable without a live database: production
+// wires the concrete pgx-backed repositories (which satisfy these) while
+// tests pass in-memory fakes. The compile-time assertions below guarantee
+// the real repos never drift out of conformance.
+
+// computedRuleLister loads the enabled computed-metric alert rules.
+type computedRuleLister interface {
+	GetEnabledByKind(ctx context.Context, kind string) ([]*alertmodel.AlertRule, error)
+}
+
+// fleetVehicleLister enumerates every vehicle in the fleet.
+type fleetVehicleLister interface {
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
+}
+
+// channelLister loads all configured notification channels.
+type channelLister interface {
+	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
+}
+
+// computedMetricEvaluator evaluates one (rule, vehicle) pair on a tick.
+type computedMetricEvaluator interface {
+	Evaluate(ctx context.Context, rule *alertmodel.AlertRule, vehicleID int64) (computed.Result, error)
+}
+
+// healthChecker is the narrow slice of *database.DB the liveness probe needs.
+type healthChecker interface {
+	Health(ctx context.Context) error
+}
+
+var (
+	_ computedRuleLister      = (*dbalert.AlertRuleRepo)(nil)
+	_ fleetVehicleLister      = (*vehicledb.VehicleRepo)(nil)
+	_ channelLister           = (*dbnotif.NotificationRepo)(nil)
+	_ computedMetricEvaluator = (*computed.Evaluator)(nil)
+	_ healthChecker           = (*database.DB)(nil)
+)
+
+// healthResponse is the JSON body returned by the /healthz endpoint.
+type healthResponse struct {
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+}
+
+// healthzHandler reports database liveness for k8s probes. It encodes the
+// body with encoding/json so an error string containing quotes or
+// backslashes cannot corrupt the response (the previous fmt.Fprintf shim
+// interpolated err.Error() straight into a JSON literal), and always sets
+// the JSON content type before writing the status line.
+func healthzHandler(hc healthChecker) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := hc.Health(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(w).Encode(healthResponse{Status: "unhealthy", Error: err.Error()})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(healthResponse{Status: "ok"})
+	}
+}
 
 func main() {
 	// Built-in healthcheck for distroless containers
@@ -320,15 +383,7 @@ func main() {
 		healthPort = "8081"
 	}
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Health(r.Context()); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintf(w, `{"status":"unhealthy","error":"%s"}`, err.Error())
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"status":"ok"}`)
-	})
+	healthMux.HandleFunc("/healthz", healthzHandler(db))
 	go func() {
 		log.Info().Str("port", healthPort).Msg("health endpoint listening")
 		if err := http.ListenAndServe(":"+healthPort, healthMux); err != nil && err != http.ErrServerClosed {
@@ -396,10 +451,10 @@ func setupLogger(level string) {
 // "fan out across all vehicles in the fleet".
 func runComputedMetricTick(
 	ctx context.Context,
-	alertRuleRepo *dbalert.AlertRuleRepo,
-	vehicleRepo *vehicledb.VehicleRepo,
-	notifRepo *dbnotif.NotificationRepo,
-	evaluator *computed.Evaluator,
+	alertRuleRepo computedRuleLister,
+	vehicleRepo fleetVehicleLister,
+	notifRepo channelLister,
+	evaluator computedMetricEvaluator,
 	mqttClient pahomqtt.Client,
 	span oteltrace.Span,
 ) {
@@ -473,11 +528,22 @@ func runComputedMetricTick(
 }
 
 func vehiclesForRule(rule *alertmodel.AlertRule, all []*vehiclemodel.Vehicle) []int64 {
+	// A nil rule targets nothing — defends the standalone helper against a
+	// malformed caller (the tick loop only passes repo-hydrated rules).
+	if rule == nil {
+		return nil
+	}
 	// Honor the sticky-all flag and the explicit vehicle subset hydrated by the
 	// repo.
 	if rule.AllVehicles {
 		out := make([]int64, 0, len(all))
 		for _, v := range all {
+			// Skip nil entries defensively — the name-resolution loop in
+			// runComputedMetricTick already guards against them, so this
+			// helper must not panic on the same malformed input.
+			if v == nil {
+				continue
+			}
 			out = append(out, v.ID)
 		}
 		return out
