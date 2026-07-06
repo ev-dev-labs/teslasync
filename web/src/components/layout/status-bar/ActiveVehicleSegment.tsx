@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Check, ChevronUp } from 'lucide-react';
 import { Tooltip } from '@/components/ui';
@@ -29,6 +29,8 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
   const { vehicle, vehicles, vehicleId, setVehicleId } = useSelectedVehicle();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const listboxId = useId();
 
   // Footer-tier polling: 60s is plenty for an always-mounted micro-segment.
   // The full-vehicle state hook is shared via TanStack Query dedup with any
@@ -41,9 +43,17 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
   const { unitPrefs } = useUnits();
   const distanceLabel = unitPrefs.distance;
   const liveState = stateData?.state;
-  const metricsLabel = liveState
-    ? `${liveState.battery_level ?? 0}% · ${Math.round(convertDistanceFromSI(liveState.rated_range ?? 0, distanceLabel))} ${distanceLabel}`
-    : null;
+  // Compose "<battery>% · <range> <unit>" from the live snapshot. Guard every
+  // numeric against non-finite input — a direct backend `state` payload can
+  // carry nulls the VehicleState type does not model — so the chip can never
+  // render a literal "NaN%" / "NaN km".
+  const metricsLabel = useMemo<string | null>(() => {
+    if (!liveState) return null;
+    const battery = Number.isFinite(liveState.battery_level) ? liveState.battery_level : 0;
+    const ratedRangeM = Number.isFinite(liveState.rated_range) ? liveState.rated_range : 0;
+    const range = Math.round(convertDistanceFromSI(ratedRangeM, distanceLabel));
+    return `${battery}% · ${range} ${distanceLabel}`;
+  }, [liveState, distanceLabel]);
 
   // Close popover on outside click / Escape so it behaves like a real menu.
   useEffect(() => {
@@ -53,7 +63,12 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
       if (!containerRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        // Escape is a keyboard dismissal — return focus to the trigger so the
+        // user is not dropped onto <body> after the listbox unmounts.
+        triggerRef.current?.focus();
+      }
     };
     document.addEventListener('mousedown', onClick);
     document.addEventListener('keydown', onKey);
@@ -67,6 +82,9 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
     (id: number) => {
       setVehicleId(id);
       setOpen(false);
+      // The chosen option button unmounts with the listbox; move focus back to
+      // the trigger so keyboard users keep a sensible focus anchor.
+      triggerRef.current?.focus();
     },
     [setVehicleId],
   );
@@ -120,9 +138,11 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
       <Tooltip content={tooltip} side="top">
         <button
           type="button"
+          ref={triggerRef}
           aria-label={`${t('statusBar.vehicle.switch', 'Switch vehicle')} (${label})`}
           aria-haspopup="listbox"
           aria-expanded={open}
+          aria-controls={open ? listboxId : undefined}
           onClick={() => setOpen((o) => !o)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
@@ -144,6 +164,7 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
 
       {open && (
         <div
+          id={listboxId}
           role="listbox"
           aria-label={t('statusBar.vehicle.aria', 'Active vehicle')}
           className={cn(
