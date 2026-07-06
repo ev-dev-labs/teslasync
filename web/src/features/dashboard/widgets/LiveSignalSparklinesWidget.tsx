@@ -19,22 +19,26 @@ const DEFAULT_SIGNALS = [
   'PackCurrent',
 ];
 
-const SIGNAL_COLORS = [
-  NEON_COLORS[0], // cyan
-  NEON_COLORS[1], // purple
-  NEON_COLORS[2], // amber
+// Six visually distinct series colours. NEON_COLORS is [cyan, emerald, purple,
+// amber, indigo, red, …]; index directly so the assignments match the comments
+// (previously NEON_COLORS[1]/[2] were mislabelled "purple"/"amber", which made
+// index 1 and index 3 both resolve to emerald `#10b981` — a duplicate colour).
+export const SIGNAL_COLORS = [
+  NEON_COLORS[0], // cyan    (#00f0ff)
+  NEON_COLORS[2], // purple  (#a855f7)
+  NEON_COLORS[3], // amber   (#f59e0b)
   '#10b981',      // emerald
   '#3b82f6',      // blue
   '#f43f5e',      // rose
 ];
 
 /** Pretty-print a PascalCase signal name as spaced words */
-function formatSignalName(name: string): string {
+export function formatSignalName(name: string): string {
   return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
 }
 
 /** Extract numeric value from a live signal entry */
-function extractNumericValue(value: unknown): number | null {
+export function extractNumericValue(value: unknown): number | null {
   if (typeof value === 'number' && isFinite(value)) return value;
   if (typeof value === 'string') {
     const n = parseFloat(value);
@@ -80,16 +84,28 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
 
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColor = trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280';
+  const trendLabel =
+    trend === 'up'
+      ? t('widget.trendUp', 'Trending up')
+      : trend === 'down'
+        ? t('widget.trendDown', 'Trending down')
+        : t('widget.trendFlat', 'No change');
+
+  const label = formatSignalName(signal);
 
   return (
     <div className="flex items-center gap-2 py-1.5 border-b border-white/[0.04] last:border-b-0">
-      {/* Color indicator */}
-      <div className="w-1 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+      {/* Color indicator (decorative — the row label carries the meaning) */}
+      <div
+        aria-hidden="true"
+        className="w-1 h-6 rounded-full flex-shrink-0"
+        style={{ backgroundColor: color }}
+      />
 
       {/* Label + value */}
       <div className="flex-1 min-w-0">
         <p className="text-2xs text-[var(--text-secondary)] truncate leading-tight">
-          {formatSignalName(signal)}
+          {label}
         </p>
         <p className="text-xs font-bold text-[var(--text-primary)] leading-tight">
           {currentValue != null ? fmtNumber(currentValue, 1) : '—'}
@@ -103,6 +119,7 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
           color={color}
           width={isWide ? 80 : 56}
           height={20}
+          ariaLabel={`${label} ${t('widget.trendSparkline', 'trend')}`}
         />
       ) : (
         <span className="text-2xs text-[var(--text-muted)] w-14 text-center">
@@ -110,8 +127,10 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
         </span>
       )}
 
-      {/* Trend indicator */}
-      <TrendIcon className="h-3 w-3 flex-shrink-0" style={{ color: trendColor }} />
+      {/* Trend indicator — icon-only, so announce the direction to AT */}
+      <span role="img" aria-label={trendLabel} className="flex-shrink-0">
+        <TrendIcon className="h-3 w-3" style={{ color: trendColor }} aria-hidden="true" />
+      </span>
     </div>
   );
 }
