@@ -149,12 +149,12 @@ SELECT field, sample_count, last_seen, max_gap_seconds, duplicate_ratio
 	}
 	defer rows.Close()
 
+	now := s.now()
 	out := &Snapshot{
-		GeneratedAt: s.now(),
+		GeneratedAt: now,
 		WindowMins:  s.windowMins,
 		Fields:      []FieldScore{},
 	}
-	now := s.now()
 	for rows.Next() {
 		var fs FieldScore
 		if err := rows.Scan(&fs.Field, &fs.SampleCount, &fs.LastSeenAt, &fs.MaxGapSeconds, &fs.DuplicateRatio); err != nil {
