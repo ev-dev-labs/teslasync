@@ -2,11 +2,11 @@
  * Shared components for Signal Log Viewer and Signal Explorer pages.
  * Provides reusable signal search, datetime range, and data table controls.
  */
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, useId } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { request } from '@/api/client'
-import { GlassPanel, Badge, Button, Input, DataTable, type Column } from './ui'
+import { GlassPanel, Badge, type BadgeProps, Button, Input, DataTable, type Column } from './ui'
 import { fmtInt } from '../lib/numberFormat'
 import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '../lib/constants'
 import { cn } from '../lib/cn'
@@ -109,8 +109,13 @@ export function formatValue(entry: SignalLogEntry): string {
   return '—'
 }
 
-export const TYPE_BADGE_COLOR: Record<string, 'cyan' | 'green' | 'amber' | 'neutral'> = {
-  num: 'cyan', str: 'green', bool: 'amber', null: 'neutral',
+// Maps a value-type discriminator to a Badge `variant`. The Badge primitive is
+// variant-based (info/success/warning/neutral); an earlier revision passed
+// these as a `color` prop, which fell through to the DOM as an inert attribute
+// and left every type chip rendering the default neutral style. Keeping the
+// values in sync with BadgeProps['variant'] restores the intended colour code.
+export const TYPE_BADGE_COLOR: Record<string, NonNullable<BadgeProps['variant']>> = {
+  num: 'info', str: 'success', bool: 'warning', null: 'neutral',
 }
 
 // Body cells in a 100s-of-rows table — readability wins over saturation.
@@ -131,25 +136,31 @@ interface SignalMultiSelectProps {
 }
 
 export function SignalMultiSelect({ vehicleId, selected, onChange, maxSignals }: SignalMultiSelectProps) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const inputId = useId()
+  const listboxId = useId()
 
-  const { data: availableSignals } = useQuery({
+  const { data: availableSignals, isLoading, isError } = useQuery({
     queryKey: ['signal-available', vehicleId],
     queryFn: () => request<string[]>(`/signals/available?vehicle_id=${vehicleId}`),
     staleTime: 60_000,
   })
 
+  const atMax = !!maxSignals && selected.length >= maxSignals
+
   const filtered = useMemo(() => {
     const all = availableSignals ?? []
-    if (!search) return all.filter(s => !selected.includes(s))
-    const q = search.toLowerCase()
-    return all.filter(s => !selected.includes(s) && s.toLowerCase().includes(q))
+    const q = search.trim().toLowerCase()
+    return all.filter(s => !selected.includes(s) && (!q || s.toLowerCase().includes(q)))
   }, [availableSignals, search, selected])
 
+  const visible = useMemo(() => filtered.slice(0, 50), [filtered])
+
   const addSignal = useCallback((sig: string) => {
-    if (maxSignals && selected.length >= maxSignals) return
+    if (!!maxSignals && selected.length >= maxSignals) return
     onChange([...selected, sig])
     setSearch('')
   }, [selected, onChange, maxSignals])
@@ -168,8 +179,10 @@ export function SignalMultiSelect({ vehicleId, selected, onChange, maxSignals }:
 
   return (
     <div>
-      <label className="metric-label mb-1.5 block">
-        Signals{maxSignals ? ` (max ${maxSignals})` : ''}
+      <label htmlFor={inputId} className="metric-label mb-1.5 block">
+        {maxSignals
+          ? t('signalQuery.signalsMax', 'Signals (max {{count}})', { count: maxSignals })
+          : t('signalQuery.signals', 'Signals')}
       </label>
 
       {selected.length > 0 && (
@@ -177,7 +190,12 @@ export function SignalMultiSelect({ vehicleId, selected, onChange, maxSignals }:
           {selected.map(sig => (
             <span key={sig} className="inline-flex items-center gap-1 rounded-lg bg-neon-cyan/10 border border-neon-cyan/25 px-2 py-0.5 text-xs font-mono text-neon-cyan">
               {sig}
-              <button type="button" onClick={() => removeSignal(sig)} className="touch-target-overlay hover:text-[var(--text-primary)] transition-colors" aria-label={`Remove ${sig}`}>
+              <button
+                type="button"
+                onClick={() => removeSignal(sig)}
+                className="touch-target-overlay hover:text-[var(--text-primary)] transition-colors"
+                aria-label={t('signalQuery.removeSignal', 'Remove {{signal}}', { signal: sig })}
+              >
                 <X className="h-3 w-3" />
               </button>
             </span>
@@ -187,29 +205,66 @@ export function SignalMultiSelect({ vehicleId, selected, onChange, maxSignals }:
 
       <div className="relative" ref={ref}>
         <Input
+          id={inputId}
           type="text"
-          placeholder={selected.length ? 'Add more signals…' : 'Search signals…'}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-label={t('signalQuery.searchSignals', 'Search signals')}
+          placeholder={selected.length
+            ? t('signalQuery.addMoreSignals', 'Add more signals…')
+            : t('signalQuery.searchSignalsPlaceholder', 'Search signals…')}
           value={search}
           onChange={e => { setSearch(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           icon={<Search className="h-3.5 w-3.5" />}
         />
-        {open && filtered.length > 0 && (
-          <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-xl border border-white/[0.08] bg-[var(--bg-primary)] shadow-xl">
-            {filtered.slice(0, 50).map(sig => (
-              <button
-                key={sig}
-                type="button"
-                onClick={() => { addSignal(sig); setOpen(false) }}
-                className="w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-white/[0.05] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                {sig}
-              </button>
-            ))}
-            {filtered.length > 50 && (
-              <p className="px-3 py-1.5 text-2xs text-[var(--text-muted)]">
-                {filtered.length - 50} more — refine search
+        {open && (
+          <div
+            id={listboxId}
+            role="listbox"
+            aria-label={t('signalQuery.searchSignals', 'Search signals')}
+            className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-xl border border-white/[0.08] bg-[var(--bg-primary)] shadow-xl"
+          >
+            {isLoading ? (
+              <p className="px-3 py-1.5 text-xs text-[var(--text-muted)]">
+                {t('signalQuery.loadingSignals', 'Loading signals…')}
               </p>
+            ) : isError ? (
+              <p className="px-3 py-1.5 text-xs text-rose-300">
+                {t('signalQuery.signalsError', 'Failed to load signals')}
+              </p>
+            ) : atMax ? (
+              <p className="px-3 py-1.5 text-xs text-[var(--text-muted)]">
+                {t('signalQuery.maxReached', 'Maximum of {{count}} signals selected', { count: maxSignals })}
+              </p>
+            ) : visible.length === 0 ? (
+              <p className="px-3 py-1.5 text-xs text-[var(--text-muted)]">
+                {search
+                  ? t('signalQuery.noMatchingSignals', 'No matching signals')
+                  : t('signalQuery.noSignals', 'No signals available')}
+              </p>
+            ) : (
+              <>
+                {visible.map(sig => (
+                  <button
+                    key={sig}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => { addSignal(sig); setOpen(false) }}
+                    className="w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-white/[0.05] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                  >
+                    {sig}
+                  </button>
+                ))}
+                {filtered.length > 50 && (
+                  <p className="px-3 py-1.5 text-2xs text-[var(--text-muted)]">
+                    {t('signalQuery.moreRefine', '{{count}} more — refine search', { count: filtered.length - 50 })}
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
@@ -230,18 +285,20 @@ interface DateTimeRangeProps {
 
 export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange, onPreset }: DateTimeRangeProps) {
   const { t } = useTranslation()
+  const fromId = useId()
+  const toId = useId()
   const activePresetHours = matchTimeRangePreset(fromStr, toStr)
   const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
       <div className="space-y-1.5">
-        <label className="metric-label">{t('signalQuery.from', 'From')}</label>
-        <input type="datetime-local" step="1" value={fromStr} onChange={e => onFromChange(e.target.value)} className={inputClass} />
+        <label htmlFor={fromId} className="metric-label">{t('signalQuery.from', 'From')}</label>
+        <input id={fromId} type="datetime-local" step="1" value={fromStr} onChange={e => onFromChange(e.target.value)} className={inputClass} />
       </div>
       <div className="space-y-1.5">
-        <label className="metric-label">{t('signalQuery.to', 'To')}</label>
-        <input type="datetime-local" step="1" value={toStr} onChange={e => onToChange(e.target.value)} className={inputClass} />
+        <label htmlFor={toId} className="metric-label">{t('signalQuery.to', 'To')}</label>
+        <input id={toId} type="datetime-local" step="1" value={toStr} onChange={e => onToChange(e.target.value)} className={inputClass} />
       </div>
       <div className="space-y-1.5">
         <label className="metric-label">{t('signalQuery.quickRange', 'Quick Range')}</label>
@@ -284,12 +341,16 @@ interface QueryControlsProps {
 
 export function QueryControls({ perPage, onPerPageChange, onQuery, disabled, loading, label }: QueryControlsProps) {
   const { t } = useTranslation()
+  const rowsId = useId()
+  const rowsLabel = t('signalQuery.rows', 'Rows')
   const buttonLabel = label ?? t('signalQuery.query', 'Query')
   return (
     <div className="flex items-end gap-2">
       <div className="space-y-1.5">
-        <label className="metric-label">{t('signalQuery.rows', 'Rows')}</label>
+        <label htmlFor={rowsId} className="metric-label">{rowsLabel}</label>
         <select
+          id={rowsId}
+          aria-label={rowsLabel}
           value={perPage}
           onChange={e => onPerPageChange(Number(e.target.value))}
           className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
@@ -318,12 +379,15 @@ interface SignalDataTableProps {
 }
 
 export function SignalDataTable({ rows, page, totalPages, total, perPage, onPageChange, loading }: SignalDataTableProps) {
+  const { t } = useTranslation()
+
   if (loading) {
     return <GlassPanel className="p-4"><div className="space-y-2">{Array.from({length: 5}).map((_, i) => <div key={i} className="h-8 rounded bg-white/[0.03] animate-pulse" />)}</div></GlassPanel>
   }
 
   type IndexedEntry = SignalLogEntry & { _rowNum: number }
-  const indexedRows: IndexedEntry[] = rows.map((entry, i) => ({
+  const safeRows = rows ?? []
+  const indexedRows: IndexedEntry[] = safeRows.map((entry, i) => ({
     ...entry,
     _rowNum: (page - 1) * perPage + i + 1,
   }))
@@ -337,19 +401,19 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
     },
     {
       key: 'created_at',
-      header: 'Timestamp',
+      header: t('signalQuery.col.timestamp', 'Timestamp'),
       render: (row) => formatTimestampMs(row.created_at),
       className: 'font-mono text-[var(--text-secondary)]',
     },
     {
       key: 'signal',
-      header: 'Signal',
+      header: t('signalQuery.col.signal', 'Signal'),
       render: (row) => row.signal,
       className: 'font-mono text-[var(--text-primary)]',
     },
     {
       key: 'value',
-      header: 'Value',
+      header: t('signalQuery.col.value', 'Value'),
       render: (row) => {
         const vt = getValueType(row)
         return <span className={TYPE_VALUE_COLOR[vt]}>{formatValue(row)}</span>
@@ -358,10 +422,10 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
     },
     {
       key: 'type',
-      header: 'Type',
+      header: t('signalQuery.col.type', 'Type'),
       render: (row) => {
         const vt = getValueType(row)
-        return <Badge color={TYPE_BADGE_COLOR[vt]}>{vt}</Badge>
+        return <Badge variant={TYPE_BADGE_COLOR[vt]}>{vt}</Badge>
       },
     },
   ]
@@ -372,20 +436,20 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
         columns={columns}
         data={indexedRows}
         keyExtractor={(row) => row._rowNum}
-        emptyMessage="No results"
+        emptyMessage={t('signalQuery.noResults', 'No results')}
         compact
       />
 
       {/* Server-side pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <span className="text-2xs text-[var(--text-muted)]">{fmtInt(total)} records</span>
+          <span className="text-2xs text-[var(--text-muted)]">{t('signalQuery.records', '{{n}} records', { n: fmtInt(total) })}</span>
           <div className="flex items-center gap-1">
-            <button onClick={() => onPageChange(1)} disabled={page <= 1} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
-            <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>
-            <span className="px-2 text-xs text-[var(--text-secondary)]">Page {page} of {totalPages}</span>
-            <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5" /></button>
-            <button onClick={() => onPageChange(totalPages)} disabled={page >= totalPages} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsRight className="h-3.5 w-3.5" /></button>
+            <button onClick={() => onPageChange(1)} disabled={page <= 1} aria-label={t('signalQuery.firstPage', 'First page')} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
+            <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label={t('signalQuery.prevPage', 'Previous page')} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>
+            <span className="px-2 text-xs text-[var(--text-secondary)]">{t('signalQuery.pageOf', 'Page {{page}} of {{total}}', { page, total: totalPages })}</span>
+            <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} aria-label={t('signalQuery.nextPage', 'Next page')} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5" /></button>
+            <button onClick={() => onPageChange(totalPages)} disabled={page >= totalPages} aria-label={t('signalQuery.lastPage', 'Last page')} className="touch-target-overlay p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsRight className="h-3.5 w-3.5" /></button>
           </div>
         </div>
       )}
