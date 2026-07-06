@@ -107,7 +107,12 @@ func DefaultPollingConfig() LegacyPollingConfig {
 
 // EnabledVehicleDataEndpoints returns the list of enabled vehicle_data sub-endpoints
 // for use in the Tesla API query string (e.g., "charge_state;drive_state").
+// The order is stable and a nil receiver yields nil (nil-safe for callers that
+// hold a *LegacyPollingConfig, as the worker does).
 func (pc *LegacyPollingConfig) EnabledVehicleDataEndpoints() []string {
+	if pc == nil {
+		return nil
+	}
 	var endpoints []string
 	if pc.ChargeState {
 		endpoints = append(endpoints, "charge_state")
@@ -130,19 +135,30 @@ func (pc *LegacyPollingConfig) EnabledVehicleDataEndpoints() []string {
 	return endpoints
 }
 
-// VehicleDataEndpointsString returns enabled sub-endpoints as a semicolon-separated string.
+// VehicleDataEndpointsString returns enabled sub-endpoints as a semicolon-separated
+// string. A nil receiver yields an empty string.
 func (pc *LegacyPollingConfig) VehicleDataEndpointsString() string {
 	return strings.Join(pc.EnabledVehicleDataEndpoints(), ";")
 }
 
-// HasAnyVehicleDataEndpoint returns true if at least one vehicle_data sub-endpoint is enabled.
+// HasAnyVehicleDataEndpoint returns true if at least one vehicle_data sub-endpoint is
+// enabled. It considers only the automatic polling flags, not their on-demand
+// counterparts. A nil receiver returns false.
 func (pc *LegacyPollingConfig) HasAnyVehicleDataEndpoint() bool {
+	if pc == nil {
+		return false
+	}
 	return pc.ChargeState || pc.ClimateState || pc.DriveState ||
 		pc.LocationData || pc.VehicleState || pc.VehicleConfig
 }
 
-// EnabledOnDemandVehicleDataEndpoints returns the list of enabled on-demand vehicle_data sub-endpoints.
+// EnabledOnDemandVehicleDataEndpoints returns the list of enabled on-demand
+// vehicle_data sub-endpoints. The order mirrors EnabledVehicleDataEndpoints and a
+// nil receiver yields nil.
 func (pc *LegacyPollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
+	if pc == nil {
+		return nil
+	}
 	var endpoints []string
 	if pc.OnDemandChargeState {
 		endpoints = append(endpoints, "charge_state")
