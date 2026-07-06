@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bug, HelpCircle, Keyboard } from 'lucide-react';
 import { Tooltip } from '@/components/ui';
@@ -36,9 +37,18 @@ const buttonClass = cn(
 export function HelpSegment({ iconOnly = false }: HelpSegmentProps) {
   const { t } = useTranslation();
 
-  const openShortcuts = () => window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts'));
-  const openTour = () => dispatchTourLauncherOpen();
-  const openFeedback = () => window.dispatchEvent(new CustomEvent('open-feedback-modal'));
+  // Stable dispatchers — each fires the same decoupled window event Layout
+  // listens for and never depends on props/state, so we memoise once per mount
+  // rather than recreating a closure on every status-bar re-render.
+  const openShortcuts = useCallback(
+    () => window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts')),
+    [],
+  );
+  const openTour = useCallback(() => dispatchTourLauncherOpen(), []);
+  const openFeedback = useCallback(
+    () => window.dispatchEvent(new CustomEvent('open-feedback-modal')),
+    [],
+  );
 
   return (
     <div className="flex items-center gap-1" data-tour="keyboard-hint">
