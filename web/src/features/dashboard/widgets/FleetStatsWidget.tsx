@@ -9,15 +9,24 @@ import type { WidgetProps } from './types';
 import type { Drive, ChargingSession } from '../types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
+/** 1 mile = 1.609344 km exactly — restates Wh/km efficiency as Wh/mi. */
+const KM_PER_MILE = 1.609344;
+/** SI prefix: 1 km = 1000 m. Used to rebuild metres from the derived-SI km field. */
+const METERS_PER_KM = 1000;
+
 export default function FleetStatsWidget(_props: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const { data: analytics, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  // analytics.total_distance_km is a derived-SI convenience already expressed in
+  // kilometres (the backend computes it as DistanceM / 1000). Reconstruct true SI
+  // metres before the SI→display converter — otherwise the tile is off by the
+  // 1000× km→m prefix (1,000 km would render as "1 km" / "0.62 mi").
+  const toDistanceDisplay = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 
   const primaryId = vehicles?.[0]?.id ?? 0;
   const { data: recentDrives } = useQuery({
