@@ -35,8 +35,11 @@ export function useUndoRedo<T>(initialValue: T): UndoRedoState<T> {
   }, []);
 
   const undo = useCallback((): T | undefined => {
-    const previous = undoStack.current.pop();
-    if (previous === undefined) return undefined;
+    // Guard on stack length, not on the popped value: T may legitimately
+    // include `undefined`, so a popped `undefined` is a real prior state to
+    // restore rather than an empty-stack sentinel.
+    if (undoStack.current.length === 0) return undefined;
+    const previous = undoStack.current.pop() as T;
     redoStack.current.push(currentRef.current);
     currentRef.current = previous;
     forceRender((v) => v + 1);
@@ -44,8 +47,8 @@ export function useUndoRedo<T>(initialValue: T): UndoRedoState<T> {
   }, []);
 
   const redo = useCallback((): T | undefined => {
-    const next = redoStack.current.pop();
-    if (next === undefined) return undefined;
+    if (redoStack.current.length === 0) return undefined;
+    const next = redoStack.current.pop() as T;
     undoStack.current.push(currentRef.current);
     currentRef.current = next;
     forceRender((v) => v + 1);
