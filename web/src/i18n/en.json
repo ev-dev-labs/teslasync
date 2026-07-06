@@ -6897,7 +6897,11 @@
       "activeConns": "Active Conns",
       "memory": "Memory",
       "goroutines": "Goroutines",
-      "noData": "No system health data"
+      "noData": "No system health data",
+      "statusOk": "Healthy",
+      "statusDegraded": "Degraded",
+      "statusUnknown": "Unknown",
+      "statusDown": "Down"
     },
     "telemetryErrors": {
       "unknown": "Unknown",
