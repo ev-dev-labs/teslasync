@@ -2275,7 +2275,8 @@
       "toggleColumn": "Show or hide {{col}}",
       "moveUp": "Move {{col}} up",
       "moveDown": "Move {{col}} down",
-      "resizeLabel": "Resize column {{col}}"
+      "resizeLabel": "Resize column {{col}}",
+      "empty": "No columns to configure"
     },
     "expand": {
       "expand": "Expand row",
