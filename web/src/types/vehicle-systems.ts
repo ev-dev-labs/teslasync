@@ -1,3 +1,30 @@
+/**
+ * Vehicle-systems wire types — the query surface behind useVehicleSystems.ts
+ * (climate, tire pressure, maintenance, service records, software updates,
+ * safety).
+ *
+ * Two key-casing conventions live here on purpose, mirroring how each shape is
+ * read at runtime:
+ *
+ *  - camelCase shapes (ClimateState, TirePressureReading, MaintenanceItem,
+ *    ServiceRecord, SoftwareUpdate) name the camelCase MIRROR that the shared
+ *    request() client adds. The backend emits snake_case JSON; client.ts runs
+ *    camelCaseKeys() (lib/resilience.ts) which KEEPS every snake_case key AND
+ *    adds a camelCase alias pointing at the same value, so `inside_temp` and
+ *    `insideTemp` both resolve. These interfaces declare the camelCase alias.
+ *  - snake_case shape (SafetySnapshot) mirrors the Go JSON tags 1:1, matching
+ *    the /safety/latest handler which serializes raw signal values verbatim.
+ *
+ * SafetySnapshot's ADAS enum fields are deliberately typed `string | boolean |
+ * number | null`: the backend forwards raw signal.SignalValue, so the same
+ * field can arrive as a typed enum string, a native boolean toggle, or a
+ * legacy numeric. NEVER call `.toLowerCase()`/`.startsWith()` on them directly
+ * — funnel through cleanSafetyEnum() / isSafetyEnumActive() in lib/safetyEnum.ts.
+ *
+ * Phase-48 (SI canonical): the `*_mi`/`miles_*` fields below are grandfathered.
+ * Do NOT add new unit-suffixed fields — new distances are meters, speeds m/s.
+ */
+
 export interface ClimateState {
   id?: number;
   created_at?: string;
@@ -105,20 +132,4 @@ export interface SafetySnapshot {
   miles_since_reset?: number | null;
   self_driving_miles_since_reset?: number | null;
   created_at?: string;
-}
-
-export interface MediaSnapshot {
-  id: string;
-  vehicleId: string;
-  title: string;
-  artist: string;
-  album: string;
-  station: string;
-  source: string;
-  playbackStatus: string;
-  volume: number;
-  volumeMax: number;
-  elapsed: number;
-  duration: number;
-  timestamp: string;
 }
