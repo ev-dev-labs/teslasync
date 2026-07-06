@@ -10,7 +10,7 @@ import {
   useLatestTirePressure,
 } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
 import { cleanNil } from '@/lib/cleanNil';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -73,12 +73,12 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
               <>
                 <Row
                   label={t('widget.torque', 'Torque')}
-                  value={motor.di_torque != null ? `${motor.di_torque} Nm` : '—'}
+                  value={isFiniteNumber(motor.di_torque) ? `${fmtInt(motor.di_torque)} Nm` : '—'}
                 />
                 <Row
                   label={t('widget.motorTemp', 'Temp')}
                   value={
-                    motor.di_stator_temp != null
+                    isFiniteNumber(motor.di_stator_temp)
                       ? `${fmtInt(toTemperatureDisplay(motor.di_stator_temp))}${tempUnit}`
                       : '—'
                   }
@@ -100,7 +100,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 <Row
                   label={t('widget.cabin', 'Cabin')}
                   value={
-                    climate.inside_temp != null
+                    isFiniteNumber(climate.inside_temp)
                       ? `${fmtInt(toTemperatureDisplay(climate.inside_temp))}${tempUnit}`
                       : '—'
                   }
@@ -108,14 +108,14 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 <Row
                   label={t('widget.outside', 'Outside')}
                   value={
-                    climate.outside_temp != null
+                    isFiniteNumber(climate.outside_temp)
                       ? `${fmtInt(toTemperatureDisplay(climate.outside_temp))}${tempUnit}`
                       : '—'
                   }
                 />
                 <Row
                   label={t('widget.hvac', 'HVAC')}
-                  value={climate.hvac_power != null ? `${fmtNumber(climate.hvac_power, 1)} kW` : '—'}
+                  value={isFiniteNumber(climate.hvac_power) ? `${fmtNumber(climate.hvac_power, 1)} kW` : '—'}
                 />
               </>
             ) : (
@@ -133,7 +133,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 <Row
                   label="FL"
                   value={
-                    tires.front_left != null
+                    isFiniteNumber(tires.front_left)
                       ? `${fmtNumber(toPressureDisplay(tires.front_left), 1)} ${pressureUnit}`
                       : '—'
                   }
@@ -141,7 +141,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 <Row
                   label="FR"
                   value={
-                    tires.front_right != null
+                    isFiniteNumber(tires.front_right)
                       ? `${fmtNumber(toPressureDisplay(tires.front_right), 1)} ${pressureUnit}`
                       : '—'
                   }
@@ -149,7 +149,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 <Row
                   label="RL"
                   value={
-                    tires.rear_left != null
+                    isFiniteNumber(tires.rear_left)
                       ? `${fmtNumber(toPressureDisplay(tires.rear_left), 1)} ${pressureUnit}`
                       : '—'
                   }
@@ -157,7 +157,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 <Row
                   label="RR"
                   value={
-                    tires.rear_right != null
+                    isFiniteNumber(tires.rear_right)
                       ? `${fmtNumber(toPressureDisplay(tires.rear_right), 1)} ${pressureUnit}`
                       : '—'
                   }
@@ -171,7 +171,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
           {/* Security summary */}
           <div className="space-y-1.5">
             <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
-              🛡️ {t('widget.security', 'Security')}
+              <span aria-hidden="true">🛡️</span> {t('widget.security', 'Security')}
             </h4>
             {security ? (
               <>
