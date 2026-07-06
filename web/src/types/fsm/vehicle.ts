@@ -270,7 +270,12 @@ export interface VehicleSignalContext {
 
 /**
  * Derive vehicle status from live state data.
- * Priority: charging > driving > API state string > offline fallback.
+ *
+ * Precedence: a missing state object → 'offline'; otherwise live signals win —
+ * `is_charging` → 'charging', then a positive `speed` → 'driving', then a
+ * recognised API `state` string (case-insensitive) passes through. A reachable
+ * but otherwise uninformative state defaults to 'online' — the API responded,
+ * so the vehicle is at least online.
  */
 export function deriveVehicleStatus(state?: { is_charging?: boolean; speed?: number | null; state?: string | null } | null): VehicleState {
   if (!state) return 'offline'
