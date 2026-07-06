@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleDot } from 'lucide-react';
 import {
@@ -14,8 +14,15 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-/** Recommended PSI range in bar (2.4–2.8 bar ≈ 35–41 psi) */
-const RECOMMENDED_RANGE_BAR = { low: 2.4, high: 2.8 } as const;
+/**
+ * Recommended tire-pressure range expressed in SI kilopascals — the unit the
+ * app-wide pressure converter (`toPressureValue` → `convertPressureFromSI`)
+ * consumes. 240–280 kPa ≈ 2.4–2.8 bar ≈ 35–41 psi.
+ */
+export const RECOMMENDED_RANGE_KPA = { low: 240, high: 280 } as const;
+
+/** 1 bar = 100 kPa (BIPM); used only for the pathological null-converter fallback. */
+const KPA_PER_BAR = 100;
 
 const TIRE_COLORS = {
   fl: '#3b82f6', // blue
@@ -24,7 +31,7 @@ const TIRE_COLORS = {
   rr: '#a855f7', // purple
 } as const;
 
-interface ChartDatum {
+export interface ChartDatum {
   time: string;
   fl: number | null;
   fr: number | null;
@@ -32,9 +39,9 @@ interface ChartDatum {
   rr: number | null;
 }
 
-function buildChartData(
+export function buildChartData(
   data: ReturnType<typeof useTirePressureHistory>['data'],
-  toPressureValue: (bar: number | null | undefined) => number | null,
+  toPressureValue: (kpa: number | null | undefined) => number | null,
 ): ChartDatum[] {
   const items = data ?? [];
   return items
@@ -49,12 +56,33 @@ function buildChartData(
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
-function latestNonNull(data: ChartDatum[], key: keyof Omit<ChartDatum, 'time'>): number | null {
+export function latestNonNull(data: ChartDatum[], key: keyof Omit<ChartDatum, 'time'>): number | null {
   for (let i = data.length - 1; i >= 0; i--) {
     const v = data[i][key];
     if (v != null) return v;
   }
   return null;
+}
+
+/**
+ * Resolve the recommended-range reference lines in the user's display unit.
+ * `toPressureValue` accepts SI kilopascals (the app-wide pressure contract),
+ * so the range is expressed in kPa and converted here. Feeding the converter
+ * Pascals instead (the previous `* 100_000`) placed the reference lines ~1000×
+ * too high, off the plotted pressure domain.
+ */
+export function recommendedPressureRange(
+  toPressureValue: (kpa: number | null | undefined) => number | null,
+): { low: number; high: number } {
+  return {
+    low: toPressureValue(RECOMMENDED_RANGE_KPA.low) ?? RECOMMENDED_RANGE_KPA.low / KPA_PER_BAR,
+    high: toPressureValue(RECOMMENDED_RANGE_KPA.high) ?? RECOMMENDED_RANGE_KPA.high / KPA_PER_BAR,
+  };
+}
+
+/** Format a converted pressure value to a single decimal, or an em-dash when absent. */
+function formatPressure(val: number | null): string {
+  return val != null ? fmtNumber(val, 1) : '—';
 }
 
 export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetProps) {
@@ -64,7 +92,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   const { pressureUnit, toPressureValue } = usePressureFormat();
   const { formatDateTime } = useDateFormat();
 
-  const formatTime = (ts: string): string => formatDateTime(ts);
+  const formatTime = useCallback((ts: string): string => formatDateTime(ts), [formatDateTime]);
 
   const {
     data,
@@ -90,20 +118,27 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   const latestRL = useMemo(() => latestNonNull(chartData, 'rl'), [chartData]);
   const latestRR = useMemo(() => latestNonNull(chartData, 'rr'), [chartData]);
 
-  const refLow = toPressureValue(RECOMMENDED_RANGE_BAR.low * 100_000) ?? RECOMMENDED_RANGE_BAR.low;
-  const refHigh = toPressureValue(RECOMMENDED_RANGE_BAR.high * 100_000) ?? RECOMMENDED_RANGE_BAR.high;
+  const { low: refLow, high: refHigh } = useMemo(
+    () => recommendedPressureRange(toPressureValue),
+    [toPressureValue],
+  );
 
-  const formatPressure = (val: number | null): string =>
-    val != null ? fmtNumber(val, 1) : '—';
+  const stats = useMemo<ChartSummaryStat[]>(
+    () =>
+      hasData
+        ? [
+            { label: t('widget.tirePressureHistory.fl', 'FL'), value: formatPressure(latestFL), unit: pressureUnit },
+            { label: t('widget.tirePressureHistory.fr', 'FR'), value: formatPressure(latestFR), unit: pressureUnit },
+            { label: t('widget.tirePressureHistory.rl', 'RL'), value: formatPressure(latestRL), unit: pressureUnit },
+            { label: t('widget.tirePressureHistory.rr', 'RR'), value: formatPressure(latestRR), unit: pressureUnit },
+          ]
+        : [],
+    [hasData, latestFL, latestFR, latestRL, latestRR, pressureUnit, t],
+  );
 
-  const stats: ChartSummaryStat[] = hasData
-    ? [
-        { label: t('widget.tirePressureHistory.fl', 'FL'), value: formatPressure(latestFL), unit: pressureUnit },
-        { label: t('widget.tirePressureHistory.fr', 'FR'), value: formatPressure(latestFR), unit: pressureUnit },
-        { label: t('widget.tirePressureHistory.rl', 'RL'), value: formatPressure(latestRL), unit: pressureUnit },
-        { label: t('widget.tirePressureHistory.rr', 'RR'), value: formatPressure(latestRR), unit: pressureUnit },
-      ]
-    : [];
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   const tick = isWide ? axisTick : axisTickSm;
 
@@ -171,7 +206,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => refetch()}
+        onRefresh={handleRefresh}
       >
         <WidgetChartSummary
           compact
@@ -194,7 +229,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       <WidgetChartSummary
         isEmpty={!hasData}
