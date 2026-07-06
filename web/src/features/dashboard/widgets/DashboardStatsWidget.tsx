@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard } from 'lucide-react';
 import { StatusBadge } from '@/components/data-display';
@@ -28,7 +28,6 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
 
   const dashStats = stats.data;
   const fsmState = fsm.data?.state ?? '—';
-  const transitions = timeline.data?.transitions ?? [];
 
   const statItems = useMemo<StatGridItem[]>(() => [
     {
@@ -50,37 +49,43 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
   ], [dashStats, fsmState, t]);
 
   const recentTransitions = useMemo(
-    () => (isWide ? transitions.slice(0, 5) : []),
-    [transitions, isWide],
+    () => (isWide ? (timeline.data?.transitions ?? []).slice(0, 5) : []),
+    [timeline.data, isWide],
   );
 
-  /* Freshness: merge from all queries */
-  const updatedAt = Math.max(
-    stats.dataUpdatedAt ?? 0,
-    fsm.dataUpdatedAt ?? 0,
-    timeline.dataUpdatedAt ?? 0,
-  );
-  const isFetching = stats.isFetching || fsm.isFetching || timeline.isFetching;
-  const isStale = stats.isStale || fsm.isStale || timeline.isStale;
-  const isError = stats.isError || fsm.isError || timeline.isError;
+  /*
+   * Freshness reflects the two live primary sources — the dashboard stats and
+   * the FSM vehicle state. The state-transition timeline is a deprecated,
+   * best-effort secondary whose endpoint is expected to 404 (see
+   * useStateTimeline); its failure and background-refetch churn must NOT drive
+   * the widget's health indicator. `isLoading` already excluded it — the other
+   * signals are aligned here so a 404 timeline never paints a red/stale/fetching
+   * freshness dot on top of otherwise-healthy stats.
+   */
+  const updatedAt = Math.max(stats.dataUpdatedAt ?? 0, fsm.dataUpdatedAt ?? 0);
+  const isFetching = stats.isFetching || fsm.isFetching;
+  const isStale = stats.isStale || fsm.isStale;
+  const isError = stats.isError || fsm.isError;
   const isLoading = stats.isLoading || fsm.isLoading;
+
+  const handleRefresh = useCallback(() => {
+    stats.refetch();
+    fsm.refetch();
+    timeline.refetch();
+  }, [stats.refetch, fsm.refetch, timeline.refetch]);
 
   const hasData = stats.data != null;
 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.dashboardStats.title', 'Dashboard Stats')}
-      icon={isCompact ? undefined : <LayoutDashboard className="h-3.5 w-3.5 text-indigo-400" />}
+      icon={isCompact ? undefined : <LayoutDashboard aria-hidden="true" className="h-3.5 w-3.5 text-indigo-400" />}
       loading={isLoading}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => {
-        stats.refetch();
-        fsm.refetch();
-        timeline.refetch();
-      }}
+      onRefresh={handleRefresh}
     >
       {hasData ? (
         <div className="flex flex-col gap-3 h-full">
@@ -137,7 +142,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<LayoutDashboard className="h-5 w-5" />}
+          icon={<LayoutDashboard aria-hidden="true" className="h-5 w-5" />}
           message={t('widget.dashboardStats.noData', 'No dashboard stats available')}
           className="py-4"
         />
