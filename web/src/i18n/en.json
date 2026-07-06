@@ -8076,6 +8076,9 @@
       "satellite": "Satellite",
       "streets": "Streets",
       "terrain": "Terrain"
+    },
+    "animatedMarker": {
+      "label": "Vehicle position"
     }
   },
   "navigation": {
