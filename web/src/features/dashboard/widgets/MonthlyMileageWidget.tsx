@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
 import {
@@ -20,8 +20,8 @@ interface BarDatum {
   isCurrent: boolean;
 }
 
-/** Format "2026-04" → "Apr" */
-function shortMonth(iso: string): string {
+/** Format "2026-04" → "Apr". Non-'YYYY-MM' or out-of-range input is returned unchanged. */
+export function shortMonth(iso: string): string {
   const parts = iso.split('-');
   if (parts.length < 2) return iso;
   const idx = parseInt(parts[1], 10) - 1;
@@ -29,7 +29,8 @@ function shortMonth(iso: string): string {
   return names[idx] ?? iso;
 }
 
-function currentMonthKey(): string {
+/** Current calendar month as a 'YYYY-MM' key, in the host's local time. */
+export function currentMonthKey(): string {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -41,9 +42,14 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-
   const distanceUnit = unitPrefs.distance;
+  // convertDistanceFromSI expects SI meters and maps to the user's unit.
+  // Memoised so the chartData derive only recomputes when the source data or
+  // the distance preference actually changes.
+  const toDistanceDisplay = useCallback(
+    (meters: number) => convertDistanceFromSI(meters, distanceUnit),
+    [distanceUnit],
+  );
 
   const {
     data,
@@ -55,6 +61,10 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
     dataUpdatedAt,
     refetch,
   } = useMonthlyMileage(vid > 0 ? String(vid) : '');
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const curMonth = currentMonthKey();
 
@@ -83,24 +93,12 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const isWide = size.cols >= 3;
   const hasData = chartData.length > 0 && chartData.some((d) => d.distance > 0);
 
-  // ── Compact (1-col): summary stats only ──
-  if (isCompact) {
-    return (
-      <WidgetShell
-        loading={isLoading}
-        error={error ? String(error) : null}
-        updatedAt={dataUpdatedAt}
-        isFetching={isFetching}
-        isStale={isStale}
-        isError={isError}
-        onRefresh={() => refetch()}
-      >
-        <WidgetChartSummary
-          compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.monthlyMileage.noData', 'No mileage data')}
-          emptyIcon={<BarChart3 className="h-5 w-5" />}
-          stats={hasData ? [
+  // Summary stats are identical in the compact and standard layouts, so they
+  // are derived once and reused (single source of truth + stable reference).
+  const summaryStats = useMemo<ChartSummaryStat[]>(
+    () =>
+      hasData
+        ? [
             {
               label: t('widget.monthlyMileage.thisMonth', 'This Month'),
               value: fmtInt(currentMonthDistance),
@@ -111,7 +109,37 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
               value: fmtInt(totalDistance),
               unit: distanceUnit,
             },
-          ] : []}
+          ]
+        : [],
+    [hasData, currentMonthDistance, totalDistance, distanceUnit, t],
+  );
+
+  // Only surface a full error panel on a genuine initial-load failure (no data
+  // yet). A background-refetch error that still has cached data must keep the
+  // chart on screen — the freshness indicator conveys the stale/error state.
+  const shellError =
+    isError && !data
+      ? String(error ?? t('widget.monthlyMileage.error', 'Unable to load mileage data'))
+      : null;
+
+  // ── Compact (1-col): summary stats only ──
+  if (isCompact) {
+    return (
+      <WidgetShell
+        loading={isLoading}
+        error={shellError}
+        updatedAt={dataUpdatedAt}
+        isFetching={isFetching}
+        isStale={isStale}
+        isError={isError}
+        onRefresh={handleRefresh}
+      >
+        <WidgetChartSummary
+          compact
+          isEmpty={!hasData}
+          emptyMessage={t('widget.monthlyMileage.noData', 'No mileage data')}
+          emptyIcon={<BarChart3 className="h-5 w-5" />}
+          stats={summaryStats}
           chart={null}
         />
       </WidgetShell>
@@ -119,21 +147,6 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   }
 
   // ── Standard (2×4+): stat header + bar chart ──
-  const stats: ChartSummaryStat[] = hasData
-    ? [
-        {
-          label: t('widget.monthlyMileage.thisMonth', 'This Month'),
-          value: fmtInt(currentMonthDistance),
-          unit: distanceUnit,
-        },
-        {
-          label: t('widget.monthlyMileage.total12m', '12-Mo Total'),
-          value: fmtInt(totalDistance),
-          unit: distanceUnit,
-        },
-      ]
-    : [];
-
   const tick = isWide ? axisTick : axisTickSm;
 
   return (
@@ -141,18 +154,18 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.monthlyMileage.title', 'Monthly Mileage')}
       icon={<BarChart3 className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      error={shellError}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       <WidgetChartSummary
         isEmpty={!hasData}
         emptyMessage={t('widget.monthlyMileage.noData', 'No mileage data')}
         emptyIcon={<BarChart3 className="h-5 w-5" />}
-        stats={stats}
+        stats={summaryStats}
         chart={
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
