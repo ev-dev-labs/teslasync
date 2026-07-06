@@ -44,12 +44,15 @@ export function BottomTabBar() {
           ? location.pathname === '/'
           : location.pathname === tab.path || location.pathname.startsWith(tab.path + '/');
         const Icon = tab.icon;
+        // Resolve once so the anchor's accessible name (aria-label) and the
+        // visible caption can never drift apart — WCAG 2.5.3 (Label in Name).
+        const label = t(tab.i18nKey, tab.fallback);
 
         return (
           <PrefetchLink
             key={tab.path}
             to={tab.path}
-            aria-label={t(tab.i18nKey, tab.fallback)}
+            aria-label={label}
             aria-current={isActive ? 'page' : undefined}
             className={cn(
               'relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-lg',
@@ -59,9 +62,9 @@ export function BottomTabBar() {
                 : 'text-[var(--text-muted)] active:text-[var(--text-secondary)]'
             )}
           >
-            <Icon className={cn('h-5 w-5', isActive && 'drop-shadow-[0_0_6px_currentColor]')} />
+            <Icon aria-hidden="true" className={cn('h-5 w-5', isActive && 'drop-shadow-[0_0_6px_currentColor]')} />
             <span className="text-2xs font-medium leading-tight">
-              {t(tab.i18nKey, tab.fallback)}
+              {label}
             </span>
             {isActive && (
               <span className="absolute -bottom-0.5 h-0.5 w-4 rounded-full bg-[var(--theme-primary)] shadow-[0_0_6px_var(--theme-primary)]" />
