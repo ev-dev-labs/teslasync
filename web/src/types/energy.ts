@@ -1,4 +1,18 @@
-/** Types for battery & energy domain */
+/**
+ * Battery & energy domain types.
+ *
+ * Every interface here mirrors the JSON wire contract emitted by the Go
+ * energy/battery/analytics handlers (snake_case keys — keep these in sync with
+ * the handler response maps in internal/api/{energy,battery,batterycells,
+ * batterydegradation,energyflow,rangeproj,sleep}).
+ *
+ * Units are mixed and intentional. Most figures are SI base units
+ * (`*_wh`, `*_m`, `*_wh_per_m`, `*_kg`), but a handful of fields still carry the
+ * legacy display-unit suffixes the backend continues to emit today
+ * (`*_km`, `*_min`, `*_kwh`). Read whatever the API returns verbatim — never
+ * convert inside a hook — and apply the user's unit preference at the render
+ * boundary via `useUnits()` + `@/lib/unitConversion`.
+ */
 
 export interface EnergyStats {
   /** Echoed by the backend energy handler; optional for callers that don't need it. */
