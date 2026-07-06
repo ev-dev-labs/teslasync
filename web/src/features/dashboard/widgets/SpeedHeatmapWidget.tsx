@@ -16,7 +16,7 @@ import type { Drive } from '@/api/types';
 const ROWS = 7;
 const COLS = 24;
 
-interface HeatCell {
+export interface HeatCell {
   day: number;   // 0=Mon … 6=Sun
   hour: number;  // 0–23
   avgSpeed: number;
@@ -24,7 +24,7 @@ interface HeatCell {
 }
 
 /** Build a 7×24 grid of average speeds from drive start times. */
-function buildHeatmap(drives: Drive[], speedUnit: SpeedUnitPref): HeatCell[][] {
+export function buildHeatmap(drives: Drive[], speedUnit: SpeedUnitPref): HeatCell[][] {
   // Accumulator: [day][hour] → { total, count }
   const acc: { total: number; count: number }[][] = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => ({ total: 0, count: 0 })),
@@ -33,9 +33,15 @@ function buildHeatmap(drives: Drive[], speedUnit: SpeedUnitPref): HeatCell[][] {
   for (const d of drives) {
     if (!d.start_ts) continue;
     const speed = d.avg_speed_mps ?? d.max_speed_mps;
-    if (speed == null || speed <= 0) continue;
+    // `speed <= 0` alone lets a NaN through (`NaN <= 0` is false) which would
+    // poison the cell average and produce a NaN colour later — require finite.
+    if (speed == null || !Number.isFinite(speed) || speed <= 0) continue;
 
     const dt = new Date(d.start_ts);
+    // A malformed `start_ts` yields an Invalid Date whose getDay()/getHours()
+    // are NaN; indexing acc[NaN][NaN] would throw and crash the whole widget.
+    if (Number.isNaN(dt.getTime())) continue;
+
     // JS getDay: 0=Sun … 6=Sat → remap to 0=Mon … 6=Sun
     const jsDay = dt.getDay();
     const day = jsDay === 0 ? 6 : jsDay - 1;
@@ -56,7 +62,7 @@ function buildHeatmap(drives: Drive[], speedUnit: SpeedUnitPref): HeatCell[][] {
 }
 
 /** Interpolate between two hex colours. t ∈ [0, 1] */
-function lerpColor(a: [number, number, number], b: [number, number, number], t: number): string {
+export function lerpColor(a: [number, number, number], b: [number, number, number], t: number): string {
   const r = Math.round(a[0] + (b[0] - a[0]) * t);
   const g = Math.round(a[1] + (b[1] - a[1]) * t);
   const bl = Math.round(a[2] + (b[2] - a[2]) * t);
@@ -71,8 +77,12 @@ const COLOR_STOPS: [number, number, number][] = [
   [239, 68, 68],    // red-500
 ];
 
-function speedToColor(speed: number, maxSpeed: number): string {
-  if (speed <= 0 || maxSpeed <= 0) return 'rgba(255,255,255,0.03)';
+export function speedToColor(speed: number, maxSpeed: number): string {
+  // Guard non-finite inputs too: a NaN would slip past `<= 0` and then index
+  // COLOR_STOPS[NaN] → undefined → crash inside lerpColor.
+  if (!Number.isFinite(speed) || !Number.isFinite(maxSpeed) || speed <= 0 || maxSpeed <= 0) {
+    return 'rgba(255,255,255,0.03)';
+  }
   const t = Math.min(speed / maxSpeed, 1);
   // Map t to a position across 3 segments (4 stops)
   const segCount = COLOR_STOPS.length - 1;
@@ -143,7 +153,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.speedHeatmap.title', 'Speed Heatmap')}
-      icon={<Grid3X3 className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Grid3X3 aria-hidden="true" className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}
       noPadding
@@ -202,7 +212,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Grid3X3 className="h-5 w-5" />}
+          icon={<Grid3X3 aria-hidden="true" className="h-5 w-5" />}
           message={t('widget.speedHeatmap.empty', 'No drive data yet')}
           className="py-4"
         />
@@ -234,6 +244,8 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: Heatma
       viewBox={`0 0 ${leftMargin + COLS * 10 + 2} ${topMargin + ROWS * 12 + 2}`}
       className="w-full h-full"
       preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
     >
       {/* Hour labels along top */}
       {hourLabels.map((h) => (
