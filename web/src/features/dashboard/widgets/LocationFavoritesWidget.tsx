@@ -1,18 +1,17 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useLocations } from '@/api/hooks/useLocations';
-import { useLocationSnapshotLatest } from '@/api/hooks/useVehicles';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
 import { fmtInt } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import type { WidgetProps } from './types';
 
-function locationBadge(
+export function locationBadge(
   snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
   t: (key: string, fallback: string) => string,
 ): { emoji: string; label: string; variant: 'success' | 'warning' | 'error' | 'neutral' } {
@@ -60,6 +59,8 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
   const isCompact = size.cols <= 1;
 
   const locBadge = locationBadge(snapshot, t);
+  const badgeVariant: 'success' | 'warning' | 'neutral' =
+    locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral';
 
   const items: RankedItem[] = useMemo(() => {
     const locs = locations ?? [];
@@ -72,6 +73,15 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
     }));
   }, [locations]);
 
+  // Both queries feed this widget: the snapshot drives the presence badge
+  // (the only content in the compact layout) and the locations list drives
+  // the ranked list. A manual refresh must refetch BOTH so the compact badge
+  // — which is derived solely from the snapshot — actually updates.
+  const handleRefresh = useCallback(() => {
+    locRefetch();
+    snapRefetch();
+  }, [locRefetch, snapRefetch]);
+
   const shellProps = {
     loading: isLoading,
     error: error ? String(error) : null,
@@ -79,23 +89,17 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
     isFetching,
     isStale,
     isError,
-    onRefresh: () => { locRefetch(); snapRefetch(); },
+    onRefresh: handleRefresh,
   };
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}
-      updatedAt={locUpdatedAt}
-      isFetching={locFetching}
-      isStale={locStale}
-      isError={locIsError}
-      onRefresh={() => locRefetch()}
-    >
+      <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
           <span className="text-2xl" role="img" aria-label={locBadge.label}>
             {locBadge.emoji}
           </span>
-          <Badge variant={locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral'} size="sm">
+          <Badge variant={badgeVariant} size="sm">
             {locBadge.label}
           </Badge>
         </div>
@@ -113,7 +117,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
         <span className="text-lg" role="img" aria-label={locBadge.label}>
           {locBadge.emoji}
         </span>
-        <Badge variant={locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral'} size="sm">
+        <Badge variant={badgeVariant} size="sm">
           {locBadge.label}
         </Badge>
         {snapshot?.destination_name && (
