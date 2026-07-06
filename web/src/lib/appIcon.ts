@@ -22,9 +22,17 @@ const RX_STANDARD = 44
 const BOLT_PATH = 'M112 30L62 108h34L78 170l58-82h-34z'
 
 /** Sanity-check a colour string before pasting it into an SVG; defends
- * against malformed values from corrupted localStorage / API. */
+ * against malformed values from corrupted localStorage / API.
+ *
+ * Only the four CSS hex notations are accepted — #RGB (3), #RGBA (4),
+ * #RRGGBB (6), and #RRGGBBAA (8). Five- and seven-digit strings are NOT
+ * valid CSS colours: a renderer silently drops such a `stop-color`, which
+ * would blank the gradient — exactly the corruption this guard exists to
+ * prevent — so they fall back rather than flowing through. */
 function safeHex(value: string, fallback: string): string {
-  return /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : fallback
+  return /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(value)
+    ? value
+    : fallback
 }
 
 export type AppIconMode =
