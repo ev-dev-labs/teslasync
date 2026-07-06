@@ -134,6 +134,90 @@ const REGISTRY: Record<string, ActivityVisual> = {
     i18nKey: 'activity.action.automationDelete',
     fallback: 'Automation deleted',
   },
+  // The Go backend (internal/automation/audit.go) records PAST-TENSE lifecycle
+  // actions in audit_logs, so the imperative keys above never match a real feed
+  // entry on their own — every automation event used to collapse onto the
+  // generic `automation` entry below. Mirror the actual emitted vocabulary here
+  // so each event gets its own icon + label; unlisted verbs still degrade to the
+  // domain-level `automation` entry via the prefix walk.
+  'automation.created': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationCreated',
+    fallback: 'Automation created',
+  },
+  'automation.updated': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationUpdated',
+    fallback: 'Automation updated',
+  },
+  'automation.deleted': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationDeleted',
+    fallback: 'Automation deleted',
+  },
+  'automation.enabled': {
+    icon: Icons.workflow,
+    color: 'text-emerald-300',
+    i18nKey: 'activity.action.automationEnabled',
+    fallback: 'Automation enabled',
+  },
+  'automation.disabled': {
+    icon: Icons.workflow,
+    color: 'text-[var(--text-muted)]',
+    i18nKey: 'activity.action.automationDisabled',
+    fallback: 'Automation disabled',
+  },
+  'automation.re_enabled': {
+    icon: Icons.workflow,
+    color: 'text-emerald-300',
+    i18nKey: 'activity.action.automationReEnabled',
+    fallback: 'Automation re-enabled',
+  },
+  'automation.test_run': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationTestRun',
+    fallback: 'Automation test run',
+  },
+  'automation.undo': {
+    icon: Icons.undo,
+    color: 'text-amber-300',
+    i18nKey: 'activity.action.automationUndo',
+    fallback: 'Automation undone',
+  },
+  'automation.imported': {
+    icon: Icons.download,
+    color: 'text-teal-300',
+    i18nKey: 'activity.action.automationImported',
+    fallback: 'Automations imported',
+  },
+  'automation.exported': {
+    icon: Icons.upload,
+    color: 'text-teal-300',
+    i18nKey: 'activity.action.automationExported',
+    fallback: 'Automations exported',
+  },
+  'automation.executed': {
+    icon: Icons.workflow,
+    color: 'text-cyan-300',
+    i18nKey: 'activity.action.automationExecuted',
+    fallback: 'Automation ran',
+  },
+  'automation.failed': {
+    icon: Icons.error,
+    color: 'text-rose-300',
+    i18nKey: 'activity.action.automationFailed',
+    fallback: 'Automation failed',
+  },
+  'automation.auto_disabled': {
+    icon: Icons.workflow,
+    color: 'text-amber-300',
+    i18nKey: 'activity.action.automationAutoDisabled',
+    fallback: 'Automation auto-disabled',
+  },
   'automation': {
     icon: Icons.workflow,
     color: 'text-cyan-300',

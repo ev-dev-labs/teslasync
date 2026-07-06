@@ -158,6 +158,19 @@ describe('getActivityVisual — result contract & purity', () => {
     'automation.create',
     'automation.update',
     'automation.delete',
+    'automation.created',
+    'automation.updated',
+    'automation.deleted',
+    'automation.enabled',
+    'automation.disabled',
+    'automation.re_enabled',
+    'automation.test_run',
+    'automation.undo',
+    'automation.imported',
+    'automation.exported',
+    'automation.executed',
+    'automation.failed',
+    'automation.auto_disabled',
     'automation',
     'dashboard.layout.save',
     'dashboard',
@@ -191,5 +204,85 @@ describe('getActivityVisual — result contract & purity', () => {
   it('exposes exactly the ActivityVisual shape (type contract)', () => {
     const v: ActivityVisual = getActivityVisual('auth.login')
     expect(Object.keys(v).sort()).toEqual(['color', 'fallback', 'i18nKey', 'icon'])
+  })
+})
+
+describe('getActivityVisual — real backend automation vocabulary (past-tense)', () => {
+  // These are the exact past-tense actions the Go backend writes to audit_logs
+  // (internal/automation/audit.go). Before they were registered, every one
+  // collapsed onto the generic `automation` entry; each must now resolve to its
+  // own distinct visual so the activity feed can label them precisely.
+  const cases: Array<[string, string, string]> = [
+    ['automation.created', 'activity.action.automationCreated', 'Automation created'],
+    ['automation.updated', 'activity.action.automationUpdated', 'Automation updated'],
+    ['automation.deleted', 'activity.action.automationDeleted', 'Automation deleted'],
+    ['automation.enabled', 'activity.action.automationEnabled', 'Automation enabled'],
+    ['automation.disabled', 'activity.action.automationDisabled', 'Automation disabled'],
+    ['automation.re_enabled', 'activity.action.automationReEnabled', 'Automation re-enabled'],
+    ['automation.test_run', 'activity.action.automationTestRun', 'Automation test run'],
+    ['automation.undo', 'activity.action.automationUndo', 'Automation undone'],
+    ['automation.imported', 'activity.action.automationImported', 'Automations imported'],
+    ['automation.exported', 'activity.action.automationExported', 'Automations exported'],
+    ['automation.executed', 'activity.action.automationExecuted', 'Automation ran'],
+    ['automation.failed', 'activity.action.automationFailed', 'Automation failed'],
+    [
+      'automation.auto_disabled',
+      'activity.action.automationAutoDisabled',
+      'Automation auto-disabled',
+    ],
+  ]
+
+  it.each(cases)(
+    'maps %s to its own past-tense visual (never the generic fallback)',
+    (action, key, fallback) => {
+      const v = getActivityVisual(action)
+      expect(v.i18nKey).toBe(key)
+      expect(v.fallback).toBe(fallback)
+      // Must not collapse to the domain-level entry or the global fallback.
+      expect(v.i18nKey).not.toBe('activity.action.automation')
+      expect(v.i18nKey).not.toBe(FALLBACK_KEY)
+      expect(isVisual(v)).toBe(true)
+    },
+  )
+
+  it('colour-codes lifecycle state and flags failures distinctly', () => {
+    const failed = getActivityVisual('automation.failed')
+    expect(failed.icon).toBe(Icons.error)
+    expect(failed.color).toBe('text-rose-300')
+
+    // enable/disable are colour-coded to convey the resulting run state.
+    expect(getActivityVisual('automation.enabled').color).toBe('text-emerald-300')
+    expect(getActivityVisual('automation.re_enabled').color).toBe('text-emerald-300')
+    expect(getActivityVisual('automation.disabled').color).toBe('text-[var(--text-muted)]')
+    expect(getActivityVisual('automation.auto_disabled').color).toBe('text-amber-300')
+  })
+
+  it('uses directional transfer icons for import vs export', () => {
+    expect(getActivityVisual('automation.imported').icon).toBe(Icons.download)
+    expect(getActivityVisual('automation.exported').icon).toBe(Icons.upload)
+    // …and they are visually distinct from one another.
+    expect(getActivityVisual('automation.imported').icon).not.toBe(
+      getActivityVisual('automation.exported').icon,
+    )
+  })
+
+  it('keeps the imperative aliases working without shadowing the real actions', () => {
+    // The legacy imperative keys still resolve (kept for forward-compat), and the
+    // real past-tense action is a genuinely different registry entry.
+    expect(getActivityVisual('automation.create').i18nKey).toBe('activity.action.automationCreate')
+    expect(getActivityVisual('automation.created').i18nKey).toBe(
+      'activity.action.automationCreated',
+    )
+    expect(getActivityVisual('automation.create')).not.toBe(getActivityVisual('automation.created'))
+  })
+
+  it('still degrades unlisted verbs to the generic automation entry', () => {
+    // A verb the backend does not emit must fall through to the domain entry via
+    // the prefix walk — not crash and not hit the global fallback.
+    expect(getActivityVisual('automation.frobnicate').i18nKey).toBe('activity.action.automation')
+    // An extra trailing segment past a real action resolves back to it.
+    expect(getActivityVisual('automation.created.v2').i18nKey).toBe(
+      'activity.action.automationCreated',
+    )
   })
 })

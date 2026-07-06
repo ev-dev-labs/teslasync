@@ -5901,7 +5901,20 @@
       "apiKeyDelete": "API key revoked",
       "auth": "Authentication",
       "authLogin": "Signed in",
-      "authLogout": "Signed out"
+      "authLogout": "Signed out",
+      "automationCreated": "Automation created",
+      "automationUpdated": "Automation updated",
+      "automationDeleted": "Automation deleted",
+      "automationEnabled": "Automation enabled",
+      "automationDisabled": "Automation disabled",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationImported": "Automations imported",
+      "automationExported": "Automations exported",
+      "automationExecuted": "Automation ran",
+      "automationFailed": "Automation failed",
+      "automationAutoDisabled": "Automation auto-disabled"
     }
   },
   "perf": {
