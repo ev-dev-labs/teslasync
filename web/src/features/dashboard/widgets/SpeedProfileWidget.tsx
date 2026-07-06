@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
@@ -12,10 +12,7 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertSpeedFromSI, convertPowerFromSI } from '@/lib/unitConversion';
-
-/** 1 mph in SI m/s (NIST: 1 mile = 1609.344 m, 1 h = 3600 s → 0.44704). */
-const MPH_TO_MPS = 1609.344 / 3600;
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface ChartDatum {
   bucket: string;
@@ -25,8 +22,7 @@ interface ChartDatum {
 
 function buildChartData(
   data: ReturnType<typeof useSpeedProfile>['data'],
-  toSpeedDisplay: (mps: number) => number,
-  toPowerDisplay: (watts: number) => number,
+  toSpeedDisplay: (mph: number) => number,
 ): ChartDatum[] {
   const distribution = data?.distribution ?? [];
   const totalReadings = distribution.reduce((sum, b) => sum + (b.readings ?? 0), 0);
@@ -34,34 +30,28 @@ function buildChartData(
   return distribution.map((b) => {
     const label = formatBucketLabel(b.speed_bucket ?? b.speedBucket ?? '', toSpeedDisplay);
     const freq = totalReadings > 0 ? ((b.readings ?? 0) / totalReadings) * 100 : 0;
-    // API delivers avg power as SI watts; convert at the display boundary.
-    const eff = toPowerDisplay(b.avg_power_w ?? 0);
+    const eff = b.avg_power_w ?? b.avgPowerW ?? 0;
     return { bucket: label, frequency: freq, efficiency: eff };
   });
 }
 
-/**
- * Convert an mph bucket label to the user's speed unit, e.g. "20-40" → "32-64"
- * in km/h. The speed-profile API emits bucket edges in miles-per-hour
- * (`'0-15'`, `'15-30'`, …, `'75+'`), so each edge is lifted to SI m/s before
- * the display conversion — `toSpeedDisplay` accepts SI m/s only.
- */
+/** Convert bucket label to user's speed unit, e.g. "20-40" → "32-64" */
 function formatBucketLabel(
   bucket: string,
-  toSpeedDisplay: (mps: number) => number,
+  toSpeedDisplay: (mph: number) => number,
 ): string {
   const parts = bucket.split('-');
   if (parts.length === 2) {
     const lo = parseFloat(parts[0]);
     const hi = parseFloat(parts[1]);
     if (!isNaN(lo) && !isNaN(hi)) {
-      return `${fmtInt(toSpeedDisplay(lo * MPH_TO_MPS))}-${fmtInt(toSpeedDisplay(hi * MPH_TO_MPS))}`;
+      return `${fmtInt(toSpeedDisplay(lo))}-${fmtInt(toSpeedDisplay(hi))}`;
     }
   }
-  // "75+" style bucket
+  // "80+" style bucket
   const num = parseFloat(bucket);
   if (!isNaN(num)) {
-    return `${fmtInt(toSpeedDisplay(num * MPH_TO_MPS))}+`;
+    return `${fmtInt(toSpeedDisplay(num))}+`;
   }
   return bucket;
 }
@@ -82,21 +72,9 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  // Stable across renders unless the relevant preference changes, so the
-  // derived chart/stat memos below actually cache instead of recomputing
-  // every render (they list these converters in their dependency arrays).
-  // Both accept SI input: m/s for speed, watts for power.
-  const toSpeedDisplay = useCallback(
-    (value: number) => convertSpeedFromSI(value, unitPrefs.speed),
-    [unitPrefs.speed],
-  );
-  const toPowerDisplay = useCallback(
-    (watts: number) => convertPowerFromSI(watts, unitPrefs.power),
-    [unitPrefs.power],
-  );
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
 
   const speedUnit = unitPrefs.speed;
-  const powerUnit = unitPrefs.power;
 
   const {
     data,
@@ -109,15 +87,9 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
     refetch,
   } = useSpeedProfile(vid > 0 ? String(vid) : undefined);
 
-  // Only blank the whole widget on the INITIAL load failure (no cached data);
-  // a transient background-refetch error keeps the last-good chart on screen
-  // and is surfaced through the freshness indicator's error state instead
-  // (WidgetShell forwards `isError` to <DataFreshness>).
-  const blockingError = !data && error ? String(error) : null;
-
   const chartData = useMemo(
-    () => buildChartData(data, toSpeedDisplay, toPowerDisplay),
-    [data, toSpeedDisplay, toPowerDisplay],
+    () => buildChartData(data, toSpeedDisplay),
+    [data, toSpeedDisplay],
   );
 
   const sweetSpot = useMemo(() => {
@@ -152,7 +124,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell
         loading={isLoading}
-        error={blockingError}
+        error={error ? String(error) : null}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -209,7 +181,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.speedProfile.title', 'Speed Profile')}
       icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={blockingError}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -259,7 +231,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                   if (name === 'frequency') {
                     return [`${fmtNumber(value, 1)}%`, t('widget.speedProfile.frequency', 'Frequency')];
                   }
-                  return [`${fmtNumber(value, 1)} ${powerUnit}`, t('widget.speedProfile.avgPower', 'Avg Power')];
+                  return [fmtNumber(value, 1), t('widget.speedProfile.efficiency', 'Wh/mi')];
                 }}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
               />
