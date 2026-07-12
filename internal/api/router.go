@@ -153,6 +153,7 @@ import (
 	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
+	apisegments "github.com/ev-dev-labs/teslasync/internal/api/segments"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisettings "github.com/ev-dev-labs/teslasync/internal/api/settings"
 	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
@@ -841,6 +842,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tempImpactHandler := tempimpact.NewHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
 	timeMachineHandler := apitimemachine.NewTimeMachineHandler(db)
+	segmentsHandler := apisegments.NewSegmentsHandler(db)
 	batteryCellsHandler := batterycells.NewHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
 	rangeProjectionHandler := apirangeproj.NewRangeProjectionHandler(db, stateReader)
 	drivetrainHealthHandler := apidrivetrain.NewDrivetrainHealthHandler(db, stateReader)
@@ -2954,6 +2956,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/rul", rulHandler.RUL)
 				r.Get("/rul/{component}", rulHandler.Component)
 
+				// Ghost Racing / EV Segments — Strava-style route segments.
+				// /segments detects the vehicle's repeated start→end routes
+				// from its drive history, best-effort persists each (so it
+				// earns a stable id), and returns a personal-best-by-time /
+				// -by-efficiency summary per segment. Read-only and
+				// rate-limit-free: the SPA reads it on page load and the
+				// clustering is computed from the bounded drives table. The
+				// segment-scoped leaderboard + ghost race live at the
+				// top-level /api/v1/segments/{segmentID}/* routes below.
+				r.Get("/segments", segmentsHandler.List)
+
 				// Vehicle access: drivers & share invitations
 				r.Route("/drivers", func(r chi.Router) {
 					r.Get("/", vehicleAccessHandler.ListDrivers)
@@ -3352,6 +3365,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// vehicle; the per-vehicle carbon summary/recommendation live under
 		// /vehicles/{vehicleID}/carbon/* above.
 		r.Get("/carbon/intensity", carbonHandler.Intensity)
+
+		// Ghost Racing / EV Segments — segment-scoped reads addressed by the
+		// stable route_segments id (the per-vehicle list at
+		// /vehicles/{vehicleID}/segments above persists and hands out the id).
+		// /leaderboard ranks every attempt on the segment by time AND by energy
+		// efficiency; /ghost aligns two attempts (a=&b=) onto a shared
+		// distance-fraction axis for a head-to-head ghost playback. Both are
+		// read-only and rate-limit-free.
+		r.Get("/segments/{segmentID}/leaderboard", segmentsHandler.Leaderboard)
+		r.Get("/segments/{segmentID}/ghost", segmentsHandler.Ghost)
 		r.Get("/analytics/sleep", sleepHandler.GetSleepAnalytics)
 		r.Get("/analytics/regen", regenHandler.Stats)
 		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
