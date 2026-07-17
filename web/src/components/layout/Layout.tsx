@@ -259,6 +259,7 @@ export const navSections = [
       { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle Live View', color: 'text-cyan-400' },
       { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Compare Vehicles', color: 'text-orange-400', minVehicles: 2 },
       { to: '/locations', icon: Icons.location, label: 'Saved Locations', color: 'text-emerald-400' },
+      { to: '/time-machine', icon: Icons.history, label: 'Time Machine', color: 'text-indigo-400' },
     ],
   },
   {
@@ -276,6 +277,8 @@ export const navSections = [
       { to: '/driving-dynamics', icon: Icons.efficiency, label: 'Driving Dynamics', color: 'text-red-400' },
       { to: '/regen-efficiency', icon: Icons.recycle, label: 'Regen Braking', color: 'text-green-400' },
       { to: '/route-efficiency', icon: Icons.navigationAlt, label: 'Route Efficiency', color: 'text-emerald-400' },
+      { to: '/drive-dna', icon: Icons.palette, label: 'Drive DNA', color: 'text-fuchsia-400' },
+      { to: '/what-if', icon: Icons.preferences, label: 'What-If Simulator', color: 'text-cyan-400' },
     ],
   },
   {
@@ -298,6 +301,7 @@ export const navSections = [
       { to: '/projected-range', icon: Icons.target, label: 'Projected Range', color: 'text-pink-400' },
       { to: '/vampire-drain', icon: Icons.moon, label: 'Vampire Drain', color: 'text-indigo-400' },
       { to: '/sleep-efficiency', icon: Icons.bedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
+      { to: '/battery-passport', icon: Icons.securityCheck, label: 'Battery Passport', color: 'text-emerald-400' },
     ],
   },
   {
@@ -335,6 +339,7 @@ export const navSections = [
       { to: '/temperature-impact', icon: Icons.climateHot, label: 'Temperature Impact', color: 'text-blue-400' },
       { to: '/cost-analysis', icon: Icons.dollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
       { to: '/tco', icon: Icons.wallet, label: 'Cost of Ownership', color: 'text-green-400' },
+      { to: '/analytics/carbon', icon: Icons.leaf, label: 'Carbon Intelligence', color: 'text-green-400' },
     ],
   },
   {
@@ -415,6 +420,7 @@ export const navSections = [
       { to: '/system-status', icon: Icons.efficiency, label: 'System Status', color: 'text-emerald-400' },
       { to: '/db-health', icon: Icons.hardDrive, label: 'Database Health', color: 'text-emerald-400' },
       { to: '/anomaly-detection', icon: Icons.scanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
+      { to: '/diagnostics/rul', icon: Icons.timer, label: 'Remaining Useful Life', color: 'text-amber-400' },
       { to: '/signals', icon: Icons.activity, label: 'Live Signals', color: 'text-neon-cyan', dataTour: 'live-signals-section' },
       { to: '/admin/live-signals', icon: Icons.radioTower, label: 'Live Signal Inspector', color: 'text-cyan-400' },
       { to: '/admin/ingest-xray', icon: Icons.scanSearch, label: 'Ingest X-Ray', color: 'text-sky-400' },
