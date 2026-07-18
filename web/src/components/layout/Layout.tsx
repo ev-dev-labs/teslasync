@@ -279,6 +279,7 @@ export const navSections = [
       { to: '/route-efficiency', icon: Icons.navigationAlt, label: 'Route Efficiency', color: 'text-emerald-400' },
       { to: '/drive-dna', icon: Icons.palette, label: 'Drive DNA', color: 'text-fuchsia-400' },
       { to: '/what-if', icon: Icons.preferences, label: 'What-If Simulator', color: 'text-cyan-400' },
+      { to: '/segments', icon: Icons.flag, label: 'Ghost Racing', color: 'text-cyan-400' },
     ],
   },
   {

@@ -137,6 +137,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/safety-settings', name: 'SafetySettings', label: 'Safety Settings', i18nKey: 'routes.safetySettings' },
   { path: '/search', name: 'Search', label: 'Search', i18nKey: 'routes.search' },
   { path: '/security-access', name: 'SecurityAccess', label: 'Security Access', i18nKey: 'routes.securityAccess' },
+  { path: '/segments', name: 'Segments', label: 'Segments', i18nKey: 'routes.segments' },
   { path: '/settings', name: 'Settings', label: 'Settings', i18nKey: 'routes.settings' },
   { path: '/settings/safety', name: 'SafetySettingsPage', label: 'Safety Settings Page', i18nKey: 'routes.safetySettingsPage' },
   { path: '/sharing/trips', name: 'SharingTrips', label: 'Sharing Trips', i18nKey: 'routes.sharingTrips' },
