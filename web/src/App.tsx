@@ -24,6 +24,7 @@ const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
 const VehicleDetail = lazy(() => import('./features/vehicles/pages/VehicleDetailPage'))
 const VehicleAccess = lazy(() => import('./features/vehicles/pages/VehicleAccessPage'))
 const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage'))
+const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
 
 // Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
@@ -51,6 +52,7 @@ const EnergyProducts = lazy(() => import('./features/battery/pages/EnergyProduct
 const VampireDrain = lazy(() => import('./features/battery/pages/VampireDrainPage'))
 const ProjectedRange = lazy(() => import('./features/battery/pages/ProjectedRangePage'))
 const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficiencyPage'))
+const BatteryPassport = lazy(() => import('./features/battery/pages/BatteryPassportPage'))
 
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
@@ -64,6 +66,9 @@ const SpeedProfile = lazy(() => import('./features/driving/pages/SpeedProfilePag
 const RegenEfficiency = lazy(() => import('./features/driving/pages/RegenEfficiencyPage'))
 const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficiencyPage'))
 const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'))
+const DriveDNA = lazy(() => import('./features/driving/pages/DriveDNAPage'))
+const WhatIf = lazy(() => import('./features/driving/pages/WhatIfPage'))
+const Segments = lazy(() => import('./features/driving/pages/SegmentsPage'))
 
 // Analytics & Statistics
 const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
@@ -71,6 +76,7 @@ const Statistics = lazy(() => import('./features/analytics/pages/StatisticsPage'
 const PeriodCompare = lazy(() => import('./features/analytics/pages/PeriodComparePage'))
 const Mileage = lazy(() => import('./features/analytics/pages/MileagePage'))
 const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCostPage'))
+const CarbonIntelligence = lazy(() => import('./features/analytics/pages/CarbonIntelligencePage'))
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
 const FleetCompare = lazy(() => import('./features/analytics/pages/FleetComparePage'))
@@ -124,6 +130,7 @@ const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspecto
 
 // Diagnostics
 const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
+const RemainingUsefulLife = lazy(() => import('./features/diagnostics/pages/RemainingUsefulLifePage'))
 
 // Admin & DevTools
 const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
@@ -380,6 +387,7 @@ export default function App() {
         <Route path="vehicles/:id" element={<SafeRoute name="VehicleDetail"><VehicleDetail /></SafeRoute>} />
         <Route path="vehicles/:id/access" element={<SafeRoute name="VehicleAccess"><VehicleAccess /></SafeRoute>} />
         <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
+        <Route path="time-machine" element={<SafeRoute name="TimeMachine"><TimeMachine /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="battery/health" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
@@ -514,6 +522,7 @@ export default function App() {
             the opt-in AILearnedAnomalyBaselines section when AI mode is on
             and the toggle is enabled). */}
         <Route path="analytics/anomalies" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
+        <Route path="diagnostics/rul" element={<SafeRoute name="RemainingUsefulLife"><RemainingUsefulLife /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature
@@ -562,7 +571,11 @@ export default function App() {
         <Route path="temperature-impact" element={<SafeRoute name="TemperatureImpact"><TemperatureImpact /></SafeRoute>} />
         <Route path="route-efficiency" element={<SafeRoute name="RouteEfficiency"><RouteEfficiency /></SafeRoute>} />
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
+                <Route path="drive-dna" element={<SafeRoute name="DriveDNA"><DriveDNA /></SafeRoute>} />
+                <Route path="what-if" element={<SafeRoute name="WhatIf"><WhatIf /></SafeRoute>} />
+                <Route path="segments" element={<SafeRoute name="Segments"><Segments /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
+        <Route path="battery-passport" element={<SafeRoute name="BatteryPassport"><BatteryPassport /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
             against frontend route `/analytics/tco`; the canonical app path
@@ -571,6 +584,8 @@ export default function App() {
             RouteSet.Frontend entry land users on the deterministic baseline
             without surprising 404s. */}
         <Route path="analytics/tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
+        {/* Carbon Intelligence — grid-aware CO₂ accounting; sibling of /analytics/tco (money) */}
+        <Route path="analytics/carbon" element={<SafeRoute name="CarbonIntelligence"><CarbonIntelligence /></SafeRoute>} />
         <Route path="vehicle-comparison" element={<SafeRoute name="FleetCompare"><FleetCompare /></SafeRoute>} />
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />

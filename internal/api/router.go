@@ -90,6 +90,8 @@ import (
 	apibattery "github.com/ev-dev-labs/teslasync/internal/api/battery"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterydegradation"
+	"github.com/ev-dev-labs/teslasync/internal/api/batterypassport"
+	apicarbon "github.com/ev-dev-labs/teslasync/internal/api/carbon"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	"github.com/ev-dev-labs/teslasync/internal/api/chargeplanner"
@@ -145,11 +147,13 @@ import (
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
 	apiregen "github.com/ev-dev-labs/teslasync/internal/api/regen"
 	apirouteeff "github.com/ev-dev-labs/teslasync/internal/api/routeeff"
+	apirul "github.com/ev-dev-labs/teslasync/internal/api/rul"
 	apisafety "github.com/ev-dev-labs/teslasync/internal/api/safety"
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
 	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
+	apisegments "github.com/ev-dev-labs/teslasync/internal/api/segments"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisettings "github.com/ev-dev-labs/teslasync/internal/api/settings"
 	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
@@ -175,6 +179,7 @@ import (
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
+	apitimemachine "github.com/ev-dev-labs/teslasync/internal/api/timemachine"
 	apitirepressure "github.com/ev-dev-labs/teslasync/internal/api/tirepressure"
 	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
@@ -817,6 +822,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
 	regenHandler := apiregen.NewRegenHandler(db)
 	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
+	batteryPassportHandler := batterypassport.NewBatteryPassportHandler(db)
+	carbonHandler := apicarbon.NewCarbonHandler(db)
+	rulHandler := apirul.NewRULHandler(db)
 	auditHandler := apiaudit.NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
@@ -833,6 +841,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
 	tempImpactHandler := tempimpact.NewHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
+	timeMachineHandler := apitimemachine.NewTimeMachineHandler(db)
+	segmentsHandler := apisegments.NewSegmentsHandler(db)
 	batteryCellsHandler := batterycells.NewHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
 	rangeProjectionHandler := apirangeproj.NewRangeProjectionHandler(db, stateReader)
 	drivetrainHealthHandler := apidrivetrain.NewDrivetrainHealthHandler(db, stateReader)
@@ -2904,7 +2914,58 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/battery", batteryHandler.Report)
 				r.Get("/battery/cells", batteryCellsHandler.GetByVehicle)
 				r.Get("/battery/projected-range", rangeProjectionHandler.GetByVehicle)
+
+				// Battery Passport — a verifiable, tamper-evident SoH
+				// provenance certificate. Both routes are read-only: the
+				// GET builds the certificate (and best-effort appends an
+				// audit-ledger snapshot), and /verify recomputes the
+				// provenance hash so a buyer can detect tampering. No rate
+				// limit — the SPA reads them on page load and the ledger
+				// write is off the read's critical path.
+				r.Get("/battery-passport", batteryPassportHandler.Get)
+				r.Get("/battery-passport/verify", batteryPassportHandler.Verify)
 				r.Get("/weekly-digest", weeklyDigestHandler.Get)
+
+				// Vehicle Time Machine — reconstruct the complete signal
+				// state at any past instant from the signal_log cold path.
+				// Both routes are read-only and rate-limit-free: the SPA
+				// polls them as the user drags the timeline scrubber, and
+				// the point-in-time query is index-served + field-capped.
+				r.Get("/time-machine", timeMachineHandler.State)
+				r.Get("/time-machine/range", timeMachineHandler.Range)
+
+				// Carbon Intelligence — grid-aware CO2 accounting for
+				// charging. /summary attributes CO2 to each session by its
+				// charging hour and scores the timing vs a gas-car baseline;
+				// /recommendation surfaces the greenest charging window. Both
+				// are read-only and rate-limit-free (the SPA reads them on page
+				// load; the diurnal grid model is a tiny 24-row table). The
+				// vehicle-independent curve is served at the top-level
+				// GET /api/v1/carbon/intensity route below.
+				r.Get("/carbon/summary", carbonHandler.Summary)
+				r.Get("/carbon/recommendation", carbonHandler.Recommendation)
+
+				// Remaining Useful Life — predictive component prognostics.
+				// /rul returns the whole health board (per-component remaining
+				// days/km, projected replace-by date, confidence, status) plus
+				// the nearest upcoming service; /rul/{component} adds the
+				// configured reference figures and a forecast series for the
+				// end-of-life chart. Both are read-only and rate-limit-free (the
+				// SPA reads them on page load; the prognosis is computed from
+				// cached daily roll-ups + a tiny config table).
+				r.Get("/rul", rulHandler.RUL)
+				r.Get("/rul/{component}", rulHandler.Component)
+
+				// Ghost Racing / EV Segments — Strava-style route segments.
+				// /segments detects the vehicle's repeated start→end routes
+				// from its drive history, best-effort persists each (so it
+				// earns a stable id), and returns a personal-best-by-time /
+				// -by-efficiency summary per segment. Read-only and
+				// rate-limit-free: the SPA reads it on page load and the
+				// clustering is computed from the bounded drives table. The
+				// segment-scoped leaderboard + ghost race live at the
+				// top-level /api/v1/segments/{segmentID}/* routes below.
+				r.Get("/segments", segmentsHandler.List)
 
 				// Vehicle access: drivers & share invitations
 				r.Route("/drivers", func(r chi.Router) {
@@ -3297,6 +3358,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Analytics
 		r.Get("/analytics/fleet", analyticsHandler.Fleet)
 		r.Get("/analytics/tco", tcoHandler.GetTCO)
+
+		// Carbon Intelligence — the vehicle-independent diurnal grid
+		// carbon-intensity model (seeded, admin-editable). Mounted as a
+		// top-level /api/v1 route because the curve is shared by every
+		// vehicle; the per-vehicle carbon summary/recommendation live under
+		// /vehicles/{vehicleID}/carbon/* above.
+		r.Get("/carbon/intensity", carbonHandler.Intensity)
+
+		// Ghost Racing / EV Segments — segment-scoped reads addressed by the
+		// stable route_segments id (the per-vehicle list at
+		// /vehicles/{vehicleID}/segments above persists and hands out the id).
+		// /leaderboard ranks every attempt on the segment by time AND by energy
+		// efficiency; /ghost aligns two attempts (a=&b=) onto a shared
+		// distance-fraction axis for a head-to-head ghost playback. Both are
+		// read-only and rate-limit-free.
+		r.Get("/segments/{segmentID}/leaderboard", segmentsHandler.Leaderboard)
+		r.Get("/segments/{segmentID}/ghost", segmentsHandler.Ghost)
 		r.Get("/analytics/sleep", sleepHandler.GetSleepAnalytics)
 		r.Get("/analytics/regen", regenHandler.Stats)
 		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
