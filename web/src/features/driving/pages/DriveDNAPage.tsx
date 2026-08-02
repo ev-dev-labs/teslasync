@@ -5,11 +5,13 @@ import { Sparkles, Download, Gauge, Mountain, Snowflake, Leaf, Fingerprint } fro
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Button, Badge, Select } from '@/components/ui';
 import { VehicleSelect } from '@/components/forms';
+import { KVList, type KVItem } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useDrives, useDriveTelemetry } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { Drive } from '@/types/driving';
@@ -32,6 +34,23 @@ const TRAIT_ICON: Record<string, typeof Gauge> = {
   Balanced: Sparkles,
 };
 
+/**
+ * i18n keys for the trait vocabulary emitted by `generateDriveDNA`.
+ *
+ * The model returns stable English identifiers (they double as the `TRAIT_ICON`
+ * lookup and as part of the shareable genome), so translation happens here at
+ * the display boundary rather than in the lib.
+ */
+const TRAIT_I18N: Record<string, string> = {
+  Spirited: 'driveDna.traitSpirited',
+  Gentle: 'driveDna.traitGentle',
+  Mountainous: 'driveDna.traitMountainous',
+  'Regen-rich': 'driveDna.traitRegenRich',
+  'Cold-start': 'driveDna.traitColdStart',
+  Efficient: 'driveDna.traitEfficient',
+  Balanced: 'driveDna.traitBalanced',
+};
+
 /** Build a standalone, downloadable SVG document string from a genome. */
 function genomeToSvg(g: DriveGenome, label: string): string {
   const rings = g.rings
@@ -43,6 +62,9 @@ function genomeToSvg(g: DriveGenome, label: string): string {
       return `<line x1="${l.x1.toFixed(2)}" y1="${l.y1.toFixed(2)}" x2="${l.x2.toFixed(2)}" y2="${l.y2.toFixed(2)}" stroke="${p.color}" stroke-width="${p.width.toFixed(2)}" stroke-linecap="round" opacity="${p.opacity.toFixed(2)}"/>`;
     })
     .join('');
+  // The exported artwork is a self-contained document with its own dark halo
+  // background, so its caption colour is intentionally a literal white alpha —
+  // it is not themed by the app and must stay legible standalone.
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DNA_VIEWBOX} ${DNA_VIEWBOX}" width="512" height="512">`
     + `<rect width="${DNA_VIEWBOX}" height="${DNA_VIEWBOX}" fill="${g.haloColor}"/>`
     + `<circle cx="${DNA_CENTER}" cy="${DNA_CENTER}" r="${DNA_CENTER - 2}" fill="none" stroke="${g.haloColor}" stroke-width="1"/>`
@@ -57,6 +79,7 @@ export default function DriveDNAPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
+  const { formatDistance, formatSpeed } = useUnits();
 
   const drivesQuery = useDrives(vehicleIdStr);
   const drives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
@@ -71,13 +94,47 @@ export default function DriveDNAPage() {
     () =>
       drives.map((d) => ({
         value: String(d.id),
-        label: `${formatDateShort(d.startTs)} · ${(d.distanceM / 1000).toFixed(1)} km`,
+        label: `${formatDateShort(d.startTs)} · ${formatDistance(d.distanceM, { precision: 1 })}`,
       })),
-    [drives],
+    [drives, formatDistance],
   );
 
   const activeDrive = drives.find((d) => String(d.id) === activeId);
   const label = activeDrive ? formatDateShort(activeDrive.startTs) : t('driveDna.title', 'Drive DNA');
+
+  const genomeStats = useMemo<KVItem[]>(
+    () => [
+      {
+        label: t('driveDna.samples', 'Samples'),
+        value: genome.stats.points,
+      },
+      {
+        label: t('driveDna.topSpeed', 'Top speed'),
+        value:
+          genome.stats.topSpeedKph != null
+            // The model reports km/h; the shared formatters take SI. Divide back
+            // to m/s at the display boundary so the value honours the user's
+            // speed preference (mph / km/h) like every other page.
+            ? formatSpeed(genome.stats.topSpeedKph / 3.6, { precision: 0 })
+            : '—',
+      },
+      {
+        // Elevation climb stays in metres — there is no elevation formatter, and
+        // routing it through `formatDistance` would render a 150 m climb as
+        // "0.2 km". Vertical gain is conventionally read in metres here.
+        label: t('driveDna.climb', 'Elevation climb'),
+        value: genome.stats.climbM != null ? `${genome.stats.climbM} m` : '—',
+      },
+      {
+        label: t('driveDna.regen', 'Regen share'),
+        value:
+          genome.stats.regenShare != null
+            ? `${Math.round(genome.stats.regenShare * 100)}%`
+            : '—',
+      },
+    ],
+    [genome.stats, t, formatSpeed],
+  );
 
   function handleDownload() {
     if (!genome.petals.length) return;
@@ -91,49 +148,48 @@ export default function DriveDNAPage() {
     URL.revokeObjectURL(url);
   }
 
-  return (
-    <PageContainer title={t('driveDna.title', 'Drive DNA')}>
-      <FadeIn>
-        <GlassPanel className="mb-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <PanelTitle><Fingerprint size={16} className="mr-1 inline text-cyan-400" aria-hidden /> {t('driveDna.heading', 'Generative telemetry art')}</PanelTitle>
-              <Text variant="bodySm" className="text-white/60">
-                {t(
-                  'driveDna.blurb',
-                  'Every drive has a unique signature. This bloom encodes speed, power flow, elevation and battery into a reproducible fingerprint.',
-                )}
-              </Text>
-            </div>
-            <div className="flex items-center gap-2">
-              <VehicleSelect />
-              {driveOptions.length > 0 && (
-                <Select
-                  aria-label={t('driveDna.pickDrive', 'Choose a drive')}
-                  value={activeId}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                  options={driveOptions}
-                />
-              )}
-            </div>
-          </div>
-        </GlassPanel>
-      </FadeIn>
+  const loading = drivesQuery.isLoading || telemetryQuery.isLoading;
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Art */}
-        <FadeIn className="lg:col-span-2">
-          <GlassPanel className="flex min-h-[420px] items-center justify-center">
+  return (
+    <PageContainer
+      title={t('driveDna.title', 'Drive DNA')}
+      subtitle={t('driveDna.subtitle', 'A generative fingerprint synthesized from one drive')}
+      query={[drivesQuery, telemetryQuery]}
+      actions={
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <VehicleSelect />
+          {driveOptions.length > 0 && (
+            <Select
+              aria-label={t('driveDna.pickDrive', 'Choose a drive')}
+              value={activeId}
+              onChange={(e) => setSelectedId(e.target.value)}
+              options={driveOptions}
+            />
+          )}
+        </div>
+      }
+    >
+      <FadeIn>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {/* Art */}
+          <GlassPanel className="flex min-h-[420px] items-center justify-center p-4 sm:p-5 xl:col-span-2">
             {drivesQuery.isError ? (
               <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
             ) : telemetryQuery.isError ? (
               <QueryError error={telemetryQuery.error} onRetry={() => telemetryQuery.refetch()} />
-            ) : drivesQuery.isLoading || telemetryQuery.isLoading ? (
-              <Skeleton className="h-[380px] w-[380px] rounded-full" />
+            ) : loading ? (
+              <Skeleton height={380} width="380px" className="rounded-full" />
             ) : !activeId ? (
-              <EmptyState message={t('driveDna.noDrives', 'No drives found for this vehicle yet.')} />
+              <EmptyState
+                icon={<Fingerprint className="h-8 w-8" />}
+                message={t('driveDna.noDrives', 'No drives found for this vehicle yet.')}
+                actionTo={{ label: t('driveDna.browseDrives', 'Browse drives'), to: '/drives' }}
+              />
             ) : genome.petals.length === 0 ? (
-              <EmptyState message={t('driveDna.noTelemetry', 'This drive has no telemetry to synthesize.')} />
+              <EmptyState /* no-action: nothing the user can do — this drive was imported without telemetry samples. The drive picker in the header is the recovery surface. */
+                icon={<Fingerprint className="h-8 w-8" />}
+                message={t('driveDna.noTelemetry', 'This drive has no telemetry to synthesize.')}
+              />
             ) : (
               <svg
                 viewBox={`0 0 ${DNA_VIEWBOX} ${DNA_VIEWBOX}`}
@@ -164,52 +220,42 @@ export default function DriveDNAPage() {
               </svg>
             )}
           </GlassPanel>
-        </FadeIn>
 
-        {/* Genome panel */}
-        <FadeIn>
-          <GlassPanel className="flex h-full flex-col gap-4">
+          {/* Genome panel */}
+          <GlassPanel className="flex h-full flex-col gap-4 p-4 sm:p-5 xl:col-span-1">
             <div>
-              <PanelTitle><Sparkles size={16} className="mr-1 inline text-cyan-400" aria-hidden /> {t('driveDna.genome', 'Genome')}</PanelTitle>
-              <div className="mt-2 flex items-center gap-2 font-mono text-lg text-cyan-300">
-                <Fingerprint size={18} className="text-cyan-400" aria-hidden />
+              <PanelTitle className="mb-2 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('driveDna.genome', 'Genome')}
+              </PanelTitle>
+              <Text variant="caption" as="p" className="mb-3">
+                {t(
+                  'driveDna.blurb',
+                  'Every drive has a unique signature. This bloom encodes speed, power flow, elevation and battery into a reproducible fingerprint.',
+                )}
+              </Text>
+              <div className="flex items-center gap-2 font-mono text-lg tabular-nums text-cyan-300">
+                <Fingerprint className="h-4 w-4 shrink-0" aria-hidden="true" />
                 {genome.signature}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {genome.traits.map((trait) => {
-                const Icon = TRAIT_ICON[trait] ?? Sparkles;
-                return (
-                  <Badge key={trait} variant="info">
-                    <Icon size={12} aria-hidden /> {trait}
-                  </Badge>
-                );
-              })}
-            </div>
+            {genome.traits.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {genome.traits.map((trait) => {
+                  const Icon = TRAIT_ICON[trait] ?? Sparkles;
+                  const key = TRAIT_I18N[trait];
+                  return (
+                    <Badge key={trait} variant="info">
+                      <Icon className="h-3 w-3" aria-hidden="true" />
+                      {key ? t(key, trait) : trait}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
 
-            <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <dt className="text-white/50">{t('driveDna.samples', 'Samples')}</dt>
-                <dd className="text-white/90">{genome.stats.points}</dd>
-              </div>
-              <div>
-                <dt className="text-white/50">{t('driveDna.topSpeed', 'Top speed')}</dt>
-                <dd className="text-white/90">
-                  {genome.stats.topSpeedKph != null ? `${genome.stats.topSpeedKph} km/h` : '—'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-white/50">{t('driveDna.climb', 'Elevation climb')}</dt>
-                <dd className="text-white/90">{genome.stats.climbM != null ? `${genome.stats.climbM} m` : '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-white/50">{t('driveDna.regen', 'Regen share')}</dt>
-                <dd className="text-white/90">
-                  {genome.stats.regenShare != null ? `${Math.round(genome.stats.regenShare * 100)}%` : '—'}
-                </dd>
-              </div>
-            </dl>
+            <KVList items={genomeStats} columns={2} />
 
             <div className="mt-auto">
               <Button
@@ -218,12 +264,13 @@ export default function DriveDNAPage() {
                 disabled={genome.petals.length === 0}
                 className="w-full"
               >
-                <Download size={16} aria-hidden /> {t('driveDna.download', 'Download SVG')}
+                <Download className="h-4 w-4" aria-hidden="true" />
+                {t('driveDna.download', 'Download SVG')}
               </Button>
             </div>
           </GlassPanel>
-        </FadeIn>
-      </div>
+        </section>
+      </FadeIn>
     </PageContainer>
   );
 }

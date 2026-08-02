@@ -11,7 +11,7 @@ export {
   type UsageCardBanner,
   type UsageCardFooterLink,
 } from './UsageCard';
-export { KVList } from './KVList';
+export { KVList, type KVItem, type KVListProps } from './KVList';
 export {
   Avatar,
   avatarColorIndex,

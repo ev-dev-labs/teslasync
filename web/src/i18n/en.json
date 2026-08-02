@@ -54,7 +54,6 @@
   "whatIf": {
     "title": "What-If Simulator",
     "subtitle": "Replay a real drive under different conditions",
-    "heading": "Rewrite a drive",
     "blurb": "Take a real drive and change how it was driven. The engine decomposes the energy you actually used and recomputes it — no guesswork, anchored to your data.",
     "pickDrive": "Choose a drive",
     "noDrives": "No drives found for this vehicle yet.",
@@ -87,10 +86,11 @@
   },
   "driveDna": {
     "title": "Drive DNA",
-    "heading": "Generative telemetry art",
+    "subtitle": "A generative fingerprint synthesized from one drive",
     "blurb": "Every drive has a unique signature. This bloom encodes speed, power flow, elevation and battery into a reproducible fingerprint.",
     "pickDrive": "Choose a drive",
     "noDrives": "No drives found for this vehicle yet.",
+    "browseDrives": "Browse drives",
     "noTelemetry": "This drive has no telemetry to synthesize.",
     "artAlt": "Drive DNA visualization, signature {{sig}}",
     "genome": "Genome",
@@ -98,7 +98,14 @@
     "topSpeed": "Top speed",
     "climb": "Elevation climb",
     "regen": "Regen share",
-    "download": "Download SVG"
+    "download": "Download SVG",
+    "traitSpirited": "Spirited",
+    "traitGentle": "Gentle",
+    "traitMountainous": "Mountainous",
+    "traitRegenRich": "Regen-rich",
+    "traitColdStart": "Cold-start",
+    "traitEfficient": "Efficient",
+    "traitBalanced": "Balanced"
   },
   "global": {
     "loading": "Loading"
