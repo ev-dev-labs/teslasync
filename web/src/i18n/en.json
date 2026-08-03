@@ -84,6 +84,139 @@
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
     "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery."
   },
+  "rangeBuffer": {
+    "title": "Range Buffer",
+    "subtitle": "How much battery is left when you arrive",
+    "kpis": "Range buffer summary metrics",
+    "comfortScore": "Comfort Score",
+    "of100": "of 100",
+    "medianArrival": "Median Arrival",
+    "lowestArrival": "Lowest Arrival",
+    "lowArrivals": "Low Arrivals",
+    "belowPct": "below {{pct}}%",
+    "histogram": "Arrival Battery Distribution",
+    "drives": "Drives",
+    "trend": "Monthly Median Arrival",
+    "closeCalls": "Closest Calls",
+    "date": "Date",
+    "distance": "Distance",
+    "arrival": "Arrival",
+    "noData": "No drives with arrival battery data in this period.",
+    "col": {
+      "range": "Arrival range",
+      "drives": "Drives",
+      "month": "Month",
+      "median": "Median arrival %"
+    }
+  },
+  "rhythm": {
+    "title": "Driving Rhythm",
+    "subtitle": "When your car actually gets driven",
+    "kpis": "Driving rhythm summary metrics",
+    "totalDrives": "Drives",
+    "favoriteSlot": "Favorite Slot",
+    "driveCount": "{{count}} drives",
+    "weekdayShare": "Weekday Share",
+    "weekendCount": "{{count}} weekend drives",
+    "predictability": "Predictability",
+    "of100": "of 100",
+    "punchcard": "Weekly Punchcard",
+    "departures": "Typical Departure",
+    "noDrives": "No drives in this period yet.",
+    "browseDrives": "Browse drives",
+    "day": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    }
+  },
+  "parking": {
+    "title": "Parking Analytics",
+    "subtitle": "Where your car spends its time between drives",
+    "kpis": "Parking summary metrics",
+    "parkedShare": "Time Parked",
+    "vsDriving": "vs time driving",
+    "nightShare": "Overnight Share",
+    "nightWindow": "22:00–06:00",
+    "longestStint": "Longest Stint",
+    "locations": "Locations",
+    "stintCount": "{{count}} stints",
+    "topLocations": "Where It Sits",
+    "location": "Location",
+    "unknown": "Unknown location",
+    "now": "now",
+    "stints": "Stints",
+    "dwell": "Time Parked",
+    "share": "Share",
+    "durationDh": "{{d}}d {{h}}h",
+    "durationH": "{{h}}h",
+    "durationM": "{{m}}m",
+    "noData": "Not enough drives in this period to reconstruct parking.",
+    "browseDrives": "Browse drives"
+  },
+  "mileageBudget": {
+    "title": "Mileage Budget",
+    "subtitle": "Lease and warranty allowance pacing with overage forecast",
+    "kpis": "Mileage budget summary metrics",
+    "used": "Driven This Term",
+    "allowedToDate": "allowed so far: {{allowed}}",
+    "pace": "Pace",
+    "overPace": "over budget pace",
+    "underPace": "within budget pace",
+    "projected": "Projected Term Total",
+    "ofAllowance": "allowance: {{total}}",
+    "overageCost": "Projected Overage",
+    "noOverage": "no overage projected",
+    "terms": "Allowance Terms",
+    "allowancePerYear": "Allowance per year",
+    "termStart": "Term start",
+    "termMonths": "Term length (months)",
+    "overageRate": "Overage fee",
+    "perKm": "/ km",
+    "perMi": "/ mi",
+    "km": "km",
+    "mi": "mi",
+    "termProgress": "Term elapsed",
+    "daysLeft": "{{days}} days left",
+    "allowanceUsed": "Allowance used",
+    "chart": "Distance vs Allowance",
+    "driven": "Driven",
+    "allowed": "Allowed",
+    "col": {
+      "month": "Month",
+      "used": "Driven",
+      "allowed": "Allowed"
+    }
+  },
+  "sweetSpot": {
+    "title": "Speed Sweet Spot",
+    "subtitle": "The cruising speed where your car sips the least energy",
+    "kpis": "Sweet spot summary metrics",
+    "spot": "Sweet Spot",
+    "atSpot": "At Sweet Spot",
+    "overall": "Your Overall",
+    "analyzed": "{{count}} drives analyzed",
+    "saving": "Potential Saving",
+    "savingHint": "if all driving hit the spot",
+    "curve": "Consumption vs Average Speed",
+    "curveHint": "Bars show distance logged per speed band; the shaded band is your sweet spot",
+    "distanceLogged": "Distance logged",
+    "consumption": "Consumption",
+    "mph": "mph",
+    "kmh": "km/h",
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "col": {
+      "speed": "Speed",
+      "consumption": "Consumption",
+      "distance": "Distance logged",
+      "drives": "Drives"
+    }
+  },
   "logbook": {
     "title": "Trip Logbook",
     "subtitle": "Classify drives for tax deduction and expense reimbursement",
@@ -217,6 +350,22 @@
     "tripLogbook": {
       "body": "Set the rate your employer or tax authority reimburses per distance driven in each category. Rates are stored per kilometre and converted to your display unit; amounts are rate × drive distance.",
       "iconLabel": "More info about reimbursement rates"
+    },
+    "rangeBuffer": {
+      "body": "The five drives that ended with the least battery remaining. Regularly arriving below 20% adds thermal and cycling stress near the bottom of the pack — a healthy buffer keeps the score high.",
+      "iconLabel": "More info about range buffer"
+    },
+    "drivingRhythm": {
+      "body": "Each cell counts drives starting in that weekday-hour slot (your local time). Darker cells are busier. The predictability score rises the more your departures concentrate into a few slots.",
+      "iconLabel": "More info about the punchcard"
+    },
+    "parkingAnalytics": {
+      "body": "Parking stints are reconstructed from the gaps between consecutive drives, located at the previous drive's destination. The overnight share counts parked time falling between 22:00 and 06:00 local.",
+      "iconLabel": "More info about parking analytics"
+    },
+    "mileageBudget": {
+      "body": "Enter your lease or warranty terms: yearly distance allowance, term start and length, and the per-distance overage fee. The projection extrapolates your average daily driving linearly to the end of the term.",
+      "iconLabel": "More info about allowance terms"
     },
     "regenEfficiency": {
       "body": "Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.",
