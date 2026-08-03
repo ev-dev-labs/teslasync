@@ -271,6 +271,7 @@ export const navSections = [
       { to: '/navigation', icon: Icons.signpost, label: 'Navigation', color: 'text-teal-400' },
       { to: '/geofences', icon: Icons.fence, label: 'Geofences', color: 'text-lime-400' },
       { to: '/mileage', icon: Icons.trip, label: 'Mileage Log', color: 'text-teal-400' },
+      { to: '/logbook', icon: Icons.wallet, label: 'Trip Logbook', color: 'text-amber-400' },
       { to: '/lifetime-stats', icon: Icons.award, label: 'Lifetime Stats', color: 'text-yellow-400' },
       { to: '/drive-score', icon: Icons.trophy, label: 'Drive Score', color: 'text-yellow-400' },
       { to: '/speed-profile', icon: Icons.speed, label: 'Speed Profile', color: 'text-rose-400' },

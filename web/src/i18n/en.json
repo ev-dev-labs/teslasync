@@ -84,6 +84,36 @@
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
     "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery."
   },
+  "logbook": {
+    "title": "Trip Logbook",
+    "subtitle": "Classify drives for tax deduction and expense reimbursement",
+    "kpis": "Logbook summary metrics",
+    "business": "Business",
+    "commute": "Commute",
+    "personal": "Personal",
+    "unclassified": "Unclassified",
+    "driveCount": "{{count}} drives",
+    "ofTotal": "of {{total}} drives",
+    "reimbursement": "Reimbursement",
+    "inPeriod": "reimbursable in this period",
+    "rateFor": "Reimbursement rate for {{category}}",
+    "perKm": "/ km",
+    "perMile": "/ mi",
+    "drives": "Drives",
+    "filter": "Filter by category",
+    "filterAll": "All categories",
+    "date": "Date",
+    "route": "Route",
+    "distance": "Distance",
+    "category": "Category",
+    "categoryFor": "Category for drive on {{date}}",
+    "amount": "Amount",
+    "suggestionBanner": "{{count}} unclassified drives match routes you have already classified.",
+    "applySuggestions": "Apply suggestions",
+    "noDrives": "No drives in this period yet.",
+    "browseDrives": "Browse drives",
+    "noneInFilter": "No drives in this category yet."
+  },
   "driveDna": {
     "title": "Drive DNA",
     "subtitle": "A generative fingerprint synthesized from one drive",
@@ -183,6 +213,10 @@
     "driveScore": {
       "body": "0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.",
       "iconLabel": "More info about Drive Score"
+    },
+    "tripLogbook": {
+      "body": "Set the rate your employer or tax authority reimburses per distance driven in each category. Rates are stored per kilometre and converted to your display unit; amounts are rate × drive distance.",
+      "iconLabel": "More info about reimbursement rates"
     },
     "regenEfficiency": {
       "body": "Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.",

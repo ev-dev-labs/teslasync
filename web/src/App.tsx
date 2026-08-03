@@ -68,6 +68,7 @@ const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficie
 const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'))
 const DriveDNA = lazy(() => import('./features/driving/pages/DriveDNAPage'))
 const WhatIf = lazy(() => import('./features/driving/pages/WhatIfPage'))
+const TripLogbook = lazy(() => import('./features/driving/pages/TripLogbookPage'))
 const Segments = lazy(() => import('./features/driving/pages/SegmentsPage'))
 
 // Analytics & Statistics
@@ -573,6 +574,7 @@ export default function App() {
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
                 <Route path="drive-dna" element={<SafeRoute name="DriveDNA"><DriveDNA /></SafeRoute>} />
                 <Route path="what-if" element={<SafeRoute name="WhatIf"><WhatIf /></SafeRoute>} />
+                <Route path="logbook" element={<SafeRoute name="TripLogbook"><TripLogbook /></SafeRoute>} />
                 <Route path="segments" element={<SafeRoute name="Segments"><Segments /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="battery-passport" element={<SafeRoute name="BatteryPassport"><BatteryPassport /></SafeRoute>} />
