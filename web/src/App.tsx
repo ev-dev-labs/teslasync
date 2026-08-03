@@ -74,6 +74,16 @@ const DrivingRhythm = lazy(() => import('./features/driving/pages/DrivingRhythmP
 const SpeedSweetSpot = lazy(() => import('./features/driving/pages/SpeedSweetSpotPage'))
 const ParkingAnalytics = lazy(() => import('./features/vehicles/pages/ParkingAnalyticsPage'))
 const MileageBudget = lazy(() => import('./features/analytics/pages/MileageBudgetPage'))
+const BatteryCare = lazy(() => import('./features/battery/pages/BatteryCarePage'))
+const ChargeAdvisor = lazy(() => import('./features/battery/pages/ChargeAdvisorPage'))
+const DriveCalendar = lazy(() => import('./features/analytics/pages/DriveCalendarPage'))
+const Explorer = lazy(() => import('./features/driving/pages/ExplorerPage'))
+const DriveCompare = lazy(() => import('./features/driving/pages/DriveComparePage'))
+const EfficiencyTarget = lazy(() => import('./features/driving/pages/EfficiencyTargetPage'))
+const Milestones = lazy(() => import('./features/analytics/pages/MilestonesPage'))
+const ColdStart = lazy(() => import('./features/driving/pages/ColdStartPage'))
+const ShareCard = lazy(() => import('./features/sharing/pages/ShareCardPage'))
+const Utilization = lazy(() => import('./features/vehicles/pages/UtilizationPage'))
 const Segments = lazy(() => import('./features/driving/pages/SegmentsPage'))
 
 // Analytics & Statistics
@@ -585,6 +595,16 @@ export default function App() {
                 <Route path="speed-sweetspot" element={<SafeRoute name="SpeedSweetSpot"><SpeedSweetSpot /></SafeRoute>} />
                 <Route path="parking" element={<SafeRoute name="ParkingAnalytics"><ParkingAnalytics /></SafeRoute>} />
                 <Route path="mileage-budget" element={<SafeRoute name="MileageBudget"><MileageBudget /></SafeRoute>} />
+                <Route path="battery-care" element={<SafeRoute name="BatteryCare"><BatteryCare /></SafeRoute>} />
+                <Route path="charge-advisor" element={<SafeRoute name="ChargeAdvisor"><ChargeAdvisor /></SafeRoute>} />
+                <Route path="drive-calendar" element={<SafeRoute name="DriveCalendar"><DriveCalendar /></SafeRoute>} />
+                <Route path="explorer" element={<SafeRoute name="Explorer"><Explorer /></SafeRoute>} />
+                <Route path="drive-compare" element={<SafeRoute name="DriveCompare"><DriveCompare /></SafeRoute>} />
+                <Route path="efficiency-target" element={<SafeRoute name="EfficiencyTarget"><EfficiencyTarget /></SafeRoute>} />
+                <Route path="milestones" element={<SafeRoute name="Milestones"><Milestones /></SafeRoute>} />
+                <Route path="cold-start" element={<SafeRoute name="ColdStart"><ColdStart /></SafeRoute>} />
+                <Route path="share-card" element={<SafeRoute name="ShareCard"><ShareCard /></SafeRoute>} />
+                <Route path="utilization" element={<SafeRoute name="Utilization"><Utilization /></SafeRoute>} />
                 <Route path="segments" element={<SafeRoute name="Segments"><Segments /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="battery-passport" element={<SafeRoute name="BatteryPassport"><BatteryPassport /></SafeRoute>} />
