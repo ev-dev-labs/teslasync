@@ -197,6 +197,18 @@ const IntelligencePackMarketplace = lazy(() => import('./features/intelligence-p
 const WarrantyResaleVault = lazy(() => import('./features/resale-vault/pages/WarrantyResaleVaultPage'))
 const FleetOperations = lazy(() => import('./features/fleet-ops/pages/FleetOperationsPage'))
 const ActionCenter = lazy(() => import('./features/action-center/pages/ActionCenterPage'))
+const TwinLab = lazy(() => import('./features/advanced-intelligence/pages/TwinLabPage'))
+const FirmwareCanary = lazy(() => import('./features/advanced-intelligence/pages/FirmwareCanaryPage'))
+const ComponentSurvival = lazy(() => import('./features/advanced-intelligence/pages/ComponentSurvivalPage'))
+const RoadHazardMesh = lazy(() => import('./features/advanced-intelligence/pages/RoadHazardMeshPage'))
+const BehavioralSentinel = lazy(() => import('./features/advanced-intelligence/pages/BehavioralSentinelPage'))
+const ChargingForensics = lazy(() => import('./features/advanced-intelligence/pages/ChargingForensicsPage'))
+const JourneyAssurance = lazy(() => import('./features/advanced-intelligence/pages/JourneyAssurancePage'))
+const ChargingSiteTwin = lazy(() => import('./features/advanced-intelligence/pages/ChargingSiteTwinPage'))
+const FederatedLearningStudio = lazy(() => import('./features/advanced-intelligence/pages/FederatedLearningStudioPage'))
+const EmergencyResilience = lazy(() => import('./features/advanced-intelligence/pages/EmergencyResiliencePage'))
+const CausalExperimentLab = lazy(() => import('./features/advanced-intelligence/pages/CausalExperimentationPage'))
+const TCOOptimizer = lazy(() => import('./features/advanced-intelligence/pages/TCOOptimizerPage'))
 
 // Admin & DevTools
 const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
@@ -599,6 +611,18 @@ export default function App() {
         <Route path="resale-vault" element={<SafeRoute name="WarrantyResaleVault"><WarrantyResaleVault /></SafeRoute>} />
         <Route path="fleet-operations" element={<SafeRoute name="FleetOperations"><FleetOperations /></SafeRoute>} />
         <Route path="action-center" element={<SafeRoute name="ActionCenter"><ActionCenter /></SafeRoute>} />
+        <Route path="intelligence/twin-lab" element={<SafeRoute name="TwinLab"><TwinLab /></SafeRoute>} />
+        <Route path="intelligence/firmware-canary" element={<SafeRoute name="FirmwareCanary"><FirmwareCanary /></SafeRoute>} />
+        <Route path="intelligence/component-survival" element={<SafeRoute name="ComponentSurvival"><ComponentSurvival /></SafeRoute>} />
+        <Route path="intelligence/road-hazards" element={<SafeRoute name="RoadHazardMesh"><RoadHazardMesh /></SafeRoute>} />
+        <Route path="intelligence/behavioral-sentinel" element={<SafeRoute name="BehavioralSentinel"><BehavioralSentinel /></SafeRoute>} />
+        <Route path="intelligence/charging-forensics" element={<SafeRoute name="ChargingForensics"><ChargingForensics /></SafeRoute>} />
+        <Route path="intelligence/journey-assurance" element={<SafeRoute name="JourneyAssurance"><JourneyAssurance /></SafeRoute>} />
+        <Route path="intelligence/charging-site-twin" element={<SafeRoute name="ChargingSiteTwin"><ChargingSiteTwin /></SafeRoute>} />
+        <Route path="intelligence/federated-learning" element={<SafeRoute name="FederatedLearningStudio"><FederatedLearningStudio /></SafeRoute>} />
+        <Route path="intelligence/emergency-resilience" element={<SafeRoute name="EmergencyResilience"><EmergencyResilience /></SafeRoute>} />
+        <Route path="intelligence/causal-lab" element={<SafeRoute name="CausalExperimentLab"><CausalExperimentLab /></SafeRoute>} />
+        <Route path="intelligence/tco-optimizer" element={<SafeRoute name="TCOOptimizer"><TCOOptimizer /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature

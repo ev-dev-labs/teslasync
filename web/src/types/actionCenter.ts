@@ -1,5 +1,6 @@
 export type ActionCenterSourceFeature =
   | 'active_alerts'
+  | 'advanced_intelligence'
   | 'charging_reliability'
   | 'fleet_maintenance'
   | 'signal_health';

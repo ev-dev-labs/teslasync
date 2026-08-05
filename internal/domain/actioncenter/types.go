@@ -6,15 +6,17 @@ import "time"
 type SourceFeature string
 
 const (
-	SourceActiveAlerts        SourceFeature = "active_alerts"
-	SourceChargingReliability SourceFeature = "charging_reliability"
-	SourceFleetMaintenance    SourceFeature = "fleet_maintenance"
-	SourceSignalHealth        SourceFeature = "signal_health"
+	SourceActiveAlerts         SourceFeature = "active_alerts"
+	SourceAdvancedIntelligence SourceFeature = "advanced_intelligence"
+	SourceChargingReliability  SourceFeature = "charging_reliability"
+	SourceFleetMaintenance     SourceFeature = "fleet_maintenance"
+	SourceSignalHealth         SourceFeature = "signal_health"
 )
 
 func (v SourceFeature) Valid() bool {
 	switch v {
-	case SourceActiveAlerts, SourceChargingReliability, SourceFleetMaintenance, SourceSignalHealth:
+	case SourceActiveAlerts, SourceAdvancedIntelligence, SourceChargingReliability,
+		SourceFleetMaintenance, SourceSignalHealth:
 		return true
 	default:
 		return false

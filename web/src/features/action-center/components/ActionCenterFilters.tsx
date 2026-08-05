@@ -35,6 +35,10 @@ export function ActionCenterFilters({ filter, vehicles, onChange }: ActionCenter
     { value: '', label: t('actionCenter.filters.allSources', 'All sources') },
     { value: 'active_alerts', label: t('actionCenter.source.active_alerts', 'Active alerts') },
     {
+      value: 'advanced_intelligence',
+      label: t('actionCenter.source.advanced_intelligence', 'Advanced intelligence'),
+    },
+    {
       value: 'charging_reliability',
       label: t('actionCenter.source.charging_reliability', 'Charging reliability'),
     },

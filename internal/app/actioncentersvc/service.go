@@ -48,24 +48,44 @@ type ActionRequest struct {
 
 type Service struct {
 	providers []provider
+	source    port.SourceReader
 	states    port.StateRepository
 	now       func() time.Time
 }
 
-func New(source port.SourceReader, states port.StateRepository) *Service {
+type Option func(*Service)
+
+func WithAdvancedIntelligence(reader AdvancedIntelligenceReader) Option {
+	if reader == nil {
+		panic("actioncentersvc.WithAdvancedIntelligence: reader must not be nil")
+	}
+	return func(service *Service) {
+		service.providers = append(service.providers, advancedProvider{
+			source:   service.source,
+			advanced: reader,
+		})
+	}
+}
+
+func New(source port.SourceReader, states port.StateRepository, options ...Option) *Service {
 	if source == nil || states == nil {
 		panic("actioncentersvc.New: dependencies must not be nil")
 	}
-	return &Service{
+	service := &Service{
 		providers: []provider{
 			alertsProvider{source: source},
 			chargingProvider{source: source},
 			workOrdersProvider{source: source},
 			signalProvider{source: source},
 		},
+		source: source,
 		states: states,
 		now:    func() time.Time { return time.Now().UTC() },
 	}
+	for _, option := range options {
+		option(service)
+	}
+	return service
 }
 
 func (s *Service) List(

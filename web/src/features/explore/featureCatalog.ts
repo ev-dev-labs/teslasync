@@ -70,6 +70,20 @@ const DESCRIPTIONS: Record<string, string> = {
   '/fleet-operations': 'Coordinate drivers, bookings, policies, work orders, and utilization.',
   '/resale-vault': 'Create verifiable, selectively disclosed vehicle-history reports.',
 
+  // ── Advanced Intelligence ──────────────────────────────────────────
+  '/intelligence/twin-lab': 'Run calibrated vehicle counterfactuals with explicit uncertainty and sensitivity.',
+  '/intelligence/firmware-canary': 'Gate firmware rollout using matched pre/post cohorts instead of simple averages.',
+  '/intelligence/component-survival': 'Model event-free component horizons, competing risks, and intervention sensitivity.',
+  '/intelligence/road-hazards': 'Reveal privacy-safe crash and airbag clusters without exposing exact coordinates.',
+  '/intelligence/behavioral-sentinel': 'Detect command and telemetry behavior shifts without claiming attack attribution.',
+  '/intelligence/charging-forensics': 'Separate recorded charging facts from unsupported meter and billing assumptions.',
+  '/intelligence/journey-assurance': 'Stress-test departure readiness against reserve, climate, and uncertainty.',
+  '/intelligence/charging-site-twin': 'Simulate charging-site queues, failures, and fallback capacity before deployment.',
+  '/intelligence/federated-learning': 'Train local aggregate models with explicit privacy-budget accounting.',
+  '/intelligence/emergency-resilience': 'Build confirmed emergency energy plans from vehicles, home reserve, and loads.',
+  '/intelligence/causal-lab': 'Run confirmed treatment/control analyses with transparent effect limitations.',
+  '/intelligence/tco-optimizer': 'Compare ownership scenarios without inventing prices, tariffs, or depreciation.',
+
   // ── Driving ────────────────────────────────────────────────────────
   '/drives': 'Every drive with route, energy used, and efficiency.',
   '/trips': 'Multi-leg trips grouped into a single journey.',

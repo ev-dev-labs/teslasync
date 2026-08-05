@@ -211,6 +211,18 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/intelligence-packs': ['intelligence packs', 'marketplace', 'signed analytics', 'sandbox', 'community'],
   '/resale-vault': ['warranty', 'resale', 'vehicle history', 'signed report', 'selective disclosure'],
   '/fleet-operations': ['fleet operations', 'drivers', 'reservations', 'cost centers', 'work orders'],
+  '/intelligence/twin-lab': ['twin lab', 'counterfactual', 'uncertainty', 'sensitivity', 'vehicle simulation'],
+  '/intelligence/firmware-canary': ['firmware canary', 'rollout', 'matched cohort', 'regression', 'hold'],
+  '/intelligence/component-survival': ['component survival', 'event free', 'competing risks', 'intervention'],
+  '/intelligence/road-hazards': ['road hazards', 'hazard mesh', 'crash cluster', 'airbag', 'coarse cell'],
+  '/intelligence/behavioral-sentinel': ['behavioral sentinel', 'command anomaly', 'identity change', 'integrity'],
+  '/intelligence/charging-forensics': ['charging forensics', 'billing', 'loss', 'cost discrepancy', 'trust'],
+  '/intelligence/journey-assurance': ['journey assurance', 'departure readiness', 'uncertainty', 'arrival energy'],
+  '/intelligence/charging-site-twin': ['charging site twin', 'queue', 'reliability', 'site simulation'],
+  '/intelligence/federated-learning': ['federated learning', 'model card', 'privacy budget', 'local training'],
+  '/intelligence/emergency-resilience': ['emergency resilience', 'reserve', 'evacuation', 'backup energy'],
+  '/intelligence/causal-lab': ['causal experiment', 'treatment', 'control', 'effect estimate'],
+  '/intelligence/tco-optimizer': ['tco optimizer', 'ownership cost', 'portfolio', 'replacement scenario'],
 }
 
 const DEFAULT_PINNED_NAV_PATHS = ['/', '/digital-twin', '/vehicles', '/charging', '/live']
@@ -240,6 +252,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Settings:       { accent: 'text-slate-700 dark:text-slate-300',     surface: 'bg-slate-400/10',   ring: 'ring-slate-400/20',   dot: 'bg-slate-400',   icon: Icons.settings,        gradient: 'from-slate-500/20 via-slate-400/5 to-transparent' },
   Data:           { accent: 'text-teal-700 dark:text-teal-300',       surface: 'bg-teal-400/10',    ring: 'ring-teal-400/20',    dot: 'bg-teal-400',    icon: Icons.database,        gradient: 'from-teal-500/20 via-teal-400/5 to-transparent' },
   Diagnostics:    { accent: 'text-cyan-700 dark:text-neon-cyan',      surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-neon-cyan',   icon: Icons.activity,        gradient: 'from-cyan-500/25 via-cyan-400/8 to-transparent' },
+  'Advanced Intelligence': { accent: 'text-indigo-700 dark:text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400', icon: Icons.network, gradient: 'from-indigo-500/25 via-indigo-400/8 to-transparent' },
   About:          { accent: 'text-slate-600 dark:text-[var(--text-secondary)]', surface: 'bg-[var(--surface-2)]', ring: 'ring-white/10', dot: 'bg-[var(--surface-2)]', icon: Icons.info, gradient: 'from-white/[0.06] via-white/[0.02] to-transparent' },
 }
 
@@ -444,6 +457,23 @@ export const navSections = [
       { to: '/alert-fatigue', icon: Icons.trendDown, label: 'Alert Fatigue', color: 'text-amber-400' },
       { to: '/notification-burn-rate', icon: Icons.securityAlert, label: 'Notification Burn Rate', color: 'text-rose-400' },
       { to: '/notification-latency', icon: Icons.timer, label: 'Notification Latency', color: 'text-cyan-400' },
+    ],
+  },
+  {
+    title: 'Advanced Intelligence',
+    items: [
+      { to: '/intelligence/twin-lab', icon: Icons.network, label: 'Vehicle Twin Lab', color: 'text-cyan-400' },
+      { to: '/intelligence/firmware-canary', icon: Icons.gitCompare, label: 'Firmware Canary', color: 'text-violet-400' },
+      { to: '/intelligence/component-survival', icon: Icons.timer, label: 'Component Survival', color: 'text-amber-400' },
+      { to: '/intelligence/road-hazards', icon: Icons.mapPinned, label: 'Road Hazard Mesh', color: 'text-orange-400' },
+      { to: '/intelligence/behavioral-sentinel', icon: Icons.securityAlert, label: 'Behavioral Sentinel', color: 'text-rose-400' },
+      { to: '/intelligence/charging-forensics', icon: Icons.receipt, label: 'Charging Forensics', color: 'text-emerald-400' },
+      { to: '/intelligence/journey-assurance', icon: Icons.navigationAlt, label: 'Journey Assurance', color: 'text-sky-400' },
+      { to: '/intelligence/charging-site-twin', icon: Icons.charging, label: 'Charging Site Twin', color: 'text-lime-400' },
+      { to: '/intelligence/federated-learning', icon: Icons.users, label: 'Federated Learning', color: 'text-purple-400' },
+      { to: '/intelligence/emergency-resilience', icon: Icons.home, label: 'Emergency Resilience', color: 'text-red-400' },
+      { to: '/intelligence/causal-lab', icon: Icons.scanSearch, label: 'Causal Experiment Lab', color: 'text-fuchsia-400' },
+      { to: '/intelligence/tco-optimizer', icon: Icons.wallet, label: 'TCO Optimizer', color: 'text-green-400' },
     ],
   },
   {

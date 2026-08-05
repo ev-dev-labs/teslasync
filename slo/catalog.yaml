@@ -74,6 +74,26 @@ slos:
     owner: platform
     tags: [http, action-center, writes]
 
+  - name: advanced_intelligence_read_availability
+    description: "Advanced-intelligence evidence reads must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: analytics
+    tags: [http, advanced-intelligence, evidence]
+
+  - name: advanced_intelligence_scenario_availability
+    description: "Confirmation-gated advanced-intelligence scenarios and durable experiments must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: analytics
+    tags: [http, advanced-intelligence, scenarios, writes]
+
   - name: telemetry_freshness
     description: "Vehicle telemetry must arrive within 60 seconds. Good = vehicles with lag <= 60s."
     sli:

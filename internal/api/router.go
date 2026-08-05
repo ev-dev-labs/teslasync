@@ -207,6 +207,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	actioncenterdb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
+	advancedintelligencedb "github.com/ev-dev-labs/teslasync/internal/database/advancedintelligence"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
@@ -372,6 +373,7 @@ import (
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/advancedintelligencesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
@@ -381,6 +383,7 @@ import (
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
+	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -860,9 +863,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
 	anomalyHandler := apianomaly.NewHandler(db)
 	benchmarkHandler := apibenchmark.NewBenchmarkHandler(db, cfg.Auth.ForwardAuthHeader)
+	advancedIntelligenceService := advancedintelligencesvc.New(
+		advancedintelligencedb.NewSourceRepository(db),
+		stateReader,
+		advancedintelligencedb.NewDurableRepository(db),
+	)
+	advancedIntelligenceHandler := advancedintelligencehandler.NewHandler(
+		advancedIntelligenceService,
+		cfg.Auth.ForwardAuthHeader,
+	)
 	actionCenterService := actioncentersvc.New(
 		actioncenterdb.NewSourceRepository(db),
 		actioncenterdb.NewStateRepository(db),
+		actioncentersvc.WithAdvancedIntelligence(advancedIntelligenceService),
 	)
 	actionCenterHandler := actioncenterhandler.NewHandler(
 		actionCenterService,
@@ -3446,6 +3459,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Unified decision inbox. Forward-auth users receive isolated state;
 		// open-mode installs use one local subject because no identity exists.
+		advancedIntelligenceHandler.MountRoutes(r)
 		r.Get("/action-center", actionCenterHandler.List)
 		r.Get("/action-center/{recommendationID}/history", actionCenterHandler.History)
 		r.With(httprate.LimitByIP(30, time.Minute)).

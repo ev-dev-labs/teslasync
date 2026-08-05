@@ -127,4 +127,3 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `internal/tesla/router/writers/tracing.go`
   - `internal/tesla/unit_history/repo.go`
   - `internal/tesla_pipeline/side_effects_observer.go`
-

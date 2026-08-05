@@ -7,6 +7,7 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
+	advanceddomain "github.com/ev-dev-labs/teslasync/internal/domain/advancedintelligence"
 	port "github.com/ev-dev-labs/teslasync/internal/port/actioncenter"
 )
 
@@ -43,6 +44,42 @@ func (f *fakeSource) ListSignalHealth(
 	context.Context, *int64, time.Time, time.Time, int,
 ) ([]domain.SignalHealthRecord, error) {
 	return f.signals, f.signalErr
+}
+
+type fakeAdvancedIntelligence struct {
+	firmware *advanceddomain.Page[advanceddomain.FirmwareCanary]
+}
+
+func (f *fakeAdvancedIntelligence) FirmwareCanary(
+	context.Context, int64, int, int,
+) (*advanceddomain.Page[advanceddomain.FirmwareCanary], error) {
+	return f.firmware, nil
+}
+
+func (f *fakeAdvancedIntelligence) ComponentSurvival(
+	context.Context, int64, int, int,
+) (*advanceddomain.Page[advanceddomain.ComponentSurvival], error) {
+	return &advanceddomain.Page[advanceddomain.ComponentSurvival]{Items: []advanceddomain.ComponentSurvival{}}, nil
+}
+
+func (f *fakeAdvancedIntelligence) RoadHazards(
+	context.Context, int64, int, int,
+) (*advanceddomain.HazardPage, error) {
+	return &advanceddomain.HazardPage{
+		Page: advanceddomain.Page[advanceddomain.HazardCluster]{
+			Items: []advanceddomain.HazardCluster{},
+		},
+	}, nil
+}
+
+func (f *fakeAdvancedIntelligence) BehavioralSentinel(
+	context.Context, int64, int, int,
+) (*advanceddomain.SentinelPage, error) {
+	return &advanceddomain.SentinelPage{
+		Page: advanceddomain.Page[advanceddomain.SentinelFinding]{
+			Items: []advanceddomain.SentinelFinding{},
+		},
+	}, nil
 }
 
 type fakeStates struct {
@@ -245,6 +282,58 @@ func TestProviderFailureDegradesExplicitly(t *testing.T) {
 	}
 	if len(response.Items) != 0 {
 		t.Fatalf("items = %d, want 0", len(response.Items))
+	}
+}
+
+func TestAdvancedIntelligenceFindingsFlowIntoActionCenter(t *testing.T) {
+	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
+	vehicle := domain.VehicleRef{ID: 7, DisplayName: "Orion"}
+	version := "2026.4.1"
+	source := &fakeSource{signals: []domain.SignalHealthRecord{{
+		Vehicle: vehicle, LatestSignalAt: testTimePtr(now.Add(-time.Hour)), CheckedAt: now,
+	}}}
+	advanced := &fakeAdvancedIntelligence{
+		firmware: &advanceddomain.Page[advanceddomain.FirmwareCanary]{
+			Items: []advanceddomain.FirmwareCanary{{
+				VehicleID: 7,
+				Version:   &version,
+				Decision:  advanceddomain.CanaryHold,
+				WindowQuality: advanceddomain.DataQuality{
+					Status:      advanceddomain.QualitySufficient,
+					SampleCount: 40,
+				},
+				Evidence: []advanceddomain.Evidence{{
+					Source:     "drives_matched_model_cohort",
+					ObservedAt: testTimePtr(now.Add(-2 * time.Hour)),
+					Summary:    "Matched target and peer windows crossed the rollout hold threshold.",
+				}},
+				Limitations: []string{"Observed association is not proof of firmware causality."},
+			}},
+		},
+	}
+	service := New(source, newFakeStates(), WithAdvancedIntelligence(advanced))
+	service.now = func() time.Time { return now }
+	advancedSource := domain.SourceAdvancedIntelligence
+
+	response, err := service.List(context.Background(), "user-1", ListFilter{
+		SourceFeature: &advancedSource,
+		Limit:         25,
+	})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(response.Items) != 1 {
+		t.Fatalf("item count = %d, want 1", len(response.Items))
+	}
+	item := response.Items[0]
+	if item.SourceFeature != domain.SourceAdvancedIntelligence {
+		t.Fatalf("source feature = %s", item.SourceFeature)
+	}
+	if item.NavigationPath == nil || *item.NavigationPath != "/intelligence/firmware-canary" {
+		t.Fatalf("navigation path = %v", item.NavigationPath)
+	}
+	if item.Confidence.Score <= 0 || len(item.Evidence) != 1 {
+		t.Fatalf("advanced recommendation lost evidence: %+v", item)
 	}
 }
 
