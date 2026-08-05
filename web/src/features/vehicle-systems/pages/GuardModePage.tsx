@@ -374,7 +374,7 @@ export default function GuardModePage() {
                     ? 'bg-red-500/20 text-red-300'
                     : isArmed
                     ? 'bg-emerald-500/20 text-emerald-300'
-                    : 'bg-white/5 text-[var(--text-muted)]',
+                    : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
                 )}
               >
                 <StateIcon className="h-8 w-8" aria-hidden="true" />

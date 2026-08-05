@@ -427,7 +427,7 @@ export default function MediaPlayerPage() {
                       <Text as="span" variant="caption" className="tabular-nums">
                         {fmtPlayTime(latest.now_playing_elapsed ?? 0)}
                       </Text>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]">
                         <div
                           className="h-full rounded-full bg-cyan-400 transition-all duration-slow"
                           style={{ width: `${progressPct}%` }}

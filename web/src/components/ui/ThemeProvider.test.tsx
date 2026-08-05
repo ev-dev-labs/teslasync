@@ -151,6 +151,20 @@ async function renderSettled() {
   return utils
 }
 
+function contrastRatio(foreground: string, background: string): number {
+  const luminance = (hex: string) => {
+    const channels = hex
+      .slice(1)
+      .match(/.{2}/g)!
+      .map((value) => Number.parseInt(value, 16) / 255)
+      .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+  }
+  const lighter = Math.max(luminance(foreground), luminance(background))
+  const darker = Math.min(luminance(foreground), luminance(background))
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
 beforeEach(() => {
   localStorage.clear()
   systemPrefersDark = false
@@ -222,6 +236,8 @@ describe('applyThemeCSS side effects', () => {
     expect(screen.getByTestId('mode-scheme')).toHaveTextContent('light')
     const root = document.documentElement
     expect(root.style.getPropertyValue('--bg')).toBe('#f8fafc')
+    expect(root.style.getPropertyValue('--text-muted')).toBe('#64748b')
+    expect(contrastRatio('#64748b', '#f8fafc')).toBeGreaterThanOrEqual(4.5)
     expect(root.style.getPropertyValue('color-scheme')).toBe('light')
     expect(root.classList.contains('light-mode')).toBe(true)
     expect(root.classList.contains('dark')).toBe(false)

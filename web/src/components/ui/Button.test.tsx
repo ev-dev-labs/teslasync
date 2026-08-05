@@ -35,7 +35,10 @@ describe('Button', () => {
     expect(cls).toContain('rounded-md');
     expect(cls).toContain('font-medium');
     expect(cls).toContain('transition');
-    expect(cls).toContain('disabled:opacity-50');
+    expect(cls).toContain('disabled:bg-[var(--surface-2)]');
+    expect(cls).toContain('disabled:text-[var(--text-secondary)]');
+    expect(cls).toContain('disabled:opacity-100');
+    expect(cls).not.toContain('disabled:opacity-50');
   });
 
   it('defaults to the primary variant and the md size', () => {
@@ -61,6 +64,13 @@ describe('Button', () => {
       rerender(<Button variant={variant}>x</Button>);
       expect(screen.getByRole('button').className).toContain(cls);
     }
+  });
+
+  it('uses the fixed on-accent foreground for the solid danger surface', () => {
+    render(<Button variant="danger">Delete</Button>);
+    const cls = screen.getByRole('button', { name: 'Delete' }).className;
+    expect(cls).toContain('text-[var(--text-on-accent)]');
+    expect(cls).not.toContain('text-[var(--text-primary)]');
   });
 
   it('applies the distinctive class for every size', () => {

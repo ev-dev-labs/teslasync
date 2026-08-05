@@ -247,7 +247,7 @@ export default function SegmentsPage() {
                 {leaderboard?.segment.name ?? t('segments.board.title', 'Leaderboard')}
               </PanelTitle>
               {/* by-time / by-efficiency toggle */}
-              <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.03] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
+              <div className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
                 {(['time', 'efficiency'] as const).map((mode) => (
                   <button
                     key={mode}
@@ -256,7 +256,7 @@ export default function SegmentsPage() {
                     aria-pressed={board === mode}
                     className={cn(
                       'rounded-md px-3 py-1 text-sm font-medium transition-colors',
-                      board === mode ? 'bg-white/10 text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                      board === mode ? 'bg-[var(--surface-3)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                     )}
                   >
                     {mode === 'time'
@@ -556,7 +556,7 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/10 text-left text-[var(--text-muted)]">
+          <tr className="border-b border-[var(--border-subtle)] text-left text-[var(--text-muted)]">
             <th scope="col" className="py-2 pr-3 font-medium">#</th>
             <th scope="col" className="py-2 pr-3 font-medium">{t('segments.table.date', 'Date')}</th>
             <th scope="col" className="py-2 pr-3 text-right font-medium">{t('segments.table.time', 'Time')}</th>
@@ -573,8 +573,8 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
               <tr
                 key={r.drive_id}
                 className={cn(
-                  'border-b border-white/[0.06] transition-colors',
-                  (isA || isB) && 'bg-white/[0.03]',
+                  'border-b border-[var(--border-subtle)] transition-colors',
+                  (isA || isB) && 'bg-[var(--surface-elevated)]',
                 )}
               >
                 <td className="py-2 pr-3 tabular-nums text-[var(--text-secondary)]">{r.rank}</td>
@@ -629,7 +629,7 @@ function RaceButton({ active, color, onClick, label }: RaceButtonProps) {
       aria-label={`${label}${active ? ' (selected)' : ''}`}
       className={cn(
         'h-7 w-7 rounded-md text-xs font-bold transition-colors',
-        active ? on : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)]',
+        active ? on : 'bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
       )}
     >
       {label}

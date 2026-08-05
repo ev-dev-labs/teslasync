@@ -65,6 +65,16 @@ describe('InlineCallout', () => {
     expect(screen.getByRole('status').className).toMatch(/rose/);
   });
 
+  it.each([
+    ['warning', 'text-amber-800', 'dark:text-amber-200'],
+    ['danger', 'text-rose-800', 'dark:text-rose-200'],
+  ] as const)('keeps %s body text readable in both themes', (variant, lightClass, darkClass) => {
+    render(<InlineCallout variant={variant}>Readable body</InlineCallout>);
+    const body = screen.getByText('Readable body');
+    expect(body.className).toContain(lightClass);
+    expect(body.className).toContain(darkClass);
+  });
+
   it('exposes a testId on the outer node', () => {
     render(
       <InlineCallout variant="info" testId="callout-foo">

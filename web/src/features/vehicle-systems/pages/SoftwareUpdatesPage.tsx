@@ -320,7 +320,7 @@ export default function SoftwareUpdatesPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={t('softwareUpdates.timeline.releaseNotes', 'Release notes for {{version}}', { version: u.version })}
-                            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-white/5 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+                            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
                           >
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           </a>

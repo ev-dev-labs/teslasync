@@ -204,6 +204,8 @@ describe('AIFeatureCard — action button (idle)', () => {
     expect(button).toHaveAttribute('title', 'Summarize')
     expect(button).toBeEnabled()
     expect(button).toHaveAttribute('aria-disabled', 'false')
+    expect(button.className).toContain('text-cyan-800')
+    expect(button.className).toContain('dark:text-cyan-100')
     // Idle: no busy state announced.
     expect(button).not.toHaveAttribute('aria-busy')
   })

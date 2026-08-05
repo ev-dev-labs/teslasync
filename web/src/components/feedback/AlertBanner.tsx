@@ -20,10 +20,10 @@ export interface AlertBannerProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const alertVariantMap: Record<AlertVariant, { border: string; bg: string; text: string; titleText: string }> = {
-  info:    { border: 'border-neon-cyan/20',   bg: 'bg-neon-cyan/5',   text: 'text-cyan-200/90',    titleText: 'text-cyan-300' },
-  success: { border: 'border-neon-green/20',  bg: 'bg-neon-green/5',  text: 'text-emerald-200/90', titleText: 'text-emerald-300' },
-  warning: { border: 'border-neon-amber/20',  bg: 'bg-neon-amber/5',  text: 'text-amber-200/90',   titleText: 'text-amber-300' },
-  danger:  { border: 'border-neon-red/20',    bg: 'bg-neon-red/5',    text: 'text-rose-200/90',    titleText: 'text-rose-300' },
+  info:    { border: 'border-neon-cyan/20',   bg: 'bg-neon-cyan/5',   text: 'text-cyan-800 dark:text-cyan-200',       titleText: 'text-cyan-800 dark:text-cyan-300' },
+  success: { border: 'border-neon-green/20',  bg: 'bg-neon-green/5',  text: 'text-emerald-800 dark:text-emerald-200', titleText: 'text-emerald-800 dark:text-emerald-300' },
+  warning: { border: 'border-neon-amber/20',  bg: 'bg-neon-amber/5',  text: 'text-amber-800 dark:text-amber-200',      titleText: 'text-amber-800 dark:text-amber-300' },
+  danger:  { border: 'border-neon-red/20',    bg: 'bg-neon-red/5',    text: 'text-rose-800 dark:text-rose-200',       titleText: 'text-rose-800 dark:text-rose-300' },
 }
 
 /**
@@ -61,7 +61,7 @@ export function AlertBanner({ variant, title, children, onClose, icon, className
           onClick={onClose}
           aria-label={closeLabel ?? t('common.dismiss', 'Dismiss')}
           className={cn(
-            'shrink-0 rounded-lg p-1.5 transition-colors hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20',
+            'shrink-0 rounded-lg p-1.5 transition-colors hover:bg-[var(--surface-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-current',
             v.text,
           )}
         >

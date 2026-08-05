@@ -80,7 +80,7 @@ export function QueryReferencePanel() {
           </li>
         ))}
       </ul>
-      <figure className="rounded-lg border border-[var(--border-subtle)] bg-black/20 p-3">
+      <figure className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
         <Text as="figcaption" variant="caption">
           {t('powerSql.info.exampleLabel', 'Example')}
         </Text>

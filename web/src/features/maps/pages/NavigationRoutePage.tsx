@@ -112,7 +112,7 @@ function LocationStatusCard({ icon, label, value, active }: LocationStatusCardPr
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
           active
             ? 'bg-emerald-500/20 text-emerald-300'
-            : 'bg-white/5 text-[var(--text-muted)]',
+            : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
         )}
       >
         {icon}

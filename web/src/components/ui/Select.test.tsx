@@ -206,6 +206,10 @@ describe('Select — passthrough, ref, and interaction', () => {
     expect(select.name).toBe('model');
     expect(select.disabled).toBe(true);
     expect(select.getAttribute('data-testid')).toBe('model-select');
+    expect(select.className).toContain('disabled:bg-[var(--surface-2)]');
+    expect(select.className).toContain('disabled:text-[var(--text-secondary)]');
+    expect(select.className).toContain('disabled:opacity-100');
+    expect(select.className).not.toContain('disabled:opacity-50');
   });
 
   it('fires onChange and reflects the chosen value when the user selects an option', () => {

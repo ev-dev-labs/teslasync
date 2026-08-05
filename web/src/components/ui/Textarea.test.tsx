@@ -264,6 +264,10 @@ describe('Textarea — ref & interaction', () => {
 
   it('respects the disabled attribute', () => {
     render(<Textarea aria-label="Comment" disabled />);
-    expect(screen.getByRole('textbox', { name: 'Comment' })).toBeDisabled();
+    const textarea = screen.getByRole('textbox', { name: 'Comment' });
+    expect(textarea).toBeDisabled();
+    expect(textarea.className).toContain('disabled:bg-[var(--surface-2)]');
+    expect(textarea.className).toContain('disabled:text-[var(--text-secondary)]');
+    expect(textarea.className).toContain('disabled:opacity-100');
   });
 });
