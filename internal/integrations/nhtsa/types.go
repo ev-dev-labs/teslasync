@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -205,4 +206,12 @@ func newUpstreamError(operation string, kind ErrorKind, status int, cause error)
 		StatusCode: status,
 		cause:      cause,
 	}
+}
+
+func requestTimedOut(parent, call context.Context, requestErr error) bool {
+	var netErr net.Error
+	return errors.Is(parent.Err(), context.DeadlineExceeded) ||
+		errors.Is(call.Err(), context.DeadlineExceeded) ||
+		errors.Is(requestErr, context.DeadlineExceeded) ||
+		(errors.As(requestErr, &netErr) && netErr.Timeout())
 }

@@ -14553,6 +14553,122 @@
     "subtitle": "A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.",
     "title": "Service Evidence Pack"
   },
+  "actionCenter": {
+    "page": {
+      "title": "Action Center",
+      "subtitle": "A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard."
+    },
+    "resource": "Action Center recommendations",
+    "loading": "Loading recommendations",
+    "list": {
+      "label": "Prioritized recommendations"
+    },
+    "summary": {
+      "label": "Action Center summary",
+      "open": "Open",
+      "critical": "Critical",
+      "high": "High",
+      "acknowledged": "Acknowledged",
+      "snoozed": "Snoozed",
+      "dismissed": "Dismissed"
+    },
+    "filters": {
+      "title": "Filter decisions",
+      "clear": "Clear filters",
+      "vehicle": "Vehicle",
+      "priority": "Priority",
+      "source": "Source",
+      "state": "State",
+      "allVehicles": "All vehicles",
+      "allPriorities": "All priorities",
+      "allSources": "All sources",
+      "allStates": "All states"
+    },
+    "priority": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "source": {
+      "active_alerts": "Active alerts",
+      "charging_reliability": "Charging reliability",
+      "fleet_maintenance": "Fleet maintenance",
+      "signal_health": "Signal health"
+    },
+    "state": {
+      "open": "Open",
+      "acknowledged": "Acknowledged",
+      "snoozed": "Snoozed",
+      "dismissed": "Dismissed"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "providerStatus": {
+      "available": "Available",
+      "degraded": "Degraded",
+      "unavailable": "Unavailable"
+    },
+    "providers": {
+      "title": "Source coverage",
+      "description": "Unavailable sources are shown explicitly; the inbox never invents substitute findings.",
+      "empty": "No provider status was returned.",
+      "findings": "{{count}} findings"
+    },
+    "card": {
+      "details": "Evidence, scoring, and outcomes",
+      "impactAvailable": "Impact supported",
+      "noImpact": "No projected impact",
+      "allVehicles": "All vehicles",
+      "expires": "Expires {{date}}",
+      "rank": "Rank",
+      "confidence": "Confidence"
+    },
+    "details": {
+      "evidence": "Evidence",
+      "timestampUnknown": "Timestamp unknown",
+      "impact": "Projected impact",
+      "noImpact": "No defensible energy, cost, time, or risk projection is available.",
+      "scoring": "Scoring basis",
+      "rankScore": "Rank {{score}}",
+      "limitations": "Limitations"
+    },
+    "history": {
+      "title": "Action history",
+      "resource": "Action history",
+      "empty": "No actions have been recorded yet."
+    },
+    "outcome": {
+      "applied": "Applied"
+    },
+    "empty": {
+      "title": "Inbox clear",
+      "message": "No recommendations match these filters. Source coverage remains visible above."
+    },
+    "action": {
+      "acknowledge": "Acknowledge",
+      "snooze": "Snooze 24 hours",
+      "dismiss": "Dismiss",
+      "restore": "Restore",
+      "navigate": "Open source"
+    },
+    "actions": {
+      "refresh": "Refresh evidence"
+    },
+    "confirm": {
+      "title": "Confirm inbox action",
+      "message": "{{action}} “{{title}}”? This changes only your Action Center state and does not control the vehicle or source record."
+    },
+    "toast": {
+      "success": "Action applied",
+      "successMessage": "Your decision inbox state was updated.",
+      "error": "Action not applied",
+      "errorMessage": "Refresh and try again."
+    }
+  },
   "serviceIntelligence": {
     "actions": {
       "evidencePack": "Open Service Evidence Pack"

@@ -196,6 +196,7 @@ const PrivacyBenchmarks = lazy(() => import('./features/benchmarks/pages/Privacy
 const IntelligencePackMarketplace = lazy(() => import('./features/intelligence-packs/pages/IntelligencePackMarketplacePage'))
 const WarrantyResaleVault = lazy(() => import('./features/resale-vault/pages/WarrantyResaleVaultPage'))
 const FleetOperations = lazy(() => import('./features/fleet-ops/pages/FleetOperationsPage'))
+const ActionCenter = lazy(() => import('./features/action-center/pages/ActionCenterPage'))
 
 // Admin & DevTools
 const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
@@ -597,6 +598,7 @@ export default function App() {
         <Route path="intelligence-packs" element={<SafeRoute name="IntelligencePackMarketplace"><IntelligencePackMarketplace /></SafeRoute>} />
         <Route path="resale-vault" element={<SafeRoute name="WarrantyResaleVault"><WarrantyResaleVault /></SafeRoute>} />
         <Route path="fleet-operations" element={<SafeRoute name="FleetOperations"><FleetOperations /></SafeRoute>} />
+        <Route path="action-center" element={<SafeRoute name="ActionCenter"><ActionCenter /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature

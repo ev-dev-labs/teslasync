@@ -53,6 +53,7 @@ export interface FeatureCatalogEntry {
 const DESCRIPTIONS: Record<string, string> = {
   // ── Home ───────────────────────────────────────────────────────────
   '/': 'Your daily summary — battery, last drive, charging, and alerts at a glance.',
+  '/action-center': 'Prioritized decisions with evidence, confidence, safe actions, and no fabricated impact.',
   '/explore': 'Browse and search every feature in TeslaSync with a 1-line description for each.',
   '/live': 'Real-time map of where your vehicle is right now.',
   '/timeline': 'Hour-by-hour history of drives, charges, and events.',

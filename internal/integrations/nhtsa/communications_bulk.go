@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"mime"
-	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -491,12 +490,8 @@ func communicationsTransportError(
 	call context.Context,
 	requestErr error,
 ) error {
-	var netErr net.Error
 	switch {
-	case errors.Is(parent.Err(), context.DeadlineExceeded),
-		errors.Is(call.Err(), context.DeadlineExceeded),
-		errors.Is(requestErr, context.DeadlineExceeded),
-		errors.As(requestErr, &netErr) && netErr.Timeout():
+	case requestTimedOut(parent, call, requestErr):
 		return newUpstreamError(
 			"manufacturer communications import",
 			ErrorKindTimeout,

@@ -75,6 +75,11 @@ describe('featureCatalog', () => {
       expect(out.some((e) => e.to === '/charging')).toBe(true);
     });
 
+    it('describes the Action Center as a decision surface with evidence', () => {
+      const out = filterFeatureCatalog(catalog, 'evidence confidence');
+      expect(out.some((entry) => entry.to === '/action-center')).toBe(true);
+    });
+
     it('matches against the section title', () => {
       const out = filterFeatureCatalog(catalog, 'Diagnostics');
       expect(out.every((e) => e.section === 'Diagnostics')).toBe(true);

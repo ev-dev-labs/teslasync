@@ -24,6 +24,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/account/2fa', name: 'TwoFactorAuth', label: 'Two Factor Auth', i18nKey: 'routes.twoFactorAuth' },
   { path: '/account/privacy', name: 'Privacy', label: 'Privacy', i18nKey: 'routes.privacy' },
   { path: '/account/sessions', name: 'ActiveSessions', label: 'Active Sessions', i18nKey: 'routes.activeSessions' },
+  { path: '/action-center', name: 'ActionCenter', label: 'Action Center', i18nKey: 'routes.actionCenter' },
   { path: '/admin/audit-log', name: 'AuditLog', label: 'Audit Log', i18nKey: 'routes.auditLog' },
   { path: '/admin/disk-forecast', name: 'DiskForecast', label: 'Disk Forecast', i18nKey: 'routes.diskForecast' },
   { path: '/admin/dlq', name: 'DLQInspector', label: 'DLQ Inspector', i18nKey: 'routes.dLQInspector' },

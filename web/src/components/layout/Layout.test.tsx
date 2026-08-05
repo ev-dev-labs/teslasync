@@ -390,6 +390,12 @@ describe('navSections (data export)', () => {
     expect(dashboard?.label).toBe('Dashboard')
   })
 
+  it('exposes the Action Center decision inbox from Home', () => {
+    const actionCenter = navSections[0].items.find((i) => i.to === '/action-center')
+    expect(actionCenter?.label).toBe('Action Center')
+    expect(navSearchKeywords['/action-center']).toContain('decision inbox')
+  })
+
   it('every item has a rooted, unique path and a non-empty label', () => {
     const paths = allItems.map((i) => i.to)
     expect(paths.every((p) => typeof p === 'string' && p.startsWith('/'))).toBe(true)
@@ -419,6 +425,7 @@ describe('navSearchKeywords (data export)', () => {
     expect(navSearchKeywords['/']).toContain('home')
     expect(navSearchKeywords['/charging']).toContain('charge')
     expect(navSearchKeywords['/battery']).toContain('soh')
+    expect(navSearchKeywords['/action-center']).toContain('recommendations')
   })
 })
 

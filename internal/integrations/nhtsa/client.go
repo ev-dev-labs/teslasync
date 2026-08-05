@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -372,10 +371,12 @@ func (c *Client) fetchJSON(
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		switch {
-		case errors.Is(callCtx.Err(), context.DeadlineExceeded):
+		case requestTimedOut(ctx, callCtx, err):
 			return nil, responseMetadata{}, false, newUpstreamError(operation, ErrorKindTimeout, 0, ErrUpstreamTimeout)
-		case errors.Is(ctx.Err(), context.Canceled), errors.Is(ctx.Err(), context.DeadlineExceeded):
+		case ctx.Err() != nil:
 			return nil, responseMetadata{}, false, newUpstreamError(operation, ErrorKindCanceled, 0, ctx.Err())
+		case callCtx.Err() != nil:
+			return nil, responseMetadata{}, false, newUpstreamError(operation, ErrorKindCanceled, 0, callCtx.Err())
 		default:
 			return nil, responseMetadata{}, false, newUpstreamError(operation, ErrorKindTransport, 0, ErrTransport)
 		}

@@ -86,6 +86,7 @@ const navI18nKeys: Record<string, string> = {
 
 export const navSearchKeywords: Record<string, string[]> = {
   '/': ['home', 'overview', 'start', 'summary'],
+  '/action-center': ['action center', 'decision inbox', 'recommendations', 'priorities', 'findings', 'snooze'],
   '/live': ['map', 'location', 'tracking', 'realtime', 'vehicle position'],
   '/vehicles': ['cars', 'fleet', 'garage', 'vehicle list'],
   '/period-compare': ['comparison', 'period', 'time', 'this month vs last month', 'trends'],
@@ -275,6 +276,7 @@ export const navSections = [
     title: 'Home',
     items: [
       { to: '/', icon: Icons.layoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
+      { to: '/action-center', icon: Icons.notificationsActive, label: 'Action Center', color: 'text-cyan-400' },
       { to: '/explore', icon: Icons.sparkles, label: 'Explore Features', color: 'text-amber-400' },
       { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/timeline', icon: Icons.clock, label: 'Timeline', color: 'text-sky-400' },

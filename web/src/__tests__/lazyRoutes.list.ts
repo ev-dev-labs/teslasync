@@ -272,4 +272,5 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'IntelligencePackMarketplace', load: () => import('../features/intelligence-packs/pages/IntelligencePackMarketplacePage') },
   { name: 'WarrantyResaleVault', load: () => import('../features/resale-vault/pages/WarrantyResaleVaultPage') },
   { name: 'FleetOperations', load: () => import('../features/fleet-ops/pages/FleetOperationsPage') },
+  { name: 'ActionCenter', load: () => import('../features/action-center/pages/ActionCenterPage') },
 ]

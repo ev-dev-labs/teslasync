@@ -206,6 +206,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/yearreview"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	actioncenterdb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
@@ -369,6 +370,7 @@ import (
 
 	// Hexagonal adapters used by legacy route composition.
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
@@ -378,6 +380,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
+	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -857,6 +860,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
 	anomalyHandler := apianomaly.NewHandler(db)
 	benchmarkHandler := apibenchmark.NewBenchmarkHandler(db, cfg.Auth.ForwardAuthHeader)
+	actionCenterService := actioncentersvc.New(
+		actioncenterdb.NewSourceRepository(db),
+		actioncenterdb.NewStateRepository(db),
+	)
+	actionCenterHandler := actioncenterhandler.NewHandler(
+		actionCenterService,
+		cfg.Auth.ForwardAuthHeader,
+	)
 	fleetOpsHandler := apifleetops.NewHandler(db)
 	nhtsaClient := nhtsa.NewClient(nhtsa.Config{})
 	communicationsProvider := apiserviceintelligence.NewDatabaseManufacturerCommunicationsProvider(db)
@@ -3432,6 +3443,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(10, time.Minute)).
 				Post("/releases", benchmarkHandler.CreateRelease)
 		})
+
+		// Unified decision inbox. Forward-auth users receive isolated state;
+		// open-mode installs use one local subject because no identity exists.
+		r.Get("/action-center", actionCenterHandler.List)
+		r.Get("/action-center/{recommendationID}/history", actionCenterHandler.History)
+		r.With(httprate.LimitByIP(30, time.Minute)).
+			Post("/action-center/{recommendationID}/actions", actionCenterHandler.ApplyAction)
 
 		// Fleet operations owns its write throttles. Service-intelligence
 		// vehicle reads use the local normalized NHTSA catalog; bulk catalog
