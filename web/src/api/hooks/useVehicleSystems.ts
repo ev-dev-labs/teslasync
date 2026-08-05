@@ -14,6 +14,8 @@ export const vehicleSystemsKeys = {
   climateHistory: (vehicleId: string) => ['climate', 'history', vehicleId] as const,
   tirePressure: (vehicleId: string) => ['tire-pressure', vehicleId] as const,
   tirePressureHistory: (vehicleId: string) => ['tire-pressure', 'history', vehicleId] as const,
+  tirePressureAnalysisHistory: (vehicleId: string, days: number) =>
+    ['tire-pressure', 'analysis-history', vehicleId, days] as const,
   maintenance: ['maintenance'] as const,
   serviceRecords: ['service-records'] as const,
   softwareUpdates: (vehicleId: string) => ['software-updates', vehicleId] as const,
@@ -55,6 +57,26 @@ export function useTirePressureHistory(vehicleId: string) {
     queryKey: vehicleSystemsKeys.tirePressureHistory(vehicleId),
     queryFn: ({ signal }) => request<TirePressureReading[]>(`/tire-pressure?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
+    select: safeArray,
+  });
+}
+
+/** Fetches an explicit, longer TPMS window for robust drift estimation. */
+export function useTirePressureAnalysisHistory(vehicleId: string, days = 30) {
+  const boundedDays = Number.isFinite(days)
+    ? Math.max(1, Math.min(365, Math.floor(days)))
+    : 30;
+  return useQuery({
+    queryKey: vehicleSystemsKeys.tirePressureAnalysisHistory(vehicleId, boundedDays),
+    queryFn: ({ signal }) => {
+      const start = new Date(Date.now() - boundedDays * 86_400_000).toISOString();
+      return request<TirePressureReading[]>(
+        `/tire-pressure?vehicle_id=${encodeURIComponent(vehicleId)}&start=${encodeURIComponent(start)}`,
+        { signal },
+      );
+    },
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
   });
 }

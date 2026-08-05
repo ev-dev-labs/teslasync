@@ -37,6 +37,7 @@ import {
   getDrives,
   drivingKeys,
   useDrives,
+  useDriveHistory,
   useDrive,
   useDriveScore,
   useDrivingStats,
@@ -93,6 +94,7 @@ beforeEach(() => {
 describe('drivingKeys', () => {
   it('produces stable, namespaced tuples for each domain', () => {
     expect(drivingKeys.drives('5')).toEqual(['drives', '5']);
+    expect(drivingKeys.history('5')).toEqual(['drives', '5', 'history', 1000]);
     expect(drivingKeys.score('5')).toEqual(['drive-score', '5']);
     expect(drivingKeys.stats('5')).toEqual(['driving-stats', '5']);
     expect(drivingKeys.dynamics('5')).toEqual(['driving-dynamics', '5']);
@@ -174,6 +176,33 @@ describe('useDrives', () => {
     const { result } = renderHook(() => useDrives('5'), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
+  });
+});
+
+describe('useDriveHistory', () => {
+  it('uses an isolated key and requests the backend maximum history window', async () => {
+    mockedRequest.mockResolvedValueOnce([{ id: 1 }]);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useDriveHistory('5'), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/drives?vehicle_id=5&limit=1000');
+    expect(result.current.data).toHaveLength(1);
+  });
+
+  it('bounds a custom limit and stays disabled without a vehicle', async () => {
+    mockedRequest.mockResolvedValueOnce([]);
+    const first = makeWrapper();
+    const { result } = renderHook(() => useDriveHistory('5', 5000), {
+      wrapper: first.Wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/drives?vehicle_id=5&limit=1000');
+
+    mockedRequest.mockReset();
+    const second = makeWrapper();
+    renderHook(() => useDriveHistory(undefined), { wrapper: second.Wrapper });
+    await tick();
+    expect(mockedRequest).not.toHaveBeenCalled();
   });
 });
 

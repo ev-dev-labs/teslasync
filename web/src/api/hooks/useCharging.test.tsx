@@ -46,6 +46,7 @@ import {
   getChargingSessions,
   chargingKeys,
   useChargingSessions,
+  useChargingHistory,
   useChargingSession,
   useChargingSessionDetail,
   useChargeTelemetry,
@@ -138,6 +139,12 @@ describe('key factories', () => {
       'charging-sessions',
       'vehicle',
       '3',
+    ]);
+    expect(chargingKeys.history('3')).toEqual([
+      'charging-sessions',
+      'history',
+      '3',
+      1000,
     ]);
   });
 
@@ -246,6 +253,28 @@ describe('useChargingSessions', () => {
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
+  });
+});
+
+describe('useChargingHistory', () => {
+  it('requests an isolated maximum-size analytical history window', async () => {
+    mockedRequest.mockResolvedValueOnce([{ id: '1' }]);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useChargingHistory('7'), {
+      wrapper: Wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/charging-sessions?vehicle_id=7&limit=1000');
+    expect(opts).toHaveProperty('signal');
+    expect(result.current.data).toHaveLength(1);
+  });
+
+  it('stays disabled without a vehicle id', async () => {
+    const { Wrapper } = makeWrapper();
+    renderHook(() => useChargingHistory(undefined), { wrapper: Wrapper });
+    await tick();
+    expect(mockedRequest).not.toHaveBeenCalled();
   });
 });
 

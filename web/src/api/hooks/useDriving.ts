@@ -37,6 +37,8 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 
 export const drivingKeys = {
   drives: (vehicleId?: string) => ['drives', vehicleId] as const,
+  history: (vehicleId?: string, limit = 1000) =>
+    ['drives', vehicleId, 'history', limit] as const,
   // Detail key is namespaced under 'drive' (singular) so it never collides
   // with `drives(vehicleId)` when the vehicleId numerically equals the drive
   // id. The collision swapped the cached value between `Drive[]` (list) and
@@ -64,6 +66,30 @@ export function useDrives(vehicleId?: string) {
     queryFn: ({ signal }) =>
       request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives', { signal }),
     enabled: !!vehicleId,
+    select: safeArray,
+  });
+}
+
+/**
+ * Fetches a deliberately larger, isolated history window for client-side
+ * analytical models. The list page keeps its existing lightweight query and
+ * cache key; analytical pages opt into this hook so an annual/cumulative model
+ * is never silently trained on the API's default 50-row page.
+ *
+ * The backend caps one request at 1,000 rows. Callers must still describe the
+ * result as an observed history window rather than guaranteed lifetime data.
+ */
+export function useDriveHistory(vehicleId?: string, limit = 1000) {
+  const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  return useQuery({
+    queryKey: drivingKeys.history(vehicleId, boundedLimit),
+    queryFn: ({ signal }) =>
+      request<Drive[]>(
+        `/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
   });
 }
@@ -305,4 +331,3 @@ export function useDriveWhyEnded(
     retry: 1,
   });
 }
-

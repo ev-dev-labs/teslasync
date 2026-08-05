@@ -33,6 +33,7 @@ import {
   useClimateHistory,
   useTirePressure,
   useTirePressureHistory,
+  useTirePressureAnalysisHistory,
   useMaintenance,
   useServiceRecords,
   useSoftwareUpdates,
@@ -151,6 +152,12 @@ describe('vehicleSystemsKeys', () => {
       'history',
       '42',
     ]);
+    expect(vehicleSystemsKeys.tirePressureAnalysisHistory(VID, 30)).toEqual([
+      'tire-pressure',
+      'analysis-history',
+      '42',
+      30,
+    ]);
     expect(vehicleSystemsKeys.maintenance).toEqual(['maintenance']);
     expect(vehicleSystemsKeys.serviceRecords).toEqual(['service-records']);
     expect(vehicleSystemsKeys.softwareUpdates(VID)).toEqual(['software-updates', '42']);
@@ -241,6 +248,32 @@ describe('useTirePressureHistory', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(firstCall().url).toBe('/tire-pressure?vehicle_id=42');
     expect(result.current.data).toEqual([]);
+  });
+});
+
+describe('useTirePressureAnalysisHistory', () => {
+  it('requests an explicit 30-day analytical window', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
+    requestMock.mockResolvedValueOnce([tire]);
+    const { result } = renderHook(() => useTirePressureAnalysisHistory(VID), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const { url, options } = firstCall();
+    const query = queryOf(url);
+    expect(url.startsWith('/tire-pressure?')).toBe(true);
+    expect(query.get('vehicle_id')).toBe(VID);
+    expect(query.get('start')).toBe('2026-01-02T00:00:00.000Z');
+    expect(options).toHaveProperty('signal');
+    vi.useRealTimers();
+  });
+
+  it('is disabled without a vehicle id', async () => {
+    renderHook(() => useTirePressureAnalysisHistory(''), { wrapper: makeWrapper() });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(requestMock).not.toHaveBeenCalled();
   });
 });
 

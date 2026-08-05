@@ -12,6 +12,8 @@ export const telemetryKeys = {
   liveSignals: (vehicleId?: number) => ['live-signals', vehicleId] as const,
   signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
   signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
+  signalAnalysisHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
+    ['signal-analysis-history', vehicleId, signal, hours, limit] as const,
   signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
   signalDiff: (vehicleId: number, signal: string, from: string, to: string) => ['signal-diff', vehicleId, signal, from, to] as const,
   signalDiffServer: (vehicleId: number, atA: string, atB: string, signalsCsv: string) =>
@@ -153,6 +155,41 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
       request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal: abortSignal }),
     enabled: vehicleId > 0 && !!signal,
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/**
+ * Fetches the backend's largest supported signal window for statistical
+ * analysis without expanding ordinary sparkline/history queries.
+ */
+export function useSignalAnalysisHistory(
+  vehicleId: number,
+  signalName: string,
+  hours: number,
+  limit = 10_000,
+) {
+  const boundedHours = Number.isFinite(hours)
+    ? Math.max(1, Math.min(24 * 365, Math.floor(hours)))
+    : 24;
+  const boundedLimit = Number.isFinite(limit)
+    ? Math.max(1, Math.min(10_000, Math.floor(limit)))
+    : 10_000;
+  return useQuery({
+    queryKey: telemetryKeys.signalAnalysisHistory(
+      vehicleId,
+      signalName,
+      boundedHours,
+      boundedLimit,
+    ),
+    queryFn: ({ signal }) =>
+      request<SignalHistoryResponse>(
+        `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,
+        { signal },
+      ),
+    enabled: vehicleId > 0 && signalName.length > 0,
+    staleTime: STALE_TIMES.MODERATE,
+    refetchInterval: INTERVALS.STANDARD,
+    refetchIntervalInBackground: false,
   });
 }
 

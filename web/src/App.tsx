@@ -68,6 +68,30 @@ const AlertFatigue = lazy(() => import('./features/notifications/pages/AlertFati
 const CommandReliability = lazy(() => import('./features/system/pages/CommandReliabilityPage'))
 const SignalCorrelation = lazy(() => import('./features/telemetry/pages/SignalCorrelationPage'))
 
+// Phase-52 — decision intelligence family. These pages apply distinct
+// statistical models to existing SI-canonical API data; no endpoint aliases or
+// re-skinned legacy features are involved.
+const ArrivalReliability = lazy(() => import('./features/driving/pages/ArrivalReliabilityPage'))
+const DestinationTransitions = lazy(() => import('./features/driving/pages/DestinationTransitionsPage'))
+const JourneyFragmentation = lazy(() => import('./features/driving/pages/JourneyFragmentationPage'))
+const SeasonalEfficiency = lazy(() => import('./features/driving/pages/SeasonalEfficiencyPage'))
+const ChargeInterruption = lazy(() => import('./features/charging/pages/ChargeInterruptionPage'))
+const ChargerResilience = lazy(() => import('./features/charging/pages/ChargerResiliencePage'))
+const ChargeDepartureAlignment = lazy(() => import('./features/charging/pages/ChargeDepartureAlignmentPage'))
+const ChargingThermalTax = lazy(() => import('./features/charging/pages/ChargingThermalTaxPage'))
+const CycleStress = lazy(() => import('./features/battery/pages/CycleStressPage'))
+const HvacCycling = lazy(() => import('./features/vehicle-systems/pages/HvacCyclingPage'))
+const ComfortConsistency = lazy(() => import('./features/vehicle-systems/pages/ComfortConsistencyPage'))
+const PreconditioningEffectiveness = lazy(() => import('./features/vehicle-systems/pages/PreconditioningEffectivenessPage'))
+const TireDifferentialDrift = lazy(() => import('./features/vehicle-systems/pages/TireDifferentialDriftPage'))
+const SignalEntropy = lazy(() => import('./features/telemetry/pages/SignalEntropyPage'))
+const SignalTrend = lazy(() => import('./features/telemetry/pages/SignalTrendPage'))
+const SignalChangePoints = lazy(() => import('./features/telemetry/pages/SignalChangePointsPage'))
+const SignalDeadband = lazy(() => import('./features/telemetry/pages/SignalDeadbandPage'))
+const SignalMutualInformation = lazy(() => import('./features/telemetry/pages/SignalMutualInformationPage'))
+const NotificationBurnRate = lazy(() => import('./features/notifications/pages/NotificationBurnRatePage'))
+const NotificationLatency = lazy(() => import('./features/notifications/pages/NotificationLatencyPage'))
+
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
 const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
@@ -633,6 +657,27 @@ export default function App() {
         <Route path="alert-fatigue" element={<SafeRoute name="AlertFatigue"><AlertFatigue /></SafeRoute>} />
         <Route path="command-reliability" element={<SafeRoute name="CommandReliability"><CommandReliability /></SafeRoute>} />
         <Route path="signal-correlation" element={<SafeRoute name="SignalCorrelation"><SignalCorrelation /></SafeRoute>} />
+        {/* Phase-52 — decision intelligence family. */}
+        <Route path="arrival-reliability" element={<SafeRoute name="ArrivalReliability"><ArrivalReliability /></SafeRoute>} />
+        <Route path="destination-transitions" element={<SafeRoute name="DestinationTransitions"><DestinationTransitions /></SafeRoute>} />
+        <Route path="journey-fragmentation" element={<SafeRoute name="JourneyFragmentation"><JourneyFragmentation /></SafeRoute>} />
+        <Route path="seasonal-efficiency" element={<SafeRoute name="SeasonalEfficiency"><SeasonalEfficiency /></SafeRoute>} />
+        <Route path="charge-interruption" element={<SafeRoute name="ChargeInterruption"><ChargeInterruption /></SafeRoute>} />
+        <Route path="charger-resilience" element={<SafeRoute name="ChargerResilience"><ChargerResilience /></SafeRoute>} />
+        <Route path="charge-departure-alignment" element={<SafeRoute name="ChargeDepartureAlignment"><ChargeDepartureAlignment /></SafeRoute>} />
+        <Route path="charging-thermal-tax" element={<SafeRoute name="ChargingThermalTax"><ChargingThermalTax /></SafeRoute>} />
+        <Route path="cycle-stress" element={<SafeRoute name="CycleStress"><CycleStress /></SafeRoute>} />
+        <Route path="hvac-cycling" element={<SafeRoute name="HvacCycling"><HvacCycling /></SafeRoute>} />
+        <Route path="comfort-consistency" element={<SafeRoute name="ComfortConsistency"><ComfortConsistency /></SafeRoute>} />
+        <Route path="preconditioning-effectiveness" element={<SafeRoute name="PreconditioningEffectiveness"><PreconditioningEffectiveness /></SafeRoute>} />
+        <Route path="tire-differential-drift" element={<SafeRoute name="TireDifferentialDrift"><TireDifferentialDrift /></SafeRoute>} />
+        <Route path="signal-entropy" element={<SafeRoute name="SignalEntropy"><SignalEntropy /></SafeRoute>} />
+        <Route path="signal-trend" element={<SafeRoute name="SignalTrend"><SignalTrend /></SafeRoute>} />
+        <Route path="signal-change-points" element={<SafeRoute name="SignalChangePoints"><SignalChangePoints /></SafeRoute>} />
+        <Route path="signal-deadband" element={<SafeRoute name="SignalDeadband"><SignalDeadband /></SafeRoute>} />
+        <Route path="signal-mutual-information" element={<SafeRoute name="SignalMutualInformation"><SignalMutualInformation /></SafeRoute>} />
+        <Route path="notification-burn-rate" element={<SafeRoute name="NotificationBurnRate"><NotificationBurnRate /></SafeRoute>} />
+        <Route path="notification-latency" element={<SafeRoute name="NotificationLatency"><NotificationLatency /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
             against frontend route `/analytics/tco`; the canonical app path

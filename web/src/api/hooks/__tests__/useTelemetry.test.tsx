@@ -48,6 +48,7 @@ import {
   useVehicleLiveSignals,
   useSignalStats,
   useSignalHistory,
+  useSignalAnalysisHistory,
   useSignalLog,
   useSignalDiff,
   useSignalSnapshot,
@@ -158,6 +159,13 @@ describe('telemetryKeys', () => {
     expect(telemetryKeys.liveSignals()).toEqual(['live-signals', undefined])
     expect(telemetryKeys.signalStats(3)).toEqual(['signal-stats', 3])
     expect(telemetryKeys.signalHistory(1, 'Speed', 24)).toEqual(['signal-history', 1, 'Speed', 24])
+    expect(telemetryKeys.signalAnalysisHistory(1, 'Speed', 24, 10_000)).toEqual([
+      'signal-analysis-history',
+      1,
+      'Speed',
+      24,
+      10_000,
+    ])
     expect(telemetryKeys.signalLog(1, 'Speed', 24, 2)).toEqual(['signal-log', 1, 'Speed', 24, 2])
     expect(telemetryKeys.signalDiff(1, 'Speed', 'a', 'b')).toEqual(['signal-diff', 1, 'Speed', 'a', 'b'])
     expect(telemetryKeys.signalDiffServer(1, 'a', 'b', 'x,y')).toEqual([
@@ -281,6 +289,7 @@ describe('useSignalHistory', () => {
     const { result } = renderHook(() => useSignalHistory(1, 'BatteryLevel', 24), {
       wrapper: makeWrapper(),
     })
+
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const url = mockedRequest.mock.calls[0][0] as string
     expect(url).toBe('/signals/1/BatteryLevel/history?hours=24')
@@ -299,6 +308,39 @@ describe('useSignalHistory', () => {
   it('is disabled when vehicleId is 0', async () => {
     renderHook(() => useSignalHistory(0, 'BatteryLevel', 24), { wrapper: makeWrapper() })
     await tick()
+    expect(mockedRequest).not.toHaveBeenCalled()
+  })
+})
+
+describe('useSignalAnalysisHistory', () => {
+  it('requests the maximum analytical limit and encodes the signal name', async () => {
+    mockedRequest.mockResolvedValueOnce({ data: [], count: 0 })
+    const { result } = renderHook(
+      () => useSignalAnalysisHistory(1, 'Battery Level', 168),
+      { wrapper: makeWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockedRequest.mock.calls[0]?.[0]).toBe(
+      '/signals/1/Battery%20Level/history?hours=168&limit=10000',
+    )
+    expect(mockedRequest.mock.calls[0]?.[1]).toHaveProperty('signal')
+  })
+
+  it('bounds custom hours and limits and stays disabled without a signal', async () => {
+    mockedRequest.mockResolvedValueOnce({ data: [], count: 0 })
+    const first = renderHook(
+      () => useSignalAnalysisHistory(1, 'Speed', 99_999, 99_999),
+      { wrapper: makeWrapper() },
+    )
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true))
+    expect(mockedRequest.mock.calls[0]?.[0]).toBe(
+      '/signals/1/Speed/history?hours=8760&limit=10000',
+    )
+
+    mockedRequest.mockReset()
+    renderHook(() => useSignalAnalysisHistory(1, '', 24), { wrapper: makeWrapper() })
+    await new Promise((resolve) => setTimeout(resolve, 20))
     expect(mockedRequest).not.toHaveBeenCalled()
   })
 })

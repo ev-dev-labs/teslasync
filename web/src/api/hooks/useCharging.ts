@@ -38,6 +38,8 @@ export const chargingKeys = {
   detailById: (id: number) => ['charging-session', id] as const,
   telemetry: (id: number) => ['charge-telemetry', id] as const,
   byVehicle: (vehicleId: string) => ['charging-sessions', 'vehicle', vehicleId] as const,
+  history: (vehicleId: string, limit = 1000) =>
+    ['charging-sessions', 'history', vehicleId, limit] as const,
 };
 
 export function useChargingSessions(vehicleId?: string) {
@@ -47,6 +49,26 @@ export function useChargingSessions(vehicleId?: string) {
       vehicleId ? `/charging-sessions?vehicle_id=${vehicleId}` : '/charging-sessions', { signal },
     ),
     enabled: !!vehicleId,
+    select: safeArray,
+  });
+}
+
+/**
+ * Fetches the largest backend-supported charging history page for analytical
+ * models without expanding the ordinary list query or sharing its cache key.
+ * The result is an observed window (maximum 1,000 rows), not a lifetime claim.
+ */
+export function useChargingHistory(vehicleId?: string, limit = 1000) {
+  const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  return useQuery({
+    queryKey: chargingKeys.history(vehicleId ?? '', boundedLimit),
+    queryFn: ({ signal }) =>
+      request<ChargingSession[]>(
+        `/charging-sessions?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
   });
 }
