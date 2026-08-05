@@ -69,6 +69,15 @@ var ErrMaxIterations = errors.New("dispatch: max iterations reached")
 // falsely present it as complete.
 var ErrStreamIncomplete = errors.New("dispatch: provider stream ended without a terminal chunk")
 
+// ErrCompletionTruncated means the provider stopped because the configured
+// output-token limit was reached. Partial text and tool arguments must not be
+// presented or executed as a complete answer.
+var ErrCompletionTruncated = errors.New("dispatch: provider completion reached its output-token limit")
+
+// ErrCompletionFiltered means the provider stopped because its content filter
+// blocked the completion. Partial output is surfaced only as a failed stream.
+var ErrCompletionFiltered = errors.New("dispatch: provider completion was blocked by a content filter")
+
 // ConfirmDecision is the outcome of a user-confirm round-trip for
 // a mutating tool call.
 type ConfirmDecision int
@@ -130,9 +139,21 @@ type StreamWriter interface {
 	// returned an error.
 	WriteToolError(name string, err error) error
 
-	// WriteDone closes the stream. The dispatcher always calls
-	// this exactly once before Run returns (success or failure).
+	// WriteDone closes a successful stream. Failed runs use ErrorEmitter when
+	// supported and never emit a success-shaped done frame.
 	WriteDone() error
+}
+
+// ErrorEmitter is the optional terminal-error surface implemented by the
+// production SSE writer.
+type ErrorEmitter interface {
+	WriteError(err error) error
+}
+
+// CompletionWriter is the optional rich success surface implemented by the
+// production SSE writer. It preserves provider finish metadata and usage.
+type CompletionWriter interface {
+	WriteDoneFull(finishReason string, usageIn, usageOut int) error
 }
 
 // LimitErrorEmitter is the OPTIONAL interface a [StreamWriter] may
@@ -193,11 +214,27 @@ func New(reg *tools.Registry, p provider.Provider, confirm ConfirmFn, max int) *
 // Run executes the chat loop until the provider returns
 // FinishStop, MaxIterations is exceeded, the user denies a
 // mutating call, or any error surfaces. The streaming output is
-// forwarded to w; w.WriteDone is called exactly once before Run
-// returns.
+// forwarded to w. Successful runs emit one done frame; failed runs emit one
+// error frame when the writer supports [ErrorEmitter].
 func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.StrategyInput, w StreamWriter) (rerr error) {
+	finishReason := provider.FinishStop
+	var usageIn, usageOut int
 	defer func() {
-		if cerr := w.WriteDone(); cerr != nil && rerr == nil {
+		if rerr != nil {
+			if emitter, ok := w.(ErrorEmitter); ok {
+				if emitErr := emitter.WriteError(rerr); emitErr != nil {
+					rerr = errors.Join(rerr, fmt.Errorf("dispatch: write terminal error: %w", emitErr))
+				}
+			}
+			return
+		}
+		if completion, ok := w.(CompletionWriter); ok {
+			if cerr := completion.WriteDoneFull(finishReason, usageIn, usageOut); cerr != nil {
+				rerr = cerr
+			}
+			return
+		}
+		if cerr := w.WriteDone(); cerr != nil {
 			rerr = cerr
 		}
 	}()
@@ -300,10 +337,33 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 			}
 			return fmt.Errorf("dispatch: provider %s (iter %d): %w", operation, iter, err)
 		}
+		usageIn += turn.inputTokens
+		usageOut += turn.outputTokens
+		if turn.finishReason == "" {
+			if len(turn.toolCalls) > 0 {
+				turn.finishReason = provider.FinishToolCalls
+			} else {
+				turn.finishReason = provider.FinishStop
+			}
+		}
 
-		// No tool calls? Loop is done.
-		if len(turn.toolCalls) == 0 {
+		switch turn.finishReason {
+		case provider.FinishLength:
+			return ErrCompletionTruncated
+		case provider.FinishContentFilter:
+			return ErrCompletionFiltered
+		case provider.FinishStop:
+			if len(turn.toolCalls) > 0 {
+				return fmt.Errorf("dispatch: provider returned tool calls with finish reason %q", turn.finishReason)
+			}
+			finishReason = provider.FinishStop
 			return nil
+		case provider.FinishToolCalls:
+			if len(turn.toolCalls) == 0 {
+				return errors.New("dispatch: provider returned tool_calls finish reason without a complete tool call")
+			}
+		default:
+			return fmt.Errorf("%w: unknown finish reason %q", ErrStreamIncomplete, turn.finishReason)
 		}
 		normalizeToolCalls(turn.toolCalls, iter)
 
@@ -340,8 +400,11 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 }
 
 type turnResult struct {
-	message   provider.Message
-	toolCalls []provider.ToolCall
+	message      provider.Message
+	toolCalls    []provider.ToolCall
+	finishReason string
+	inputTokens  int
+	outputTokens int
 }
 
 // completeTurn uses the provider's real streaming path whenever advertised.
@@ -375,8 +438,11 @@ func (d *Dispatcher) completeTurn(
 		}
 	}
 	return turnResult{
-		message:   resp.Message,
-		toolCalls: append([]provider.ToolCall(nil), resp.ToolCalls...),
+		message:      resp.Message,
+		toolCalls:    append([]provider.ToolCall(nil), resp.ToolCalls...),
+		finishReason: resp.FinishReason,
+		inputTokens:  resp.InputTokens,
+		outputTokens: resp.OutputTokens,
 	}, "chat", nil
 }
 
@@ -397,6 +463,8 @@ func (d *Dispatcher) streamTurn(
 	toolCalls := make([]provider.ToolCall, 0, 2)
 	consumed := false
 	done := false
+	var finishReason string
+	var inputTokens, outputTokens int
 	for chunk := range chunks {
 		consumed = true
 		switch {
@@ -410,7 +478,13 @@ func (d *Dispatcher) streamTurn(
 		case chunk.ToolDelta != nil:
 			toolCalls = append(toolCalls, *chunk.ToolDelta)
 		case chunk.Done:
+			if done {
+				return turnResult{}, consumed, errors.New("provider emitted multiple terminal stream chunks")
+			}
 			done = true
+			finishReason = chunk.FinishReason
+			inputTokens = chunk.InputTokens
+			outputTokens = chunk.OutputTokens
 		}
 	}
 	if !done {
@@ -421,7 +495,10 @@ func (d *Dispatcher) streamTurn(
 			Role:    provider.RoleAssistant,
 			Content: content.String(),
 		},
-		toolCalls: toolCalls,
+		toolCalls:    toolCalls,
+		finishReason: finishReason,
+		inputTokens:  inputTokens,
+		outputTokens: outputTokens,
 	}, consumed, nil
 }
 
@@ -538,12 +615,69 @@ func (d *Dispatcher) runOneToolCall(ctx context.Context, call provider.ToolCall,
 	if err := w.WriteToolResult(call.Name, resJSON); err != nil {
 		return provider.Message{}, fmt.Errorf("dispatch: write tool result: %w", err)
 	}
+	providerJSON, err := privacySafeToolResult(resJSON)
+	if err != nil {
+		return provider.Message{}, fmt.Errorf("dispatch: sanitize tool %q result: %w", call.Name, err)
+	}
 	return provider.Message{
 		Role:    provider.RoleTool,
 		Name:    call.Name,
 		ToolID:  call.ID,
-		Content: string(resJSON),
+		Content: string(providerJSON),
 	}, nil
+}
+
+// privacySafeToolResult removes precise location fields before a tool result is
+// appended to provider history. The authenticated browser still receives the
+// original result event; only the model-facing copy is sanitized.
+func privacySafeToolResult(raw json.RawMessage) (json.RawMessage, error) {
+	var value any
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	if err := decoder.Decode(&value); err != nil {
+		return nil, err
+	}
+	sanitizeLocationFields(value)
+	out, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func sanitizeLocationFields(value any) {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, child := range typed {
+			if isPreciseLocationField(key) {
+				typed[key] = "<precise_location_redacted>"
+				continue
+			}
+			sanitizeLocationFields(child)
+		}
+	case []any:
+		for _, child := range typed {
+			sanitizeLocationFields(child)
+		}
+	}
+}
+
+func isPreciseLocationField(key string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(key))
+	switch normalized {
+	case "lat", "latitude", "lon", "lng", "longitude", "polygon_wkt",
+		"start_place", "end_place":
+		return true
+	}
+	if strings.Contains(normalized, "address") {
+		return true
+	}
+	for _, suffix := range []string{"_lat", "_latitude", "_lon", "_lng", "_longitude"} {
+		if strings.HasSuffix(normalized, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 // confirmCall is split out so tests can hook the boundary.

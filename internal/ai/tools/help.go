@@ -126,6 +126,21 @@ const ragHelpMaxQueryChars = 1024
 // enumerated set. Computed once at package init.
 var ragHelpAllowedSourceTypesHint = strings.Join(ragHelpAllowedSourceTypes, ", ")
 
+var chatbotKnowledgeAllowedSourceTypes = []string{
+	SourceHelpDocs,
+	SourceHelpRunbooks,
+}
+
+var chatbotKnowledgeAllowedSourceTypeSet = func() map[string]struct{} {
+	out := make(map[string]struct{}, len(chatbotKnowledgeAllowedSourceTypes))
+	for _, sourceType := range chatbotKnowledgeAllowedSourceTypes {
+		out[sourceType] = struct{}{}
+	}
+	return out
+}()
+
+var chatbotKnowledgeAllowedSourceTypesHint = strings.Join(chatbotKnowledgeAllowedSourceTypes, ", ")
+
 // retrieveDocsInput is the typed input shape for retrieve_docs.
 // The dispatcher decodes the LLM's tool-call arguments JSON into
 // this struct via ValidateStruct so a malformed input fails before
@@ -149,6 +164,12 @@ type retrieveDocsInput struct {
 	// `omitempty`, so we use `gte=0` (the zero sentinel passes;
 	// Execute substitutes the default).
 	K int `json:"k,omitempty" validate:"gte=0,lte=12" desc:"Top-k count to return; default 5 when omitted, max 12."`
+}
+
+type retrieveAppKnowledgeInput struct {
+	Query       string   `json:"query" validate:"required" desc:"Natural-language TeslaSync usage, configuration, or troubleshooting question."`
+	SourceTypes []string `json:"source_types" validate:"required,min=1" desc:"Documentation corpora to search; allowed values: docs, runbooks."`
+	K           int      `json:"k,omitempty" validate:"gte=0,lte=12" desc:"Top-k count to return; default 5 when omitted, max 12."`
 }
 
 // helpChunk is the shared envelope for one chunk in the
@@ -187,10 +208,10 @@ func (t *retrieveDocs) Name() string {
 // allowlist appended so the model picks from the curated set.
 func (t *retrieveDocs) Description() string {
 	if t.Name() == "retrieve_app_knowledge" {
-		return "Search TeslaSync's own documentation, runbooks, and interface text for application usage, configuration, or troubleshooting questions. " +
+		return "Search TeslaSync's embedded documentation and runbooks for application usage, configuration, or troubleshooting questions. " +
 			"Use fleet query tools instead for vehicle telemetry, drives, charging, alerts, or efficiency. " +
 			"READ-only: no record is created, mutated, or deleted. " +
-			"Allowed source_types: " + ragHelpAllowedSourceTypesHint + ". " +
+			"Allowed source_types: " + chatbotKnowledgeAllowedSourceTypesHint + ". " +
 			"Returns {chunks: [{source_type, source_id, chunk_idx, text, score}]}; cite only returned source_id values and DO NOT fabricate a result when chunks is empty."
 	}
 	return "Find the top-k nearest chunks to a natural-language help question across the application's own documentation, runbooks, and i18n strings via the F7 RAG retriever. " +
@@ -201,6 +222,9 @@ func (t *retrieveDocs) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveDocs) InputSchema() json.RawMessage {
+	if t.Name() == "retrieve_app_knowledge" {
+		return CachedSchema(retrieveAppKnowledgeInput{})
+	}
 	return CachedSchema(retrieveDocsInput{})
 }
 
@@ -221,6 +245,31 @@ func (t *retrieveDocs) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveDocs) Validate(raw json.RawMessage) (any, error) {
+	if t.Name() == "retrieve_app_knowledge" {
+		value, err := ValidateStruct[retrieveAppKnowledgeInput](raw)
+		if err != nil {
+			return nil, err
+		}
+		input := value.(retrieveAppKnowledgeInput)
+		if err := assertAllowedHelpToolSourceTypes(
+			t.Name(),
+			input.SourceTypes,
+			chatbotKnowledgeAllowedSourceTypeSet,
+			chatbotKnowledgeAllowedSourceTypesHint,
+		); err != nil {
+			return nil, err
+		}
+		if len(input.Query) > ragHelpMaxQueryChars {
+			return nil, fmt.Errorf("%s: query is %d chars (max %d)", t.Name(),
+				len(input.Query), ragHelpMaxQueryChars)
+		}
+		return retrieveDocsInput{
+			Query:       input.Query,
+			SourceTypes: input.SourceTypes,
+			K:           input.K,
+		}, nil
+	}
+
 	v, err := ValidateStruct[retrieveDocsInput](raw)
 	if err != nil {
 		return nil, err
@@ -450,19 +499,33 @@ func RegisterChatbotKnowledgeTool(r *Registry, s HelpSources) {
 // entry plus the allowed set so the LLM's tool-error reply contains
 // enough context to retry with a corrected payload.
 func assertAllowedHelpSourceTypes(types []string) error {
+	return assertAllowedHelpToolSourceTypes(
+		"retrieve_docs",
+		types,
+		ragHelpAllowedSourceTypeSet,
+		ragHelpAllowedSourceTypesHint,
+	)
+}
+
+func assertAllowedHelpToolSourceTypes(
+	toolName string,
+	types []string,
+	allowed map[string]struct{},
+	allowedHint string,
+) error {
 	if len(types) == 0 {
-		return errors.New("retrieve_docs: source_types is required and must contain at least one entry")
+		return fmt.Errorf("%s: source_types is required and must contain at least one entry", toolName)
 	}
 	// Reject duplicates so the LLM's payload is unambiguous and
 	// the retriever doesn't double-search the same corpus.
 	seen := make(map[string]struct{}, len(types))
 	for _, st := range types {
-		if _, ok := ragHelpAllowedSourceTypeSet[st]; !ok {
-			return fmt.Errorf("retrieve_docs: source_type %q not in allowed set %s",
-				st, ragHelpAllowedSourceTypesHint)
+		if _, ok := allowed[st]; !ok {
+			return fmt.Errorf("%s: source_type %q not in allowed set %s",
+				toolName, st, allowedHint)
 		}
 		if _, dup := seen[st]; dup {
-			return fmt.Errorf("retrieve_docs: source_type %q appears more than once in source_types", st)
+			return fmt.Errorf("%s: source_type %q appears more than once in source_types", toolName, st)
 		}
 		seen[st] = struct{}{}
 	}

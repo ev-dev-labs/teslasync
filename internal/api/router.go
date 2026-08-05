@@ -15,6 +15,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 
+	docsfs "github.com/ev-dev-labs/teslasync/docs"
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
@@ -784,18 +785,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Drives:  drivedb.NewDriveRepo(db),
 		Charges: chargingdb.NewChargingRepo(db),
 	})
-	// Give Helix Chat its own view of the global application-knowledge corpus.
-	// The retriever resolves provider and feature settings through chatbot-llm,
-	// so chat documentation answers do not depend on the separate rag-help
-	// toggle being enabled.
-	aiChatbotKnowledgeRetriever, err := rag.New(
-		context.Background(),
-		aiSettingsRepo,
-		db,
-		aiRegistry,
-		chatbotllm.FeatureID,
-		rag.ModelNomicEmbedText,
-	)
+	// Helix Chat searches the embedded application documentation locally. This
+	// corpus works when AI is enabled after startup and adds no embedding-provider
+	// egress or dependency on the separate rag-help feature toggle.
+	aiChatbotKnowledgeRetriever, err := rag.NewLexicalDocsRetriever(docsfs.FS)
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai chatbot: knowledge retriever wiring failed")
 	}

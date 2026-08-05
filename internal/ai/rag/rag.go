@@ -110,24 +110,15 @@ var (
 	ErrDimMismatch = errors.New("rag: provider returned vector with unexpected dimension")
 )
 
-// Chunk is one row returned by [Retriever.Retrieve], post-cosine-
-// similarity ranking. Score is the cosine similarity in [-1, 1]
-// (NOT [0, 1]) — the caller's threshold logic should be aware that
-// near-zero means "uncorrelated", positive means "similar", and
-// negative means "actively dissimilar" (which is rare for sane
-// embedding models but can occur).
-//
-// We deliberately do not normalise to [0, 1] because the operation
-// is lossy in both directions: callers who want a percentage can
-// compute (1 + Score) / 2; callers who want raw cosine distance
-// can compute 1 - Score. Returning the raw similarity preserves
-// every downstream choice.
+// Chunk is one result returned by [Retriever.Retrieve], ordered by relevance.
+// PgvectorRetriever returns raw cosine similarity in [-1, 1];
+// LexicalDocsRetriever returns normalized BM25 relevance in (0, 1].
 type Chunk struct {
 	SourceType string  // matches one of the Source* constants.
 	SourceID   string  // domain key (drive_id, doc filepath, etc).
 	ChunkIdx   int     // 0-based; chunk position within the source.
 	Text       string  // post-redaction chunk text.
-	Score      float32 // cosine similarity, range [-1, 1].
+	Score      float32 // implementation-specific relevance score.
 }
 
 // Retriever is the single canonical RAG entry point. Every

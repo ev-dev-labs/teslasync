@@ -105,13 +105,18 @@ func (f *FakeRules) GetAll(_ context.Context) ([]*alertmodel.AlertRule, error) {
 	return f.Rules, nil
 }
 
-// FakeNotif implements the notification-log-read port (GetLogs only).
+// FakeNotif implements the alert-backed notification-log read port.
 type FakeNotif struct {
 	Logs []*notificationmodel.NotificationLog
 }
 
-// GetLogs returns every seeded log entry.
+// GetLogs returns every seeded log entry for legacy tool fixtures.
 func (f *FakeNotif) GetLogs(_ context.Context, _, _ int) ([]*notificationmodel.NotificationLog, error) {
+	return f.Logs, nil
+}
+
+// GetAlertLogs returns every seeded alert-backed log entry.
+func (f *FakeNotif) GetAlertLogs(_ context.Context, _, _ int) ([]*notificationmodel.NotificationLog, error) {
 	return f.Logs, nil
 }
 

@@ -65,6 +65,27 @@ func TestFinishReasons_AreStable(t *testing.T) {
 	}
 }
 
+func TestNormalizeFinishReason(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		"stop":           FinishStop,
+		"end_turn":       FinishStop,
+		"stop_sequence":  FinishStop,
+		"tool_calls":     FinishToolCalls,
+		"tool_use":       FinishToolCalls,
+		"length":         FinishLength,
+		"max_tokens":     FinishLength,
+		"content_filter": FinishContentFilter,
+		"unknown":        "",
+		"":               "",
+	}
+	for input, want := range cases {
+		if got := NormalizeFinishReason(input); got != want {
+			t.Errorf("NormalizeFinishReason(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
 // TestRoles_AreStable mirrors TestFinishReasons_AreStable.
 func TestRoles_AreStable(t *testing.T) {
 	t.Parallel()

@@ -384,6 +384,20 @@ func TestRegisterChatbotKnowledgeTool_UsesIndependentName(t *testing.T) {
 			t.Errorf("Description() missing %q: %q", must, tool.Description())
 		}
 	}
+	if strings.Contains(tool.Description(), "i18n") || strings.Contains(string(tool.InputSchema()), "i18n") {
+		t.Fatalf("chatbot knowledge advertises unavailable i18n corpus: description=%q schema=%s",
+			tool.Description(), tool.InputSchema())
+	}
+	validated, err := tool.Validate(json.RawMessage(`{"query":"configure Helix","source_types":["docs","runbooks"],"k":3}`))
+	if err != nil {
+		t.Fatalf("Validate supported corpora: %v", err)
+	}
+	if got := validated.(retrieveDocsInput).SourceTypes; len(got) != 2 || got[0] != "docs" || got[1] != "runbooks" {
+		t.Fatalf("validated source types = %v", got)
+	}
+	if _, err := tool.Validate(json.RawMessage(`{"query":"button label","source_types":["i18n"]}`)); err == nil {
+		t.Fatal("Validate accepted unavailable i18n corpus")
+	}
 }
 
 func TestAllowedHelpSourceTypes_ReturnsDefensiveCopySorted(t *testing.T) {

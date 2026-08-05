@@ -302,17 +302,32 @@ func (s *SequencedMock) Stream(ctx context.Context, req provider.ChatRequest) (<
 			case out <- provider.Chunk{Delta: string(ru)}:
 			}
 		}
-		for _, call := range r.ChatResponse.ToolCalls {
-			callCopy := call
-			select {
-			case <-ctx.Done():
-				return
-			case out <- provider.Chunk{ToolDelta: &callCopy}:
+		finishReason := r.ChatResponse.FinishReason
+		if finishReason == "" {
+			if len(r.ChatResponse.ToolCalls) > 0 {
+				finishReason = provider.FinishToolCalls
+			} else {
+				finishReason = provider.FinishStop
+			}
+		}
+		if finishReason == provider.FinishToolCalls {
+			for _, call := range r.ChatResponse.ToolCalls {
+				callCopy := call
+				select {
+				case <-ctx.Done():
+					return
+				case out <- provider.Chunk{ToolDelta: &callCopy}:
+				}
 			}
 		}
 		select {
 		case <-ctx.Done():
-		case out <- provider.Chunk{Done: true}:
+		case out <- provider.Chunk{
+			Done:         true,
+			FinishReason: finishReason,
+			InputTokens:  r.ChatResponse.InputTokens,
+			OutputTokens: r.ChatResponse.OutputTokens,
+		}:
 		}
 	}()
 	return out, nil

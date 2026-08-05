@@ -324,6 +324,77 @@ func TestDispatcher_RejectsIncompleteProviderStream(t *testing.T) {
 	if !errors.Is(err, ErrStreamIncomplete) {
 		t.Fatalf("Run error = %v, want ErrStreamIncomplete", err)
 	}
+	if w.Done() {
+		t.Fatal("incomplete stream emitted a success-shaped done event")
+	}
+	if !errors.Is(w.RunError(), ErrStreamIncomplete) {
+		t.Fatalf("terminal error = %v, want ErrStreamIncomplete", w.RunError())
+	}
+}
+
+func TestDispatcher_RejectsTruncatedCompletionBeforeToolExecution(t *testing.T) {
+	t.Parallel()
+	p := &streamingScriptedProvider{streams: [][]provider.Chunk{{
+		{ToolDelta: &provider.ToolCall{ID: "call_1", Name: "ping", Arguments: json.RawMessage(`{}`)}},
+		{Done: true, FinishReason: provider.FinishLength},
+	}}}
+	r := tools.NewRegistry()
+	r.Register(&pingTool{})
+	d := New(r, p, nil, 0)
+	w := NewCaptureWriter()
+
+	err := d.Run(context.Background(), fakeStrategy{tools: []string{"ping"}}, strategy.StrategyInput{}, w)
+	if !errors.Is(err, ErrCompletionTruncated) {
+		t.Fatalf("Run error = %v, want ErrCompletionTruncated", err)
+	}
+	if len(w.ToolCalls()) != 0 || len(w.ToolResults()) != 0 {
+		t.Fatalf("truncated completion executed tool: calls=%v results=%v", w.ToolCalls(), w.ToolResults())
+	}
+	if w.Done() {
+		t.Fatal("truncated completion emitted done")
+	}
+}
+
+func TestDispatcher_PreservesTerminalUsage(t *testing.T) {
+	t.Parallel()
+	p := &streamingScriptedProvider{streams: [][]provider.Chunk{{
+		{Delta: "grounded"},
+		{Done: true, FinishReason: provider.FinishStop, InputTokens: 21, OutputTokens: 7},
+	}}}
+	d := New(tools.NewRegistry(), p, nil, 0)
+	w := NewCaptureWriter()
+
+	if err := d.Run(context.Background(), fakeStrategy{}, strategy.StrategyInput{}, w); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	finishReason, inputTokens, outputTokens := w.Completion()
+	if finishReason != provider.FinishStop || inputTokens != 21 || outputTokens != 7 {
+		t.Fatalf("completion = %q %d/%d", finishReason, inputTokens, outputTokens)
+	}
+}
+
+func TestPrivacySafeToolResultRedactsNestedLocationFields(t *testing.T) {
+	t.Parallel()
+	raw := json.RawMessage(`{
+		"drive":{"start_lat":37.5,"end_lon":-122.3,"start_address":"1 Main St","distance_m":1200},
+		"geofences":[{"name":"Home","polygon_wkt":"POLYGON((-122 37))"}],
+		"heading":180
+	}`)
+	safe, err := privacySafeToolResult(raw)
+	if err != nil {
+		t.Fatalf("privacySafeToolResult: %v", err)
+	}
+	got := string(safe)
+	for _, secret := range []string{"37.5", "-122.3", "1 Main St", "POLYGON"} {
+		if strings.Contains(got, secret) {
+			t.Errorf("sanitized tool result retained %q: %s", secret, got)
+		}
+	}
+	for _, retained := range []string{`"distance_m":1200`, `"heading":180`, `"name":"Home"`} {
+		if !strings.Contains(got, retained) {
+			t.Errorf("sanitized tool result lost %s: %s", retained, got)
+		}
+	}
 }
 
 func TestDispatcher_FallsBackWhenStreamCapabilityDrifts(t *testing.T) {

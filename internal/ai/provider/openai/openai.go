@@ -272,6 +272,10 @@ type openAIStreamFrame struct {
 		} `json:"delta"`
 		FinishReason string `json:"finish_reason,omitempty"`
 	} `json:"choices"`
+	Usage struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	} `json:"usage"`
 }
 
 func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, stream bool) ([]byte, error) {
@@ -364,11 +368,33 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 	defer close(out)
 	defer body.Close()
 	var toolCalls provider.ToolCallAccumulator
-	emitToolCalls := func() {
-		for _, call := range toolCalls.Calls() {
-			callCopy := call
-			send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+	var finishReason string
+	var inputTokens, outputTokens int
+	emitTerminal := func() {
+		calls := toolCalls.Calls()
+		if finishReason == "" {
+			if len(calls) > 0 {
+				send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: openai stream ended without a tool_calls finish reason", provider.ErrUpstream)})
+				return
+			}
+			finishReason = provider.FinishStop
 		}
+		if len(calls) > 0 && finishReason != provider.FinishToolCalls {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: openai emitted tool fragments with finish reason %q", provider.ErrUpstream, finishReason)})
+			return
+		}
+		if finishReason == provider.FinishToolCalls {
+			for _, call := range calls {
+				callCopy := call
+				send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+			}
+		}
+		send(ctx, out, provider.Chunk{
+			Done:         true,
+			FinishReason: finishReason,
+			InputTokens:  inputTokens,
+			OutputTokens: outputTokens,
+		})
 	}
 	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
@@ -387,14 +413,19 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 		}
 		payload := strings.TrimSpace(strings.TrimPrefix(raw, streamPrefixData))
 		if payload == streamSentinel {
-			emitToolCalls()
-			send(ctx, out, provider.Chunk{Done: true})
+			emitTerminal()
 			return
 		}
 		var frame openAIStreamFrame
 		if err := json.Unmarshal([]byte(payload), &frame); err != nil {
 			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: openai stream decode: %v", provider.ErrUpstream, err)})
 			return
+		}
+		if frame.Usage.PromptTokens > 0 {
+			inputTokens = frame.Usage.PromptTokens
+		}
+		if frame.Usage.CompletionTokens > 0 {
+			outputTokens = frame.Usage.CompletionTokens
 		}
 		if len(frame.Choices) == 0 {
 			continue
@@ -407,13 +438,19 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 			toolCalls.Add(tc.Index, tc.ID, tc.Function.Name, tc.Function.Arguments)
 		}
 		if ch.FinishReason != "" {
-			emitToolCalls()
-			send(ctx, out, provider.Chunk{Done: true})
-			return
+			finishReason = provider.NormalizeFinishReason(ch.FinishReason)
+			if finishReason == "" {
+				send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: openai returned unknown finish reason %q", provider.ErrUpstream, ch.FinishReason)})
+				return
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
 		send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: openai stream read: %v", provider.ErrUpstream, err)})
+		return
+	}
+	if finishReason != "" {
+		emitTerminal()
 	}
 }
 

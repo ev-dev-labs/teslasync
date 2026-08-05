@@ -87,7 +87,7 @@ type fakeNotif struct {
 	logs []*notificationmodel.NotificationLog
 }
 
-func (f *fakeNotif) GetLogs(ctx context.Context, limit, off int) ([]*notificationmodel.NotificationLog, error) {
+func (f *fakeNotif) GetAlertLogs(ctx context.Context, limit, off int) ([]*notificationmodel.NotificationLog, error) {
 	return f.logs, nil
 }
 

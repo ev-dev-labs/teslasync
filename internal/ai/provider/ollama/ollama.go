@@ -190,6 +190,7 @@ func (a *Adapter) relayStream(ctx context.Context, body io.ReadCloser, out chan<
 	defer body.Close()
 	dec := bufio.NewScanner(body)
 	dec.Buffer(make([]byte, 0, 64*1024), 1<<20)
+	var toolCalls provider.ToolCallAccumulator
 	for dec.Scan() {
 		select {
 		case <-ctx.Done():
@@ -208,20 +209,28 @@ func (a *Adapter) relayStream(ctx context.Context, body io.ReadCloser, out chan<
 		if frame.Message.Content != "" {
 			send(ctx, out, provider.Chunk{Delta: frame.Message.Content})
 		}
-		// Ollama emits a fully-formed tool_call on its terminal frame
-		// (not piecewise like OpenAI). Forward each as a ToolDelta so
-		// streaming dispatchers can route them; the non-streaming Chat path
-		// mirrors this via toChatResponse.
-		for _, tc := range frame.Message.ToolCalls {
-			tcCopy := provider.ToolCall{
-				ID:        tc.ID,
-				Name:      tc.Function.Name,
-				Arguments: tc.Function.Arguments,
-			}
-			send(ctx, out, provider.Chunk{ToolDelta: &tcCopy})
+		for index, tc := range frame.Message.ToolCalls {
+			toolCalls.Add(index, tc.ID, tc.Function.Name, string(tc.Function.Arguments))
 		}
 		if frame.Done {
-			send(ctx, out, provider.Chunk{Done: true})
+			finishReason := provider.NormalizeFinishReason(frame.DoneReason)
+			calls := toolCalls.Calls()
+			if len(calls) > 0 && finishReason != provider.FinishLength {
+				finishReason = provider.FinishToolCalls
+				for _, call := range calls {
+					callCopy := call
+					send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+				}
+			}
+			if finishReason == "" {
+				finishReason = provider.FinishStop
+			}
+			send(ctx, out, provider.Chunk{
+				Done:         true,
+				FinishReason: finishReason,
+				InputTokens:  frame.PromptEvalCount,
+				OutputTokens: frame.EvalCount,
+			})
 			return
 		}
 	}
@@ -294,10 +303,13 @@ type ollamaChatResponse struct {
 }
 
 type ollamaStreamFrame struct {
-	Model     string    `json:"model"`
-	CreatedAt time.Time `json:"created_at"`
-	Message   ollamaMsg `json:"message"`
-	Done      bool      `json:"done"`
+	Model           string    `json:"model"`
+	CreatedAt       time.Time `json:"created_at"`
+	Message         ollamaMsg `json:"message"`
+	Done            bool      `json:"done"`
+	DoneReason      string    `json:"done_reason,omitempty"`
+	PromptEvalCount int       `json:"prompt_eval_count"`
+	EvalCount       int       `json:"eval_count"`
 }
 
 func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, stream bool) ([]byte, error) {

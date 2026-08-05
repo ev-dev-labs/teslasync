@@ -186,9 +186,11 @@ Features marked `NeedsRAG=true` in the registry retrieve relevant chunks from
 the `pgvector` index before calling the provider. The chunk store and the
 embedding model are configurable; see `internal/ai/rag/`.
 
-Helix Chat owns a retriever configured under `chatbot-llm`. It searches the
-same global docs, runbooks, and interface-text corpus as app help without
-depending on the separate `rag-help` feature toggle or provider override.
+Helix Chat uses an embedded corpus of maintained TeslaSync documentation. A
+local BM25-style retriever ranks that corpus in process, so product questions
+remain grounded without provider embeddings, a populated `pgvector` index, or
+the separate `rag-help` feature toggle. Retrieved passages include source
+paths that Chat can cite in its answer.
 
 ## Grounding and evidence
 

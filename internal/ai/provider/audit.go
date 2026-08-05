@@ -296,10 +296,9 @@ func (a *auditedProvider) Stream(ctx context.Context, req ChatRequest) (<-chan C
 }
 
 // relayAndAudit forwards chunks unchanged and submits one audit row
-// after the stream terminates (closes or errors). Output token count
-// is approximated by the sum of delta lengths in *runes* — vendor
-// token counts are not available mid-stream, but rune count is the
-// closest cheap proxy that does not require a tokenizer dependency.
+// after the stream terminates (closes or errors). Provider-supplied terminal
+// usage wins; when unavailable, output usage falls back to the sum of delta
+// lengths in runes.
 func (a *auditedProvider) relayAndAudit(
 	ctx context.Context,
 	req ChatRequest,
@@ -310,26 +309,35 @@ func (a *auditedProvider) relayAndAudit(
 	defer close(out)
 	var (
 		runeCount    int
+		inputTokens  int
+		outputTokens int
 		finishReason string
 		streamErr    error
 	)
+	submit := func(err error) {
+		rec := a.baseRecord(ctx, req, started, time.Now().UTC())
+		rec.InputTokens = inputTokens
+		if outputTokens > 0 {
+			rec.OutputTokens = outputTokens
+		} else {
+			rec.OutputTokens = runeCount
+		}
+		rec.FinishReason = finishReason
+		rec.CostMicroCents = cost.Compute(a.name, req.Model, rec.InputTokens, rec.OutputTokens)
+		if err != nil {
+			rec.Error = truncateError(err.Error())
+		}
+		a.writer.Submit(rec)
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			streamErr = ctx.Err()
-			rec := a.baseRecord(ctx, req, started, time.Now().UTC())
-			rec.OutputTokens = runeCount
-			rec.FinishReason = finishReason
-			rec.Error = truncateError(streamErr.Error())
-			a.writer.Submit(rec)
+			submit(streamErr)
 			return
 		case c, ok := <-src:
 			if !ok {
-				rec := a.baseRecord(ctx, req, started, time.Now().UTC())
-				rec.OutputTokens = runeCount
-				rec.FinishReason = finishReason
-				rec.CostMicroCents = cost.Compute(a.name, req.Model, 0, runeCount)
-				a.writer.Submit(rec)
+				submit(streamErr)
 				return
 			}
 			if c.Delta != "" {
@@ -342,25 +350,19 @@ func (a *auditedProvider) relayAndAudit(
 			case out <- c:
 			case <-ctx.Done():
 				streamErr = ctx.Err()
-				rec := a.baseRecord(ctx, req, started, time.Now().UTC())
-				rec.OutputTokens = runeCount
-				rec.FinishReason = finishReason
-				rec.Error = truncateError(streamErr.Error())
-				a.writer.Submit(rec)
+				submit(streamErr)
 				return
 			}
 			if c.Done || c.Err != nil {
 				if c.Done {
-					finishReason = FinishStop
+					finishReason = c.FinishReason
+					if finishReason == "" {
+						finishReason = FinishStop
+					}
+					inputTokens = c.InputTokens
+					outputTokens = c.OutputTokens
 				}
-				rec := a.baseRecord(ctx, req, started, time.Now().UTC())
-				rec.OutputTokens = runeCount
-				rec.FinishReason = finishReason
-				rec.CostMicroCents = cost.Compute(a.name, req.Model, 0, runeCount)
-				if streamErr != nil {
-					rec.Error = truncateError(streamErr.Error())
-				}
-				a.writer.Submit(rec)
+				submit(streamErr)
 				return
 			}
 		}

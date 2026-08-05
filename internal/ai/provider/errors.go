@@ -45,3 +45,21 @@ var (
 	// status when available so logs are self-explanatory.
 	ErrUpstream = errors.New("ai/provider: upstream request failed")
 )
+
+// NormalizeFinishReason maps provider-specific terminal reasons onto the
+// portable Finish* constants. An empty return value means the provider did not
+// supply a recognized terminal reason.
+func NormalizeFinishReason(reason string) string {
+	switch reason {
+	case FinishStop, "end_turn", "stop_sequence":
+		return FinishStop
+	case FinishToolCalls, "tool_use":
+		return FinishToolCalls
+	case FinishLength, "max_tokens":
+		return FinishLength
+	case FinishContentFilter:
+		return FinishContentFilter
+	default:
+		return ""
+	}
+}

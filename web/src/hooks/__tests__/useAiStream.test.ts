@@ -305,13 +305,30 @@ describe('useAiStream — error paths', () => {
   });
 
   it('surfaces a server error event as state=error', async () => {
-    globalThis.fetch = mockFetchOK([sseFrame('error', { message: 'stream_stalled' })]);
+    globalThis.fetch = mockFetchOK([
+      sseFrame('tool_call', { id: 'call-1', name: 'query_vehicle_state', arguments: {} }),
+      sseFrame('error', { message: 'stream_stalled' }),
+    ]);
     const { result } = renderHook(() =>
       useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
     );
     act(() => result.current.start());
     await waitFor(() => expect(result.current.state).toBe('error'));
     expect(result.current.error).toBe('stream_stalled');
+    expect(result.current.activity).toEqual([
+      { id: 'call-1', name: 'query_vehicle_state', status: 'failed' },
+    ]);
+  });
+
+  it('treats EOF without a terminal event as an incomplete stream', async () => {
+    globalThis.fetch = mockFetchOK([sseFrame('delta', { text: 'partial' })]);
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('error'));
+    expect(result.current.error).toBe('stream_incomplete');
+    expect(result.current.text).toBe('partial');
   });
 
   it('drops malformed events and continues', async () => {
@@ -336,11 +353,17 @@ describe('useAiStream — cancellation', () => {
     let abortSignal: AbortSignal | undefined;
     globalThis.fetch = vi.fn(async (_input, init: RequestInit | undefined) => {
       abortSignal = init?.signal ?? undefined;
-      // Return a stream that never closes — only abort terminates it.
+      const encoder = new TextEncoder();
       return new Response(
         new ReadableStream<Uint8Array>({
-          start() {
-            // never enqueue, never close
+          start(controller) {
+            controller.enqueue(encoder.encode(
+              sseFrame('tool_call', {
+                id: 'call-1',
+                name: 'query_vehicle_state',
+                arguments: {},
+              }),
+            ));
           },
         }),
         { status: 200 },
@@ -352,9 +375,16 @@ describe('useAiStream — cancellation', () => {
     );
     act(() => result.current.start());
     await waitFor(() => expect(result.current.state).toBe('streaming'));
+    await waitFor(() => expect(result.current.activity).toEqual([
+      { id: 'call-1', name: 'query_vehicle_state', status: 'running' },
+    ]));
 
     act(() => result.current.cancel());
     expect(abortSignal?.aborted).toBe(true);
+    expect(result.current.state).toBe('idle');
+    await waitFor(() => expect(result.current.activity).toEqual([
+      { id: 'call-1', name: 'query_vehicle_state', status: 'failed' },
+    ]));
   });
 
   it('aborts on unmount', async () => {

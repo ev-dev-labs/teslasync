@@ -128,14 +128,21 @@ For hypertable chunks, retention can also be configured as a TimescaleDB policy 
 
 ## pgvector — RAG embeddings
 
-The Helix help chatbot uses retrieval-augmented generation grounded in the markdown corpus under `docs/user/`. Embeddings live in `ai_embeddings`:
+Vector-backed Helix features such as `rag-help` can use retrieval-augmented
+generation over indexed documentation. Embeddings live in the dimensioned
+embedding tables:
 
 - One row per chunk of a source document
 - `embedding vector(N)` column with an ivfflat or hnsw index for cosine-similarity search
 - `source_type` + `source_id` link each chunk back to its origin (e.g., `('docs', 'charging/quickstart.md')`)
 - Content hash prevents re-embedding unchanged files
 
-Retrieval is a parameterised SQL query — no separate vector service, no extra hop. The chatbot's dispatcher composes the user question with the top-k chunks and sends both to the active LLM provider.
+Retrieval is a parameterised SQL query, with no separate vector service.
+
+Helix Chat's application-knowledge tool takes a different production path:
+maintained Markdown is embedded in the API binary and ranked in process with
+BM25-style lexical retrieval. Chat therefore does not require an embedding
+provider, a populated vector index, or the `rag-help` feature toggle.
 
 ## Migrations
 

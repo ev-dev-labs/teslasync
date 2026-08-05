@@ -1,8 +1,13 @@
 # Help corpus
 
-This directory is the **help corpus** for the Helix chatbot. Every markdown file under `docs/user/` is a source the chatbot can ground its answers in — retrieval-augmented generation (RAG) backed by pgvector.
+This directory contains focused help articles for Helix. Its Markdown is
+compiled into the TeslaSync binary with the rest of the maintained
+documentation and searched locally by Helix Chat's BM25-style application
+knowledge retriever.
 
-If you're writing documentation for the published user-facing site, that lives one level up under `docs/` and is rendered by VitePress. This directory is for the chatbot only.
+Published user-facing documentation lives one level up under `docs/` and is
+rendered by VitePress. Helix Chat can retrieve both that reference material and
+the concise articles kept here.
 
 ## Why it's separate from the rest of the docs
 
@@ -15,27 +20,38 @@ The chatbot corpus is a different shape of writing:
 - Anchored to specific UI moments ("after you turn on Sentry Mode", "when a drive ends")
 - No assumed prior context — the retriever pulls one chunk and the model answers from it
 
-Mixing the two would produce a published site full of "the user just asked …" fragments and a chatbot grounded in essays it can't usefully retrieve from. Two corpora, two indexers, two audiences.
+Keeping the focused articles separate avoids filling the published site with
+"the user just asked ..." fragments while still letting the same local
+retriever rank both collections.
 
 ## What goes here
 
 - **Markdown only.** The indexer skips every other extension. Code samples are fine, but the surrounding prose is the part that gets embedded.
 - **One topic per file.** Easier to retrieve, easier to maintain. A 5-page essay is worse than 5 focused files.
-- **Filenames are part of the source ID.** `charging/quickstart.md` becomes the stable identifier the chatbot cites when it grounds an answer.
+- **Filenames are part of the source ID.** `charging-quickstart.md` becomes
+  `user/charging-quickstart.md`, the stable identifier Helix cites when it
+  grounds an answer.
 - **Front matter is allowed.** The indexer treats the file as plain text either way; front matter doesn't help or hurt retrieval.
 - **Hidden files and partials are skipped.** Filenames starting with `.` or `_` are ignored — useful for drafts and shared snippets that aren't standalone answers.
 
-## How indexing works
+## How retrieval works
 
-The indexer lives in `internal/ai/rag/`. The contract is:
+The embedded retriever lives in `internal/ai/rag/`. The contract is:
 
-1. On boot (when the chatbot feature is enabled), the indexer walks this directory.
-2. Each markdown file is turned into one source row under `source_type='docs'`.
-3. The `source_id` is the **slash-normalised** path relative to `docs/user/` — `charging/quickstart.md`, not `charging\quickstart.md`. This makes the IDs stable across Windows ↔ Unix host swaps.
-4. Each file is chunked, embedded with the configured embedding model, and stored in `ai_embeddings` (pgvector).
-5. Re-indexing is **idempotent**. Content hashes prevent re-embedding of unchanged files. A re-index after a doc edit only embeds the files that changed.
+1. `docs/embed.go` packages maintained Markdown into the API binary at build
+   time.
+2. On API startup, `LexicalDocsRetriever` walks the embedded filesystem and
+   splits every file into bounded chunks.
+3. The source ID is the slash-normalised path under `docs/`, such as
+   `user/charging-quickstart.md`.
+4. Retrieval ranks chunks in memory with BM25-style term relevance and a
+   source-path boost.
+5. The selected text and source IDs are passed to the active chat provider;
+   no embedding request or vector-database query is needed.
 
-The chatbot's retrieval step queries `ai_embeddings` for the top-k chunks by cosine similarity, joins back to the source rows for citation metadata, and presents the model with both the user's question and the retrieved chunks.
+The separate `rag-help` feature can still use the configurable pgvector
+retriever. Helix Chat's `retrieve_app_knowledge` tool does not depend on that
+feature, its toggle, or its embedding provider.
 
 ## Writing for retrieval
 
@@ -63,13 +79,16 @@ The full Helix reference: [Helix AI](../guide/helix-ai.md).
 ## Operational notes
 
 - The corpus is **read-only at runtime** for the API. Edits happen at build time (you write markdown, commit, deploy).
-- After a deploy, the indexer detects changed files via content hash and re-embeds only those.
-- An empty corpus is valid. The chatbot will still function but won't ground its answers in your docs — it'll answer from its general training.
-- Provider matters less than corpus quality. A small embedding model on a good corpus beats a large model on a sparse one.
+- A deploy rebuilds the embedded corpus; there is no runtime indexing job or
+  embedding cost for Chat application knowledge.
+- If retrieval finds no relevant chunk, Helix states that the knowledge base
+  has no match rather than answering from model memory.
+- Provider choice affects narration quality, while retrieval remains local and
+  deterministic.
 
 ## Where to learn more
 
-- `internal/ai/rag/docs_indexer.go` — the walker + chunker + embed loop
-- `internal/ai/rag/retriever.go` — the query-time retrieval path
-- `migrations/*_embeddings.up.sql` — the pgvector schema
+- `docs/embed.go` — the embedded Markdown corpus
+- `internal/ai/rag/lexical_docs.go` — local indexing and ranking
+- `internal/ai/rag/chunker.go` — bounded Markdown chunking
 - [Helix AI](../guide/helix-ai.md) — how the chatbot fits into the broader AI layer

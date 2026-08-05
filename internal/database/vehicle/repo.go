@@ -77,7 +77,7 @@ func (r *VehicleRepo) GetByVIN(ctx context.Context, vin string) (*vehiclemodel.V
 func (r *VehicleRepo) GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error) {
 	ctx, span := tracing.DBSpan(ctx, "select_all", "vehicles")
 	defer span.End()
-	query := `SELECT id, tesla_id, vin, display_name, model, trim_level, color, timezone, created_at, updated_at
+	query := `SELECT id, tesla_id, vin, display_name, model, trim_level, color, timezone, archived_at, created_at, updated_at
 		FROM vehicles ORDER BY id`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
@@ -89,7 +89,7 @@ func (r *VehicleRepo) GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, erro
 	for rows.Next() {
 		v := &vehiclemodel.Vehicle{}
 		if err := rows.Scan(
-			&v.ID, &v.TeslaID, &v.VIN, &v.DisplayName, &v.Model, &v.TrimLevel, &v.Color, &v.Timezone, &v.CreatedAt, &v.UpdatedAt,
+			&v.ID, &v.TeslaID, &v.VIN, &v.DisplayName, &v.Model, &v.TrimLevel, &v.Color, &v.Timezone, &v.ArchivedAt, &v.CreatedAt, &v.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

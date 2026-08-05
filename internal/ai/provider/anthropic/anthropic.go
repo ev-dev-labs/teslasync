@@ -194,8 +194,13 @@ type anthropicMessagesResponse struct {
 }
 
 type anthropicStreamFrame struct {
-	Type  string `json:"type"`
-	Index int    `json:"index"`
+	Type    string `json:"type"`
+	Index   int    `json:"index"`
+	Message struct {
+		Usage struct {
+			InputTokens int `json:"input_tokens"`
+		} `json:"usage"`
+	} `json:"message"`
 	Delta struct {
 		Type        string `json:"type"`
 		Text        string `json:"text"`
@@ -203,6 +208,10 @@ type anthropicStreamFrame struct {
 		PartialJSON string `json:"partial_json"`
 	} `json:"delta"`
 	ContentBlock anthropicWireBlock `json:"content_block"`
+	Usage        struct {
+		InputTokens  int `json:"input_tokens"`
+		OutputTokens int `json:"output_tokens"`
+	} `json:"usage"`
 }
 
 func encodeMessagesRequest(cfg provider.ProviderConfig, req provider.ChatRequest, stream bool) ([]byte, error) {
@@ -334,11 +343,33 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 	defer close(out)
 	defer body.Close()
 	var toolCalls provider.ToolCallAccumulator
-	emitToolCalls := func() {
-		for _, call := range toolCalls.Calls() {
-			callCopy := call
-			send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+	var finishReason string
+	var inputTokens, outputTokens int
+	emitTerminal := func() {
+		calls := toolCalls.Calls()
+		if finishReason == "" {
+			if len(calls) > 0 {
+				send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: anthropic stream ended without a tool_use stop reason", provider.ErrUpstream)})
+				return
+			}
+			finishReason = provider.FinishStop
 		}
+		if len(calls) > 0 && finishReason != provider.FinishToolCalls {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: anthropic emitted tool fragments with finish reason %q", provider.ErrUpstream, finishReason)})
+			return
+		}
+		if finishReason == provider.FinishToolCalls {
+			for _, call := range calls {
+				callCopy := call
+				send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+			}
+		}
+		send(ctx, out, provider.Chunk{
+			Done:         true,
+			FinishReason: finishReason,
+			InputTokens:  inputTokens,
+			OutputTokens: outputTokens,
+		})
 	}
 	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
@@ -362,6 +393,19 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 			return
 		}
 		switch frame.Type {
+		case "message_start":
+			inputTokens = frame.Message.Usage.InputTokens
+		case "message_delta":
+			if frame.Delta.StopReason != "" {
+				finishReason = provider.NormalizeFinishReason(frame.Delta.StopReason)
+				if finishReason == "" {
+					send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: anthropic returned unknown stop reason %q", provider.ErrUpstream, frame.Delta.StopReason)})
+					return
+				}
+			}
+			if frame.Usage.OutputTokens > 0 {
+				outputTokens = frame.Usage.OutputTokens
+			}
 		case "content_block_delta":
 			if frame.Delta.Text != "" {
 				send(ctx, out, provider.Chunk{Delta: frame.Delta.Text})
@@ -374,8 +418,7 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 				toolCalls.Add(frame.Index, frame.ContentBlock.ID, frame.ContentBlock.Name, "")
 			}
 		case "message_stop":
-			emitToolCalls()
-			send(ctx, out, provider.Chunk{Done: true})
+			emitTerminal()
 			return
 		case "error":
 			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: anthropic stream error frame", provider.ErrUpstream)})
