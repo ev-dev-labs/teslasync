@@ -137,6 +137,37 @@ func TestOpenAI_Stream_SSE(t *testing.T) {
 	}
 }
 
+func TestOpenAI_Stream_AssemblesToolCallFragments(t *testing.T) {
+	t.Parallel()
+	a := newAdapter(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, `data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"query_battery_status","arguments":"{\"vehicle"}}]}}]}`+"\n\n")
+		_, _ = io.WriteString(w, `data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"_id\":42}"}}]},"finish_reason":"tool_calls"}]}`+"\n\n")
+	}))
+	out, err := a.Stream(context.Background(), provider.ChatRequest{
+		Messages: []provider.Message{{Role: provider.RoleUser, Content: "battery"}},
+	})
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	var calls []provider.ToolCall
+	for chunk := range out {
+		if chunk.Err != nil {
+			t.Fatalf("stream err: %v", chunk.Err)
+		}
+		if chunk.ToolDelta != nil {
+			calls = append(calls, *chunk.ToolDelta)
+		}
+	}
+	if len(calls) != 1 {
+		t.Fatalf("tool calls = %+v, want one assembled call", calls)
+	}
+	if calls[0].ID != "call_1" || calls[0].Name != "query_battery_status" ||
+		string(calls[0].Arguments) != `{"vehicle_id":42}` {
+		t.Fatalf("assembled call = %+v", calls[0])
+	}
+}
+
 func TestOpenAI_Embed_BatchedRequest(t *testing.T) {
 	t.Parallel()
 	calls := 0

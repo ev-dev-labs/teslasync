@@ -333,6 +333,13 @@ func (r *anthropicMessagesResponse) toChatResponse() *provider.ChatResponse {
 func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Chunk) {
 	defer close(out)
 	defer body.Close()
+	var toolCalls provider.ToolCallAccumulator
+	emitToolCalls := func() {
+		for _, call := range toolCalls.Calls() {
+			callCopy := call
+			send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+		}
+	}
 	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	for scanner.Scan() {
@@ -359,14 +366,15 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 			if frame.Delta.Text != "" {
 				send(ctx, out, provider.Chunk{Delta: frame.Delta.Text})
 			}
+			if frame.Delta.PartialJSON != "" {
+				toolCalls.Add(frame.Index, "", "", frame.Delta.PartialJSON)
+			}
 		case "content_block_start":
 			if frame.ContentBlock.Type == "tool_use" {
-				send(ctx, out, provider.Chunk{ToolDelta: &provider.ToolCall{
-					ID:   frame.ContentBlock.ID,
-					Name: frame.ContentBlock.Name,
-				}})
+				toolCalls.Add(frame.Index, frame.ContentBlock.ID, frame.ContentBlock.Name, "")
 			}
 		case "message_stop":
+			emitToolCalls()
 			send(ctx, out, provider.Chunk{Done: true})
 			return
 		case "error":

@@ -40,7 +40,7 @@ export function ChatWelcome({ onPick }: ChatWelcomeProps) {
         <Text as="p" size="sm" color="secondary">
           {t(
             'chatbot.askAbout',
-            'Ask about your vehicles, drives, charging, and more',
+            'Investigate live fleet evidence, compare domains, or ask for cited TeslaSync guidance',
           )}
         </Text>
       </div>

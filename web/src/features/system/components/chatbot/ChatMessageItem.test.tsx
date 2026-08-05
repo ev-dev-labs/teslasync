@@ -89,6 +89,23 @@ describe('ChatMessageItem', () => {
     expect(screen.getByTestId('avatar')).toHaveAttribute('data-avatar-kind', 'bot');
   });
 
+  it('renders the assistant tool evidence and usage trail', () => {
+    renderItem(
+      makeMessage({
+        aiActivity: [
+          { id: 'one', name: 'query_vehicle_count', status: 'succeeded' },
+          { id: 'two', name: 'query_alerts_recent', status: 'failed' },
+        ],
+        aiUsage: { in: 40, out: 12 },
+      }),
+    );
+
+    const trail = screen.getByTestId('helix-evidence-trail');
+    expect(trail).toHaveTextContent('Vehicle count');
+    expect(trail).toHaveTextContent('Alerts recent');
+    expect(trail).toHaveTextContent('52 tokens');
+  });
+
   it('shows the timestamp only on the last message in a group', () => {
     const expected = formatTime(CREATED_AT);
     const { rerender } = renderItem(makeMessage(), { isLastInGroup: true });

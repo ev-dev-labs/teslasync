@@ -302,6 +302,14 @@ func (s *SequencedMock) Stream(ctx context.Context, req provider.ChatRequest) (<
 			case out <- provider.Chunk{Delta: string(ru)}:
 			}
 		}
+		for _, call := range r.ChatResponse.ToolCalls {
+			callCopy := call
+			select {
+			case <-ctx.Done():
+				return
+			case out <- provider.Chunk{ToolDelta: &callCopy}:
+			}
+		}
 		select {
 		case <-ctx.Done():
 		case out <- provider.Chunk{Done: true}:

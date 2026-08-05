@@ -11,6 +11,7 @@ package chatbotllm
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
@@ -42,7 +43,14 @@ func TestStrategy_System(t *testing.T) {
 	if sys == "" {
 		t.Fatal("System() returned empty prompt")
 	}
-	for _, must := range []string{"TeslaSync", "tools", "never invent"} {
+	for _, must := range []string{
+		"TeslaSync",
+		"tools",
+		"never invent",
+		"query_vehicle_count",
+		"retrieve_app_knowledge",
+		"read-only",
+	} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)
 		}
@@ -64,6 +72,13 @@ func TestStrategy_Tools(t *testing.T) {
 		"query_alerts_active",
 		"query_battery_status",
 		"query_vehicle_count",
+		"query_vehicle_location",
+		"query_drive_detail",
+		"query_charge_detail",
+		"query_alerts_recent",
+		"query_geofences_list",
+		"query_efficiency_period",
+		"retrieve_app_knowledge",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Tools() length = %d, want %d (got=%v)", len(got), len(want), got)
@@ -100,24 +115,28 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 	for _, name := range s.Tools() {
 		// Naming convention: query_* is read-only; create_*,
 		// update_*, delete_*, send_*, suspend_* are write.
-		if !startsWithQuery(name) {
+		if !startsWithQuery(name) && name != "retrieve_app_knowledge" {
 			t.Errorf("Tools() includes non-read-only tool %q", name)
 		}
 	}
 }
 
-// TestStrategy_ContextReturnsNil pins the empty-context contract.
-// The dispatcher hydrates History from the AI handler; the strategy
-// must not contribute extra prefix messages until F7 RAG ships.
-func TestStrategy_ContextReturnsNil(t *testing.T) {
+// TestStrategy_ContextProvidesCurrentDate ensures relative date questions
+// are interpreted against an explicit UTC calendar date rather than model
+// training-time priors.
+func TestStrategy_ContextProvidesCurrentDate(t *testing.T) {
 	t.Parallel()
 	s := New()
 	msgs, err := s.Context(context.Background(), strategy.StrategyInput{})
 	if err != nil {
 		t.Fatalf("Context() err = %v, want nil", err)
 	}
-	if msgs != nil {
-		t.Fatalf("Context() = %v, want nil", msgs)
+	if len(msgs) != 1 || msgs[0].Role != "system" {
+		t.Fatalf("Context() = %v, want one system message", msgs)
+	}
+	if !contains(msgs[0].Content, time.Now().UTC().Format(time.DateOnly)) ||
+		!contains(msgs[0].Content, "relative periods") {
+		t.Fatalf("Context() missing current UTC date guidance: %v", msgs)
 	}
 }
 

@@ -144,6 +144,16 @@ vi.mock('../components/chatbot/ChatMessageItem', () => ({
         <span data-testid="chat-msg-text">
           {message.streamedText ?? message.content}
         </span>
+        <span data-testid="chat-msg-evidence">
+          {(message.aiActivity ?? [])
+            .map((item) => `${item.name}:${item.status}`)
+            .join(',')}
+        </span>
+        <span data-testid="chat-msg-usage">
+          {message.aiUsage
+            ? `${message.aiUsage.in + message.aiUsage.out} tokens`
+            : ''}
+        </span>
         {isLastAssistant && onRegenerate ? (
           <button
             type="button"
@@ -633,6 +643,17 @@ describe('ChatbotPage — AI-on streaming path', () => {
 
     const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
     const body =
+      sseFrame('tool_call', {
+        id: 'fleet-1',
+        name: 'query_vehicle_count',
+        arguments: {},
+      }) +
+      sseFrame('tool_result', {
+        id: 'fleet-1',
+        name: 'query_vehicle_count',
+        ok: true,
+        data: { count: 1 },
+      }) +
       sseFrame('delta', { text: 'Hello ' }) +
       sseFrame('delta', { text: 'world' }) +
       sseFrame('done', { finish_reason: 'stop', usage: { in: 5, out: 3 } });
@@ -666,6 +687,10 @@ describe('ChatbotPage — AI-on streaming path', () => {
     await waitFor(() =>
       expect(lastAssistantRow().getAttribute('data-streaming')).toBe('false'),
     );
+    expect(lastAssistantRow()).toHaveTextContent(
+      'query_vehicle_count:succeeded',
+    );
+    expect(lastAssistantRow()).toHaveTextContent('8 tokens');
     // No AI-off fallback POST — the AI path replaces it entirely.
     expect(chatPosts()).toHaveLength(0);
   });

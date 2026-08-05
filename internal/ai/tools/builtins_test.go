@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,7 +129,12 @@ func TestRegister12Builtins_RegistersAllByName(t *testing.T) {
 func TestQueryVehicleCount(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
-	src := &fakeVehicles{all: []*vehiclemodel.Vehicle{{ID: 1}, {ID: 2}, {ID: 3}}}
+	model := "Model 3"
+	src := &fakeVehicles{all: []*vehiclemodel.Vehicle{
+		{ID: 1, DisplayName: "Roadie", VIN: "redacted-one", Model: &model},
+		{ID: 2, DisplayName: "Comet", VIN: "redacted-two"},
+		{ID: 3, DisplayName: "Archived", VIN: "redacted-three", ArchivedAt: timePointer(time.Now().UTC())},
+	}}
 	Register12Builtins(r, Sources{
 		Vehicles:      src,
 		VehicleState:  &fakeState{},
@@ -151,6 +157,19 @@ func TestQueryVehicleCount(t *testing.T) {
 	m := out.(map[string]any)
 	if m["count"].(int) != 3 {
 		t.Errorf("count = %v, want 3", m["count"])
+	}
+	encoded, err := json.Marshal(m["vehicles"])
+	if err != nil {
+		t.Fatalf("marshal summaries: %v", err)
+	}
+	got := string(encoded)
+	for _, want := range []string{`"id":1`, `"display_name":"Roadie"`, `"model":"Model 3"`, `"active":false`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("vehicle summaries missing %s: %s", want, got)
+		}
+	}
+	if strings.Contains(got, "redacted-one") || strings.Contains(got, `"vin"`) {
+		t.Errorf("vehicle discovery leaked VIN data: %s", got)
 	}
 }
 
@@ -377,6 +396,7 @@ func TestPeriodCutoff(t *testing.T) {
 		{"year", now.AddDate(-1, 0, 0)},
 		{"unknown", time.Time{}},
 	}
+
 	for _, c := range cases {
 		got := periodCutoff(c.period, now)
 		if !got.Equal(c.want) {
@@ -384,3 +404,5 @@ func TestPeriodCutoff(t *testing.T) {
 		}
 	}
 }
+
+func timePointer(value time.Time) *time.Time { return &value }

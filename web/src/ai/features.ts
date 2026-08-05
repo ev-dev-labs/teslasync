@@ -148,8 +148,8 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
   }),
   "chatbot-llm": Object.freeze({
     id: "chatbot-llm",
-    name: "LLM Chatbot",
-    description: "Conversational fleet assistant powered by an LLM. Falls back to the heuristic chatbot when AI is off.",
+    name: "Helix fleet intelligence copilot",
+    description: "Evidence-first conversational agent with live fleet tools, cross-domain analysis, TeslaSync knowledge retrieval, visible provenance, and a deterministic fallback when AI is off.",
     tier: "U",
     defaultOn: false,
     needsRag: true,

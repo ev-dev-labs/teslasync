@@ -37,6 +37,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/limit"
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
@@ -62,6 +63,11 @@ var ErrConfirmationDenied = errors.New("dispatch: user denied tool-call confirma
 // MaxIterations cap. The caller should surface this as a
 // "conversation got stuck" message, not a hard error.
 var ErrMaxIterations = errors.New("dispatch: max iterations reached")
+
+// ErrStreamIncomplete means a provider stream closed without its terminal
+// Done chunk. Treating this as success would persist a truncated answer and
+// falsely present it as complete.
+var ErrStreamIncomplete = errors.New("dispatch: provider stream ended without a terminal chunk")
 
 // ConfirmDecision is the outcome of a user-confirm round-trip for
 // a mutating tool call.
@@ -256,6 +262,14 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 			msgs = append(msgs, provider.Message{Role: provider.RoleSystem, Content: hint})
 		}
 	}
+	// Apply the product-wide quality floor after feature-specific format
+	// instructions and display preferences. Every Helix surface therefore
+	// inherits evidence discipline without duplicating prompt text across
+	// dozens of strategies.
+	msgs = append(msgs, provider.Message{
+		Role:    provider.RoleSystem,
+		Content: IntelligenceContract,
+	})
 	ctxMsgs, err := s.Context(ctx, in)
 	if err != nil {
 		return fmt.Errorf("dispatch: strategy context: %w", err)
@@ -279,50 +293,19 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 			Messages: msgs,
 			Tools:    specs,
 		}
-		resp, err := d.provider.Chat(ctx, req)
+		turn, operation, err := d.completeTurn(ctx, req, w)
 		if err != nil {
-			// F9: a [*limit.LimitError] is the rate-limiter or cost-
-			// cap saying "do not dispatch this call". It is NOT a
-			// Run error per se — the SSE wire surfaces it as a
-			// structured terminal `error` frame so the SPA can
-			// render the AiLimitBanner + pivot to the non-AI
-			// baseline (ADR-015 §I3).
-			var le *limit.LimitError
-			if errors.As(err, &le) {
-				if emitter, ok := w.(LimitErrorEmitter); ok {
-					if emitErr := emitter.EmitLimitError(
-						le.Error(),
-						le.Decision.Reason,
-						int(le.Decision.RetryAfter.Seconds()),
-						le.Decision.BannerLevel,
-						le.Decision.BaselineAvailable,
-					); emitErr != nil {
-						return fmt.Errorf("dispatch: emit limit error (iter %d): %w", iter, emitErr)
-					}
-					return nil
-				}
-				// Writer doesn't expose a structured emit hook —
-				// bubble the LimitError so a less feature-rich
-				// writer (e.g. CaptureWriter in tests) still sees a
-				// non-nil err and can decide its own fate.
-				return fmt.Errorf("dispatch: provider chat (iter %d): %w", iter, err)
+			if handled, limitErr := emitLimitError(w, err, operation, iter); handled {
+				return limitErr
 			}
-			return fmt.Errorf("dispatch: provider chat (iter %d): %w", iter, err)
-		}
-
-		// Forward any text content as a single delta. A future
-		// streaming-aware Run (F5) will replace this with
-		// per-chunk forwarding via Provider.Stream.
-		if resp.Message.Content != "" {
-			if err := w.WriteDelta(resp.Message.Content); err != nil {
-				return fmt.Errorf("dispatch: write delta: %w", err)
-			}
+			return fmt.Errorf("dispatch: provider %s (iter %d): %w", operation, iter, err)
 		}
 
 		// No tool calls? Loop is done.
-		if len(resp.ToolCalls) == 0 {
+		if len(turn.toolCalls) == 0 {
 			return nil
 		}
+		normalizeToolCalls(turn.toolCalls, iter)
 
 		// Append the assistant's tool-call message to history so
 		// the next provider call sees the proposal. Carry the
@@ -332,9 +315,9 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 		// `messages.[N].content: expected string, got null` when
 		// the assistant message lacks both content AND tool_calls.
 		// Ollama is more lenient but the same fix is harmless there.
-		asst := resp.Message
-		if len(resp.ToolCalls) > 0 {
-			asst.ToolCalls = append([]provider.ToolCall(nil), resp.ToolCalls...)
+		asst := turn.message
+		if len(turn.toolCalls) > 0 {
+			asst.ToolCalls = append([]provider.ToolCall(nil), turn.toolCalls...)
 		}
 		msgs = append(msgs, asst)
 
@@ -342,7 +325,10 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 		// execution is intentionally not supported in F4 — every
 		// mutation must be observable to the user before the
 		// next runs.)
-		for _, call := range resp.ToolCalls {
+		for _, call := range turn.toolCalls {
+			if strings.TrimSpace(call.Name) == "" {
+				return fmt.Errorf("dispatch: provider emitted a tool call with no name")
+			}
 			toolMsg, derr := d.runOneToolCall(ctx, call, allowedTools, w)
 			if derr != nil {
 				return derr
@@ -351,6 +337,123 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 		}
 	}
 	return ErrMaxIterations
+}
+
+type turnResult struct {
+	message   provider.Message
+	toolCalls []provider.ToolCall
+}
+
+// completeTurn uses the provider's real streaming path whenever advertised.
+// Capability drift falls back to Chat only when Stream refuses synchronously,
+// before any frame has been consumed.
+func (d *Dispatcher) completeTurn(
+	ctx context.Context,
+	req provider.ChatRequest,
+	w StreamWriter,
+) (turnResult, string, error) {
+	if d.provider.Capabilities().Streaming {
+		turn, consumed, err := d.streamTurn(ctx, req, w)
+		if err == nil {
+			return turn, "stream", nil
+		}
+		if consumed || !errors.Is(err, provider.ErrCapabilityNotSupported) {
+			return turnResult{}, "stream", err
+		}
+	}
+
+	resp, err := d.provider.Chat(ctx, req)
+	if err != nil {
+		return turnResult{}, "chat", err
+	}
+	if resp == nil {
+		return turnResult{}, "chat", errors.New("provider returned a nil chat response")
+	}
+	if resp.Message.Content != "" {
+		if err := w.WriteDelta(resp.Message.Content); err != nil {
+			return turnResult{}, "chat", fmt.Errorf("write delta: %w", err)
+		}
+	}
+	return turnResult{
+		message:   resp.Message,
+		toolCalls: append([]provider.ToolCall(nil), resp.ToolCalls...),
+	}, "chat", nil
+}
+
+func (d *Dispatcher) streamTurn(
+	ctx context.Context,
+	req provider.ChatRequest,
+	w StreamWriter,
+) (turnResult, bool, error) {
+	chunks, err := d.provider.Stream(ctx, req)
+	if err != nil {
+		return turnResult{}, false, err
+	}
+	if chunks == nil {
+		return turnResult{}, false, errors.New("provider returned a nil stream")
+	}
+
+	var content strings.Builder
+	toolCalls := make([]provider.ToolCall, 0, 2)
+	consumed := false
+	done := false
+	for chunk := range chunks {
+		consumed = true
+		switch {
+		case chunk.Err != nil:
+			return turnResult{}, consumed, chunk.Err
+		case chunk.Delta != "":
+			content.WriteString(chunk.Delta)
+			if err := w.WriteDelta(chunk.Delta); err != nil {
+				return turnResult{}, consumed, fmt.Errorf("write delta: %w", err)
+			}
+		case chunk.ToolDelta != nil:
+			toolCalls = append(toolCalls, *chunk.ToolDelta)
+		case chunk.Done:
+			done = true
+		}
+	}
+	if !done {
+		return turnResult{}, consumed, ErrStreamIncomplete
+	}
+	return turnResult{
+		message: provider.Message{
+			Role:    provider.RoleAssistant,
+			Content: content.String(),
+		},
+		toolCalls: toolCalls,
+	}, consumed, nil
+}
+
+func emitLimitError(w StreamWriter, err error, operation string, iter int) (bool, error) {
+	var le *limit.LimitError
+	if !errors.As(err, &le) {
+		return false, nil
+	}
+	if emitter, ok := w.(LimitErrorEmitter); ok {
+		if emitErr := emitter.EmitLimitError(
+			le.Error(),
+			le.Decision.Reason,
+			int(le.Decision.RetryAfter.Seconds()),
+			le.Decision.BannerLevel,
+			le.Decision.BaselineAvailable,
+		); emitErr != nil {
+			return true, fmt.Errorf("dispatch: emit limit error (iter %d): %w", iter, emitErr)
+		}
+		return true, nil
+	}
+	return true, fmt.Errorf("dispatch: provider %s (iter %d): %w", operation, iter, err)
+}
+
+func normalizeToolCalls(calls []provider.ToolCall, iter int) {
+	for index := range calls {
+		if calls[index].ID == "" {
+			calls[index].ID = fmt.Sprintf("helix_call_%d_%d", iter+1, index+1)
+		}
+		if len(calls[index].Arguments) == 0 {
+			calls[index].Arguments = json.RawMessage("{}")
+		}
+	}
 }
 
 // runOneToolCall validates the LLM-proposed call against the

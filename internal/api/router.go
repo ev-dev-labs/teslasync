@@ -784,6 +784,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Drives:  drivedb.NewDriveRepo(db),
 		Charges: chargingdb.NewChargingRepo(db),
 	})
+	// Give Helix Chat its own view of the global application-knowledge corpus.
+	// The retriever resolves provider and feature settings through chatbot-llm,
+	// so chat documentation answers do not depend on the separate rag-help
+	// toggle being enabled.
+	aiChatbotKnowledgeRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		chatbotllm.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai chatbot: knowledge retriever wiring failed")
+	}
+	tools.RegisterChatbotKnowledgeTool(aiToolRegistry, tools.HelpSources{
+		Retriever: aiChatbotKnowledgeRetriever,
+	})
 	aiChatbotHandler := aichatbot.NewHandler(
 		dbnotif.NewChatRepo(db),
 		aiRegistry,

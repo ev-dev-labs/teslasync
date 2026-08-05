@@ -147,6 +147,43 @@ func TestAnthropic_Stream_SSE(t *testing.T) {
 	}
 }
 
+func TestAnthropic_Stream_AssemblesToolInputDeltas(t *testing.T) {
+	t.Parallel()
+	a := newAdapter(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "event: content_block_start\n")
+		_, _ = io.WriteString(w, `data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"tool_1","name":"query_vehicle_state","input":{}}}`+"\n\n")
+		_, _ = io.WriteString(w, "event: content_block_delta\n")
+		_, _ = io.WriteString(w, `data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"vehicle"}}`+"\n\n")
+		_, _ = io.WriteString(w, "event: content_block_delta\n")
+		_, _ = io.WriteString(w, `data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"_id\":9}"}}`+"\n\n")
+		_, _ = io.WriteString(w, "event: message_stop\n")
+		_, _ = io.WriteString(w, "data: {\"type\":\"message_stop\"}\n\n")
+	}))
+	out, err := a.Stream(context.Background(), provider.ChatRequest{
+		Messages: []provider.Message{{Role: provider.RoleUser, Content: "state"}},
+	})
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	var calls []provider.ToolCall
+	for chunk := range out {
+		if chunk.Err != nil {
+			t.Fatalf("stream err: %v", chunk.Err)
+		}
+		if chunk.ToolDelta != nil {
+			calls = append(calls, *chunk.ToolDelta)
+		}
+	}
+	if len(calls) != 1 {
+		t.Fatalf("tool calls = %+v, want one assembled call", calls)
+	}
+	if calls[0].ID != "tool_1" || calls[0].Name != "query_vehicle_state" ||
+		string(calls[0].Arguments) != `{"vehicle_id":9}` {
+		t.Fatalf("assembled call = %+v", calls[0])
+	}
+}
+
 func TestAnthropic_Embed_AlwaysReturnsCapabilityNotSupported(t *testing.T) {
 	t.Parallel()
 	a := newAdapter(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

@@ -365,6 +365,27 @@ func TestRegisterHelpTools_DuplicateRegistrationPanics(t *testing.T) {
 	RegisterHelpTools(r, HelpSources{Retriever: &fakeRetriever{}})
 }
 
+func TestRegisterChatbotKnowledgeTool_UsesIndependentName(t *testing.T) {
+	t.Parallel()
+	r := NewRegistry()
+	ret := &fakeRetriever{}
+	RegisterHelpTools(r, HelpSources{Retriever: ret})
+	RegisterChatbotKnowledgeTool(r, HelpSources{Retriever: ret})
+
+	tool, ok := r.Get("retrieve_app_knowledge")
+	if !ok {
+		t.Fatal("retrieve_app_knowledge not registered")
+	}
+	if tool.Mutates() {
+		t.Fatal("retrieve_app_knowledge must be read-only")
+	}
+	for _, must := range []string{"application usage", "fleet query tools", "DO NOT fabricate"} {
+		if !strings.Contains(tool.Description(), must) {
+			t.Errorf("Description() missing %q: %q", must, tool.Description())
+		}
+	}
+}
+
 func TestAllowedHelpSourceTypes_ReturnsDefensiveCopySorted(t *testing.T) {
 	t.Parallel()
 	a := AllowedHelpSourceTypes()

@@ -232,6 +232,7 @@ type openAIWireMsg struct {
 }
 
 type openAIWireToolCall struct {
+	Index    int    `json:"index,omitempty"`
 	ID       string `json:"id"`
 	Type     string `json:"type"`
 	Function struct {
@@ -362,6 +363,13 @@ func (r *openAIChatResponse) toChatResponse() *provider.ChatResponse {
 func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Chunk) {
 	defer close(out)
 	defer body.Close()
+	var toolCalls provider.ToolCallAccumulator
+	emitToolCalls := func() {
+		for _, call := range toolCalls.Calls() {
+			callCopy := call
+			send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+		}
+	}
 	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	for scanner.Scan() {
@@ -379,6 +387,7 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 		}
 		payload := strings.TrimSpace(strings.TrimPrefix(raw, streamPrefixData))
 		if payload == streamSentinel {
+			emitToolCalls()
 			send(ctx, out, provider.Chunk{Done: true})
 			return
 		}
@@ -395,13 +404,10 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 			send(ctx, out, provider.Chunk{Delta: ch.Delta.Content})
 		}
 		for _, tc := range ch.Delta.ToolCalls {
-			send(ctx, out, provider.Chunk{ToolDelta: &provider.ToolCall{
-				ID:        tc.ID,
-				Name:      tc.Function.Name,
-				Arguments: json.RawMessage(tc.Function.Arguments),
-			}})
+			toolCalls.Add(tc.Index, tc.ID, tc.Function.Name, tc.Function.Arguments)
 		}
 		if ch.FinishReason != "" {
+			emitToolCalls()
 			send(ctx, out, provider.Chunk{Done: true})
 			return
 		}

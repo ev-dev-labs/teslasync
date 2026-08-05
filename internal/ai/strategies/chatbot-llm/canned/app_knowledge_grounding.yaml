@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_app_knowledge_1
+        name: retrieve_app_knowledge
+        arguments: '{"query":"configure an alert in TeslaSync","source_types":["docs"],"k":5}'
+    input_tokens: 30
+    output_tokens: 16
+  - finish_reason: stop
+    content: "Open Alert Studio, create a rule, review its conditions and cooldown, then save it. Source: docs/guide/alerts.md."
+    input_tokens: 52
+    output_tokens: 24

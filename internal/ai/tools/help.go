@@ -170,16 +170,29 @@ type helpChunk struct {
 // Execution: typed input → user_subject from ctx → rag.Retriever.Retrieve
 // → JSON envelope. No DB write; no SQL written by this method.
 type retrieveDocs struct {
-	r rag.Retriever
+	r    rag.Retriever
+	name string
 }
 
 // Name implements [Tool].
-func (t *retrieveDocs) Name() string { return "retrieve_docs" }
+func (t *retrieveDocs) Name() string {
+	if t.name != "" {
+		return t.name
+	}
+	return "retrieve_docs"
+}
 
 // Description implements [Tool]. Used by the LLM during tool
 // selection — kept short and intent-focused, with the source-type
 // allowlist appended so the model picks from the curated set.
 func (t *retrieveDocs) Description() string {
+	if t.Name() == "retrieve_app_knowledge" {
+		return "Search TeslaSync's own documentation, runbooks, and interface text for application usage, configuration, or troubleshooting questions. " +
+			"Use fleet query tools instead for vehicle telemetry, drives, charging, alerts, or efficiency. " +
+			"READ-only: no record is created, mutated, or deleted. " +
+			"Allowed source_types: " + ragHelpAllowedSourceTypesHint + ". " +
+			"Returns {chunks: [{source_type, source_id, chunk_idx, text, score}]}; cite only returned source_id values and DO NOT fabricate a result when chunks is empty."
+	}
 	return "Find the top-k nearest chunks to a natural-language help question across the application's own documentation, runbooks, and i18n strings via the F7 RAG retriever. " +
 		"READ-only: no record is created, mutated, or deleted. " +
 		"Allowed source_types: " + ragHelpAllowedSourceTypesHint + ". " +
@@ -217,7 +230,7 @@ func (t *retrieveDocs) Validate(raw json.RawMessage) (any, error) {
 		return nil, err
 	}
 	if len(in.Query) > ragHelpMaxQueryChars {
-		return nil, fmt.Errorf("retrieve_docs: query is %d chars (max %d)",
+		return nil, fmt.Errorf("%s: query is %d chars (max %d)", t.Name(),
 			len(in.Query), ragHelpMaxQueryChars)
 	}
 	return in, nil
@@ -239,7 +252,7 @@ func (t *retrieveDocs) Validate(raw json.RawMessage) (any, error) {
 func (t *retrieveDocs) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(retrieveDocsInput)
 	if t.r == nil {
-		return nil, errors.New("retrieve_docs: no rag.Retriever wired")
+		return nil, fmt.Errorf("%s: no rag.Retriever wired", t.Name())
 	}
 
 	k := input.K
@@ -254,7 +267,7 @@ func (t *retrieveDocs) Execute(ctx context.Context, in any) (any, error) {
 
 	chunks, err := t.r.Retrieve(ctx, helpCorpusSubject, input.Query, input.SourceTypes, k)
 	if err != nil {
-		return nil, fmt.Errorf("retrieve_docs: rag.Retrieve: %w", err)
+		return nil, fmt.Errorf("%s: rag.Retrieve: %w", t.Name(), err)
 	}
 
 	// Convert to a deterministic envelope so the tool output
@@ -419,6 +432,17 @@ type HelpSources struct {
 func RegisterHelpTools(r *Registry, s HelpSources) {
 	r.Register(&retrieveDocs{r: s.Retriever})
 	r.Register(&citeHelpChunk{})
+}
+
+// RegisterChatbotKnowledgeTool installs a chatbot-scoped view of the global
+// help corpus. Production passes a retriever configured with chatbot-llm's
+// feature ID, so chat knowledge retrieval never depends on rag-help being
+// enabled or sharing its provider configuration.
+func RegisterChatbotKnowledgeTool(r *Registry, s HelpSources) {
+	r.Register(&retrieveDocs{
+		r:    s.Retriever,
+		name: "retrieve_app_knowledge",
+	})
 }
 
 // assertAllowedHelpSourceTypes enforces the per-feature source-type

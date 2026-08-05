@@ -9955,17 +9955,37 @@
       "empty": "No release notes available yet."
     }
   },
+  "helix": {
+    "badge": "Helix",
+    "ariaLabel": "Helix",
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.",
+    "evidence": {
+      "title": "Evidence trail",
+      "grounded": "Grounded in",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "limited": "Limited evidence",
+      "gathering": "Gathering",
+      "reading": "Reading",
+      "used": "Used",
+      "unavailable": "Unavailable",
+      "successful": "successful",
+      "tokens": "tokens"
+    }
+  },
   "chatbot": {
     "title": "Helix",
-    "subtitle": "Ask Helix anything about your Tesla fleet",
+    "subtitle": "Evidence-grounded intelligence across your fleet and TeslaSync knowledge",
     "history": "History",
     "newChat": "New Chat",
     "sessions": "Sessions",
     "noSessions": "No conversations yet",
     "howCanIHelp": "How can Helix help you?",
-    "askAbout": "Ask about your vehicles, drives, charging, and more",
+    "askAbout": "Investigate live fleet evidence, compare domains, or ask for cited TeslaSync guidance",
     "thinking": "Helix is thinking…",
-    "placeholder": "Ask Helix about your fleet… (Shift+Enter for newline)",
+    "planning": "Helix is planning the investigation…",
+    "grounding": "Helix is grounding the answer in TeslaSync evidence…",
+    "placeholder": "Ask Helix to investigate, compare, or explain… (Shift+Enter for newline)",
     "inputLabel": "Message",
     "aiError": "(AI error: {{message}})",
     "actions": {
@@ -9979,10 +9999,10 @@
       "saveAndResend": "Save & resend"
     },
     "suggestion": {
-      "fleetYesterday": "What did my fleet do yesterday?",
-      "chargingCost30d": "Charging cost last 30 days",
-      "socDropping": "Why is my SoC dropping faster this week?",
-      "efficientDrive": "Show me the most efficient drive this month"
+      "readiness": "Give me a fleet readiness briefing using battery, alerts, and recent charging.",
+      "attention": "Which vehicle needs attention first, and what evidence supports it?",
+      "crossDomain": "Compare recent driving efficiency and charging patterns across my vehicles.",
+      "knowledge": "How do I configure alerts in TeslaSync? Cite the relevant documentation."
     },
     "session": {
       "untitled": "Untitled conversation",
@@ -10010,7 +10030,7 @@
     },
     "llm": {
       "indicator": "Helix",
-      "indicatorTooltip": "Helix is your AI assistant. It generates responses using your redacted fleet context.",
+      "indicatorTooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.",
       "badge": "Helix"
     }
   },

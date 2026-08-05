@@ -173,7 +173,7 @@ type queryVehicleCount struct{ src VehicleSource }
 
 func (t *queryVehicleCount) Name() string { return "query_vehicle_count" }
 func (t *queryVehicleCount) Description() string {
-	return "Return the number of vehicles in the fleet."
+	return "Discover the fleet: return the vehicle count plus safe summaries containing each numeric vehicle ID, display name, model, and active status. Call this before vehicle-specific tools when the conversation has not established a valid vehicle_id."
 }
 func (t *queryVehicleCount) InputSchema() json.RawMessage  { return CachedSchema(emptyInput{}) }
 func (t *queryVehicleCount) OutputSchema() json.RawMessage { return nil }
@@ -190,7 +190,28 @@ func (t *queryVehicleCount) Execute(ctx context.Context, in any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"count": len(vs)}, nil
+	type vehicleSummary struct {
+		ID          int64   `json:"id"`
+		DisplayName string  `json:"display_name"`
+		Model       *string `json:"model,omitempty"`
+		Active      bool    `json:"active"`
+	}
+	summaries := make([]vehicleSummary, 0, len(vs))
+	for _, vehicle := range vs {
+		if vehicle == nil {
+			continue
+		}
+		summaries = append(summaries, vehicleSummary{
+			ID:          vehicle.ID,
+			DisplayName: vehicle.DisplayName,
+			Model:       vehicle.Model,
+			Active:      vehicle.IsActive(),
+		})
+	}
+	return map[string]any{
+		"count":    len(summaries),
+		"vehicles": summaries,
+	}, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +219,7 @@ func (t *queryVehicleCount) Execute(ctx context.Context, in any) (any, error) {
 // ---------------------------------------------------------------------------
 
 type vehicleIDInput struct {
-	VehicleID int64 `json:"vehicle_id" validate:"required,gte=1" desc:"Numeric vehicle ID from query_vehicle_count or query_vehicles."`
+	VehicleID int64 `json:"vehicle_id" validate:"required,gte=1" desc:"Numeric vehicle ID from the vehicles array returned by query_vehicle_count."`
 }
 
 type queryVehicleState struct {

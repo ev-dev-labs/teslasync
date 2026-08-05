@@ -140,5 +140,26 @@ describe('AiOutputPanel', () => {
       expect(screen.queryByRole('alert')).toBeNull()
       expect(screen.queryByTestId(THINKING)).toBeNull()
     })
+
+    it('renders successful and failed evidence sources without exposing payloads', () => {
+      renderPanel({
+        state: 'done',
+        text: 'Grounded answer',
+        activity: [
+          { id: 'one', name: 'query_battery_status', status: 'succeeded' },
+          { id: 'two', name: 'query_vehicle_location', status: 'failed' },
+        ],
+        usage: { in: 20, out: 10 },
+      })
+
+      const trail = screen.getByTestId('helix-evidence-trail')
+      expect(trail).toHaveTextContent('Evidence trail')
+      expect(trail).toHaveTextContent('Battery status')
+      expect(trail).toHaveTextContent('Vehicle location')
+      expect(trail).toHaveTextContent('1 successful')
+      expect(trail).toHaveTextContent('1 unavailable')
+      expect(trail).toHaveTextContent('30 tokens')
+      expect(trail).not.toHaveTextContent('vehicle_id')
+    })
   })
 })

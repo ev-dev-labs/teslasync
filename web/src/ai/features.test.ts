@@ -108,9 +108,9 @@ describe('AI_FEATURES', () => {
   it('locks the seed chatbot-llm metadata snapshot', () => {
     expect(AI_FEATURES[SEED_ID]).toEqual({
       id: 'chatbot-llm',
-      name: 'LLM Chatbot',
+      name: 'Helix fleet intelligence copilot',
       description:
-        'Conversational fleet assistant powered by an LLM. Falls back to the heuristic chatbot when AI is off.',
+        'Evidence-first conversational agent with live fleet tools, cross-domain analysis, TeslaSync knowledge retrieval, visible provenance, and a deterministic fallback when AI is off.',
       tier: 'U',
       defaultOn: false,
       needsRag: true,

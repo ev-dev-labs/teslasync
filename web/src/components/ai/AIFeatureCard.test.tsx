@@ -67,7 +67,7 @@ describe('AIBadge', () => {
     expect(badge).toHaveAttribute('aria-label', 'Helix')
     expect(badge).toHaveAttribute(
       'title',
-      'Helix is your AI assistant. It generates responses using your redacted fleet context.',
+      'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
     )
     // The mark is purely decorative — the pill text carries the meaning.
     const icon = badge.querySelector('svg')
@@ -119,6 +119,34 @@ describe('AIFeatureCard — header content', () => {
     )
 
     expect(screen.getByText('Beta')).toBeInTheDocument()
+  })
+})
+
+describe('AIFeatureCard — evidence wiring', () => {
+  it('passes shared stream activity into the Helix evidence trail', () => {
+    render(
+      <AIFeatureCard
+        title="Battery Health"
+        description="Explain the forecast."
+        buttonLabel="Explain"
+        canStart
+        stream={makeStream({
+          state: 'done',
+          text: 'Battery is stable.',
+          activity: [
+            { id: 'one', name: 'query_battery_status', status: 'succeeded' },
+          ],
+          usage: { in: 18, out: 6 },
+        })}
+      />,
+    )
+
+    expect(screen.getByTestId('helix-evidence-trail')).toHaveTextContent(
+      'Battery status',
+    )
+    expect(screen.getByTestId('helix-evidence-trail')).toHaveTextContent(
+      '24 tokens',
+    )
   })
 })
 

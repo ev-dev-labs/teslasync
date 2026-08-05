@@ -30,7 +30,7 @@ walks every feature in the registry and asserts each off-mode contract.
 
 | Surface | Route | Description |
 |---|---|---|
-| Helix Chat | `/chatbot` | Conversational assistant with tool-use over your fleet data |
+| Helix Chat | `/chatbot` | Evidence-first fleet agent with cross-domain tool use, app knowledge retrieval, and visible provenance |
 | AI Settings | `/settings/ai` | Per-feature toggles, provider config, usage card, redaction controls, restore panel |
 | Inline widgets | various pages | 55+ `AI*.tsx` widgets, each gated by `withAiFeature` |
 
@@ -186,6 +186,32 @@ Features marked `NeedsRAG=true` in the registry retrieve relevant chunks from
 the `pgvector` index before calling the provider. The chunk store and the
 embedding model are configurable; see `internal/ai/rag/`.
 
+Helix Chat owns a retriever configured under `chatbot-llm`. It searches the
+same global docs, runbooks, and interface-text corpus as app help without
+depending on the separate `rag-help` feature toggle or provider override.
+
+## Grounding and evidence
+
+Every strategy runs under the shared Helix intelligence contract. It requires
+fleet-specific factual claims to come from tool results or context supplied in
+the current run, while preserving the output format requested by each feature.
+Helix calls out missing, stale, sparse, or conflicting evidence instead of
+filling gaps from model priors. It provides concise rationale, not hidden
+chain-of-thought.
+
+The shared streaming UI retains a privacy-safe execution trail: tool name,
+running/succeeded/unavailable status, successful source count, and terminal
+token usage. Tool arguments and raw result payloads are deliberately excluded
+from this shared metadata because they can contain locations, VINs, or other
+fleet details.
+
+Helix Chat can discover safe vehicle summaries and use all twelve core
+read-only fleet tools: vehicle state and location, battery status, drives and
+drive detail, charging sessions and charge detail, active and recent alerts,
+geofences, and period efficiency. It can chain these sources for cross-domain
+analysis. Questions about TeslaSync itself use the chatbot-scoped application
+knowledge retriever and cite only sources returned by retrieval.
+
 ## Tools (function calling)
 
 Features marked `NeedsTools=true` can invoke functions on the server. The tool
@@ -199,12 +225,16 @@ registry lives at `internal/ai/tools/`:
 - Multiple tool calls per assistant turn are supported (OpenAI, Azure, and
   Anthropic all allow it). Every call is round-tripped through the
   conversation history so the next turn sees the result.
+- Provider-specific streaming fragments are assembled into complete,
+  schema-valid tool calls before execution. Partial JSON never reaches a tool.
 
 ## Streaming
 
 Features marked `NeedsStream=true` deliver tokens through SSE via the
-provider's streaming endpoint. The shared streaming layer lives at
-`internal/ai/stream/`.
+provider's streaming endpoint. Deltas are forwarded as they arrive rather than
+materializing a complete response and replaying it as one chunk. A stream that
+closes without a terminal frame is reported as incomplete. The shared
+streaming layer lives at `internal/ai/stream/`.
 
 ## Audit, usage, cost
 

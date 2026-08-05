@@ -40,10 +40,22 @@ import { ChatWelcome } from './ChatWelcome'
 // Declared order of getChatSuggestions() — the rendered chip order is
 // deterministic, so index-based assertions below are stable.
 const SUGGESTIONS = [
-  { key: 'chatbot.suggestion.fleetYesterday', text: 'What did my fleet do yesterday?' },
-  { key: 'chatbot.suggestion.chargingCost30d', text: 'Charging cost last 30 days' },
-  { key: 'chatbot.suggestion.socDropping', text: 'Why is my SoC dropping faster this week?' },
-  { key: 'chatbot.suggestion.efficientDrive', text: 'Show me the most efficient drive this month' },
+  {
+    key: 'chatbot.suggestion.readiness',
+    text: 'Give me a fleet readiness briefing using battery, alerts, and recent charging.',
+  },
+  {
+    key: 'chatbot.suggestion.attention',
+    text: 'Which vehicle needs attention first, and what evidence supports it?',
+  },
+  {
+    key: 'chatbot.suggestion.crossDomain',
+    text: 'Compare recent driving efficiency and charging patterns across my vehicles.',
+  },
+  {
+    key: 'chatbot.suggestion.knowledge',
+    text: 'How do I configure alerts in TeslaSync? Cite the relevant documentation.',
+  },
 ] as const
 
 beforeEach(() => {
@@ -64,12 +76,14 @@ describe('ChatWelcome — hero copy', () => {
 
   it('renders the supporting description as a paragraph wired through i18n', () => {
     render(<ChatWelcome onPick={vi.fn()} />)
-    const desc = screen.getByText('Ask about your vehicles, drives, charging, and more')
+    const desc = screen.getByText(
+      'Investigate live fleet evidence, compare domains, or ask for cited TeslaSync guidance',
+    )
     expect(desc).toBeInTheDocument()
     expect(desc.tagName).toBe('P')
     expect(tSpy).toHaveBeenCalledWith(
       'chatbot.askAbout',
-      'Ask about your vehicles, drives, charging, and more',
+      'Investigate live fleet evidence, compare domains, or ask for cited TeslaSync guidance',
     )
   })
 })
@@ -112,9 +126,15 @@ describe('ChatWelcome — onPick interaction', () => {
   it('forwards the exact chip text to onPick exactly once when clicked', () => {
     const onPick = vi.fn()
     render(<ChatWelcome onPick={onPick} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Charging cost last 30 days' }))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Which vehicle needs attention first, and what evidence supports it?',
+      }),
+    )
     expect(onPick).toHaveBeenCalledTimes(1)
-    expect(onPick).toHaveBeenCalledWith('Charging cost last 30 days')
+    expect(onPick).toHaveBeenCalledWith(
+      'Which vehicle needs attention first, and what evidence supports it?',
+    )
   })
 
   it('does not call onPick on render and forwards successive picks in order', () => {
@@ -122,17 +142,33 @@ describe('ChatWelcome — onPick interaction', () => {
     render(<ChatWelcome onPick={onPick} />)
     expect(onPick).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'What did my fleet do yesterday?' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Show me the most efficient drive this month' }))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Give me a fleet readiness briefing using battery, alerts, and recent charging.',
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'How do I configure alerts in TeslaSync? Cite the relevant documentation.',
+      }),
+    )
 
     expect(onPick).toHaveBeenCalledTimes(2)
-    expect(onPick).toHaveBeenNthCalledWith(1, 'What did my fleet do yesterday?')
-    expect(onPick).toHaveBeenNthCalledWith(2, 'Show me the most efficient drive this month')
+    expect(onPick).toHaveBeenNthCalledWith(
+      1,
+      'Give me a fleet readiness briefing using battery, alerts, and recent charging.',
+    )
+    expect(onPick).toHaveBeenNthCalledWith(
+      2,
+      'How do I configure alerts in TeslaSync? Cite the relevant documentation.',
+    )
   })
 
   it('exposes each chip as a native, focusable button (keyboard operable)', () => {
     render(<ChatWelcome onPick={vi.fn()} />)
-    const first = screen.getByRole('button', { name: 'What did my fleet do yesterday?' })
+    const first = screen.getByRole('button', {
+      name: 'Give me a fleet readiness briefing using battery, alerts, and recent charging.',
+    })
     expect(first.tagName).toBe('BUTTON')
     first.focus()
     expect(first).toHaveFocus()
@@ -144,14 +180,16 @@ describe('ChatWelcome — i18n indirection', () => {
     tSpy.mockImplementation((key: string) => {
       const de: Record<string, string> = {
         'chatbot.howCanIHelp': 'Wie kann Helix dir helfen?',
-        'chatbot.suggestion.fleetYesterday': 'Was hat meine Flotte gestern gemacht?',
+        'chatbot.suggestion.readiness': 'Wie steht es um die Einsatzbereitschaft meiner Flotte?',
       }
       return de[key] ?? key
     })
     render(<ChatWelcome onPick={vi.fn()} />)
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Wie kann Helix dir helfen?')
     expect(
-      screen.getByRole('button', { name: 'Was hat meine Flotte gestern gemacht?' }),
+      screen.getByRole('button', {
+        name: 'Wie steht es um die Einsatzbereitschaft meiner Flotte?',
+      }),
     ).toBeInTheDocument()
   })
 })
