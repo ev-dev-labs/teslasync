@@ -201,6 +201,15 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/redis-signals': ['redis', 'cache', 'signals'],
   '/db-health': ['database', 'db', 'postgres'],
   '/anomaly-detection': ['anomaly', 'outliers', 'analytics', 'detection'],
+  '/diagnostics/root-cause': ['root cause', 'evidence graph', 'hypothesis', 'signal explanation', 'diagnostics'],
+  '/diagnostics/service-evidence': ['service evidence', 'evidence pack', 'integrity', 'service export'],
+  '/dashcam': ['dashcam', 'sentry', 'clips', 'redaction', 'incident reconstruction'],
+  '/energy-orchestrator': ['whole home energy', 'solar', 'powerwall', 'tariff', 'panel limit', 'departure'],
+  '/service-intelligence': ['recall', 'service intelligence', 'tsb', 'firmware', 'symptoms'],
+  '/benchmarks/privacy': ['private benchmarks', 'differential privacy', 'cohort', 'degradation comparison'],
+  '/intelligence-packs': ['intelligence packs', 'marketplace', 'signed analytics', 'sandbox', 'community'],
+  '/resale-vault': ['warranty', 'resale', 'vehicle history', 'signed report', 'selective disclosure'],
+  '/fleet-operations': ['fleet operations', 'drivers', 'reservations', 'cost centers', 'work orders'],
 }
 
 const DEFAULT_PINNED_NAV_PATHS = ['/', '/digital-twin', '/vehicles', '/charging', '/live']
@@ -282,6 +291,8 @@ export const navSections = [
       { to: '/parking', icon: Icons.parking, label: 'Parking Analytics', color: 'text-cyan-400' },
       { to: '/utilization', icon: Icons.efficiency, label: 'Utilization', color: 'text-rose-400' },
       { to: '/time-machine', icon: Icons.history, label: 'Time Machine', color: 'text-indigo-400' },
+      { to: '/fleet-operations', icon: Icons.users, label: 'Fleet Operations', color: 'text-violet-400' },
+      { to: '/resale-vault', icon: Icons.securityCheck, label: 'Warranty & Resale Vault', color: 'text-emerald-400' },
     ],
   },
   {
@@ -360,6 +371,7 @@ export const navSections = [
       { to: '/power-flow', icon: Icons.charging, label: 'Power Flow', color: 'text-orange-400' },
       { to: '/energy-products', icon: Icons.home, label: 'Solar & Powerwall', color: 'text-lime-400' },
       { to: '/energy-ledger', icon: Icons.receipt, label: 'Energy Ledger', color: 'text-emerald-400' },
+      { to: '/energy-orchestrator', icon: Icons.workflow, label: 'Energy Orchestrator', color: 'text-cyan-400' },
     ],
   },
   {
@@ -371,6 +383,8 @@ export const navSections = [
       { to: '/software-updates', icon: Icons.download, label: 'Software Updates', color: 'text-teal-400' },
       { to: '/firmware-impact', icon: Icons.gitCompare, label: 'Firmware Impact', color: 'text-violet-400' },
       { to: '/maintenance', icon: Icons.maintenance, label: 'Maintenance', color: 'text-amber-400' },
+      { to: '/service-intelligence', icon: Icons.stethoscope, label: 'Recall & Service Intelligence', color: 'text-rose-400' },
+      { to: '/diagnostics/service-evidence', icon: Icons.fileJson, label: 'Service Evidence Pack', color: 'text-cyan-400' },
     ],
   },
   {
@@ -397,6 +411,7 @@ export const navSections = [
       { to: '/share-card', icon: Icons.share, label: 'Share Card Studio', color: 'text-pink-400' },
       { to: '/analytics/carbon', icon: Icons.leaf, label: 'Carbon Intelligence', color: 'text-green-400' },
       { to: '/drive-archetypes', icon: Icons.radar, label: 'Drive Archetypes', color: 'text-fuchsia-400' },
+      { to: '/benchmarks/privacy', icon: Icons.securityCheck, label: 'Private Benchmarks', color: 'text-emerald-400' },
     ],
   },
   {
@@ -465,6 +480,7 @@ export const navSections = [
       { to: '/integrations/helix', icon: HelixMark, label: 'Helix', color: 'text-purple-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
       { to: '/gas-price', icon: Icons.fuel, label: 'Gas Prices', color: 'text-orange-400' },
+      { to: '/intelligence-packs', icon: Icons.package, label: 'Intelligence Packs', color: 'text-cyan-400' },
     ],
   },
   {
@@ -482,6 +498,8 @@ export const navSections = [
       { to: '/db-health', icon: Icons.hardDrive, label: 'Database Health', color: 'text-emerald-400' },
       { to: '/anomaly-detection', icon: Icons.scanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
       { to: '/diagnostics/rul', icon: Icons.timer, label: 'Remaining Useful Life', color: 'text-amber-400' },
+      { to: '/diagnostics/root-cause', icon: Icons.network, label: 'Root-Cause Intelligence', color: 'text-cyan-400' },
+      { to: '/dashcam', icon: Icons.show, label: 'Dashcam & Sentry', color: 'text-indigo-400' },
       { to: '/signals', icon: Icons.activity, label: 'Live Signals', color: 'text-neon-cyan', dataTour: 'live-signals-section' },
       { to: '/admin/live-signals', icon: Icons.radioTower, label: 'Live Signal Inspector', color: 'text-cyan-400' },
       { to: '/admin/ingest-xray', icon: Icons.scanSearch, label: 'Ingest X-Ray', color: 'text-sky-400' },

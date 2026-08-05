@@ -261,4 +261,15 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'SignalMutualInformation', load: () => import('../features/telemetry/pages/SignalMutualInformationPage') },
   { name: 'NotificationBurnRate', load: () => import('../features/notifications/pages/NotificationBurnRatePage') },
   { name: 'NotificationLatency', load: () => import('../features/notifications/pages/NotificationLatencyPage') },
+
+  // Differentiated local intelligence and operations
+  { name: 'RootCauseIntelligence', load: () => import('../features/diagnostics/pages/RootCauseIntelligencePage') },
+  { name: 'ServiceEvidencePack', load: () => import('../features/diagnostics/pages/ServiceEvidencePackPage') },
+  { name: 'DashcamIntelligence', load: () => import('../features/dashcam/pages/DashcamIntelligencePage') },
+  { name: 'WholeHomeEnergy', load: () => import('../features/home-energy/pages/WholeHomeEnergyPage') },
+  { name: 'ServiceIntelligence', load: () => import('../features/service-intelligence/pages/ServiceIntelligencePage') },
+  { name: 'PrivacyBenchmarks', load: () => import('../features/benchmarks/pages/PrivacyBenchmarksPage') },
+  { name: 'IntelligencePackMarketplace', load: () => import('../features/intelligence-packs/pages/IntelligencePackMarketplacePage') },
+  { name: 'WarrantyResaleVault', load: () => import('../features/resale-vault/pages/WarrantyResaleVaultPage') },
+  { name: 'FleetOperations', load: () => import('../features/fleet-ops/pages/FleetOperationsPage') },
 ]

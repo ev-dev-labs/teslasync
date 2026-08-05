@@ -1429,7 +1429,9 @@
     "retry": "Retry",
     "outside": "Outside",
     "remove": "Remove",
-    "high": "High"
+    "high": "High",
+    "actions": "Actions",
+    "keep": "Keep reservation"
   },
   "units": {
     "km": "km",
@@ -13507,6 +13509,1186 @@
       "band": "Confidence band",
       "projected": "Projected health",
       "basis": "Basis"
+    }
+  },
+  "benchmarks": {
+    "budget": {
+      "aria": "Differential privacy budget used",
+      "caption": "Epsilon composes across new source versions. Reading or refreshing an existing release costs nothing.",
+      "empty": "Opt in to start privacy accounting.",
+      "headline": "ε {{spent}} of {{budget}}",
+      "remaining": "ε {{value}} remaining",
+      "title": "Privacy budget",
+      "unavailable": "Budget unavailable"
+    },
+    "chart": {
+      "aria": "Performance percentile by private benchmark metric, from zero to one hundred",
+      "charging": "Charging",
+      "degradation": "Degradation",
+      "efficiency": "Efficiency",
+      "empty": "No released percentiles to chart.",
+      "metric": "Metric",
+      "operations": "Operations",
+      "percentile": "Percentile",
+      "subtitle": "Higher bars mean better relative performance",
+      "title": "Noise-adjusted performance percentiles"
+    },
+    "cohort": {
+      "create": "Create release",
+      "eligible": "Eligible",
+      "error": "Could not create release: {{message}}",
+      "minimum": "Release threshold",
+      "minimumValue": "At least {{count}} vehicles",
+      "model": "Model family",
+      "noRelease": "No stable release yet",
+      "noReleaseMessage": "Create a release for the last three completed months. Cohorts below k={{count}} remain suppressed.",
+      "optInMessage": "Opt in before TeslaSync can derive a bounded local contribution.",
+      "optInTitle": "Consent required",
+      "pending": "Not released",
+      "refresh": "Check current source version",
+      "title": "Cohort eligibility",
+      "unknownYear": "Unknown",
+      "year": "Model-year bucket"
+    },
+    "consent": {
+      "acknowledge": "I opt in to bounded aggregate benchmarking and understand that released aggregates cannot be withdrawn.",
+      "action": "Opt in",
+      "active": "Opt-in is active for this vehicle. Refreshes reuse a stable release and do not spend more privacy budget.",
+      "description": "TeslaSync derives bounded summaries locally. Raw trips, locations and VINs are never submitted to this endpoint.",
+      "error": "Could not update benchmark consent: {{message}}",
+      "title": "Private participation"
+    },
+    "controls": {
+      "cancel": "Keep participation",
+      "confirm": "Revoke & delete",
+      "confirmMessage": "Future use stops immediately and clipped contribution rows are deleted. Published noisy cohort releases cannot be withdrawn.",
+      "confirmTitle": "Revoke private benchmarks?",
+      "description": "Revocation stops future participation and deletes clipped contribution rows. Already released DP aggregates and minimal accounting metadata remain.",
+      "error": "Could not revoke participation: {{message}}",
+      "revoke": "Revoke & delete contribution data",
+      "revokeWord": "REVOKE",
+      "title": "Privacy controls",
+      "typed": "Type {{word}} to confirm"
+    },
+    "method": {
+      "clip": "TeslaSync derives session-level aggregates locally and clips every vehicle to documented bounds.",
+      "cohort": "Only coarse model-family and five-year model-year buckets define similarity; precise location is excluded.",
+      "limit": "Differential privacy protects aggregate contributions. It does not make a tiny local fleet representative, comparable, or suitable for causal conclusions.",
+      "noise": "Crypto-secure Laplace noise is applied to fixed histograms before means, ranges and percentiles are calculated.",
+      "stable": "A release ID is reused until the completed source period or cohort membership version changes.",
+      "title": "Methodology & limits"
+    },
+    "metrics": {
+      "charging": "Charging reliability",
+      "degradation": "Battery degradation",
+      "efficiency": "Driving efficiency",
+      "empty": "Metric cards remain unavailable until an eligible private release exists.",
+      "emptyTitle": "No comparison released",
+      "noPercentile": "Percentile unavailable",
+      "operations": "Notification & command reliability",
+      "percentile": "{{value}}th performance percentile",
+      "range": "Private IQR {{low}}–{{high}}",
+      "subtitle": "Ranges and percentiles are noisy estimates, not exact fleet rankings.",
+      "suppressed": "Suppressed below privacy threshold",
+      "title": "Private comparisons"
+    },
+    "noVehicle": "Choose a vehicle before reviewing or changing benchmark consent.",
+    "noVehicleTitle": "Select a vehicle",
+    "subtitle": "Compare bounded local metrics with coarse, opt-in cohorts using differential privacy.",
+    "title": "Privacy-Preserving Benchmarks"
+  },
+  "dashcam": {
+    "catalog": {
+      "delete": "Delete clip",
+      "emptyMessage": "Import Sentry/Dashcam clips above to build a local, searchable catalog.",
+      "emptyTitle": "No clips imported yet",
+      "eventCount": "{{count}} event candidate(s)",
+      "listAria": "Imported clips",
+      "noMatchMessage": "Try clearing the search text or resetting a filter chip.",
+      "noMatchTitle": "No clips match these filters"
+    },
+    "detail": {
+      "emptyMessage": "Choose a clip from the catalog to play it back, redact it, review event evidence, or reconstruct the incident timeline.",
+      "emptyTitle": "No clip selected"
+    },
+    "events": {
+      "atSeconds": "t={{seconds}}s",
+      "emptyMessage": "Import metadata (event.json / folder), run local motion analysis, or connect telemetry in the Reconstruction tab to derive event candidates.",
+      "emptyTitle": "No event candidates yet",
+      "title": "Event evidence",
+      "wholeClip": "whole clip"
+    },
+    "export": {
+      "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",
+      "manifest": "Download incident manifest (JSON)",
+      "still": "Export redacted still (PNG)",
+      "title": "Local export"
+    },
+    "filters": {
+      "all": "All",
+      "ariaLabel": "Clip filters",
+      "camera": "Camera",
+      "eventType": "Event type",
+      "searchPlaceholder": "Search filename or notes…",
+      "source": "Source folder"
+    },
+    "import": {
+      "cta": "Import {{count}} clip(s)",
+      "description": "Clips never leave this browser tab. Files are parsed and stored locally in IndexedDB, along with any redaction masks and notes you add.",
+      "selected": "{{count}} file(s) selected",
+      "sidecarLabel": "event.json (optional)",
+      "title": "Import clips from disk",
+      "videoLabel": "Video file(s)"
+    },
+    "page": {
+      "noPersistence": "Local storage is not persistent in this browser ({{reason}}) — imported clips will be lost when this tab closes.",
+      "subtitle": "Local-only clip catalog, privacy redaction, and telemetry-synchronized incident reconstruction. Nothing leaves this browser.",
+      "title": "Dashcam & Sentry Intelligence",
+      "unknownReason": "unknown reason"
+    },
+    "player": {
+      "motionNotRun": "Motion score not yet computed.",
+      "motionScore": "Sampled-frame pixel-difference score: {{score}} ({{pairs}} frame pairs)",
+      "motionUnavailable": "Motion analysis unavailable: {{reason}}",
+      "pause": "Pause",
+      "play": "Play",
+      "restart": "Restart",
+      "runMotion": "Run local motion analysis"
+    },
+    "reconstruction": {
+      "description": "Filenames carry no timezone. Adjust the assumed camera clock offset below if the reconstruction looks shifted.",
+      "firstLast": "First: {{first}} at t={{firstAt}}s · Last: {{last}} at t={{lastAt}}s",
+      "incidentSequence": "Incident sequence (statistical)",
+      "lookbackNote": "Requesting the last {{hours}}h of telemetry history from now to reach this clip. Older signal data may already have been pruned server-side.",
+      "noIncidents": "No statistically significant telemetry changes were detected in this window.",
+      "noTimestamp": "This clip's filename did not include a parseable capture time, so it cannot be aligned to telemetry history.",
+      "noVehicle": "Select a vehicle above to align this clip with telemetry history.",
+      "offsetLabel": "Assumed camera clock offset from UTC",
+      "offsetValue": "{{n}} min",
+      "outOfRange": "This clip is old enough that server-side telemetry retention may not reach back this far.",
+      "pointCount": "{{count}} sample(s)",
+      "signalPickerLabel": "Telemetry signals to align",
+      "signalPickerPlaceholder": "Search signals…",
+      "title": "Telemetry-synchronized reconstruction",
+      "window": "Window: {{pre}} pre-roll → clip → {{post}} post-roll"
+    },
+    "redaction": {
+      "add": "Add region",
+      "defaultLabel": "Unlabeled region",
+      "description": "Rectangles are stored as normalized coordinates and rendered over playback. Export produces a redacted still frame or a manifest — never a modified video file.",
+      "empty": "No redaction regions defined yet.",
+      "height": "Height",
+      "labelPlaceholder": "Label",
+      "overlayAria": "Privacy redaction masks",
+      "remove": "Remove region",
+      "title": "Privacy redaction masks",
+      "width": "Width"
+    },
+    "tabs": {
+      "ariaLabel": "Clip detail sections",
+      "events": "Events",
+      "export": "Export",
+      "player": "Player",
+      "reconstruction": "Reconstruction",
+      "redaction": "Redaction"
+    }
+  },
+  "fleetOps": {
+    "actions": {
+      "reserve": "New reservation"
+    },
+    "assignments": {
+      "driver": "Driver",
+      "empty": "No driver assignments are scheduled.",
+      "ends": "Ends",
+      "ongoing": "Ongoing",
+      "resource": "Assignments",
+      "starts": "Starts",
+      "title": "Assignment roster",
+      "vehicle": "Vehicle",
+      "edit": "Edit assignment for {{name}}",
+      "delete": "Delete assignment for {{name}}",
+      "add": "Add assignment"
+    },
+    "conflict": {
+      "message": "This vehicle or driver is already committed during that period. Refresh the schedule and choose another time.",
+      "title": "Scheduling conflict"
+    },
+    "costCenters": {
+      "bookings": "Bookings",
+      "empty": "No cost centers have been configured.",
+      "openOrders": "Open orders",
+      "resource": "Cost centers",
+      "title": "Cost-center allocation",
+      "add": "Add cost center",
+      "active": "Active",
+      "inactive": "Inactive",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "maintenanceCost": "Maintenance cost"
+    },
+    "error": {
+      "message": "The operation failed. Review the details and try again.",
+      "title": "Reservation could not be saved"
+    },
+    "forecast": {
+      "aria": "Daily fleet utilization forecast with lower and upper uncertainty bounds",
+      "date": "Date",
+      "expected": "Expected utilization",
+      "fair": "Fair confidence",
+      "good": "Good confidence",
+      "lower": "Lower bound",
+      "quality": "Forecast quality: {{quality}}",
+      "resource": "Utilization forecast",
+      "sparse": "Sparse history",
+      "subtitle": "Expected daily fleet utilization with uncertainty band",
+      "title": "Utilization forecast",
+      "uncertainty": "Uncertainty",
+      "upper": "Upper bound"
+    },
+    "kpi": {
+      "assignedVehicles": "Assigned vehicles",
+      "forecastAverage": "14-day fleet average",
+      "forecastUtilization": "Forecast utilization",
+      "openWorkOrders": "Open work orders",
+      "reservations": "Active reservations"
+    },
+    "policies": {
+      "allowedWindows": "Allowed windows",
+      "disabled": "Disabled",
+      "empty": "No charging policies are configured.",
+      "enabled": "Enabled",
+      "maxPower": "Max power",
+      "policy": "Policy",
+      "priority": "Priority",
+      "resource": "Charging policies",
+      "state": "State",
+      "targetSoc": "Target SoC",
+      "title": "Charging policy matrix",
+      "vehicle": "Vehicle",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "add": "Add policy"
+    },
+    "reservationDialog": {
+      "costCenter": "Cost center",
+      "create": "Create reservation",
+      "driver": "Driver",
+      "ends": "Ends",
+      "name": "Reservation name",
+      "noCostCenter": "No cost center",
+      "periodError": "End time must be after start time.",
+      "required": "Complete all required fields.",
+      "selectVehicle": "Select vehicle",
+      "starts": "Starts",
+      "title": "Create reservation",
+      "unassigned": "Leave unassigned",
+      "vehicle": "Vehicle",
+      "validation": "Enter a name, vehicle, valid period, and a driver assigned for the full reservation.",
+      "editTitle": "Edit reservation",
+      "purpose": "Purpose",
+      "status": "Status"
+    },
+    "reservations": {
+      "driver": "Driver",
+      "empty": "No reservations in this planning window.",
+      "period": "Period",
+      "reservation": "Reservation",
+      "resource": "Reservations",
+      "status": "Status",
+      "title": "Reservation calendar",
+      "vehicle": "Vehicle",
+      "cancelTitle": "Cancel reservation?",
+      "cancelMessage": "Cancel “{{name}}”? Its vehicle and driver time will become available.",
+      "cancelAction": "Cancel reservation",
+      "edit": "Edit {{name}}",
+      "cancelNamed": "Cancel {{name}}",
+      "delete": "Delete {{name}}"
+    },
+    "status": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "confirmed": "Confirmed",
+      "requested": "Requested"
+    },
+    "subtitle": "Coordinate drivers, bookings, charging, costs, maintenance, and capacity.",
+    "title": "Fleet operations",
+    "workOrders": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "critical": "Critical",
+      "dueDate": "Due {{date}}",
+      "dueDistance": "Due at {{distance}}",
+      "empty": "No maintenance work orders are open.",
+      "high": "High",
+      "inProgress": "In progress",
+      "low": "Low",
+      "medium": "Medium",
+      "noDue": "No due threshold",
+      "noneInColumn": "No orders",
+      "open": "Open",
+      "resource": "Work orders",
+      "scheduled": "Scheduled",
+      "title": "Maintenance work-order board",
+      "add": "Add work order",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}"
+    },
+    "assignmentDialog": {
+      "validation": "Choose a driver and vehicle, and enter a valid period. Notes may use up to 500 characters.",
+      "editTitle": "Edit assignment",
+      "createTitle": "Add assignment",
+      "chooseVehicle": "Choose vehicle",
+      "chooseDriver": "Choose driver",
+      "ongoingHint": "Leave blank for an ongoing assignment.",
+      "notes": "Notes"
+    },
+    "delete": {
+      "assignment": "assignment",
+      "reservation": "reservation",
+      "policy": "charging policy",
+      "costCenter": "cost center",
+      "driver": "driver",
+      "workOrder": "work order",
+      "record": "record",
+      "title": "Delete {{resource}}?",
+      "message": "Delete “{{name}}”? This cannot be undone and may be blocked while related records are active."
+    },
+    "policyDialog": {
+      "validation": "Check the vehicle, 1–100% target, power, priority, effective period, and non-overlapping windows.",
+      "editTitle": "Edit charging policy",
+      "createTitle": "Add charging policy",
+      "chooseVehicle": "Choose vehicle",
+      "name": "Policy name",
+      "powerHint": "Optional SI-canonical power limit in watts.",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "noEnd": "Leave blank for no end date.",
+      "windows": "Allowed charging windows",
+      "addWindow": "Add window",
+      "noWindows": "Add at least one local-time window. Overnight windows are supported.",
+      "day": "Day",
+      "windowStart": "Start",
+      "windowEnd": "End",
+      "removeWindow": "Remove charging window"
+    },
+    "costCenterDialog": {
+      "validation": "Code and name are required and must fit their limits.",
+      "editTitle": "Edit cost center",
+      "createTitle": "Add cost center",
+      "code": "Code",
+      "name": "Name",
+      "active": "Available for new fleet activity"
+    },
+    "driverDialog": {
+      "validation": "Name and reference are required and must fit their limits.",
+      "editTitle": "Edit driver",
+      "createTitle": "Add driver",
+      "name": "Display name",
+      "reference": "Non-sensitive reference code",
+      "status": "Status"
+    },
+    "drivers": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "name": "Driver",
+      "reference": "Reference",
+      "status": "Status",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "title": "Fleet drivers",
+      "add": "Add driver",
+      "resource": "Drivers",
+      "empty": "No fleet drivers are configured."
+    },
+    "mutation": {
+      "versionTitle": "Record changed",
+      "conflictTitle": "Conflicting change",
+      "errorTitle": "Change could not be saved",
+      "versionMessage": "Someone updated this {{resource}} after it was loaded. Refresh before trying again.",
+      "conflictMessage": "This {{resource}} conflicts with another active record. Review periods and unique values.",
+      "errorMessage": "The server could not apply this change. Your existing data was not modified.",
+      "refresh": "Refresh data"
+    },
+    "workOrderDialog": {
+      "validation": "Check required fields, non-negative distance/cost, the three-letter currency, and scheduled downtime.",
+      "editTitle": "Edit work order",
+      "createTitle": "Add work order",
+      "chooseVehicle": "Choose vehicle",
+      "costCenter": "Cost center",
+      "noCostCenter": "No cost center",
+      "title": "Title",
+      "status": "Status",
+      "severity": "Severity",
+      "dueDistance": "Due odometer ({{unit}})",
+      "dueAt": "Due at",
+      "scheduledStart": "Downtime starts",
+      "scheduledEnd": "Downtime ends",
+      "costMinor": "Cost (minor units)",
+      "currency": "Currency",
+      "description": "Description"
+    }
+  },
+  "homeEnergy": {
+    "export": {
+      "description": "Download the full recommendation — inputs, per-slot schedule, and scores — as a versioned JSON document. Nothing is sent to any vehicle, Powerwall, or utility.",
+      "download": "Download canonical JSON plan",
+      "title": "Export Plan"
+    },
+    "flow": {
+      "aria": "Multi-series chart of solar generation, household load, vehicle charging, battery, and grid power across the planning horizon",
+      "battery": "Powerwall (+charge/-discharge)",
+      "gridExport": "Grid export (shown negative)",
+      "gridImport": "Grid import",
+      "load": "Household load",
+      "solar": "Solar",
+      "subtitle": "Solar, household load, vehicle charging, battery, and grid — per 15-minute slot",
+      "title": "Energy Flow Schedule",
+      "vehicles": "Vehicle charging"
+    },
+    "heatmap": {
+      "empty": "No plan slots to display yet.",
+      "gridExport": "Grid export %",
+      "gridImport": "Grid import %",
+      "less": "Less",
+      "more": "More",
+      "powerwall": "Powerwall SoC",
+      "tariff": "Import tariff",
+      "title": "Tariff & Constraint Heatmap",
+      "vehicles": "Vehicle charging"
+    },
+    "kpi": {
+      "cost": "Projected Cost",
+      "costHint": "over the planning horizon",
+      "feasible": "Plan is feasible",
+      "infeasible": "Constraints violated",
+      "overall": "Overall Score",
+      "peakImport": "Peak Grid Import",
+      "peakImportHint": "highest single-slot draw",
+      "selfConsumption": "Self-Consumption",
+      "selfConsumptionHint": "solar used on-site",
+      "unmetEnergy": "Unmet Energy",
+      "unmetEnergyHint": "never fabricated as delivered",
+      "vehiclesReady": "Vehicles Ready",
+      "vehiclesReadyHint": "meet their target by deadline"
+    },
+    "page": {
+      "subtitle": "A local, deterministic recommendation across vehicles, solar, battery, and tariffs — never an autonomous command",
+      "title": "Whole-Home Energy Orchestrator"
+    },
+    "powerwall": {
+      "aria": "Powerwall state of charge over time, with reserve floor reference line",
+      "none": "No home battery is modeled in this scenario. Enable it under Scenario & Assumptions.",
+      "reserveLabel": "Reserve floor",
+      "soc": "State of charge",
+      "subtitle": "Projected state of charge, with the backup reserve floor",
+      "title": "Powerwall Trajectory"
+    },
+    "quality": {
+      "confidence": "{{pct}}% confidence from {{count}} history sample(s)",
+      "high": "High",
+      "load": "Household load forecast",
+      "low": "Low",
+      "medium": "Medium",
+      "noAutonomy": "This plan is a recommendation only. TeslaSync never issues a command to a vehicle, Powerwall, or utility as a result of it.",
+      "none": "No history",
+      "provenanceAssumed": "Assumed (user-editable): tariff rates, grid/panel import-export limits, Powerwall specification, and per-vehicle target SoC, capacity, charge power, and departure time. TeslaSync has no endpoint that reports these as measured fact.",
+      "provenanceNoSite": "Measured: current vehicle state of charge only — no Tesla energy site was found on this account.",
+      "provenanceSite": "Measured: current vehicle SoC and solar/load history from {{site}}.",
+      "solar": "Solar forecast",
+      "title": "Assumptions & Forecast Quality",
+      "unnamedSite": "your Tesla energy site"
+    },
+    "readiness": {
+      "delivered": "Delivered {{delivered}} of {{needed}} needed",
+      "departureSlot": "Departure slot #{{slot}}",
+      "empty": "No vehicles are part of this plan.",
+      "noDeadline": "Opportunistic (no deadline)",
+      "notReady": "Not ready",
+      "ofTarget": "of {{target}}%",
+      "ready": "Ready",
+      "ringAria": "{{name}} projected state of charge",
+      "title": "Per-Vehicle Readiness",
+      "unmet": "Unmet: {{amount}}"
+    },
+    "scenario": {
+      "commitBaseline": "Save as stability baseline",
+      "exportPrice": "Export price",
+      "gridGroup": "Grid / Panel Limits (editable assumption)",
+      "horizonGroup": "Planning Horizon",
+      "horizonHours": "Horizon",
+      "hoursValue": "{{n}}h",
+      "hourValue": "{{n}}:00",
+      "importOffPeak": "Off-peak import price",
+      "importPeak": "Peak import price",
+      "maxExport": "Max grid export",
+      "maxImport": "Max grid import",
+      "peakEnd": "Peak window end (UTC hour)",
+      "peakStart": "Peak window start (UTC hour)",
+      "powerwallEnabled": "Present",
+      "powerwallGroup": "Home Battery (editable assumption)",
+      "presetBalanced": "Balanced",
+      "presetCost": "Cost-first",
+      "presetCustom": "Custom (saved)",
+      "presetGreen": "Self-consumption-first",
+      "presetPeak": "Peak-shaving-first",
+      "pwCapacity": "Usable capacity",
+      "pwChargePower": "Max charge power",
+      "pwDischargePower": "Max discharge power",
+      "pwReserve": "Backup reserve floor",
+      "refreshNow": "Recompute from now",
+      "reset": "Reset to defaults",
+      "tariffGroup": "Tariff (editable assumption)",
+      "title": "Scenario & Assumptions",
+      "weightPreset": "Optimization priority"
+    },
+    "vehicle": {
+      "capacity": "Usable pack capacity",
+      "currentSoc": "Current SoC (measured): {{pct}}%",
+      "departureHour": "Departure hour (UTC)",
+      "empty": "No vehicles found on this account to orchestrate.",
+      "hasDeadline": "Has departure deadline",
+      "maxPower": "Max charge power",
+      "priority": "Charging priority",
+      "priorityHigh": "High",
+      "priorityLow": "Low",
+      "priorityMedium": "Medium",
+      "targetSoc": "Target SoC by departure",
+      "title": "Vehicle Assumptions"
+    },
+    "violation": {
+      "unknownVehicle": "A vehicle"
+    },
+    "violations": {
+      "clean": "This plan satisfies every hard constraint modeled.",
+      "errorsCount": "{{count}} error(s)",
+      "none": "No violations",
+      "title": "Constraint Violations",
+      "warningsCount": "{{count}} warning(s)"
+    }
+  },
+  "intelPacks": {
+    "audit": {
+      "colAction": "Action",
+      "colDetail": "Detail",
+      "colPack": "Pack",
+      "colWhen": "When",
+      "empty": "No actions have been recorded yet."
+    },
+    "capabilities": {
+      "denied": "Denied",
+      "granted": "Granted",
+      "none": "This pack requests no capabilities."
+    },
+    "catalog": {
+      "anonymousPublisher": "Anonymous",
+      "byPublisher": "by {{publisher}} · v{{version}}",
+      "capabilityCount": "{{count}} capabilities",
+      "empty": "No catalog entries are bundled with this build.",
+      "install": "View & install",
+      "installed": "Installed",
+      "installedOutdated": "Installed (outdated)",
+      "intro": "A small, curated, locally-bundled catalog — nothing here is ever fetched from a network. Each entry demonstrates a distinct trust state: signed & recognized, unsigned draft, and a deliberately tampered demo.",
+      "upgradeAvailable": "Update available → v{{version}}",
+      "upToDate": "Up to date (v{{version}})"
+    },
+    "compat": {
+      "compatible": "Compatible",
+      "incompatible": "Incompatible"
+    },
+    "confirm": {
+      "install": "Install",
+      "installMessage": "Signature verified for \"{{name}}\" v{{version}}. Installing grants it exactly the capabilities listed: {{caps}}. Remember: a valid signature proves key possession, not that this publisher’s intentions are trustworthy.",
+      "installTitle": "Install pack?",
+      "trustAndInstall": "Trust & install",
+      "typePhrase": "Type \"{{phrase}}\" to confirm",
+      "uninstallMessage": "This removes \"{{name}}\" and its version history from this device. This cannot be undone.",
+      "uninstallTitle": "Uninstall pack?",
+      "unsignedMessage": "\"{{name}}\" has NO signature. TeslaSync cannot verify who created it or whether it has been altered. Only trust unsigned packs you personally authored or fully understand. This decision is recorded locally and can be reversed by uninstalling.",
+      "unsignedTitle": "Trust this unsigned pack? (local development only)",
+      "upgrade": "Upgrade",
+      "upgradeTitle": "Upgrade pack?"
+    },
+    "detail": {
+      "blockedBody": "Signature/content verification failed or this platform cannot perform it. Installing a pack in this state is never allowed.",
+      "blockedTitle": "This pack cannot be installed",
+      "capabilities": "Requested capabilities",
+      "coefficientsCount": "{{count}} bounded coefficients",
+      "contents": "Manifest contents",
+      "dashboardsCount": "{{count}} dashboard layouts",
+      "formulasCount": "{{count}} analytics formulas",
+      "installAction": "Install",
+      "markBlocked": "Record as blocked",
+      "publisher": "Publisher",
+      "recommendationsCount": "{{count}} automation recommendations (suggestions only — never auto-applied)",
+      "trustAndInstall": "Trust as local-development pack…",
+      "upgradeTo": "Upgrade to v{{version}}"
+    },
+    "export": {
+      "download": "Export",
+      "empty": "No installed packs to export yet.",
+      "title": "Export an installed pack"
+    },
+    "fingerprint": {
+      "claimMismatch": "The manifest’s self-claimed publisher fingerprint does not match the fingerprint recomputed from the actual signing key. Treat this as suspicious.",
+      "copy": "Copy fingerprint",
+      "none": "No signing key (unsigned)",
+      "recognized": "Recognized: {{name}}",
+      "unrecognized": "Not in local recognized-publisher list"
+    },
+    "import": {
+      "chooseFile": "Choose file…",
+      "description": "Import re-runs the full parser, structural limits, expression-safety checks, and signature verification — nothing is trusted just because it came from a file.",
+      "errorTitle": "Import rejected",
+      "parse": "Parse pasted JSON",
+      "pasteLabel": "Or paste envelope JSON",
+      "readError": "Could not read the selected file.",
+      "sourceNote": "Imported manually — re-parsed and re-verified through the exact same pipeline as the bundled catalog.",
+      "title": "Import a manifest",
+      "unknownError": "Could not parse this file."
+    },
+    "installed": {
+      "colEnabled": "Enabled",
+      "colName": "Pack",
+      "colVerification": "Verification",
+      "empty": "No packs are installed yet. Install one from the Catalog tab.",
+      "grantedCapabilities": "Capability grant on record",
+      "none": "none recorded",
+      "noTrustDecision": "No trust decision on record",
+      "rollback": "Rollback",
+      "toggleEnabled": "Enable {{name}}",
+      "trustDecisionKind": "Trust decision: {{decision}}",
+      "uninstall": "Uninstall",
+      "upgradeAvailable": "v{{version}} available — see Catalog",
+      "upgradeHint": "Open the Catalog tab to review and upgrade",
+      "versionHistoryCount": "{{count}} previous version(s) retained for rollback"
+    },
+    "page": {
+      "subtitle": "Signed, sandboxed, local-first analytics packs — declarative data only, never executable code, never a network request.",
+      "title": "Intelligence-Pack Marketplace"
+    },
+    "sandbox": {
+      "average": "avg {{value}}{{unit}}",
+      "deniedFields": "Fields evaluated as 0 (capability denied): {{fields}}",
+      "formulaMissing": "Referenced formula not found.",
+      "intro": "Runs entirely offline against bundled synthetic sample data with strict execution/row/output budgets. Safe to preview even unsigned or unverified packs.",
+      "noDashboards": "This pack declares no dashboard layouts.",
+      "noData": "No output rows.",
+      "noEntries": "No packs available to preview.",
+      "runStats": "{{rows}} sample rows · {{steps}} evaluation steps · {{ms}}ms{{truncated}}",
+      "selectPack": "Pack to preview",
+      "selectToPreview": "Select a pack to run its sandbox preview.",
+      "truncatedSuffix": " · truncated by budget",
+      "usingFullGrant": "Preview mode: simulating full requested-capability grant (not installed)",
+      "usingInstalledGrant": "Using installed capability grant"
+    },
+    "security": {
+      "browserNote": "Ed25519 in Web Crypto requires a secure context (HTTPS or localhost) and a modern browser (roughly Chrome/Edge 137+, Firefox 130+, Safari 17+ — exact floors vary by OS). Older or locked-down browsers cannot install signed packs; this is by design, not a bug.",
+      "capabilitiesIntro": "There is no field for a \"write\", \"command\", or \"network\" capability anywhere in the schema — requesting one is structurally impossible, not merely denied.",
+      "capabilitiesTitle": "The complete capability allowlist",
+      "g1": "No code execution: never eval, new Function, dynamic import(), or a same-origin iframe. Formulas are interpreted as a closed AST vocabulary, not run as code.",
+      "g2": "No network requests originate from pack content. Sandbox preview data is a fixed, bundled synthetic dataset compiled into this build.",
+      "g3": "Signature verification is cryptographic (SHA-256 + Ed25519 via Web Crypto), never a hand-rolled or heuristic check.",
+      "g4": "No silent weak fallback: if Web Crypto or Ed25519 is unavailable, installation of a signed pack fails explicitly rather than degrading.",
+      "g5": "Structural resource ceilings on the raw JSON (size, depth, node count, string/array lengths, per-formula AST node count and depth).",
+      "g6": "Runtime execution budgets bound every sandbox run: a step ceiling, a wall-clock deadline, and row/output-point caps.",
+      "g7": "Deny-by-default capabilities: the allowlist itself is closed (parse-time reject for anything else), and each capability additionally requires your explicit install-time grant.",
+      "g8": "A valid signature proves key possession and content integrity — nothing about the publisher’s trustworthiness.",
+      "g9": "Local-first persistence: installed packs, trust decisions, and the audit log live in IndexedDB (or a documented localStorage fallback) — never a server round-trip.",
+      "guaranteesTitle": "Guarantees",
+      "limitsTitle": "Resource ceilings & budgets in this build",
+      "maxBytes": "Max envelope size",
+      "maxDepth": "Max JSON depth",
+      "maxExprDepth": "Max AST depth per formula",
+      "maxExprNodes": "Max AST nodes per formula",
+      "maxNodes": "Max JSON node count",
+      "ng1": "Signature verification does NOT vouch for a publisher’s intentions, competence, or good faith. Anyone can generate a keypair and sign anything with it.",
+      "ng2": "Canonicalization is a documented, internally-consistent subset of RFC 8785 (JCS) — not a certified, byte-for-byte-interoperable implementation with arbitrary third-party tooling.",
+      "ng3": "Unsigned packs are unverified by definition. They can be previewed but cannot be enabled without the explicit, clearly-labeled local-development trust flow — a convenience for experimentation, not a security boundary.",
+      "ng4": "The sandbox proves computational safety, not real-world analytical correctness. A formula can look reasonable against sample data and still be a poor model of real behavior.",
+      "ng5": "Automation recommendations never execute anything. They are plain strings a human reviews and manually recreates in the Automation Builder.",
+      "ng6": "Ed25519 support in Web Crypto is a newer browser feature than SHA-256. Older or locked-down browsers, or any non-secure-context origin, cannot install signed packs by design.",
+      "ng7": "The IndexedDB → localStorage storage fallback is about persistence reliability only; it has no bearing on cryptographic verification.",
+      "ng8": "Multi-table writes (e.g. install + audit log append) are not cross-table transactional — each table is written atomically on its own.",
+      "nonGuaranteesTitle": "Explicit non-guarantees",
+      "sandboxDuration": "Max sandbox wall-clock time",
+      "sandboxRows": "Max sandbox sample rows",
+      "sandboxSteps": "Max sandbox evaluation steps"
+    },
+    "tabs": {
+      "ariaLabel": "Intelligence-Pack Marketplace sections",
+      "audit": "Audit Log",
+      "catalog": "Catalog",
+      "importExport": "Import / Export",
+      "installed": "Installed",
+      "sandbox": "Sandbox Preview",
+      "security": "Security & Methodology"
+    },
+    "trust": {
+      "distinctionNote": "A valid signature proves the publisher possesses the signing key and that the content has not changed since signing. It does not prove the publisher’s intentions are trustworthy — that judgement is always yours."
+    },
+    "verify": {
+      "checking": "Checking signature…",
+      "cryptoUnavailable": "Web Crypto unavailable",
+      "digestMismatch": "Content altered — digest mismatch",
+      "ed25519Unsupported": "Ed25519 unsupported",
+      "error": "Verification failed",
+      "invalid": "Signature invalid — do not trust",
+      "platformUnsupported": "Verification unavailable on this browser",
+      "unknown": "Not verified",
+      "unsigned": "Unsigned — preview only",
+      "validRecognized": "Signature valid · recognized publisher",
+      "validUnrecognized": "Signature valid · unrecognized publisher"
+    }
+  },
+  "resaleVault": {
+    "audit": {
+      "emptyDescription": "Generate a key or sign a report to start the local audit trail.",
+      "emptyTitle": "No activity yet",
+      "loading": "Loading audit log…",
+      "refresh": "Refresh",
+      "subtitle": "A local, chronological record of key and report activity in this browser. Never embedded in a signed report or sent anywhere.",
+      "title": "Audit Trail"
+    },
+    "battery": {
+      "avgChargeLimit": "Average charge limit",
+      "capacity": "Current capacity",
+      "cold": "Cold",
+      "cycles": "Equivalent full cycles",
+      "empty": "No battery passport evidence in this report.",
+      "fastChargeRatio": "Fast-charge ratio",
+      "hot": "Hot",
+      "nominal": "Nominal",
+      "originalCapacity": "Original capacity",
+      "provenance": "Passport provenance hash",
+      "recommendations": "Recommendations",
+      "soh": "State of health",
+      "thermal": "Thermal exposure",
+      "title": "Battery Health"
+    },
+    "disclosure": {
+      "exactTimestamps": "Use exact timestamps",
+      "exactTimestampsHint": "Off by default — dates are truncated to the day.",
+      "exactTimestampsWarning": "Exact timestamps can make this report easier to correlate with other data sources. Consider day precision instead.",
+      "hardExclusions": "Always excluded, regardless of profile: {{list}}. These are never offered as a choice.",
+      "profileGroup": "Disclosure profile",
+      "sections": "Evidence sections",
+      "sectionsCustomHint": "Check every section this report should include.",
+      "sectionsFixedHint": "Fixed by the selected profile. Switch to Custom to edit individually.",
+      "subtitle": "Choose what this report includes. Nothing is shared until you export or copy it — this only changes what would be assembled.",
+      "title": "Disclosure Profile",
+      "vinHint": "Excluded by default. Even a masked VIN narrows down the vehicle.",
+      "vinLabel": "VIN disclosure",
+      "vinWarning": "Disclosing the VIN (even masked) is identifying information. Only include it if the recipient specifically needs it."
+    },
+    "evidence": {
+      "scopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure Profile tab to control what actually leaves your browser."
+    },
+    "export": {
+      "digest": "SHA-256 digest",
+      "download": "Download JSON",
+      "keyId": "Key ID",
+      "keyPersisted": "Signing key persisted",
+      "keyRevoked": "Signed with a revoked key",
+      "keySessionOnly": "Signing key session-only",
+      "sign": "Sign report",
+      "signedAt": "Signed at",
+      "subtitle": "Signing computes a SHA-256 digest of the report above and produces an ECDSA signature over it using your active local key.",
+      "title": "Export Signed Report"
+    },
+    "import": {
+      "badJson": "This file is not valid JSON.",
+      "badShape": "This file does not look like a signed vault report (missing report/digest/signature fields).",
+      "chooseFile": "Choose report file",
+      "digestMatches": "Digest matches",
+      "digestMismatch": "Digest mismatch",
+      "empty": "No report imported yet in this session.",
+      "invalid": "Some checks failed",
+      "keyId": "Key ID",
+      "knownKey": "Signed with a key known to this browser",
+      "knownRevoked": "Signed with a locally-known, revoked key",
+      "reportId": "Report ID",
+      "sigInvalid": "Signature invalid",
+      "sigValid": "Signature valid",
+      "subtitle": "Load a signed report JSON file (from this browser or another one) to independently check its digest and signature.",
+      "title": "Import & Verify a Report",
+      "valid": "All checks passed",
+      "verifying": "Verifying…"
+    },
+    "incidents": {
+      "acknowledged": "Acknowledged",
+      "count": "Events observed",
+      "earliest": "Earliest event",
+      "empty": "No security incident evidence in this report.",
+      "latest": "Latest event",
+      "title": "Security Incidents"
+    },
+    "intro": {
+      "body": "Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).",
+      "title": "Local-first, selectively disclosed"
+    },
+    "inventory": {
+      "dataFound": "Data found",
+      "excluded": "Excluded by profile",
+      "included": "Included",
+      "loading": "Loading…",
+      "noData": "No data",
+      "partialError": "One or more evidence sources failed to load. Affected sections are shown as unavailable rather than guessed.",
+      "subtitle": "What data is available for this vehicle, and whether the current disclosure profile would include it.",
+      "title": "Evidence Inventory"
+    },
+    "keys": {
+      "active": "Active",
+      "activeKey": "Active key",
+      "confirmRevoke": "Confirm revoke",
+      "created": "Created",
+      "empty": "No signing keys yet in this browser.",
+      "generate": "Generate new key",
+      "loading": "Loading key registry…",
+      "none": "none — generate one to sign reports",
+      "persisted": "Persisted (survives reload)",
+      "revoke": "Revoke",
+      "revoked": "Revoked",
+      "revokedAt": "Revoked at",
+      "rotate": "Rotate active key",
+      "rotatedFrom": "Rotated from",
+      "sessionOnly": "Session-only (lost on reload)",
+      "title": "Signature & Key Management"
+    },
+    "maintenance": {
+      "categories": "Categories",
+      "empty": "No maintenance or service evidence in this report.",
+      "recordCount": "Service records",
+      "records": "Service records",
+      "scheduledCount": "Scheduled items",
+      "scopeNote": "Maintenance data is read from an account-wide endpoint, not filtered per vehicle. If this account has more than one vehicle, some entries may not belong to this one.",
+      "title": "Maintenance & Service"
+    },
+    "page": {
+      "subtitle": "Build a selectively-disclosed, cryptographically signed vehicle-history report — entirely in this browser.",
+      "title": "Warranty & Resale Vault"
+    },
+    "preview": {
+      "coarsened": "Coarsened ({{count}})",
+      "empty": "Build a report to see exactly what would be included, excluded, and warned about.",
+      "hardExcluded": "Always excluded ({{count}})",
+      "includedWithWarning": "Included with warning",
+      "limitations": "Limitations",
+      "noneExcluded": "Every evidence section is included in this profile.",
+      "sectionExcluded": "Excluded by profile ({{count}})",
+      "timeBounds": "Evidence window: {{earliest}} → {{latest}} ({{precision}} precision).",
+      "title": "Privacy Preview"
+    },
+    "software": {
+      "count": "Updates observed",
+      "empty": "No software update evidence in this report.",
+      "latest": "Latest installed version",
+      "title": "Software Updates"
+    },
+    "tabs": {
+      "ariaLabel": "Warranty & Resale Vault sections",
+      "audit": "Audit Trail",
+      "disclosure": "Disclosure Profile",
+      "evidence": "Evidence",
+      "import": "Import & Verify",
+      "preview": "Preview & Sign"
+    },
+    "usage": {
+      "charging": "Charging",
+      "co2": "CO2 saved",
+      "cost": "Total cost",
+      "distance": "Total distance",
+      "drives": "Drives observed",
+      "driving": "Driving",
+      "duration": "Total duration",
+      "efficiency": "Avg. efficiency",
+      "empty": "No driving or charging history evidence in this report.",
+      "energyAdded": "Total energy added",
+      "fastCharge": "Fast-charge sessions",
+      "peakPower": "Avg. peak power",
+      "regen": "Regen ratio",
+      "scopeNote": "Reflects an observed window of recent records, not a guaranteed complete lifetime history.",
+      "score": "Driving score",
+      "sessions": "Sessions observed",
+      "title": "Driving & Charging History"
+    },
+    "vin": {
+      "excluded": "Excluded (recommended)",
+      "full": "Full VIN",
+      "masked": "Masked (prefix + last 4)"
+    },
+    "warranty": {
+      "empty": "No warranty evidence in this report.",
+      "fetchedAt": "Fetched at",
+      "scopeNote": "Warranty details are fetched at the Tesla account level, not scoped to an individual vehicle.",
+      "title": "Warranty"
+    }
+  },
+  "rootCauseIntelligence": {
+    "graph": {
+      "concurrent": "concurrent",
+      "consideredOnly": "considered, no corroborating shift · {{n}} samples",
+      "focalNodeLabel": "Focal",
+      "focalTag": "(focal signal)",
+      "lags": "lags",
+      "leads": "leads",
+      "noRelated": "No related signals were identified in the catalog for this focal signal.",
+      "pickOne": "Choose a signal above to see its evidence graph.",
+      "relationSamples": "{{relation}} · {{n}} samples",
+      "title": "Evidence Graph"
+    },
+    "hypotheses": {
+      "effect": "Effect size {{n}}",
+      "helpLabel": "More info about how hypotheses are ranked",
+      "lag": "Lag {{n}} min",
+      "noFocalShift": "No robust shift was found for this signal in the analyzed window, so no hypotheses are offered.",
+      "noneCorroborate": "This signal shows a shift, but no other analyzed signal showed a comparable, well-timed shift.",
+      "pickOne": "Choose a signal above to generate ranked hypotheses.",
+      "samples": "{{n}} samples",
+      "score": "Rank score {{n}}",
+      "title": "Ranked Hypotheses"
+    },
+    "interpretation": {
+      "coverage": "{{withEvidence}} of {{considered}} related signals corroborated · {{samples}} focal samples",
+      "limitationsTitle": "Limitations",
+      "overallScore": "Overall evidence score {{n}} of 1.00",
+      "pickOne": "Choose a signal above to see how its evidence should be read.",
+      "title": "Interpretation & Limits"
+    },
+    "kpis": {
+      "effect": "Focal Shift Effect Size",
+      "effectNone": "No robust shift found",
+      "effectSubtitle": "{{before}} → {{after}}",
+      "hypotheses": "Ranked Hypotheses",
+      "hypothesesSubtitle": "{{n}} candidates considered",
+      "quality": "Evidence Quality",
+      "qualitySubtitle": "Overall score {{n}} of 1.00",
+      "samples": "Focal Samples",
+      "samplesSubtitle": "{{h}}h window",
+      "sectionLabel": "Root-cause evidence metrics"
+    },
+    "picker": {
+      "focalHint": "The signal whose shift you want evidence-ranked hypotheses for.",
+      "focalLabel": "Focal signal",
+      "focalPlaceholder": "Choose a signal",
+      "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
+      "title": "Choose a Signal to Investigate",
+      "windowLabel": "Analysis window"
+    },
+    "quality": {
+      "insufficient": "Insufficient evidence",
+      "moderate": "Moderate evidence",
+      "strong": "Strong evidence",
+      "weak": "Weak evidence"
+    },
+    "subtitle": "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift — a statistical association, never a diagnosis or proof of causation.",
+    "timeline": {
+      "ariaDescription": "{{count}} series shown; the focal signal is {{focal}}",
+      "ariaLabel": "Line chart of the focal signal and its related candidates, each independently normalized to a 0 to 1 scale",
+      "col": {
+        "time": "Time"
+      },
+      "notEnough": "Not enough history yet for this signal and window.",
+      "pickOne": "Choose a signal above to see its normalized timeline.",
+      "subtitle": "Each series independently scaled to 0–1 for visual comparison; ranking uses the raw robust statistics, not this view",
+      "title": "Normalized Signal Timeline"
+    },
+    "title": "Root-Cause Intelligence"
+  },
+  "serviceEvidencePack": {
+    "errors": {
+      "cryptoUnavailable": "This session cannot compute a SHA-256 integrity digest — Web Crypto requires a secure context (HTTPS or localhost). Try again over HTTPS.",
+      "generic": "Something went wrong while generating the pack. Please try again."
+    },
+    "integrity": {
+      "copyDigest": "Copy digest",
+      "explain": "Generate the pack to compute a SHA-256 integrity digest over its canonical JSON. The digest lets anyone verify offline that the exported file has not been altered since it was generated — it is not a digital signature.",
+      "export": "Download JSON",
+      "generate": "Generate pack",
+      "meta": "Schema {{version}} · generated {{when}}",
+      "needsEvidence": "Choose a signal whose analysis clears the minimum evidence bar before generating a pack.",
+      "title": "Integrity & Export"
+    },
+    "inventory": {
+      "col": {
+        "domains": "Domains",
+        "evidence": "Corroborating",
+        "role": "Role",
+        "samples": "Samples",
+        "signal": "Signal"
+      },
+      "evidenceNo": "No",
+      "evidenceYes": "Yes",
+      "noSignals": "No signal evidence is available for this window yet.",
+      "pickOne": "Choose a signal above to build the evidence inventory.",
+      "roleCandidate": "Candidate",
+      "roleFocal": "Focal",
+      "title": "Evidence Inventory"
+    },
+    "kpis": {
+      "hypotheses": "Ranked Hypotheses",
+      "hypothesesSubtitle": "Evidence-ranked, not diagnostic",
+      "qualitySubtitle": "Drives the export gate below",
+      "sectionLabel": "Service evidence pack metrics",
+      "signals": "Signals in Pack",
+      "signalsSubtitle": "{{n}} corroborating",
+      "status": "Pack Status",
+      "statusDigest": "Digest {{digest}}…",
+      "statusGenerated": "Generated",
+      "statusNotReady": "Not ready",
+      "statusNotReadyHint": "Needs stronger evidence first",
+      "statusReady": "Ready",
+      "statusReadyHint": "Generate below to compute its digest"
+    },
+    "preview": {
+      "empty": "Generate a pack above to preview the exact JSON document that will be downloaded.",
+      "title": "Pack Preview"
+    },
+    "privacy": {
+      "excludedTitle": "Never included",
+      "includedTitle": "Included",
+      "notes": "This pack references the vehicle by its numeric id and display name only. Signal evidence is limited to statistical summaries — raw telemetry payloads are never embedded.",
+      "title": "Privacy Manifest"
+    },
+    "subtitle": "A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.",
+    "title": "Service Evidence Pack"
+  },
+  "serviceIntelligence": {
+    "actions": {
+      "evidencePack": "Open Service Evidence Pack"
+    },
+    "applicability": {
+      "potential": "Potentially applicable",
+      "review": "Needs review",
+      "unlikely": "Unlikely"
+    },
+    "common": {
+      "selectMessage": "Choose a vehicle to compare its decoded build and firmware context with safety records.",
+      "selectTitle": "Select a vehicle",
+      "unavailable": "Unavailable"
+    },
+    "communications": {
+      "docs": "Review NHTSA datasets",
+      "empty": "The configured provider returned no manufacturer communications for this vehicle context.",
+      "emptyTitle": "No communications found",
+      "select": "Choose a vehicle to check the configured manufacturer-communications provider.",
+      "source": "Open source document",
+      "title": "Manufacturer communications & TSBs",
+      "unavailable": "NHTSA does not currently document a stable vehicle-scoped JSON API for manufacturer communications. TeslaSync does not fabricate records.",
+      "unavailableTitle": "Typed TSB source unavailable",
+      "staleTitle": "TSB index needs refresh",
+      "stale": "Showing matches from the last successful official NHTSA bulk import.",
+      "typeUnknown": "Communication type unavailable",
+      "hypothesis": "Applicability hypothesis",
+      "symptoms": "{{count}} observed symptom match"
+    },
+    "completion": {
+      "unknown": "Completion unknown"
+    },
+    "confidence": {
+      "value": "{{value}}% confidence"
+    },
+    "disclaimer": {
+      "body": "Campaign applicability, completion, and symptom overlap require confirmation by NHTSA, Tesla, or a qualified technician.",
+      "title": "Service hypotheses, not findings of fault"
+    },
+    "evidence": {
+      "count": "{{count}} items",
+      "empty": "No normalized service-intelligence evidence is available yet.",
+      "emptyTitle": "No evidence bundle",
+      "inventory": "Evidence inventory",
+      "select": "Choose a vehicle to assemble service-ready evidence references.",
+      "source": "Open evidence source",
+      "title": "Evidence & limitations"
+    },
+    "limitations": {
+      "title": "Interpretation limits"
+    },
+    "page": {
+      "subtitle": "Compare decoded vehicle context and observed signal patterns with NHTSA safety records.",
+      "title": "Recall & Service Intelligence"
+    },
+    "recall": {
+      "consequence": "Potential consequence",
+      "empty": "NHTSA returned no recall campaigns for the decoded make, model, and model year.",
+      "emptyTitle": "No recall candidates",
+      "hypothesis": "Applicability hypothesis",
+      "ota": "OTA remedy",
+      "parkIt": "NHTSA park-it warning",
+      "parkOutside": "NHTSA park-outside warning",
+      "remedy": "Published remedy",
+      "reported": "Reported",
+      "select": "Choose a vehicle to load its model-year recall candidates.",
+      "source": "Open NHTSA campaign",
+      "title": "Recall inventory"
+    },
+    "sources": {
+      "available": "Available",
+      "cache": "Normalized cache",
+      "checked": "Checked",
+      "empty": "Source freshness metadata is not available yet.",
+      "emptyTitle": "No source metadata",
+      "fetched": "Fetched",
+      "open": "Open source",
+      "records": "{{count}} records",
+      "select": "Choose a vehicle to inspect source availability and retrieval times.",
+      "title": "Source freshness",
+      "unavailable": "Unavailable",
+      "stale": "Stale"
+    },
+    "summary": {
+      "applicable": "Potentially applicable",
+      "communications": "Communications",
+      "recallCandidates": "Recall candidates",
+      "symptoms": "Symptom matches"
+    },
+    "symptoms": {
+      "campaign": "Campaign {{id}}",
+      "empty": "No recent statistical signal deviations overlapped the returned safety campaign components.",
+      "emptyTitle": "No overlapping symptoms",
+      "score": "{{value}}% match",
+      "select": "Choose a vehicle to compare recent signal deviations with campaign components.",
+      "title": "Ranked observed symptoms"
+    },
+    "vehicle": {
+      "assemblyPlant": "Assembly plant",
+      "empty": "Decoded build and firmware context is not available yet.",
+      "emptyTitle": "No vehicle context",
+      "fallback": "Vehicle {{id}}",
+      "firmware": "Observed firmware",
+      "model": "Vehicle",
+      "modelYear": "Model year",
+      "select": "Select vehicle",
+      "title": "Vehicle match context"
+    },
+    "catalog": {
+      "title": "Official NHTSA TSB catalog",
+      "subtitle": "Administrator controls for the normalized manufacturer-communications index.",
+      "fresh": "Fresh",
+      "stale": "Stale",
+      "unavailable": "Not imported",
+      "records": "Normalized Tesla records",
+      "coverage": "Official period artifacts",
+      "lastSuccess": "Last successful import",
+      "never": "Never",
+      "emptyTitle": "TSB catalog is not populated",
+      "empty": "Import the official periods below to enable manufacturer-communication matching.",
+      "staleTitle": "Catalog refresh recommended",
+      "staleBody": "The latest successful import is more than eight days old. Existing normalized matches remain available.",
+      "failedTitle": "Latest import failed",
+      "failedBody": "The last successful catalog remains active. Retry the affected official period.",
+      "importError": "Catalog import failed",
+      "importErrorBody": "Retry the official artifact import.",
+      "notModified": "Already current",
+      "rowsRead": "{{count}} source rows",
+      "rowsImported": "{{count}} Tesla rows",
+      "rowsRejected": "{{count}} rejected",
+      "periodsTitle": "Official artifact coverage",
+      "periodsBody": "Imports are idempotent, restricted to official NHTSA URLs, and may request step-up authentication.",
+      "latest": "Latest successful",
+      "importPeriodLabel": "Import official NHTSA artifact for {{period}}",
+      "refreshPeriod": "Refresh",
+      "importPeriod": "Import"
     }
   }
 }

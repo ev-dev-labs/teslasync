@@ -49,6 +49,7 @@ import {
   useSignalStats,
   useSignalHistory,
   useSignalAnalysisHistory,
+  useSignalEvidenceBundle,
   useSignalLog,
   useSignalDiff,
   useSignalSnapshot,
@@ -164,6 +165,13 @@ describe('telemetryKeys', () => {
       1,
       'Speed',
       24,
+      10_000,
+    ])
+    expect(telemetryKeys.signalEvidenceHistory(1, 'Speed', 72, 10_000)).toEqual([
+      'signal-evidence-history',
+      1,
+      'Speed',
+      72,
       10_000,
     ])
     expect(telemetryKeys.signalLog(1, 'Speed', 24, 2)).toEqual(['signal-log', 1, 'Speed', 24, 2])
@@ -342,6 +350,82 @@ describe('useSignalAnalysisHistory', () => {
     renderHook(() => useSignalAnalysisHistory(1, '', 24), { wrapper: makeWrapper() })
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(mockedRequest).not.toHaveBeenCalled()
+  })
+})
+
+describe('useSignalEvidenceBundle', () => {
+  it('loads unique encoded signals with independent cancellation contexts', async () => {
+    mockedRequest.mockImplementation(async (url: string) => ({
+      vehicleId: 1,
+      signal: url.includes('Battery') ? 'Battery Level' : 'Speed',
+      from: '',
+      to: '',
+      count: 0,
+      data: [],
+    }))
+    const { result } = renderHook(
+      () => useSignalEvidenceBundle(1, ['Battery Level', 'Speed', 'Battery Level', ''], 72),
+      { wrapper: makeWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+    expect(mockedRequest).toHaveBeenCalledTimes(2)
+    expect(mockedRequest.mock.calls.map((call) => call[0])).toEqual([
+      '/signals/1/Battery%20Level/history?hours=72&limit=10000',
+      '/signals/1/Speed/history?hours=72&limit=10000',
+    ])
+    expect(mockedRequest.mock.calls.every((call) => call[1]?.signal instanceof AbortSignal)).toBe(true)
+    expect(result.current.data.map((series) => series.signal)).toEqual(['Battery Level', 'Speed'])
+    expect(result.current.isError).toBe(false)
+  })
+
+  it('caps the bundle at eight signals and bounds hours and limit', async () => {
+    mockedRequest.mockResolvedValue({ vehicleId: 1, signal: '', from: '', to: '', count: 0, data: [] })
+    const names = Array.from({ length: 10 }, (_, index) => `Signal ${index}`)
+    const { result } = renderHook(
+      () => useSignalEvidenceBundle(1, names, 99_999, 99_999),
+      { wrapper: makeWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+    expect(mockedRequest).toHaveBeenCalledTimes(8)
+    expect(mockedRequest.mock.calls[0]?.[0]).toBe(
+      '/signals/1/Signal%200/history?hours=8760&limit=10000',
+    )
+    expect(mockedRequest.mock.calls[7]?.[0]).toBe(
+      '/signals/1/Signal%207/history?hours=8760&limit=10000',
+    )
+  })
+
+  it('surfaces a partial request failure instead of returning success-shaped data', async () => {
+    mockedRequest
+      .mockResolvedValueOnce({ vehicleId: 1, signal: 'Speed', from: '', to: '', count: 0, data: [] })
+      .mockRejectedValueOnce(new Error('history unavailable'))
+    const { result } = renderHook(
+      () => useSignalEvidenceBundle(1, ['Speed', 'Power'], 24),
+      { wrapper: makeWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+    expect(result.current.isError).toBe(true)
+    expect(result.current.error?.message).toBe('history unavailable')
+    expect(result.current.data).toHaveLength(1)
+  })
+
+  it('does not fetch when the vehicle or signal set is unavailable', async () => {
+    const first = renderHook(
+      () => useSignalEvidenceBundle(0, ['Speed'], 24),
+      { wrapper: makeWrapper() },
+    )
+    const second = renderHook(
+      () => useSignalEvidenceBundle(1, [], 24),
+      { wrapper: makeWrapper() },
+    )
+
+    await tick()
+    expect(mockedRequest).not.toHaveBeenCalled()
+    expect(first.result.current.isLoading).toBe(false)
+    expect(second.result.current.data).toEqual([])
   })
 })
 

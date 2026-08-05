@@ -34,6 +34,26 @@ slos:
     owner: platform
     tags: [http, latency]
 
+  - name: service_intelligence_availability
+    description: "Recall and service-intelligence requests must return without a server or upstream-gateway failure."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, upstream, safety]
+
+  - name: service_intelligence_catalog_admin_availability
+    description: "NHTSA communications catalog status and import operations must complete without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, upstream, safety, admin]
+
   - name: telemetry_freshness
     description: "Vehicle telemetry must arrive within 60 seconds. Good = vehicles with lag <= 60s."
     sli:
@@ -93,3 +113,63 @@ slos:
     window: 28d
     owner: frontend
     tags: [frontend, web-vitals]
+
+  - name: fleet_ops_availability
+    description: "Small-fleet operations endpoints must return non-5xx responses."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: fleet
+    tags: [http, fleet-ops]
+
+  - name: fleet_ops_forecast_latency
+    description: "Small-fleet utilization forecasts must complete within one second."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: fleet
+    tags: [http, fleet-ops, latency]
+
+  - name: benchmark_privacy_status_availability
+    description: "Privacy benchmark status reads must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: analytics
+    tags: [http, privacy, benchmarks]
+
+  - name: benchmark_consent_availability
+    description: "Privacy benchmark consent and revocation writes must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: analytics
+    tags: [http, privacy, benchmarks]
+
+  - name: benchmark_release_read_availability
+    description: "Paginated privacy benchmark release reads must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: analytics
+    tags: [http, privacy, benchmarks]
+
+  - name: benchmark_release_creation_availability
+    description: "Stable differential-privacy release creation must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: analytics
+    tags: [http, privacy, benchmarks]

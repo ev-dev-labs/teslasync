@@ -91,6 +91,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterydegradation"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterypassport"
+	apibenchmark "github.com/ev-dev-labs/teslasync/internal/api/benchmark"
 	apicarbon "github.com/ev-dev-labs/teslasync/internal/api/carbon"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
@@ -119,6 +120,7 @@ import (
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apiexports "github.com/ev-dev-labs/teslasync/internal/api/exports"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
+	apifleetops "github.com/ev-dev-labs/teslasync/internal/api/fleetops"
 	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
@@ -154,6 +156,7 @@ import (
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
 	apisegments "github.com/ev-dev-labs/teslasync/internal/api/segments"
+	apiserviceintelligence "github.com/ev-dev-labs/teslasync/internal/api/serviceintelligence"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisettings "github.com/ev-dev-labs/teslasync/internal/api/settings"
 	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
@@ -224,6 +227,7 @@ import (
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
+	"github.com/ev-dev-labs/teslasync/internal/integrations/nhtsa"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -852,6 +856,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	costForecastHandler := costforecast.NewHandler(db)
 	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
 	anomalyHandler := apianomaly.NewHandler(db)
+	benchmarkHandler := apibenchmark.NewBenchmarkHandler(db, cfg.Auth.ForwardAuthHeader)
+	fleetOpsHandler := apifleetops.NewHandler(db)
+	nhtsaClient := nhtsa.NewClient(nhtsa.Config{})
+	communicationsProvider := apiserviceintelligence.NewDatabaseManufacturerCommunicationsProvider(db)
+	communicationsBulkClient := nhtsa.NewCommunicationsBulkClient(nhtsa.CommunicationsBulkConfig{})
+	communicationsImportService := apiserviceintelligence.NewCommunicationsImportService(
+		db,
+		communicationsBulkClient,
+	)
+	communicationsAdminHandler := apiserviceintelligence.NewCommunicationsAdminHandler(
+		communicationsImportService,
+	)
+	serviceIntelligenceHandler := apiserviceintelligence.NewServiceIntelligenceHandler(
+		apiserviceintelligence.NewService(
+			apiserviceintelligence.NewDatabaseVehicleReader(db),
+			apiserviceintelligence.NewSignalObservationReader(db),
+			nhtsaClient,
+			communicationsProvider,
+		),
+	)
 	// register the anomaly-explanations
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_anomaly_context` for the
@@ -3394,6 +3418,37 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/anomalies", anomalyHandler.GetAnomalies)
 		r.Get("/analytics/lifetime", lifetimeHandler.GetLifetimeStats)
 		r.Get("/analytics/year-review", yearReviewHandler.GetYearReview)
+
+		// Privacy-preserving cohort benchmarks require a stable authenticated
+		// subject so consent and epsilon accounting cannot be reset in open mode.
+		r.Route("/benchmarks", func(r chi.Router) {
+			r.Use(tsauth.RequireSubjectMiddleware(cfg.Auth.ForwardAuthHeader))
+			r.Get("/privacy", benchmarkHandler.Status)
+			r.With(httprate.LimitByIP(10, time.Minute)).
+				Put("/privacy/consent", benchmarkHandler.Consent)
+			r.With(httprate.LimitByIP(10, time.Minute)).
+				Delete("/privacy/consent", benchmarkHandler.Revoke)
+			r.Get("/releases", benchmarkHandler.ListReleases)
+			r.With(httprate.LimitByIP(10, time.Minute)).
+				Post("/releases", benchmarkHandler.CreateRelease)
+		})
+
+		// Fleet operations owns its write throttles. Service-intelligence
+		// vehicle reads use the local normalized NHTSA catalog; bulk catalog
+		// imports require sudo and carry their own strict write throttle.
+		apifleetops.MountRoutes(r, fleetOpsHandler)
+		apiserviceintelligence.Mount(r, serviceIntelligenceHandler)
+		r.Get(
+			"/admin/service-intelligence/communications/status",
+			communicationsAdminHandler.Status,
+		)
+		r.With(
+			httprate.LimitByIP(10, time.Hour),
+			RequireSudo(sudoStore, sudoCfg),
+		).Post(
+			"/admin/service-intelligence/communications/import",
+			communicationsAdminHandler.Import,
+		)
 
 		// Charge Planner (smart scheduling)
 		r.Route("/charge-planner", func(r chi.Router) {

@@ -185,6 +185,17 @@ const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspecto
 // Diagnostics
 const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
 const RemainingUsefulLife = lazy(() => import('./features/diagnostics/pages/RemainingUsefulLifePage'))
+const RootCauseIntelligence = lazy(() => import('./features/diagnostics/pages/RootCauseIntelligencePage'))
+const ServiceEvidencePack = lazy(() => import('./features/diagnostics/pages/ServiceEvidencePackPage'))
+
+// Differentiated local intelligence and operations
+const DashcamIntelligence = lazy(() => import('./features/dashcam/pages/DashcamIntelligencePage'))
+const WholeHomeEnergy = lazy(() => import('./features/home-energy/pages/WholeHomeEnergyPage'))
+const ServiceIntelligence = lazy(() => import('./features/service-intelligence/pages/ServiceIntelligencePage'))
+const PrivacyBenchmarks = lazy(() => import('./features/benchmarks/pages/PrivacyBenchmarksPage'))
+const IntelligencePackMarketplace = lazy(() => import('./features/intelligence-packs/pages/IntelligencePackMarketplacePage'))
+const WarrantyResaleVault = lazy(() => import('./features/resale-vault/pages/WarrantyResaleVaultPage'))
+const FleetOperations = lazy(() => import('./features/fleet-ops/pages/FleetOperationsPage'))
 
 // Admin & DevTools
 const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
@@ -577,6 +588,15 @@ export default function App() {
             and the toggle is enabled). */}
         <Route path="analytics/anomalies" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
         <Route path="diagnostics/rul" element={<SafeRoute name="RemainingUsefulLife"><RemainingUsefulLife /></SafeRoute>} />
+        <Route path="diagnostics/root-cause" element={<SafeRoute name="RootCauseIntelligence"><RootCauseIntelligence /></SafeRoute>} />
+        <Route path="diagnostics/service-evidence" element={<SafeRoute name="ServiceEvidencePack"><ServiceEvidencePack /></SafeRoute>} />
+        <Route path="dashcam" element={<SafeRoute name="DashcamIntelligence"><DashcamIntelligence /></SafeRoute>} />
+        <Route path="energy-orchestrator" element={<SafeRoute name="WholeHomeEnergy"><WholeHomeEnergy /></SafeRoute>} />
+        <Route path="service-intelligence" element={<SafeRoute name="ServiceIntelligence"><ServiceIntelligence /></SafeRoute>} />
+        <Route path="benchmarks/privacy" element={<SafeRoute name="PrivacyBenchmarks"><PrivacyBenchmarks /></SafeRoute>} />
+        <Route path="intelligence-packs" element={<SafeRoute name="IntelligencePackMarketplace"><IntelligencePackMarketplace /></SafeRoute>} />
+        <Route path="resale-vault" element={<SafeRoute name="WarrantyResaleVault"><WarrantyResaleVault /></SafeRoute>} />
+        <Route path="fleet-operations" element={<SafeRoute name="FleetOperations"><FleetOperations /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature
