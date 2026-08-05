@@ -291,6 +291,7 @@ export const navSections = [
       { to: '/route-efficiency', icon: Icons.navigationAlt, label: 'Route Efficiency', color: 'text-emerald-400' },
       { to: '/drive-dna', icon: Icons.palette, label: 'Drive DNA', color: 'text-fuchsia-400' },
       { to: '/what-if', icon: Icons.preferences, label: 'What-If Simulator', color: 'text-cyan-400' },
+      { to: '/departure-forecast', icon: Icons.calendarClock, label: 'Departure Forecast', color: 'text-sky-400' },
       { to: '/segments', icon: Icons.flag, label: 'Ghost Racing', color: 'text-cyan-400' },
     ],
   },
@@ -302,6 +303,7 @@ export const navSections = [
       { to: '/charging-curve', icon: Icons.trendUp, label: 'Charging Curve', color: 'text-lime-400' },
       { to: '/charging-heatmap', icon: Icons.calendarClock, label: 'Charging Patterns', color: 'text-cyan-400' },
       { to: '/smart-charge', icon: Icons.calendarClock, label: 'Smart Charging', color: 'text-cyan-400' },
+      { to: '/charger-health', icon: Icons.activity, label: 'Charger Health', color: 'text-rose-400' },
       { to: '/powershare', icon: Icons.charging, label: 'Powershare', color: 'text-amber-400' },
     ],
   },
@@ -315,6 +317,7 @@ export const navSections = [
       { to: '/vampire-drain', icon: Icons.moon, label: 'Vampire Drain', color: 'text-indigo-400' },
       { to: '/sleep-efficiency', icon: Icons.bedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
       { to: '/battery-passport', icon: Icons.securityCheck, label: 'Battery Passport', color: 'text-emerald-400' },
+      { to: '/pack-capacity', icon: Icons.batteryFull, label: 'Pack Capacity', color: 'text-lime-400' },
       { to: '/range-buffer', icon: Icons.battery, label: 'Range Buffer', color: 'text-teal-400' },
       { to: '/battery-care', icon: Icons.heartPulse, label: 'Battery Care', color: 'text-emerald-400' },
       { to: '/charge-advisor', icon: Icons.batteryCharging, label: 'Charge Advisor', color: 'text-cyan-400' },
@@ -327,6 +330,7 @@ export const navSections = [
       { to: '/energy-flow', icon: Icons.arrowRightLeft, label: 'Energy Flow', color: 'text-yellow-400' },
       { to: '/power-flow', icon: Icons.charging, label: 'Power Flow', color: 'text-orange-400' },
       { to: '/energy-products', icon: Icons.home, label: 'Solar & Powerwall', color: 'text-lime-400' },
+      { to: '/energy-ledger', icon: Icons.receipt, label: 'Energy Ledger', color: 'text-emerald-400' },
     ],
   },
   {
@@ -335,6 +339,7 @@ export const navSections = [
       { to: '/tire-pressure', icon: Icons.tirePressure, label: 'Tire Pressure', color: 'text-orange-400' },
       { to: '/drivetrain-health', icon: Icons.cpu, label: 'Drivetrain Health', color: 'text-red-400' },
       { to: '/software-updates', icon: Icons.download, label: 'Software Updates', color: 'text-teal-400' },
+      { to: '/firmware-impact', icon: Icons.gitCompare, label: 'Firmware Impact', color: 'text-violet-400' },
       { to: '/maintenance', icon: Icons.maintenance, label: 'Maintenance', color: 'text-amber-400' },
     ],
   },
@@ -342,6 +347,7 @@ export const navSections = [
     title: 'Cabin',
     items: [
       { to: '/climate-control', icon: Icons.climate, label: 'Climate Control', color: 'text-sky-400' },
+      { to: '/cabin-thermal', icon: Icons.climateHot, label: 'Cabin Thermal Model', color: 'text-orange-400' },
       { to: '/media-player', icon: Icons.headphones, label: 'Media Player', color: 'text-pink-400' },
     ],
   },
@@ -357,6 +363,7 @@ export const navSections = [
       { to: '/tco', icon: Icons.wallet, label: 'Cost of Ownership', color: 'text-green-400' },
       { to: '/share-card', icon: Icons.share, label: 'Share Card Studio', color: 'text-pink-400' },
       { to: '/analytics/carbon', icon: Icons.leaf, label: 'Carbon Intelligence', color: 'text-green-400' },
+      { to: '/drive-archetypes', icon: Icons.radar, label: 'Drive Archetypes', color: 'text-fuchsia-400' },
     ],
   },
   {
@@ -364,6 +371,7 @@ export const navSections = [
     items: [
       { to: '/commands', icon: Icons.gamepad, label: 'Send Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
       { to: '/command-history', icon: Icons.history, label: 'Command History', color: 'text-violet-400' },
+      { to: '/command-reliability', icon: Icons.securityCheck, label: 'Command Reliability', color: 'text-emerald-400' },
     ],
   },
   {
@@ -383,6 +391,7 @@ export const navSections = [
       { to: '/notifications/webhooks', icon: Icons.cloud, label: 'Webhooks', color: 'text-sky-400' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser Notifications', color: 'text-fuchsia-400' },
       { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet Hours', color: 'text-indigo-400' },
+      { to: '/alert-fatigue', icon: Icons.trendDown, label: 'Alert Fatigue', color: 'text-amber-400' },
     ],
   },
   {
@@ -452,6 +461,7 @@ export const navSections = [
       { to: '/admin/gdpr-exports', icon: Icons.hardDriveDownload, label: 'GDPR Exports', color: 'text-emerald-400' },
       { to: '/state-debugger', icon: Icons.bug, label: 'State Debugger', color: 'text-purple-400' },
       { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT Inspector', color: 'text-blue-400' },
+      { to: '/signal-correlation', icon: Icons.network, label: 'Signal Correlation', color: 'text-cyan-400' },
       { to: '/redis-signals', icon: Icons.server, label: 'Redis Signals', color: 'text-orange-400' },
       { to: '/admin/telemetry/coverage', icon: Icons.cloud, label: 'Telemetry Coverage', color: 'text-sky-400' },
       { to: '/api-logs', icon: Icons.fileText, label: 'API Logs', color: 'text-amber-400' },

@@ -30,6 +30,24 @@ export interface ChargingSession {
   /** Session duration in minutes (display-derived; present on the activity shape). */
   duration_min: number;
   cost?: number | null;
+
+  /*
+   * Columns the Go model emits with `omitempty` (internal/models/charging).
+   * They are absent from the trimmed dashboard-activity shape, so every one is
+   * optional and must be coalesced before use.
+   */
+  /** SoC gained over the session, percentage points. */
+  delta_soc_pct?: number | null;
+  start_odometer_m?: number | null;
+  end_odometer_m?: number | null;
+  start_lat?: number | null;
+  start_lng?: number | null;
+  /** Reverse-geocoded label for the charge location, when known. */
+  start_place?: string | null;
+  /** Mean charger power in watts (W, SI canonical). */
+  avg_power_w?: number | null;
+  cost_currency?: string | null;
+  cable_type?: string | null;
 }
 
 /* ── Cost Forecast ────────────────────────────────────────── */

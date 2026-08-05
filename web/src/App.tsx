@@ -54,6 +54,20 @@ const ProjectedRange = lazy(() => import('./features/battery/pages/ProjectedRang
 const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficiencyPage'))
 const BatteryPassport = lazy(() => import('./features/battery/pages/BatteryPassportPage'))
 
+// Phase-51 — advanced analytics family. Each of these is backed by a pure,
+// unit-tested `features/{domain}/lib/*.ts` module rather than a new endpoint;
+// they derive novel signal from data the API already returns.
+const PackCapacity = lazy(() => import('./features/battery/pages/PackCapacityPage'))
+const EnergyLedger = lazy(() => import('./features/battery/pages/EnergyLedgerPage'))
+const DepartureForecast = lazy(() => import('./features/driving/pages/DepartureForecastPage'))
+const DriveArchetypes = lazy(() => import('./features/analytics/pages/DriveArchetypesPage'))
+const FirmwareImpact = lazy(() => import('./features/analytics/pages/FirmwareImpactPage'))
+const CabinThermal = lazy(() => import('./features/vehicle-systems/pages/CabinThermalPage'))
+const ChargerHealth = lazy(() => import('./features/charging/pages/ChargerHealthPage'))
+const AlertFatigue = lazy(() => import('./features/notifications/pages/AlertFatiguePage'))
+const CommandReliability = lazy(() => import('./features/system/pages/CommandReliabilityPage'))
+const SignalCorrelation = lazy(() => import('./features/telemetry/pages/SignalCorrelationPage'))
+
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
 const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
@@ -608,6 +622,17 @@ export default function App() {
                 <Route path="segments" element={<SafeRoute name="Segments"><Segments /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="battery-passport" element={<SafeRoute name="BatteryPassport"><BatteryPassport /></SafeRoute>} />
+        {/* Phase-51 — advanced analytics family. */}
+        <Route path="pack-capacity" element={<SafeRoute name="PackCapacity"><PackCapacity /></SafeRoute>} />
+        <Route path="energy-ledger" element={<SafeRoute name="EnergyLedger"><EnergyLedger /></SafeRoute>} />
+        <Route path="departure-forecast" element={<SafeRoute name="DepartureForecast"><DepartureForecast /></SafeRoute>} />
+        <Route path="drive-archetypes" element={<SafeRoute name="DriveArchetypes"><DriveArchetypes /></SafeRoute>} />
+        <Route path="firmware-impact" element={<SafeRoute name="FirmwareImpact"><FirmwareImpact /></SafeRoute>} />
+        <Route path="cabin-thermal" element={<SafeRoute name="CabinThermal"><CabinThermal /></SafeRoute>} />
+        <Route path="charger-health" element={<SafeRoute name="ChargerHealth"><ChargerHealth /></SafeRoute>} />
+        <Route path="alert-fatigue" element={<SafeRoute name="AlertFatigue"><AlertFatigue /></SafeRoute>} />
+        <Route path="command-reliability" element={<SafeRoute name="CommandReliability"><CommandReliability /></SafeRoute>} />
+        <Route path="signal-correlation" element={<SafeRoute name="SignalCorrelation"><SignalCorrelation /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
             against frontend route `/analytics/tco`; the canonical app path
