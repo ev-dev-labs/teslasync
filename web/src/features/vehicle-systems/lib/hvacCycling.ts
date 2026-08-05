@@ -7,10 +7,12 @@
  * Durations are returned in SI seconds.
  */
 
+import { resolveHvacActive } from '@/lib/climateState';
+
 export interface HvacSignalSample {
   timestamp?: string | null;
   created_at?: string | null;
-  hvacPower?: string | null;
+  hvacPower?: boolean | null;
   isAcOn?: boolean | null;
   fanSpeed?: number | null;
   hvacFanStatus?: number | null;
@@ -52,8 +54,6 @@ export interface HvacCyclingOptions {
 
 const DEFAULT_MAX_GAP_S = 30 * 60;
 const DEFAULT_SHORT_CYCLE_S = 10 * 60;
-const ON_WORDS = new Set(['on', 'true', 'active', 'enabled', 'heat', 'heating', 'cool', 'cooling']);
-const OFF_WORDS = new Set(['off', 'false', 'inactive', 'disabled', 'idle']);
 
 function finiteSignal(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -65,20 +65,11 @@ function finiteSignal(value: number | null | undefined): number | null {
  */
 export function normalizeHvacOn(sample: HvacSignalSample): boolean | null {
   const states: boolean[] = [];
-  if (typeof sample.isAcOn === 'boolean') states.push(sample.isAcOn);
+  const primaryState = resolveHvacActive(sample.hvacPower, sample.isAcOn);
+  if (primaryState != null) states.push(primaryState);
 
   for (const fan of [finiteSignal(sample.fanSpeed), finiteSignal(sample.hvacFanStatus)]) {
     if (fan != null) states.push(fan > 0);
-  }
-
-  const power = sample.hvacPower?.trim().toLowerCase();
-  if (power) {
-    if (ON_WORDS.has(power)) states.push(true);
-    else if (OFF_WORDS.has(power)) states.push(false);
-    else {
-      const numeric = Number(power);
-      if (Number.isFinite(numeric)) states.push(numeric > 0);
-    }
   }
 
   if (states.some(Boolean)) return true;

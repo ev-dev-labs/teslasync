@@ -16,14 +16,13 @@ function sample(minute: number, state: Partial<HvacSignalSample>): HvacSignalSam
 
 describe('normalizeHvacOn', () => {
   it('treats any active compressor or fan signal as on', () => {
-    expect(normalizeHvacOn({ hvacPower: 'Off', fanSpeed: 3 })).toBe(true);
+    expect(normalizeHvacOn({ hvacPower: false, fanSpeed: 3 })).toBe(true);
     expect(normalizeHvacOn({ isAcOn: true, hvacFanStatus: 0 })).toBe(true);
-    expect(normalizeHvacOn({ hvacPower: 'cooling' })).toBe(true);
+    expect(normalizeHvacOn({ hvacPower: true })).toBe(true);
   });
 
   it('recognises explicit off and preserves unknown state', () => {
-    expect(normalizeHvacOn({ hvacPower: 'Off', isAcOn: false, fanSpeed: 0 })).toBe(false);
-    expect(normalizeHvacOn({ hvacPower: 'mystery' })).toBeNull();
+    expect(normalizeHvacOn({ hvacPower: false, isAcOn: false, fanSpeed: 0 })).toBe(false);
     expect(normalizeHvacOn({})).toBeNull();
   });
 });
@@ -31,10 +30,10 @@ describe('normalizeHvacOn', () => {
 describe('summarizeHvacCycling', () => {
   it('run-length segments intervals and computes duration-weighted duty', () => {
     const result = summarizeHvacCycling([
-      sample(0, { hvacPower: 'On' }),
-      sample(5, { hvacPower: 'On' }),
-      sample(10, { hvacPower: 'Off' }),
-      sample(20, { hvacPower: 'Off' }),
+      sample(0, { hvacPower: true }),
+      sample(5, { hvacPower: true }),
+      sample(10, { hvacPower: false }),
+      sample(20, { hvacPower: false }),
       sample(30, { isAcOn: true }),
       sample(35, { isAcOn: false }),
     ]);
@@ -53,11 +52,11 @@ describe('summarizeHvacCycling', () => {
   it('reports short-cycle share over on events only', () => {
     const result = summarizeHvacCycling(
       [
-        sample(0, { hvacPower: 'On' }),
-        sample(5, { hvacPower: 'Off' }),
-        sample(10, { hvacPower: 'On' }),
-        sample(30, { hvacPower: 'Off' }),
-        sample(40, { hvacPower: 'Off' }),
+        sample(0, { hvacPower: true }),
+        sample(5, { hvacPower: false }),
+        sample(10, { hvacPower: true }),
+        sample(30, { hvacPower: false }),
+        sample(40, { hvacPower: false }),
       ],
       { shortCycleThresholdS: 600 },
     );
@@ -68,10 +67,10 @@ describe('summarizeHvacCycling', () => {
   it('does not bridge missing telemetry gaps', () => {
     const result = summarizeHvacCycling(
       [
-        sample(0, { hvacPower: 'On' }),
-        sample(5, { hvacPower: 'On' }),
-        sample(100, { hvacPower: 'On' }),
-        sample(105, { hvacPower: 'Off' }),
+        sample(0, { hvacPower: true }),
+        sample(5, { hvacPower: true }),
+        sample(100, { hvacPower: true }),
+        sample(105, { hvacPower: false }),
       ],
       { maxGapS: 600 },
     );
@@ -81,9 +80,9 @@ describe('summarizeHvacCycling', () => {
 
   it('sorts samples, accepts created_at, and ignores unknown rows', () => {
     const result = summarizeHvacCycling([
-      sample(10, { hvacPower: 'Off' }),
+      sample(10, { hvacPower: false }),
       { created_at: new Date(BASE).toISOString(), fanSpeed: 2 },
-      sample(5, { hvacPower: 'unknown' }),
+      sample(5, {}),
     ]);
     expect(result.analyzedSamples).toBe(2);
     expect(result.eventCount).toBe(1);
@@ -91,8 +90,8 @@ describe('summarizeHvacCycling', () => {
 
   it('allocates observed time into the 24-hour profile', () => {
     const result = summarizeHvacCycling([
-      sample(0, { hvacPower: 'On' }),
-      sample(120, { hvacPower: 'Off' }),
+      sample(0, { hvacPower: true }),
+      sample(120, { hvacPower: false }),
     ], { maxGapS: 3 * 3600 });
     expect(result.hourlyProfile).toHaveLength(24);
     expect(result.hourlyProfile.reduce((sum, bucket) => sum + bucket.observedS, 0)).toBe(7200);

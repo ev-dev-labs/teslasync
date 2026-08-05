@@ -74,7 +74,7 @@ describe('ClimateState camelCase-mirror contract', () => {
     inside_temp: 21.5,
     outside_temp: 9,
     driver_temp_setting: 22,
-    hvac_power: 'On',
+    hvac_power: true,
     is_ac_on: true,
     fan_speed: 3,
     seat_heater_left: 2,
@@ -85,7 +85,7 @@ describe('ClimateState camelCase-mirror contract', () => {
     expectMirror(wired, 'inside_temp', 'insideTemp', 21.5);
     expectMirror(wired, 'outside_temp', 'outsideTemp', 9);
     expectMirror(wired, 'driver_temp_setting', 'driverTempSetting', 22);
-    expectMirror(wired, 'hvac_power', 'hvacPower', 'On');
+    expectMirror(wired, 'hvac_power', 'hvacPower', true);
     expectMirror(wired, 'is_ac_on', 'isAcOn', true);
     expectMirror(wired, 'fan_speed', 'fanSpeed', 3);
     expectMirror(wired, 'seat_heater_left', 'seatHeaterLeft', 2);

@@ -10,7 +10,7 @@ const DEPARTURE = Date.UTC(2026, 6, 1, 8);
 function climate(
   minutesBefore: number,
   insideTemp: number,
-  hvacPower: string | null,
+  hvacPower: boolean | null,
   overrides: Partial<PreconditioningClimateSample> = {},
 ): PreconditioningClimateSample {
   return {
@@ -57,10 +57,10 @@ describe('summarizePreconditioningEffectiveness', () => {
   it('joins only the 45 minutes immediately before a drive', () => {
     const result = summarizePreconditioningEffectiveness(
       [
-        climate(50, 40, 'On'),
-        climate(45, 35, 'Off'),
-        climate(10, 30, 'Off'),
-        climate(-1, 20, 'On'),
+        climate(50, 40, true),
+        climate(45, 35, false),
+        climate(10, 30, false),
+        climate(-1, 20, true),
       ],
       [drive()],
     );
@@ -77,8 +77,8 @@ describe('summarizePreconditioningEffectiveness', () => {
   it('detects observed HVAC activity and averages driver/passenger setpoints', () => {
     const result = summarizePreconditioningEffectiveness(
       [
-        climate(30, 35, 'Off', { driverTempSetting: 20, passengerTempSetting: 22 }),
-        climate(10, 24, 'On', { driverTempSetting: 20, passengerTempSetting: 22 }),
+        climate(30, 35, false, { driverTempSetting: 20, passengerTempSetting: 22 }),
+        climate(10, 24, true, { driverTempSetting: 20, passengerTempSetting: 22 }),
       ],
       [drive()],
     );
@@ -94,22 +94,22 @@ describe('summarizePreconditioningEffectiveness', () => {
 
   it('stratifies hot and cold departures and compares group medians', () => {
     const samples: PreconditioningClimateSample[] = [
-      climate(30, 35, 'Off'),
-      climate(5, 24, 'On'),
+      climate(30, 35, false),
+      climate(5, 24, true),
       {
-        ...climate(30, 5, 'Off'),
+        ...climate(30, 5, false),
         timestamp: new Date(DEPARTURE + 60 * 60_000 - 30 * 60_000).toISOString(),
       },
       {
-        ...climate(5, 18, 'On'),
+        ...climate(5, 18, true),
         timestamp: new Date(DEPARTURE + 60 * 60_000 - 5 * 60_000).toISOString(),
       },
       {
-        ...climate(30, 6, 'Off'),
+        ...climate(30, 6, false),
         timestamp: new Date(DEPARTURE + 2 * 60 * 60_000 - 30 * 60_000).toISOString(),
       },
       {
-        ...climate(5, 7, 'Off'),
+        ...climate(5, 7, false),
         timestamp: new Date(DEPARTURE + 2 * 60 * 60_000 - 5 * 60_000).toISOString(),
       },
     ];
@@ -129,7 +129,7 @@ describe('summarizePreconditioningEffectiveness', () => {
 
   it('does not assign unknown HVAC state to the unconditioned control', () => {
     const result = summarizePreconditioningEffectiveness(
-      [climate(30, 35, null), climate(5, 30, 'mystery')],
+      [climate(30, 35, null), climate(5, 30, null)],
       [drive()],
     );
     expect(result.joinedDepartures).toBe(0);
@@ -137,9 +137,9 @@ describe('summarizePreconditioningEffectiveness', () => {
   });
 
   it('requires at least two samples and a meaningful initial temperature gap', () => {
-    const sparse = summarizePreconditioningEffectiveness([climate(10, 35, 'On')], [drive()]);
+    const sparse = summarizePreconditioningEffectiveness([climate(10, 35, true)], [drive()]);
     const comfortable = summarizePreconditioningEffectiveness(
-      [climate(30, 21.2, 'Off'), climate(5, 21, 'Off')],
+      [climate(30, 21.2, false), climate(5, 21, false)],
       [drive()],
     );
     expect(sparse.joinedDepartures).toBe(0);
@@ -148,7 +148,7 @@ describe('summarizePreconditioningEffectiveness', () => {
 
   it('reports balanced evidence strength without inventing a comparison', () => {
     const none = summarizePreconditioningEffectiveness(
-      [climate(30, 35, 'On'), climate(5, 25, 'On')],
+      [climate(30, 35, true), climate(5, 25, true)],
       [drive()],
     );
     expect(none.overall.evidence).toBe('none');
@@ -161,7 +161,7 @@ describe('summarizePreconditioningEffectiveness', () => {
       drives.push(drive(index + 1, startMs));
       for (const [before, temp] of [[30, 35], [5, index % 2 === 0 ? 23 : 34]] as const) {
         samples.push({
-          ...climate(before, temp, index % 2 === 0 ? 'On' : 'Off'),
+          ...climate(before, temp, index % 2 === 0),
           timestamp: new Date(startMs - before * 60_000).toISOString(),
         });
       }

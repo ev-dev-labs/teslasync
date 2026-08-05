@@ -31,7 +31,7 @@ function soak(opts: {
       insideTemp: ambientC + (startC - ambientC) * Math.exp(-t / tauMin),
       outsideTemp: ambientC,
       isAcOn: hvacOn,
-      hvacPower: hvacOn ? 'On' : 'Off',
+      hvacPower: hvacOn,
     };
   });
 }
@@ -65,9 +65,9 @@ describe('fitSoakEvents', () => {
     expect(rejected).toBe(0);
   });
 
-  it('treats an unknown hvacPower state as running', () => {
+  it('treats canonical hvacPower=true as running without an AC signal', () => {
     const samples = soak({ startMinOffset: 0, startC: 40, ambientC: 20, tauMin: 90, points: 12 })
-      .map((s) => ({ ...s, hvacPower: 'Unknown' }));
+      .map((s) => ({ ...s, isAcOn: false, hvacPower: true }));
     expect(fitSoakEvents(samples).events).toHaveLength(0);
   });
 
@@ -103,7 +103,7 @@ describe('fitSoakEvents', () => {
       insideTemp: 25 + i * 1.5,
       outsideTemp: 20,
       isAcOn: false,
-      hvacPower: 'Off',
+      hvacPower: false,
     }));
     const { events, rejected } = fitSoakEvents(climbing);
     expect(events).toHaveLength(0);

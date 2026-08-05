@@ -23,6 +23,8 @@
  * Pure, React-free and clock-free.
  */
 
+import { resolveHvacActive } from '@/lib/climateState';
+
 /**
  * Minimal structural shape this model needs. Declared locally rather than
  * importing `ClimateState` because the climate history endpoint returns rows
@@ -35,7 +37,7 @@ export interface CabinSample {
   insideTemp?: number | null;
   outsideTemp?: number | null;
   isAcOn?: boolean | null;
-  hvacPower?: string | null;
+  hvacPower?: boolean | null;
 }
 
 /** One clean parked window with a fitted time constant. */
@@ -115,11 +117,13 @@ function normalize(samples: readonly CabinSample[]): NormalizedSample[] {
     if (inside == null || outside == null) continue;
     if (!Number.isFinite(inside) || !Number.isFinite(outside)) continue;
 
-    // `hvacPower` is a free-text state ('On' / 'Off' / null); anything that
-    // isn't explicitly off counts as running, so an ambiguous row can never
-    // contaminate a "HVAC was off" fit.
-    const powerOn = s.hvacPower != null && s.hvacPower.trim().toLowerCase() !== 'off';
-    out.push({ ms, ts, inside, outside, hvacOn: s.isAcOn === true || powerOn });
+    out.push({
+      ms,
+      ts,
+      inside,
+      outside,
+      hvacOn: resolveHvacActive(s.hvacPower, s.isAcOn) === true,
+    });
   }
   out.sort((a, b) => a.ms - b.ms);
   return out;

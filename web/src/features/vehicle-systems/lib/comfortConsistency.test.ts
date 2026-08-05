@@ -16,7 +16,7 @@ function row(
     insideTemp,
     driverTempSetting: 21,
     passengerTempSetting: 21,
-    hvacPower: 'On',
+    hvacPower: true,
     ...overrides,
   };
 }
@@ -38,9 +38,9 @@ describe('summarizeComfortConsistency', () => {
 
   it('excludes HVAC-off and unknown samples from consistency scoring', () => {
     const result = summarizeComfortConsistency([
-      row(0, 40, { hvacPower: 'Off', isAcOn: false, fanSpeed: 0 }),
-      row(5, 22, { hvacPower: 'mystery' }),
-      row(10, 21, { hvacPower: 'On' }),
+      row(0, 40, { hvacPower: false, isAcOn: false, fanSpeed: 0 }),
+      row(5, 22, { hvacPower: null, isAcOn: null, fanSpeed: null }),
+      row(10, 21, { hvacPower: true }),
     ]);
     expect(result.analyzedSamples).toBe(1);
     expect(result.meanAbsDeviationC).toBe(0);
@@ -96,8 +96,8 @@ describe('summarizeComfortConsistency', () => {
 
   it('is null-safe when temperatures, setpoints, or timestamps are absent', () => {
     const result = summarizeComfortConsistency([
-      { timestamp: null, insideTemp: 21, driverTempSetting: 21, hvacPower: 'On' },
-      { timestamp: 'bad', insideTemp: 21, driverTempSetting: 21, hvacPower: 'On' },
+      { timestamp: null, insideTemp: 21, driverTempSetting: 21, hvacPower: true },
+      { timestamp: 'bad', insideTemp: 21, driverTempSetting: 21, hvacPower: true },
       row(0, 21, { insideTemp: null }),
       row(1, 21, { driverTempSetting: null, passengerTempSetting: null }),
     ]);

@@ -184,7 +184,7 @@ function climate(over: Partial<ClimateState> = {}): ClimateState {
     outsideTemp: 15,
     driverTempSetting: 21,
     passengerTempSetting: 20,
-    hvacPower: 'On',
+    hvacPower: true,
     isAcOn: true,
     hvacAutoMode: 'On',
     fanSpeed: 5,

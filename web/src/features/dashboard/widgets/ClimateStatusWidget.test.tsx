@@ -4,22 +4,21 @@
  * The widget renders the latest climate/HVAC reading for the first (or
  * explicitly selected) vehicle inside a WidgetShell: cabin + outside
  * temperature (converted to the user's unit at the render boundary), the HVAC
- * power draw, and two status chips (defrost active / battery heater on). Every
+ * state, and two status chips (defrost active / battery heater on). Every
  * data hook is mocked so the network is never touched, and `useUnits` is
  * stubbed with a deterministic temperature preference so the real
  * `convertTempFromSI` + `fmtInt` display math is exercised end-to-end.
  *
  * Facets covered:
- *   - populated render: both temperatures (°C), HVAC kW, and both chips.
+ *   - populated render: both temperatures (°C), HVAC state, and both chips.
  *   - unit conversion: the same SI Celsius values render in °F when the
  *     preference flips, and the label follows the preference (not the source).
  *   - battery-heater regression (R1): the chip is driven by the `battery_heater`
  *     field the `/climate/latest` handler actually emits (BatteryHeaterOn →
  *     battery_heater), NOT the legacy `battery_heater_on` alias which is always
  *     undefined on this endpoint — so the chip used to be dead code.
- *   - hvac-power regression (R2): `HvacPower` decodes to an enum STRING
- *     ("On"/"Off"/…), so the old `!= null` guard rendered a nonsensical
- *     "0.0 kW"; a finite-number guard now collapses it to the placeholder.
+ *   - hvac-power regression (R2): canonical boolean state renders as On/Off;
+ *     malformed non-boolean payloads collapse to the placeholder.
  *   - chip branches: defrost "Off" and inactive/null heater hide their chips.
  *   - null-safety: missing temps + power collapse to "—" without crashing.
  *   - empty state: the "No climate data" EmptyState (role="status") with the
@@ -78,13 +77,12 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 
 // Mirrors the flat map the climate/latest handler emits (signal → field). The
 // spread lets each test override individual fields, including intentionally
-// wrong-typed values (enum string for power, the legacy alias) to lock in the
-// hardening. Values are SI: temperatures in °C, power already in kW.
+// wrong-typed values to lock in boundary hardening. Temperatures are SI °C.
 function makeClimate(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     inside_temp: 20,
     outside_temp: 10,
-    hvac_power: 2.5,
+    hvac_power: true,
     defrost_mode: 'Normal',
     battery_heater: true,
     ...over,
@@ -112,14 +110,14 @@ beforeEach(() => {
 });
 
 describe('ClimateStatusWidget — rendering', () => {
-  it('renders both temperatures (°C), HVAC power, and both status chips', () => {
+  it('renders both temperatures (°C), HVAC state, and both status chips', () => {
     setup({ climate: makeQuery({ data: makeClimate() }) });
     render(<ClimateStatusWidget size={STANDARD} />);
 
     expect(screen.getByText('Climate')).toBeInTheDocument();
     expect(screen.getByText('20°C')).toBeInTheDocument();
     expect(screen.getByText('10°C')).toBeInTheDocument();
-    expect(screen.getByText('2.5 kW')).toBeInTheDocument();
+    expect(screen.getByText('On')).toBeInTheDocument();
     expect(screen.getByText('Defrost')).toBeInTheDocument();
     expect(screen.getByText('Heater')).toBeInTheDocument();
   });
@@ -168,10 +166,7 @@ describe('ClimateStatusWidget — rendering', () => {
     expect(screen.queryByText('Defrost')).not.toBeInTheDocument();
   });
 
-  it('collapses a non-numeric HVAC power enum to a placeholder instead of "0.0 kW"', () => {
-    // Regression (R2): HvacPower decodes to an enum string. The old `!= null`
-    // guard let "On" flow into fmtNumber → safeNumber("On") = 0 → "0.0 kW".
-    // isFiniteNumber() now rejects it so the row honestly reads "—".
+  it('collapses a non-boolean HVAC payload to a placeholder', () => {
     setup({
       climate: makeQuery({
         data: makeClimate({ inside_temp: 21, outside_temp: 11, hvac_power: 'On' }),
@@ -179,8 +174,6 @@ describe('ClimateStatusWidget — rendering', () => {
     });
     render(<ClimateStatusWidget size={STANDARD} />);
 
-    expect(screen.queryByText('0.0 kW')).not.toBeInTheDocument();
-    expect(screen.queryByText(/kW/)).not.toBeInTheDocument();
     // Only the HVAC row is missing a value; both temps still render.
     expect(screen.getByText('—')).toBeInTheDocument();
   });

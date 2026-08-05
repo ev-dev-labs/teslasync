@@ -380,41 +380,49 @@ func (r *SourceRepository) Sentinel(
 			SELECT
 				COUNT(*)::int AS sample_count,
 				COUNT(*) FILTER (WHERE status IN ('failed', 'timed_out'))::int AS failure_count,
-				COUNT(*) FILTER (WHERE ts >= $3 - INTERVAL '24 hours')::int AS recent_count,
 				COUNT(*) FILTER (
-					WHERE ts >= $3 - INTERVAL '24 hours'
+					WHERE ts >= $3::timestamptz - INTERVAL '24 hours'
+				)::int AS recent_count,
+				COUNT(*) FILTER (
+					WHERE ts >= $3::timestamptz - INTERVAL '24 hours'
 					  AND status IN ('failed', 'timed_out')
 				)::int AS recent_failure_count,
 				COUNT(*) FILTER (
-					WHERE ts < $3 - INTERVAL '24 hours'
+					WHERE ts < $3::timestamptz - INTERVAL '24 hours'
 				)::int AS prior_count,
 				COUNT(*) FILTER (
-					WHERE ts < $3 - INTERVAL '24 hours'
+					WHERE ts < $3::timestamptz - INTERVAL '24 hours'
 					  AND status IN ('failed', 'timed_out')
 				)::int AS prior_failure_count,
 				COUNT(DISTINCT invoked_by) FILTER (
-					WHERE ts >= $3 - INTERVAL '24 hours'
+					WHERE ts >= $3::timestamptz - INTERVAL '24 hours'
 				)::int AS recent_identity_count,
 				COUNT(DISTINCT invoked_by) FILTER (
-					WHERE ts < $3 - INTERVAL '24 hours'
+					WHERE ts < $3::timestamptz - INTERVAL '24 hours'
 				)::int AS prior_identity_count,
 				MAX(ts) AS latest_at
 			FROM command_executions
-			WHERE vehicle_id = $1 AND ts >= $2 AND ts < $3
+			WHERE vehicle_id = $1
+			  AND ts >= $2::timestamptz
+			  AND ts < $3::timestamptz
 		),
 		command_bursts AS (
 			SELECT COALESCE(MAX(command_count), 0)::int AS max_per_minute
 			FROM (
 				SELECT date_trunc('minute', ts), COUNT(*) AS command_count
 				FROM command_executions
-				WHERE vehicle_id = $1 AND ts >= $2 AND ts < $3
+				WHERE vehicle_id = $1
+				  AND ts >= $2::timestamptz
+				  AND ts < $3::timestamptz
 				GROUP BY date_trunc('minute', ts)
 			) grouped
 		),
 		signal_minutes AS (
 			SELECT DISTINCT time_bucket('5 minutes', ts) AS ts
 			FROM signal_log
-			WHERE vehicle_id = $1 AND ts >= $2 AND ts < $3
+			WHERE vehicle_id = $1
+			  AND ts >= $2::timestamptz
+			  AND ts < $3::timestamptz
 		),
 		signal_gaps AS (
 			SELECT

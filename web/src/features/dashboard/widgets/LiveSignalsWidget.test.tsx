@@ -3,7 +3,7 @@
  *
  * The widget aggregates four independent "latest" telemetry snapshots for the
  * first (or explicitly selected) vehicle inside a WidgetShell: motor
- * (torque / stator temp / gear), climate (cabin + outside temp, HVAC power),
+ * (torque / stator temp / gear), climate (cabin + outside temp, HVAC state),
  * tire pressures (FL/FR/RL/RR), and a security summary (lock + sentry chips).
  * Every data hook and the display-boundary `useUnits` bridge are mocked so the
  * network is never touched, while the real `convertTempFromSI` /
@@ -95,13 +95,12 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 // The four snapshot shapes below mirror the flat maps the *_latest handlers
 // emit (signal → field). The spread lets each test override individual fields,
 // including intentionally wrong-typed values (enum strings, Go "<nil>") to lock
-// in the hardening. Numeric values are SI: temps in °C, pressures in kPa, HVAC
-// power already in kW.
+// in the hardening. Numeric values are SI: temps in °C and pressures in kPa.
 function makeMotor(over: Record<string, unknown> = {}): Record<string, unknown> {
   return { di_torque: 245, di_stator_temp: 60, gear: 'D', ...over };
 }
 function makeClimate(over: Record<string, unknown> = {}): Record<string, unknown> {
-  return { inside_temp: 20, outside_temp: 10, hvac_power: 2.5, ...over };
+  return { inside_temp: 20, outside_temp: 10, hvac_power: true, ...over };
 }
 function makeTires(over: Record<string, unknown> = {}): Record<string, unknown> {
   return { front_left: 290, front_right: 300, rear_left: 280, rear_right: 260, ...over };
@@ -158,10 +157,10 @@ describe('LiveSignalsWidget — rendering', () => {
     expect(screen.getByText('60°C')).toBeInTheDocument();
     expect(screen.getByText('D')).toBeInTheDocument();
 
-    // Climate: cabin + outside temps (°C), HVAC power.
+    // Climate: cabin + outside temps (°C), HVAC state.
     expect(screen.getByText('20°C')).toBeInTheDocument();
     expect(screen.getByText('10°C')).toBeInTheDocument();
-    expect(screen.getByText('2.5 kW')).toBeInTheDocument();
+    expect(screen.getByText('On')).toBeInTheDocument();
 
     // Tires: 290/300/280/260 kPa → bar (÷100).
     expect(screen.getByText('2.9 bar')).toBeInTheDocument();
@@ -198,9 +197,7 @@ describe('LiveSignalsWidget — rendering', () => {
   });
 
   it('collapses non-numeric enum-string readings to "—" instead of "0" / "0.0 kW" / "0.0 bar"', () => {
-    // Regression (R2): the wire fields decode to enum strings. The old
-    // `!= null` guard let them reach fmtInt/fmtNumber → safeNumber(str)=0 →
-    // "0 Nm" / "0°C" / "0.0 kW" / "0.0 bar". `isFiniteNumber` rejects them.
+    // Wrong-typed runtime payloads must not be coerced into valid-looking data.
     setup({
       motor: makeQuery({ data: makeMotor({ di_torque: 'Drive', di_stator_temp: 'HeatOn', gear: 'D' }) }),
       climate: makeQuery({ data: makeClimate({ inside_temp: 'Cold', outside_temp: 'Warm', hvac_power: 'On' }) }),
@@ -261,7 +258,7 @@ describe('LiveSignalsWidget — rendering', () => {
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
     // The still-loading sections withhold their values but keep their headers.
     expect(screen.getByText('Climate')).toBeInTheDocument();
-    expect(screen.queryByText('2.5 kW')).not.toBeInTheDocument();
+    expect(screen.queryByText('20°C')).not.toBeInTheDocument();
   });
 
   it('shows the "No live signal data" empty state when every source is empty', () => {

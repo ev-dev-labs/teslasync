@@ -16,6 +16,7 @@ import (
 	port "github.com/ev-dev-labs/teslasync/internal/port/advancedintelligence"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type fakeRow struct {
@@ -200,6 +201,69 @@ func TestSourceRepositoryHasNoForbiddenLegacyTableReferences(t *testing.T) {
 		if strings.Contains(lower, table) {
 			t.Fatalf("forbidden legacy table reference %q", table)
 		}
+	}
+}
+
+func TestSentinelQueryPinsTimestampParameterTypes(t *testing.T) {
+	db := &fakeDBTX{row: fakeRow{values: []interface{}{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		(*int64)(nil), (*time.Time)(nil), (*time.Time)(nil),
+	}}}
+	repository := &SourceRepository{q: db}
+
+	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	if _, err := repository.Sentinel(
+		context.Background(), 7, now.Add(-30*24*time.Hour), now,
+	); err != nil {
+		t.Fatalf("Sentinel() error = %v", err)
+	}
+
+	if strings.Contains(db.lastQuery, "$3 - INTERVAL") {
+		t.Fatal("Sentinel query performs interval arithmetic on an untyped parameter")
+	}
+	if got := strings.Count(
+		db.lastQuery,
+		"$3::timestamptz - INTERVAL '24 hours'",
+	); got != 6 {
+		t.Fatalf("typed 24-hour boundaries = %d, want 6", got)
+	}
+	for _, boundary := range []string{
+		"ts >= $2::timestamptz",
+		"ts < $3::timestamptz",
+	} {
+		if !strings.Contains(db.lastQuery, boundary) {
+			t.Fatalf("Sentinel query missing typed boundary %q", boundary)
+		}
+	}
+}
+
+func TestSentinelQueryExecutesAgainstMigratedDatabase(t *testing.T) {
+	dsn := os.Getenv("TESLASYNC_TEST_DB")
+	if dsn == "" {
+		t.Skip("TESLASYNC_TEST_DB unset")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatalf("open test database: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("TESLASYNC_TEST_DB unreachable: %v", err)
+	}
+
+	repository := &SourceRepository{q: pool}
+	now := time.Now().UTC()
+	evidence, err := repository.Sentinel(
+		ctx, 0, now.Add(-30*24*time.Hour), now,
+	)
+	if err != nil {
+		t.Fatalf("Sentinel() error = %v", err)
+	}
+	if evidence.VehicleID != 0 {
+		t.Fatalf("vehicle ID = %d, want 0", evidence.VehicleID)
 	}
 }
 

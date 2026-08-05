@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { resolveHvacActive } from '@/lib/climateState';
+import { fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
@@ -111,8 +112,7 @@ interface FullViewProps {
 }
 
 function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
-  const hvacOn = (climateData.hvac_power != null && climateData.hvac_power > 0) ||
-    climateData.is_ac_on === true;
+  const hvacState = resolveHvacActive(climateData.hvac_power, climateData.is_ac_on);
 
   return (
     <div className="h-full flex flex-col justify-between gap-2.5">
@@ -120,17 +120,14 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Power className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-          <Badge variant={hvacOn ? 'success' : 'neutral'} size="sm">
-            {hvacOn
+          <Badge variant={hvacState === true ? 'success' : 'neutral'} size="sm">
+            {hvacState === true
               ? t('widget.climatePanel.hvacOn', 'HVAC On')
-              : t('widget.climatePanel.hvacOff', 'HVAC Off')}
+              : hvacState === false
+                ? t('widget.climatePanel.hvacOff', 'HVAC Off')
+                : t('widget.climatePanel.hvacUnknown', 'HVAC Unknown')}
           </Badge>
         </div>
-        {climateData.hvac_power != null && climateData.hvac_power > 0 && (
-          <span className="text-xs text-[var(--text-secondary)]">
-            {fmtNumber(climateData.hvac_power, 1)} kW
-          </span>
-        )}
       </div>
 
       {/* Temperature row */}

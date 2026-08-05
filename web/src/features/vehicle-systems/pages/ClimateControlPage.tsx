@@ -842,7 +842,9 @@ export default function ClimateControlPage() {
                     )}
                   />
                 }
-                subtitle={latest?.hvacPower != null ? `${t('State')}: ${latest.hvacPower}` : undefined}
+                subtitle={latest?.hvacPower != null
+                  ? `${t('State')}: ${latest.hvacPower ? t('On') : t('Off')}`
+                  : undefined}
               />
 
               <MetricCard

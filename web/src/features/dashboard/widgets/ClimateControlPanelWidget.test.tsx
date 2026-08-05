@@ -5,7 +5,7 @@
  * The widget reads `useClimateLatest()` (TanStack Query, 5s poll) and renders
  * one of two layouts driven by `size`:
  *   • compact (cols ≤ 1 && rows ≤ 1): a single big cabin-temperature figure;
- *   • full: an HVAC on/off badge (+ power draw), a cabin/outside temperature
+ *   • full: an HVAC on/off badge, a cabin/outside temperature
  *     row, a fan-speed / wheel-heat row, and a wrap of seat-heater + defrost +
  *     battery-heater status chips.
  *
@@ -269,20 +269,18 @@ describe('ClimateControlPanelWidget — HVAC status', () => {
     expect(screen.queryByText('HVAC Off')).toBeNull();
   });
 
-  it('shows "HVAC On" and the power draw when hvac_power > 0', () => {
-    setQuery({ data: makeClimate({ hvac_power: 1.5, is_ac_on: false }) });
+  it('shows "HVAC On" from the canonical boolean hvac_power field', () => {
+    setQuery({ data: makeClimate({ hvac_power: true, is_ac_on: false }) });
     renderWidget(FULL);
 
     expect(screen.getByText('HVAC On')).toBeInTheDocument();
-    expect(screen.getByText('1.5 kW')).toBeInTheDocument();
   });
 
-  it('shows "HVAC Off" (and no power draw) when AC is off and there is no power', () => {
-    setQuery({ data: makeClimate({ is_ac_on: false, hvac_power: 0 }) });
+  it('shows "HVAC Off" when both HVAC signals are explicitly off', () => {
+    setQuery({ data: makeClimate({ is_ac_on: false, hvac_power: false }) });
     renderWidget(FULL);
 
     expect(screen.getByText('HVAC Off')).toBeInTheDocument();
-    expect(screen.queryByText(/kW$/)).toBeNull();
   });
 });
 
