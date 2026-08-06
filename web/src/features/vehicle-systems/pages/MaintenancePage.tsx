@@ -635,6 +635,11 @@ export default function MaintenancePage() {
                     ? t('maintenance.noItemsFiltered', 'No items match the selected category. Try a different filter.')
                     : t('maintenance.noItems', 'No maintenance items found for this vehicle.')
                 }
+                action={
+                  categoryFilter !== 'all'
+                    ? { label: t('maintenance.clearFilterCta', 'Clear filter'), onClick: () => setCategoryFilter('all') }
+                    : undefined
+                }
               />
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
@@ -659,7 +664,9 @@ export default function MaintenancePage() {
             ) : itemsQuery.isError ? (
               <QueryError error={itemsQuery.error} onRetry={() => itemsQuery.refetch()} />
             ) : projections.length === 0 ? (
-              <EmptyState message={t('maintenance.noProjections', 'No upcoming service projections available.')} />
+              <EmptyState /* no-action: derived from the same maintenance items shown in the panel to the left, filtered further to non-completed items with a configured mileage/month interval; nothing distinct to trigger from this side panel. */
+                message={t('maintenance.noProjections', 'No upcoming service projections available.')}
+              />
             ) : (
               <ul className="space-y-2.5">
                 {projections.map((p) => (
@@ -729,7 +736,9 @@ export default function MaintenancePage() {
                 </div>
               </div>
             ) : (
-              <EmptyState message={t('maintenance.noCost', 'No cost data available yet. Log service records to see cost estimates.')} />
+              <EmptyState /* no-action: there is no in-app "log a service record" flow yet — the Schedule button in the page header is a documented placeholder for a future slice, so wiring it here would be a no-op. */
+                message={t('maintenance.noCost', 'No cost data available yet. Log service records to see cost estimates.')}
+              />
             )}
           </GlassPanel>
 
@@ -747,7 +756,9 @@ export default function MaintenancePage() {
             ) : itemsQuery.isError ? (
               <QueryError error={itemsQuery.error} onRetry={() => itemsQuery.refetch()} />
             ) : categoryBreakdown.length === 0 ? (
-              <EmptyState message={t('maintenance.noCategory', 'No maintenance items to categorize yet.')} />
+              <EmptyState /* no-action: derived from the same unfiltered items list as the Maintenance Items panel above; if that panel is empty this one is too, and there is nothing distinct to trigger from here. */
+                message={t('maintenance.noCategory', 'No maintenance items to categorize yet.')}
+              />
             ) : (
               <div className="space-y-3">
                 {categoryBreakdown.map((row) => (
@@ -784,6 +795,7 @@ export default function MaintenancePage() {
           ) : records.length === 0 ? (
             <EmptyState
               icon={<Wrench className="h-10 w-10" />}
+              /* no-action: there is no record-logging UI in this app yet — service records are populated from the backend integration only, so no client-side action can create one. */
               message={t('maintenance.noRecords', 'No service records logged yet.')}
             />
           ) : (

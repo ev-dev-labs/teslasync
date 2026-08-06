@@ -245,6 +245,8 @@ export function EntryDrawer({
           </GlassPanel>
         </div>
       ) : (
+        // no-action: this drawer only mounts once a DLQ entry is selected —
+        // selecting a row in the inspector list is the trigger surface.
         <EmptyState
           message={t('admin.dlq.drawer.empty', 'No DLQ entry selected.')}
         />

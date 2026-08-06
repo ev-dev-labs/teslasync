@@ -8,6 +8,7 @@
  * same QueryError) without repeating the branch logic.
  */
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import type { SectionStatus } from './liveSignalStats';
@@ -36,7 +37,10 @@ export function LiveSectionState({
   emptyMessage,
   children,
 }: LiveSectionStateProps) {
+  const { t } = useTranslation();
   if (status === 'no-vehicle') {
+    // no-action: the vehicle selector lives in the page header above every
+    // panel — retrying is meaningless while the query stays `enabled: false`.
     return <EmptyState icon={noVehicleIcon} message={noVehicleMessage} />;
   }
   if (status === 'loading') {
@@ -55,7 +59,13 @@ export function LiveSectionState({
     );
   }
   if (status === 'empty') {
-    return <EmptyState icon={emptyIcon} message={emptyMessage} />;
+    return (
+      <EmptyState
+        icon={emptyIcon}
+        message={emptyMessage}
+        action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
+      />
+    );
   }
   return <>{children}</>;
 }

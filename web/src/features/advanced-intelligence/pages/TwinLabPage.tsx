@@ -174,7 +174,7 @@ export default function TwinLabPage() {
                 <Bar dataKey="high" fill={CHART_COLORS[1]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyState message={t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')} />}
+          ) : <EmptyState /* no-action: the scenario add/remove controls above this chart are the trigger surface; uncertainty bars appear once at least two scenarios have supported results. */ message={t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')} />}
         </ChartContainer>
       </FadeIn>
 

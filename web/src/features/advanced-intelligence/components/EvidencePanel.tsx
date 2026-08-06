@@ -106,6 +106,7 @@ export function EvidencePanel({
               </Text>
             </div>
           )) : (
+            // no-action: which evidence sources a calc run returns is determined server-side by that specific run; there is no client action that adds evidence after the fact.
             <EmptyState
               className="py-8"
               message={t('advancedIntelligence.evidence.empty', 'No supporting evidence was returned.')}

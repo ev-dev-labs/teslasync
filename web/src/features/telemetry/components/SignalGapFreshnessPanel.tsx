@@ -45,12 +45,14 @@ export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFresh
         <EmptyState
           icon={<Gauge className="h-8 w-8" />}
           message={t('signalGap.selectVehiclePrompt', 'Select a vehicle to inspect its signal freshness.')}
+          actionTo={{ label: t('signalGap.manageVehicles', 'Manage vehicles'), to: '/vehicles' }}
         />
       ) : query.isLoading ? (
         <Skeleton height={260} />
       ) : query.isError ? (
         <QueryError error={query.error} onRetry={() => query.refetch()} />
       ) : buckets.total === 0 ? (
+        // no-action: transient — this vehicle is selected but hasn't streamed a single signal yet; resolves on its own once telemetry arrives.
         <EmptyState
           icon={<Gauge className="h-8 w-8" />}
           message={t('signalGap.noData', 'No signal data available')}

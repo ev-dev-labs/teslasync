@@ -58,6 +58,7 @@ export function AuditLogPanel() {
   ];
 
   if (rows.length === 0) {
+    // no-action: transient — this log fills automatically as install/uninstall/rollback actions occur; there is no user action to populate an empty audit trail.
     return <EmptyState icon={<ScrollText className="h-10 w-10" />} message={t('intelPacks.audit.empty', 'No actions have been recorded yet.')} />;
   }
 

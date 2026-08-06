@@ -90,6 +90,7 @@ export function ArchivedSummary({ query }: ArchivedSummaryProps) {
           <EmptyState
             icon={<Archive className="h-8 w-8" aria-hidden="true" />}
             message={t('notifications.archived.summary.empty', 'No archived notifications yet')}
+            actionTo={{ label: t('notifications.archived.summary.cta', 'Go to inbox'), to: '/notifications/inbox' }}
           />
         </GlassPanel>
       </section>

@@ -101,6 +101,7 @@ export function MetricComparisonGrid({
           })}
         </div>
       ) : (
+        // no-action: the "Create release" control lives in the adjacent Cohort Eligibility panel on this same page; nothing to trigger from inside this grid.
         <EmptyState
           title={t('benchmarks.metrics.emptyTitle', 'No comparison released')}
           message={t(

@@ -69,6 +69,7 @@ export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehi
         <EmptyState
           icon={<BarChart3 className="h-8 w-8" />}
           message={t('admin.vehicleCost.chartEmpty', 'No ingest volume recorded in this window yet.')}
+          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
         />
       ) : (
         <div

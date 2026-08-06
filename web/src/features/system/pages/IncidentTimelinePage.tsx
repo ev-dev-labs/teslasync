@@ -230,6 +230,7 @@ export default function IncidentTimelinePage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3">{t('incidentTimeline.postUpdate', 'Post an update')}</PanelTitle>
             {isResolved ? (
+              // no-action: resolved incidents are read-only by design (this file's "canonical close-out" rule) — posting updates is intentionally disabled.
               <EmptyState
                 icon={<CheckCircle2 className="h-8 w-8" aria-hidden="true" />}
                 title={t('incidentTimeline.resolvedTitle', 'Incident resolved')}

@@ -1688,6 +1688,21 @@ export default function DriveScorePage() {
                 sortDir={sortDir}
                 onSort={onSort}
                 mobileColumns={['date', 'score', 'grade']}
+                exportable
+                exportFilename="drive-score-history"
+                exportRow={(row) => ({
+                  drive_id: row.id,
+                  occurred_at: row.ts,
+                  route: row.route,
+                  distance_m: row.distanceM,
+                  duration_s: row.durationS,
+                  wh_per_km: row.whPerKm,
+                  score: row.total,
+                  grade: row.grade,
+                  efficiency: row.efficiency,
+                  smoothness: row.smoothness,
+                  speed: row.speed,
+                })}
                 emptyMessage={t('driveScore.noDrives', 'No drives found for the selected period.')}
                 pagination={{ defaultPageSize: DRIVES_PER_PAGE }}
               />

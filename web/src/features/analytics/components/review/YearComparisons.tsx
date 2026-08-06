@@ -18,7 +18,8 @@ export function YearComparisons({ comparisons }: Props) {
   if (items.length === 0) {
     return (
       <GlassPanel className="p-4 sm:p-5">
-        <EmptyState message={t('yearReview.noFunFacts', 'No fun facts available for this year yet')} />
+        <EmptyState /* no-action: fun facts are computed server-side from the whole year's aggregate stats; the year switcher lives in the page header, outside this component's props, and is the only way to see a different year's set. */
+          message={t('yearReview.noFunFacts', 'No fun facts available for this year yet')} />
       </GlassPanel>
     );
   }

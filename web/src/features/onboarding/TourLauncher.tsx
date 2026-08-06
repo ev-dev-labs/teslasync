@@ -98,7 +98,7 @@ export function TourLauncher() {
         </p>
 
         {tours.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: listTours() reads the static TOURS registry (8 hardcoded tour definitions in tourRegistry.ts); there is no user action that adds or removes a tour from it. */
             message={t('tour.launcher.empty', 'No tours are available yet.')}
           />
         ) : (

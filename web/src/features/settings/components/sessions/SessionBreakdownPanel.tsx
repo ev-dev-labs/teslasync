@@ -67,7 +67,10 @@ export function SessionBreakdownPanel({
       ) : isError ? (
         <QueryError error={shownError} onRetry={onRetry} />
       ) : rows.length === 0 ? (
-        <EmptyState message={emptyMessage} />
+        <EmptyState
+          message={emptyMessage}
+          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
+        />
       ) : (
         <div className="space-y-3">
           {rows.map((row, i) => (

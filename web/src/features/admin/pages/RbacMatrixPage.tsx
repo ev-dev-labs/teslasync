@@ -170,6 +170,8 @@ function MatrixGrid({ payload, draft, editing, onToggle }: MatrixGridProps) {
 
   if (roles.length === 0 || orderedCategories.length === 0) {
     return (
+      // no-action: MatrixGrid has no onRetry — roles===0 is dead code (the
+      // page guard above handles it); the catalog is hand-maintained, not stale.
       <EmptyState
         icon={<ShieldCheck className="h-8 w-8" aria-hidden="true" />}
         message={t('rbac.matrix.empty', 'No permissions to display for the current roles.')}

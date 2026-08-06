@@ -301,13 +301,18 @@ export default function TemperatureImpactPage() {
           <EmptyState
             icon={opts.icon}
             message={emptyMessage}
+            actionTo={
+              noVehicle
+                ? { label: t('tempImpact.manageVehicles', 'Manage vehicles'), to: '/vehicles' }
+                : undefined
+            }
             className="py-10"
           />
         );
       }
       return null;
     },
-    [isLoading, isError, query, emptyMessage],
+    [isLoading, isError, query, emptyMessage, noVehicle, t],
   );
 
   const hasPoints = points.length > 0;

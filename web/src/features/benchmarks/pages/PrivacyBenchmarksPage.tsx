@@ -73,6 +73,7 @@ export default function PrivacyBenchmarksPage() {
               'benchmarks.noVehicle',
               'Choose a vehicle before reviewing or changing benchmark consent.',
             )}
+            actionTo={{ label: t('benchmarks.noVehicleCta', 'Go to vehicles'), to: '/vehicles' }}
           />
         </GlassPanel>
       ) : (

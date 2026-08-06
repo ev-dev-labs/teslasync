@@ -324,6 +324,8 @@ export default function ApiLogsPage() {
               ) : statsError ? (
                 <QueryError error={statsError} onRetry={() => refetchStats()} />
               ) : serviceRows.length === 0 ? (
+                // no-action: getAPICallLogStats() is a global all-time
+                // aggregate ignoring filters here; self-resolves once traffic occurs (30s poll).
                 <EmptyState
                   icon={<Layers className="h-8 w-8" aria-hidden="true" />}
                   message={t('apiLogs.noServices', 'No service activity yet')}
@@ -464,6 +466,7 @@ export default function ApiLogsPage() {
                 message={hasFilters
                   ? t('apiLogs.adjustFilters', 'Try adjusting your filters')
                   : t('apiLogs.noLogsFound', 'No API call logs found')}
+                action={hasFilters ? { label: t('apiLogs.clear', 'Clear'), onClick: clearFilters } : undefined}
               />
             ) : (
               <ul aria-label={t('apiLogs.logTitle', 'API Call Log')} className="divide-y divide-[var(--glass-border)]">

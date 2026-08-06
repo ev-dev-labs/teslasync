@@ -440,6 +440,8 @@ export default function BatteryCellsPage() {
               <QueryError error={error} onRetry={refetch} />
             ) : cells.length === 0 ? (
               <EmptyState
+                /* no-action: transient — per-cell voltage telemetry populates once the BMS
+                   reports it for this vehicle; there is no manual trigger to speed it up. */
                 icon={<Grid3x3 className="h-8 w-8" />}
                 message={t('battery.cells.heatmap.empty', 'No cell readings available.')}
               />
@@ -480,6 +482,8 @@ export default function BatteryCellsPage() {
               <QueryError error={error} onRetry={refetch} />
             ) : histogram.length === 0 ? (
               <EmptyState
+                /* no-action: transient — the histogram is derived from the same per-cell
+                   readings as the heatmap above; it fills in once cells report. */
                 icon={<BarChart3 className="h-8 w-8" />}
                 message={t('battery.cells.distribution.empty', 'No distribution data available.')}
               />
@@ -513,6 +517,8 @@ export default function BatteryCellsPage() {
             <QueryError error={error} onRetry={refetch} />
           ) : cells.length === 0 ? (
             <EmptyState
+              /* no-action: transient — mirrors the same per-cell voltage telemetry gap as the
+                 heatmap section above; nothing to trigger manually. */
               icon={<BarChart3 className="h-8 w-8" />}
               message={t('battery.cells.bar.empty', 'No cell voltages available.')}
             />
@@ -560,6 +566,8 @@ export default function BatteryCellsPage() {
               <QueryError error={error} onRetry={refetch} />
             ) : history.length === 0 ? (
               <EmptyState
+                /* no-action: transient — needs multiple historical cell snapshots to plot a
+                   trend; accumulates automatically as telemetry arrives, no trigger to speed it up. */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.cells.overTime.empty', 'Not enough history yet.')}
               />
@@ -597,6 +605,8 @@ export default function BatteryCellsPage() {
               <QueryError error={error} onRetry={refetch} />
             ) : history.length === 0 ? (
               <EmptyState
+                /* no-action: transient — shares the same historical-snapshot requirement as the
+                   voltage-over-time chart to the left; fills in as more samples arrive. */
                 icon={<Zap className="h-8 w-8" />}
                 message={t('battery.cells.imbalance.empty', 'Not enough history yet.')}
               />
@@ -659,6 +669,8 @@ export default function BatteryCellsPage() {
               </div>
             ) : (
               <EmptyState
+                /* no-action: transient — the spread trend needs its own accumulated history
+                   window (independent of the raw voltage-over-time series above); fills in over time. */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.cells.chart.noSpreadTrend', 'Not enough history for spread trend')}
                 className="py-8"
@@ -688,6 +700,8 @@ export default function BatteryCellsPage() {
             <QueryError error={error} onRetry={refetch} />
           ) : sortedCells.length === 0 ? (
             <EmptyState
+              /* no-action: transient — this table lists the same per-cell readings shown in the
+                 heatmap/bar sections above; it populates once the BMS reports cell data. */
               icon={<Battery className="h-8 w-8" />}
               message={t('battery.cells.details.empty', 'No cell details available.')}
             />
@@ -750,6 +764,8 @@ export default function BatteryCellsPage() {
               </div>
             ) : (
               <EmptyState
+                /* no-action: transient — waits on the vehicle's next temperature-sensor
+                   telemetry packet; no user action shortens that cadence. */
                 icon={<Thermometer className="h-8 w-8" />}
                 message={t('battery.cells.temp.empty', 'No temperature data available')}
                 className="py-8"
@@ -784,6 +800,8 @@ export default function BatteryCellsPage() {
               </div>
             ) : (
               <EmptyState
+                /* no-action: transient — recommendations are derived from the accumulated cell
+                   history above; there's nothing to trigger until enough samples exist. */
                 icon={<Info className="h-8 w-8" />}
                 message={t('battery.cells.noInsights', 'Not enough data for recommendations')}
                 className="py-8"

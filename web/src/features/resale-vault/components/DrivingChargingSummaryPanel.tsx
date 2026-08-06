@@ -43,6 +43,7 @@ export function DrivingChargingSummaryPanel({ driving, charging }: DrivingChargi
       <PanelTitle>{t('resaleVault.usage.title', 'Driving & Charging History')}</PanelTitle>
 
       {!driving && !charging ? (
+        // no-action: mirrors this vehicle's drive/charge history query results as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
         <EmptyState message={t('resaleVault.usage.empty', 'No driving or charging history evidence in this report.')} />
       ) : (
         <>

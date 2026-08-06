@@ -82,6 +82,7 @@ export function LiveThroughputPanel({
 
       <div className="h-56 sm:h-64 xl:h-72">
         {!hasData ? (
+          // no-action: transient — SSE auto-reconnects and the page-level banner already surfaces disconnect state; nothing to trigger here.
           <EmptyState
             icon={
               connected ? (

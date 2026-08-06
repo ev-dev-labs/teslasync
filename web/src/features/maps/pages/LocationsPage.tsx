@@ -104,7 +104,7 @@ export default function LocationsPage() {
   // baseline geofence-create / location-rename UI; the AI panel
   // never persists.
   const [appliedName, setAppliedName] = useState<{ id: number; name: string } | null>(null);
-  const { start, end, setRange } = useRangeState({
+  const { start, end, setRange, reset: resetRange } = useRangeState({
     persistKey: 'locations.range',
     defaultPresetId: 'all',
   });
@@ -259,6 +259,8 @@ export default function LocationsPage() {
             error={error}
             onRetry={() => refetch()}
             emptyMessage={t('locations.noVisitData', 'No visited location data')}
+            emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={resetRange}
             ariaLabel={t('locations.byVisits.aria', 'Bar chart of the most-visited locations')}
           />
           <LocationLeaderboardPanel
@@ -271,6 +273,8 @@ export default function LocationsPage() {
             error={error}
             onRetry={() => refetch()}
             emptyMessage={t('locations.noTimeData', 'No time-spent data available')}
+            emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={resetRange}
             ariaLabel={t('locations.byTime.aria', 'Bar chart of locations by hours spent')}
           />
         </section>

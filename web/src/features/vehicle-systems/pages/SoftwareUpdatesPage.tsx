@@ -74,7 +74,7 @@ export default function SoftwareUpdatesPage() {
   const { vehicleId, vehicles } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
   const setUrl = useUrlBatch();
-  const { start, end } = useRangeState({
+  const { start, end, presetId, reset: resetRange } = useRangeState({
     persistKey: 'software-updates.range',
     defaultPresetId: 'all',
   });
@@ -239,6 +239,11 @@ export default function SoftwareUpdatesPage() {
               <EmptyState
                 icon={<BarChart3 className="h-8 w-8" />}
                 message={t('softwareUpdates.cadence.empty', 'No update activity in this range')}
+                action={
+                  presetId !== 'all'
+                    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+                    : undefined
+                }
               />
             ) : (
               <SoftwareUpdateCadenceChart data={cadence} />
@@ -258,6 +263,11 @@ export default function SoftwareUpdatesPage() {
               <EmptyState
                 icon={<ListChecks className="h-8 w-8" />}
                 message={t('softwareUpdates.breakdown.empty', 'No updates to summarize')}
+                action={
+                  presetId !== 'all'
+                    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+                    : undefined
+                }
               />
             ) : (
               <SoftwareUpdateStatusBreakdown counts={statusCounts} total={totalUpdates} />
@@ -289,6 +299,11 @@ export default function SoftwareUpdatesPage() {
               icon={<Smartphone className="h-12 w-12" />}
               title={t('softwareUpdates.timeline.emptyTitle', 'No update history')}
               message={t('softwareUpdates.timeline.empty', 'No software update history available for this vehicle yet.')}
+              action={
+                presetId !== 'all'
+                  ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+                  : undefined
+              }
             />
           ) : (
             <>

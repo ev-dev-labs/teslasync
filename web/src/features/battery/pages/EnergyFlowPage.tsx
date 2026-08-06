@@ -277,12 +277,28 @@ function SectionState({
   skeletonHeight?: number;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   if (noVehicle) {
-    return <EmptyState icon={<Car className="h-8 w-8" />} message={noVehicleMessage} />;
+    return (
+      <EmptyState
+        icon={<Car className="h-8 w-8" />}
+        message={noVehicleMessage}
+        actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+      />
+    );
   }
   if (loading) return <Skeleton height={skeletonHeight} rounded />;
   if (error) return <QueryError error={error} onRetry={onRetry} />;
-  if (empty) return <EmptyState icon={<Zap className="h-8 w-8" />} message={emptyMessage} />;
+  if (empty) {
+    return (
+      <EmptyState
+        /* no-action: transient — this section's energy series accumulates as telemetry streams
+           in; there is no manual trigger to backfill it faster. */
+        icon={<Zap className="h-8 w-8" />}
+        message={emptyMessage}
+      />
+    );
+  }
   return <>{children}</>;
 }
 

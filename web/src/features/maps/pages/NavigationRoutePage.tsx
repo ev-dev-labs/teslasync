@@ -572,6 +572,7 @@ export default function NavigationRoutePage() {
             <EmptyState
               icon={<Navigation className="h-8 w-8 text-[var(--text-muted)]" aria-hidden="true" />}
               message={t('nav.noVehicle', 'Select a vehicle to view navigation and route data.')}
+              actionTo={{ label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' }}
             />
           </GlassPanel>
         ) : (

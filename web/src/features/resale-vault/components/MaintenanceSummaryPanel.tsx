@@ -27,6 +27,7 @@ export function MaintenanceSummaryPanel({ maintenance }: MaintenanceSummaryPanel
       <PanelTitle>{t('resaleVault.maintenance.title', 'Maintenance & Service')}</PanelTitle>
 
       {!maintenance ? (
+        // no-action: mirrors Tesla's account-wide maintenance endpoint (see scope note below); no refetch handler reaches this panel.
         <EmptyState message={t('resaleVault.maintenance.empty', 'No maintenance or service evidence in this report.')} />
       ) : (
         <>

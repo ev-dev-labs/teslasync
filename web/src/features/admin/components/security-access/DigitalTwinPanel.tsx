@@ -49,6 +49,8 @@ export function DigitalTwinPanel({
           <VehicleTwin {...twinState} size="sm" interactive vehicleId={vehicleId} />
         </div>
       ) : (
+        // no-action: latest state streams on a 5s poll — this gap is
+        // transient and closes once telemetry arrives; no manual refresh needed.
         <EmptyState
           icon={<Car className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.security.twin.noData', 'No live vehicle state available yet')}

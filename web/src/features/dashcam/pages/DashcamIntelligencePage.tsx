@@ -79,6 +79,7 @@ export default function DashcamIntelligencePage() {
                 totalCount={clips.length}
                 selectedClipId={selectedClipId}
                 onSelect={setSelectedClipId}
+                onClearFilters={() => setFilters(defaultClipFilterState())}
               />
             </div>
 
@@ -87,6 +88,7 @@ export default function DashcamIntelligencePage() {
                 <ClipDetailPanel clip={selectedClip} vehicleId={vehicleId} />
               ) : (
                 <GlassPanel padding="lg">
+                  {/* no-action: selection-gated — the clip catalog list is directly adjacent in the left column. */}
                   <EmptyState
                     icon={<Video className="h-8 w-8" />}
                     title={t('dashcam.detail.emptyTitle', 'No clip selected')}

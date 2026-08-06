@@ -38,7 +38,7 @@ export function SoftwareUpdateStatusBreakdown({
 
   if (rows.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: transient — reachable only when every update's status falls outside UPDATE_STATUS_ORDER; the parent (SoftwareUpdatesPage) already gates this panel behind its own `total === 0` empty state for the ordinary no-updates case. */
         icon={<ListChecks className="h-8 w-8" />}
         message={t(
           'softwareUpdates.breakdown.noKnownStatus',

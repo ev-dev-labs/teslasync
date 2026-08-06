@@ -36,6 +36,7 @@ export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajecto
     return (
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-3">{t('homeEnergy.powerwall.title', 'Powerwall Trajectory')}</PanelTitle>
+        {/* no-action: the enable toggle lives in the Scenario & Assumptions panel above this chart. */}
         <EmptyState
           icon={<BatteryCharging className="h-8 w-8" />}
           message={t('homeEnergy.powerwall.none', 'No home battery is modeled in this scenario. Enable it under Scenario & Assumptions.')}

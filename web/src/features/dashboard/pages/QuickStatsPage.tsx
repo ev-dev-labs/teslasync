@@ -113,6 +113,7 @@ export default function QuickStatsPage() {
               <EmptyState
                 icon={<BarChart3 className="h-8 w-8" />}
                 message={t('quickStats.noData', 'No fleet metrics available yet')}
+                action={{ label: t('common.retry', 'Retry'), onClick: refetchAnalytics }}
               />
             </GlassPanel>
           ) : (
@@ -190,6 +191,7 @@ export default function QuickStatsPage() {
                 <EmptyState
                   icon={<Car className="h-8 w-8" />}
                   message={t('quickStats.noVehicle', 'No vehicle found')}
+                  actionTo={{ label: t('quickStats.noVehicleCta', 'Go to vehicles'), to: '/vehicles' }}
                 />
               </GlassPanel>
             ) : (

@@ -30,6 +30,7 @@ export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleA
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}
           message={t('homeEnergy.vehicle.empty', 'No vehicles found on this account to orchestrate.')}
+          actionTo={{ label: t('homeEnergy.vehicle.addVehicle', 'Add a vehicle'), to: '/vehicles' }}
         />
       ) : (
         <div className="space-y-2">

@@ -12,6 +12,7 @@ interface ReservationPanelProps {
   loading: boolean;
   error: unknown;
   onRetry: () => void;
+  onAdd: () => void;
   onEdit: (item: FleetReservation) => void;
   onCancel: (item: FleetReservation) => void;
   onDelete: (item: FleetReservation) => void;
@@ -29,6 +30,7 @@ export function ReservationPanel({
   loading,
   error,
   onRetry,
+  onAdd,
   onEdit,
   onCancel,
   onDelete,
@@ -96,6 +98,7 @@ export function ReservationPanel({
         <EmptyState
           icon={<CalendarDays className="h-8 w-8" />}
           message={t('fleetOps.reservations.empty', 'No reservations in this planning window.')}
+          action={{ label: t('fleetOps.reservations.add', 'Add reservation'), onClick: onAdd }}
         />
       ) : (
         <div className="mt-4 space-y-5">

@@ -27,6 +27,7 @@ export function InsightPanel({
         {description ? <Text as="p" variant="bodySm">{description}</Text> : null}
       </div>
       {empty ? (
+        // no-action: generic shared shell reused by many pages, each with its own empty predicate; fix belongs to the caller.
         <EmptyState icon={<Info className="h-6 w-6" aria-hidden="true" />} message={emptyMessage} />
       ) : children}
     </GlassPanel>

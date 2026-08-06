@@ -83,6 +83,7 @@ export function AuditTrailPanel({ refreshToken }: AuditTrailPanelProps) {
       {isLoading ? (
         <HelperText>{t('resaleVault.audit.loading', 'Loading audit log…')}</HelperText>
       ) : entries.length === 0 ? (
+        // no-action: the Refresh button in this panel's own header re-runs load(); real resolution is generating a key or signing a report in another tab.
         <EmptyState
           title={t('resaleVault.audit.emptyTitle', 'No activity yet')}
           message={t('resaleVault.audit.emptyDescription', 'Generate a key or sign a report to start the local audit trail.')}

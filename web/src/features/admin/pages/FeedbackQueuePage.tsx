@@ -282,6 +282,8 @@ export default function FeedbackQueuePage() {
             ) : statusError ? (
               <QueryError error={statusError} onRetry={handleRetryStatusCounts} />
             ) : statusTotal === 0 ? (
+              // no-action: mirrors the queue table below — a refetch can't
+              // manufacture feedback rows that were never submitted.
               <EmptyState
                 icon={<Icons.workflow className="h-8 w-8" aria-hidden="true" />}
                 message={t('feedback.queue.noStatusData', 'No feedback to triage yet.')}
@@ -301,6 +303,8 @@ export default function FeedbackQueuePage() {
             ) : categoryError ? (
               <QueryError error={categoryError} onRetry={handleRetryCategoryCounts} />
             ) : categoryTotal === 0 ? (
+              // no-action: derived from the same user-submitted feedback rows
+              // as the triage panel — none submitted yet means nothing to chart.
               <EmptyState
                 icon={<Icons.pieChart className="h-8 w-8" aria-hidden="true" />}
                 message={t('feedback.queue.noCategoryData', 'No categories to show yet.')}

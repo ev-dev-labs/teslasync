@@ -38,6 +38,7 @@ export function WarrantySummaryPanel({ warranty }: WarrantySummaryPanelProps) {
       <PanelTitle>{t('resaleVault.warranty.title', 'Warranty')}</PanelTitle>
 
       {!warranty || !warranty.data ? (
+        // no-action: mirrors Tesla's account-level warranty endpoint as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
         <EmptyState message={t('resaleVault.warranty.empty', 'No warranty evidence in this report.')} />
       ) : (
         <>

@@ -267,6 +267,7 @@ export default function SpeedProfilePage() {
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
                 message={t('speedProfile.noDistribution', 'No speed distribution available yet')}
+                actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <div
@@ -304,6 +305,7 @@ export default function SpeedProfilePage() {
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
                 message={t('speedProfile.noData', 'No speed profile data available yet')}
+                actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <div className="grid grid-cols-3 items-start gap-1 sm:gap-2">
@@ -356,6 +358,7 @@ export default function SpeedProfilePage() {
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
                 message={t('speedProfile.noBuckets', 'No speed buckets recorded for this window')}
+                actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             </GlassPanel>
           ) : (
@@ -440,6 +443,7 @@ export default function SpeedProfilePage() {
               <EmptyState
                 icon={<Activity className="h-8 w-8" aria-hidden="true" />}
                 message={t('speedProfile.noScatter', 'Not enough drive data for the efficiency scatter yet')}
+                actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <>
@@ -501,6 +505,7 @@ export default function SpeedProfilePage() {
               <EmptyState
                 icon={<Zap className="h-8 w-8" aria-hidden="true" />}
                 message={t('speedProfile.noInsight', 'Efficiency insight appears once optimal-speed data is available')}
+                actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             )}
           </GlassPanel>

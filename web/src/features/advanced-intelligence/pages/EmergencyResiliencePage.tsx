@@ -212,6 +212,7 @@ export default function EmergencyResiliencePage() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
+            // no-action: the scenario duration/input controls above this chart are the trigger surface; the timeline fills once the simulation returns at least two supported points.
             <EmptyState message={t(
               'advancedIntelligence.resilience.timeline.empty',
               'At least two supported timeline points are required.',

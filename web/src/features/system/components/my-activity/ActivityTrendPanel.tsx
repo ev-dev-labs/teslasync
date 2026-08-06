@@ -87,6 +87,7 @@ export function ActivityTrendPanel({
         ) : isError ? (
           <QueryError error={error ?? FALLBACK_ERROR} onRetry={onRetry} />
         ) : isEmpty || rows.length === 0 ? (
+          // no-action: the daily trend's window is controlled by the RangePicker in the page header; a different range repopulates it.
           <EmptyState
             icon={<Icons.analytics className="h-8 w-8" />}
             message={t('activity.myActivity.trend.empty', 'No activity recorded in this window.')}

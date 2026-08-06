@@ -16,6 +16,8 @@ interface RecommendationListProps {
     recommendation: ActionCenterRecommendation,
     action: ActionCenterStateAction | 'navigate',
   ) => void;
+  /** Resets the active filter set back to its default (open, no vehicle/priority/source). */
+  onClearFilters: () => void;
 }
 
 export function RecommendationList({
@@ -24,6 +26,7 @@ export function RecommendationList({
   error,
   onRetry,
   onAction,
+  onClearFilters,
 }: RecommendationListProps) {
   const { t } = useTranslation();
   const EmptyIcon = Icons.notifications;
@@ -53,6 +56,7 @@ export function RecommendationList({
           'actionCenter.empty.message',
           'No recommendations match these filters. Source coverage remains visible above.',
         )}
+        action={{ label: t('actionCenter.filters.clear', 'Clear filters'), onClick: onClearFilters }}
       />
     );
   }

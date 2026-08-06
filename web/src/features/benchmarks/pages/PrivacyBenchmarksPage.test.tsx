@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hookState = vi.hoisted(() => ({
@@ -80,7 +81,11 @@ describe('PrivacyBenchmarksPage', () => {
 
   it('renders an explicit vehicle-selection state instead of firing data controls', () => {
     hookState.vehicleId = null;
-    render(<PrivacyBenchmarksPage />);
+    render(
+      <MemoryRouter>
+        <PrivacyBenchmarksPage />
+      </MemoryRouter>,
+    );
     expect(screen.getByText('Select a vehicle')).toBeInTheDocument();
     expect(screen.queryByTestId('consent-gate')).not.toBeInTheDocument();
   });

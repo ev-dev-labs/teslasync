@@ -41,7 +41,10 @@ export function OwnershipPanel({
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
       {empty ? (
-        <EmptyState icon={<Info className="h-6 w-6" aria-hidden="true" />} message={emptyMessage} />
+        <EmptyState /* no-action: shared wrapper reused by every ownership analysis page (charging reconciliation, warranty, tariff, etc.); each caller supplies its own `emptyMessage` describing that page's specific recovery path (or lack of one) — there is no single generic action to wire at this shared layer. */
+          icon={<Info className="h-6 w-6" aria-hidden="true" />}
+          message={emptyMessage}
+        />
       ) : (
         children
       )}

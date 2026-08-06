@@ -202,6 +202,8 @@ export function AutomationActivityFeed({
                 ))}
               </div>
             ) : recentLive.length === 0 ? (
+              // no-action: history only grows once the automation engine runs
+              // a job; the page's "create automation" EmptyState owns that path.
               <EmptyState
                 icon={<Activity className="h-8 w-8" />}
                 message={t('automations.noHistory', 'No execution history yet')}

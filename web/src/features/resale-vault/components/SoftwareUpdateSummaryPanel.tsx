@@ -23,6 +23,7 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates }: SoftwareUpdateSu
       </div>
 
       {!softwareUpdates ? (
+        // no-action: mirrors this vehicle's software-update history as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
         <EmptyState message={t('resaleVault.software.empty', 'No software update evidence in this report.')} />
       ) : (
         <>

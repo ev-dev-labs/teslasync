@@ -63,7 +63,7 @@ export default function GasPriceAutoPollPage() {
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <div className="xl:col-span-2">
-            <GasPriceTrendChart query={historyQuery} />
+            <GasPriceTrendChart query={historyQuery} onPollNow={() => pollMut.mutate()} />
           </div>
           <GasPriceControlPanel query={statusQuery} />
         </section>

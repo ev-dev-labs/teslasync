@@ -101,6 +101,8 @@ export function GDPRLifecyclePanel({ artifact, loading, className }: GDPRLifecyc
       ) : items.length > 0 ? (
         <Timeline items={items} />
       ) : (
+        // no-action: like GDPRArtifactDetails, this is derived purely from
+        // the parent's `artifact` prop — use the lookup input above.
         <EmptyState
           icon={<Clock className="h-8 w-8" />}
           message={t('admin.gdprExport.lifecycleEmpty', 'No lifecycle events recorded yet.')}

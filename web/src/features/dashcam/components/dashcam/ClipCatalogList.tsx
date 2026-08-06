@@ -13,15 +13,18 @@ export interface ClipCatalogListProps {
   totalCount: number;
   selectedClipId: string | null;
   onSelect: (id: string) => void;
+  /** Resets the catalog's search/facet filters back to `defaultClipFilterState()`. */
+  onClearFilters: () => void;
 }
 
 /** Card-list of clips matching the current search/filter state. */
-export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect }: ClipCatalogListProps) {
+export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect, onClearFilters }: ClipCatalogListProps) {
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
   const deleteClip = useDeleteClip();
 
   if (totalCount === 0) {
+    // no-action: the trigger surface is the ImportPanel directly above this catalog on the page.
     return (
       <EmptyState
         icon={<Video className="h-8 w-8" />}
@@ -37,6 +40,7 @@ export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect }:
         icon={<Video className="h-8 w-8" />}
         title={t('dashcam.catalog.noMatchTitle', 'No clips match these filters')}
         message={t('dashcam.catalog.noMatchMessage', 'Try clearing the search text or resetting a filter chip.')}
+        action={{ label: t('dashcam.filters.clear', 'Clear filters'), onClick: onClearFilters }}
       />
     );
   }

@@ -53,6 +53,7 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
     >
       <SectionTitle>{legend}</SectionTitle>
       {featureIds.length === 0 ? (
+        // no-action: featureIds comes from the generated AI_FEATURE_IDS registry, which always ships entries in practice.
         <EmptyState
           message={t(
             'ai.settings.feature.empty',

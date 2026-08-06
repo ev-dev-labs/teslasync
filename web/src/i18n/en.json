@@ -940,6 +940,7 @@
     "noHistory": "No location history available for this vehicle.",
     "noSnapshots": "No location snapshots recorded yet.",
     "noVehicle": "Select a vehicle to view navigation and route data.",
+    "manageVehicles": "Manage vehicles",
     "trafficDelayTitle": "Route Traffic Delay",
     "delay": "delay",
     "resource": "Navigation",
@@ -1748,6 +1749,7 @@
       "title": "Charging Curve",
       "subtitle": "Power vs state-of-charge across sessions",
       "empty": "No charging sessions to plot a curve.",
+      "resetRange": "Reset date range",
       "selectSession": "Select a session to inspect",
       "col": {
         "charger": "Charger Type",
@@ -2493,7 +2495,8 @@
       "label": "Setup progress",
       "value": "{{done}}/{{total}}",
       "hint": "Steps complete",
-      "allDone": "All steps complete"
+      "allDone": "All steps complete",
+      "stepOf": "Step {{current}} of {{total}}"
     },
     "resources": {
       "title": "Resources & help",
@@ -4899,6 +4902,7 @@
     "distance": "Distance",
     "energy": "Energy",
     "selectVehiclePrompt": "Select a vehicle to view its year in review",
+    "goToVehicles": "Go to vehicles",
     "prevYear": "Previous year",
     "nextYear": "Next year",
     "drivesOfYear": "Drives of the year",
@@ -5990,7 +5994,8 @@
       "totalEnergy": "Total Energy",
       "gasSavings": "Gas Savings $",
       "savingsPercent": "Savings %",
-      "vsGasoline": "vs gasoline"
+      "vsGasoline": "vs gasoline",
+      "resetRange": "Reset date range"
     },
     "environment": {
       "title": "Environmental Impact",
@@ -8629,6 +8634,7 @@
     "maxRegenCol": "Max Regen",
     "ratioCol": "Ratio",
     "noData": "No regen efficiency data available yet",
+    "browseDrives": "Browse drives",
     "col": {
       "month": "Month",
       "regenKwh": "Regen kWh",
@@ -8703,7 +8709,8 @@
     "noDistribution": "No speed distribution available yet",
     "noBuckets": "No speed buckets recorded for this window",
     "noScatter": "Not enough drive data for the efficiency scatter yet",
-    "noInsight": "Efficiency insight appears once optimal-speed data is available"
+    "noInsight": "Efficiency insight appears once optimal-speed data is available",
+    "browseDrives": "Browse drives"
   },
   "geofences": {
     "selectVehicle": "Select a vehicle first",
@@ -8824,6 +8831,7 @@
   "tempImpact": {
     "tipCold": "Precondition your cabin in cold weather to reduce battery drain",
     "tipHot": "Park in shade during hot weather to preserve battery efficiency",
+    "manageVehicles": "Manage vehicles",
     "title": "Temperature Impact",
     "subtitle": "How outside temperature affects driving efficiency",
     "avgEfficiency": "Avg Efficiency",
@@ -10423,6 +10431,7 @@
     "noItemsTitle": "No maintenance items",
     "noItemsFiltered": "No items match the selected category. Try a different filter.",
     "noItems": "No maintenance items found for this vehicle.",
+    "clearFilterCta": "Clear filter",
     "projectionsTitle": "Service Projections",
     "noProjections": "No upcoming service projections available.",
     "costTitle": "Estimated Annual Cost",
@@ -10534,7 +10543,8 @@
       "categoryEmpty": "No categorized changes to summarize",
       "sourceEmpty": "No source-layer data yet",
       "pinnedEmpty": "No pinned signals — pin a row to track it here",
-      "pinnedCount": "{{count}} pinned"
+      "pinnedCount": "{{count}} pinned",
+      "clearFilters": "Clear filters"
     },
     "source": {
       "l1": "L1 · In-process",
@@ -10636,6 +10646,7 @@
     "distributionTitle": "Signal Health Distribution",
     "healthSection": "Signal health",
     "selectVehiclePrompt": "Select a vehicle to inspect its signal freshness.",
+    "manageVehicles": "Manage vehicles",
     "stripLabel": "Staleness distribution across {{total}} signals",
     "signals": "Signals",
     "receivingSummary": "{{receiving}} of {{total}} signals arriving",
@@ -10821,6 +10832,7 @@
   },
   "safety": {
     "liveSignals": "Live Safety Signals",
+    "selectVehicleCta": "Go to vehicles",
     "buckled": "Buckled",
     "unbuckled": "Unbuckled",
     "driverBelt": "Driver Belt",
@@ -10842,6 +10854,7 @@
   },
   "softwareUpdates": {
     "title": "Software Updates",
+    "resetRangeCta": "View all time",
     "aiNarration": {
       "title": "Summarize my software update history",
       "description": "Ask Helix to walk through your firmware update history — the current version, the install cadence, and the headline release-note themes. The narrator quotes only the deterministic update events your vehicle reported plus public Tesla release notes for the versions you have installed; it never invents firmware versions or claims features your installed build does not have.",
@@ -12512,6 +12525,7 @@
     "empty": {
       "cta": "View drives"
     },
+    "resetDateRange": "Reset date range",
     "aiAutoName": {
       "title": "Suggest a name for this location",
       "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — Helix never saves the name; you confirm and save via the existing baseline form.",
@@ -13665,6 +13679,7 @@
       "all": "All",
       "ariaLabel": "Clip filters",
       "camera": "Camera",
+      "clear": "Clear filters",
       "eventType": "Event type",
       "searchPlaceholder": "Search filename or notes…",
       "source": "Source folder"
@@ -14037,6 +14052,7 @@
       "unnamedSite": "your Tesla energy site"
     },
     "readiness": {
+      "addVehicle": "Add a vehicle",
       "delivered": "Delivered {{delivered}} of {{needed}} needed",
       "departureSlot": "Departure slot #{{slot}}",
       "empty": "No vehicles are part of this plan.",
@@ -14080,6 +14096,7 @@
       "weightPreset": "Optimization priority"
     },
     "vehicle": {
+      "addVehicle": "Add a vehicle",
       "capacity": "Usable pack capacity",
       "currentSoc": "Current SoC (measured): {{pct}}%",
       "departureHour": "Departure hour (UTC)",

@@ -619,6 +619,7 @@ export default function ChargingDetailPage() {
                   </ResponsiveContainer>
                 </div>
               ) : (
+                // no-action: data-quality edge case — telemetry rows exist but lack usable battery_level/power_kw pairs; synthesizeCurve covers the no-telemetry case.
                 <EmptyState
                   icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
                   message={t('common.noData', 'No data available')}
@@ -745,6 +746,7 @@ export default function ChargingDetailPage() {
                     )}
                   </ChargingChartSync>
                 ) : (
+                  // no-action: historical telemetry for this closed session either recorded soc/energy/range rows or it never did — nothing to trigger now.
                   <EmptyState
                     icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
                     message={t('common.noData', 'No data available')}
@@ -817,6 +819,7 @@ export default function ChargingDetailPage() {
                       )}
                     </ChargingChartSync>
                   ) : (
+                    // no-action: this closed session either logged battery/inside/outside temperature telemetry or it never did — nothing to trigger.
                     <EmptyState
                       icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
                       message={t('common.noData', 'No data available')}
@@ -884,6 +887,7 @@ export default function ChargingDetailPage() {
                       )}
                     </ChargingChartSync>
                   ) : (
+                    // no-action: this closed session either logged voltage/current telemetry or it never did — nothing left to trigger for a finished charge.
                     <EmptyState
                       icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
                       message={t('common.noData', 'No data available')}
@@ -999,6 +1003,7 @@ export default function ChargingDetailPage() {
                   ]}
                 />
               ) : (
+                // no-action: liveCharging reflects the current vehicle telemetry, not this historical session — only populates mid-charge.
                 <EmptyState
                   icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
                   message={t('charging.detail.noLiveData', 'No live charging telemetry available.')}
@@ -1042,6 +1047,7 @@ export default function ChargingDetailPage() {
               {session.start_place ? (
                 <Text as="p" variant="body">{session.start_place}</Text>
               ) : (
+                // no-action: start_place is geocoded once at session close; this historical session simply never resolved one.
                 <EmptyState
                   icon={<MapPin className="h-8 w-8 opacity-20" aria-hidden="true" />}
                   message={t('charging.detail.noLocation', 'No location recorded for this session.')}

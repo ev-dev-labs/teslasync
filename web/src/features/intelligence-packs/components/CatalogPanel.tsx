@@ -27,6 +27,7 @@ export function CatalogPanel() {
       </p>
 
       {entries.length === 0 ? (
+        // no-action: entries come from the bundled CATALOG_ENTRIES fixture (lib/catalogFixtures.ts), which always ships at least one demo entry — this branch is effectively unreachable.
         <EmptyState
           icon={<PackageSearch className="h-10 w-10" />}
           message={t('intelPacks.catalog.empty', 'No catalog entries are bundled with this build.')}

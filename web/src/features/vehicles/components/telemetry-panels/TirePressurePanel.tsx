@@ -42,6 +42,7 @@ export function TirePressurePanel({ tireData }: TirePressurePanelProps) {
       {tireData ? (
         <TirePressureContent tireData={tireData} formatPressure={formatPressure} />
       ) : (
+        // no-action: tireData is streamed telemetry passed in as a prop from the parent page; it appears once Fleet Telemetry reports a tire-pressure signal, nothing to trigger from this panel.
         <EmptyState
           message={t('telemetry.noTirePressureData', 'No tire pressure data available')}
         />

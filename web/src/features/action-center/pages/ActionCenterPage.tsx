@@ -136,6 +136,7 @@ export default function ActionCenterPage() {
           error={query.error}
           onRetry={() => void query.refetch()}
           onAction={handleAction}
+          onClearFilters={() => setFilter(initialFilter)}
         />
         <Pagination
           page={page}

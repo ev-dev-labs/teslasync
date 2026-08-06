@@ -42,6 +42,7 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
       </h3>
       <div className="h-36 sm:h-44">
         {isEmpty ? (
+          // no-action: unreachable — ChargingListPage only mounts this chart once startLevelDist.length > 0, so totalSessions here is never 0.
           <EmptyState
             icon={<BatteryCharging className="h-8 w-8 opacity-20" aria-hidden="true" />}
             message={t('charging.charts.batteryLevelEmpty', 'No charge-start levels to chart yet.')}

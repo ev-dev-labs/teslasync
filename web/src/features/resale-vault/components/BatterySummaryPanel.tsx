@@ -29,6 +29,7 @@ export function BatterySummaryPanel({ battery }: BatterySummaryPanelProps) {
       </div>
 
       {!battery ? (
+        // no-action: mirrors the Battery Passport query result as a nullable prop; no refetch handler reaches this panel.
         <EmptyState message={t('resaleVault.battery.empty', 'No battery passport evidence in this report.')} />
       ) : (
         <>

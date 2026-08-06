@@ -148,6 +148,7 @@ export function InstalledInventoryPanel() {
 
   if (rows.length === 0) {
     return (
+      // no-action: the install control lives in the adjacent Catalog tab of this same marketplace page, not in this Installed tab.
       <EmptyState
         icon={<PackageOpen className="h-10 w-10" />}
         message={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the Catalog tab.')}

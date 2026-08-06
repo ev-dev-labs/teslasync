@@ -311,6 +311,7 @@ export default function RegenEfficiencyPage() {
               <EmptyState
                 icon={<Gauge className="h-8 w-8" />}
                 message={t('regen.noData', 'No regen efficiency data available yet')}
+                actionTo={{ label: t('regen.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <div className="flex flex-col items-center gap-3 py-2">
@@ -394,6 +395,7 @@ export default function RegenEfficiencyPage() {
               <EmptyState
                 icon={<Activity className="h-8 w-8" />}
                 message={t('regen.noData', 'No regen efficiency data available yet')}
+                actionTo={{ label: t('regen.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <div className="space-y-4">

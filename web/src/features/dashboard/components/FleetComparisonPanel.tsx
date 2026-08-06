@@ -79,6 +79,7 @@ export function FleetComparisonPanel({
         <EmptyState
           icon={<Car className="h-8 w-8" />}
           message={t('quickStats.fleet.empty', 'No fleet comparison data yet')}
+          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
         />
       ) : (
         <ul className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet Comparison')}>

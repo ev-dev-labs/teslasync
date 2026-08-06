@@ -618,6 +618,18 @@ export default function ChargingReconciliationPage() {
             data={invoices}
             keyExtractor={(row) => row.id}
             tableId="ownership-reconcile-invoices"
+            exportable
+            exportFilename="charging-invoices"
+            exportRow={(row) => ({
+              invoice_ref: row.invoice_ref,
+              provider: row.provider,
+              period_start: row.period_start,
+              period_end: row.period_end,
+              billed_total_minor: row.billed_total_minor,
+              currency: row.currency,
+              line_count: row.line_count,
+              status: row.status,
+            })}
             emptyMessage={t('ownership.reconcile.invoices.empty', 'No statements imported yet for this vehicle.')}
           />
           <MutationError error={remove.error} />
@@ -710,6 +722,24 @@ export default function ChargingReconciliationPage() {
             data={lines}
             keyExtractor={(row) => row.line.id || row.line.line_ref}
             tableId="ownership-reconcile-lines"
+            exportable
+            exportFilename="charging-reconciliation-lines"
+            exportRow={(row) => ({
+              line_ref: row.line.line_ref,
+              location: row.line.location ?? '',
+              occurred_at: row.line.occurred_at,
+              match_state: row.match_state,
+              match_confidence_pct: row.match_confidence_pct,
+              billed_energy_wh: row.line.billed_energy_wh,
+              measured_energy_wh: row.measured_energy_wh ?? '',
+              energy_delta_pct: row.energy_delta_pct ?? '',
+              time_delta_s: row.time_delta_s ?? '',
+              billed_total_minor: row.line.billed_total_minor,
+              expected_cost_minor: row.expected_cost_minor,
+              variance_minor: row.variance_minor,
+              recoverable: row.recoverable,
+              variance_reasons: (row.variance_reasons ?? []).join(' '),
+            })}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -733,6 +763,16 @@ export default function ChargingReconciliationPage() {
             data={buckets}
             keyExtractor={(row) => row.reason}
             tableId="ownership-reconcile-buckets"
+            exportable
+            exportFilename="charging-variance-attribution"
+            exportRow={(row) => ({
+              category: row.label,
+              reason: row.reason,
+              line_count: row.line_count,
+              amount_minor: row.amount_minor,
+              share_pct: row.share_pct,
+              recoverable: row.recoverable,
+            })}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -755,6 +795,15 @@ export default function ChargingReconciliationPage() {
             data={uninvoiced}
             keyExtractor={(row) => row.session_id}
             tableId="ownership-reconcile-uninvoiced"
+            exportable
+            exportFilename="charging-uninvoiced-sessions"
+            exportRow={(row) => ({
+              session_id: row.session_id,
+              started_at: row.started_at,
+              location: row.location ?? '',
+              energy_wh: row.energy_wh,
+              narrative: row.narrative,
+            })}
           />
         </OwnershipPanel>
       </FadeIn>

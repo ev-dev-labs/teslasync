@@ -145,7 +145,10 @@ export function EventTimeline({ timelineEvents, isLoading, error, onRetry, class
           })}
         </ul>
       ) : (
-        <EmptyState message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
+        <EmptyState
+          message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')}
+          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
+        />
       )}
     </GlassPanel>
   );

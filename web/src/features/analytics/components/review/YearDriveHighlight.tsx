@@ -47,7 +47,9 @@ export function YearDriveHighlight({ drive, label, icon: Icon }: Props) {
       </div>
 
       {!drive ? (
-        <EmptyState message={t('yearReview.noDriveData', 'No drive data for this year')} />
+        <EmptyState /* no-action: this slot is only null when the selected year had no drive for this specific superlative (e.g. no "most efficient" drive); the page-level "no activity" banner and year switcher above already cover recovery. */
+          message={t('yearReview.noDriveData', 'No drive data for this year')}
+        />
       ) : (
         <>
           <div className="flex min-w-0 items-center gap-1.5">

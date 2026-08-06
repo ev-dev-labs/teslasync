@@ -568,6 +568,7 @@ export default function SignalsWorkspacePage() {
                       {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
                     </div>
                   ) : diffAllRows.length === 0 && !diffFilterActive && atAIso && atBIso ? (
+                    // no-action: gated on !diffFilterActive — filters are confirmed off here, so this is genuinely zero diffs between the two snapshots, not a filtered-away result.
                     <EmptyState
                       icon={<GitCompare className="h-8 w-8" aria-hidden="true" />}
                       message={t('signalDiff.noChanges', 'No signals changed between the two snapshots')}

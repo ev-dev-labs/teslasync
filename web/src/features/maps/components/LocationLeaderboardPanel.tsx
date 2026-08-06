@@ -29,6 +29,14 @@ export interface LocationLeaderboardPanelProps {
   onRetry?: () => void;
   /** Empty-state message, already translated. */
   emptyMessage: string;
+  /**
+   * Optional CTA label for the empty state, already translated by the
+   * caller (e.g. "Reset date range"). Paired with `onResetFilters` — the
+   * button only renders when both are supplied.
+   */
+  emptyActionLabel?: string;
+  /** Clears whatever filter is scoping `data` to empty (e.g. the page's date range). */
+  onResetFilters?: () => void;
   /** Accessible description of the chart for screen readers. */
   ariaLabel: string;
 }
@@ -56,6 +64,8 @@ export function LocationLeaderboardPanel({
   error,
   onRetry,
   emptyMessage,
+  emptyActionLabel,
+  onResetFilters,
   ariaLabel,
 }: LocationLeaderboardPanelProps) {
   // Normalise once per data change: coerce untyped / API-sourced rows to a
@@ -86,7 +96,14 @@ export function LocationLeaderboardPanel({
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : rows.length === 0 ? (
-        <EmptyState message={emptyMessage} />
+        <EmptyState
+          message={emptyMessage}
+          action={
+            emptyActionLabel && onResetFilters
+              ? { label: emptyActionLabel, onClick: onResetFilters }
+              : undefined
+          }
+        />
       ) : (
         <div style={{ height: chartHeight }} aria-label={ariaLabel} role="img">
           <ResponsiveContainer width="100%" height="100%">

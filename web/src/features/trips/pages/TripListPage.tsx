@@ -185,6 +185,7 @@ export default function TripListPage() {
                 <EmptyState
                   icon={<Route className="h-12 w-12" aria-hidden="true" />}
                   message={t('trips.list.empty', 'No trips recorded yet')}
+                  action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
                 />
               </GlassPanel>
             ) : (
@@ -434,6 +435,7 @@ function TripEnergyPanel({ trips, isLoading, isError, error, onRetry }: SectionS
         <EmptyState
           icon={<Zap className="h-8 w-8" aria-hidden="true" />}
           message={t('trips.energy.empty', 'No energy data to rank yet')}
+          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
         />
       ) : (
         <div className="space-y-3">

@@ -50,6 +50,7 @@ export function CohortEligibilityPanel({
           <Spinner />
         </div>
       ) : !optedIn ? (
+        // no-action: the opt-in control is the ConsentGate section rendered directly above this panel on the page; this card only reflects that state.
         <EmptyState
           icon={<UsersRound className="h-8 w-8" />}
           title={t('benchmarks.cohort.optInTitle', 'Consent required')}

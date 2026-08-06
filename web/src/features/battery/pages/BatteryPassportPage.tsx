@@ -222,6 +222,7 @@ export default function BatteryPassportPage() {
               'batteryPassport.noVehicle',
               'Choose a vehicle to issue its Battery Passport certificate.',
             )}
+            actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
           />
         </GlassPanel>
       ) : (
@@ -286,6 +287,8 @@ export default function BatteryPassportPage() {
                   </div>
                 ) : (
                   <EmptyState
+                    /* no-action: transient — a passport is issued automatically once enough
+                       charge/capacity history accumulates for this vehicle; nothing to trigger. */
                     message={t('batteryPassport.empty', 'No passport could be issued for this vehicle yet.')}
                   />
                 )}
@@ -329,6 +332,8 @@ export default function BatteryPassportPage() {
                     </>
                   ) : (
                     <EmptyState
+                      /* no-action: transient — SoH estimation needs a longer charge/capacity
+                         history window; it becomes available as more sessions are logged. */
                       message={t(
                         'batteryPassport.noSoh',
                         'Not enough charge/capacity history to estimate SoH yet.',
@@ -393,7 +398,11 @@ export default function BatteryPassportPage() {
                   </>
                 ) : (
                   <div className="col-span-2">
-                    <EmptyState message={t('batteryPassport.empty', 'No passport could be issued for this vehicle yet.')} />
+                    <EmptyState
+                      /* no-action: transient — duplicates the masthead's passport-issuance gap;
+                         resolves automatically once a passport can be issued for this vehicle. */
+                      message={t('batteryPassport.empty', 'No passport could be issued for this vehicle yet.')}
+                    />
                   </div>
                 )}
               </div>
@@ -429,6 +438,8 @@ export default function BatteryPassportPage() {
                   />
                 ) : (
                   <EmptyState
+                    /* no-action: transient — the day-over-day trend needs multiple SoH
+                       snapshots; it fills in as passport history accumulates. */
                     icon={<Activity className="h-8 w-8" />}
                     message={t(
                       'batteryPassport.noTrend',
@@ -496,6 +507,8 @@ export default function BatteryPassportPage() {
                   </div>
                 ) : (
                   <EmptyState
+                    /* no-action: transient — waits on the vehicle to report ambient-temperature
+                       telemetry; there is no manual way to request a reading. */
                     icon={<Thermometer className="h-8 w-8" />}
                     message={t(
                       'batteryPassport.noThermal',
@@ -531,6 +544,8 @@ export default function BatteryPassportPage() {
                   </ul>
                 ) : (
                   <EmptyState
+                    /* no-action: healthy state — an empty recommendations list means the pack is
+                       being treated well; there is nothing for the user to act on here. */
                     icon={<CheckCircle2 className="h-8 w-8" />}
                     message={t(
                       'batteryPassport.noRecommendations',
@@ -606,6 +621,8 @@ export default function BatteryPassportPage() {
                   </div>
                 ) : (
                   <EmptyState
+                    /* no-action: transient — the provenance hash is generated once a passport is
+                       issued; nothing to trigger before then. */
                     message={t('batteryPassport.noProvenance', 'No provenance hash available yet.')}
                   />
                 )}

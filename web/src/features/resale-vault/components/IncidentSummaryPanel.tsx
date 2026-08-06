@@ -24,6 +24,7 @@ export function IncidentSummaryPanel({ incidents }: IncidentSummaryPanelProps) {
       <PanelTitle>{t('resaleVault.incidents.title', 'Security Incidents')}</PanelTitle>
 
       {!incidents ? (
+        // no-action: mirrors this vehicle's Guard security-event history as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
         <EmptyState message={t('resaleVault.incidents.empty', 'No security incident evidence in this report.')} />
       ) : (
         <>

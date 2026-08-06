@@ -127,6 +127,7 @@ export default function FleetOperationsPage() {
           loading={reservationsQuery.isLoading}
           error={reservationsQuery.error}
           onRetry={() => void reservationsQuery.refetch()}
+          onAdd={() => setEditor({ kind: 'reservation', item: null })}
           onEdit={(item) => setEditor({ kind: 'reservation', item })}
           onCancel={setCancelTarget}
           onDelete={(item) => setDeleteTarget({ kind: 'reservation', item })}

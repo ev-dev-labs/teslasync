@@ -24,6 +24,7 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
   if (clip.eventCandidates.length === 0) {
     return (
       <GlassPanel padding="md">
+        {/* no-action: three disjoint recovery paths (import metadata, run motion analysis, or switch to Reconstruction tab) live outside this component with no single handler in scope here. */}
         <EmptyState
           icon={<AlertTriangle className="h-8 w-8" />}
           title={t('dashcam.events.emptyTitle', 'No event candidates yet')}

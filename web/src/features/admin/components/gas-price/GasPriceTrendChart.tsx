@@ -24,6 +24,8 @@ import type { GasPriceHistory } from '@/api/types';
 
 interface GasPriceTrendChartProps {
   query: UseQueryResult<GasPriceHistory[], Error>;
+  /** Wired to the page's "Poll Now" mutation so the empty state can trigger a fetch directly. */
+  onPollNow?: () => void;
 }
 
 /**
@@ -31,7 +33,7 @@ interface GasPriceTrendChartProps {
  * returns rows newest-first, so we reverse to chronological order for the time
  * axis. Loading, empty, and error states are all handled independently.
  */
-export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
+export function GasPriceTrendChart({ query, onPollNow }: GasPriceTrendChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
   const { formatCurrency } = useFormatting();
@@ -71,6 +73,7 @@ export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
         <EmptyState
           icon={<TrendingUp className="h-8 w-8" />}
           message={t('gas.noHistory', 'No price history recorded yet. Trigger a poll to get started.')}
+          action={onPollNow ? { label: t('gas.pollNow', 'Poll Now'), onClick: onPollNow } : undefined}
         />
       ) : (
         <div

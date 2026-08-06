@@ -66,6 +66,7 @@ export function BenchmarkPercentileChart({
           </BarChart>
         </ResponsiveContainer>
       ) : (
+        // no-action: the "Create release" control lives in the adjacent Cohort Eligibility panel on this same page; nothing to trigger from inside the chart itself.
         <EmptyState
           message={t('benchmarks.chart.empty', 'No released percentiles to chart.')}
           className="py-8"

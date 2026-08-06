@@ -110,6 +110,8 @@ export function SelectedTripPreview({
           </Text>
         </div>
       ) : (
+        // no-action: selection-gated — the recent-trips list beside this panel is the only
+        // selector; clicking a row there fills this preview, so there is nothing to trigger here.
         <EmptyState
           icon={<MapPin className="h-10 w-10" />}
           message={t(

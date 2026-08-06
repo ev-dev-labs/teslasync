@@ -23,6 +23,7 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}
           message={t('homeEnergy.readiness.empty', 'No vehicles are part of this plan.')}
+          actionTo={{ label: t('homeEnergy.readiness.addVehicle', 'Add a vehicle'), to: '/vehicles' }}
         />
       ) : (
         <Grid cols={{ default: 1, sm: 2, lg: 3 }} gap={4}>

@@ -136,7 +136,7 @@ export function EvidencePanel({
               </div>
             ))
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: mirrors exactly what the analysis engine returned for its evidence array — engines intentionally omit rows rather than fabricate placeholders, and the Data quality badge in the column to the left already explains why. */
               className="py-8"
               message={t('ownership.evidence.empty', 'No supporting evidence was returned.')}
             />

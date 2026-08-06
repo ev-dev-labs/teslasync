@@ -129,6 +129,7 @@ export function SandboxPreviewPanel() {
   const run = useSandboxPreview(selectedEntry?.envelope.manifest ?? null, grantedCapabilities);
 
   if (entries.length === 0) {
+    // no-action: preview entries are sourced from the same bundled catalog fixture as the Catalog tab, which always ships at least one demo entry.
     return <EmptyState icon={<FlaskConical className="h-10 w-10" />} message={t('intelPacks.sandbox.noEntries', 'No packs available to preview.')} />;
   }
 
@@ -157,8 +158,10 @@ export function SandboxPreviewPanel() {
       )}
 
       {run == null || !selectedEntry ? (
+        // no-action: the trigger surface is the pack Select control directly above this panel.
         <EmptyState message={t('intelPacks.sandbox.selectToPreview', 'Select a pack to run its sandbox preview.')} />
       ) : selectedEntry.envelope.manifest.dashboards.length === 0 ? (
+        // no-action: whether a pack ships dashboard layouts is fixed by its manifest; there is nothing the user can trigger from this preview to add one.
         <EmptyState message={t('intelPacks.sandbox.noDashboards', 'This pack declares no dashboard layouts.')} />
       ) : (
         <div className="space-y-6">

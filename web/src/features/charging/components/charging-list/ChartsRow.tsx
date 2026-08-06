@@ -60,6 +60,7 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
               </ResponsiveContainer>
             </div>
           ) : (
+            // no-action: ChartsRow is orphaned — only its own test + the barrel import reference it; no live page renders this trend chart.
             <EmptyState message={t('charging.charts.noTrendData', 'No charging trend data available yet.')} />
           )}
         </GlassPanel>
@@ -102,6 +103,7 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
               </div>
             </div>
           ) : (
+            // no-action: ChartsRow is orphaned — only its own test + the barrel import reference it; no live page renders this breakdown chart.
             <EmptyState message={t('charging.charts.noBreakdownData', 'No charger breakdown data available yet.')} />
           )}
         </GlassPanel>

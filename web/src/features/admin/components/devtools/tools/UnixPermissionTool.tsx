@@ -101,6 +101,8 @@ export function UnixPermissionTool() {
             </div>
           </>
         ) : (
+          // no-action: the Octal Permission input directly above is the trigger
+          // surface — this panel only renders empty/invalid before a value is typed.
           <EmptyState
             message={
               result.kind === 'empty'

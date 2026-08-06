@@ -97,6 +97,7 @@ export function InboxSummary({ query }: InboxSummaryProps) {
           <EmptyState
             icon={<Inbox className="h-8 w-8" aria-hidden="true" />}
             message={t('notifications.inbox.summary.empty', 'No notifications yet')}
+            actionTo={{ label: t('notifications.inbox.summary.cta', 'Manage alert rules'), to: '/notifications/rules' }}
           />
         </GlassPanel>
       </section>
