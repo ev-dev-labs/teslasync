@@ -70,6 +70,12 @@ export default function SignalLogViewerPage() {
 
   const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
+  // deferred-filter:no — this page has no keystroke-driven client filter to
+  // defer. Signal selection and time range are explicit query inputs that
+  // only take effect when the user presses Run (setQueryKey), and paging is a
+  // bounded slice() of the already-fetched result set. There is no free-text
+  // input whose every character would re-filter a large list, so
+  // useDeferredValue would defer nothing.
   const [queryKey, setQueryKey] = useState<number | null>(null);
 
   const canQuery = selectedSignals.length > 0 && !!start && !!end && vehicleId > 0;
