@@ -6,6 +6,7 @@ import { Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { RadialGauge } from '@/components/charts/RadialGauge';
+import { temperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 
@@ -49,7 +50,7 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
               <div key={sensor.key} className="flex flex-col items-center">
                 <RadialGauge
                   value={sensor.value != null ? toTemperatureDisplay(sensor.value) : 0}
-                  max={toTemperatureDisplay(sensor.maxTemp)}
+                  {...temperatureGaugeRange(toTemperatureDisplay, { maxC: sensor.maxTemp })}
                   label={t(sensor.labelKey, sensor.defaultLabel)}
                   unit={tempUnit}
                   color={tempSeverityColor(sensor.value, sensor.maxTemp)}

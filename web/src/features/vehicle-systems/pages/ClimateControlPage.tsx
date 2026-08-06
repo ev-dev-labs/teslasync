@@ -39,6 +39,7 @@ import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   RadialGauge,
+  ambientTemperatureGaugeRange,
   LineChart,
   Line,
   AreaChart,
@@ -271,6 +272,7 @@ function CardSkeletons({ count, className }: { count: number; className: string 
 function GaugeCell({
   loading,
   value,
+  min,
   max,
   label,
   unit,
@@ -279,6 +281,7 @@ function GaugeCell({
 }: {
   loading: boolean;
   value: number | null;
+  min: number;
   max: number;
   label: string;
   unit: string;
@@ -290,7 +293,7 @@ function GaugeCell({
       {loading ? (
         <Skeleton rounded width="120px" height={120} />
       ) : value != null ? (
-        <RadialGauge value={value} max={max} label={label} unit={unit} color={color} />
+        <RadialGauge value={value} min={min} max={max} label={label} unit={unit} color={color} />
       ) : (
         <EmptyState /* no-action: transient — source signal missing */ icon={icon} message={label} />
       )}
@@ -405,11 +408,14 @@ export default function ClimateControlPage() {
 
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
-  const isFahrenheit = tempUnit === '°F';
-  const tempGaugeMax = isFahrenheit ? 131 : 55;
   // Backend ClimateState temperatures arrive in °C SI. `convertTempFromSI`
   // accepts the °C scalar directly and returns the user-pref display value.
   const toTemperatureDisplay = (celsius: number) => convertTempFromSI(celsius, tempUnit);
+  /* Both gauge ends are converted together. A degree scale has a non-zero
+   * origin, so converting only the ceiling makes the same temperature sweep a
+   * different arc in °F; the floor also sits below freezing so a cold outside
+   * reading renders instead of clamping to an empty ring. */
+  const tempGaugeRange = ambientTemperatureGaugeRange(toTemperatureDisplay);
 
   /* ─── Vehicle selector: header VehiclePicker is the source of truth ─── */
   const { vehicleId } = useSelectedVehicle();
@@ -684,7 +690,7 @@ export default function ClimateControlPage() {
               <GaugeCell
                 loading={latestLoading}
                 value={latest?.insideTemp != null ? toTemperatureDisplay(latest.insideTemp) : null}
-                max={tempGaugeMax}
+                {...tempGaugeRange}
                 label={t('Inside Temp')}
                 unit={tempUnit}
                 color={CHART_COLORS[0]}
@@ -695,7 +701,7 @@ export default function ClimateControlPage() {
                 value={
                   latest?.outsideTemp != null ? toTemperatureDisplay(latest.outsideTemp) : null
                 }
-                max={tempGaugeMax}
+                {...tempGaugeRange}
                 label={t('Outside Temp')}
                 unit={tempUnit}
                 color={CHART_COLORS[1]}
@@ -708,7 +714,7 @@ export default function ClimateControlPage() {
                     ? toTemperatureDisplay(latest.driverTempSetting)
                     : null
                 }
-                max={tempGaugeMax}
+                {...tempGaugeRange}
                 label={t('Driver Set Temp')}
                 unit={tempUnit}
                 color={CHART_COLORS[2]}

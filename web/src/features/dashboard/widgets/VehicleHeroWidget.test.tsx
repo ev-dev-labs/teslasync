@@ -57,7 +57,6 @@ vi.mock('../components/VehicleHero', () => ({
     vehicle?: { display_name?: string; vin?: string };
     state: unknown;
     firmwareVersion: string;
-    isFahrenheit: boolean;
     distanceUnit: string;
     speedUnit: string;
     tempUnit: string;
@@ -69,7 +68,6 @@ vi.mock('../components/VehicleHero', () => ({
     <div data-testid="vehicle-hero">
       <span data-testid="hero-name">{props.vehicle?.display_name || props.vehicle?.vin || ''}</span>
       <span data-testid="hero-firmware">{props.firmwareVersion}</span>
-      <span data-testid="hero-fahrenheit">{String(props.isFahrenheit)}</span>
       <span data-testid="hero-distance-unit">{props.distanceUnit}</span>
       <span data-testid="hero-speed-unit">{props.speedUnit}</span>
       <span data-testid="hero-temp-unit">{props.tempUnit}</span>
@@ -293,14 +291,13 @@ describe('VehicleHeroWidget — unit wiring at the display boundary', () => {
   it('wires metric (km / °C) converters and labels through to the hero', () => {
     setup({
       units: makeUnits({ distance: 'km', speed: 'km/h', temperature: '°C' }),
-      settings: makeSettings({ isFahrenheit: false }),
+      settings: makeSettings(),
     });
     render(<VehicleHeroWidget size={STANDARD} />);
 
     expect(screen.getByTestId('hero-distance-unit').textContent).toBe('km');
     expect(screen.getByTestId('hero-speed-unit').textContent).toBe('km/h');
     expect(screen.getByTestId('hero-temp-unit').textContent).toBe('°C');
-    expect(screen.getByTestId('hero-fahrenheit').textContent).toBe('false');
     // 1000 m → 1 km, 10 m/s → 36 km/h, 20 °C → 20 °C.
     expect(screen.getByTestId('hero-conv-distance').textContent).toBe('1');
     expect(screen.getByTestId('hero-conv-speed').textContent).toBe('36');
@@ -317,7 +314,6 @@ describe('VehicleHeroWidget — unit wiring at the display boundary', () => {
     expect(screen.getByTestId('hero-distance-unit').textContent).toBe('mi');
     expect(screen.getByTestId('hero-speed-unit').textContent).toBe('mph');
     expect(screen.getByTestId('hero-temp-unit').textContent).toBe('°F');
-    expect(screen.getByTestId('hero-fahrenheit').textContent).toBe('true');
     // The wired converters must carry the imperial preference (mi/mph), not a
     // hard-coded metric unit — assert against the real SI library math.
     expect(screen.getByTestId('hero-conv-distance').textContent).toBe(String(convertDistanceFromSI(1000, 'mi')));

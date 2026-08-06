@@ -131,7 +131,6 @@ function renderHero(state: VehicleState | null) {
         toDistanceDisplay={toDistanceDisplay}
         toSpeedDisplay={toSpeedDisplay}
         toTemperatureDisplay={toTemperatureDisplay}
-        isFahrenheit={false}
         distanceUnit="mi"
         speedUnit="mph"
         tempUnit="°C"

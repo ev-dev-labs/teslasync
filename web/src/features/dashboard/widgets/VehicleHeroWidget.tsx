@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Car } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
 import { useUnits } from '@/hooks/useUnits';
 import {
   convertDistanceFromSI,
@@ -32,7 +31,6 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
    * are memoised on their unit preference so a background re-render (the state
    * query polls) doesn't hand VehicleHero fresh function identities each time. */
   const { unitPrefs } = useUnits();
-  const { isFahrenheit } = useSettings();
 
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
@@ -77,7 +75,6 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
           toDistanceDisplay={toDistanceDisplay}
           toSpeedDisplay={toSpeedDisplay}
           toTemperatureDisplay={toTemperatureDisplay}
-          isFahrenheit={isFahrenheit}
           distanceUnit={distanceUnit}
           speedUnit={speedUnit}
           tempUnit={tempUnit}

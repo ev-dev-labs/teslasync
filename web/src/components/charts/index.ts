@@ -1,5 +1,12 @@
 export { RadialGauge } from './RadialGauge';
 export { BipolarBar, type BipolarBarProps } from './BipolarBar';
+export {
+  temperatureGaugeRange,
+  ambientTemperatureGaugeRange,
+  AMBIENT_TEMP_MIN_C,
+  AMBIENT_TEMP_MAX_C,
+  type TemperatureGaugeRange,
+} from './temperatureGaugeRange';
 export { MiniChart } from './MiniChart';
 export { SmallMultiplesChart, type SmallMultiplesChartProps } from './SmallMultiplesChart';
 export { ChartContainer } from './ChartContainer';

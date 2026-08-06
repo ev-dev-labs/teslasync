@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { RadialGauge } from '@/components/charts/RadialGauge';
+import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
@@ -85,7 +86,13 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
     /* Range gauge max scales with display unit so the arc fills meaningfully
      * — Tesla long-range packs cap around 400 mi ≈ 644 km. */
     const rangeMax = distanceLabel === 'km' ? 644 : 400;
-    const tempMax = temperatureLabel === '°C' ? 50 : 122;
+    /* Both ends are converted together: a degree scale has a non-zero origin,
+     * so converting only the ceiling makes the same temperature sweep a
+     * different arc in °F. The floor also sits below freezing so sub-zero
+     * outside readings render instead of clamping to an empty ring. */
+    const tempRange = ambientTemperatureGaugeRange((c) =>
+      convertTempFromSI(c, temperatureLabel),
+    );
 
     return (
       <GlassPanel
@@ -150,7 +157,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               />
               <RadialGauge
                 value={insideTempDisplay}
-                max={tempMax}
+                {...tempRange}
                 label={t('vehicleHero.gauge.inside', 'Inside')}
                 unit={temperatureLabel}
                 color="#f59e0b"
@@ -158,7 +165,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               />
               <RadialGauge
                 value={outsideTempDisplay}
-                max={tempMax}
+                {...tempRange}
                 label={t('vehicleHero.gauge.outside', 'Outside')}
                 unit={temperatureLabel}
                 color="#a78bfa"

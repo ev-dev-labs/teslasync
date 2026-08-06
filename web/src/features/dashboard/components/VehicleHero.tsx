@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { FreshnessIndicator } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts/RadialGauge';
+import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -22,7 +23,6 @@ interface VehicleHeroProps {
   toDistanceDisplay: (km: number) => number;
   toSpeedDisplay: (kmh: number) => number;
   toTemperatureDisplay: (c: number) => number;
-  isFahrenheit: boolean;
   distanceUnit: string;
   speedUnit: string;
   tempUnit: string;
@@ -33,12 +33,15 @@ interface VehicleHeroProps {
 export function VehicleHero({
   vehicle, state, firmwareVersion,
   toDistanceDisplay, toSpeedDisplay, toTemperatureDisplay,
-  isFahrenheit, distanceUnit, speedUnit, tempUnit,
+  distanceUnit, speedUnit, tempUnit,
   lastFetchedAt,
 }: VehicleHeroProps) {
   const { t } = useTranslation('dashboard');
   const { formatTime } = useDateFormat();
   const status = (state?.state ?? 'offline') as string;
+  /* Both ends converted together so the arc means the same thing in °C and
+   * °F, with a sub-zero floor so cold outside readings still render. */
+  const tempRange = ambientTemperatureGaugeRange(toTemperatureDisplay);
 
   return (
     <div className="relative h-full overflow-hidden">
@@ -83,11 +86,11 @@ export function VehicleHero({
                 />
               )}
               <RadialGauge
-                value={Math.round(toTemperatureDisplay(state.inside_temp ?? 0))} max={isFahrenheit ? 122 : 50}
+                value={Math.round(toTemperatureDisplay(state.inside_temp ?? 0))} {...tempRange}
                 label={t('hero.inside', 'Inside')} unit={tempUnit} color="#f97316" size={70}
               />
               <RadialGauge
-                value={Math.round(toTemperatureDisplay(state.outside_temp ?? 0))} max={isFahrenheit ? 122 : 50}
+                value={Math.round(toTemperatureDisplay(state.outside_temp ?? 0))} {...tempRange}
                 label={t('hero.outside', 'Outside')} unit={tempUnit} color="#3b82f6" size={70}
               />
             </div>

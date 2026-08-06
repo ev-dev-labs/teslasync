@@ -100,7 +100,6 @@ function renderHero(overrides: Partial<Props> = {}) {
     toDistanceDisplay: identity,
     toSpeedDisplay: identity,
     toTemperatureDisplay: identity,
-    isFahrenheit: false,
     distanceUnit: 'km',
     speedUnit: 'km/h',
     tempUnit: '°C',

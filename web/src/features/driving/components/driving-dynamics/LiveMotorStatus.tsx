@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Cog, Gauge } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
-import { RadialGauge, BipolarBar } from '@/components/charts';
+import { RadialGauge, BipolarBar, temperatureGaugeRange } from '@/components/charts';
 import { EmptyState, Spinner, QueryError } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
@@ -119,10 +119,9 @@ export default function LiveMotorStatus({
                   ? toTemperatureDisplay(motorTempC)
                   : toTemperatureDisplay(0)
               }
-              // Both ends are converted so the ratio survives the unit
-              // change — see the RadialGauge `min` doc comment.
-              min={toTemperatureDisplay(0)}
-              max={toTemperatureDisplay(MOTOR_TEMP_FULL_SCALE_C)}
+              {...temperatureGaugeRange(toTemperatureDisplay, {
+                maxC: MOTOR_TEMP_FULL_SCALE_C,
+              })}
               label={t('dynamics.motorTemp', 'Motor')}
               unit={motorTempC != null ? tempUnit : '—'}
               color={motorTempColor(motorTempC ?? 0)}
