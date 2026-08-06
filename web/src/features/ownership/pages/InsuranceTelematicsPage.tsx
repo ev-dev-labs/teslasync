@@ -640,6 +640,15 @@ export default function InsuranceTelematicsPage() {
               'ownership.insurance.trend.chartAria',
               'Area chart of rolling insurance risk score over the analysis window',
             )}
+            data={trend}
+            dataColumns={[
+              { key: 'label', label: t('ownership.insurance.trend.col.bucket', 'Period') },
+              {
+                key: 'risk_score',
+                label: t('ownership.insurance.trend.score', 'Risk score'),
+                format: (v) => fmtNumber(v as number, 1),
+              },
+            ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trend} margin={chartMargin}>

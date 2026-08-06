@@ -444,6 +444,16 @@ export default function SubscriptionROIPage() {
               'ownership.subscription.chart.aria',
               'Bar chart of return on spend percentage for each subscription, coloured by verdict',
             )}
+            data={roiChartData}
+            dataColumns={[
+              { key: 'name', label: t('ownership.subscription.chart.col.name', 'Subscription') },
+              {
+                key: 'roi',
+                label: t('ownership.subscription.chart.col.roi', 'Return on spend'),
+                format: (v) => formatPct(v as number, 1),
+              },
+              { key: 'verdict', label: t('ownership.subscription.chart.col.verdict', 'Verdict') },
+            ]}
             height={280}
           >
             <ResponsiveContainer width="100%" height="100%">

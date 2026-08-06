@@ -124,6 +124,20 @@ export default function TariffLabPage() {
     [results],
   );
 
+  const chartTableRows = useMemo(
+    () =>
+      results.map((row) => ({
+        name: row.name,
+        annual: row.annual_cost_minor / 100,
+        status: row.is_current
+          ? t('ownership.tariff.chart.statusCurrent', 'Current plan')
+          : row.rank === 1
+            ? t('ownership.tariff.chart.statusBest', 'Cheapest')
+            : t('ownership.tariff.chart.statusAlt', 'Alternative'),
+      })),
+    [results, t],
+  );
+
   const toggleSelected = (id: number) => {
     setSelected((current) =>
       current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
@@ -475,6 +489,16 @@ export default function TariffLabPage() {
               'ownership.tariff.chart.aria',
               'Bar chart comparing annualised cost of each evaluated tariff plan',
             )}
+            data={chartTableRows}
+            dataColumns={[
+              { key: 'name', label: t('ownership.tariff.chart.col.plan', 'Plan') },
+              {
+                key: 'annual',
+                label: t('ownership.tariff.chart.cost', 'Annual cost'),
+                format: (v) => fmtNumber(v as number, 2),
+              },
+              { key: 'status', label: t('ownership.tariff.chart.col.status', 'Status') },
+            ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={chartMargin}>

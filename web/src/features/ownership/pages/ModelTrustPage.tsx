@@ -529,6 +529,25 @@ export default function ModelTrustPage() {
               'ownership.trust.calibration.aria',
               'Bar chart of mean absolute error and mean bias grouped by prediction magnitude bin',
             )}
+            data={calibrationData}
+            dataColumns={[
+              { key: 'name', label: t('ownership.trust.calibration.col.bin', 'Prediction bin') },
+              {
+                key: 'error',
+                label: t('ownership.trust.calibration.col.error', 'Mean absolute error'),
+                format: (v) => fmtNumber(v as number, 3),
+              },
+              {
+                key: 'bias',
+                label: t('ownership.trust.calibration.col.bias', 'Mean bias'),
+                format: (v) => fmtNumber(v as number, 3),
+              },
+              {
+                key: 'samples',
+                label: t('ownership.trust.calibration.col.samples', 'Samples'),
+                format: (v) => fmtNumber(v as number, 0),
+              },
+            ]}
             height={280}
           >
             <ResponsiveContainer width="100%" height="100%">

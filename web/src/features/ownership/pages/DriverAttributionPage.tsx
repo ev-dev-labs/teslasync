@@ -498,6 +498,20 @@ export default function DriverAttributionPage() {
               'ownership.driver.chart.aria',
               'Bar chart of drive share and aggression score per behaviour cluster',
             )}
+            data={shareData}
+            dataColumns={[
+              { key: 'name', label: t('ownership.driver.chart.col.cluster', 'Cluster') },
+              {
+                key: 'share',
+                label: t('ownership.driver.chart.col.share', 'Share of drives'),
+                format: (v) => formatPct(v as number, 1),
+              },
+              {
+                key: 'aggression',
+                label: t('ownership.driver.chart.col.aggression', 'Aggression score'),
+                format: (v) => fmtNumber(v as number, 1),
+              },
+            ]}
             height={280}
           >
             <ResponsiveContainer width="100%" height="100%">
