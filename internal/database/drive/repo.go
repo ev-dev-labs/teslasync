@@ -403,6 +403,55 @@ func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*drivemodel.Dri
 	return drives, rows.Err()
 }
 
+// PlaceLabelVersion is the current revision of the start_place / end_place
+// labelling logic (see geocoding.GeoResult.ShortName). Rows written by an
+// older revision carry a lower drives.place_label_version and are re-resolved
+// once by the startup repair. Bump this whenever a change to ShortName would
+// produce a materially better label for already-stored rows.
+const PlaceLabelVersion = 2
+
+// FindStalePlaceLabels returns drives whose place names were produced by an
+// older labelling revision and that still have the coordinates needed to
+// re-resolve them, newest first. Bounded by limit so a single pass over a large
+// backlog stays predictable.
+func (r *DriveRepo) FindStalePlaceLabels(ctx context.Context, limit int) ([]*drivemodel.Drive, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	query := `SELECT ` + driveColumns + ` FROM drives
+		WHERE place_label_version < $1
+		  AND ((start_lat IS NOT NULL AND start_lng IS NOT NULL)
+		    OR (end_lat IS NOT NULL AND end_lng IS NOT NULL))
+		ORDER BY id DESC
+		LIMIT $2`
+	rows, err := r.db.Pool.Query(ctx, query, PlaceLabelVersion, limit)
+	if err != nil {
+		return nil, fmt.Errorf("drives find_stale_place_labels: %w", err)
+	}
+	defer rows.Close()
+
+	var drives []*drivemodel.Drive
+	for rows.Next() {
+		d, err := scanDrive(rows)
+		if err != nil {
+			return nil, fmt.Errorf("drives find_stale_place_labels scan: %w", err)
+		}
+		drives = append(drives, d)
+	}
+	return drives, rows.Err()
+}
+
+// MarkPlaceLabelVersion records that a drive's place names were produced by the
+// current labelling revision, removing it from the repair backlog.
+func (r *DriveRepo) MarkPlaceLabelVersion(ctx context.Context, id int64) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE drives SET place_label_version = $2 WHERE id = $1`, id, PlaceLabelVersion)
+	if err != nil {
+		return fmt.Errorf("drives mark_place_label_version: %w", err)
+	}
+	return nil
+}
+
 // PartialUpdateWithTx is like PartialUpdate but uses the provided transaction.
 // The fields map MUST be keyed by SI canonical column names.
 func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx database.DBTX, id int64, fields map[string]interface{}) error {

@@ -398,7 +398,7 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 
 	// Reverse geocode start address (async to not block)
 	if hasLoc {
-		go t.resolveAndUpdateAddress(drive.ID, lat, lon, true)
+		go t.resolveAndUpdateAddress(drive.ID, lat, lon, true, resolveUseCache)
 	}
 
 	trigger := "speed"
@@ -456,7 +456,7 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 			active.StartLongitude = floatPtr(lo)
 			startBackfill["start_lat"] = la
 			startBackfill["start_lng"] = lo
-			go t.resolveAndUpdateAddress(active.DriveID, la, lo, true)
+			go t.resolveAndUpdateAddress(active.DriveID, la, lo, true, resolveUseCache)
 		}
 	}
 	if active.StartRatedRange == nil {
@@ -1236,7 +1236,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 	// Reverse geocode end address (async)
 	if endLat != nil && endLon != nil {
-		go t.resolveAndUpdateAddress(active.DriveID, *endLat, *endLon, false)
+		go t.resolveAndUpdateAddress(active.DriveID, *endLat, *endLon, false, resolveUseCache)
 	}
 
 	log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
@@ -1333,7 +1333,24 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 	}
 }
 
-func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lon float64, isStart bool) {
+// addressResolveMode selects whether a place lookup may be served from the
+// places cache. Repairs must bypass it: the cache stores the label produced by
+// the labelling revision in force when it was written, so a cached read would
+// hand the repair back the very string it is trying to replace.
+type addressResolveMode int
+
+const (
+	resolveUseCache addressResolveMode = iota
+	resolveBypassCache
+)
+
+// geocodeRateLimit paces provider calls during bulk backfill/repair passes.
+// Nominatim's usage policy caps callers at 1 request/second.
+const geocodeRateLimit = 1100 * time.Millisecond
+
+// resolveAndUpdateAddress resolves a place name for one drive endpoint and
+// writes it to start_place or end_place. It reports whether a name was stored.
+func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lon float64, isStart bool, mode addressResolveMode) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -1352,15 +1369,17 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
 		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: geofences[0].Name})
 		metrics.GeocodingTotal.WithLabelValues("geofence").Inc()
-		return
+		return true
 	}
 
 	// 2. Check places cache (previously resolved locations within 50m)
-	if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
-		_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
-		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: cached.DisplayName})
-		metrics.GeocodingTotal.WithLabelValues("cached").Inc()
-		return
+	if mode == resolveUseCache {
+		if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
+			_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
+			_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: cached.DisplayName})
+			metrics.GeocodingTotal.WithLabelValues("cached").Inc()
+			return true
+		}
 	}
 
 	// 3. Reverse geocode via Nominatim (or Google when configured)
@@ -1370,32 +1389,53 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	if err != nil {
 		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
 		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
-		return
+		return false
+	}
+	if result == nil {
+		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
+		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode returned no result")
+		return false
 	}
 	metrics.GeocodingTotal.WithLabelValues("success").Inc()
 
 	name := result.ShortName()
+	if name == "" {
+		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode produced an empty place name")
+		return false
+	}
 
-	// Save to cache for future lookups
+	// Save to cache for future lookups. Upsert overwrites any entry within 50m,
+	// so a repair also refreshes the stale label other drives would have read.
 	_ = t.placesCache.Upsert(ctx, &dbadmin.PlaceCacheEntry{
-		Latitude:    lat,
-		Longitude:   lon,
-		DisplayName: name,
-		Source:      "geocoding",
-		City:        ptrStrOrNil(result.City),
-		State:       ptrStrOrNil(result.State),
-		Country:     ptrStrOrNil(result.Country),
-		Postcode:    ptrStrOrNil(result.PostCode),
+		Latitude:     lat,
+		Longitude:    lon,
+		DisplayName:  name,
+		Source:       "geocoding",
+		BusinessName: ptrStrOrNil(result.Name),
+		City:         ptrStrOrNil(result.City),
+		State:        ptrStrOrNil(result.State),
+		Country:      ptrStrOrNil(result.Country),
+		Postcode:     ptrStrOrNil(result.PostCode),
 	})
 
 	if err := t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: name}); err != nil {
 		log.Error().Err(err).Int64("drive_id", driveID).Str("field", field).Msg("telemetry: failed to update address")
+		return false
 	}
+	return true
 }
 
-// BackfillAddresses geocodes drives that have coordinates but no address names.
-// Runs as a background goroutine at startup to fill in missing addresses.
+// BackfillAddresses geocodes drives that have coordinates but no address names,
+// then repairs drives still carrying labels from an older labelling revision.
+// Runs as a background goroutine at startup.
 func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
+	t.backfillMissingAddresses(ctx)
+	t.RepairStalePlaceLabels(ctx)
+}
+
+// backfillMissingAddresses fills in place names for drives that have never been
+// geocoded at all.
+func (t *TelemetrySessionTracker) backfillMissingAddresses(ctx context.Context) {
 	drives, err := t.driveRepo.FindMissingAddresses(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("backfill: failed to query drives missing addresses")
@@ -1418,25 +1458,125 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLat != nil && d.EndLon != nil
 
 		if needStart {
-			t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true)
+			t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveUseCache)
 			filled++
 			metrics.AddressBackfillCompleted.Inc()
 			metrics.AddressBackfillRemaining.Dec()
 			// Rate-limit to avoid hammering the geocoder (Nominatim 1 req/sec policy)
-			time.Sleep(1100 * time.Millisecond)
+			time.Sleep(geocodeRateLimit)
 		}
 		if needEnd {
 			if ctx.Err() != nil {
 				break
 			}
-			t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false)
+			t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false, resolveUseCache)
 			filled++
 			metrics.AddressBackfillCompleted.Inc()
 			metrics.AddressBackfillRemaining.Dec()
-			time.Sleep(1100 * time.Millisecond)
+			time.Sleep(geocodeRateLimit)
 		}
 	}
 	log.Info().Int("resolved", filled).Int("total_drives", len(drives)).Msg("backfill: address geocoding complete")
+}
+
+// placeLabelRepairBatch bounds one database round-trip of the repair backlog.
+// The pass loops until the backlog drains, so this only caps how many rows are
+// held in memory at once.
+const placeLabelRepairBatch = 100
+
+// RepairStalePlaceLabels re-resolves start_place / end_place for drives whose
+// labels were produced by an older labelling revision.
+//
+// Every provider adapter used to discard the house number and POI name, so a
+// drive with both ends on one road stored the same road-level string twice and
+// Journey Details showed an identical Start and Destination. Fixing the
+// labelling logic only helps drives geocoded afterwards; already-stored rows
+// stay wrong until they are resolved again, which is what this pass does.
+//
+// The places cache is deliberately bypassed — it holds labels written by the
+// old revision, so a cached read would return the exact string being replaced.
+// Each drive is marked with the current revision once at least one endpoint
+// resolves, making the pass idempotent: the backlog only ever shrinks, and a
+// drive whose provider lookup fails is retried on a later run instead of being
+// silently marked done.
+func (t *TelemetrySessionTracker) RepairStalePlaceLabels(ctx context.Context) {
+	if t.driveRepo == nil || t.geocoder == nil {
+		return
+	}
+
+	repaired, failed := 0, 0
+	for {
+		if ctx.Err() != nil {
+			break
+		}
+		drives, err := t.driveRepo.FindStalePlaceLabels(ctx, placeLabelRepairBatch)
+		if err != nil {
+			log.Error().Err(err).Msg("place-label repair: failed to query stale drives")
+			return
+		}
+		if len(drives) == 0 {
+			break
+		}
+		if repaired == 0 && failed == 0 {
+			log.Info().Msg("place-label repair: re-resolving drives labelled by an older revision")
+		}
+
+		batchRepaired := 0
+		batchFailed := 0
+		for _, d := range drives {
+			if ctx.Err() != nil {
+				break
+			}
+
+			resolved := false
+			if d.StartLat != nil && d.StartLon != nil {
+				if t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveBypassCache) {
+					resolved = true
+				}
+				time.Sleep(geocodeRateLimit)
+			}
+			if ctx.Err() != nil {
+				break
+			}
+			if d.EndLat != nil && d.EndLon != nil {
+				if t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false, resolveBypassCache) {
+					resolved = true
+				}
+				time.Sleep(geocodeRateLimit)
+			}
+
+			// Leave the version untouched when nothing resolved so a provider
+			// outage cannot permanently strand a drive on the old label.
+			if !resolved {
+				batchFailed++
+				continue
+			}
+			if err := t.driveRepo.MarkPlaceLabelVersion(ctx, d.ID); err != nil {
+				log.Error().Err(err).Int64("drive_id", d.ID).Msg("place-label repair: failed to mark drive resolved")
+				batchFailed++
+				continue
+			}
+			batchRepaired++
+		}
+		repaired += batchRepaired
+		// Failures stay in the backlog and are re-selected by the next query,
+		// so only the latest batch's count describes what is still outstanding;
+		// accumulating would report the same row once per pass.
+		failed = batchFailed
+
+		// The backlog query is not cursor-paginated: rows that failed stay
+		// selected. A batch that marked nothing therefore returns the identical
+		// rows next time, so stop instead of spinning. The survivors are picked
+		// up by the next run.
+		if batchRepaired == 0 {
+			break
+		}
+	}
+
+	if repaired > 0 || failed > 0 {
+		log.Info().Int("repaired", repaired).Int("deferred", failed).
+			Msg("place-label repair: complete")
+	}
 }
 
 // driveMergeWindow is the maximum gap between an ended drive's ended_at and
