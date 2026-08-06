@@ -39,7 +39,7 @@ import type { DrivePosition } from '@/types/driving';
 
 /* Prop-capturing shared state for the mocked maps barrel. Hoisted so the
  * mock factory (evaluated before imports) and the specs both reach it. */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 const { maps } = vi.hoisted(() => ({
   maps: {
     containers: [] as any[],

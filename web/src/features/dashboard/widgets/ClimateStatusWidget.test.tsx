@@ -60,7 +60,7 @@ const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockClimate = useClimateLatest as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -93,9 +93,9 @@ const STANDARD = { cols: 2, rows: 3 };
 
 function setup(
   opts: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     vehicles?: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     climate?: any;
     tempPref?: '°C' | '°F';
   } = {},

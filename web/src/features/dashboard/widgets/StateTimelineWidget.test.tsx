@@ -74,7 +74,7 @@ const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 // A minimal fallback-echoing translator for the pure-utility tests.
 const echo = (_k: string, d: string) => d;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

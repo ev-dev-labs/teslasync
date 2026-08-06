@@ -166,7 +166,7 @@ const mockBulkDelete = useBulkDeleteDrives as unknown as ReturnType<typeof vi.fn
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

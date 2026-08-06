@@ -88,7 +88,7 @@ const mockUseConnectionPool = useConnectionPool as unknown as ReturnType<typeof 
 const MB = 1024 * 1024;
 const GB = 1024 * 1024 * 1024;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

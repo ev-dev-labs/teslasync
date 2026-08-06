@@ -178,7 +178,7 @@ function makeState(over: Partial<VehicleState> = {}): VehicleState {
 }
 
 /** Minimal `UseQueryResult`-shaped stub for `useVehicleState`. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function stateQuery(over: Record<string, unknown> = {}): any {
   return { data: undefined, isLoading: false, isError: false, error: null, ...over }
 }

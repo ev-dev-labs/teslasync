@@ -158,7 +158,7 @@ const mockApply = useApplySchedule as unknown as ReturnType<typeof vi.fn>;
 const mockPlans = useChargePlans as unknown as ReturnType<typeof vi.fn>;
 const mockRatePlans = useRatePlans as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -176,16 +176,16 @@ function makeQuery(over: Record<string, unknown> = {}): any {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function optimizeState(over: Record<string, unknown> = {}): any {
   return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function applyState(over: Record<string, unknown> = {}): any {
   return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function selected(vehicleId: number | null): any {
   return {
     vehicleId,

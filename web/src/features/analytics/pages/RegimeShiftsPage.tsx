@@ -59,7 +59,7 @@ export default function RegimeShiftsPage() {
       consumption: toEff(w.whPerKm),
       regime: segmentByWeek.has(w.weekStart) ? toEff(segmentByWeek.get(w.weekStart)!) : null,
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toEff derives from isMiles
+     
   }, [summary.series, summary.segments, isMiles]);
 
   const latest = summary.segments[summary.segments.length - 1] ?? null;

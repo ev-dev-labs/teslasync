@@ -150,7 +150,7 @@ const EXPECTED_ICONS = {
 const byId = (id: string): WidgetDef => SYSTEM_WIDGETS.find((w) => w.id === id)!;
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -172,7 +172,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
  * sidestepping the flaky `<Suspense>` retry flush under jsdom/vitest.
  */
 async function resolveLazy(lazyCmp: WidgetDef['component']): Promise<ComponentType<WidgetProps>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const internal = lazyCmp as any;
   try {
     return internal._init(internal._payload);
@@ -257,7 +257,7 @@ describe('SYSTEM_WIDGETS — registry data contract', () => {
 
   it('wires each widget to a React.lazy exotic component', () => {
     for (const w of SYSTEM_WIDGETS) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const cmp = w.component as any;
       expect(typeof cmp).toBe('object');
       expect(String(cmp.$$typeof)).toBe('Symbol(react.lazy)');

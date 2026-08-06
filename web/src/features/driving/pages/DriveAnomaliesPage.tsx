@@ -99,7 +99,7 @@ export default function DriveAnomaliesPage() {
       });
     }
     return rows.sort((a, b) => (a.speed ?? 0) - (b.speed ?? 0));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- converters derive from isMiles
+     
   }, [summary.curve, summary.points, isMiles]);
 
   if (vehicleId == null) {

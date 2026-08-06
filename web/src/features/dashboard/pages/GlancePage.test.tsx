@@ -155,7 +155,7 @@ const VEHICLES = [
   { id: 2, display_name: 'Car B', model: 'Model Y', vin: 'VINBBBB' },
 ] as unknown as Vehicle[];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -198,9 +198,9 @@ function makeUnits() {
 }
 
 let units: ReturnType<typeof makeUnits>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let stateQuery: any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let sendCommand: any;
 
 function renderPage(path = '/glance') {

@@ -69,7 +69,7 @@ const AMBER = '#f59e0b';
 const RED = '#ef4444';
 const RING_STROKE = 'rgba(255,255,255,0.25)';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

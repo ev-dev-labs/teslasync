@@ -65,7 +65,7 @@ const mockPool = useConnectionPool as unknown as ReturnType<typeof vi.fn>;
 
 const t = (_k: string, def: string) => def;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -84,7 +84,7 @@ function comp(status: string) {
   return { status, consecutiveFailures: 0, lastError: null, details: {} };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeHealth(over: Record<string, unknown> = {}): any {
   return {
     status: 'healthy',
@@ -100,12 +100,12 @@ function makeHealth(over: Record<string, unknown> = {}): any {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeDbStats(over: Record<string, unknown> = {}): any {
   return { tables: [], tableCount: 42, databaseSize: '2.4 GB', ...over };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makePool(over: Record<string, unknown> = {}): any {
   return {
     maxOpen: 25,
@@ -121,11 +121,11 @@ function makePool(over: Record<string, unknown> = {}): any {
 }
 
 interface SetupOpts {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   health?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   db?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   pool?: any;
 }
 

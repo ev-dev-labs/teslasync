@@ -70,7 +70,7 @@ export default function ExplorerPage() {
       sortable: true,
       render: (r) => <Text variant="bodySm">{r.firstVisitMonth}</Text>,
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fmtKm derives from formatDistance
+     
   ], [t, formatDistance]);
 
   if (vehicleId == null) {

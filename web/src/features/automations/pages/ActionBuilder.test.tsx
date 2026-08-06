@@ -103,7 +103,7 @@ function lastActions(onChange: ReturnType<typeof vi.fn>): AutomationActionStepIn
   return calls[calls.length - 1][0] as AutomationActionStepInput[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function lastAction(onChange: ReturnType<typeof vi.fn>, index = 0): any {
   return lastActions(onChange)[index];
 }

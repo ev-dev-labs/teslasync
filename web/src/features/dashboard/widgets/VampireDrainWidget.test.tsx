@@ -81,7 +81,7 @@ const echo = (_k: string, d: string) => d;
 // matches don't depend on the source file's byte encoding.
 const DOT = '\u00B7';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

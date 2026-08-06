@@ -194,7 +194,7 @@ const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 // the page's own maths.
 const KM_PER_MILE = 1.609344;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -243,7 +243,7 @@ const BEST_WH_KM = 130; // min of bestEfficiency
 const WORST_WH_KM = 260; // max of worstEfficiency
 const AVG_WH_KM = Math.round((160 + 150 + 210) / 3); // 173
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function selected(vehicleId: number | null): any {
   return {
     vehicleId,

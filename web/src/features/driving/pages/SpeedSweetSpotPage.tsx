@@ -74,7 +74,7 @@ export default function SpeedSweetSpotPage() {
         distance: toDistKm(p.distanceM),
         drives: p.drives,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- converters derive from isMiles
+     
     [result.points, isMiles],
   );
 

@@ -71,7 +71,7 @@ export default function DrivingRhythmPage() {
             ? formatFractionalHour(rhythm.medianDepartureByDay[day]!)
             : '—',
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dayLabel derives from t
+     
     [rhythm.medianDepartureByDay, t],
   );
 

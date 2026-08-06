@@ -104,7 +104,7 @@ const mockUseAuditCategories = useAuditCategories as unknown as ReturnType<typeo
 const mockUseAuditActions = useAuditActions as unknown as ReturnType<typeof vi.fn>;
 const mockUseAuditChainVerify = useAuditChainVerify as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -122,7 +122,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 // Inspect the most recent argument object the audit-log hook was called with —
 // the page rebuilds `queryParams` on every render, so the last call reflects
 // the live filter/offset state.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function lastAuditParams(): any {
   const calls = mockUseAuditLog.mock.calls;
   return calls[calls.length - 1]?.[0];

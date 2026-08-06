@@ -61,7 +61,7 @@ vi.hoisted(() => {
 // Shared, hoisted test doubles so the mock factories below and the specs can
 // both reach them.
 const { captured, driveMock, unitsMock } = vi.hoisted(() => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   captured: {} as Record<string, any>,
   driveMock: vi.fn(),
   unitsMock: vi.fn(),
@@ -96,7 +96,7 @@ vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
 vi.mock('@/features/trips/components/TripReplayMap', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     TripReplayMap: (props: any) => {
       captured.map = props;
       return React.createElement('div', { 'data-testid': 'trip-replay-map' });
@@ -107,7 +107,7 @@ vi.mock('@/features/trips/components/TripReplayMap', async () => {
 vi.mock('@/features/trips/components/TripReplayCharts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     TripReplayCharts: (props: any) => {
       captured.charts = props;
       return React.createElement('div', { 'data-testid': 'trip-replay-charts' });
@@ -118,12 +118,12 @@ vi.mock('@/features/trips/components/TripReplayCharts', async () => {
 vi.mock('@/components/charts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     ElevationProfile: (props: any) => {
       captured.elevation = props;
       return React.createElement('div', { 'data-testid': 'elevation-profile' });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     Sparkline: (props: any) => {
       captured.sparkline = props;
       return React.createElement('div', { 'data-testid': 'sparkline' });
@@ -139,7 +139,7 @@ vi.mock('@/components/data-display', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
     ...actual,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     PlaybackControls: (props: any) => {
       captured.playback = props;
       return React.createElement('div', { 'data-testid': 'playback-controls' });
@@ -270,7 +270,7 @@ function makeDrive(over: Partial<DriveDetail> = {}): DriveDetail {
   return { ...base, positions: POSITIONS, telemetry: [], ...over };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeDriveQuery(over: { data?: DriveDetail; isLoading?: boolean; error?: unknown; refetch?: () => any } = {}) {
   return {
     data: over.data,

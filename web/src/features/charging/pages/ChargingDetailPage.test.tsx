@@ -179,7 +179,7 @@ const mockLive = useChargingTelemetryLatest as unknown as ReturnType<typeof vi.f
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 const mockFormatting = useFormatting as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

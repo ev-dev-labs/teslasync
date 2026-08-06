@@ -155,7 +155,7 @@ const mockRange = useRangeState as unknown as ReturnType<typeof vi.fn>;
 
 const RANGE = { start: '2026-06-01', end: '2026-06-30' };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -216,7 +216,7 @@ const HISTORY: MediaSnapshot[] = [
   snapshot({ id: 3, now_playing_title: 'Mid Track', now_playing_artist: 'Artist M', playback_source: 'Bluetooth', playback_status: 'Stopped', audio_volume: 6, created_at: '2026-06-12T12:00:00Z' }),
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function selected(vehicleId: number | null): any {
   return {
     vehicleId,

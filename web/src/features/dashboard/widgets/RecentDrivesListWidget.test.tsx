@@ -106,7 +106,7 @@ const mockRequest = request as unknown as ReturnType<typeof vi.fn>;
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -149,7 +149,7 @@ const STANDARD = { cols: 2, rows: 4 }; // limit 7, not wide
 const WIDE = { cols: 3, rows: 2 }; // limit 10, wide (addresses shown)
 
 function setup(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   opts: { drives?: any; vehicles?: any; distancePref?: 'km' | 'mi' } = {},
 ) {
   mockVehicles.mockReturnValue(opts.vehicles ?? makeQuery({ data: [{ id: 42 }] }));

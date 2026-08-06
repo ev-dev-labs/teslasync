@@ -98,7 +98,7 @@ import MonthlyMileageWidget, { shortMonth, currentMonthKey } from './MonthlyMile
 const mockMileage = useMonthlyMileage as unknown as ReturnType<typeof vi.fn>;
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

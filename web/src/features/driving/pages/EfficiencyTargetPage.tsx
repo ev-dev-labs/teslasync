@@ -67,7 +67,7 @@ export default function EfficiencyTargetPage() {
         // table, whose cells are string | number only.
         hit: w.hit ? '✓' : '✗',
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toDisplay derives from isMiles
+     
     [summary.weeks, isMiles],
   );
 

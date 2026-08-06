@@ -118,11 +118,11 @@ vi.mock('@/components/maps', () => ({
       {children}
     </div>
   ),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   Marker: ({ position }: any) => (
     <div data-testid="marker" data-position={JSON.stringify(position)} />
   ),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   Polyline: ({ positions, pathOptions }: any) => (
     <div
       data-testid="polyline"
@@ -134,7 +134,7 @@ vi.mock('@/components/maps', () => ({
     <div data-testid="tile-layer" data-style={style} />
   ),
   MapInvalidator: () => <div data-testid="map-invalidator" />,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   MapLayerSwitcher: ({ current, onChange }: any) => (
     <div data-testid="layer-switcher">
       {(['dark', 'satellite', 'streets', 'terrain'] as const).map((s) => (
@@ -150,17 +150,17 @@ vi.mock('@/components/maps', () => ({
 // replaced with inert stubs. AreaChart exposes its `data` (the derived speed
 // series) and Area exposes its `name` so conversion + labelling are assertable.
 vi.mock('@/components/charts', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   AreaChart: ({ data, children }: any) => (
     <div data-testid="area-chart" data-series={JSON.stringify(data)}>
       {children}
     </div>
   ),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   Area: ({ name, dataKey }: any) => (
     <div data-testid="area" data-name={String(name)} data-datakey={String(dataKey)} />
   ),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   ResponsiveContainer: ({ children }: any) => (
     <div data-testid="responsive-container">{children}</div>
   ),

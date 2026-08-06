@@ -50,7 +50,7 @@ import BackupHistoryWidget, { fmtDuration, thirtyDaysAgo } from './BackupHistory
 const mockSites = useTeslaEnergySites as unknown as ReturnType<typeof vi.fn>;
 const mockEvents = useTeslaBackupHistory as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -96,7 +96,7 @@ function makeEvent(over: Partial<TeslaBackupEvent> = {}): TeslaBackupEvent {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function setup(opts: { sites?: any; events?: any } = {}) {
   mockSites.mockReturnValue(opts.sites ?? makeQuery({ data: [SITE] }));
   mockEvents.mockReturnValue(opts.events ?? makeQuery({ data: [] }));

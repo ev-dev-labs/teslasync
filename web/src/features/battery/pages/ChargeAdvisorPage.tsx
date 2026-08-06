@@ -69,7 +69,7 @@ export default function ChargeAdvisorPage() {
         burn: f.expectedBurnPct,
         soc: f.projectedEndPct,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dayLabel derives from t
+     
     [advice.forecast, t],
   );
 
