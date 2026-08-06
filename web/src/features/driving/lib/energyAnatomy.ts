@@ -103,15 +103,52 @@ export function computeAnatomy(drives: readonly Drive[]): AnatomyTotals {
   }
 
   return {
-    aeroWh: Math.round(aero),
-    rollingWh: Math.round(rolling),
-    climateWh: Math.round(climate),
-    otherWh: Math.round(other),
+    ...apportion(aero, rolling, climate, other, total),
     totalWh: Math.round(total),
     regenWh: Math.round(regen),
     drives: count,
     distanceM: distance,
   };
+}
+
+/**
+ * Round the four components so they always sum **exactly** to the rounded
+ * total (largest-remainder / Hare-quota apportionment).
+ *
+ * Rounding each component independently drifts: four halves-rounded-up push the
+ * displayed parts up to 2 Wh above `totalWh`, so a stacked bar or breakdown
+ * table renders segments that visibly do not add up to the headline figure.
+ * Here every component is floored first, then the leftover whole units are
+ * handed out to the largest fractional remainders — total is preserved and each
+ * component still lands within 1 Wh of its true value.
+ */
+function apportion(
+  aero: number,
+  rolling: number,
+  climate: number,
+  other: number,
+  total: number,
+): Pick<AnatomyTotals, 'aeroWh' | 'rollingWh' | 'climateWh' | 'otherWh'> {
+  const parts = [aero, rolling, climate, other];
+  const floors = parts.map((p) => Math.floor(p));
+  // Distribute against the rounded total the UI actually prints, so the
+  // segments reconcile with the headline rather than with the raw float sum.
+  let remaining = Math.round(total) - floors.reduce((s, f) => s + f, 0);
+
+  const order = parts
+    .map((p, i) => ({ i, frac: p - floors[i] }))
+    .sort((a, b) => b.frac - a.frac);
+
+  const out = [...floors];
+  // `remaining` is provably in 0..3 here: the four parts sum to `total` by
+  // construction, so flooring loses strictly less than one unit each. The
+  // bounded loop simply makes that non-negotiable rather than assumed.
+  for (let pass = 0; remaining > 0 && pass < order.length; pass += 1) {
+    out[order[pass].i] += 1;
+    remaining -= 1;
+  }
+
+  return { aeroWh: out[0], rollingWh: out[1], climateWh: out[2], otherWh: out[3] };
 }
 
 /* ── Sankey geometry ─────────────────────────────────────────────── */

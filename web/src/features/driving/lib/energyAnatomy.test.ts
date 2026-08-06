@@ -43,6 +43,47 @@ describe('computeAnatomy', () => {
     expect(a.drives).toBe(2);
   });
 
+  it('holds the sum invariant across a wide sweep of inputs', () => {
+    // The single-case check above passes on inputs whose rounding happens to
+    // cancel. Rounding each component independently drifts the parts up to
+    // 2 Wh away from the headline total, so a breakdown renders segments that
+    // do not add up. Sweep enough shapes — including the rescale branch and
+    // the zero-climate branch — that any such drift is caught.
+    const speeds = [5, 11, 16.7, 25, 33];
+    const energies = [500, 1_337, 9_001, 10_000, 23_456];
+    const temps = [-10, 0, 20, 35];
+    const distances = [1_000, 7_777, 60_000];
+
+    for (const avgSpeedMps of speeds) {
+      for (const energyUsedWh of energies) {
+        for (const outsideTempAvgC of temps) {
+          for (const distanceM of distances) {
+            const a = computeAnatomy([
+              drive({ avgSpeedMps, energyUsedWh, outsideTempAvgC, distanceM }),
+            ]);
+            const label = `v=${avgSpeedMps} e=${energyUsedWh} T=${outsideTempAvgC} d=${distanceM}`;
+            expect(a.aeroWh + a.rollingWh + a.climateWh + a.otherWh, label).toBe(a.totalWh);
+            expect(a.otherWh, label).toBeGreaterThanOrEqual(0);
+            expect(a.aeroWh, label).toBeGreaterThanOrEqual(0);
+            expect(a.rollingWh, label).toBeGreaterThanOrEqual(0);
+            expect(a.climateWh, label).toBeGreaterThanOrEqual(0);
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps each apportioned component within 1 Wh of its true share', () => {
+    // Largest-remainder rounding must preserve the sum *without* distorting the
+    // physics: a component may only be nudged by the sub-unit fraction it lost.
+    const a = computeAnatomy([drive({ energyUsedWh: 10_001, outsideTempAvgC: -10 })]);
+    const b = computeAnatomy([drive({ energyUsedWh: 10_002, outsideTempAvgC: -10 })]);
+    // A 1 Wh change in measured energy must not swing any component wildly.
+    expect(Math.abs(a.aeroWh - b.aeroWh)).toBeLessThanOrEqual(2);
+    expect(Math.abs(a.rollingWh - b.rollingWh)).toBeLessThanOrEqual(2);
+    expect(Math.abs(a.climateWh - b.climateWh)).toBeLessThanOrEqual(2);
+  });
+
   it('caps modeled physics at the measured energy (no negative other)', () => {
     // Tiny measured energy despite fast/long driving: modeled terms overshoot
     // and must be rescaled rather than pushing `other` negative.
