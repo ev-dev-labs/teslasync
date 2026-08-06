@@ -6,6 +6,22 @@ import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 interface RadialGaugeProps {
   value: number;
   max: number;
+  /**
+   * Start of the scale. Defaults to 0 (a plain 0→max magnitude ring).
+   *
+   * Set this for **interval** scales whose zero is arbitrary — a
+   * temperature in °F being the motivating case. A 0→max ring reads the
+   * fill as `value / max`, which is only meaningful when zero means "none
+   * of the quantity". 49 °C on a 0–150 °C ring is 33% full, but the same
+   * reading in Fahrenheit (120 °F on a 0–302 °F ring) is 40% full — the
+   * ring silently changed meaning with the user's unit preference.
+   * Passing the converted `min` as well makes the offset cancel out of
+   * `(value - min) / (max - min)` so both units draw the same arc.
+   *
+   * For **signed** quantities (torque, axle speed) prefer BipolarBar —
+   * this gauge has no way to express direction.
+   */
+  min?: number;
   label: string;
   unit?: string;
   color?: string;
@@ -27,7 +43,7 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
  */
 export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
   function RadialGauge(
-    { value, max, label, unit, color = '#3b82f6', size = 120, decimals, className },
+    { value, max, min = 0, label, unit, color = '#3b82f6', size = 120, decimals, className },
     ref,
   ) {
     const radius = (size - STROKE_WIDTH) / 2;
@@ -40,11 +56,25 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
     // an unguarded NaN value, a NaN `max`, or a zero `max` (0 / 0) previously
     // produced `strokeDashoffset={NaN}`, blanking the ring.
     const safeMax = Number.isFinite(max) && max > 0 ? max : 0;
-    const clamped = Math.max(0, Math.min(toFinite(value), safeMax));
-    const ratio = safeMax > 0 ? clamped / safeMax : 0;
+    // A `min` at or above the top of the scale would invert the range, so it
+    // falls back to 0 (the default 0→max behaviour) rather than producing a
+    // negative span and an arc that grows the wrong way.
+    const safeMin = Number.isFinite(min) && min < safeMax ? min : 0;
+    const span = safeMax - safeMin;
+    const clamped = Math.max(safeMin, Math.min(toFinite(value), safeMax));
+    const ratio = span > 0 ? (clamped - safeMin) / span : 0;
     const offset = circumference - ratio * circumference;
     const d = decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision());
     const display = fmtNumber(clamped, d);
+
+    // A round cap adds half a stroke width of length at each end, so on a
+    // near-zero arc the cap IS the entire mark and the gauge renders a
+    // floating dot that reads as a position marker rather than a magnitude
+    // (a 0.6% brake reading looked like a pip pinned to the top of the ring).
+    // Below that length the arc is drawn butt-capped so a tiny value looks
+    // like a tiny sliver.
+    const arcLength = ratio * circumference;
+    const cap = arcLength >= STROKE_WIDTH ? 'round' : 'butt';
 
     return (
       <div
@@ -52,7 +82,7 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
         role="meter"
         aria-label={label || undefined}
         aria-valuenow={clamped}
-        aria-valuemin={0}
+        aria-valuemin={safeMin}
         aria-valuemax={safeMax}
         aria-valuetext={unit ? `${display}${unit}` : display}
         className={cn('inline-flex flex-col items-center gap-1', className)}
@@ -75,7 +105,7 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
               fill="none"
               stroke={color}
               strokeWidth={STROKE_WIDTH}
-              strokeLinecap="round"
+              strokeLinecap={cap}
               strokeDasharray={circumference}
               strokeDashoffset={offset}
               className="transition-all duration-slow"

@@ -1,4 +1,5 @@
 export { RadialGauge } from './RadialGauge';
+export { BipolarBar, type BipolarBarProps } from './BipolarBar';
 export { MiniChart } from './MiniChart';
 export { SmallMultiplesChart, type SmallMultiplesChartProps } from './SmallMultiplesChart';
 export { ChartContainer } from './ChartContainer';

@@ -275,3 +275,88 @@ describe('RadialGauge — ref forwarding', () => {
     expect(ref.current).toHaveAttribute('role', 'meter');
   });
 });
+
+describe('RadialGauge — offset scales (min prop)', () => {
+  it('defaults min to 0 so the plain 0→max ring is unchanged', () => {
+    const { container } = render(<RadialGauge value={50} max={200} label="Motor" />);
+    expect(num(arc(container), 'stroke-dashoffset')).toBeCloseTo(CIRC() * 0.75, 5);
+    expect(container.querySelector('[role="meter"]')).toHaveAttribute('aria-valuemin', '0');
+  });
+
+  it('measures the fill from min, not from zero', () => {
+    // (150 - 100) / (200 - 100) = 50%.
+    const { container } = render(
+      <RadialGauge value={150} min={100} max={200} label="Motor" />,
+    );
+    expect(num(arc(container), 'stroke-dashoffset')).toBeCloseTo(CIRC() * 0.5, 5);
+  });
+
+  it('reports the shifted range on the ARIA meter', () => {
+    render(<RadialGauge value={150} min={100} max={200} label="Motor" />);
+    const meter = screen.getByRole('meter', { name: 'Motor' });
+    expect(meter).toHaveAttribute('aria-valuemin', '100');
+    expect(meter).toHaveAttribute('aria-valuemax', '200');
+    expect(meter).toHaveAttribute('aria-valuenow', '150');
+  });
+
+  it('clamps to min rather than to zero when the value is below the range', () => {
+    const { container } = render(
+      <RadialGauge value={20} min={100} max={200} label="Motor" />,
+    );
+    expect(num(arc(container), 'stroke-dashoffset')).toBeCloseTo(CIRC(), 5);
+    expect(screen.getByRole('meter', { name: 'Motor' })).toHaveAttribute(
+      'aria-valuenow',
+      '100',
+    );
+  });
+
+  it('sweeps the same arc for the same temperature in Celsius and Fahrenheit', () => {
+    // The motivating bug: temperature is an INTERVAL scale, so a 0→max ring
+    // reads a different fraction once the user switches to °F. Converting BOTH
+    // ends makes the offset cancel.
+    const c = render(<RadialGauge value={50} min={0} max={150} label="Motor" />);
+    const cOffset = num(arc(c.container as HTMLElement), 'stroke-dashoffset');
+    c.unmount();
+
+    const f = render(<RadialGauge value={122} min={32} max={302} label="Motor" />);
+    const fOffset = num(arc(f.container as HTMLElement), 'stroke-dashoffset');
+
+    expect(fOffset).toBeCloseTo(cOffset, 5);
+  });
+
+  it('ignores a min at or above max rather than inverting the range', () => {
+    const { container } = render(
+      <RadialGauge value={50} min={500} max={100} label="Motor" />,
+    );
+    // Falls back to the 0→max scale: 50 / 100 = 50%.
+    expect(num(arc(container), 'stroke-dashoffset')).toBeCloseTo(CIRC() * 0.5, 5);
+    expect(container.querySelector('[role="meter"]')).toHaveAttribute('aria-valuemin', '0');
+  });
+
+  it('keeps the geometry finite for a NaN min', () => {
+    const { container } = render(
+      <RadialGauge value={50} min={Number.NaN} max={100} label="Motor" />,
+    );
+    expect(Number.isFinite(num(arc(container), 'stroke-dashoffset'))).toBe(true);
+  });
+});
+
+describe('RadialGauge — round-cap artifact', () => {
+  it('butt-caps a near-zero arc so it renders as a sliver, not a floating dot', () => {
+    // A round cap adds half a stroke width at EACH end, so on a 0.6% arc the
+    // cap is the whole mark and the gauge drew a pip that read as a position
+    // marker rather than a magnitude.
+    const { container } = render(<RadialGauge value={0.6} max={100} label="Brake" />);
+    expect(arc(container)).toHaveAttribute('stroke-linecap', 'butt');
+  });
+
+  it('keeps the round cap once the arc is longer than the stroke width', () => {
+    const { container } = render(<RadialGauge value={50} max={100} label="Brake" />);
+    expect(arc(container)).toHaveAttribute('stroke-linecap', 'round');
+  });
+
+  it('butt-caps an exactly-zero arc', () => {
+    const { container } = render(<RadialGauge value={0} max={100} label="Brake" />);
+    expect(arc(container)).toHaveAttribute('stroke-linecap', 'butt');
+  });
+});
