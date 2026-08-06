@@ -384,7 +384,7 @@ export default function AutomationsListPage() {
               aria-label={t('automations.presets.toggleAria', 'Show or hide quick start templates')}
             >
               <ChevronRight
-                className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-90"
+                className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-normal group-open:rotate-90"
                 aria-hidden="true"
               />
               <Sparkles className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />

@@ -1531,7 +1531,7 @@ export default function Layout() {
                     <span className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
                       <SectionIcon
                         className={cn(
-                          'h-3 w-3 shrink-0 transition-all duration-200',
+                          'h-3 w-3 shrink-0 transition-all duration-normal',
                           sectionStyle?.accent ?? 'text-neon-cyan',
                           isActiveSection && 'drop-shadow-[0_0_6px_currentColor]'
                         )}

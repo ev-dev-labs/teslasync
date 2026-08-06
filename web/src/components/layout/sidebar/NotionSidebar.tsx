@@ -157,7 +157,7 @@ function NotionSectionRow({
     >
       <Icons.next
         className={cn(
-          'h-3 w-3 shrink-0 text-[var(--text-muted)] transition-transform duration-150 ease-out',
+          'h-3 w-3 shrink-0 text-[var(--text-muted)] transition-transform duration-fast ease-out',
           expanded ? 'rotate-90' : 'rotate-0',
         )}
         aria-hidden
