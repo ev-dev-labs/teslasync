@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, Button, DataTable, PanelTitle, SectionTitle, Caption, Label, Text, type Column,
+  GlassPanel, Button, DataTable, PanelTitle, Caption, Label, Text, type Column,
 } from '@/components/ui';
 import { MetricCard, TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -21,6 +21,7 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { typography, type NeonColor } from '@/lib/tokens';
 import type { TableInfo } from '@/types/admin';
+import { VisuallyHidden } from '@/components/a11y';
 
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
@@ -287,9 +288,9 @@ export default function DBHealthPage() {
       {/* 2 — Primary bento: hero table-size chart + migration status */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <SectionTitle className="sr-only">
+          <VisuallyHidden as="h2">
             {t('dbHealth.section.storage', 'Storage and migrations')}
-          </SectionTitle>
+          </VisuallyHidden>
 
           {/* Hero — table sizes (spans 2 of 3 columns on wide screens) */}
           <div className="xl:col-span-2">
@@ -437,9 +438,9 @@ export default function DBHealthPage() {
       {/* 3 — Detail bento: tables list + connection pool */}
       <FadeIn delay={0.2}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <SectionTitle className="sr-only">
+          <VisuallyHidden as="h2">
             {t('dbHealth.section.runtime', 'Tables and runtime')}
-          </SectionTitle>
+          </VisuallyHidden>
 
           {/* Tables list (spans 2 of 3 columns on wide screens) */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">

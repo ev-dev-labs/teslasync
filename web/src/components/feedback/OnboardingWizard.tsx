@@ -173,7 +173,7 @@ export default function OnboardingWizard() {
         <div
           className="flex items-center justify-center gap-2 mb-6"
           role="group"
-          aria-label={t('onboarding.progress', 'Step {{current}} of {{total}}', {
+          aria-label={t('onboarding.progress.stepOf', 'Step {{current}} of {{total}}', {
             current: currentStep + 1,
             total: steps.length,
           })}

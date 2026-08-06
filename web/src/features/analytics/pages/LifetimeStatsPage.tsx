@@ -237,7 +237,7 @@ export default function LifetimeStatsPage() {
 
       {/* ── AI Q&A (opt-in; absent when AI is off) ───────────────── */}
       <FadeIn delay={0.1}>
-        <section aria-label={t('lifetime.aiQA', 'Ask about your lifetime stats')}>
+        <section aria-label={t('lifetime.aiQA.title', 'Ask about your lifetime stats')}>
           <AILifetimeStatsQA vehicleId={vehicleId ?? undefined} />
         </section>
       </FadeIn>

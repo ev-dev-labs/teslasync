@@ -31,6 +31,7 @@ import { cn } from '@/lib/cn';
 import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
+import { VisuallyHidden } from '@/components/a11y';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -81,7 +82,7 @@ function StatChip({ icon, label, value }: { icon: ReactNode; label: string; valu
       )}
     >
       {icon}
-      <span className="sr-only">{label}: </span>
+      <VisuallyHidden>{label}: </VisuallyHidden>
       <Text color="primary" className="tabular-nums">{value}</Text>
     </span>
   );
@@ -174,6 +175,7 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           message={t('common.noData', 'No data available')}
+          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
           className="py-8"
         />
       ) : (
@@ -232,6 +234,7 @@ function FleetStatusPanel({ counts, total, isLoading, isError, error, onRetry }:
         <EmptyState
           icon={<ListChecks className="h-8 w-8" />}
           message={t('vehicles.noStatusData', 'No fleet status data yet')}
+          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
           className="py-8"
         />
       ) : (

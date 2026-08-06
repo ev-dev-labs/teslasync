@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { cn } from '@/lib/cn';
+import { VisuallyHidden } from '@/components/a11y';
 
 export interface StatCardTrend {
   direction: 'up' | 'down' | 'flat';
@@ -100,7 +101,7 @@ export function StatCard({ label, value, unit, icon, trend, sublabel, loading, c
           )}
         >
           <span aria-hidden="true">{TREND_GLYPH[direction]}</span>
-          <span className="sr-only">{trendDescription}</span>
+          <VisuallyHidden>{trendDescription}</VisuallyHidden>
           <span>{trend.value ?? ''}</span>
         </div>
       ) : null}
