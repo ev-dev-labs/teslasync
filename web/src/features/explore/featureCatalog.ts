@@ -267,6 +267,18 @@ const DESCRIPTIONS: Record<string, string> = {
   '/api-logs': 'Recent HTTP requests with status, duration, and payload size.',
   '/api-playground': 'Try any API endpoint with parameter forms.',
 
+  // ── Ownership Intelligence ─────────────────────────────────────────
+  '/ownership/insurance-telematics': 'Driving-risk scoring and premium evidence for your insurer.',
+  '/ownership/tariff-lab': 'Compare utility rate plans against your real charging history.',
+  '/ownership/charging-reconciliation': 'Match charging invoices to sessions and raise disputes.',
+  '/ownership/driver-attribution': 'Cluster driving fingerprints to attribute trips to drivers.',
+  '/ownership/warranty-command': 'Coverage windows, expiry risk, and claim-readiness evidence.',
+  '/ownership/data-governance': 'Plan retention and purge policies before anything is deleted.',
+  '/ownership/model-trust': 'Score prediction accuracy, calibration, bias, and drift.',
+  '/ownership/jurisdiction-compliance': 'Apportion distance by region for road-usage charges.',
+  '/ownership/consumables-lifecycle': 'Wear-part life remaining from real usage stress.',
+  '/ownership/subscription-roi': 'Whether each recurring feature earns back its cost.',
+
   // ── About ──────────────────────────────────────────────────────────
   '/roadmap': 'Upcoming features grouped by quarter.',
 };
