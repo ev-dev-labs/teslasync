@@ -209,6 +209,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	actioncenterdb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
 	advancedintelligencedb "github.com/ev-dev-labs/teslasync/internal/database/advancedintelligence"
+	ownershipinteldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
@@ -375,6 +376,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/advancedintelligencesvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
@@ -385,6 +387,7 @@ import (
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
+	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -881,6 +884,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	advancedIntelligenceHandler := advancedintelligencehandler.NewHandler(
 		advancedIntelligenceService,
+		cfg.Auth.ForwardAuthHeader,
+	)
+	ownershipIntelService := ownershipintelsvc.New(
+		ownershipinteldb.NewSourceRepository(db),
+		ownershipinteldb.NewDurableRepository(db),
+	)
+	ownershipIntelHandler := ownershipintelhandler.NewHandler(
+		ownershipIntelService,
 		cfg.Auth.ForwardAuthHeader,
 	)
 	actionCenterService := actioncentersvc.New(
@@ -3471,6 +3482,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Unified decision inbox. Forward-auth users receive isolated state;
 		// open-mode installs use one local subject because no identity exists.
 		advancedIntelligenceHandler.MountRoutes(r)
+		ownershipIntelHandler.MountRoutes(r)
 		r.Get("/action-center", actionCenterHandler.List)
 		r.Get("/action-center/{recommendationID}/history", actionCenterHandler.History)
 		r.With(httprate.LimitByIP(30, time.Minute)).

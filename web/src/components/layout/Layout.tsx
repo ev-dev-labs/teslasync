@@ -223,6 +223,16 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/intelligence/emergency-resilience': ['emergency resilience', 'reserve', 'evacuation', 'backup energy'],
   '/intelligence/causal-lab': ['causal experiment', 'treatment', 'control', 'effect estimate'],
   '/intelligence/tco-optimizer': ['tco optimizer', 'ownership cost', 'portfolio', 'replacement scenario'],
+  '/ownership/insurance-telematics': ['insurance telematics', 'underwriting', 'premium', 'risk score', 'safe driving discount', 'harsh braking'],
+  '/ownership/tariff-lab': ['tariff lab', 'utility rate', 'time of use', 'price band', 'arbitrage', 'electricity plan', 'rate comparison'],
+  '/ownership/charging-reconciliation': ['charging reconciliation', 'invoice', 'dispute', 'billing variance', 'overcharge', 'statement audit'],
+  '/ownership/driver-attribution': ['driver attribution', 'fingerprint', 'who drove', 'behaviour cluster', 'driver profile', 'cost split'],
+  '/ownership/warranty-command': ['warranty', 'coverage', 'claim readiness', 'expiry', 'deductible', 'capacity floor'],
+  '/ownership/data-governance': ['data governance', 'retention policy', 'disk usage', 'purge plan', 'legal hold', 'storage'],
+  '/ownership/model-trust': ['model trust', 'prediction accuracy', 'calibration', 'forecast error', 'bias', 'drift', 'skill score'],
+  '/ownership/jurisdiction-compliance': ['jurisdiction', 'road usage charge', 'apportionment', 'mileage tax', 'filing', 'registration'],
+  '/ownership/consumables-lifecycle': ['consumables', 'wear parts', 'tires', 'filters', 'brake pads', 'wipers', 'replacement due'],
+  '/ownership/subscription-roi': ['subscription roi', 'connectivity', 'premium features', 'cancel', 'break even', 'recurring cost'],
 }
 
 const DEFAULT_PINNED_NAV_PATHS = ['/', '/digital-twin', '/vehicles', '/charging', '/live']
@@ -253,6 +263,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Data:           { accent: 'text-teal-700 dark:text-teal-300',       surface: 'bg-teal-400/10',    ring: 'ring-teal-400/20',    dot: 'bg-teal-400',    icon: Icons.database,        gradient: 'from-teal-500/20 via-teal-400/5 to-transparent' },
   Diagnostics:    { accent: 'text-cyan-700 dark:text-neon-cyan',      surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-neon-cyan',   icon: Icons.activity,        gradient: 'from-cyan-500/25 via-cyan-400/8 to-transparent' },
   'Advanced Intelligence': { accent: 'text-indigo-700 dark:text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400', icon: Icons.network, gradient: 'from-indigo-500/25 via-indigo-400/8 to-transparent' },
+  'Ownership Intelligence': { accent: 'text-teal-700 dark:text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400', icon: Icons.wallet, gradient: 'from-teal-500/25 via-teal-400/8 to-transparent' },
   About:          { accent: 'text-slate-600 dark:text-[var(--text-secondary)]', surface: 'bg-[var(--surface-2)]', ring: 'ring-white/10', dot: 'bg-[var(--surface-2)]', icon: Icons.info, gradient: 'from-white/[0.06] via-white/[0.02] to-transparent' },
 }
 
@@ -474,6 +485,21 @@ export const navSections = [
       { to: '/intelligence/emergency-resilience', icon: Icons.home, label: 'Emergency Resilience', color: 'text-red-400' },
       { to: '/intelligence/causal-lab', icon: Icons.scanSearch, label: 'Causal Experiment Lab', color: 'text-fuchsia-400' },
       { to: '/intelligence/tco-optimizer', icon: Icons.wallet, label: 'TCO Optimizer', color: 'text-green-400' },
+    ],
+  },
+  {
+    title: 'Ownership Intelligence',
+    items: [
+      { to: '/ownership/insurance-telematics', icon: Icons.securityCheck, label: 'Insurance Telematics', color: 'text-teal-400' },
+      { to: '/ownership/tariff-lab', icon: Icons.bolt, label: 'Utility Tariff Lab', color: 'text-lime-400' },
+      { to: '/ownership/charging-reconciliation', icon: Icons.receipt, label: 'Invoice Reconciliation', color: 'text-amber-400' },
+      { to: '/ownership/driver-attribution', icon: Icons.fingerprint, label: 'Driver Attribution', color: 'text-violet-400' },
+      { to: '/ownership/warranty-command', icon: Icons.award, label: 'Warranty Command', color: 'text-cyan-400' },
+      { to: '/ownership/data-governance', icon: Icons.database, label: 'Data Governance', color: 'text-slate-400' },
+      { to: '/ownership/model-trust', icon: Icons.target, label: 'Model Trust Lab', color: 'text-sky-400' },
+      { to: '/ownership/jurisdiction-compliance', icon: Icons.globe, label: 'Jurisdiction Compliance', color: 'text-indigo-400' },
+      { to: '/ownership/consumables-lifecycle', icon: Icons.package, label: 'Consumables Lifecycle', color: 'text-rose-400' },
+      { to: '/ownership/subscription-roi', icon: Icons.wallet, label: 'Subscription ROI', color: 'text-emerald-400' },
     ],
   },
   {

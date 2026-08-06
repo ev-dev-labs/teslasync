@@ -210,6 +210,18 @@ const EmergencyResilience = lazy(() => import('./features/advanced-intelligence/
 const CausalExperimentLab = lazy(() => import('./features/advanced-intelligence/pages/CausalExperimentationPage'))
 const TCOOptimizer = lazy(() => import('./features/advanced-intelligence/pages/TCOOptimizerPage'))
 
+// Ownership Intelligence
+const InsuranceTelematics = lazy(() => import('./features/ownership/pages/InsuranceTelematicsPage'))
+const TariffLab = lazy(() => import('./features/ownership/pages/TariffLabPage'))
+const ChargingReconciliation = lazy(() => import('./features/ownership/pages/ChargingReconciliationPage'))
+const DriverAttribution = lazy(() => import('./features/ownership/pages/DriverAttributionPage'))
+const WarrantyCommand = lazy(() => import('./features/ownership/pages/WarrantyCommandPage'))
+const DataGovernance = lazy(() => import('./features/ownership/pages/DataGovernancePage'))
+const ModelTrust = lazy(() => import('./features/ownership/pages/ModelTrustPage'))
+const JurisdictionCompliance = lazy(() => import('./features/ownership/pages/JurisdictionCompliancePage'))
+const ConsumablesLifecycle = lazy(() => import('./features/ownership/pages/ConsumablesLifecyclePage'))
+const SubscriptionROI = lazy(() => import('./features/ownership/pages/SubscriptionROIPage'))
+
 // Admin & DevTools
 const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
 const DevTools = lazy(() => import('./features/admin/pages/DevToolsPage'))
@@ -623,6 +635,16 @@ export default function App() {
         <Route path="intelligence/emergency-resilience" element={<SafeRoute name="EmergencyResilience"><EmergencyResilience /></SafeRoute>} />
         <Route path="intelligence/causal-lab" element={<SafeRoute name="CausalExperimentLab"><CausalExperimentLab /></SafeRoute>} />
         <Route path="intelligence/tco-optimizer" element={<SafeRoute name="TCOOptimizer"><TCOOptimizer /></SafeRoute>} />
+        <Route path="ownership/insurance-telematics" element={<SafeRoute name="InsuranceTelematics"><InsuranceTelematics /></SafeRoute>} />
+        <Route path="ownership/tariff-lab" element={<SafeRoute name="TariffLab"><TariffLab /></SafeRoute>} />
+        <Route path="ownership/charging-reconciliation" element={<SafeRoute name="ChargingReconciliation"><ChargingReconciliation /></SafeRoute>} />
+        <Route path="ownership/driver-attribution" element={<SafeRoute name="DriverAttribution"><DriverAttribution /></SafeRoute>} />
+        <Route path="ownership/warranty-command" element={<SafeRoute name="WarrantyCommand"><WarrantyCommand /></SafeRoute>} />
+        <Route path="ownership/data-governance" element={<SafeRoute name="DataGovernance"><DataGovernance /></SafeRoute>} />
+        <Route path="ownership/model-trust" element={<SafeRoute name="ModelTrust"><ModelTrust /></SafeRoute>} />
+        <Route path="ownership/jurisdiction-compliance" element={<SafeRoute name="JurisdictionCompliance"><JurisdictionCompliance /></SafeRoute>} />
+        <Route path="ownership/consumables-lifecycle" element={<SafeRoute name="ConsumablesLifecycle"><ConsumablesLifecycle /></SafeRoute>} />
+        <Route path="ownership/subscription-roi" element={<SafeRoute name="SubscriptionROI"><SubscriptionROI /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature
