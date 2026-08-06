@@ -88,4 +88,27 @@ describe('cn — tailwind-merge conflict resolution (last wins)', () => {
     const result = cn('p-2', useLargePadding && 'p-8', false && 'p-0')
     expect(result).toBe('p-8')
   })
+
+  /**
+   * Every token-backed scale declared in tailwind.config.js uses a custom
+   * (non-numeric, non-keyword) key, which twMerge does NOT recognise out of
+   * the box — both classes survive and CSS source order silently decides the
+   * winner. Each scale must therefore be registered in cn.ts. This test is
+   * the guard: adding a new custom scale to tailwind.config.js without
+   * registering it here will fail.
+   */
+  describe('token-backed custom scales resolve last-wins', () => {
+    it.each([
+      ['duration-fast', 'duration-normal'],
+      ['duration-fast', 'duration-200'],
+      ['ease-standard', 'ease-linear'],
+      ['ease-accelerate', 'ease-decelerate'],
+      ['rounded-panel', 'rounded-lg'],
+      ['rounded-shape-md', 'rounded-full'],
+      ['shadow-panel', 'shadow-e1'],
+      ['shadow-e2', 'shadow-none'],
+    ])('%s then %s keeps only the last', (base, override) => {
+      expect(cn(base, override)).toBe(override)
+    })
+  })
 })
