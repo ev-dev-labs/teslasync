@@ -5,6 +5,7 @@ import type {
   AdvancedPage,
   CausalExperiment,
   ChargingForensicsPage,
+  ChargingForensicsItem,
   ChargingSiteTwinRequest,
   ChargingSiteTwinResponse,
   ComponentSurvival,
@@ -106,6 +107,36 @@ export function useChargingForensics(vehicleId: number | null, limit = 25, offse
     advancedIntelligenceKeys.chargingForensics(vehicleId, limit, offset),
     'charging-forensics', vehicleId, limit, offset,
   );
+}
+
+// The advanced-intelligence list endpoints reject `limit > 100` outright
+// (handler.parseListRequest bounds it), so a complete export has to page.
+const EXPORT_PAGE_SIZE = 100;
+// Safety stop so a bad `total` can never spin the loop forever.
+const EXPORT_MAX_ROWS = 10_000;
+
+/**
+ * Fetch the whole charging-forensics set for CSV export.
+ *
+ * The table is server-paginated, so exporting only the rows currently on
+ * screen would hand the user a dispute packet that silently omits most of
+ * the evidence. Pages through at the endpoint's maximum page size instead.
+ */
+export async function fetchAllChargingForensics(
+  vehicleId: number,
+  signal?: AbortSignal,
+): Promise<ChargingForensicsItem[]> {
+  const rows: ChargingForensicsItem[] = [];
+  for (let offset = 0; offset < EXPORT_MAX_ROWS; offset += EXPORT_PAGE_SIZE) {
+    const page = await request<ChargingForensicsPage>(
+      listPath('charging-forensics', vehicleId, EXPORT_PAGE_SIZE, offset),
+      { signal },
+    );
+    const items = page.items ?? [];
+    rows.push(...items);
+    if (items.length < EXPORT_PAGE_SIZE || rows.length >= (page.total ?? rows.length)) break;
+  }
+  return rows;
 }
 
 export function useFederatedModelCards(vehicleId: number | null, limit = 25, offset = 0) {
