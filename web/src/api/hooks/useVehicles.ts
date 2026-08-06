@@ -334,8 +334,11 @@ export function useUserPreferenceLatest(vehicleId: number, refetchInterval?: num
 }
 
 /** Raw async function for fetching vehicle state — use in batch queries where hooks can't be used */
-export async function fetchVehicleState(vehicleId: number): Promise<{ state?: VehicleState; live: boolean }> {
-  const res = await request<RawStateResponse | null>(`/vehicles/${vehicleId}/state`)
+export async function fetchVehicleState(
+  vehicleId: number,
+  signal?: AbortSignal,
+): Promise<{ state?: VehicleState; live: boolean }> {
+  const res = await request<RawStateResponse | null>(`/vehicles/${vehicleId}/state`, { signal })
   return mapVehicleStateResponse(res, vehicleId)
 }
 
@@ -362,11 +365,11 @@ export function useFleetStates(vehicles: Vehicle[]) {
   const ids = list.map((v) => v.id).sort((a, b) => a - b);
   return useQuery({
     queryKey: ['fleet-vehicle-states', ids],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       Promise.all(
         list.map(async (v): Promise<FleetStateEntry> => {
           try {
-            const { state } = await fetchVehicleState(v.id);
+            const { state } = await fetchVehicleState(v.id, signal);
             return { vehicle: v, state: state ?? null };
           } catch {
             return { vehicle: v, state: null };
