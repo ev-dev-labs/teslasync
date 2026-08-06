@@ -68,7 +68,10 @@ const TARGET_FRAGMENTS = [
 // backlog stays visible. NOT a failure — there's nothing to enforce
 // `exportable` on if there's no <DataTable/>.
 const PENDING_MIGRATION = [
-  'features/notifications/pages/NotificationsPage.tsx',
+  // Successor to the deleted NotificationsPage.tsx (renamed in #64
+  // "Refactor/filters"). InboxPage is a thin shell; rows are mapped into
+  // <NotificationRow> inside InboxBody, so that is what must migrate.
+  'features/notifications/components/InboxBody.tsx',
   'features/notifications/pages/AlertRulesPage.tsx',
   'features/admin/pages/ApiLogsPage.tsx',
   'features/driving/pages/DrivesListPage.tsx',
@@ -265,11 +268,19 @@ if (skippedNoDataTable.length > 0) {
 // PENDING_MIGRATION — informational only. Mirror the pattern used by
 // audit-virtualization.mjs: surface backlog so future sweeps can
 // migrate raw `.map()` / `<table>` rows to <DataTable/> + exportable.
+//
+// A *stale* entry is a hard failure, not a warning: a path that no longer
+// exists silently stops auditing the surface it was meant to track, which
+// is how NotificationsPage.tsx rotted through #64.
 const pendingMissing = [];
 for (const rel of PENDING_MIGRATION) {
   const full = path.join(ROOT, rel);
   if (!existsSync(full)) {
     pendingMissing.push(rel);
+    failures.push({
+      file: rel,
+      reason: 'file not found (PENDING_MIGRATION is stale — repoint it at the renamed file or drop the entry)',
+    });
   }
 }
 if (PENDING_MIGRATION.length > 0) {

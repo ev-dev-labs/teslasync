@@ -45,11 +45,15 @@ const ROOT = join('src');
  * so Tailwind `peer-*:` variants on the indicator can read its state
  * while it stays in the accessibility tree. Wrapping it in
  * `<VisuallyHidden>` would break the `peer` sibling relationship.
+ * - `RadioCard.tsx` is the same pattern for `<input type="radio">`: the
+ * card body reads `peer-checked:` / `peer-focus-visible:` off the native
+ * input, so the input has to stay a direct `peer` sibling.
  */
 const ALLOWED_FILES = new Set([
   toAllowKey(join('src', 'components', 'a11y', 'VisuallyHidden.tsx')),
   toAllowKey(join('src', 'components', 'a11y', '__tests__', 'VisuallyHidden.test.tsx')),
   toAllowKey(join('src', 'components', 'ui', 'Checkbox.tsx')),
+  toAllowKey(join('src', 'components', 'ui', 'RadioCard.tsx')),
 ]);
 
 function toAllowKey(p) {

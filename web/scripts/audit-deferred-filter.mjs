@@ -36,9 +36,15 @@ const ROOT = 'src';
 
 // Each TARGET is a path (relative to web/) and an optional row component
 // name. When `rowComponent` is set, the audit also requires that name
-// to appear inside a `memo(` call somewhere in the file — otherwise
-// the row will still re-render on every filter keystroke even though
-// the filter compute is deferred.
+// to be wrapped in `memo(` — otherwise the row will still re-render on
+// every filter keystroke even though the filter compute is deferred.
+//
+// `rowComponentPath` says WHERE that memo() wrapper lives. Row components
+// are routinely extracted out of the page into their own file (one exported
+// component per file, per the repo's monolith rule), and the memo() wrapper
+// travels with them. Without this the audit greps the page file, finds no
+// `memo(`, and reports a false positive against a component that is in fact
+// correctly memoised. Defaults to the page itself for inline row components.
 //
 // Server-driven targets are still listed: they must carry the
 // `deferred-filter:no` justification or the audit fails. That keeps
@@ -47,6 +53,7 @@ const TARGETS = [
   {
     path: join(ROOT, 'features', 'driving', 'pages', 'DrivesListPage.tsx'),
     rowComponent: 'DriveCard',
+    rowComponentPath: join(ROOT, 'features', 'driving', 'components', 'DriveCard.tsx'),
   },
   {
     path: join(ROOT, 'features', 'system', 'pages', 'CommandHistoryPage.tsx'),
@@ -146,14 +153,39 @@ function auditFile(target) {
 
   // Row-component memo() check — only when the target declares one.
   if (rowComponent) {
-    const memoNames = memoCallNamesIn(text);
-    if (!memoNames.has(rowComponent)) {
+    // Resolve where the component is actually defined. An extracted row
+    // component keeps its memo() wrapper in its own file, not in the page.
+    const declPath = target.rowComponentPath ?? path;
+    if (!existsSync(declPath)) {
+      offenders.push({
+        where: declPath,
+        why:
+          `Declared \`rowComponentPath\` for \`${rowComponent}\` does not ` +
+          `exist. Update web/scripts/audit-deferred-filter.mjs to re-point ` +
+          `this entry at the file that defines and memoises the row.`,
+      });
+      return;
+    }
+
+    const declText = declPath === path ? text : readFileSync(declPath, 'utf8');
+
+    // Accept either form:
+    //   export const DriveCard = memo(DriveCardImpl, areEqual)   ← extracted
+    //   const DriveCard = memo(function DriveCard() {...})        ← inline
+    // The first wraps a differently-named impl, so a plain
+    // `memo(DriveCard` substring search misses it.
+    const exportedMemo = new RegExp(
+      `(?:export\\s+)?const\\s+${rowComponent}\\s*(?::[^=]+)?=\\s*memo\\s*\\(`,
+    ).test(declText);
+    const memoNames = memoCallNamesIn(declText);
+
+    if (!exportedMemo && !memoNames.has(rowComponent)) {
       const declLine = locOfMatch(
-        text,
+        declText,
         new RegExp(`function\\s+${rowComponent}\\b|const\\s+${rowComponent}\\b`),
       );
       offenders.push({
-        where: declLine ? `${path}:${declLine}` : path,
+        where: declLine ? `${declPath}:${declLine}` : declPath,
         why:
           `Row component \`${rowComponent}\` must be wrapped in ` +
           `\`memo(${rowComponent}, areEqual?)\` so unchanged rows skip ` +
