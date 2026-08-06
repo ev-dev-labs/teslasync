@@ -64,6 +64,7 @@ import {
 import { ApiError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { ActiveOrdersSection } from './ActiveOrdersSection'
+import { BADGE_VARIANTS } from '@/components/ui';
 
 const mockedUseOrders = useTeslaUserOrders as unknown as Mock
 const mockedUseRefresh = useRefreshTeslaOrders as unknown as Mock
@@ -341,13 +342,13 @@ describe('ActiveOrdersSection — status badge variants', () => {
   it('maps an unrecognized status to the neutral (gray) variant', () => {
     renderWithStatus('BOOKED')
     const badge = screen.getByText('Booked')
-    expect(badge.className).toContain('bg-gray-100')
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral)
   })
 
   it('renders an em dash and neutral variant for an empty status', () => {
     renderWithStatus('')
     const badge = screen.getByText('—')
-    expect(badge.className).toContain('bg-gray-100')
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral)
     expect(badge.className).toContain('rounded-full')
   })
 })

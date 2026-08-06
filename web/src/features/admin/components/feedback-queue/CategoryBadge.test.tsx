@@ -36,6 +36,7 @@ vi.mock('react-i18next', async () => {
 
 import { CategoryBadge } from './CategoryBadge'
 import type { FeedbackCategory } from '@/api/types'
+import { BADGE_VARIANTS } from '@/components/ui';
 
 function renderBadge(category: FeedbackCategory) {
   const { container } = render(<CategoryBadge category={category} />)
@@ -62,7 +63,7 @@ describe('CategoryBadge', () => {
   it('renders other/question as a neutral grey chip', () => {
     const { chip } = renderBadge('other')
     expect(chip?.textContent?.trim()).toBe('Other / question')
-    expect(chip?.className).toContain('bg-gray-100')
+    expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
   })
 
   it('assigns a distinct variant colour per known category', () => {
@@ -74,7 +75,7 @@ describe('CategoryBadge', () => {
     const other = bg('other')
     expect(bug).toContain('bg-red-100')
     expect(feature).toContain('bg-blue-100')
-    expect(other).toContain('bg-gray-100')
+    expect(other).toContain(BADGE_VARIANTS.neutral)
     expect(bug).not.toEqual(feature)
     expect(feature).not.toEqual(other)
   })
@@ -93,7 +94,7 @@ describe('CategoryBadge', () => {
     const unknownCategory = 'escalation' as unknown as FeedbackCategory
     const { chip } = renderBadge(unknownCategory)
     expect(chip?.textContent?.trim()).toBe('Other / question')
-    expect(chip?.className).toContain('bg-gray-100')
+    expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
     expect(chip?.className).not.toContain('bg-red-100')
     expect(chip?.className).not.toContain('bg-blue-100')
   })

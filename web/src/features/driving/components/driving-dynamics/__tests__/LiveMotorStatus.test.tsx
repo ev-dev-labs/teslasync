@@ -45,6 +45,7 @@ vi.mock('react-i18next', async () => {
 import LiveMotorStatus from '../LiveMotorStatus'
 import type { MotorSnapshot } from '@/api/types'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
+import { BADGE_VARIANTS } from '@/components/ui'
 
 // `fmtNumber` reads module-global precision + locale. Pin them so the
 // "500.00 Nm" / "12,000 RPM" / "50.0°C" assertions are deterministic
@@ -207,8 +208,10 @@ describe('LiveMotorStatus — shift state', () => {
     const badge = screen.getByLabelText('Shift State: Unknown')
     expect(badge).toBeInTheDocument()
     expect(badge).toHaveTextContent('Unknown')
-    // Neutral (grey), NOT the success variant reserved for Drive.
-    expect(badge.className).toContain('bg-gray')
+    // Neutral, NOT the success variant reserved for Drive. Asserted against the
+    // exported Badge palette so a re-skin of the neutral chip cannot silently
+    // invalidate this check.
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral)
     expect(badge.className).not.toContain('bg-green')
   })
 })

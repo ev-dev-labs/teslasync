@@ -104,6 +104,91 @@
   --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-easing-accelerate: cubic-bezier(0.3, 0, 1, 1);
   --motion-easing-decelerate: cubic-bezier(0, 0, 0, 1);
+
+  /*
+   * === SHAPE SCALE =====================================================
+   *
+   * Before this existed, every primitive picked its own radius by hand
+   * (GlassPanel `rounded-xl`, Card `rounded-lg`, .glass-panel `rounded-2xl`,
+   * Button `rounded-md`), so surfaces that sit next to each other did not
+   * agree on their corners. These tokens are the single source of truth;
+   * Tailwind exposes them as `rounded-{xs,sm,md,lg,xl,pill}` via
+   * tailwind.config.js → borderRadius. Never hardcode a px/rem radius.
+   */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /*
+   * === ELEVATION RAMP ==================================================
+   *
+   * A neutral, physically-plausible shadow ladder that replaces the neon
+   * bloom (`shadow-glow-*`) as the default way to express depth. Depth now
+   * reads as light occlusion rather than as a coloured halo, which keeps
+   * surfaces legible on all 140 presets instead of only the cyan ones.
+   * Overridden under `:root.light-mode` with softer, shorter shadows.
+   */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.36), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.44), 0 2px 6px rgba(0, 0, 0, 0.28);
+
+  /*
+   * === PANEL SURFACE ===================================================
+   *
+   * The one contract shared by GlassPanel and Card so the two primitives
+   * stop disagreeing about background, border, radius and elevation. All
+   * values derive from the active preset's `--surface-*` / `--border-*`
+   * variables, so every theme keeps working untouched.
+   *
+   * `--panel-blur` is the glassmorphism dial. It is 0 by default (flat,
+   * modern, and much cheaper to composite); raise it to re-enable frosted
+   * surfaces globally without editing a single component.
+   */
+  --panel-bg: var(--surface-1);
+  --panel-bg-hover: var(--surface-2);
+  --panel-border: var(--border-default);
+  --panel-border-hover: var(--border-strong);
+  --panel-radius: var(--radius-lg);
+  --panel-shadow: var(--elevation-1);
+  --panel-shadow-hover: var(--elevation-2);
+  --panel-blur: 0px;
+
+  /*
+   * === CONTROL SURFACE =================================================
+   *
+   * Neutral (non-accent) interactive chrome: secondary/outline/ghost
+   * buttons, toolbar affordances. Previously hardcoded to Tailwind's
+   * `gray-*` ramp, which ignored the active theme entirely — a secondary
+   * button rendered slate-grey on Dracula, Gruvbox and Solarized alike.
+   */
+  --control-bg: var(--surface-2);
+  --control-bg-hover: var(--surface-3);
+  --control-border: var(--border-default);
+  --control-border-hover: var(--border-strong);
+
+  /* Toggle/switch off-state track. Must sit clearly *above* the panel it
+   * rests on (so the control reads as an affordance rather than a hole) while
+   * staying obviously "off" next to the accent-filled on-state. */
+  --control-track-off: var(--border-strong);
+  /* The sliding thumb. An elevated physical object catching light, so it stays
+   * light on both dark and light presets (the same convention iOS/Material
+   * switches use) — but it is a token, so an exotic preset can override it. */
+  --control-thumb: #ffffff;
+
+  /* Loading-skeleton shimmer. Deliberately a notch stronger than
+   * `--border-default`: a skeleton must be readable as absent content, not
+   * mistaken for a divider. */
+  --skeleton-bg: var(--border-default);
+
+  /* Unified focus ring. Always the active accent so it is visible on every
+   * preset, and always 2px so the hit target never shifts on focus. */
+  --focus-ring: var(--theme-primary);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 }
 
 /* === DENSITY MODES (Phase 40 / Prompt 44) ============================ */
@@ -166,61 +251,74 @@ select option:checked {
 
 /* === GLASS MORPHISM === */
 @layer components {
+  /*
+   * The `.glass-*` component classes predate the panel token contract and
+   * hardcoded their own gradient, 20px blur, radius and cyan hover. They now
+   * resolve from the same `--panel-*` / `--control-*` / `--radius-*` tokens as
+   * the GlassPanel and Card primitives, so the ~287 call sites using these
+   * classes re-skin together with everything else and track the active theme
+   * instead of assuming a cyan palette. Class names are kept for compatibility.
+   */
   .glass-panel {
-    @apply relative overflow-hidden rounded-2xl;
-    border: 1px solid var(--glass-border);
-    background: linear-gradient(135deg, rgba(128,128,128,0.04) 0%, rgba(128,128,128,0.01) 100%);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    @apply relative overflow-hidden;
+    border-radius: var(--panel-radius);
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    backdrop-filter: blur(var(--panel-blur));
+    box-shadow: var(--panel-shadow);
   }
 
   .glass-panel-hover {
-    @apply glass-panel transition-all duration-300;
+    @apply glass-panel transition-all duration-normal;
   }
   .glass-panel-hover:hover {
-    border-color: rgba(0, 240, 255, 0.15);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 240, 255, 0.05), inset 0 1px 0 rgba(255,255,255,0.06);
+    border-color: var(--panel-border-hover);
+    background: var(--panel-bg-hover);
+    box-shadow: var(--panel-shadow-hover);
   }
 
   .glass-card {
-    @apply rounded-xl p-5;
-    border: 1px solid var(--glass-border);
-    background: var(--surface-2);
-    backdrop-filter: blur(12px);
+    @apply p-5;
+    border-radius: var(--panel-radius);
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    backdrop-filter: blur(var(--panel-blur));
+    box-shadow: var(--panel-shadow);
   }
 
   .glass-input {
-    @apply w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200;
-    border: 1px solid var(--glass-border);
+    @apply w-full px-4 py-3 text-sm outline-none transition-all duration-normal;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--control-border);
     background: var(--surface-1);
     color: var(--text-primary);
   }
   .glass-input:focus-visible {
-    outline: 2px solid var(--theme-primary);
-    outline-offset: 2px;
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
   }
   .glass-input::placeholder {
     color: var(--text-muted);
   }
   .glass-input:focus {
     border-color: var(--theme-primary);
-    box-shadow: 0 0 15px rgba(var(--theme-primary-rgb), 0.15);
   }
 
   .glass-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium
-      transition-all duration-200 cursor-pointer;
-    border: 1px solid var(--glass-border);
-    background: var(--surface-2);
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium
+      transition-all duration-fast cursor-pointer;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--control-border);
+    background: var(--control-bg);
     color: var(--text-primary);
   }
   .glass-button:hover {
-    background: var(--surface-3);
-    border-color: var(--theme-primary);
+    background: var(--control-bg-hover);
+    border-color: var(--control-border-hover);
   }
   .glass-button:focus-visible {
-    outline: 2px solid var(--theme-primary);
-    outline-offset: 2px;
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
   }
 
   .neon-button {
@@ -438,6 +536,15 @@ select option:checked {
   --border-strong: rgba(0, 0, 0, 0.2);
   --surface-overlay: rgba(15, 23, 42, 0.5);
   --bg-app: #f8fafc;
+  /*
+   * Elevation ramp for light themes. The dark-mode ladder uses heavy black
+   * alphas that read as dirty smudges on a white surface, so light mode gets
+   * shorter, softer, cooler shadows plus a hairline ambient ring that keeps
+   * panel edges crisp where the shadow alone is too faint to define them.
+   */
+  --elevation-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  --elevation-2: 0 2px 6px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.05);
+  --elevation-3: 0 10px 28px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
 /* Override white text → dark in light mode */
@@ -783,11 +890,17 @@ select option:checked {
   background-color: #94a3b8 !important;
 }
 
-/* Glass panels in light mode - subtle shadow instead of dark glass */
+/* Glass panels in light mode - subtle shadow instead of dark glass.
+ * The background/border/shadow deliberately resolve from the panel tokens
+ * rather than being pinned to white: the light-mode `--elevation-*` overrides
+ * and the active preset's own `--surface-*` already carry the light treatment.
+ * Hardcoding `rgba(255,255,255,.7)` here forced every one of the 11 light
+ * presets (Solarized Light's cream, Gruvbox Light, Rosé Pine Dawn, Ayu Light…)
+ * to render pure-white panels that clashed with their own page background. */
 :root.light-mode .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+  background: var(--panel-bg);
+  border-color: var(--panel-border);
+  box-shadow: var(--panel-shadow);
 }
 
 /* Gradient text headers: white→gray gradient invisible in light mode */
@@ -799,8 +912,8 @@ select option:checked {
 }
 
 :root.light-mode .glass-card {
-  background: rgba(255, 255, 255, 0.6);
-  border-color: rgba(0, 0, 0, 0.06);
+  background: var(--panel-bg);
+  border-color: var(--panel-border);
 }
 
 /* Scrollbar in light mode */
@@ -870,8 +983,8 @@ select option:checked {
 
 /* Glass panel hover border: use theme-aware colors */
 :root.light-mode .glass-panel-hover:hover {
-  border-color: rgba(var(--theme-primary-rgb), 0.2);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+  border-color: var(--panel-border-hover);
+  box-shadow: var(--panel-shadow-hover);
 }
 
 /* SVG text elements: ensure dark fill in light mode */
@@ -924,7 +1037,7 @@ select option:checked {
 /* === MOBILE TYPOGRAPHY & SPACING === */
 @media (max-width: 640px) {
   .glass-panel {
-    border-radius: 1rem;
+    border-radius: var(--radius-md);
   }
   .glass-card {
     padding: 0.75rem;

@@ -46,6 +46,7 @@ vi.mock('@/hooks/usePageTitle', () => ({
 import { useSettings } from '@/hooks/useSettings'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import SafetyPage from './SafetyPage'
+import { BADGE_VARIANTS } from '@/components/ui';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 const mockUsePageTitle = usePageTitle as unknown as ReturnType<typeof vi.fn>
@@ -306,7 +307,7 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
     ).toContain('bg-green-100')
     expect(
       valueBadge('safetySettings.rows.criticalFlashEnabled.title').className,
-    ).toContain('bg-gray-100')
+    ).toContain(BADGE_VARIANTS.neutral)
   })
 
   it('renders quiet-hours times, dashing out a blank value', () => {

@@ -32,9 +32,12 @@ describe('Button', () => {
     render(<Button>x</Button>);
     const cls = screen.getByRole('button').className;
     expect(cls).toContain('inline-flex');
-    expect(cls).toContain('rounded-md');
+    expect(cls).toContain('rounded-shape-sm');
     expect(cls).toContain('font-medium');
     expect(cls).toContain('transition');
+    // Focus ring is unified on the accent token so it stays visible on all
+    // 140 theme presets rather than depending on the variant.
+    expect(cls).toContain('focus-visible:ring-[var(--focus-ring)]');
     expect(cls).toContain('disabled:bg-[var(--surface-2)]');
     expect(cls).toContain('disabled:text-[var(--text-secondary)]');
     expect(cls).toContain('disabled:opacity-100');
@@ -52,12 +55,14 @@ describe('Button', () => {
   });
 
   it('applies the distinctive class for every variant', () => {
+    // Neutral variants resolve from the `--control-*` tokens, not Tailwind's
+    // fixed `gray-*` ramp, so they track whichever of the 140 presets is live.
     const expected: Record<Variant, string> = {
       primary: 'bg-[var(--theme-primary)]',
-      secondary: 'bg-gray-100',
-      outline: 'border-gray-300',
+      secondary: 'bg-[var(--control-bg)]',
+      outline: 'border-[var(--control-border)]',
       danger: 'bg-red-600',
-      ghost: 'hover:bg-gray-100',
+      ghost: 'hover:bg-[var(--control-bg)]',
     };
     const { rerender } = render(<Button variant="primary">x</Button>);
     for (const [variant, cls] of Object.entries(expected) as [Variant, string][]) {

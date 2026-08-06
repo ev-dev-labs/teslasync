@@ -28,6 +28,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { WidgetTipCards, type TipItem } from './WidgetTipCards';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 const baseTip: TipItem = {
   id: 'tip-1',
@@ -161,7 +162,7 @@ describe('WidgetTipCards — impact badge', () => {
     // high → success, medium → warning, low → neutral (Badge variant classes).
     expect(screen.getByText('H')).toHaveClass('bg-green-100');
     expect(screen.getByText('M')).toHaveClass('bg-yellow-100');
-    expect(screen.getByText('L')).toHaveClass('bg-gray-100');
+    expect(screen.getByText('L')).toHaveClass(BADGE_VARIANTS.neutral);
   });
 
   it('renders no badge when impact is undefined', () => {

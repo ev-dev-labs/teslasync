@@ -74,6 +74,7 @@ vi.mock('@/components/data-display', () => ({
 
 import { TopSignalsPanel, type TopSignal } from './TopSignalsPanel';
 import { chartTokens } from '@/lib/tokens';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 // The multiplication sign the badge appends (U+00D7) and the em dash the
 // sublabel falls back to (U+2014), declared via escapes so the assertions stay
@@ -219,7 +220,7 @@ describe('TopSignalsPanel — value-type mapping', () => {
 
     // neutral badge → gray, not the info/success/warning palettes.
     const badge = screen.getByText(`5${TIMES}`);
-    expect(badge).toHaveClass('bg-gray-100');
+    expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
     expect(badge).not.toHaveClass('bg-blue-100');
     // colour falls through to the first series entry.
     expect(within(rowFor('mystery')).getByTestId('metric-bar')).toHaveAttribute(

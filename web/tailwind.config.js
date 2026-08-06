@@ -59,8 +59,29 @@ export default {
         'glow-purple': '0 0 30px rgba(168, 85, 247, 0.2)',
         'inner-glow': 'inset 0 1px 0 rgba(255,255,255,0.05)',
         'glass': '0 8px 32px rgba(0, 0, 0, 0.4)',
+        // Neutral elevation ladder — the modern default for expressing depth.
+        // Mode-aware: the underlying vars are re-declared under
+        // `:root.light-mode` in index.css. Prefer these over `shadow-glow-*`,
+        // which only reads correctly on the cyan presets.
+        'e1': 'var(--elevation-1)',
+        'e2': 'var(--elevation-2)',
+        'e3': 'var(--elevation-3)',
+        'panel': 'var(--panel-shadow)',
+        'panel-hover': 'var(--panel-shadow-hover)',
       },
       borderRadius: {
+        // Token-backed shape scale (index.css → SHAPE SCALE). Deliberately
+        // ADDITIVE: Tailwind's own `sm`/`md`/`lg`/`xl` radii are left alone so
+        // this re-skin cannot silently reshape all 651 existing components.
+        // Propagation happens through the shared primitives instead, which is
+        // predictable and reviewable. New code should prefer these names.
+        'shape-xs': 'var(--radius-xs)',
+        'shape-sm': 'var(--radius-sm)',
+        'shape-md': 'var(--radius-md)',
+        'shape-lg': 'var(--radius-lg)',
+        'shape-xl': 'var(--radius-xl)',
+        'pill': 'var(--radius-pill)',
+        'panel': 'var(--panel-radius)',
         '2xl': '1rem',
         '3xl': '1.5rem',
       },

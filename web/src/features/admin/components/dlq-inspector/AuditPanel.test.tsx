@@ -48,6 +48,7 @@ import type {
   DLQReplayAuditRecord,
   DLQReplayResult,
 } from '@/types/admin-diagnostics'
+import { BADGE_VARIANTS } from '@/components/ui'
 
 function makeRow(
   overrides: Partial<DLQReplayAuditRecord> = {},
@@ -163,7 +164,7 @@ describe('AuditPanel', () => {
       ['publish_failed', 'bg-red-100'],
       ['rate_limited', 'bg-yellow-100'],
       ['disabled', 'bg-yellow-100'],
-      ['not_found', 'bg-gray-100'],
+      ['not_found', BADGE_VARIANTS.neutral],
       ['unparseable', 'bg-red-100'],
     ]
 
@@ -183,7 +184,7 @@ describe('AuditPanel', () => {
 
     const badge = screen.getByText('throttled')
     // RESULT_VARIANT has no `throttled` key → `?? 'neutral'` catches it.
-    expect(badge).toHaveClass('bg-gray-100')
+    expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
   })
 
   it('renders the "—" placeholder for blank actor / destination / error / trace fields', () => {

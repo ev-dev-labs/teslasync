@@ -255,7 +255,7 @@ describe('Toggle — visual state', () => {
     const { rerender } = render(
       <Toggle checked={false} onChange={() => {}} aria-label="Sync" />,
     );
-    expect(screen.getByRole('switch').className).toContain('bg-gray-300');
+    expect(screen.getByRole('switch').className).toContain('bg-[var(--control-track-off)]');
     rerender(<Toggle checked onChange={() => {}} aria-label="Sync" />);
     expect(screen.getByRole('switch').className).toContain('bg-cyan-500');
   });

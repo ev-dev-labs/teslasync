@@ -25,7 +25,7 @@ export function Skeleton({ width, height = 16, rounded, lines = 1, className }: 
         {Array.from({ length: lineCount }).map((_, i) => (
           <div
             key={i}
-            className="animate-pulse rounded bg-gray-200 dark:bg-gray-700"
+            className="animate-pulse rounded bg-[var(--skeleton-bg)]"
             style={{ width: i === lineCount - 1 ? '60%' : width ?? '100%', height }}
           />
         ))}
@@ -37,7 +37,7 @@ export function Skeleton({ width, height = 16, rounded, lines = 1, className }: 
     <div
       aria-hidden="true"
       className={cn(
-        'animate-pulse bg-gray-200 dark:bg-gray-700',
+        'animate-pulse bg-[var(--skeleton-bg)]',
         rounded ? 'rounded-full' : 'rounded',
         className,
       )}

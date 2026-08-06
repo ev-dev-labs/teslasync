@@ -22,6 +22,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
 import { SettingsActionCard, type SettingsActionCardProps } from './SettingsActionCard'
+import { GLOW_CLASSES } from '@/components/ui/GlassPanel'
 
 const DEFAULTS: Pick<SettingsActionCardProps, 'icon' | 'title' | 'description'> = {
   icon: <span data-testid="glyph" />,
@@ -136,13 +137,13 @@ describe('SettingsActionCard — iconColor tint + glow mapping', () => {
   it('uses the green tint and a matching green hover glow for a green link', () => {
     const { container } = renderCard({ iconColor: 'green', href: '/x' })
     expect(iconBoxClasses()).toContain('text-emerald-300')
-    expect(panelOf(container).className).toContain('hover:border-green-400/30')
+    expect(panelOf(container).className).toContain(GLOW_CLASSES.green)
   })
 
   it('uses the purple tint and a matching purple hover glow for a purple link', () => {
     const { container } = renderCard({ iconColor: 'purple', href: '/x' })
     expect(iconBoxClasses()).toContain('text-purple-300')
-    expect(panelOf(container).className).toContain('hover:border-purple-400/30')
+    expect(panelOf(container).className).toContain(GLOW_CLASSES.purple)
   })
 
   it('falls back to the cyan glow for a color GlassPanel cannot glow (red)', () => {
@@ -150,7 +151,7 @@ describe('SettingsActionCard — iconColor tint + glow mapping', () => {
     // The icon tint still reflects the requested color…
     expect(iconBoxClasses()).toContain('text-rose-300')
     // …but the panel glow degrades to cyan since GlassPanel has no red glow.
-    expect(panelOf(container).className).toContain('hover:border-cyan-400/30')
+    expect(panelOf(container).className).toContain(GLOW_CLASSES.cyan)
   })
 })
 

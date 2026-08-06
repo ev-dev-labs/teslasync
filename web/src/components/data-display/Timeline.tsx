@@ -48,7 +48,7 @@ export function Timeline({ items, className, emptyMessage }: TimelineProps) {
           {i < list.length - 1 && (
             <span
               aria-hidden="true"
-              className="absolute left-[11px] top-6 h-full w-px bg-gray-200 dark:bg-gray-700"
+              className="absolute left-[11px] top-6 h-full w-px bg-[var(--panel-border)]"
             />
           )}
 
@@ -56,8 +56,10 @@ export function Timeline({ items, className, emptyMessage }: TimelineProps) {
           <span
             aria-hidden={item.icon ? undefined : true}
             className={cn(
-              'absolute left-0 top-1 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 bg-white dark:bg-gray-900',
-              item.color ? undefined : 'border-gray-300 text-[var(--text-muted)] dark:border-gray-600',
+              // The dot sits on top of the connector line, so it must be filled
+              // with the surrounding panel surface to punch a clean hole in it.
+              'absolute left-0 top-1 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 bg-[var(--panel-bg)]',
+              item.color ? undefined : 'border-[var(--control-border)] text-[var(--text-muted)]',
             )}
             style={item.color ? { borderColor: item.color, color: item.color } : undefined}
           >

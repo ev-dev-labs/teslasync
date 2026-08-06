@@ -31,6 +31,7 @@ import type { ReactNode } from 'react';
 
 import { MediaNavigationPanel } from './MediaNavigationPanel';
 import type { MediaSnapshot, LocationSnapshot } from '@/api/types';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 // Per-test-mutable display unit. `vi.hoisted` guarantees the object exists
 // before the hoisted `vi.mock` factory below closes over it.
@@ -139,7 +140,7 @@ describe('MediaNavigationPanel', () => {
     const badge = screen.getByText('Playing');
     // Before the fix this badge fell through to the neutral default (bg-gray-100).
     expect(badge).toHaveClass('bg-green-100');
-    expect(badge).not.toHaveClass('bg-gray-100');
+    expect(badge).not.toHaveClass(BADGE_VARIANTS.neutral);
   });
 
   it('colours the status badge warning (amber) while Paused', () => {
@@ -160,7 +161,7 @@ describe('MediaNavigationPanel', () => {
       />,
     );
     const badge = screen.getByText('Stopped');
-    expect(badge).toHaveClass('bg-gray-100');
+    expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
     expect(badge).not.toHaveClass('bg-green-100');
   });
 

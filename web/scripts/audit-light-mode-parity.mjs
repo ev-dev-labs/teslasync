@@ -53,6 +53,27 @@ const VIOLATION_PATTERNS = [
     re: /bg-white\/(\d+)/g,
     advice: 'use bg-[var(--surface-2)]',
   },
+  // The `gray-*` ramp is a fixed Tailwind palette: it does not move with the
+  // active theme, so a component using it renders the same slate grey on all
+  // 140 presets and visibly clashes with Dracula / Solarized / Gruvbox / Nord.
+  //
+  // Only the *extremes* are flagged. Light (50-200) and dark (700-950) grays
+  // are surface shades: a `bg-gray-900` panel stays near-black in light mode,
+  // which is exactly the parity break this audit exists to catch. Mid grays
+  // (300-600) read acceptably against both a light and a dark background and
+  // are the established neutral member of the semantic status palette — the
+  // "unknown / inactive" sibling of `bg-green-500` / `bg-amber-500`, which this
+  // audit deliberately does not flag either. See `types/fsm/theme.ts`.
+  {
+    id: 'bg-gray-surface-literal',
+    re: /(?:dark:)?bg-gray-(?:950|900|800|700|200|100|50)(?![0-9])(?:\/\d+)?/g,
+    advice: 'use bg-[var(--surface-1)] / bg-[var(--control-bg)] / bg-[var(--skeleton-bg)]',
+  },
+  {
+    id: 'border-gray-surface-literal',
+    re: /(?:dark:)?border-gray-(?:950|900|800|700|200|100|50)(?![0-9])(?:\/\d+)?/g,
+    advice: 'use border-[var(--control-border)] / border-[var(--panel-border)]',
+  },
 ];
 
 // Files that are allowed to use raw colors. Each entry is matched as a
@@ -69,6 +90,13 @@ const EXEMPT_FILES = [
   'components/charts/',
   // Theme primitives that map raw Tailwind tokens to CSS vars.
   'components/theme/',
+  // Tooltip deliberately renders an *inverted* surface — dark chip on a light
+  // page, light chip on a dark page — so it reads as an overlay rather than a
+  // panel. `bg-gray-900 dark:bg-gray-100` is the inversion, paired with
+  // `text-[var(--text-inverse)]`. This is an intentional contract with its own
+  // dedicated test; tokenising it would collapse the tooltip into the very
+  // surface it must stand out from.
+  'components/ui/Tooltip.tsx',
 ];
 
 const files = globSync('**/*.{tsx,ts}', {
@@ -77,6 +105,13 @@ const files = globSync('**/*.{tsx,ts}', {
 });
 
 const findings = [];
+
+// A violation written inside a comment is documentation, not a rendered class.
+// `Modal.tsx` for example documents that it does *not* hardcode
+// `bg-white dark:bg-gray-800` — flagging that would push authors to stop
+// describing the rule they are following. Comment-only lines are therefore
+// skipped; a real class on a code line with a trailing comment is still caught.
+const isCommentLine = (line) => /^\s*(\/\/|\/\*|\*)/.test(line);
 
 for (const rel of files) {
   if (EXEMPT_FILES.some((e) => rel.includes(e))) continue;
@@ -88,13 +123,15 @@ for (const rel of files) {
     let m;
     while ((m = re.exec(src)) !== null) {
       const lineIdx = src.slice(0, m.index).split(/\r?\n/).length - 1;
+      const line = lines[lineIdx] ?? '';
+      if (isCommentLine(line)) continue;
       findings.push({
         file: rel,
         line: lineIdx + 1,
         id,
         match: m[0],
         advice,
-        snippet: lines[lineIdx]?.trim() ?? '',
+        snippet: line.trim(),
       });
     }
   }

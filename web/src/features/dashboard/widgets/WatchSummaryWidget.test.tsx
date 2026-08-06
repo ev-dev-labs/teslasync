@@ -46,6 +46,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { WatchSummary, WatchComplication } from '@/api/hooks/useWatch';
 import WatchSummaryWidget, { getBatteryColor } from './WatchSummaryWidget';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 // jsdom lacks matchMedia; DataFreshness → useMotionPreference and AnimatedNumber
 // read it during render. Report reduced-motion = true so AnimatedNumber skips
@@ -295,7 +296,7 @@ describe('WatchSummaryWidget — standard layout', () => {
 describe('WatchSummaryWidget — state badge variants', () => {
   const cases = [
     { state: 'online', cls: 'bg-green-100' },
-    { state: 'asleep', cls: 'bg-gray-100' },
+    { state: 'asleep', cls: BADGE_VARIANTS.neutral },
     { state: 'offline', cls: 'bg-yellow-100' },
   ] as const;
 

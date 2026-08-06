@@ -22,11 +22,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { createRef } from 'react';
-import { GlassPanel } from './GlassPanel';
+import { GlassPanel, GLOW_CLASSES } from './GlassPanel';
 
-const CYAN_GLOW = 'hover:border-cyan-400/30';
-const GREEN_GLOW = 'hover:border-green-400/30';
-const PURPLE_GLOW = 'hover:border-purple-400/30';
+// Derived from the component's own exported map so a change to the accent
+// treatment never requires editing assertions in four separate suites.
+const CYAN_GLOW = GLOW_CLASSES.cyan;
+const GREEN_GLOW = GLOW_CLASSES.green;
+const PURPLE_GLOW = GLOW_CLASSES.purple;
 
 describe('GlassPanel — element + children', () => {
   it('renders a native <div> carrying its children', () => {
@@ -56,13 +58,16 @@ describe('GlassPanel — element + children', () => {
 });
 
 describe('GlassPanel — base surface + forced-colors', () => {
-  it('always carries the glass surface base classes', () => {
+  it('always carries the panel surface contract classes', () => {
     render(<GlassPanel data-testid="panel">x</GlassPanel>);
     const cls = screen.getByTestId('panel').className;
-    expect(cls).toContain('bg-[var(--surface-2)]');
-    expect(cls).toContain('backdrop-blur-sm');
-    expect(cls).toContain('border-[var(--border-subtle)]');
-    expect(cls).toContain('rounded-xl');
+    // Panel surface tokens are shared verbatim with Card so the two
+    // primitives cannot drift apart again (index.css → PANEL SURFACE).
+    expect(cls).toContain('bg-[var(--panel-bg)]');
+    expect(cls).toContain('backdrop-blur-[var(--panel-blur)]');
+    expect(cls).toContain('border-[var(--panel-border)]');
+    expect(cls).toContain('rounded-panel');
+    expect(cls).toContain('shadow-panel');
   });
 
   it('retains the forced-colors overrides for Windows High Contrast mode', () => {
@@ -221,12 +226,12 @@ describe('GlassPanel — className merge + cn() conflict resolution', () => {
     );
     const cls = screen.getByTestId('panel').className;
     expect(cls).toContain('my-custom-surface');
-    expect(cls).toContain('bg-[var(--surface-2)]');
+    expect(cls).toContain('bg-[var(--panel-bg)]');
   });
 
   it('lets a caller className win a Tailwind conflict via tailwind-merge', () => {
     // cn() runs twMerge, so a caller rounding utility replaces the base
-    // `rounded-xl` instead of both surviving (last-wins conflict resolution).
+    // `rounded-panel` instead of both surviving (last-wins conflict resolution).
     render(
       <GlassPanel className="rounded-lg" data-testid="panel">
         x
@@ -234,7 +239,7 @@ describe('GlassPanel — className merge + cn() conflict resolution', () => {
     );
     const cls = screen.getByTestId('panel').className;
     expect(cls).toContain('rounded-lg');
-    expect(cls).not.toContain('rounded-xl');
+    expect(cls).not.toContain('rounded-panel');
   });
 });
 

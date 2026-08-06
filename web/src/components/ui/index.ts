@@ -1,5 +1,5 @@
 export { Button, type ButtonProps } from './Button';
-export { Badge, type BadgeProps } from './Badge';
+export { Badge, BADGE_VARIANTS, type BadgeProps } from './Badge';
 export { Card, CardHeader, CardFooter, type CardProps, type CardHeaderProps } from './Card';
 export { Checkbox, type CheckboxProps, type CheckboxSize } from './Checkbox';
 export { RadioCard, type RadioCardProps } from './RadioCard';
@@ -8,7 +8,7 @@ export { Modal, type ModalProps } from './Modal';
 export { Popover, type PopoverProps, type PopoverAlign, type PopoverSide } from './Popover';
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { Tabs, type TabsProps, type TabItem } from './Tabs';
-export { GlassPanel, type GlassPanelProps } from './GlassPanel';
+export { GlassPanel, GLOW_CLASSES, type GlassPanelProps } from './GlassPanel';
 export { SelectableCard, type SelectableCardProps } from './SelectableCard';
 export { StatusPill, type StatusPillProps } from './StatusPill';
 export { Toggle, type ToggleProps } from './Toggle';
