@@ -232,12 +232,13 @@ export function useMotorLatest(vehicleId: number, refetchInterval?: number) {
   });
 }
 
-export function useMotorHistory(vehicleId: number, limit = 200) {
+export function useMotorHistory(vehicleId: number, limit = 200, refetchInterval?: number) {
   return useQuery({
     queryKey: ['motor-history', vehicleId, limit],
     queryFn: ({ signal }) => request<import('../types').MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
     enabled: vehicleId > 0,
     select: safeArray,
+    refetchInterval,
   });
 }
 

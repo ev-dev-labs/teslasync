@@ -60,13 +60,14 @@ export const drivingKeys = {
     ['drive', driveId, 'why-ended', window] as const,
 };
 
-export function useDrives(vehicleId?: string) {
+export function useDrives(vehicleId?: string, refetchInterval?: number) {
   return useQuery({
     queryKey: drivingKeys.drives(vehicleId),
     queryFn: ({ signal }) =>
       request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives', { signal }),
     enabled: !!vehicleId,
     select: safeArray,
+    refetchInterval,
   });
 }
 
@@ -230,12 +231,13 @@ export function useDriveTelemetry(driveId: string) {
   });
 }
 
-export function useDrivingCoach(vehicleId?: string, days = 30) {
+export function useDrivingCoach(vehicleId?: string, days = 30, refetchInterval?: number) {
   return useQuery({
     queryKey: drivingKeys.coach(vehicleId, days),
     queryFn: ({ signal }) => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.SLOW,
+    refetchInterval,
   });
 }
 

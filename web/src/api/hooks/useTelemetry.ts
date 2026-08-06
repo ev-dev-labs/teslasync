@@ -456,7 +456,7 @@ export function useSignalCatalog() {
  */
 export function useSignalObservations(
   vehicleId: number | string | undefined,
-  opts?: { signal_name?: string; since?: string; until?: string; limit?: number },
+  opts?: { signal_name?: string; since?: string; until?: string; limit?: number; refetchInterval?: number },
 ) {
   const params = new URLSearchParams();
   if (vehicleId != null) params.set('vehicle_id', String(vehicleId));
@@ -479,6 +479,7 @@ export function useSignalObservations(
     },
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.REALTIME,
+    refetchInterval: opts?.refetchInterval,
   });
 }
 
