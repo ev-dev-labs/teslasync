@@ -37,12 +37,14 @@ type azureReverseAddress struct {
 }
 
 type azureAddress struct {
-	FreeformAddress    string `json:"freeformAddress"`
-	StreetName         string `json:"streetName"`
-	Municipality       string `json:"municipality"`
-	CountrySubdivision string `json:"countrySubdivision"`
-	Country            string `json:"country"`
-	PostalCode         string `json:"postalCode"`
+	FreeformAddress         string `json:"freeformAddress"`
+	StreetNumber            string `json:"streetNumber"`
+	StreetName              string `json:"streetName"`
+	MunicipalitySubdivision string `json:"municipalitySubdivision"`
+	Municipality            string `json:"municipality"`
+	CountrySubdivision      string `json:"countrySubdivision"`
+	Country                 string `json:"country"`
+	PostalCode              string `json:"postalCode"`
 }
 
 func (c *AzureClient) ReverseGeocode(ctx context.Context, lat, lon float64) (*GeoResult, error) {
@@ -78,7 +80,9 @@ func (c *AzureClient) ReverseGeocode(ctx context.Context, lat, lon float64) (*Ge
 	addr := result.Addresses[0].Address
 	return &GeoResult{
 		DisplayName: addr.FreeformAddress,
+		HouseNumber: addr.StreetNumber,
 		Road:        addr.StreetName,
+		Suburb:      addr.MunicipalitySubdivision,
 		City:        addr.Municipality,
 		State:       addr.CountrySubdivision,
 		Country:     addr.Country,

@@ -76,7 +76,29 @@ func (c *GoogleClient) ReverseGeocode(ctx context.Context, lat, lon float64) (*G
 		return nil, fmt.Errorf("google geocoding: status %s, no results", gResp.Status)
 	}
 
-	return parseGoogleResult(&gResp.Results[0]), nil
+	// results[0] is the most precise address match. A point-of-interest, when
+	// Google knows one, arrives as a *separate* result, so scan the rest for a
+	// name rather than losing it.
+	res := parseGoogleResult(&gResp.Results[0])
+	if res.Name == "" {
+		res.Name = googlePOIName(gResp.Results)
+	}
+	return res, nil
+}
+
+// googlePOIName returns the first point-of-interest / premise label found
+// across the result set, or "" when Google reported only street addresses.
+func googlePOIName(results []googleResult) string {
+	for i := range results {
+		for _, comp := range results[i].AddressComponents {
+			for _, t := range comp.Types {
+				if t == "point_of_interest" || t == "establishment" || t == "premise" {
+					return comp.LongName
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // parseGoogleResult converts a Google result to a GeoResult.
@@ -88,8 +110,18 @@ func parseGoogleResult(r *googleResult) *GeoResult {
 	for _, comp := range r.AddressComponents {
 		for _, t := range comp.Types {
 			switch t {
+			case "point_of_interest", "establishment", "premise":
+				if result.Name == "" {
+					result.Name = comp.LongName
+				}
+			case "street_number":
+				result.HouseNumber = comp.LongName
 			case "route":
 				result.Road = comp.LongName
+			case "neighborhood", "sublocality", "sublocality_level_1":
+				if result.Suburb == "" {
+					result.Suburb = comp.LongName
+				}
 			case "locality":
 				result.City = comp.LongName
 			case "administrative_area_level_1":
