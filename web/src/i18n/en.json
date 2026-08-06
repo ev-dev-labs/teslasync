@@ -7352,6 +7352,8 @@
       "gear": "Gear",
       "torque": "Torque",
       "nm": "Nm",
+      "regen": "Regen",
+      "drive": "Drive",
       "noData": "No motor data",
       "title": "Motor Performance",
       "statorTemp": "Stator Temp",
