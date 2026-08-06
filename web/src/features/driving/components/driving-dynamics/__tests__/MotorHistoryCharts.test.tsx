@@ -71,6 +71,21 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
 import MotorHistoryCharts from '../MotorHistoryCharts';
 import type { MotorSnapshot } from '@/api/types';
 
+// The charts now own the ['motor-history', …] query (shared with
+// useMotorStats) instead of receiving rows as a prop, so they refresh as new
+// telemetry lands. The fetch is stubbed and driven from `mockMotorHistory`.
+let mockMotorHistory: MotorSnapshot[] | undefined;
+
+vi.mock('@/api/hooks/useVehicles', () => ({
+  useMotorHistory: () => ({
+    data: mockMotorHistory,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
+  }),
+}));
+
 const AWAITING = 'Awaiting motor telemetry data...';
 
 const POWER_TITLE = /Motor Power Over Time/;
@@ -127,13 +142,14 @@ function fullSnap(ts: string): MotorSnapshot {
 const commonProps = { toSpeedDisplay: (v: number) => v, speedUnit: 'mph' };
 
 function renderCharts(motorHistory: MotorSnapshot[] | undefined) {
+  mockMotorHistory = motorHistory;
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <MotorHistoryCharts motorHistory={motorHistory} {...commonProps} />
+        <MotorHistoryCharts vehicleId={1} {...commonProps} />
       </MemoryRouter>
     </QueryClientProvider>,
   );

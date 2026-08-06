@@ -21,14 +21,21 @@ import { FadeIn } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
-import type { DrivingCoachData, CoachDriveScore } from '@/types/driving';
+import { useDrivingCoach } from '@/api/hooks/useDriving';
+import { INTERVALS } from '@/lib/constants';
+import type { CoachDriveScore } from '@/types/driving';
 
 interface DrivingCoachSectionProps {
-  coachData: DrivingCoachData | undefined;
+  vehicleId: string | undefined;
 }
 
-export default function DrivingCoachSection({ coachData }: DrivingCoachSectionProps) {
+export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionProps) {
   const { t } = useTranslation();
+
+  // The coach model aggregates 30 days of drives — it only shifts when a
+  // drive completes, so it refreshes on the slow analytics cadence rather
+  // than inheriting the page's 5s live-motor poll.
+  const { data: coachData } = useDrivingCoach(vehicleId, 30, INTERVALS.ANALYTICS);
 
   const coachColumns: Column<CoachDriveScore>[] = useMemo(
     () => [

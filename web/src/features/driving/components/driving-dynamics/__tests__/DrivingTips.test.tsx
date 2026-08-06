@@ -34,6 +34,27 @@ import type { ReactNode } from 'react'
 import DrivingTips from '../DrivingTips'
 import type { MotorStats } from '../helpers'
 
+// The panel now owns its data via the shared useMotorStats hook rather than
+// receiving a page-computed prop, so the recommendations refresh with the
+// rolling history window. The hook is stubbed and driven by `renderTips`.
+let mockMotorStats: MotorStats | null = null
+
+vi.mock('../useMotorStats', () => ({
+  MOTOR_HISTORY_LIMIT: 200,
+  useMotorStats: () => ({
+    motorStats: mockMotorStats,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
+  }),
+}))
+
+function renderTips(motorStats: MotorStats | null) {
+  mockMotorStats = motorStats
+  return render(<DrivingTips vehicleId={1} />)
+}
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
@@ -92,14 +113,14 @@ function iconClassOf(li: HTMLElement): string {
 
 describe('DrivingTips — panel + accessibility', () => {
   it('always renders the panel heading, even with no data', () => {
-    render(<DrivingTips motorStats={null} />)
+    renderTips(null)
     const heading = screen.getByRole('heading', { name: /Driving Style Recommendations/i })
     expect(heading).toBeInTheDocument()
     expect(heading.tagName).toBe('H3')
   })
 
   it('exposes the tips as a semantic list with one <li> per tip', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 120 })} />)
+    renderTips(makeStats({ avgPower: 120 }))
     const list = screen.getByRole('list')
     expect(list.tagName).toBe('UL')
     const items = within(list).getAllByRole('listitem')
@@ -107,7 +128,7 @@ describe('DrivingTips — panel + accessibility', () => {
   })
 
   it('marks every tip icon decorative (aria-hidden) so screen readers rely on the text', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 5 })} />)
+    renderTips(makeStats({ avgPower: 5 }))
     const items = getTipItems()
     for (const li of items) {
       const svg = li.querySelector('svg')
@@ -119,7 +140,7 @@ describe('DrivingTips — panel + accessibility', () => {
 
 describe('DrivingTips — no-data / info branch', () => {
   it('renders exactly the onboarding hint when motorStats is null', () => {
-    render(<DrivingTips motorStats={null} />)
+    renderTips(null)
     expect(
       screen.getByText('Drive your vehicle to start collecting dynamics data.'),
     ).toBeInTheDocument()
@@ -128,7 +149,7 @@ describe('DrivingTips — no-data / info branch', () => {
   })
 
   it('shows the info (Lightbulb) icon — NOT a warning triangle — for the onboarding hint (regression)', () => {
-    render(<DrivingTips motorStats={null} />)
+    renderTips(null)
     const [li] = getTipItems()
     expect(toneOf(li)).toBe('info')
     expect(iconClassOf(li)).toContain(TONE_ICON_CLASS.info)
@@ -140,7 +161,7 @@ describe('DrivingTips — no-data / info branch', () => {
 
 describe('DrivingTips — power branches', () => {
   it('aggressive power (>80) → two caution tips about easing off', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 95 })} />)
+    renderTips(makeStats({ avgPower: 95 }))
     expect(
       screen.getByText('Ease into the accelerator — gradual inputs save energy and tire wear.'),
     ).toBeInTheDocument()
@@ -154,7 +175,7 @@ describe('DrivingTips — power branches', () => {
   })
 
   it('moderate power (>20, <=80) → two smooth-throttle caution tips', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 45 })} />)
+    renderTips(makeStats({ avgPower: 45 }))
     expect(
       screen.getByText('Smooth throttle transitions can improve efficiency by 10–15%.'),
     ).toBeInTheDocument()
@@ -163,7 +184,7 @@ describe('DrivingTips — power branches', () => {
   })
 
   it('economical power (<=20) → two positive tips with the green shield icon', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 12 })} />)
+    renderTips(makeStats({ avgPower: 12 }))
     expect(
       screen.getByText('Excellent driving style! Maintaining this maximizes range and comfort.'),
     ).toBeInTheDocument()
@@ -176,7 +197,7 @@ describe('DrivingTips — power branches', () => {
 
 describe('DrivingTips — branch boundaries', () => {
   it('avgPower === 80 is NOT aggressive → falls through to the moderate tips', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 80 })} />)
+    renderTips(makeStats({ avgPower: 80 }))
     expect(
       screen.getByText('Smooth throttle transitions can improve efficiency by 10–15%.'),
     ).toBeInTheDocument()
@@ -186,7 +207,7 @@ describe('DrivingTips — branch boundaries', () => {
   })
 
   it('avgPower === 20 is NOT moderate → falls through to the positive tips', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 20 })} />)
+    renderTips(makeStats({ avgPower: 20 }))
     expect(
       screen.getByText('Excellent driving style! Maintaining this maximizes range and comfort.'),
     ).toBeInTheDocument()
@@ -198,7 +219,7 @@ describe('DrivingTips — branch boundaries', () => {
 
 describe('DrivingTips — thermal caution', () => {
   it('appends a caution thermal tip when maxMotorTemp > 120', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 12, maxMotorTemp: 135 })} />)
+    renderTips(makeStats({ avgPower: 12, maxMotorTemp: 135 }))
     const items = getTipItems()
     expect(items).toHaveLength(3)
     expect(
@@ -207,7 +228,7 @@ describe('DrivingTips — thermal caution', () => {
   })
 
   it('keeps the praise rows positive while the thermal warning stays caution (regression)', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 12, maxMotorTemp: 135 })} />)
+    renderTips(makeStats({ avgPower: 12, maxMotorTemp: 135 }))
     const tones = getTipItems().map(toneOf)
     // Pre-fix ALL three rows shared one icon (green shield for a
     // conservative driver) — hiding the thermal warning. Now the
@@ -219,7 +240,7 @@ describe('DrivingTips — thermal caution', () => {
   })
 
   it('does NOT append the thermal tip when maxMotorTemp <= 120', () => {
-    render(<DrivingTips motorStats={makeStats({ avgPower: 12, maxMotorTemp: 120 })} />)
+    renderTips(makeStats({ avgPower: 12, maxMotorTemp: 120 }))
     expect(
       screen.queryByText('Motor temps are running high — consider easing off sustained high power.'),
     ).toBeNull()
@@ -237,7 +258,7 @@ describe('DrivingTips — null-safety', () => {
       avgPower: undefined,
       maxMotorTemp: undefined,
     } as unknown as MotorStats
-    expect(() => render(<DrivingTips motorStats={partial} />)).not.toThrow()
+    expect(() => renderTips(partial)).not.toThrow()
     expect(
       screen.getByText('Excellent driving style! Maintaining this maximizes range and comfort.'),
     ).toBeInTheDocument()

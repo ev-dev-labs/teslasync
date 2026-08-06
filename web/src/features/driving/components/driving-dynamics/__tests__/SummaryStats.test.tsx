@@ -15,6 +15,24 @@ import type { ReactNode } from 'react'
 import SummaryStats from '../SummaryStats'
 import type { MotorStats } from '../helpers'
 
+// SummaryStats now owns its data via useMotorStats (shared, deduped
+// ['motor-history', …] query) instead of receiving a prop from the page, so
+// the aggregate KPIs refresh as new telemetry lands. The aggregation itself
+// is covered by helpers.test.ts; this suite still only pins the rendering, so
+// the hook is stubbed and driven from `mockMotorStats`.
+let mockMotorStats: MotorStats | null = null
+
+vi.mock('../useMotorStats', () => ({
+  MOTOR_HISTORY_LIMIT: 200,
+  useMotorStats: () => ({
+    motorStats: mockMotorStats,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
+  }),
+}))
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
@@ -48,38 +66,35 @@ const baseStats: MotorStats = {
 }
 
 describe('SummaryStats — temperature suffix', () => {
-  it('renders "49.0°C" not "49.0°°C" for °C preference', () => {
-    const { container } = render(
+  function renderStats(
+    motorStats: MotorStats | null,
+    toTemperatureDisplay: (v: number) => number,
+    tempUnit: '°C' | '°F',
+  ) {
+    mockMotorStats = motorStats
+    return render(
       <SummaryStats
-        motorStats={baseStats}
-        toTemperatureDisplay={(v) => v}
-        tempUnit="°C"
+        vehicleId={1}
+        toTemperatureDisplay={toTemperatureDisplay}
+        tempUnit={tempUnit}
       />,
     )
+  }
+
+  it('renders "49.0°C" not "49.0°°C" for °C preference', () => {
+    const { container } = renderStats(baseStats, (v) => v, '°C')
     expect(screen.getByText('49.0°C')).toBeInTheDocument()
     expect(container.textContent).not.toMatch(/°°/)
   })
 
   it('renders "120.2°F" not "120.2°°F" for °F preference', () => {
-    const { container } = render(
-      <SummaryStats
-        motorStats={baseStats}
-        toTemperatureDisplay={(c) => (c * 9) / 5 + 32}
-        tempUnit="°F"
-      />,
-    )
+    const { container } = renderStats(baseStats, (c) => (c * 9) / 5 + 32, '°F')
     expect(screen.getByText('120.2°F')).toBeInTheDocument()
     expect(container.textContent).not.toMatch(/°°/)
   })
 
   it('renders "—" placeholder when motorStats is null (no temp suffix at all)', () => {
-    const { container } = render(
-      <SummaryStats
-        motorStats={null}
-        toTemperatureDisplay={(v) => v}
-        tempUnit="°C"
-      />,
-    )
+    const { container } = renderStats(null, (v) => v, '°C')
     // Multiple "—" placeholders in the panel — assert at least one present.
     expect(container.textContent).toContain('—')
     expect(container.textContent).not.toMatch(/°°/)

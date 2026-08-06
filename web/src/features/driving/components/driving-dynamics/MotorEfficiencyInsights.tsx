@@ -7,12 +7,12 @@ import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
-import type { MotorStats, ThrottleStyle } from './helpers';
+import { getThrottleStyle } from './helpers';
+import { useMotorStats } from './useMotorStats';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 
 interface MotorEfficiencyInsightsProps {
-  motorStats: MotorStats | null;
-  throttleStyle: ThrottleStyle | null;
+  vehicleId: number | null | undefined;
   toTemperatureDisplay: (v: number) => number;
   // tempUnit is the user's display preference (e.g. '°C' or '°F'). The
   // value already INCLUDES the degree symbol — never prefix another '°'
@@ -23,12 +23,13 @@ interface MotorEfficiencyInsightsProps {
 }
 
 export default function MotorEfficiencyInsights({
-  motorStats,
-  throttleStyle,
+  vehicleId,
   toTemperatureDisplay,
   tempUnit,
 }: MotorEfficiencyInsightsProps) {
   const { t } = useTranslation();
+  const { motorStats } = useMotorStats(vehicleId);
+  const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPower) : null;
 
   const noData = (
     <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Activity className="h-5 w-5" />} message={t('dynamics.noMotorData', 'No motor data recorded yet')} />

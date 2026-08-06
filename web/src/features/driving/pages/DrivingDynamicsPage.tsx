@@ -5,13 +5,14 @@ import { PageContainer } from '@/components/layout';
 import { VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 
-import { useDrives, useDrivingCoach } from '@/api/hooks/useDriving';
-import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useDrives } from '@/api/hooks/useDriving';
+import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useSignalQueryInvalidation } from '@/hooks/useSignalQueryInvalidation';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { INTERVALS } from '@/lib/constants';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
-import { computeMotorStats, getThrottleStyle } from '../components/driving-dynamics/helpers';
 import {
   LiveMotorStatus,
   GForcePanel,
@@ -26,6 +27,45 @@ import {
   DrivingTips,
 } from '../components/driving-dynamics';
 
+/**
+ * Tesla signal fields that feed each live query on this page, taken from the
+ * backend projections: `motorMappings` in internal/api/motor/handler.go and
+ * `driveDynamicsMappings` in internal/api/drivedyn/handler.go. When one of
+ * these arrives on the `signal_change` SSE channel the matching query is
+ * invalidated, so the live panels update within the coalescing window instead
+ * of waiting out their poll interval.
+ */
+const MOTOR_SIGNAL_FIELDS = [
+  'DiMotorCurrentF',
+  'DiMotorCurrentR',
+  'DiTorqueActualF',
+  'DiTorqueActualR',
+  'DiTorquemotor',
+  'DiAxleSpeedF',
+  'DiAxleSpeedR',
+  'DiStatorTempF',
+  'DiStatorTempR',
+  'DiHeatsinkTF',
+  'DiHeatsinkTR',
+  'DiInverterTF',
+  'DiInverterTR',
+  'DiStateF',
+  'DiStateR',
+  'DiVBatF',
+  'DiVBatR',
+  'Gear',
+] as const;
+
+const DRIVE_DYNAMICS_SIGNAL_FIELDS = [
+  'LateralAcceleration',
+  'LongitudinalAcceleration',
+  'PedalPosition',
+  'BrakePedalPos',
+  'BrakePedal',
+] as const;
+
+const CRUISE_SIGNAL_FIELDS = ['CruiseSetSpeed', 'CruiseFollowDistance', 'VehicleSpeed'] as const;
+
 export default function DrivingDynamicsPage() {
   const { t } = useTranslation();
   usePageTitle(t('dynamics.title', 'Driving Dynamics'));
@@ -33,16 +73,32 @@ export default function DrivingDynamicsPage() {
   /* ---- vehicle selection ---- */
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-
-  /* ---- data hooks ---- */
   const vehicleIdNum = vehicleId ?? 0;
-  // Keep the whole query object so PageContainer can render the freshness
-  // chip for the live motor stream (5s poll) in the header.
-  const motorLatestQuery = useMotorLatest(vehicleIdNum, 5000);
-  const motorLatest = motorLatestQuery.data;
-  const { data: motorHistory } = useMotorHistory(vehicleIdNum, 200);
-  const { data: drives } = useDrives(vehicleIdStr);
-  const { data: coachData } = useDrivingCoach(vehicleIdStr);
+
+  /* ---- page-owned data ----
+   * Every panel now owns the query it renders, at a cadence matched to how
+   * fast that data actually moves (live motor 5s, aggregate history 10s,
+   * drives 30s, coach 5m). Only two things stay here: the drives list, which
+   * the page-level date filter narrows for two different panels, and the
+   * live-motor query, which PageContainer needs for the header freshness
+   * chip. TanStack dedupes on the query key, so re-declaring the live-motor
+   * subscription here shares the panels' cache entry rather than doubling
+   * the request rate. */
+  const motorLatestQuery = useMotorLatest(vehicleIdNum, INTERVALS.REALTIME);
+  const { data: drives } = useDrives(vehicleIdStr, INTERVALS.STANDARD);
+
+  /* ---- push updates ----
+   * Polling bounds staleness at the interval; SSE collapses it to the
+   * coalescing window so a gear change or a throttle stab shows up almost
+   * immediately instead of up to 5s later. */
+  useSignalQueryInvalidation({
+    vehicleId: vehicleId ?? undefined,
+    bindings: [
+      { fields: MOTOR_SIGNAL_FIELDS, queryKey: ['motor-latest', vehicleIdNum] },
+      { fields: DRIVE_DYNAMICS_SIGNAL_FIELDS, queryKey: ['drive-dynamics-latest', vehicleIdNum] },
+      { fields: CRUISE_SIGNAL_FIELDS, queryKey: ['signal-observations', vehicleId ?? undefined] },
+    ],
+  });
 
   /* ---- settings ---- */
   const { unitPrefs } = useUnits();
@@ -51,8 +107,8 @@ export default function DrivingDynamicsPage() {
   const tempUnit = unitPrefs.temperature;
   // Stable SI→display converters so the memoized derives inside child
   // sections (e.g. DriveAnalyticsSection's speed/accel useMemos) don't
-  // recompute on every 5s live-motor poll — they only change when the
-  // user actually flips a unit preference.
+  // recompute on every live poll — they only change when the user
+  // actually flips a unit preference.
   const toDistanceDisplay = useCallback(
     (value: number) => convertDistanceFromSI(value, distanceUnit),
     [distanceUnit],
@@ -85,10 +141,6 @@ export default function DrivingDynamicsPage() {
     });
   }, [drives, startDate, endDate]);
 
-  /* ---- motor stats (cross-section) ---- */
-  const motorStats = useMemo(() => computeMotorStats(motorHistory), [motorHistory]);
-  const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPower) : null;
-
   /* ================================================================ */
   /*  RENDER — full-width responsive bento                             */
   /* ================================================================ */
@@ -104,7 +156,7 @@ export default function DrivingDynamicsPage() {
         {/* 1 — KPI band: full-width motor summary metrics */}
         <section aria-label={t('dynamics.section.summary', 'Motor summary metrics')}>
           <SummaryStats
-            motorStats={motorStats}
+            vehicleId={vehicleId}
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
           />
@@ -117,7 +169,7 @@ export default function DrivingDynamicsPage() {
             className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5"
           >
             <LiveMotorStatus
-              motorLatest={motorLatest}
+              vehicleId={vehicleId}
               toTemperatureDisplay={toTemperatureDisplay}
               tempUnit={tempUnit}
             />
@@ -132,7 +184,7 @@ export default function DrivingDynamicsPage() {
             className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5"
           >
             <SpeedGearPanel
-              motorLatest={motorLatest}
+              vehicleId={vehicleId}
               filteredDrives={filteredDrives}
               toSpeedDisplay={toSpeedDisplay}
               speedUnit={speedUnit}
@@ -145,8 +197,7 @@ export default function DrivingDynamicsPage() {
         {/* 4 — Motor efficiency insights (3-up band) */}
         <section aria-label={t('dynamics.section.efficiency', 'Motor efficiency')}>
           <MotorEfficiencyInsights
-            motorStats={motorStats}
-            throttleStyle={throttleStyle}
+            vehicleId={vehicleId}
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
           />
@@ -155,7 +206,7 @@ export default function DrivingDynamicsPage() {
         {/* 5 — Motor telemetry history charts (reflow to more columns) */}
         <section aria-label={t('dynamics.section.history', 'Motor history')}>
           <MotorHistoryCharts
-            motorHistory={motorHistory}
+            vehicleId={vehicleId}
             toSpeedDisplay={toSpeedDisplay}
             speedUnit={speedUnit}
           />
@@ -163,7 +214,7 @@ export default function DrivingDynamicsPage() {
 
         {/* 6 — Driving coach (score, style, trend, patterns, per-drive) */}
         <section aria-label={t('dynamics.coach.title', 'Driving Coach')}>
-          <DrivingCoachSection coachData={coachData} />
+          <DrivingCoachSection vehicleId={vehicleIdStr} />
         </section>
 
         {/* 7 — Drive analytics (range filter + distribution + profile) */}
@@ -187,7 +238,7 @@ export default function DrivingDynamicsPage() {
         {/* 8 — Driving style recommendations */}
         <FadeIn delay={0.15}>
           <section aria-label={t('dynamics.recommendations', 'Driving Style Recommendations')}>
-            <DrivingTips motorStats={motorStats} />
+            <DrivingTips vehicleId={vehicleId} />
           </section>
         </FadeIn>
       </div>

@@ -130,20 +130,27 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
+// The SSE→cache bridge opens a real EventSource, which jsdom does not
+// implement. Mocked at the boundary so the wiring (which query keys are bound
+// to which Tesla signal fields) can be asserted without a live stream.
+vi.mock('@/hooks/useSignalQueryInvalidation', () => ({
+  useSignalQueryInvalidation: vi.fn(),
+}));
+
 // Replace the child barrel with prop-surfacing doubles. Each double renders the
 // exact page-computed props the assertions care about; DriveAnalyticsSection
 // also exposes the wired date-range callbacks as buttons for interaction tests.
 vi.mock('../components/driving-dynamics', () => ({
   SummaryStats: (p: any) => (
     <div data-testid="summary">
-      <span data-testid="summary-readings">{p.motorStats?.totalReadings ?? -1}</span>
+      <span data-testid="summary-vid">{String(p.vehicleId)}</span>
       <span data-testid="summary-temp">{p.toTemperatureDisplay(100)}</span>
       <span data-testid="summary-tunit">{p.tempUnit}</span>
     </div>
   ),
   LiveMotorStatus: (p: any) => (
     <div data-testid="live-motor">
-      <span data-testid="live-shift">{p.motorLatest?.shift_state ?? 'none'}</span>
+      <span data-testid="live-vid">{String(p.vehicleId)}</span>
       <span data-testid="live-temp">{p.toTemperatureDisplay(100)}</span>
       <span data-testid="live-tunit">{p.tempUnit}</span>
     </div>
@@ -153,6 +160,7 @@ vi.mock('../components/driving-dynamics', () => ({
   AutopilotSection: (p: any) => <div data-testid="autopilot">{String(p.vehicleId)}</div>,
   SpeedGearPanel: (p: any) => (
     <div data-testid="speed-gear">
+      <span data-testid="sg-vid">{String(p.vehicleId)}</span>
       <span data-testid="sg-count">{p.filteredDrives.length}</span>
       <span data-testid="sg-speed">{p.toSpeedDisplay(10)}</span>
       <span data-testid="sg-sunit">{p.speedUnit}</span>
@@ -160,20 +168,19 @@ vi.mock('../components/driving-dynamics', () => ({
   ),
   MotorEfficiencyInsights: (p: any) => (
     <div data-testid="efficiency">
-      <span data-testid="eff-style">{p.throttleStyle ?? 'none'}</span>
-      <span data-testid="eff-power">{p.motorStats?.avgPower ?? -1}</span>
+      <span data-testid="eff-vid">{String(p.vehicleId)}</span>
       <span data-testid="eff-tunit">{p.tempUnit}</span>
     </div>
   ),
   MotorHistoryCharts: (p: any) => (
     <div data-testid="motor-history">
-      <span data-testid="mh-count">{p.motorHistory?.length ?? -1}</span>
+      <span data-testid="mh-vid">{String(p.vehicleId)}</span>
       <span data-testid="mh-speed">{p.toSpeedDisplay(10)}</span>
       <span data-testid="mh-sunit">{p.speedUnit}</span>
     </div>
   ),
   DrivingCoachSection: (p: any) => (
-    <div data-testid="coach">{p.coachData ? 'has-coach' : 'no-coach'}</div>
+    <div data-testid="coach">{String(p.vehicleId)}</div>
   ),
   DriveAnalyticsSection: (p: any) => (
     <div data-testid="drive-analytics">
@@ -198,8 +205,7 @@ vi.mock('../components/driving-dynamics', () => ({
   ),
   DrivingTips: (p: any) => (
     <div data-testid="tips">
-      <span data-testid="tips-style">{p.throttleStyle ?? 'none'}</span>
-      <span data-testid="tips-has">{p.motorStats ? 'has-stats' : 'no-stats'}</span>
+      <span data-testid="tips-vid">{String(p.vehicleId)}</span>
     </div>
   ),
 }));
@@ -221,6 +227,7 @@ if (typeof window.matchMedia !== 'function') {
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
 import { useDrives, useDrivingCoach } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useSignalQueryInvalidation } from '@/hooks/useSignalQueryInvalidation';
 import DrivingDynamicsPage from './DrivingDynamicsPage';
 
 const mockMotorLatest = vi.mocked(useMotorLatest);
@@ -228,6 +235,7 @@ const mockMotorHistory = vi.mocked(useMotorHistory);
 const mockDrives = vi.mocked(useDrives);
 const mockCoach = vi.mocked(useDrivingCoach);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
+const mockSignalSync = vi.mocked(useSignalQueryInvalidation);
 
 /** Minimal `UseQueryResult`-shaped stub (incl. DataFreshness fields). */
 function qr(over: Record<string, unknown> = {}): any {
@@ -364,53 +372,66 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
     expect(document.title).toContain('Driving Dynamics');
   });
 
-  it('wires the data hooks with SI/snake_case-correct arguments', () => {
+  it('wires the page-owned data hooks with SI/snake_case-correct arguments', () => {
     renderPage();
-    // vehicleId=1: live poll every 5s, 200-row history, string id for list/coach.
+    // Only two queries stay at page level: the live-motor query (PageContainer
+    // needs it for the header freshness chip) and the drives list (the
+    // page-scoped date filter narrows it for two different panels). Everything
+    // else is owned by the panel that renders it, at its own cadence.
     expect(mockMotorLatest).toHaveBeenCalledWith(1, 5000);
-    expect(mockMotorHistory).toHaveBeenCalledWith(1, 200);
-    expect(mockDrives).toHaveBeenCalledWith('1');
-    expect(mockCoach).toHaveBeenCalledWith('1');
+    expect(mockDrives).toHaveBeenCalledWith('1', 30000);
+    // The page must NOT re-fetch what the panels now own — a page-level
+    // history/coach fetch is exactly the prop-drilling that froze them.
+    expect(mockMotorHistory).not.toHaveBeenCalled();
+    expect(mockCoach).not.toHaveBeenCalled();
+  });
+
+  it('hands every panel the vehicle id so each owns its own subscription', () => {
+    renderPage();
+    for (const id of [
+      'summary-vid',
+      'live-vid',
+      'sg-vid',
+      'eff-vid',
+      'mh-vid',
+      'tips-vid',
+    ]) {
+      expect(screen.getByTestId(id)).toHaveTextContent('1');
+    }
+    // DrivingCoachSection takes the string form (its endpoint is a query param).
+    expect(screen.getByTestId('coach')).toHaveTextContent('1');
   });
 });
 
-describe('DrivingDynamicsPage — motor-stats derivation', () => {
-  it('computes stats from history and derives an aggressive throttle style', () => {
+describe('DrivingDynamicsPage — live push bridge', () => {
+  it('binds the motor / dynamics / cruise signal fields to their query keys', () => {
     renderPage();
 
-    // computeMotorStats over AGGRESSIVE_HISTORY: 2 readings, avgPower 100.
-    expect(num('summary-readings')).toBe(2);
-    expect(num('eff-power')).toBe(100);
-    // getThrottleStyle(100) => 'aggressive' (>= 80) — threaded to both consumers.
-    expect(screen.getByTestId('eff-style')).toHaveTextContent('aggressive');
-    expect(screen.getByTestId('tips-style')).toHaveTextContent('none');
-    expect(screen.getByTestId('tips-has')).toHaveTextContent('has-stats');
-    // Live snapshot shift state propagates.
-    expect(screen.getByTestId('live-shift')).toHaveTextContent('D');
-    // Coach data present.
-    expect(screen.getByTestId('coach')).toHaveTextContent('has-coach');
-  });
+    expect(mockSignalSync).toHaveBeenCalled();
+    const arg = mockSignalSync.mock.calls.at(-1)?.[0] as any;
+    expect(arg.vehicleId).toBe(1);
 
-  it('derives a conservative throttle style for low average power', () => {
-    mockMotorHistory.mockReturnValue(
-      qr({ data: [motorSnap({ power_kw: 5 }), motorSnap({ power_kw: 15 })] }),
+    const byKey = new Map<string, string[]>(
+      arg.bindings.map((b: any) => [JSON.stringify(b.queryKey), [...b.fields]]),
     );
-    renderPage();
-    // avg(5,15)=10 < 20 => 'conservative'.
-    expect(screen.getByTestId('eff-style')).toHaveTextContent('conservative');
-    expect(screen.getByTestId('tips-style')).toHaveTextContent('none');
-    expect(num('eff-power')).toBe(10);
-  });
 
-  it('renders empty derivation (null stats, no throttle style) when history is empty', () => {
-    mockMotorHistory.mockReturnValue(qr({ data: [] }));
-    renderPage();
-    // computeMotorStats([]) => null → the page passes null through.
-    expect(num('summary-readings')).toBe(-1);
-    expect(screen.getByTestId('eff-style')).toHaveTextContent('none');
-    expect(screen.getByTestId('tips-has')).toHaveTextContent('no-stats');
-    // Sections still render — never a blank panel.
-    expect(screen.getAllByRole('region')).toHaveLength(8);
+    // Field names must match the backend projections verbatim — motorMappings
+    // in internal/api/motor/handler.go and driveDynamicsMappings in
+    // internal/api/drivedyn/handler.go. A typo here silently disables push.
+    const motorFields = byKey.get(JSON.stringify(['motor-latest', 1]));
+    expect(motorFields).toContain('DiTorqueActualF');
+    expect(motorFields).toContain('DiAxleSpeedF');
+    expect(motorFields).toContain('DiStatorTempF');
+    expect(motorFields).toContain('Gear');
+
+    const dynFields = byKey.get(JSON.stringify(['drive-dynamics-latest', 1]));
+    expect(dynFields).toEqual([
+      'LateralAcceleration',
+      'LongitudinalAcceleration',
+      'PedalPosition',
+      'BrakePedalPos',
+      'BrakePedal',
+    ]);
   });
 });
 
@@ -496,12 +517,10 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
   it('propagates a null vehicleId and disables the data hooks safely', () => {
     renderPage();
 
-    // vehicleId ?? 0 → live/history hooks receive 0 (their `enabled` gate);
-    // list/coach receive undefined.
+    // vehicleId ?? 0 → the live hook receives 0 (its `enabled` gate);
+    // the drives list receives undefined.
     expect(mockMotorLatest).toHaveBeenCalledWith(0, 5000);
-    expect(mockMotorHistory).toHaveBeenCalledWith(0, 200);
-    expect(mockDrives).toHaveBeenCalledWith(undefined);
-    expect(mockCoach).toHaveBeenCalledWith(undefined);
+    expect(mockDrives).toHaveBeenCalledWith(undefined, 30000);
 
     // The live sub-panels receive the raw null id (they gate internally).
     expect(screen.getByTestId('gforce')).toHaveTextContent('null');
@@ -514,7 +533,7 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
     // No blank page: all eight regions remain, filtered list is empty.
     expect(screen.getAllByRole('region')).toHaveLength(8);
     expect(num('da-count')).toBe(0);
-    expect(screen.getByTestId('coach')).toHaveTextContent('no-coach');
+    expect(screen.getByTestId('coach')).toHaveTextContent('undefined');
     // VehicleSelect renders nothing when the fleet is empty.
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
