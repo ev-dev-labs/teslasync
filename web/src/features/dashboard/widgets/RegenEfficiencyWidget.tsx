@@ -29,7 +29,10 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   const isCompact = size.cols <= 1;
 
-  const regenPct = (data?.regenRatio ?? 0) * 100;
+  // `/analytics/regen` already returns regen_ratio as a percentage
+  // (regenWh / driveWh * 100, see internal/api/regen/handler.go). Do not
+  // scale it again — that pinned the gauge at max and forced regenColor green.
+  const regenPct = data?.regenRatio ?? 0;
   const color = useMemo(() => regenColor(regenPct), [regenPct]);
 
   const stats: GaugeHeroStat[] = useMemo(() => [

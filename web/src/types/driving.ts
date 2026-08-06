@@ -103,6 +103,14 @@ export interface DrivingStats {
   avgEfficiencyWhKm: number;
   avgSpeedKmh: number;
   topSpeedKmh: number;
+  /**
+   * Regen share as a **0-1 fraction** — the API rounds
+   * `regen / total` to three decimals (internal/api/drives/listing.go).
+   *
+   * Note this differs from {@link RegenEfficiencyData.regenRatio}, which
+   * carries the same name but is already a 0-100 percentage. Multiply this one
+   * by 100 before displaying it as a percentage.
+   */
   regenRatio: number;
   regenEnergyWh: number;
   co2SavedKg: number;
@@ -152,6 +160,13 @@ export interface SpeedBucket {
 export interface RegenEfficiencyData {
   totalRegenWh: number;
   totalDriveWh: number;
+  /**
+   * Recovery rate as a **percentage (0-100)** — the API computes
+   * `totalRegenWh / totalDriveWh * 100` (internal/api/regen/handler.go).
+   *
+   * Note this differs from {@link DrivingStats.regenRatio}, which carries the
+   * same name but is a 0-1 fraction. Do not multiply this one by 100.
+   */
   regenRatio: number;
   monthlyAvgRegen: number;
   freeCharges: number;

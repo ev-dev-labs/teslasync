@@ -145,7 +145,9 @@ function makeData(over: Partial<RegenEfficiencyData> = {}): RegenEfficiencyData 
   return {
     totalRegenWh: 1234,
     totalDriveWh: 5000,
-    regenRatio: 0.4,
+    // `/analytics/regen` returns regen_ratio already as a percentage
+    // (1234 / 5000 * 100), not a 0-1 fraction.
+    regenRatio: 24.7,
     monthlyAvgRegen: 56,
     freeCharges: 7,
     ...over,
@@ -204,8 +206,8 @@ describe('RegenEfficiencyWidget — standard layout', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText('Regen Braking')).toBeInTheDocument();
-    // Gauge recovery label (rounded percentage) — 0.4 → 40%.
-    expect(screen.getByText('40%')).toBeInTheDocument();
+    // Gauge recovery label (rounded percentage) — 24.7 → 25%.
+    expect(screen.getByText('25%')).toBeInTheDocument();
     expect(container.querySelector(GAUGE_SVG)).not.toBeNull();
 
     // Three stat tiles with their formatted values.
@@ -237,7 +239,7 @@ describe('RegenEfficiencyWidget — compact layout', () => {
     const { container } = renderWidget(COMPACT);
 
     expect(screen.queryByText('Regen Braking')).toBeNull();
-    expect(screen.getByText('40%')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
     expect(container.querySelector(GAUGE_SVG)).not.toBeNull();
     // Stats are suppressed in the compact gauge hero.
     expect(screen.queryByText('Total Recovered')).toBeNull();
@@ -255,18 +257,45 @@ describe('RegenEfficiencyWidget — compact layout', () => {
 
 describe('RegenEfficiencyWidget — recovery colour thresholds', () => {
   it.each([
-    { ratio: 0.5, label: '50%', color: GREEN, band: 'green' },
-    { ratio: 0.31, label: '31%', color: GREEN, band: 'green' },
-    { ratio: 0.3, label: '30%', color: AMBER, band: 'amber (boundary: 30 is not > 30)' },
-    { ratio: 0.16, label: '16%', color: AMBER, band: 'amber' },
-    { ratio: 0.15, label: '15%', color: RED, band: 'red (boundary: 15 is not > 15)' },
-    { ratio: 0.05, label: '5%', color: RED, band: 'red' },
+    { ratio: 50, label: '50%', color: GREEN, band: 'green' },
+    { ratio: 31, label: '31%', color: GREEN, band: 'green' },
+    { ratio: 30, label: '30%', color: AMBER, band: 'amber (boundary: 30 is not > 30)' },
+    { ratio: 16, label: '16%', color: AMBER, band: 'amber' },
+    { ratio: 15, label: '15%', color: RED, band: 'red (boundary: 15 is not > 15)' },
+    { ratio: 5, label: '5%', color: RED, band: 'red' },
   ])('paints the gauge $band at $label recovery', ({ ratio, label, color }) => {
     mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: ratio }) }));
     const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText(label)).toBeInTheDocument();
     expect(container.querySelector(`circle[stroke="${color}"]`)).not.toBeNull();
+  });
+});
+
+describe('RegenEfficiencyWidget — API scale contract', () => {
+  it('does not re-scale the percentage the API already returns', () => {
+    // Regression: the widget multiplied regen_ratio by 100. Because
+    // /analytics/regen returns regenWh / driveWh * 100 (a percentage), a real
+    // 25% recovery rendered as "2500%", the gauge clamped to its 100 max so it
+    // sat permanently full, and regenColor's > 30 branch made it always green.
+    mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 25 }) }));
+    const { container } = renderWidget(STANDARD);
+
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.queryByText('2500%')).toBeNull();
+    // 25 is not > 30, so the band must be amber — proof the colour thresholds
+    // still discriminate rather than saturating green.
+    expect(container.querySelector(`circle[stroke="${AMBER}"]`)).not.toBeNull();
+    expect(container.querySelector(`circle[stroke="${GREEN}"]`)).toBeNull();
+  });
+
+  it('keeps the gauge off its ceiling for a typical recovery rate', () => {
+    mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 18 }) }));
+    renderWidget(STANDARD);
+
+    const meter = screen.getByRole('meter');
+    expect(meter).toHaveAttribute('aria-valuenow', '18');
+    expect(meter).toHaveAttribute('aria-valuemax', '100');
   });
 });
 
