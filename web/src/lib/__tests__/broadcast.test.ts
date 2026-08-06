@@ -36,6 +36,24 @@ function disableBroadcastChannel() {
   })
 }
 
+// BroadcastChannel delivery is asynchronous with no guaranteed tick budget, so a
+// single `setTimeout(0)` hop drops messages under CPU load. Poll for the expected
+// state instead — this returns as soon as delivery lands.
+async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (!predicate()) {
+    if (Date.now() > deadline) throw new Error('waitFor: timed out waiting for channel delivery')
+    await new Promise((r) => setTimeout(r, 1))
+  }
+}
+
+// Drains any already-queued delivery, for assertions that a message did NOT arrive.
+// There is nothing to poll for, so this bounds how long an erroneous delivery has
+// to show up; more hops make the negative assertion stronger, never flakier.
+async function settle(): Promise<void> {
+  for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 1))
+}
+
 describe('broadcast bus', () => {
   beforeEach(() => {
     __resetBroadcastForTests()
@@ -63,8 +81,7 @@ describe('broadcast bus', () => {
       peer.addEventListener('message', (e: MessageEvent) => received.push(e.data))
 
       broadcast({ type: 'auth.logout' })
-      // Allow the microtask + macrotask hop the BroadcastChannel uses.
-      await new Promise((r) => setTimeout(r, 0))
+      await waitFor(() => received.length === 1)
       peer.close()
 
       expect(received).toHaveLength(1)
@@ -80,13 +97,13 @@ describe('broadcast bus', () => {
       const off = subscribe(handler)
       // Emitting from this same tab — handler must NOT fire.
       broadcast({ type: 'auth.logout' })
-      await new Promise((r) => setTimeout(r, 0))
+      await settle()
       expect(handler).not.toHaveBeenCalled()
 
       // Emit from a peer (different _from) by hand-rolling an envelope.
       const peer = new BroadcastChannel('teslasync')
       peer.postMessage({ _from: 'other-tab', _ts: Date.now(), msg: { type: 'auth.logout' } })
-      await new Promise((r) => setTimeout(r, 0))
+      await waitFor(() => handler.mock.calls.length === 1)
       peer.close()
       off()
 
@@ -103,7 +120,7 @@ describe('broadcast bus', () => {
       peer.postMessage(null)
       peer.postMessage('not-an-envelope')
       peer.postMessage({ _from: 'x', _ts: 0 }) // no msg
-      await new Promise((r) => setTimeout(r, 0))
+      await settle()
       peer.close()
       off()
       expect(handler).not.toHaveBeenCalled()
@@ -118,7 +135,7 @@ describe('broadcast bus', () => {
       const offB = subscribe(ok)
       const peer = new BroadcastChannel('teslasync')
       peer.postMessage({ _from: 'other-tab', _ts: Date.now(), msg: { type: 'auth.logout' } })
-      await new Promise((r) => setTimeout(r, 0))
+      await waitFor(() => ok.mock.calls.length === 1)
       peer.close()
       offA()
       offB()
