@@ -18,13 +18,13 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  RadialGauge,
   ResponsiveContainer,
   Sparkline,
   Tooltip,
   XAxis,
   YAxis,
 } from '@/components/charts';
+import { MetricTile } from '@/components/data-display';
 import { Badge, Caption, GlassPanel, Select, Text } from '@/components/ui';
 import { EmptyState, InlineCallout } from '@/components/feedback';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -50,7 +50,6 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
     );
   }
   const data = seriesToChartData(result.series);
-  const maxVal = Math.max(1, ...result.series.map((v) => Math.abs(v)));
 
   return (
     <GlassPanel padding="sm" className="flex flex-col gap-2">
@@ -90,7 +89,23 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
       ) : kind === 'sparkline' ? (
         <Sparkline data={result.series} ariaLabel={title} />
       ) : kind === 'radial-gauge' ? (
-        <RadialGauge value={result.latest ?? 0} max={maxVal} label={title} unit={result.unit} size={96} />
+        // A pack formula has no declared ceiling, so the previous ring scaled
+        // itself to the sample's own peak — which pinned it to a full circle
+        // whenever the latest row happened to BE the peak, regardless of
+        // magnitude. Nothing here can honestly fill a ring, so the reading is
+        // shown as a number against the range the sample actually spanned.
+        <MetricTile
+          value={result.latest}
+          unit={result.unit}
+          label={t('intelPacks.sandbox.latest', 'Latest')}
+          align="start"
+          decimals={1}
+          sublabel={t('intelPacks.sandbox.sampleRange', 'sample {{min}}–{{max}}{{unit}}', {
+            min: fmtNumber(Math.min(...result.series), 1),
+            max: fmtNumber(Math.max(...result.series), 1),
+            unit: result.unit ? ` ${result.unit}` : '',
+          })}
+        />
       ) : (
         <div>
           <Text variant="metricValue">{result.latest != null ? fmtNumber(result.latest, 1) : '—'}</Text>
