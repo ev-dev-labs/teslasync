@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // The SI canonical schema (migration 000185_drives_si) keeps trips and
@@ -192,9 +193,15 @@ func (r *TripRepo) GetDriveIDs(ctx context.Context, tripID int64) ([]int64, erro
 
 // GenerateMonthlyTrips creates monthly trip summaries by aggregating drives
 // and charging sessions. Creates trips for all months with drives, including
-// the current month (marked as in-progress). Idempotent — existing trips are
-// updated for the current month, and completed months are never re-created.
+// the current month (marked as in-progress). Idempotent — a month is inserted
+// once, refreshed while it is the current month, and closed out once it ends.
 func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
+	// One source of truth for "which month is running". The finalize pass below
+	// and the in-progress upsert must agree on this boundary, otherwise a month
+	// could be closed by one step and reopened by the other on every tick.
+	now := time.Now().UTC()
+	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
 	// Completed months are inserted only once; the current month is upserted below.
 	query := `
 		WITH drive_months AS (
@@ -251,10 +258,15 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 		created++
 	}
 
-	// Upsert the current month as in-progress.
-	currentMonth := time.Now().UTC().Truncate(24 * time.Hour)
-	currentMonth = time.Date(currentMonth.Year(), currentMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
+	// Close out any month that is over but still carries in-progress state.
+	// Without this a month first written while it was current keeps its
+	// "(In Progress)" name and its provisional ended_at forever, because the
+	// query above only ever considers months that have no trip at all.
+	if err := r.finalizePastMonths(ctx, currentMonth); err != nil {
+		return created, fmt.Errorf("finalize past months: %w", err)
+	}
 
+	// Upsert the current month as in-progress.
 	curMonthVehicles, err := r.vehiclesWithDrivesInMonth(ctx, currentMonth)
 	if err != nil {
 		return created, fmt.Errorf("current month vehicles: %w", err)
@@ -267,6 +279,64 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 	}
 
 	return created, nil
+}
+
+// finalizePastMonths re-runs the monthly upsert in completed mode for every
+// generated summary whose month has ended but whose row still reads as
+// in-progress — that is, whose ended_at is not the month boundary.
+//
+// Scope is deliberately narrow. Only rows the generator owns are touched:
+// they start exactly on a month boundary, have no owning user, and carry
+// either the auto_generated flag or one of the two names this file writes.
+// Rows created before auto_generated was set are matched by name, so existing
+// installs repair themselves on the next tick without a backfill migration.
+func (r *TripRepo) finalizePastMonths(ctx context.Context, currentMonth time.Time) error {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT vehicle_id, started_at
+		FROM trips
+		WHERE started_at < $1
+		  AND started_at = date_trunc('month', started_at)
+		  AND created_by_user IS NULL
+		  AND (auto_generated IS TRUE
+		       OR name LIKE '% Summary'
+		       OR name LIKE '% (In Progress)')
+		  AND (ended_at IS NULL OR ended_at <> started_at + INTERVAL '1 month')
+		ORDER BY started_at
+	`, currentMonth)
+	if err != nil {
+		return fmt.Errorf("find stale months: %w", err)
+	}
+
+	type monthKey struct {
+		vehicleID  int64
+		monthStart time.Time
+	}
+	var stale []monthKey
+	for rows.Next() {
+		var mk monthKey
+		if err := rows.Scan(&mk.vehicleID, &mk.monthStart); err != nil {
+			rows.Close()
+			return err
+		}
+		stale = append(stale, mk)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for _, mk := range stale {
+		if _, err := r.UpsertMonthTrip(ctx, mk.vehicleID, mk.monthStart.UTC(), false); err != nil {
+			return fmt.Errorf("close month %s: %w", mk.monthStart.Format("Jan 2006"), err)
+		}
+	}
+	if len(stale) > 0 {
+		log.Info().
+			Int("finalized", len(stale)).
+			Str("current_month", currentMonth.Format("Jan 2006")).
+			Msg("trip generator: closed out months left in progress")
+	}
+	return nil
 }
 
 // vehiclesWithDrivesInMonth returns vehicle IDs that have drives in the given month.
@@ -325,15 +395,15 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 	case err == nil:
 		// Existing monthly trip: refresh name and end time.
 		if _, err := r.db.Pool.Exec(ctx, `
-			UPDATE trips SET name=$1, ended_at=$2
+			UPDATE trips SET name=$1, ended_at=$2, auto_generated=TRUE
 			WHERE id=$3
 		`, name, effectiveEnd, tripID); err != nil {
 			return 0, fmt.Errorf("update trip: %w", err)
 		}
 	case errors.Is(err, pgx.ErrNoRows):
 		if err := r.db.Pool.QueryRow(ctx, `
-			INSERT INTO trips (vehicle_id, name, started_at, ended_at)
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO trips (vehicle_id, name, started_at, ended_at, auto_generated)
+			VALUES ($1, $2, $3, $4, TRUE)
 			RETURNING id
 		`, vehicleID, name, monthStart, effectiveEnd).Scan(&tripID); err != nil {
 			return 0, fmt.Errorf("insert trip: %w", err)
