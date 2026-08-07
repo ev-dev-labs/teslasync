@@ -27,6 +27,17 @@ interface RadialGaugeProps {
   color?: string;
   size?: number;
   decimals?: number;
+  /**
+   * Suppress the printed scale caption.
+   *
+   * The caption exists because a ring on its own never says what a full ring
+   * would mean. "47 kW" filling three-quarters of a circle is unreadable until
+   * you know the circle ends at 250 kW, and that ceiling lived only in
+   * `aria-valuemax` — announced to screen readers, invisible to everyone else.
+   * A 0–100 scale is self-describing (the whole IS 100%) so it is never
+   * captioned; every other scale is, unless the caller already prints it.
+   */
+  hideScale?: boolean;
   className?: string;
 }
 
@@ -43,7 +54,7 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
  */
 export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
   function RadialGauge(
-    { value, max, min = 0, label, unit, color = '#3b82f6', size = 120, decimals, className },
+    { value, max, min = 0, label, unit, color = '#3b82f6', size = 120, decimals, hideScale, className },
     ref,
   ) {
     const radius = (size - STROKE_WIDTH) / 2;
@@ -75,6 +86,19 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
     // like a tiny sliver.
     const arcLength = ratio * circumference;
     const cap = arcLength >= STROKE_WIDTH ? 'round' : 'butt';
+
+    // A percentage ring needs no caption: the reader already knows a full ring
+    // is "all of it". Percent-ness is a property of the UNIT, not of the
+    // numbers — a 0–100 °C ring looks identical but ends at an arbitrary
+    // ceiling, so it must still state its range. A bare 0–100 ring with no unit
+    // reads as a percentage by convention and is left uncaptioned too.
+    const unitText = (unit ?? '').trim();
+    const isFullSpan = safeMin === 0 && safeMax === 100;
+    const isPercentScale = isFullSpan && (unitText === '%' || unitText === '');
+    const showScale = !hideScale && !isPercentScale && span > 0;
+    const scaleLabel = showScale
+      ? `${fmtNumber(safeMin, 0)} – ${fmtNumber(safeMax, 0)}${unit ?? ''}`
+      : null;
 
     return (
       <div
@@ -127,6 +151,12 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
         <Text as="span" size="xs" weight="medium" color="muted">
           {label}
         </Text>
+
+        {scaleLabel && (
+          <Text as="span" size="2xs" color="muted" className="tabular-nums">
+            {scaleLabel}
+          </Text>
+        )}
       </div>
     );
   },

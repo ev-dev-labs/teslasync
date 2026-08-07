@@ -4,7 +4,7 @@
  *
  * The panel is a presentational leaf: given a `sensors: TempSensor[]` list and a
  * `loading` flag it renders one `RadialGauge` per sensor (temperature reading +
- * a "Max: <n><unit>" caption), or a loading skeleton, or a labelled empty state.
+ * a scale caption stating the gauge's range), or a loading skeleton, or a labelled empty state.
  * There is no data source — the surface under test is the three-way render branch
  * plus the way each sensor is projected onto a gauge:
  *
@@ -202,12 +202,12 @@ describe('TemperatureGauges — populated (metric / °C)', () => {
     expect(tSpy).toHaveBeenCalledWith('drivetrain.frontMotor', 'Front Motor');
     expect(tSpy).toHaveBeenCalledWith('drivetrain.battery', 'Battery');
 
-    // Each "Max" caption carries the SI value converted to the metric unit.
-    expect(screen.getByText('Max: 150°C')).toBeInTheDocument();
-    expect(screen.getByText('Max: 120°C')).toBeInTheDocument();
-    expect(screen.getByText('Max: 60°C')).toBeInTheDocument();
-    expect(screen.getByText('Max: 100°C')).toBeInTheDocument();
-    expect(tSpy).toHaveBeenCalledWith('drivetrain.maxLabel', 'Max');
+    // Each gauge states its own scale, so the ceiling is visible rather than
+    // implicit in the arc — printed as an SI-converted range in the active unit.
+    expect(screen.getByText('0 – 150°C')).toBeInTheDocument();
+    expect(screen.getByText('0 – 120°C')).toBeInTheDocument();
+    expect(screen.getByText('0 – 60°C')).toBeInTheDocument();
+    expect(screen.getByText('0 – 100°C')).toBeInTheDocument();
   });
 
   it('shows a live reading (unit-converted) and zeroes a null reading', () => {
@@ -236,10 +236,11 @@ describe('TemperatureGauges — Fahrenheit boundary', () => {
     mockSettings = { ...mockSettings, unit_of_temp: 'F' };
     const { container } = renderGauges({ sensors: fourSensors() });
 
-    // Captions swap to Fahrenheit: 150°C→302, 120°C→248, 60°C→140, 100°C→212.
-    expect(screen.getByText('Max: 302°F')).toBeInTheDocument();
-    expect(screen.getByText('Max: 140°F')).toBeInTheDocument();
-    expect(screen.queryByText('Max: 60°C')).toBeNull();
+    // Scale captions swap to Fahrenheit at BOTH ends — the floor is 0 °C, which
+    // is 32 °F, not zero. Converting only the ceiling would misreport the range.
+    expect(screen.getByText('32 – 302°F')).toBeInTheDocument();
+    expect(screen.getByText('32 – 140°F')).toBeInTheDocument();
+    expect(screen.queryByText('0 – 60°C')).toBeNull();
 
     // The battery reading converts 55°C → 131°F at the render boundary.
     expect(screen.getByText('131')).toBeInTheDocument();
@@ -264,7 +265,7 @@ describe('TemperatureGauges — null safety', () => {
       sensors: [sensor({ key: 'solo', value: null, maxTemp: 60 })],
     });
 
-    expect(screen.getByText('Max: 60°C')).toBeInTheDocument();
+    expect(screen.getByText('0 – 60°C')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
     expect(circleStrokes(container)).toContain('#6b7280');

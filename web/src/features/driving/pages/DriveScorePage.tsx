@@ -549,7 +549,7 @@ function CategoryGaugeCard({
   return (
     <GlassPanel className="flex flex-col items-center p-4 sm:p-5">
       <PanelTitle className="mb-3 self-start">{title}</PanelTitle>
-      <RadialGauge value={value} max={max} label={title} color={color} size={120} />
+      <RadialGauge value={value} max={max} label={title} color={color} size={120} hideScale />
       <div className="mt-3 flex items-baseline gap-1">
         <Text as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
           <AnimatedNumber value={value} />

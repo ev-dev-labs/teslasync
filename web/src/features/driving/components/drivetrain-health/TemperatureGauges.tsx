@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Thermometer } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { temperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
 
 import type { TempSensor } from './constants';
 import { tempSeverityColor } from './helpers';
@@ -55,10 +54,6 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
                   unit={tempUnit}
                   color={tempSeverityColor(sensor.value, sensor.maxTemp)}
                 />
-                <Text as="p" variant="caption" className="mt-2">
-                  {t('drivetrain.maxLabel', 'Max')}: {fmtNumber(toTemperatureDisplay(sensor.maxTemp), 0)}
-                  {tempUnit}
-                </Text>
               </div>
             ))}
           </Grid>

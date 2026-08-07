@@ -255,7 +255,6 @@ export default function EnergyPage() {
         label: t('energy.gauge.band.heavy', 'Heavy'),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [unitPrefs.distance, t],
   );
   // Guard against hand-edited / malformed `from`/`to` URL params: an invalid

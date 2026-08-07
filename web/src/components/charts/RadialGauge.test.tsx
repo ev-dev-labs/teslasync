@@ -360,3 +360,70 @@ describe('RadialGauge — round-cap artifact', () => {
     expect(arc(container)).toHaveAttribute('stroke-linecap', 'butt');
   });
 });
+describe('RadialGauge — printed scale caption', () => {
+  // The regression this guards: the ring''s ceiling existed only in
+  // `aria-valuemax`, so a sighted reader saw an arc with no way to know what a
+  // full ring meant. Every non-percentage scale must now say where it ends.
+  it('prints the range for a non-percentage scale', () => {
+    render(<RadialGauge value={120} max={250} label="Power" unit=" kW" />);
+    expect(screen.getByText('0 – 250 kW')).toBeInTheDocument();
+  });
+
+  it('omits the caption for a 0–100 scale, which is self-describing', () => {
+    render(<RadialGauge value={72} max={100} label="Battery" unit="%" />);
+    expect(screen.queryByText('0 – 100%')).not.toBeInTheDocument();
+  });
+
+  it('captions a 0–100 scale whose unit is NOT a percentage', () => {
+    // Regression: percent-ness was inferred from the numbers alone, so a
+    // 0–100 °C motor-temperature ring was silently treated as a percentage and
+    // lost its caption — the one case where the ceiling is least guessable.
+    render(<RadialGauge value={55} max={100} label="Motor" unit="°C" />);
+    expect(screen.getByText('0 – 100°C')).toBeInTheDocument();
+  });
+
+  it('omits the caption for a bare 0–100 ring, which reads as a percentage', () => {
+    const { container } = render(<RadialGauge value={72} max={100} label="Score" />);
+    expect(container.textContent).not.toContain('0 – 100');
+  });
+
+  it('includes a non-zero min so offset scales state both ends', () => {
+    render(<RadialGauge value={40} min={-20} max={150} label="Motor" unit="°C" />);
+    expect(screen.getByText('-20 – 150°C')).toBeInTheDocument();
+  });
+
+  it('captions a 0–100 scale that is offset, since the whole is no longer 100%', () => {
+    render(<RadialGauge value={60} min={20} max={100} label="Charge" unit="%" />);
+    expect(screen.getByText('20 – 100%')).toBeInTheDocument();
+  });
+
+  it('honours hideScale for callers that already print the ceiling themselves', () => {
+    render(<RadialGauge value={120} max={250} label="Power" unit=" kW" hideScale />);
+    expect(screen.queryByText('0 – 250 kW')).not.toBeInTheDocument();
+  });
+
+  it('drops the unit suffix when the caller supplies none', () => {
+    render(<RadialGauge value={3} max={10} label="Score" />);
+    expect(screen.getByText('0 – 10')).toBeInTheDocument();
+  });
+
+  it('formats large ceilings with locale grouping', () => {
+    render(<RadialGauge value={800} max={1500} label="Cycles" />);
+    expect(screen.getByText('0 – 1,500')).toBeInTheDocument();
+  });
+
+  it('suppresses the caption when the domain collapses to nothing', () => {
+    const { container } = render(<RadialGauge value={5} max={0} label="Broken" unit=" kW" />);
+    expect(container.textContent).not.toContain('–');
+  });
+
+  it('rounds a fractional ceiling to whole units in the caption', () => {
+    render(<RadialGauge value={100} max={249.6} label="Speed" unit=" km/h" />);
+    expect(screen.getByText('0 – 250 km/h')).toBeInTheDocument();
+  });
+
+  it('keeps the caption out of the accessible name of the meter', () => {
+    render(<RadialGauge value={120} max={250} label="Power" unit=" kW" />);
+    expect(screen.getByRole('meter', { name: 'Power' })).toBeInTheDocument();
+  });
+});
