@@ -1609,7 +1609,13 @@
       "energy": "Energy",
       "totalCost": "Total Cost",
       "avgPower": "Avg Power",
-      "avgCostPerKwh": "Avg $/kWh"
+      "avgCostPerKwh": "Avg cost",
+      "perKwh": "/kWh",
+      "band": {
+        "ac": "AC",
+        "dcFast": "DC fast",
+        "supercharge": "Supercharge"
+      }
     },
     "metrics": {
       "home": "Home",
@@ -5435,7 +5441,13 @@
       "energyUsed": "Energy Used",
       "efficiency": "Efficiency",
       "co2Saved": "CO₂ Saved",
-      "totalCost": "Total Cost"
+      "totalCost": "Total Cost",
+      "band": {
+        "excellent": "Excellent",
+        "good": "Good",
+        "average": "Average",
+        "heavy": "Heavy"
+      }
     },
     "metric": {
       "costPerKwh": "Cost per kWh",
@@ -7863,6 +7875,9 @@
     }
   },
   "driveDetail": {
+    "vsAverage": "vs your average",
+    "vsRecord": "vs your record",
+    "minutesShort": "min",
     "costSavings": "Cost & Savings",
     "tripCost": "Trip Cost",
     "atRate": "at {{currencySymbol}}{{costPerKwh}}/kWh",

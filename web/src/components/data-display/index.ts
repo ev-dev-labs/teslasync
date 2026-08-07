@@ -33,6 +33,7 @@ export { AnimatedNumber } from './AnimatedNumber';
 export { Timeline, type TimelineItemData, type TimelineProps } from './Timeline';
 export { RecentActivityFeed, type RecentActivityFeedProps } from './RecentActivityFeed';
 export { MetricCard } from './MetricCard';
+export { MetricTile, type MetricTileProps } from './MetricTile';
 export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
 export { TimelineItem, type TimelineItemProps } from './TimelineItem';
