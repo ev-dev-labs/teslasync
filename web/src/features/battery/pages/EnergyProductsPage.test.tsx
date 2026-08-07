@@ -266,7 +266,11 @@ describe('EnergyProductsPage — ready dashboard', () => {
     // Site configuration section (own query) — deterministic SI values.
     expect(screen.getByText('Site Configuration')).toBeInTheDocument();
     expect(screen.getByText('Time-Based Control')).toBeInTheDocument(); // autonomous mode
-    expect(screen.getByText('20%')).toBeInTheDocument(); // backup reserve
+    // Backup reserve renders as a gauge: the value and its unit are separate
+    // nodes, and the meter announces the reading with its range.
+    const reserve = screen.getByRole('meter', { name: /backup reserve/i });
+    expect(reserve).toHaveAttribute('aria-valuenow', '20');
+    expect(reserve).toHaveAttribute('aria-valuetext', '20%');
     expect(screen.getByText('5.0 kW')).toBeInTheDocument(); // rated power (W → kW)
     expect(screen.getByText(/Firmware: 23\.44\.0/)).toBeInTheDocument(); // firmware label + version
     expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument(); // timezone

@@ -8,7 +8,7 @@ export const BATTERY_WIDGETS: WidgetDef[] = [
   {
     id: 'battery-gauge',
     name: 'Battery Level',
-    description: 'Battery percentage with radial gauge',
+    description: 'Battery percentage with level gauge',
     icon: Battery,
     category: 'battery',
     defaultSize: { cols: 1, rows: 2 },
@@ -17,15 +17,18 @@ export const BATTERY_WIDGETS: WidgetDef[] = [
     component: lazy(() => import('../BatteryGaugeWidget')),
   },
   {
+    // The id is persisted in users' saved dashboard layouts, so it stays
+    // 'battery-radial-gauge' even though the widget is no longer a radial —
+    // renaming it would silently drop the widget from every existing dashboard.
     id: 'battery-radial-gauge',
-    name: 'Battery Radial Gauge',
-    description: 'Large radial gauge showing battery percentage with color gradient (green>amber>red)',
+    name: 'Battery Level Gauge',
+    description: 'Large battery percentage gauge with color gradient (green>amber>red)',
     icon: Battery,
     category: 'battery',
     defaultSize: { cols: 1, rows: 2 },
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
-    component: lazy(() => import('../BatteryRadialGaugeWidget')),
+    component: lazy(() => import('../BatteryLinearGaugeWidget')),
   },
   {
     id: 'range-estimate',

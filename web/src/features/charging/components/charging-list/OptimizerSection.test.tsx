@@ -9,7 +9,7 @@
  *      saving strictly exceeds $5);
  *   2. a "Charging Habits" panel (sessions/week, home %, avg target, common
  *      start hour + day);
- *   3. a "Battery-Friendly Score" RadialGauge whose colour + caption switch on
+ *   3. a "Battery-Friendly Score" LinearGauge whose colour + caption switch on
  *      three score bands (>=75 good / >=50 fair / else poor);
  *   4. a "Cost Analysis" panel (peak/off-peak rate, % of sessions during peak,
  *      the peak/off-peak hour lists);
@@ -48,6 +48,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import { OptimizerSection } from './OptimizerSection';
+import { gaugeColor } from '@/test/gaugeTestUtils';
 import type {
   ChargingOptimizerData,
   OptimizerCostAnalysis,
@@ -136,9 +137,8 @@ function makeOptimizer(o: OptimizerOverrides = {}): ChargingOptimizerData {
 const renderSection = (o?: OptimizerOverrides) =>
   render(<OptimizerSection optimizer={makeOptimizer(o)} />);
 
-/** The single hex-stroked circle in the section is the RadialGauge's progress arc. */
-const gaugeStroke = (container: HTMLElement) =>
-  container.querySelector('circle[stroke^="#"]')?.getAttribute('stroke');
+/** The section renders a single LinearGauge; this is its fill colour. */
+const gaugeStroke = (container: HTMLElement) => gaugeColor(container);
 
 const SAVINGS_DETAIL =
   'Based on your charging patterns, shifting to off-peak hours could reduce your monthly costs.';
@@ -348,17 +348,18 @@ describe('OptimizerSection — recommendations', () => {
 });
 
 describe('OptimizerSection — accessibility', () => {
-  it('marks every decorative icon glyph as aria-hidden (only the gauge arc is not)', () => {
+  it('marks every decorative icon glyph as aria-hidden', () => {
     const { container } = renderSection();
 
     const svgs = Array.from(container.querySelectorAll('svg'));
     expect(svgs.length).toBeGreaterThan(1);
 
     // Every lucide glyph (banner $, Calendar, cost $, Clock, Lightbulb, Shields)
-    // is decorative and hidden from assistive tech. The lone exception is the
-    // RadialGauge's hand-drawn arc <svg class="-rotate-90">, a chart primitive.
+    // is decorative and hidden from assistive tech. The gauge is no longer an
+    // <svg> ring, so nothing here should be exposed to a screen reader...
     const notHidden = svgs.filter((s) => s.getAttribute('aria-hidden') !== 'true');
-    expect(notHidden).toHaveLength(1);
-    expect(notHidden[0].getAttribute('class') ?? '').toContain('-rotate-90');
+    expect(notHidden).toHaveLength(0);
+    // ...the reading itself is announced by the gauge's role="meter" instead.
+    expect(container.querySelector('[role="meter"]')).not.toBeNull();
   });
 });

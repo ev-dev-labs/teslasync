@@ -7,7 +7,7 @@
  * the page's bento grid independently. The facets pinned here exercise every
  * branch of the component:
  *
- *   • populated: renders the enabled-rate <RadialGauge> (labelled "Enabled
+ *   • populated: renders the enabled-rate <LinearGauge> (labelled "Enabled
  *     Rate", value at 0 decimals + a "%" unit) plus success/neutral count chips
  *     that locale-format the enabled/disabled totals;
  *   • a fractional rate rounds to a whole percent (the gauge is passed

@@ -30,7 +30,7 @@
  * is never touched and every query state is driven deterministically.
  * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
  * read the English defaults. The shared WidgetShell / WidgetGaugeHero /
- * RadialGauge / DataFreshness / EmptyState primitives all run for real, so the
+ * LinearGauge / DataFreshness / EmptyState primitives all run for real, so the
  * assertions exercise the true rendered DOM. `<MemoryRouter>` wraps every render
  * because the error branch's <QueryError> uses `useNavigate`.
  */
@@ -39,6 +39,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import BatteryHealthAnalyticsWidget from './BatteryHealthAnalyticsWidget';
+import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
 // <DataFreshness> → useMotionPreference) reads it during render. Install a
@@ -83,7 +84,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Colour tokens returned by the widget's internal `scoreColor()` and rendered
-// as the RadialGauge arc `stroke`.
+// as the LinearGauge arc `stroke`.
 const GREEN = '#10b981';
 const AMBER = '#f59e0b';
 const RED = '#ef4444';
@@ -144,8 +145,9 @@ function renderWidget(
   );
 }
 
-function gaugeArc(container: HTMLElement, color: string): SVGCircleElement | null {
-  return container.querySelector(`circle[stroke="${color}"]`);
+/** True when a LinearGauge in the tree is filled with `color`. */
+function gaugeArc(container: HTMLElement, color: string): boolean {
+  return hasGaugeColor(container, color);
 }
 
 beforeEach(() => {
@@ -199,7 +201,7 @@ describe('BatteryHealthAnalyticsWidget — standard layout', () => {
     expect(screen.getByText('76')).toBeInTheDocument();
 
     // A healthy SoH paints the gauge arc green.
-    expect(gaugeArc(container, GREEN)).toBeTruthy();
+    expect(gaugeArc(container, GREEN)).toBe(true);
   });
 
   it('formats a large cycle count with locale thousands separators', () => {
@@ -222,9 +224,9 @@ describe('BatteryHealthAnalyticsWidget — SoH colour thresholds', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(gaugeArc(container, GREEN)).toBeTruthy();
-    expect(gaugeArc(container, AMBER)).toBeNull();
-    expect(gaugeArc(container, RED)).toBeNull();
+    expect(gaugeArc(container, GREEN)).toBe(true);
+    expect(gaugeArc(container, AMBER)).toBe(false);
+    expect(gaugeArc(container, RED)).toBe(false);
   });
 
   it('paints the gauge amber in the 50–79 band', () => {
@@ -234,8 +236,8 @@ describe('BatteryHealthAnalyticsWidget — SoH colour thresholds', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(gaugeArc(container, AMBER)).toBeTruthy();
-    expect(gaugeArc(container, GREEN)).toBeNull();
+    expect(gaugeArc(container, AMBER)).toBe(true);
+    expect(gaugeArc(container, GREEN)).toBe(false);
   });
 
   it('paints the gauge red below 50', () => {
@@ -245,8 +247,8 @@ describe('BatteryHealthAnalyticsWidget — SoH colour thresholds', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(gaugeArc(container, RED)).toBeTruthy();
-    expect(gaugeArc(container, AMBER)).toBeNull();
+    expect(gaugeArc(container, RED)).toBe(true);
+    expect(gaugeArc(container, AMBER)).toBe(false);
   });
 });
 
@@ -262,7 +264,7 @@ describe('BatteryHealthAnalyticsWidget — compact layout', () => {
 
     // Gauge (with its unit) is present …
     expect(screen.getByText('health')).toBeInTheDocument();
-    expect(gaugeArc(container, GREEN)).toBeTruthy();
+    expect(gaugeArc(container, GREEN)).toBe(true);
     // … but the titled header and the stat grid are dropped in compact mode.
     expect(screen.queryByText('Battery Analytics')).not.toBeInTheDocument();
     expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
@@ -332,7 +334,7 @@ describe('BatteryHealthAnalyticsWidget — query states', () => {
 
     expect(screen.getByText('Cycles')).toBeInTheDocument();
     expect(screen.getAllByText('0').length).toBeGreaterThan(0);
-    expect(gaugeArc(container, RED)).toBeTruthy();
+    expect(gaugeArc(container, RED)).toBe(true);
   });
 });
 
@@ -418,7 +420,7 @@ describe('BatteryHealthAnalyticsWidget — graceful degradation on transient err
     // Data is still on screen …
     expect(screen.getByText('Battery Analytics')).toBeInTheDocument();
     expect(screen.getByText('640')).toBeInTheDocument();
-    expect(gaugeArc(container, GREEN)).toBeTruthy();
+    expect(gaugeArc(container, GREEN)).toBe(true);
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).

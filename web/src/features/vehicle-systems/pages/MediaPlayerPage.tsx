@@ -17,7 +17,7 @@ import { MetricCard, TimeStamp } from '@/components/data-display';
 import { EmptyState, AlertBanner, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  RadialGauge, ChartTooltip, ChartGradient, chartGrid, axisTickSm, CHART_COLORS,
+  LinearGauge, ChartTooltip, ChartGradient, chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from '@/components/charts';
@@ -450,7 +450,7 @@ export default function MediaPlayerPage() {
               {t('media.volume', 'Volume')}
             </PanelTitle>
             <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2">
-              <RadialGauge
+              <LinearGauge
                 value={latest?.audio_volume ?? 0}
                 max={latest?.audio_volume_max || VOLUME_FALLBACK_MAX}
                 label={t('media.volume', 'Volume')}

@@ -23,7 +23,7 @@
 // network layer does not exist in the React unit-test scope. The
 // "shows thresholds only" semantic refers to the parent
 // TirePressurePage which keeps rendering the deterministic
-// four-corner radial gauges, soft-low/normal/soft-high threshold
+// four-corner gauges, soft-low/normal/soft-high threshold
 // bands, warning banner, summary metric cards, pressure history
 // chart, and history table regardless of this AI section's
 // visibility.

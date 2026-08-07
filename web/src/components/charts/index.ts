@@ -1,4 +1,4 @@
-export { RadialGauge } from './RadialGauge';
+export { LinearGauge } from './LinearGauge';
 export { BipolarBar, type BipolarBarProps } from './BipolarBar';
 export { ThresholdBar, type ThresholdBarProps, type ThresholdBand } from './ThresholdBar';
 export {

@@ -70,7 +70,7 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
  * an arbitrary maximum is this?". Instances sharing a domain stack into a
  * directly comparable column.
  *
- * Use {@link RadialGauge} only when 100% is genuinely meaningful, and
+ * Use {@link LinearGauge} only when 100% is genuinely meaningful, and
  * {@link BipolarBar} when the sign of the value carries information.
  */
 export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(

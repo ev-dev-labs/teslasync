@@ -1,7 +1,7 @@
 /**
- * BatteryRadialGaugeWidget — behaviour + hardening coverage.
+ * BatteryLinearGaugeWidget — behaviour + hardening coverage.
  *
- * The widget renders a battery state-of-charge radial gauge whose arc colour is
+ * The widget renders a battery state-of-charge gauge whose arc colour is
  * driven by `getBatteryColor` (green > 50 %, amber > 20 %, else red), an
  * optional charge-limit overlay ring + "Limit" stat (only when the extended
  * `charge_limit_soc` field is a finite number), a compact 1×1 variant, and a
@@ -58,16 +58,20 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 }));
 
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import BatteryRadialGaugeWidget from './BatteryRadialGaugeWidget';
+import BatteryLinearGaugeWidget from './BatteryLinearGaugeWidget';
+import { gaugeColors } from '@/test/gaugeTestUtils';
 
 const mockUseVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockUseVehicleState = useVehicleState as unknown as ReturnType<typeof vi.fn>;
 
-// Arc colours from getBatteryColor — asserted against the RadialGauge stroke.
+// Fill colours from getBatteryColor — asserted against the LinearGauge fill.
 const GREEN = '#10b981';
 const AMBER = '#f59e0b';
 const RED = '#ef4444';
-const RING_STROKE = 'rgba(255,255,255,0.25)';
+/** The charge-limit reference tick drawn on the gauge track, if any. */
+function limitMarker(container: HTMLElement): HTMLElement | null {
+  return container.querySelector<HTMLElement>('[data-testid="gauge-marker"]');
+}
 
  
 function makeQuery(over: Record<string, unknown> = {}): any {
@@ -124,9 +128,9 @@ function stateQuery(
   return makeQuery({ data, ...over });
 }
 
-/** Every `stroke` attribute on rendered <circle>s — proves gauge/ring colour. */
+/** Every gauge fill colour — proves gauge colour. */
 function circleStrokes(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll('circle')).map((c) => c.getAttribute('stroke') ?? '');
+  return gaugeColors(container);
 }
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
@@ -134,7 +138,7 @@ function renderWidget(props: Partial<WidgetProps> = {}) {
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <BatteryRadialGaugeWidget size={{ cols: 2, rows: 2 }} {...props} />
+        <BatteryLinearGaugeWidget size={{ cols: 2, rows: 2 }} {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -147,7 +151,7 @@ beforeEach(() => {
   mockUseVehicleState.mockReturnValue(stateQuery(makeState()));
 });
 
-describe('BatteryRadialGaugeWidget — level → gauge colour', () => {
+describe('BatteryLinearGaugeWidget — level → gauge colour', () => {
   it('renders a green arc when the level is above 50%', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     const { container } = renderWidget();
@@ -155,7 +159,7 @@ describe('BatteryRadialGaugeWidget — level → gauge colour', () => {
     expect(circleStrokes(container)).toContain(GREEN);
     expect(circleStrokes(container)).not.toContain(AMBER);
     expect(circleStrokes(container)).not.toContain(RED);
-    // Not a blank panel: the RadialGauge label renders in the large variant.
+    // Not a blank panel: the LinearGauge label renders in the large variant.
     expect(screen.getAllByText('Battery').length).toBeGreaterThan(0);
   });
 
@@ -203,37 +207,38 @@ describe('BatteryRadialGaugeWidget — level → gauge colour', () => {
   });
 });
 
-describe('BatteryRadialGaugeWidget — charge-limit overlay + stat', () => {
-  it('shows the ring and Limit stat when charge_limit_soc is a finite number (large)', () => {
+describe('BatteryLinearGaugeWidget — charge-limit overlay + stat', () => {
+  it('shows the limit marker and Limit stat when charge_limit_soc is a finite number (large)', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(stateWithLimit(90, { battery_level: 80 })),
     );
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(circleStrokes(container)).toContain(RING_STROKE);
+    // The tick sits at the limit's position on the same 0–100 scale.
+    expect(limitMarker(container)?.style.left).toBe('90%');
     expect(screen.getByText('Limit')).toBeInTheDocument();
     expect(screen.getByText('Level')).toBeInTheDocument();
     // The distinct limit value renders in the stat row.
     expect(screen.getByText('90')).toBeInTheDocument();
   });
 
-  it('omits the ring and Limit stat when charge_limit_soc is absent', () => {
+  it('omits the limit marker and Limit stat when charge_limit_soc is absent', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(circleStrokes(container)).not.toContain(RING_STROKE);
+    expect(limitMarker(container)).toBeNull();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
     // The Level stat is always present in the large variant.
     expect(screen.getByText('Level')).toBeInTheDocument();
   });
 
-  it('ignores a non-numeric charge_limit_soc so no NaN leaks into the overlay/stat', () => {
+  it('ignores a non-numeric charge_limit_soc so no NaN leaks into the marker/stat', () => {
     // A string value must be dropped by the finite-number guard.
     mockUseVehicleState.mockReturnValue(
       stateQuery(stateWithLimit('90', { battery_level: 80 })),
     );
     const asString = renderWidget({ size: { cols: 2, rows: 2 } });
-    expect(circleStrokes(asString.container)).not.toContain(RING_STROKE);
+    expect(limitMarker(asString.container)).toBeNull();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
     asString.unmount();
 
@@ -242,12 +247,12 @@ describe('BatteryRadialGaugeWidget — charge-limit overlay + stat', () => {
       stateQuery(stateWithLimit(Number.NaN, { battery_level: 80 })),
     );
     const asNaN = renderWidget({ size: { cols: 2, rows: 2 } });
-    expect(circleStrokes(asNaN.container)).not.toContain(RING_STROKE);
+    expect(limitMarker(asNaN.container)).toBeNull();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
   });
 });
 
-describe('BatteryRadialGaugeWidget — charging indicator', () => {
+describe('BatteryLinearGaugeWidget — charging indicator', () => {
   it('renders the charging indicator when the vehicle is charging', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(makeState({ battery_level: 80, is_charging: true })),
@@ -270,20 +275,18 @@ describe('BatteryRadialGaugeWidget — charging indicator', () => {
   });
 });
 
-describe('BatteryRadialGaugeWidget — layout variants', () => {
+describe('BatteryLinearGaugeWidget — layout variants', () => {
   it('renders a compact 1×1 gauge without title, stats, or ring', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(stateWithLimit(90, { battery_level: 80 })),
     );
     const { container } = renderWidget({ size: { cols: 1, rows: 1 } });
 
-    // Compact: no header title, no gauge label, no stats, and the ring is
-    // suppressed (WidgetGaugeHero only renders children when not compact).
+    // Compact: no header title, no gauge label, and no stat row.
     expect(screen.queryByText('Battery')).not.toBeInTheDocument();
     expect(screen.queryByText('Level')).not.toBeInTheDocument();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
-    expect(circleStrokes(container)).not.toContain(RING_STROKE);
-    // The gauge arc itself is still drawn.
+    // The gauge fill itself is still drawn.
     expect(circleStrokes(container)).toContain(GREEN);
   });
 
@@ -302,7 +305,7 @@ describe('BatteryRadialGaugeWidget — layout variants', () => {
   });
 });
 
-describe('BatteryRadialGaugeWidget — loading / empty / error', () => {
+describe('BatteryLinearGaugeWidget — loading / empty / error', () => {
   it('shows a skeleton while loading (no gauge, no empty state)', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(undefined, { data: undefined, isLoading: true }));
     const { container } = renderWidget();
@@ -344,7 +347,7 @@ describe('BatteryRadialGaugeWidget — loading / empty / error', () => {
   });
 });
 
-describe('BatteryRadialGaugeWidget — refresh + vehicle resolution', () => {
+describe('BatteryLinearGaugeWidget — refresh + vehicle resolution', () => {
   it('refetches vehicle state when the refresh control is activated', () => {
     const refetch = vi.fn();
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 }), { refetch }));

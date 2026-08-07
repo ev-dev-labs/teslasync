@@ -11,7 +11,7 @@ import { GlassPanel, Badge, Button, DataTable, PanelTitle, Caption, Text, type C
 import { MetricCard } from '@/components/data-display';
 import { AIVampireDrainExplanation } from '@/components/ai/AIVampireDrainExplanation';
 import {
-  RadialGauge, ChartTooltip, AREA_DEFAULTS,
+  LinearGauge, ChartTooltip, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -305,7 +305,7 @@ export default function VampireDrainPage() {
               />
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <RadialGauge
+                <LinearGauge
                   value={avg}
                   max={GAUGE_MAX}
                   label={t('vampireDrain.gauge.label', 'Avg %/day')}

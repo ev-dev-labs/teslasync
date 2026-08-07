@@ -9,7 +9,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { FreshnessIndicator } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { LinearGauge } from '@/components/charts/LinearGauge';
 import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -63,33 +63,35 @@ export function VehicleHero({
 
         {state ? (
           <div className="mt-6">
-            {/* Context-aware radial gauges */}
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-6">
-              <RadialGauge
+            {/* Context-aware gauges. Bars need horizontal room, so they sit in
+                a responsive grid rather than the single wrapping row the old
+                fixed-diameter rings used. */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 mb-6">
+              <LinearGauge
                 value={state.battery_level ?? 0} max={100} label={t('hero.battery', 'Battery')} unit="%"
                 color={(state.battery_level ?? 0) > 50 ? '#10b981' : '#f59e0b'} size={70}
               />
-              <RadialGauge
+              <LinearGauge
                 value={Math.round(toDistanceDisplay(state.rated_range ?? 0))} max={600}
                 label={t('hero.range', 'Range')} unit={distanceUnit} color="#00f0ff" size={70}
               />
               {(status === 'driving' || (state.speed ?? 0) > 0) && (
-                <RadialGauge
+                <LinearGauge
                   value={Math.round(toSpeedDisplay(state.speed ?? 0))} max={250}
                   label={t('hero.speed', 'Speed')} unit={speedUnit} color="#a855f7" size={70}
                 />
               )}
               {state.is_charging && (
-                <RadialGauge
+                <LinearGauge
                   value={Math.round(state.charger_power ?? 0)} max={250}
                   label={t('hero.power', 'Power')} unit="kW" color="#10b981" size={70}
                 />
               )}
-              <RadialGauge
+              <LinearGauge
                 value={Math.round(toTemperatureDisplay(state.inside_temp ?? 0))} {...tempRange}
                 label={t('hero.inside', 'Inside')} unit={tempUnit} color="#f97316" size={70}
               />
-              <RadialGauge
+              <LinearGauge
                 value={Math.round(toTemperatureDisplay(state.outside_temp ?? 0))} {...tempRange}
                 label={t('hero.outside', 'Outside')} unit={tempUnit} color="#3b82f6" size={70}
               />

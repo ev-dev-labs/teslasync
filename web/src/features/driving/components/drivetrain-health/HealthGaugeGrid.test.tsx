@@ -2,7 +2,7 @@
  * HealthGaugeGrid — behavioural + hardening contract.
  *
  * HealthGaugeGrid is a purely presentational three-panel grid: a health-score
- * radial gauge, a motor-details KV list, and a drive-statistics KV list. Every
+ * gauge, a motor-details KV list, and a drive-statistics KV list. Every
  * data source has independent loading / empty / populated branches, so these
  * tests pin each branch plus the SI→display unit conversion at the render
  * boundary.
@@ -155,7 +155,7 @@ describe('HealthGaugeGrid — populated', () => {
   it('renders the health-score gauge, description and both panel titles', () => {
     render(<HealthGaugeGrid {...makeProps()} />)
 
-    // Radial gauge renders the integer score (88) and its caption.
+    // Gauge renders the integer score (88) and its caption.
     expect(screen.getByText('88')).toBeInTheDocument()
     expect(screen.getByText('Overall drivetrain condition rating')).toBeInTheDocument()
     // Panel titles are always present regardless of data state.

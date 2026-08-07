@@ -18,7 +18,7 @@ import {
 import {
   ChartContainer,
   ChartTooltip,
-  RadialGauge,
+  LinearGauge,
   AREA_DEFAULTS,
   LineChart,
   Line,
@@ -97,7 +97,7 @@ interface HistoryRow {
 
 /**
  * Gauge / chart fill colors keyed by grade. These are passed as dynamic
- * `color` props to RadialGauge / recharts fills — never used as body text.
+ * `color` props to LinearGauge / recharts fills — never used as body text.
  */
 const GRADE_COLORS: Record<string, string> = {
   'A+': '#39ff14',
@@ -549,7 +549,7 @@ function CategoryGaugeCard({
   return (
     <GlassPanel className="flex flex-col items-center p-4 sm:p-5">
       <PanelTitle className="mb-3 self-start">{title}</PanelTitle>
-      <RadialGauge value={value} max={max} label={title} color={color} size={120} hideScale />
+      <LinearGauge value={value} max={max} label={title} color={color} size={120} hideScale />
       <div className="mt-3 flex items-baseline gap-1">
         <Text as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
           <AnimatedNumber value={value} />
@@ -1089,7 +1089,7 @@ export default function DriveScorePage() {
             <PanelTitle className="mb-3">{t('driveScore.overall', 'Overall Score')}</PanelTitle>
             {scoreState(240, noDrivesMsg, <Icons.speed className="h-8 w-8" aria-hidden="true" />) ?? (
               <div className="flex flex-1 flex-col items-center justify-center py-4">
-                <RadialGauge
+                <LinearGauge
                   value={overallScore}
                   max={100}
                   label={t('driveScore.overall', 'Overall Score')}
@@ -1470,12 +1470,13 @@ export default function DriveScorePage() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-4">
-                    <RadialGauge
+                    <LinearGauge
                       value={bestDrive.score.total}
                       max={100}
                       label={t('driveScore.score', 'Score')}
                       color="#4ade80"
                       size={72}
+                      className="w-28 shrink-0"
                     />
                     <dl className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">
@@ -1534,12 +1535,13 @@ export default function DriveScorePage() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-4">
-                    <RadialGauge
+                    <LinearGauge
                       value={worstDrive.score.total}
                       max={100}
                       label={t('driveScore.score', 'Score')}
                       color="#f87171"
                       size={72}
+                      className="w-28 shrink-0"
                     />
                     <dl className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">

@@ -8,9 +8,9 @@
  * via typed construction — a shape regression fails `tsc --noEmit` — and at
  * runtime via real assertions on the constructed values):
  *
- *   HEALTH_SCORE  — RadialGauge `max={100}` + AnimatedNumber `suffix="%"` both
+ *   HEALTH_SCORE  — LinearGauge `max={100}` + AnimatedNumber `suffix="%"` both
  *                   assume a 0..100 value ranked by severity (good>warn>crit).
- *   HEALTH_COLOR  — RadialGauge `color` + helpers.tempSeverityColor return these;
+ *   HEALTH_COLOR  — LinearGauge `color` + helpers.tempSeverityColor return these;
  *                   must be valid, distinct, severity-appropriate hex.
  *   HEALTH_GLOW   — fed straight into <GlassPanel glow=…>; every value must be a
  *                   real, renderable GlassPanel accent (never the empty 'none').
@@ -51,7 +51,7 @@ describe('HEALTH_SCORE', () => {
   });
 
   it('keeps every score within the 0–100 gauge range', () => {
-    // RadialGauge max={100} + AnimatedNumber suffix="%" would render a
+    // LinearGauge max={100} + AnimatedNumber suffix="%" would render a
     // nonsensical arc / percentage for an out-of-range value.
     for (const s of ALL_STATUSES) {
       expect(HEALTH_SCORE[s]).toBeGreaterThanOrEqual(0);

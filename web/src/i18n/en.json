@@ -3359,7 +3359,7 @@
         },
         "tire-pressure-trend-reasoning": {
           "label": "Tire-pressure trend reasoning",
-          "description": "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation when all four corners trend together with a parallel ambient-temperature drop, single-corner slow-leak signature when one corner's rate is materially worse), and any actionable threshold crossing — grounded strictly in the same TpmsPressure* and OutsideTemp signal-log change feed the gauges render, and honest that the per-corner slope is a descriptive linear extrapolation rather than a forecast. The deterministic Tire Pressure page (four-corner radial gauges, soft-low/normal/soft-high threshold bands, warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation when all four corners trend together with a parallel ambient-temperature drop, single-corner slow-leak signature when one corner's rate is materially worse), and any actionable threshold crossing — grounded strictly in the same TpmsPressure* and OutsideTemp signal-log change feed the gauges render, and honest that the per-corner slope is a descriptive linear extrapolation rather than a forecast. The deterministic Tire Pressure page (four-corner gauges, soft-low/normal/soft-high threshold bands, warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when Helix is off."
         },
         "alert-tuning-suggestions": {
           "label": "Alert-rule tuning suggestions",
@@ -6878,7 +6878,7 @@
     },
     "level": "Level",
     "chargeLimit": "Limit",
-    "batteryRadial": "Battery",
+    "batteryLevel": "Battery",
     "chargeCost": {
       "monthly": "30-day cost",
       "noData": "No charge data",

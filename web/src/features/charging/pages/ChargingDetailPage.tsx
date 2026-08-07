@@ -26,7 +26,7 @@ import {
   MetricBar, InlineMetric, AnimatedNumber, MetricCard, KVList,
   LiveIndicator, DateTime,
 } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import {
   Skeleton, EmptyState, QueryError, LiveStaleDataBanner,
   PageHeaderSkeleton, StatGridSkeleton, ChartBlockSkeleton,
@@ -499,7 +499,7 @@ export default function ChargingDetailPage() {
                 {gauges.map((g) => (
                   <StaggerItem key={g.key}>
                     <div className="flex flex-col items-center rounded-xl border border-white/[0.05] bg-white/[0.02] py-4">
-                      <RadialGauge
+                      <LinearGauge
                         value={g.value}
                         max={g.max}
                         label={g.label}

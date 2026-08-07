@@ -141,7 +141,7 @@ export function useChartExport(filename?: string): ChartExportApi {
     try {
       const xml = serializeFirstChildSVG(chartRef.current);
       if (!xml) {
-        // Some chart kinds (radial gauges, tile heatmaps) render via
+        // Some chart kinds (level gauges, tile heatmaps) render via
         // `<canvas>` or pure CSS — there is no SVG to serialize. Bail
         // out quietly so the menu item simply does nothing instead of
         // flashing a confusing toast.

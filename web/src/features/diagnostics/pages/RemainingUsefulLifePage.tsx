@@ -10,7 +10,7 @@ import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard } from '@/comp
 import { VehicleSelect } from '@/components/forms';
 import { MetricBar } from '@/components/data-display';
 import {
-  RadialGauge, ChartGradient, ChartTooltip, chartGrid, axisTick,
+  LinearGauge, ChartGradient, ChartTooltip, chartGrid, axisTick,
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -31,7 +31,7 @@ const COLOR_EOL = '#f43f5e'; // rose-500 — the end-of-life threshold marker
 
 /* Per-status presentation. `dot` is a background class for the StatusPill's
    indicator; `text` is a toned-neon (-300) accent for the icon/label; `gauge`
-   is the RadialGauge arc colour. */
+   is the LinearGauge arc colour. */
 interface StatusMeta {
   dot: string;
   text: string;
@@ -229,7 +229,7 @@ export default function RemainingUsefulLifePage() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      <RadialGauge
+                      <LinearGauge
                         value={c.health_pct}
                         max={100}
                         unit="%"
@@ -237,6 +237,7 @@ export default function RemainingUsefulLifePage() {
                         color={meta.gauge}
                         size={104}
                         decimals={0}
+                        className="w-32 shrink-0"
                       />
                       <dl className="min-w-0 flex-1 space-y-1.5">
                         <div className="flex items-center justify-between gap-2">

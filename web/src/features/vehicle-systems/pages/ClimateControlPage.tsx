@@ -38,7 +38,7 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  RadialGauge,
+  LinearGauge,
   ambientTemperatureGaugeRange,
   LineChart,
   Line,
@@ -268,7 +268,7 @@ function CardSkeletons({ count, className }: { count: number; className: string 
   );
 }
 
-/** A single radial temperature gauge cell with its own loading + empty state. */
+/** A single temperature gauge cell with its own loading + empty state. */
 function GaugeCell({
   loading,
   value,
@@ -293,7 +293,7 @@ function GaugeCell({
       {loading ? (
         <Skeleton rounded width="120px" height={120} />
       ) : value != null ? (
-        <RadialGauge value={value} min={min} max={max} label={label} unit={unit} color={color} />
+        <LinearGauge value={value} min={min} max={max} label={label} unit={unit} color={color} />
       ) : (
         <EmptyState /* no-action: transient — source signal missing */ icon={icon} message={label} />
       )}

@@ -10,7 +10,7 @@ import { PageContainer } from '@/components/layout';
 import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, Badge, PanelTitle, Text, Caption, Button, CopyButton } from '@/components/ui';
 import { MetricCard, MetricBar } from '@/components/data-display';
-import { RadialGauge, AreaChartWrapper } from '@/components/charts';
+import { LinearGauge, AreaChartWrapper } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -315,7 +315,7 @@ export default function BatteryPassportPage() {
                     <Skeleton height={200} />
                   ) : passport && passport.soh_pct > 0 ? (
                     <>
-                      <RadialGauge
+                      <LinearGauge
                         value={passport.soh_pct}
                         max={100}
                         label={t('batteryPassport.soh', 'State of Health')}

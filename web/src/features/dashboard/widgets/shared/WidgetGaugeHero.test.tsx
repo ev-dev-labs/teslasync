@@ -4,14 +4,14 @@
  * Exercises every export of WidgetGaugeHero.tsx:
  *   - `WidgetGaugeHero` — the presentational wrapper: the size branch
  *     (compact 70 vs standard 100), the numeric guards it feeds into the
- *     RadialGauge arc math, the conditional stats row, and the conditional
+ *     LinearGauge arc math, the conditional stats row, and the conditional
  *     children slot.
  *   - `GaugeHeroConfig` / `GaugeHeroStat` — the exported prop types, referenced
  *     as annotations on the fixtures below so the public contract is pinned.
  *
  * Bugs this pins (each assertion fails on the pre-hardened source):
  *   - A non-positive or non-finite `gauge.max` used to be forwarded verbatim,
- *     making RadialGauge divide by zero → a `NaN` stroke offset and a visually
+ *     making LinearGauge divide by zero → a `NaN` stroke offset and a visually
  *     broken ring. It is now clamped to a safe 100-unit scale.
  *   - A non-finite `gauge.value` (NaN / Infinity / undefined from an optional
  *     upstream field) used to reach the arc math as-is; it now collapses to 0.
@@ -21,7 +21,7 @@
  *     a React duplicate-key warning; the key is now `${label}-${index}`.
  *
  * Strategy:
- *   - RadialGauge is a heavy chart primitive (its barrel re-exports recharts).
+ *   - LinearGauge is a heavy chart primitive (its barrel re-exports recharts).
  *     It is replaced with a prop-capturing stub so this stays a fast, focused
  *     unit test of WidgetGaugeHero's OWN logic — the exact numbers it forwards
  *     are asserted directly via data-* attributes, which is stronger evidence
@@ -35,8 +35,8 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { WidgetGaugeHero, type GaugeHeroConfig, type GaugeHeroStat } from './WidgetGaugeHero';
 
-// ── RadialGauge stub — records the props WidgetGaugeHero forwards. ────────────
-interface RadialGaugeStubProps {
+// ── LinearGauge stub — records the props WidgetGaugeHero forwards. ────────────
+interface LinearGaugeStubProps {
   value: number;
   max: number;
   label: string;
@@ -46,9 +46,9 @@ interface RadialGaugeStubProps {
 }
 
 vi.mock('@/components/charts', () => ({
-  RadialGauge: ({ value, max, label, unit, color, size }: RadialGaugeStubProps) => (
+  LinearGauge: ({ value, max, label, unit, color, size }: LinearGaugeStubProps) => (
     <div
-      data-testid="radial-gauge"
+      data-testid="linear-gauge"
       data-value={String(value)}
       data-max={String(max)}
       data-label={label}
@@ -72,10 +72,10 @@ afterEach(() => cleanup());
 
 // ── Gauge prop forwarding ────────────────────────────────────────────────────
 describe('WidgetGaugeHero — gauge forwarding', () => {
-  it('forwards the gauge label, unit, and color to the RadialGauge', () => {
+  it('forwards the gauge label, unit, and color to the LinearGauge', () => {
     render(<WidgetGaugeHero gauge={baseGauge} />);
 
-    const gauge = screen.getByTestId('radial-gauge');
+    const gauge = screen.getByTestId('linear-gauge');
     expect(gauge).toHaveAttribute('data-label', 'Battery');
     expect(gauge).toHaveAttribute('data-unit', '%');
     expect(gauge).toHaveAttribute('data-color', '#10b981');
@@ -83,26 +83,26 @@ describe('WidgetGaugeHero — gauge forwarding', () => {
 
   it('renders the standard size (100) by default and the compact size (70) when compact', () => {
     const { rerender } = render(<WidgetGaugeHero gauge={baseGauge} />);
-    expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-size', '100');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-size', '100');
 
     rerender(<WidgetGaugeHero gauge={baseGauge} compact />);
-    expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-size', '70');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-size', '70');
   });
 
   it('forwards a finite gauge value (including 0) unchanged', () => {
     const { rerender } = render(<WidgetGaugeHero gauge={{ ...baseGauge, value: 73 }} />);
-    expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-value', '73');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', '73');
 
     rerender(<WidgetGaugeHero gauge={{ ...baseGauge, value: 0 }} />);
-    expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-value', '0');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', '0');
   });
 
   it('forwards a valid positive max unchanged', () => {
     const { rerender } = render(<WidgetGaugeHero gauge={{ ...baseGauge, max: 250 }} />);
-    expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-max', '250');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-max', '250');
 
     rerender(<WidgetGaugeHero gauge={{ ...baseGauge, max: 100 }} />);
-    expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-max', '100');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-max', '100');
   });
 });
 
@@ -113,7 +113,7 @@ describe('WidgetGaugeHero — numeric guards', () => {
       const { unmount } = render(
         <WidgetGaugeHero gauge={{ ...baseGauge, value: badValue as number }} />,
       );
-      expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-value', '0');
+      expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', '0');
       unmount();
     }
   });
@@ -121,8 +121,8 @@ describe('WidgetGaugeHero — numeric guards', () => {
   it('clamps a non-positive or non-finite max to a safe 100-unit scale', () => {
     for (const badMax of [0, -50, Number.NaN, Number.POSITIVE_INFINITY]) {
       const { unmount } = render(<WidgetGaugeHero gauge={{ ...baseGauge, max: badMax }} />);
-      // A raw 0/NaN here would make RadialGauge divide by zero → data-max="NaN".
-      expect(screen.getByTestId('radial-gauge')).toHaveAttribute('data-max', '100');
+      // A raw 0/NaN here would make LinearGauge divide by zero → data-max="NaN".
+      expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-max', '100');
       unmount();
     }
   });
@@ -153,7 +153,7 @@ describe('WidgetGaugeHero — stats row', () => {
     expect(container.querySelector('.flex-wrap')).toBeNull();
 
     // The gauge still renders in both cases (never a blank panel).
-    expect(screen.getByTestId('radial-gauge')).toBeInTheDocument();
+    expect(screen.getByTestId('linear-gauge')).toBeInTheDocument();
   });
 
   it('renders an em-dash for a stat whose value is nullish (never a blank cell)', () => {
@@ -215,7 +215,7 @@ describe('WidgetGaugeHero — children slot', () => {
     );
 
     expect(screen.getByText('charging-indicator')).toBeInTheDocument();
-    expect(screen.getByTestId('radial-gauge')).toBeInTheDocument();
+    expect(screen.getByTestId('linear-gauge')).toBeInTheDocument();
   });
 
   it('suppresses both the stats row and the children slot in compact mode (gauge only)', () => {
@@ -227,7 +227,7 @@ describe('WidgetGaugeHero — children slot', () => {
     );
 
     // The gauge is always present…
-    expect(screen.getByTestId('radial-gauge')).toBeInTheDocument();
+    expect(screen.getByTestId('linear-gauge')).toBeInTheDocument();
     // …but compact drops the stats and children chrome.
     expect(screen.queryByText('Range')).not.toBeInTheDocument();
     expect(screen.queryByText('charging-indicator')).not.toBeInTheDocument();

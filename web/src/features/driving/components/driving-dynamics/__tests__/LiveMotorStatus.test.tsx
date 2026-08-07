@@ -16,7 +16,7 @@
  *     all-axles-absent case reading "—" rather than a confident 0
  *   - **signed** torque and axle speed: regenerative braking and reverse must
  *     render as negative readings, NOT clamp to zero the way the previous
- *     RadialGauge presentation did
+ *     LinearGauge presentation did
  *   - hottest-axle motor-temp selection, display-unit conversion (°F), a
  *     regression guard against a doubled degree symbol, AND a guard that the
  *     temperature ring sweeps the same fraction in °C and °F (the offset-scale
@@ -67,6 +67,7 @@ import LiveMotorStatus from '../LiveMotorStatus'
 import type { MotorSnapshot } from '@/api/types'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import { BADGE_VARIANTS } from '@/components/ui'
+import { gaugeWidth } from '@/test/gaugeTestUtils';
 
 // `fmtNumber` reads module-global precision + locale. Pin them so the
 // numeric assertions are deterministic regardless of suite ordering.
@@ -235,7 +236,7 @@ describe('LiveMotorStatus — signed powertrain values (regression)', () => {
       }),
     )
 
-    // The previous RadialGauge presentation clamped at 0, so a car braking
+    // The previous LinearGauge presentation clamped at 0, so a car braking
     // hard on regen was indistinguishable from a stationary one.
     const torque = screen.getByLabelText('Torque')
     expect(torque).toHaveAttribute('aria-valuenow', '-200')
@@ -271,16 +272,12 @@ describe('LiveMotorStatus — motor temperature', () => {
     expect(container.textContent).not.toMatch(/°°/)
   })
 
-  it('sweeps the same arc fraction in °C and °F (offset-scale regression)', () => {
-    // Temperature is an INTERVAL scale: its zero is arbitrary. A 0→max ring
+  it('fills the same fraction in °C and °F (offset-scale regression)', () => {
+    // Temperature is an INTERVAL scale: its zero is arbitrary. A 0→max gauge
     // therefore reads a different fraction for the same physical temperature
     // once the user switches to Fahrenheit. The gauge is passed a converted
     // `min` as well so the offset cancels — this pins that behaviour.
-    const arcOffset = (root: HTMLElement): string => {
-      const circles = root.querySelectorAll('circle')
-      // [0] is the static track, [1] is the value arc.
-      return circles[1]?.getAttribute('stroke-dashoffset') ?? ''
-    }
+    const arcOffset = (root: HTMLElement): string => gaugeWidth(root)
 
     const celsius = renderPanel(snapshot({ motor_temp_c_front: 50, shift_state: 'P' }), {
       toTemperatureDisplay: identity,

@@ -3,7 +3,7 @@
  * a11y, and null-safety coverage for the file's sole export.
  *
  * The panel is a presentational leaf: given a `sensors: TempSensor[]` list and a
- * `loading` flag it renders one `RadialGauge` per sensor (temperature reading +
+ * `loading` flag it renders one `LinearGauge` per sensor (temperature reading +
  * a scale caption stating the gauge's range), or a loading skeleton, or a labelled empty state.
  * There is no data source — the surface under test is the three-way render branch
  * plus the way each sensor is projected onto a gauge:
@@ -87,6 +87,7 @@ vi.mock('react-i18next', async () => {
 });
 
 import { TemperatureGauges } from './TemperatureGauges';
+import { gaugeColors } from '@/test/gaugeTestUtils';
 
 /** A single sensor with sane defaults; each spec overrides the fields it asserts. */
 function sensor(over: Partial<TempSensor> = {}): TempSensor {
@@ -123,11 +124,9 @@ function renderGauges(props: { sensors: TempSensor[]; loading?: boolean }) {
   return render(<TemperatureGauges {...props} />);
 }
 
-/** The non-empty `stroke` of every gauge circle (track = currentColor, arc = severity hex). */
+/** The fill colour of every gauge (severity hex). */
 function circleStrokes(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll('circle'))
-    .map((c) => c.getAttribute('stroke'))
-    .filter((s): s is string => Boolean(s));
+  return gaugeColors(container);
 }
 
 const EMPTY_MESSAGE = 'No temperature sensor data available yet';

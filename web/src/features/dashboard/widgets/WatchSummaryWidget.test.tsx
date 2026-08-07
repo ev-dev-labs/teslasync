@@ -8,7 +8,7 @@
  *   1. `getBatteryColor` — the SoC → accent-color band utility (an export):
  *        > 50 % emerald, > 20 % amber, ≤ 20 % red, with the two boundaries pinned.
  *   2. Two layouts driven by `size.cols`:
- *        - compact (cols <= 1): a title-less watch face — a RadialGauge whose
+ *        - compact (cols <= 1): a title-less watch face — a LinearGauge whose
  *          progress stroke is `getBatteryColor(level)`, a StatusBadge, the
  *          SI→preference converted range, and a pulsing charging indicator.
  *        - standard (cols >= 2): a titled "Watch Summary" shell with a battery
@@ -36,7 +36,7 @@
  * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
  * read the English defaults. `@/hooks/useDateFormat` + `@/hooks/useTimeFormatPreference`
  * are stubbed so the real `<TimeStamp>` / `<DataFreshness>` render without a
- * settings QueryClient. The shared WidgetShell / DataFreshness / RadialGauge /
+ * settings QueryClient. The shared WidgetShell / DataFreshness / LinearGauge /
  * StatusBadge / WidgetBigNumber / Badge / EmptyState primitives and the real
  * `convertDistanceFromSI` / `convertTempFromSI` all run for real, so assertions
  * exercise the true rendered DOM.
@@ -47,6 +47,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { WatchSummary, WatchComplication } from '@/api/hooks/useWatch';
 import WatchSummaryWidget, { getBatteryColor } from './WatchSummaryWidget';
 import { BADGE_VARIANTS } from '@/components/ui';
+import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 // jsdom lacks matchMedia; DataFreshness → useMotionPreference and AnimatedNumber
 // read it during render. Report reduced-motion = true so AnimatedNumber skips
@@ -333,8 +334,8 @@ describe('WatchSummaryWidget — compact layout', () => {
 
     const { container } = renderWidget({ cols: 1, rows: 2 });
 
-    expect(container.querySelector('circle[stroke="#10b981"]')).toBeTruthy();
-    expect(container.querySelector('circle[stroke="#ef4444"]')).toBeNull();
+    expect(hasGaugeColor(container, '#10b981')).toBe(true);
+    expect(hasGaugeColor(container, '#ef4444')).toBe(false);
   });
 
   it('paints the gauge progress stroke with the critical-band color at low SoC', () => {
@@ -342,8 +343,8 @@ describe('WatchSummaryWidget — compact layout', () => {
 
     const { container } = renderWidget({ cols: 1, rows: 2 });
 
-    expect(container.querySelector('circle[stroke="#ef4444"]')).toBeTruthy();
-    expect(container.querySelector('circle[stroke="#10b981"]')).toBeNull();
+    expect(hasGaugeColor(container, '#ef4444')).toBe(true);
+    expect(hasGaugeColor(container, '#10b981')).toBe(false);
   });
 
   it('shows the pulsing charging indicator when the complication reports charging', () => {

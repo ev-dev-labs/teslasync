@@ -26,7 +26,7 @@ import {
 import { VehicleSelect } from '@/components/forms';
 import { MetricCard, TimeStamp, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge,
+  LinearGauge,
   LineChart,
   Line,
   XAxis,
@@ -107,7 +107,7 @@ export function enabledCount(snap: SafetySnapshot): number {
 export const TOTAL_FEATURES = 9;
 
 /** Semantic gauge color — kept as a computed value so it can drive the
- *  RadialGauge `color` prop directly (dynamic, not a static var style). */
+ *  LinearGauge `color` prop directly (dynamic, not a static var style). */
 export function scoreColor(pct: number): string {
   if (pct >= 80) return '#10b981';
   if (pct >= 50) return '#f59e0b';
@@ -564,16 +564,15 @@ export default function SafetySettingsPage() {
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-4">
-                <RadialGauge
+                <LinearGauge
                   value={enabled}
                   max={TOTAL_FEATURES}
                   label={t('Safety Score')}
-                  unit={`${fmtInt(scorePct)}%`}
                   color={scoreColor(scorePct)}
                   size={140}
                 />
                 <Badge variant={scoreBadgeVariant(scorePct)}>
-                  {enabled}/{TOTAL_FEATURES} {t('enabled')}
+                  {enabled}/{TOTAL_FEATURES} {t('enabled')} · {fmtInt(scorePct)}%
                 </Badge>
               </div>
             )}

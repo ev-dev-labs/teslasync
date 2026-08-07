@@ -15,7 +15,7 @@ import {
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, ChartGradient,
+  LinearGauge, ChartTooltip, ChartGradient,
   chartGrid, axisTick, chartMarginLabeled, chartAnimation, CHART_COLORS,
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -563,7 +563,7 @@ export default function EnergyFlowPage() {
                       : undefined
                   }
                 >
-                  <RadialGauge
+                  <LinearGauge
                     value={batterySOC}
                     max={100}
                     label={t('energyFlow.node.battery', 'Battery')}

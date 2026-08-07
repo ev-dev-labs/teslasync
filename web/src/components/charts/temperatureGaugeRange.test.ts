@@ -21,7 +21,7 @@ import {
 const toC = (c: number) => c;
 const toF = (c: number) => (c * 9) / 5 + 32;
 
-/** The fraction of the ring a reading fills, exactly as RadialGauge computes it. */
+/** The fraction of the ring a reading fills, exactly as LinearGauge computes it. */
 function fillFraction(valueC: number, toDisplay: (c: number) => number, range: { min: number; max: number }) {
   const v = toDisplay(valueC);
   const clamped = Math.max(range.min, Math.min(v, range.max));

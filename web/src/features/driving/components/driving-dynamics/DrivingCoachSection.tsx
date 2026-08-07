@@ -5,7 +5,7 @@ import { Zap, ShieldCheck, Lightbulb } from 'lucide-react';
 import { GlassPanel, Badge, DataTable, PanelTitle, SectionTitle, Caption, Text, type Column } from '@/components/ui';
 import {
   ChartTooltip,
-  RadialGauge,
+  LinearGauge,
   AREA_DEFAULTS,
   LineChart,
   Line,
@@ -89,7 +89,7 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:gap-5">
         <FadeIn delay={0.43} className="h-full">
           <GlassPanel className="flex h-full flex-col items-center justify-center p-4 sm:p-5">
-            <RadialGauge
+            <LinearGauge
               value={coachData?.overall_score ?? 0}
               max={100}
               label={t('dynamics.coach.overallScore', 'Driving Score')}

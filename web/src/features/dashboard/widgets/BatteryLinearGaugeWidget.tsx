@@ -7,48 +7,13 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
 
-const STROKE_WIDTH = 8;
-
 function getBatteryColor(level: number): string {
   if (level > 50) return '#10b981'; // green
   if (level > 20) return '#f59e0b'; // amber
   return '#ef4444';                 // red
 }
 
-/** Thin arc overlay showing the charge limit position on the gauge */
-function ChargeLimitRing({ value, max, gaugeSize }: { value: number; max: number; gaugeSize: number }) {
-  const radius = (gaugeSize - STROKE_WIDTH) / 2;
-  const center = gaugeSize / 2;
-  const circumference = 2 * Math.PI * radius;
-  // Guard against a zero/negative max (division by zero → NaN dashoffset).
-  const safeMax = max > 0 ? max : 100;
-  const clamped = Math.max(0, Math.min(value, safeMax));
-  const offset = circumference - (clamped / safeMax) * circumference;
-
-  return (
-    <div aria-hidden className="absolute inset-x-0 top-0 flex justify-center pointer-events-none">
-      <svg
-        width={gaugeSize}
-        height={gaugeSize}
-        className="-rotate-90"
-      >
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.25)"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-        />
-      </svg>
-    </div>
-  );
-}
-
-export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProps) {
+export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -68,8 +33,6 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
 
   const color = useMemo(() => (state ? getBatteryColor(batteryLevel) : '#374151'), [state, batteryLevel]);
 
-  const gaugeSize = isCompact ? 70 : 100;
-
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
@@ -86,7 +49,7 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.batteryRadial', 'Battery')}
+      title={isCompact ? undefined : t('widget.batteryLevel', 'Battery')}
       icon={isCompact ? undefined : <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
       loading={isLoading}
       // Surface a genuine initial-load failure (no state yet) as a real error
@@ -103,23 +66,25 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
       <div className="h-full flex flex-col items-center justify-center gap-1">
         {state ? (
           <>
-            <div className="relative">
-              <WidgetGaugeHero
-                gauge={{
-                  value: batteryLevel,
-                  max: 100,
-                  label: isCompact ? '' : t('widget.battery', 'Battery'),
-                  unit: '%',
-                  color,
-                }}
-                stats={isLarge ? stats : undefined}
-                compact={isCompact}
-              >
-                {chargeLimitSoc != null && (
-                  <ChargeLimitRing value={chargeLimitSoc} max={100} gaugeSize={gaugeSize} />
-                )}
-              </WidgetGaugeHero>
-            </div>
+            <WidgetGaugeHero
+              gauge={{
+                value: batteryLevel,
+                max: 100,
+                label: isCompact ? '' : t('widget.battery', 'Battery'),
+                unit: '%',
+                color,
+                // The configured charge limit is a target on the same 0–100
+                // scale, so it reads as a tick on the track rather than as a
+                // second, unlabelled quantity.
+                marker: chargeLimitSoc,
+                markerLabel:
+                  chargeLimitSoc != null
+                    ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%`
+                    : undefined,
+              }}
+              stats={isLarge ? stats : undefined}
+              compact={isCompact}
+            />
 
             {state.is_charging && (
               <p className="text-2xs text-emerald-300 animate-pulse mt-1">

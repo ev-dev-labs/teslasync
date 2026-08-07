@@ -5,7 +5,7 @@ import { Battery, Route } from 'lucide-react'
 import { GlassPanel, PanelTitle, Text } from '@/components/ui'
 import { AnimatedNumber } from '@/components/data-display'
 import {
-  RadialGauge, ChartTooltip, CHART_COLORS,
+  LinearGauge, ChartTooltip, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
   AREA_DEFAULTS, areaGradient,
@@ -64,13 +64,14 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
           {t('vehicles.detail.batteryOverview', 'Battery Overview')}
         </PanelTitle>
         <div className="flex items-center gap-4 mb-4">
-          <RadialGauge
+          <LinearGauge
             value={batteryLevel}
             max={100}
             label={t('common.battery', 'Battery')}
             unit="%"
             color={batteryColor(batteryLevel)}
             size={100}
+            className="w-32 shrink-0"
           />
           <div className="flex-1">
             <GlassPanel className="p-3 mb-2">

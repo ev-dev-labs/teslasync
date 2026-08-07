@@ -13,7 +13,7 @@
  *   68 °F on a 0→122 °F ring = 55.7%   ← same temperature, different arc
  *
  * The offset only cancels when **both** ends are converted and the gauge
- * measures `(v - min) / (max - min)`, which is what `RadialGauge`'s `min` prop
+ * measures `(v - min) / (max - min)`, which is what `LinearGauge`'s `min` prop
  * enables. This helper exists so callers cannot convert one end and forget the
  * other — the whole range is produced in one call.
  *
@@ -35,13 +35,13 @@ export interface TemperatureGaugeRange {
 }
 
 /**
- * Builds `{ min, max }` for a temperature `RadialGauge`, both ends converted
+ * Builds `{ min, max }` for a temperature `LinearGauge`, both ends converted
  * with the caller's display converter.
  *
  * Spread it directly onto the gauge:
  *
  * ```tsx
- * <RadialGauge
+ * <LinearGauge
  *   value={toDisplay(motorTempC)}
  *   {...temperatureGaugeRange(toDisplay, { maxC: 150 })}
  * />

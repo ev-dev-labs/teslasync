@@ -15,7 +15,7 @@
 //     stream accumulates into the shared AiOutputPanel.
 //
 // The component does NOT replace the deterministic four-corner
-// radial gauges, the warning banner, the summary metric cards,
+// gauges, the warning banner, the summary metric cards,
 // the pressure history chart, or the history table rendered by
 // TirePressurePage. That baseline content remains the canonical
 // view visible to every user; this AI section is opt-in read-only
@@ -80,7 +80,7 @@ interface InnerSectionProps {
  * component only describes the surface's appearance.
  *
  * Visual contract:
- *   - One GlassPanel sized to sit above the four-corner radial
+ *   - One GlassPanel sized to sit above the four-corner
  *     gauges on TirePressurePage.
  *   - Cyan AI badge in the header (matches the chatbot brand
  *     colour).

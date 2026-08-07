@@ -1,7 +1,7 @@
 /**
  * MetricTile — behaviour + hardening contract.
  *
- * MetricTile is the replacement for RadialGauge at call sites whose value has
+ * MetricTile is the replacement for LinearGauge at call sites whose value has
  * no meaningful 100%. The defect it exists to fix is arithmetic, not cosmetic:
  * `max={Math.max(count, 50)}` renders a ring pinned at exactly 100% for every
  * count above 50, and `max={value * 1.5}` pins it at exactly 66.7% for every

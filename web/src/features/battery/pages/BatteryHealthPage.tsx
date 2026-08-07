@@ -16,7 +16,7 @@ import {
   SectionTitle, PanelTitle, Text, Caption, MetricLabel,
 } from '@/components/ui';
 import {
-  RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
+  LinearGauge, ChartContainer, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, CHART_COLORS, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -614,7 +614,7 @@ export default function BatteryHealthPage() {
               </PanelTitle>
               <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-3 sm:gap-6 xl:grid-cols-3 2xl:grid-cols-5">
                 <div className="col-span-2 flex flex-col items-center sm:col-span-1">
-                  <RadialGauge
+                  <LinearGauge
                     value={health.current_soh}
                     max={100}
                     label={t('battery.gauge.health', 'Health Score')}
@@ -627,21 +627,21 @@ export default function BatteryHealthPage() {
                     {healthLabel(health.current_soh, t)}
                   </Badge>
                 </div>
-                <RadialGauge
+                <LinearGauge
                   value={capacityNowPct}
                   max={100}
                   label={t('battery.gauge.capacity', 'Capacity')}
                   unit="%"
                   color="#00f0ff"
                 />
-                <RadialGauge
+                <LinearGauge
                   value={health.degradation_rate_yr}
                   max={10}
                   label={t('battery.gauge.degradation', 'Degradation')}
                   unit="%/yr"
                   color={degradationColor(health.degradation_rate_yr)}
                 />
-                <RadialGauge
+                <LinearGauge
                   value={health.total_cycles}
                   max={1500}
                   label={t('battery.gauge.cycles', 'Cycles')}

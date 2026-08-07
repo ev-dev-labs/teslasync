@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Cog, Gauge } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
-import { RadialGauge, BipolarBar, temperatureGaugeRange } from '@/components/charts';
+import { LinearGauge, BipolarBar, temperatureGaugeRange } from '@/components/charts';
 import { EmptyState, Spinner, QueryError } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
@@ -22,11 +22,12 @@ interface LiveMotorStatusProps {
  *
  * Torque and axle speed are **signed** on the wire: DiTorqueActualF/R go
  * negative under regenerative braking and DiAxleSpeedF/R go negative in
- * reverse. They are therefore drawn as zero-centred BipolarBars — a radial
- * gauge clamps at zero, so regen and reverse used to render identically to a
- * parked car. The drive and regen ends are scaled independently because the
- * powertrain is asymmetric: peak drive torque is several times the regen
- * limit, so a symmetric scale would waste most of the regen half.
+ * reverse. They are therefore drawn as zero-centred BipolarBars — a
+ * single-direction gauge clamps at zero, so regen and reverse used to render
+ * identically to a parked car. The drive and regen ends are scaled
+ * independently because the powertrain is asymmetric: peak drive torque is
+ * several times the regen limit, so a symmetric scale would waste most of the
+ * regen half.
  */
 const TORQUE_DRIVE_MAX_NM = 1000;
 const TORQUE_REGEN_MAX_NM = 400;
@@ -113,7 +114,7 @@ export default function LiveMotorStatus({
       <div className="grid grid-cols-1 gap-5 @xl:grid-cols-2 @xl:items-center">
         <div className="flex items-center justify-center gap-6">
           <div className="flex flex-col items-center gap-2">
-            <RadialGauge
+            <LinearGauge
               value={
                 motorTempC != null
                   ? toTemperatureDisplay(motorTempC)

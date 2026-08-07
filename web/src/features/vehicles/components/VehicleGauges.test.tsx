@@ -3,13 +3,13 @@
  *
  * VehicleGauges is the hero telemetry surface of the vehicle-detail page. It
  * takes an SI-canonical `VehicleState` (meters, m/s, m/h) plus a `Vehicle`, and
- * fans the data out to a car visualisation, four radial gauges (battery / range
+ * fans the data out to a car visualisation, four gauges (battery / range
  * / speed / power), a stack of metric bars, and a row of status chips. Every
  * physical quantity is converted at the display boundary through the user's
  * `useUnits()` preference — the gauges must receive matching value/max pairs in
  * the SAME unit so the arc fill reflects the real physical ratio.
  *
- * Strategy: the heavy presentational children (TeslaCarViz, RadialGauge,
+ * Strategy: the heavy presentational children (TeslaCarViz, LinearGauge,
  * MetricBar) are stubbed so each renders its props as inspectable data-*
  * attributes. That lets these tests pin the *container's* responsibility —
  * SI→display conversion, null-safety, unit labelling, conditional rendering,
@@ -21,7 +21,7 @@
  * component formats the raw SI value (never a pre-converted magnitude).
  *
  * Coverage:
- *   1. Four radial gauges render with correct SI→km conversions + unit labels.
+ *   1. Four gauges render with correct SI→km conversions + unit labels.
  *   2. Speed converts to km/h and the gauge colour reflects moving vs parked.
  *   3. The battery gauge colour follows the good/warn/bad level bands.
  *   4. Battery + range metric bars always render; the charge-rate bar is hidden
@@ -93,8 +93,8 @@ vi.mock('@/components/data-display/TeslaCarViz', async () => {
   }
 })
 
-vi.mock('@/components/charts/RadialGauge', () => ({
-  RadialGauge: (props: {
+vi.mock('@/components/charts/LinearGauge', () => ({
+  LinearGauge: (props: {
     value: number
     max: number
     label: string
@@ -204,7 +204,7 @@ beforeEach(() => {
   mockUnits.formatDistance.mockClear()
 })
 
-describe('VehicleGauges — radial gauges (metric)', () => {
+describe('VehicleGauges — gauges (metric)', () => {
   it('renders all four gauges with SI→km conversions and unit labels', () => {
     render(<VehicleGauges vehicle={makeVehicle()} state={makeState()} />)
 

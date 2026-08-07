@@ -42,7 +42,7 @@ export const DRIVING_WIDGETS: WidgetDef[] = [
   {
     id: 'drive-score-gauge',
     name: 'Drive Score Gauge',
-    description: 'Radial gauge showing weekly score (0-100) with efficiency, smoothness, and speed breakdown',
+    description: 'Weekly score gauge (0-100) with efficiency, smoothness, and speed breakdown',
     icon: Gauge,
     category: 'driving',
     defaultSize: { cols: 1, rows: 2 },

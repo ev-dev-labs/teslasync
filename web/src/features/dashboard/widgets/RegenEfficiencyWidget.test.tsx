@@ -5,7 +5,7 @@
  * (`vehicleId` prop → first vehicle from `useVehicles` → undefined) and reads
  * that vehicle's regenerative-braking rollup (`useRegenEfficiency`). It renders
  * one of two layouts inside `WidgetShell`:
- *   - compact (cols ≤ 1)  → a titleless `WidgetGaugeHero` (radial recovery gauge
+ *   - compact (cols ≤ 1)  → a titleless `WidgetGaugeHero` (recovery gauge
  *                            only, no stat tiles).
  *   - standard (cols > 1) → a titled shell (with a help affordance) wrapping the
  *                           gauge plus a 3-up stat strip: Total Recovered (energy),
@@ -107,6 +107,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useRegenEfficiency } from '@/api/hooks/useDriving';
 import type { RegenEfficiencyData } from '@/types/driving';
 import type { WidgetProps, WidgetSize } from './types';
+import { hasGauge, hasGaugeColor } from '@/test/gaugeTestUtils';
 
 const mockVehicles = vi.mocked(useVehicles);
 const mockRegen = vi.mocked(useRegenEfficiency);
@@ -114,9 +115,8 @@ const mockRegen = vi.mocked(useRegenEfficiency);
 const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 
-// The RadialGauge progress arc is the only element carrying a hex `stroke`
+// The LinearGauge progress arc is the only element carrying a hex `stroke`
 // (the track uses `currentColor`), so this selector uniquely targets the gauge.
-const GAUGE_SVG = 'svg[class~="-rotate-90"]';
 const GREEN = '#10b981';
 const AMBER = '#f59e0b';
 const RED = '#ef4444';
@@ -208,7 +208,7 @@ describe('RegenEfficiencyWidget — standard layout', () => {
     expect(screen.getByText('Regen Braking')).toBeInTheDocument();
     // Gauge recovery label (rounded percentage) — 24.7 → 25%.
     expect(screen.getByText('25%')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).not.toBeNull();
+    expect(hasGauge(container)).toBe(true);
 
     // Three stat tiles with their formatted values.
     expect(screen.getByText('Total Recovered')).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe('RegenEfficiencyWidget — compact layout', () => {
 
     expect(screen.queryByText('Regen Braking')).toBeNull();
     expect(screen.getByText('25%')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).not.toBeNull();
+    expect(hasGauge(container)).toBe(true);
     // Stats are suppressed in the compact gauge hero.
     expect(screen.queryByText('Total Recovered')).toBeNull();
     expect(screen.queryByText('Monthly Avg')).toBeNull();
@@ -251,7 +251,7 @@ describe('RegenEfficiencyWidget — compact layout', () => {
     const { container } = renderWidget(COMPACT);
 
     expect(screen.getByText('No regen data')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).toBeNull();
+    expect(hasGauge(container)).toBe(false);
   });
 });
 
@@ -268,7 +268,7 @@ describe('RegenEfficiencyWidget — recovery colour thresholds', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText(label)).toBeInTheDocument();
-    expect(container.querySelector(`circle[stroke="${color}"]`)).not.toBeNull();
+    expect(hasGaugeColor(container, color)).toBe(true);
   });
 });
 
@@ -285,8 +285,8 @@ describe('RegenEfficiencyWidget — API scale contract', () => {
     expect(screen.queryByText('2500%')).toBeNull();
     // 25 is not > 30, so the band must be amber — proof the colour thresholds
     // still discriminate rather than saturating green.
-    expect(container.querySelector(`circle[stroke="${AMBER}"]`)).not.toBeNull();
-    expect(container.querySelector(`circle[stroke="${GREEN}"]`)).toBeNull();
+    expect(hasGaugeColor(container, AMBER)).toBe(true);
+    expect(hasGaugeColor(container, GREEN)).toBe(false);
   });
 
   it('keeps the gauge off its ceiling for a typical recovery rate', () => {
@@ -305,7 +305,7 @@ describe('RegenEfficiencyWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(container.querySelector(GAUGE_SVG)).toBeNull();
+    expect(hasGauge(container)).toBe(false);
     expect(screen.queryByText('No regen data')).toBeNull();
   });
 
@@ -324,7 +324,7 @@ describe('RegenEfficiencyWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText('No regen data')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).toBeNull();
+    expect(hasGauge(container)).toBe(false);
   });
 });
 
@@ -344,7 +344,7 @@ describe('RegenEfficiencyWidget — null-safety', () => {
 
     // regenRatio undefined → 0% gauge, red band (0 is not > 15).
     expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(container.querySelector(`circle[stroke="${RED}"]`)).not.toBeNull();
+    expect(hasGaugeColor(container, RED)).toBe(true);
 
     // Energy + power formatters are still called with the undefined SI value and
     // return the placeholder (never a blank tile).

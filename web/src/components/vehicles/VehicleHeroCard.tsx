@@ -5,7 +5,7 @@ import { Gauge } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { LinearGauge } from '@/components/charts/LinearGauge';
 import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
@@ -138,8 +138,8 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             of collapsing the section, so the panel is never a blank shell. */}
         {vs ? (
           <>
-            <div className="flex flex-wrap items-center justify-center gap-6">
-              <RadialGauge
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+              <LinearGauge
                 value={vs.battery_level ?? 0}
                 max={100}
                 label={t('vehicleHero.gauge.battery', 'Battery')}
@@ -147,7 +147,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 color={(vs.battery_level ?? 0) > 20 ? '#22d3ee' : '#ef4444'}
                 size={100}
               />
-              <RadialGauge
+              <LinearGauge
                 value={rangeDisplay}
                 max={rangeMax}
                 label={t('vehicleHero.gauge.range', 'Range')}
@@ -155,7 +155,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 color="#4ade80"
                 size={100}
               />
-              <RadialGauge
+              <LinearGauge
                 value={insideTempDisplay}
                 {...tempRange}
                 label={t('vehicleHero.gauge.inside', 'Inside')}
@@ -163,7 +163,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 color="#f59e0b"
                 size={100}
               />
-              <RadialGauge
+              <LinearGauge
                 value={outsideTempDisplay}
                 {...tempRange}
                 label={t('vehicleHero.gauge.outside', 'Outside')}

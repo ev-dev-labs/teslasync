@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Watch, Lock, Unlock } from 'lucide-react';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { StatusBadge, AnimatedNumber, TimeStamp } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
@@ -78,11 +78,12 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
       >
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-1.5 py-1">
-            <div className="relative inline-flex items-center justify-center">
-              <RadialGauge
+            <div className="w-full">
+              <LinearGauge
                 value={batteryLevel ?? 0}
                 max={100}
                 label=""
+                ariaLabel={t('widget.battery', 'Battery')}
                 unit="%"
                 color={color}
                 size={80}

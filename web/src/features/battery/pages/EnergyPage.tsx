@@ -293,7 +293,7 @@ export default function EnergyPage() {
 
   /* ── No-data banner gate ───────────────────────────────────────────
    * Replay vehicles + brand-new accounts have no charging sessions and
-   * no computed energy stats. Showing 4 RadialGauges all at 0 looks
+   * no computed energy stats. Showing 4 LinearGauges all at 0 looks
    * like a perfectly efficient car using zero energy. Render an
    * honest empty hero instead of misleading zeros.
    */

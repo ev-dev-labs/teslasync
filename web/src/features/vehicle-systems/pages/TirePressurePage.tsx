@@ -556,7 +556,7 @@ export default function TirePressurePage() {
           aria-label={t('tirePressure.readings', 'Current readings and trend')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
-          {/* Current readings — four corner radial gauges */}
+          {/* Current readings — four corner threshold bars */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />

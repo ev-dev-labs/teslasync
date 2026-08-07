@@ -3,7 +3,7 @@
  *
  * The widget is the dashboard's drivetrain-health tile. It merges two data
  * sources — the drivetrain-health assessment (`useDrivetrainHealth`) and the
- * latest motor snapshot (`useMotorLatest`) — into a radial health gauge plus a
+ * latest motor snapshot (`useMotorLatest`) — into a health gauge plus a
  * four-up temperature / drive-state stat row. Its surface under test:
  *
  *   1. The gauge mapping: `overallHealth` → score (good 95 / warning 60 /
@@ -29,9 +29,9 @@
  * Strategy (mirrors AnalyticsSummaryWidget.test.tsx + BatteryDegradationTrendWidget.test.tsx):
  *   - The data hooks + useUnits are mocked with hoisted vi.fn()s so the network
  *     is never touched and every render is deterministic. The widget keeps the
- *     REAL number formatter, REAL convertTempFromSI, and REAL RadialGauge /
+ *     REAL number formatter, REAL convertTempFromSI, and REAL LinearGauge /
  *     WidgetShell, so conversions + the gauge arc are genuinely rendered
- *     (RadialGauge is pure SVG — no recharts ResponsiveContainer to shim).
+ *     (LinearGauge is pure SVG — no recharts ResponsiveContainer to shim).
  *   - react-i18next resolves the developer fallback string.
  *   - matchMedia is shimmed so framer-motion (via the freshness chip) settles.
  *   - Renders are wrapped in <MemoryRouter> because the error branch mounts
@@ -119,6 +119,7 @@ import DrivetrainHealthWidget from './DrivetrainHealthWidget';
 import type { WidgetSize } from './types';
 import type { DrivetrainHealthData } from '@/types/driving';
 import type { MotorSnapshot } from '@/api/types';
+import { gaugeColor } from '@/test/gaugeTestUtils';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
@@ -198,9 +199,9 @@ function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: numbe
   );
 }
 
-/** The RadialGauge arc is the only <circle> carrying stroke-linecap="round". */
-function gaugeArc(container: HTMLElement): Element | null {
-  return container.querySelector('circle[stroke-linecap="round"]');
+/** The fill colour the LinearGauge is painted with. */
+function gaugeArc(container: HTMLElement): string | undefined {
+  return gaugeColor(container);
 }
 
 beforeEach(() => {
@@ -242,7 +243,7 @@ describe('DrivetrainHealthWidget', () => {
     expect(screen.getAllByText('°C')).toHaveLength(3);
 
     // Good health → green arc.
-    expect(gaugeArc(container)).toHaveAttribute('stroke', '#10b981');
+    expect(gaugeArc(container)).toBe('#10b981');
   });
 
   it('maps warning health to a 60 score, amber arc and "Warning" label', () => {
@@ -251,7 +252,7 @@ describe('DrivetrainHealthWidget', () => {
 
     expect(screen.getByText('Warning')).toBeInTheDocument();
     expect(screen.getByText('60')).toBeInTheDocument();
-    expect(gaugeArc(container)).toHaveAttribute('stroke', '#f59e0b');
+    expect(gaugeArc(container)).toBe('#f59e0b');
   });
 
   it('maps critical health to a 25 score, red arc and "Critical" label', () => {
@@ -260,7 +261,7 @@ describe('DrivetrainHealthWidget', () => {
 
     expect(screen.getByText('Critical')).toBeInTheDocument();
     expect(screen.getByText('25')).toBeInTheDocument();
-    expect(gaugeArc(container)).toHaveAttribute('stroke', '#ef4444');
+    expect(gaugeArc(container)).toBe('#ef4444');
   });
 
   it('applies the real SI→°F conversion at the display boundary', () => {

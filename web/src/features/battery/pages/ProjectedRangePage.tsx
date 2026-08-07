@@ -11,7 +11,7 @@ import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, Badge, Slider, PanelTitle, Text, Caption, HelperText } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip,
+  LinearGauge, ChartTooltip,
   chartMargin, axisTick, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine,
@@ -235,7 +235,7 @@ export default function ProjectedRangePage() {
               <EmptyState /* no-action: transient — efficiency resolves once the projection loads */ message={t('range.noEfficiency', 'Efficiency data unavailable yet.')} />
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center">
-                <RadialGauge
+                <LinearGauge
                   value={Math.round((data.efficiency_factor ?? 0) * 100)}
                   max={100}
                   label={t('range.efficiency', 'Efficiency')}

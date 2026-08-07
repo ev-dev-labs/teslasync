@@ -35,14 +35,14 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
 /**
  * Zero-centred horizontal bar for a **signed** measurement.
  *
- * A radial gauge cannot express sign — it clamps at zero, so regenerative
+ * A single-direction gauge cannot express sign — it clamps at zero, so regenerative
  * braking (negative torque) and reverse (negative axle speed) render exactly
  * like a stationary car. This renders the sign as direction: the fill grows
  * right of the zero rule when positive and left of it when negative, so the
  * two states are never confusable.
  *
  * Use this for any quantity whose sign carries meaning (torque, axle speed,
- * longitudinal/lateral acceleration, net power). Keep {@link RadialGauge} for
+ * longitudinal/lateral acceleration, net power). Keep {@link LinearGauge} for
  * quantities that are genuinely a bounded 0→max magnitude (state of charge,
  * pedal position, temperature).
  */

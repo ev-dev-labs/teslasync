@@ -24,7 +24,7 @@ export interface MetricTileProps {
 /**
  * A magnitude with no meaningful maximum.
  *
- * Counterpart to {@link RadialGauge}: use a ring only when 100% is a real,
+ * Counterpart to {@link LinearGauge}: use a ring only when 100% is a real,
  * reachable state (a full battery, a complete score). Totals, counts, costs and
  * durations have no such whole, and the codebase repeatedly papered over that
  * by deriving the ceiling from the reading itself — `max={Math.max(count, 50)}`

@@ -10,7 +10,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Button, PanelTitle } from '@/components/ui';
 import { MetricCard, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, ChartContainer, ChartLegend,
+  LinearGauge, ChartTooltip, ChartContainer, ChartLegend,
   chartGrid, axisTickSm,
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -262,13 +262,14 @@ export default function StatisticsPage() {
             ) : batteryHealth ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-center">
                 <div className="flex justify-center">
-                  <RadialGauge
+                  <LinearGauge
                     value={Math.round(batteryHealth.current_soh ?? 0)}
                     max={100}
                     label={t('statistics.health', 'Health')}
                     unit="%"
                     color={BATTERY_GAUGE_COLOR}
                     size={140}
+                    className="max-w-xs"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">

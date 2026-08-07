@@ -14,7 +14,7 @@ import {
   ChartContainer, ChartTooltip, AREA_DEFAULTS, renderAnnotationLines,
   ComposedChart, Line, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  RadialGauge,
+  LinearGauge,
 } from '@/components/charts';
 
 import { useRangeState } from '@/hooks/useRangeState';
@@ -315,7 +315,7 @@ export default function RegenEfficiencyPage() {
               />
             ) : (
               <div className="flex flex-col items-center gap-3 py-2">
-                <RadialGauge
+                <LinearGauge
                   value={Math.round(data.regenRatio ?? 0)}
                   max={100}
                   label={t('regen.regenRatio', 'Regen Ratio')}

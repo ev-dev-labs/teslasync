@@ -5,7 +5,7 @@ import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { LinearGauge } from '@/components/charts/LinearGauge';
 import { temperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -47,7 +47,7 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
           <Grid cols={{ default: 2, md: 4 }} gap={6}>
             {list.map((sensor) => (
               <div key={sensor.key} className="flex flex-col items-center">
-                <RadialGauge
+                <LinearGauge
                   value={sensor.value != null ? toTemperatureDisplay(sensor.value) : 0}
                   {...temperatureGaugeRange(toTemperatureDisplay, { maxC: sensor.maxTemp })}
                   label={t(sensor.labelKey, sensor.defaultLabel)}

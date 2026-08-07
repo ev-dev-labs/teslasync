@@ -1,7 +1,7 @@
 /**
  * BipolarBar — zero-centred bar for SIGNED measurements.
  *
- * The component exists because RadialGauge clamps at zero: regenerative
+ * The component exists because LinearGauge clamps at zero: regenerative
  * braking (negative torque) and reverse (negative axle speed) rendered
  * identically to a stationary car. This suite pins the direction semantics,
  * the asymmetric-scale geometry, the ARIA meter contract, and the null-safety
@@ -81,7 +81,7 @@ describe('BipolarBar — direction (the reason this component exists)', () => {
       <BipolarBar value={-500} max={1000} min={1000} label="Torque" />,
     );
     // The fill STARTS 25% left of zero and runs back to it — never clamped
-    // away the way the RadialGauge presentation did.
+    // away the way the LinearGauge presentation did.
     expect(fill(container)).toHaveStyle({ left: '25%', width: '25%' });
   });
 

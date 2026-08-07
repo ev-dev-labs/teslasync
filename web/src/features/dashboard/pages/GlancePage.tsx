@@ -33,7 +33,7 @@ import {
   Text,
   Caption,
 } from '@/components/ui';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { FreshnessIndicator, MetricCard } from '@/components/data-display';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -335,13 +335,14 @@ export default function GlancePage() {
                     </div>
                   ) : (
                     <div className="mt-4 flex flex-col items-center">
-                      <div className="relative flex justify-center">
-                        <RadialGauge
+                      <div className="relative flex w-full justify-center">
+                        <LinearGauge
                           value={state.battery_level ?? 0}
                           max={100}
                           label={t('glance.battery', 'Battery')}
                           unit="%"
                           size={180}
+                          className="max-w-xs"
                           color={
                             state.battery_level != null
                               ? batteryColor(state.battery_level)

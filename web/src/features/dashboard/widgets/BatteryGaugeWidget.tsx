@@ -7,7 +7,7 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 /**
- * Maps a state-of-charge percentage to the radial-gauge stroke colour. A
+ * Maps a state-of-charge percentage to the gauge fill colour. A
  * `null`/`undefined` level (a snapshot that has not landed yet) renders the
  * neutral grey rather than a misleading "critical" red.
  */

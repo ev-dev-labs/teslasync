@@ -11,7 +11,7 @@ import { FadeIn } from '@/components/motion';
 import { VehicleSelect, RangePicker } from '@/components/forms';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceLine, RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
+  ReferenceLine, LinearGauge, ChartContainer, ChartTooltip, ChartGradient,
   chartGrid, axisTick,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -205,7 +205,7 @@ export default function CarbonIntelligencePage() {
               <Skeleton height={220} className="rounded-xl" />
             ) : lifetime && (lifetime.sessions_scored ?? 0) > 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-                <RadialGauge
+                <LinearGauge
                   value={score}
                   max={100}
                   label={t('carbon.gaugeLabel', 'Green score')}

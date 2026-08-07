@@ -3,7 +3,7 @@
  *
  * The widget resolves a vehicle (explicit prop → first vehicle → none), reads a
  * single `useQuery('/analytics/sleep?vehicle_id=…&days=30')` result and renders
- * a radial gauge + three derived stats (avg drain/day, total sleep hours, wake
+ * a gauge + three derived stats (avg drain/day, total sleep hours, wake
  * events) — or the loading / empty / error states. This suite drives the whole
  * component through its accessible surface:
  *
@@ -76,6 +76,7 @@ import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { SleepEfficiencyData, SleepDrainEvent } from '@/types/energy';
 import type { WidgetProps } from './types';
+import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 const mockRequest = vi.mocked(request);
 const mockUseVehicles = vi.mocked(useVehicles);
@@ -292,7 +293,7 @@ describe('SleepEfficiencyWidget populated', () => {
       const { container } = renderWidget({ vehicleId: 1 });
 
       await screen.findByText(String(pct));
-      expect(container.querySelector(`circle[stroke="${color}"]`)).not.toBeNull();
+      expect(hasGaugeColor(container, color)).toBe(true);
     });
   });
 

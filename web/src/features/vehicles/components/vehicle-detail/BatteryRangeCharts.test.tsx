@@ -1,7 +1,7 @@
 /**
  * BatteryRangeCharts — behaviour + regression coverage.
  *
- * The component owns two GlassPanels: a battery overview (radial gauge +
+ * The component owns two GlassPanels: a battery overview (gauge +
  * headline battery / range values + a Current/Remaining bar chart) and a
  * recent-drives distance-trend area chart that degrades to an <EmptyState>.
  *
@@ -73,9 +73,9 @@ vi.mock('@/components/data-display', () => ({
 }))
 
 // Light chart stand-ins: containers render children; data-bearing charts and
-// the radial gauge surface their props for assertion.
+// the gauge surface their props for assertion.
 vi.mock('@/components/charts', () => ({
-  RadialGauge: ({
+  LinearGauge: ({
     value,
     color,
     label,
@@ -85,7 +85,7 @@ vi.mock('@/components/charts', () => ({
     label: string
   }) => (
     <div
-      data-testid="radial-gauge"
+      data-testid="linear-gauge"
       data-value={String(value)}
       data-color={color}
       aria-label={label}
@@ -204,7 +204,7 @@ describe('BatteryRangeCharts — battery overview panel', () => {
     render(<BatteryRangeCharts state={makeState({ battery_level: 42 })} drives={[]} />)
 
     expect(screen.getByText('42%')).toBeInTheDocument()
-    expect(screen.getByTestId('radial-gauge').dataset.value).toBe('42')
+    expect(screen.getByTestId('linear-gauge').dataset.value).toBe('42')
   })
 
   it('renders the rated range converted to the user distance unit (km)', () => {
@@ -225,13 +225,13 @@ describe('BatteryRangeCharts — battery overview panel', () => {
     const { rerender } = render(
       <BatteryRangeCharts state={makeState({ battery_level: 70 })} drives={[]} />,
     )
-    expect(screen.getByTestId('radial-gauge').dataset.color).toBe('#10b981')
+    expect(screen.getByTestId('linear-gauge').dataset.color).toBe('#10b981')
 
     rerender(<BatteryRangeCharts state={makeState({ battery_level: 40 })} drives={[]} />)
-    expect(screen.getByTestId('radial-gauge').dataset.color).toBe('#f59e0b')
+    expect(screen.getByTestId('linear-gauge').dataset.color).toBe('#f59e0b')
 
     rerender(<BatteryRangeCharts state={makeState({ battery_level: 10 })} drives={[]} />)
-    expect(screen.getByTestId('radial-gauge').dataset.color).toBe('#ef4444')
+    expect(screen.getByTestId('linear-gauge').dataset.color).toBe('#ef4444')
   })
 
   it('splits the bar chart into Current / Remaining that sum to 100', () => {
@@ -309,7 +309,7 @@ describe('BatteryRangeCharts — null-safety (the hardening this test guards)', 
 
     expect(screen.getByText('0%')).toBeInTheDocument()
     expect(screen.getByText('0 km')).toBeInTheDocument()
-    expect(screen.getByTestId('radial-gauge').dataset.value).toBe('0')
+    expect(screen.getByTestId('linear-gauge').dataset.value).toBe('0')
     // Remaining stays a full 100 % rather than collapsing to NaN.
     expect(seriesOf('bar-chart')).toEqual([
       { name: 'Current', value: 0 },

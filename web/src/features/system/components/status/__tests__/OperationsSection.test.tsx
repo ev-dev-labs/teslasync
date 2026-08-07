@@ -8,7 +8,7 @@
  *
  *   - header badge variant by success-rate threshold (success/warning/danger)
  *   - the shared loading skeleton while any query is in flight
- *   - the populated happy path (metric cards + radial gauge + two tables)
+ *   - the populated happy path (metric cards + gauge + two tables)
  *   - the built-in empty-message path for each table
  *   - a per-source <QueryError> when a query fails, INCLUDING the regression
  *     guard that a failed notification-logs query no longer nukes the whole
@@ -202,7 +202,7 @@ describe('OperationsSection — populated', () => {
     expect(screen.getByText('Channels')).toBeInTheDocument()
     expect(screen.getByText('3/5')).toBeInTheDocument()
 
-    // Radial gauge renders the integer success value and its label.
+    // Gauge renders the integer success value and its label.
     expect(screen.getByText('95')).toBeInTheDocument()
     expect(screen.getByText('Success')).toBeInTheDocument()
 

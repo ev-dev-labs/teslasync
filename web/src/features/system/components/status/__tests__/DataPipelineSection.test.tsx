@@ -167,7 +167,7 @@ describe('DataPipelineSection', () => {
     expect(screen.getByText('15.0 MB')).toBeInTheDocument()
     expect(screen.getByText('1,000,000')).toBeInTheDocument()
     expect(screen.getByText('700,000')).toBeInTheDocument()
-    expect(screen.getByText('Savings')).toBeInTheDocument() // radial gauge label
+    expect(screen.getByText('Savings')).toBeInTheDocument() // gauge label
   })
 
   it('renders the export job table with correct per-status counts', async () => {

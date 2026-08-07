@@ -3,7 +3,7 @@
  *
  * VehicleHeroCard renders one fleet hero card: an optional user photo, the
  * vehicle identity (name / VIN / model badge) with a live status pill, four
- * radial gauges (battery / range / inside / outside), a detail-card grid, and
+ * gauges (battery / range / inside / outside), a detail-card grid, and
  * three navigation links (details / commands / live map). SI base units
  * (meters, °C) are converted to the user's display preference via the real
  * `convertDistanceFromSI` / `convertTempFromSI`, with the unit suffix supplied
@@ -14,7 +14,7 @@
  *     so alt text / labels read naturally in assertions.
  *   - `useUnits` is mocked with a mutable km/°C ↔ mi/°F switch so both display
  *     branches are exercised while the pure SI converters run for REAL.
- *   - `RadialGauge` is a thin prop-surfacing stub (value / max / unit / colour
+ *   - `LinearGauge` is a thin prop-surfacing stub (value / max / unit / colour
  *     as data-attributes) so the converted numbers, gauge scaling and battery
  *     colour threshold are asserted precisely and without text collisions with
  *     the detail cards.
@@ -80,8 +80,8 @@ vi.mock('react-i18next', () => ({
 
 // Surface the gauge props as data-attributes so the SI→display conversion,
 // gauge scaling and battery colour threshold are directly assertable.
-vi.mock('@/components/charts/RadialGauge', () => ({
-  RadialGauge: (p: {
+vi.mock('@/components/charts/LinearGauge', () => ({
+  LinearGauge: (p: {
     value: number;
     max: number;
     label: string;

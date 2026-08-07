@@ -8,7 +8,7 @@ import {
   ChartTooltip,
   BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  RadialGauge,
+  LinearGauge,
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -309,7 +309,7 @@ export default function SpeedProfilePage() {
               />
             ) : (
               <div className="grid grid-cols-3 items-start gap-1 sm:gap-2">
-                <RadialGauge
+                <LinearGauge
                   value={Math.round(toSpeedDisplay(data.avgSpeedMps ?? 0))}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
@@ -317,7 +317,7 @@ export default function SpeedProfilePage() {
                   color="#00f0ff"
                   size={96}
                 />
-                <RadialGauge
+                <LinearGauge
                   value={Math.round(toSpeedDisplay(data.peakSpeedMps ?? 0))}
                   max={Math.max(1, Math.round(toSpeedDisplay(69.44)))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
@@ -325,7 +325,7 @@ export default function SpeedProfilePage() {
                   color="#ef4444"
                   size={96}
                 />
-                <RadialGauge
+                <LinearGauge
                   value={Math.round(toSpeedDisplay(data.optimalSpeedMps ?? 0))}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}

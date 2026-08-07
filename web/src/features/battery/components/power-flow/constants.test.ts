@@ -13,7 +13,7 @@ import { DEFAULT_SITE_ID, FLOW_COLORS, PRESET_IDS } from './constants'
  *   - PowerHistoryChart feeds FLOW_COLORS.{solar,battery,grid,home} straight
  *     into recharts `stroke` + `<ChartGradient color>` (an SVG stopColor); a
  *     non-hex value would render an invisible / default-black series.
- *   - PowerFlowDashboardPage feeds FLOW_COLORS.soc into `<RadialGauge color>`.
+ *   - PowerFlowDashboardPage feeds FLOW_COLORS.soc into `<LinearGauge color>`.
  *   - PowerFlowDashboardPage passes PRESET_IDS to `<RangePicker presetIds>`,
  *     which resolves each id through DATE_PRESETS; an unknown id yields a chip
  *     that renders nothing and no-ops on click.
