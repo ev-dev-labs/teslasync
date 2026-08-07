@@ -1,5 +1,6 @@
 export { RadialGauge } from './RadialGauge';
 export { BipolarBar, type BipolarBarProps } from './BipolarBar';
+export { ThresholdBar, type ThresholdBarProps, type ThresholdBand } from './ThresholdBar';
 export {
   temperatureGaugeRange,
   ambientTemperatureGaugeRange,
