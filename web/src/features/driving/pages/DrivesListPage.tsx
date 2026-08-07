@@ -49,7 +49,7 @@ import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
 import {
   getEfficiency, gradeFromEfficiency, gradeFromNumeric,
   computePeriodStats, priorPeriod, detectAnomalies, detectNotable, detectCommutes,
-  groupByDate, dailyTrend, localDayKey,
+  groupByDate, dailyTrend, localDayKey, shiftDayKey,
   type TrendMetric, type PeriodStats,
 } from '@/lib/drivesAggregation';
 import { DriveCard } from '../components/DriveCard';
@@ -63,6 +63,9 @@ const COLLECTIONS = ['all', 'anomalies', 'notable', 'commutes', 'tagged'] as con
 type Collection = typeof COLLECTIONS[number];
 const TREND_METRICS = ['drives', 'distance', 'score', 'efficiency', 'cost'] as const;
 
+/** Rows fetched per request. The API rejects anything above 1,000. */
+const DRIVES_FETCH_LIMIT = 1000;
+
 export default function DrivesListPage() {
   const { t } = useTranslation();
   usePageTitle(t('drives.title', 'Drive History'));
@@ -71,8 +74,37 @@ export default function DrivesListPage() {
   /* Data hooks */
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const drivesQuery = useDrives(vehicleIdStr);
+
+  /* Selected range. Read before the data hook because it scopes the request:
+   * the API applies a 50-row default page, so filtering client-side alone
+   * capped this page at the 50 newest drives regardless of the chosen range
+   * or page size. */
+  const defaultStart = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate] = useUrlString('from', defaultStart);
+  const [endDate] = useUrlString('to', defaultEnd);
+  const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
+
+  /* Fetch window. It has to reach back over the prior period as well, because
+   * the delta comparison below is computed from drives that fall *before* the
+   * selected range. Both ends are padded by a day: the API filters on UTC
+   * while this page buckets drives by the vehicle's local day, so an exact
+   * window would drop rows the tz-aware filter should keep. */
+  const fetchWindow = useMemo(() => ({
+    start: shiftDayKey(priorRange?.start ?? startDate, -1) ?? undefined,
+    end: shiftDayKey(endDate, 1) ?? undefined,
+    limit: DRIVES_FETCH_LIMIT,
+  }), [priorRange, startDate, endDate]);
+
+  const drivesQuery = useDrives(vehicleIdStr, fetchWindow);
   const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
+
+  /* A full page back means the range almost certainly holds more drives than
+   * one request can carry. Say so rather than silently showing a subset. */
+  const truncated = (drives?.length ?? 0) >= DRIVES_FETCH_LIMIT;
 
   /* Active vehicle's IANA timezone — every "what day is this drive?"
  * decision on this page must use this rather than the browser's local
@@ -107,13 +139,6 @@ export default function DrivesListPage() {
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize] = useUrlNumber('size', 50);
   const [search] = useUrlString('q', '');
-  const defaultStart = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStart);
-  const [endDate] = useUrlString('to', defaultEnd);
   const [collection] = useUrlEnum<Collection>('coll', COLLECTIONS, 'all');
   const [trendMetric, setTrendMetric] = useUrlEnum<TrendMetric>('trend', TREND_METRICS, 'drives');
   const setUrlBatch = useUrlBatch();
@@ -136,7 +161,6 @@ export default function DrivesListPage() {
     () => computePeriodStats(dateFilteredDrives, undefined, undefined, tz),
     [dateFilteredDrives, tz],
   );
-  const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
   const priorStats = useMemo<PeriodStats | null>(
     () => priorRange && drives
       ? computePeriodStats(drives, priorRange.start, priorRange.end, tz)
@@ -840,6 +864,15 @@ export default function DrivesListPage() {
           </div>
 
         {/* Drive list */}
+        {truncated && (
+          <InlineCallout variant="warning" icon={<AlertTriangle className="h-4 w-4" />}>
+            {t(
+              'drives.truncated',
+              'Showing the {{limit}} most recent drives in this range — the range holds more than one request can return. Narrow the dates, or use the CSV/JSON export for the full set.',
+              { limit: DRIVES_FETCH_LIMIT },
+            )}
+          </InlineCallout>
+        )}
         {isDrivesLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}

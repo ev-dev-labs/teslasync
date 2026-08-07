@@ -36,7 +36,10 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 }
 
 export const drivingKeys = {
-  drives: (vehicleId?: string) => ['drives', vehicleId] as const,
+  drives: (vehicleId?: string, window?: DriveWindow) =>
+    (window?.start || window?.end || window?.limit
+      ? ['drives', vehicleId, window.start ?? null, window.end ?? null, window.limit ?? null] as const
+      : ['drives', vehicleId] as const),
   history: (vehicleId?: string, limit = 1000) =>
     ['drives', vehicleId, 'history', limit] as const,
   // Detail key is namespaced under 'drive' (singular) so it never collides
@@ -60,14 +63,46 @@ export const drivingKeys = {
     ['drive', driveId, 'why-ended', window] as const,
 };
 
-export function useDrives(vehicleId?: string, refetchInterval?: number) {
+/**
+ * Options for scoping a drives query on the server.
+ *
+ * Without them the API applies its own 50-row default page, so a caller that
+ * filters or paginates client-side can only ever see the newest 50 drives no
+ * matter what range or page size the user asked for.
+ */
+export interface DriveWindow {
+  /** Inclusive `YYYY-MM-DD` lower bound, matched against `started_at` in UTC. */
+  start?: string;
+  /** Inclusive `YYYY-MM-DD` upper bound, matched against `started_at` in UTC. */
+  end?: string;
+  /** Row cap for one request. The API rejects anything above 1,000. */
+  limit?: number;
+  refetchInterval?: number;
+}
+
+export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
+  // The second parameter used to be a bare refetch interval; keep that shape
+  // working so callers that only poll are unaffected.
+  const opts: DriveWindow = typeof options === 'number' ? { refetchInterval: options } : (options ?? {});
+  const boundedLimit = opts.limit == null
+    ? undefined
+    : Math.max(1, Math.min(1000, Math.floor(opts.limit)));
+  const window: DriveWindow = { start: opts.start, end: opts.end, limit: boundedLimit };
+
   return useQuery({
-    queryKey: drivingKeys.drives(vehicleId),
-    queryFn: ({ signal }) =>
-      request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives', { signal }),
+    queryKey: drivingKeys.drives(vehicleId, window),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams();
+      if (vehicleId) params.set('vehicle_id', vehicleId);
+      if (opts.start) params.set('start', opts.start);
+      if (opts.end) params.set('end', opts.end);
+      if (boundedLimit != null) params.set('limit', String(boundedLimit));
+      const qs = params.toString();
+      return request<Drive[]>(qs ? `/drives?${qs}` : '/drives', { signal });
+    },
     enabled: !!vehicleId,
     select: safeArray,
-    refetchInterval,
+    refetchInterval: opts.refetchInterval,
   });
 }
 

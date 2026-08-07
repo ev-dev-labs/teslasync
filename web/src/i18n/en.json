@@ -8554,6 +8554,7 @@
     "avgSpeed": "Avg Speed",
     "efficiency": "Efficiency",
     "allDrives": "All Drives",
+    "truncated": "Showing the {{limit}} most recent drives in this range — the range holds more than one request can return. Narrow the dates, or use the CSV/JSON export for the full set.",
     "sortRecent": "Recent",
     "sortDistance": "Distance",
     "sortEfficiency": "Efficiency",
