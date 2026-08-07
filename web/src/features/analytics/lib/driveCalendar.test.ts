@@ -41,6 +41,9 @@ describe('buildDriveCalendar', () => {
     const cal = buildDriveCalendar([], NOW);
     expect(cal.days[0]!.day).toBe(0);
     expect(cal.days[cal.days.length - 1]!.date).toBe('2026-07-30');
+    expect(cal.weeks).toHaveLength(53);
+    expect(cal.weeks[0]!.monthKey).toBe('2025-08');
+    expect(cal.weeks.filter((week) => week.monthKey).at(-1)!.monthKey).toBe('2026-07');
   });
 
   it('aggregates same-day drives into one cell', () => {
@@ -96,5 +99,77 @@ describe('buildDriveCalendar', () => {
     const cal = buildDriveCalendar([driveOn(new Date(2024, 0, 1, 9))], NOW);
     expect(cal.totalDrives).toBe(0);
     expect(cal.activeDays).toBe(0);
+  });
+
+  it('excludes old outliers from the visible heatmap intensity scale', () => {
+    const cal = buildDriveCalendar([
+      driveOn(new Date(2024, 0, 1, 9), 1_000_000),
+      driveOn(new Date(2026, 6, 20, 9), 10_000),
+    ], NOW);
+
+    expect(cal.days.find((day) => day.date === '2026-07-20')?.level).toBe(4);
+  });
+
+  it('aggregates chronological monthly distance, drives, and active days', () => {
+    const cal = buildDriveCalendar([
+      driveOn(new Date(2026, 5, 30, 9), 4_000),
+      driveOn(new Date(2026, 6, 1, 9), 6_000),
+      driveOn(new Date(2026, 6, 1, 18), 2_000),
+      driveOn(new Date(2026, 6, 20, 9), 8_000),
+    ], NOW);
+
+    expect(cal.months.map((month) => month.month)).toEqual(
+      [...cal.months.map((month) => month.month)].sort(),
+    );
+    expect(cal.months.find((month) => month.month === '2026-06')).toEqual(
+      expect.objectContaining({ distanceM: 4_000, drives: 1, activeDays: 1 }),
+    );
+    expect(cal.months.find((month) => month.month === '2026-07')).toEqual(
+      expect.objectContaining({ distanceM: 16_000, drives: 3, activeDays: 2 }),
+    );
+  });
+
+  it('builds Sunday-first weekday totals and deterministic rhythm insights', () => {
+    const cal = buildDriveCalendar([
+      driveOn(new Date(2026, 6, 20, 9), 5_000), // Monday
+      driveOn(new Date(2026, 6, 20, 18), 7_000),
+      driveOn(new Date(2026, 6, 26, 9), 3_000), // Sunday
+    ], NOW);
+
+    expect(cal.weekdays.map((weekday) => weekday.day)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(cal.weekdays[1]).toEqual(
+      expect.objectContaining({ distanceM: 12_000, drives: 2, activeDays: 1 }),
+    );
+    expect(cal.favoriteWeekday?.day).toBe(1);
+    expect(cal.averageDistancePerActiveDayM).toBe(7_500);
+    expect(cal.averageDrivesPerActiveDay).toBe(1.5);
+    expect(cal.weekendDistanceShare).toBeCloseTo(0.2);
+    expect(cal.activityRate).toBeCloseTo(2 / cal.days.length);
+  });
+
+  it('ranks the five highest-distance active days and identifies the peak month', () => {
+    const cal = buildDriveCalendar([
+      driveOn(new Date(2026, 5, 1, 9), 6_000),
+      driveOn(new Date(2026, 5, 2, 9), 2_000),
+      driveOn(new Date(2026, 6, 1, 9), 9_000),
+      driveOn(new Date(2026, 6, 2, 9), 4_000),
+      driveOn(new Date(2026, 6, 3, 9), 8_000),
+      driveOn(new Date(2026, 6, 4, 9), 3_000),
+    ], NOW);
+
+    expect(cal.topDays.map((day) => day.distanceM)).toEqual([9_000, 8_000, 6_000, 4_000, 3_000]);
+    expect(cal.topDays[0]!.date).toBe('2026-07-01');
+    expect(cal.busiestMonth?.month).toBe('2026-07');
+    expect(cal.busiestMonth?.distanceM).toBe(24_000);
+  });
+
+  it('returns explicit null insights when no distance activity exists', () => {
+    const cal = buildDriveCalendar([], NOW);
+    expect(cal.topDays).toEqual([]);
+    expect(cal.favoriteWeekday).toBeNull();
+    expect(cal.busiestMonth).toBeNull();
+    expect(cal.averageDistancePerActiveDayM).toBeNull();
+    expect(cal.averageDrivesPerActiveDay).toBeNull();
+    expect(cal.weekendDistanceShare).toBeNull();
   });
 });

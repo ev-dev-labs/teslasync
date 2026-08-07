@@ -147,6 +147,8 @@
     "title": "Drive Calendar",
     "subtitle": "A year of driving at a glance, with streaks",
     "kpis": "Drive calendar summary metrics",
+    "activity": "Driving activity",
+    "insights": "Driving patterns and highlights",
     "activeDays": "Active Days",
     "inYear": "in the last 52 weeks",
     "currentStreak": "Current Streak",
@@ -155,11 +157,65 @@
     "distance": "Distance",
     "driveCount": "{{count}} drives",
     "busiestDay": "Busiest Day",
-    "grid": "Last 52 Weeks",
     "less": "Less",
     "more": "More",
     "noDrives": "No drives in the last year yet.",
-    "browseDrives": "Browse drives"
+    "browseDrives": "Browse drives",
+    "heatmap": {
+      "title": "Last 52 Weeks",
+      "activeSummary": "{{active}} active days · {{drives}} drives",
+      "aria": "Daily driving heatmap for the last 52 weeks; {{active}} active days and a {{streak}} day current streak",
+      "cell": "{{date}} · {{distance}} · {{count}} drives",
+      "legend": "Driving intensity from less to more"
+    },
+    "monthly": {
+      "title": "Monthly distance & activity",
+      "subtitle": "Rolling 52-week totals by calendar month",
+      "aria": "Monthly driving distance bars with a drive-count trend for the last 52 weeks",
+      "distanceSeries": "Distance ({{unit}})",
+      "drivesSeries": "Drives",
+      "month": "Month",
+      "activeDays": "Active days"
+    },
+    "weekdayPattern": {
+      "title": "Day-of-week pattern",
+      "subtitle": "Distance by weekday across the observed window",
+      "aria": "Bar chart comparing total driving distance from Sunday through Saturday",
+      "distanceSeries": "Distance ({{unit}})",
+      "weekday": "Weekday",
+      "drives": "Drives",
+      "activeDays": "Active days"
+    },
+    "weekdays": {
+      "sun": { "short": "Sun", "long": "Sunday" },
+      "mon": { "short": "Mon", "long": "Monday" },
+      "tue": { "short": "Tue", "long": "Tuesday" },
+      "wed": { "short": "Wed", "long": "Wednesday" },
+      "thu": { "short": "Thu", "long": "Thursday" },
+      "fri": { "short": "Fri", "long": "Friday" },
+      "sat": { "short": "Sat", "long": "Saturday" }
+    },
+    "rhythm": {
+      "title": "Driving rhythm",
+      "favoriteDay": "Favorite driving day",
+      "favoriteDayDetail": "{{count}} drives across {{active}} active days",
+      "activeRate": "Calendar activity",
+      "activeRateDetail": "of days included at least one drive",
+      "typicalDay": "Typical active day",
+      "typicalDayDetail": "{{average}} drives on average",
+      "weekendShare": "Weekend distance",
+      "weekendShareDetail": "share of total distance",
+      "peakMonth": "Peak month",
+      "peakMonthDetail": "{{distance}} · {{count}} drives",
+      "noData": "No driving rhythm to summarize yet."
+    },
+    "topDays": {
+      "title": "Top driving days",
+      "subtitle": "Highest-distance days in the last 52 weeks",
+      "rank": "Rank {{rank}}",
+      "dayDetails": "{{count}} drives",
+      "noData": "No active driving days to rank yet."
+    }
   },
   "explorer": {
     "title": "Explorer",
