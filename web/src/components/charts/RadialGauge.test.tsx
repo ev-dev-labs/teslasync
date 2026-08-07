@@ -407,6 +407,19 @@ describe('RadialGauge — printed scale caption', () => {
     expect(screen.getByText('0 – 10')).toBeInTheDocument();
   });
 
+  it('drops a dash placeholder unit rather than printing it in the caption', () => {
+    // Callers signal "no reading yet" with `unit={v != null ? realUnit : '—'}`.
+    // Appending that to the range produced the nonsense caption "0 – 150—".
+    render(<RadialGauge value={0} max={150} label="Motor" unit="—" />);
+    expect(screen.getByText('0 – 150')).toBeInTheDocument();
+    expect(screen.queryByText('0 – 150—')).not.toBeInTheDocument();
+  });
+
+  it('treats a dash placeholder on a 0–100 ring as no unit, so no caption appears', () => {
+    const { container } = render(<RadialGauge value={0} max={100} label="Throttle" unit="—" />);
+    expect(container.textContent).not.toContain('0 – 100');
+  });
+
   it('formats large ceilings with locale grouping', () => {
     render(<RadialGauge value={800} max={1500} label="Cycles" />);
     expect(screen.getByText('0 – 1,500')).toBeInTheDocument();

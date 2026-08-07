@@ -93,11 +93,16 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
     // ceiling, so it must still state its range. A bare 0–100 ring with no unit
     // reads as a percentage by convention and is left uncaptioned too.
     const unitText = (unit ?? '').trim();
+    // Several callers signal "no reading yet" by swapping the unit for a dash
+    // placeholder (`unit={temp != null ? tempUnit : '—'}`). That is the absence
+    // of a unit, not a unit, so it must neither be appended to the caption
+    // ("0 – 150—") nor counted as a distinguishing unit.
+    const isPlaceholderUnit = unitText === '' || /^[—–-]+$/.test(unitText);
     const isFullSpan = safeMin === 0 && safeMax === 100;
-    const isPercentScale = isFullSpan && (unitText === '%' || unitText === '');
+    const isPercentScale = isFullSpan && (unitText === '%' || isPlaceholderUnit);
     const showScale = !hideScale && !isPercentScale && span > 0;
     const scaleLabel = showScale
-      ? `${fmtNumber(safeMin, 0)} – ${fmtNumber(safeMax, 0)}${unit ?? ''}`
+      ? `${fmtNumber(safeMin, 0)} – ${fmtNumber(safeMax, 0)}${isPlaceholderUnit ? '' : unit ?? ''}`
       : null;
 
     return (

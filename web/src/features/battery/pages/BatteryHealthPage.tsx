@@ -619,6 +619,7 @@ export default function BatteryHealthPage() {
                     max={100}
                     label={t('battery.gauge.health', 'Health Score')}
                     unit="/100"
+                    hideScale
                     size={130}
                     color={gaugeColor(health.current_soh)}
                   />
