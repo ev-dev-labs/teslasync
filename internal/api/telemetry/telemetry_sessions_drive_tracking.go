@@ -1232,12 +1232,15 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// Fleet Telemetry sends signals at different intervals (SOC every ~5 min,
 	// odometer sporadically). If the drive start/end moment didn't coincide
 	// with a reading, we find the closest position within ±10 minutes.
-	go t.backfillDriveValues(active, vehicleID)
-
-	// Reverse geocode end address (async)
-	if endLat != nil && endLon != nil {
-		go t.resolveAndUpdateAddress(active.DriveID, *endLat, *endLon, false, resolveUseCache)
-	}
+	// Endpoint finalization must observe the backfilled coordinates, so it is
+	// chained after the backfill instead of raced against it — both write
+	// end_lat/end_lng and the later writer would win. Finalization also owns
+	// the drive-completion geocode, because the end label has to be resolved
+	// from the endpoint that survives that correction.
+	go func() {
+		t.backfillDriveValues(active, vehicleID)
+		t.finalizeDriveEndpoints(active.DriveID)
+	}()
 
 	log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
 		Int64("duration_s", durationS).Float64("distance_m", distanceMeters).Msg("telemetry: drive ended")
@@ -1454,6 +1457,11 @@ func (t *TelemetrySessionTracker) backfillMissingAddresses(ctx context.Context) 
 			break
 		}
 
+		// A drive missing labels may also carry endpoints that were never
+		// recorded or that collapsed onto one fix. Correct them from the track
+		// before geocoding so the two ends resolve to different places.
+		t.repairDriveEndpointCoords(ctx, d)
+
 		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLat != nil && d.StartLon != nil
 		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLat != nil && d.EndLon != nil
 
@@ -1477,6 +1485,117 @@ func (t *TelemetrySessionTracker) backfillMissingAddresses(ctx context.Context) 
 		}
 	}
 	log.Info().Int("resolved", filled).Int("total_drives", len(drives)).Msg("backfill: address geocoding complete")
+}
+
+// endpointsDegenerate reports whether a drive's stored endpoint coordinates
+// cannot describe two distinct places: either end is missing, or both ends hold
+// the identical fix. Such a row geocodes to the same label twice.
+func endpointsDegenerate(d *drivemodel.Drive) bool {
+	if d.StartLat == nil || d.StartLon == nil || d.EndLat == nil || d.EndLon == nil {
+		return true
+	}
+	return *d.StartLat == *d.EndLat && *d.StartLon == *d.EndLon
+}
+
+// repairDriveEndpointCoords corrects a drive's stored endpoint coordinates from
+// its recorded GPS track and reports whether anything changed.
+//
+// Re-geocoding alone cannot fix a Journey Details panel that shows the same
+// Start and Destination, because the geocoder is handed drives.start_lat /
+// end_lat — so when those columns already hold one fix twice, a repair pass
+// faithfully rewrites the identical label into both fields. The true endpoints
+// survive in signal_log, which is the same track the route map draws, which is
+// why the map looks right while the panel does not.
+//
+// The drive struct is updated in place so the caller geocodes the corrected
+// coordinates in the same pass. Only endpoints that are actually wrong are
+// rewritten: a drive that genuinely starts and ends in one place (a round trip)
+// keeps its coordinates, because the track's first and last fix agree with what
+// is stored. It reports which endpoints moved so the caller can re-resolve the
+// labels that the correction invalidated.
+func (t *TelemetrySessionTracker) repairDriveEndpointCoords(ctx context.Context, d *drivemodel.Drive) (startRepaired, endRepaired bool) {
+	if t.signalLogReader == nil || d == nil || !endpointsDegenerate(d) {
+		return false, false
+	}
+
+	endTs := time.Now()
+	if d.EndTs != nil {
+		endTs = *d.EndTs
+	}
+	track, err := t.signalLogReader.DriveEndpointCoordinates(ctx, d.VehicleID, d.StartTs, endTs)
+	if err != nil {
+		log.Warn().Err(err).Int64("drive_id", d.ID).
+			Msg("endpoint repair: failed to read drive track")
+		return false, false
+	}
+	if track == nil || track.StartLat == nil || track.EndLat == nil {
+		return false, false
+	}
+
+	fields := map[string]interface{}{}
+	if d.StartLat == nil || d.StartLon == nil || *d.StartLat != *track.StartLat || *d.StartLon != *track.StartLon {
+		fields["start_lat"] = *track.StartLat
+		fields["start_lng"] = *track.StartLon
+	}
+	if d.EndLat == nil || d.EndLon == nil || *d.EndLat != *track.EndLat || *d.EndLon != *track.EndLon {
+		fields["end_lat"] = *track.EndLat
+		fields["end_lng"] = *track.EndLon
+	}
+	if len(fields) == 0 {
+		return false, false
+	}
+
+	if err := t.driveRepo.PartialUpdate(ctx, d.ID, fields); err != nil {
+		log.Error().Err(err).Int64("drive_id", d.ID).
+			Msg("endpoint repair: failed to persist corrected coordinates")
+		return false, false
+	}
+
+	if _, ok := fields["start_lat"]; ok {
+		d.StartLat, d.StartLon = track.StartLat, track.StartLon
+		startRepaired = true
+	}
+	if _, ok := fields["end_lat"]; ok {
+		d.EndLat, d.EndLon = track.EndLat, track.EndLon
+		endRepaired = true
+	}
+	log.Info().Int64("drive_id", d.ID).Int64("vehicle_id", d.VehicleID).
+		Bool("start_repaired", startRepaired).Bool("end_repaired", endRepaired).
+		Msg("endpoint repair: corrected drive endpoints from GPS track")
+	return startRepaired, endRepaired
+}
+
+// finalizeDriveEndpoints runs once a completed drive's deferred value backfill
+// has settled. It re-reads the persisted row so it observes the final stored
+// coordinates, corrects endpoints that collapsed onto a single fix, and then
+// resolves the place labels.
+//
+// The end label is always resolved here — this is the drive-completion geocode.
+// The start label is only re-resolved when the repair moved the start endpoint,
+// because the label written at drive start then describes the wrong place.
+func (t *TelemetrySessionTracker) finalizeDriveEndpoints(driveID int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	d, err := t.driveRepo.GetByID(ctx, driveID)
+	if err != nil {
+		log.Warn().Err(err).Int64("drive_id", driveID).
+			Msg("telemetry: endpoint finalize could not read drive")
+		return
+	}
+	if d == nil {
+		return
+	}
+
+	startRepaired, _ := t.repairDriveEndpointCoords(ctx, d)
+
+	if d.StartLat != nil && d.StartLon != nil &&
+		(startRepaired || d.StartAddress == nil || *d.StartAddress == "") {
+		t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveUseCache)
+	}
+	if d.EndLat != nil && d.EndLon != nil {
+		t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false, resolveUseCache)
+	}
 }
 
 // placeLabelRepairBatch bounds one database round-trip of the repair backlog.
@@ -1529,6 +1648,11 @@ func (t *TelemetrySessionTracker) RepairStalePlaceLabels(ctx context.Context) {
 			}
 
 			resolved := false
+			// Correct the stored coordinates first. Geocoding reads
+			// d.StartLat / d.EndLat, so repairing labels before endpoints
+			// would just rewrite the same wrong label into both fields.
+			t.repairDriveEndpointCoords(ctx, d)
+
 			if d.StartLat != nil && d.StartLon != nil {
 				if t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveBypassCache) {
 					resolved = true

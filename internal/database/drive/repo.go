@@ -408,7 +408,11 @@ func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*drivemodel.Dri
 // older revision carry a lower drives.place_label_version and are re-resolved
 // once by the startup repair. Bump this whenever a change to ShortName would
 // produce a materially better label for already-stored rows.
-const PlaceLabelVersion = 2
+//
+// Revision 3 additionally repairs the endpoint coordinates a label is derived
+// from: a drive whose stored end_lat/end_lng collapsed onto its start could
+// only ever geocode to the same label twice, however good the labelling logic.
+const PlaceLabelVersion = 3
 
 // FindStalePlaceLabels returns drives whose place names were produced by an
 // older labelling revision and that still have the coordinates needed to
