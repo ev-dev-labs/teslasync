@@ -11,7 +11,7 @@
     "build": "tsc && vite build",
     "postbuild": "node scripts/check-bundle-size.mjs",
     "preview": "vite preview",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values && npm run audit:rtl && npm run audit:bg-polling && npm run audit:export-adoption && npm run audit:inline-help && npm run audit:touch-target && npm run audit:typography",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values && npm run audit:rtl && npm run audit:bg-polling && npm run audit:export-adoption && npm run audit:inline-help && npm run audit:touch-target && npm run audit:gauge-width && npm run audit:typography",
     "audit:typography": "node scripts/audit-typography.mjs",
     "lint:i18n": "node scripts/lint-i18n-no-template-literals.mjs",
     "lint:light-mode": "node scripts/audit-light-mode-parity.mjs",
@@ -50,7 +50,8 @@
     "audit:i18n": "pwsh ../scripts/i18n-coverage.ps1",
     "i18n:validate": "node ../scripts/i18n-validate-keys.mjs",
     "i18n:validate:strict": "node ../scripts/i18n-validate-keys.mjs --strict",
-    "i18n:extract": "node ../scripts/i18n-validate-keys.mjs --extract"
+    "i18n:extract": "node ../scripts/i18n-validate-keys.mjs --extract",
+    "audit:gauge-width": "node scripts/audit-gauge-width.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
