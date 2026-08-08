@@ -71,9 +71,12 @@ export const drivingKeys = {
  * matter what range or page size the user asked for.
  */
 export interface DriveWindow {
-  /** Inclusive `YYYY-MM-DD` lower bound, matched against `started_at` in UTC. */
+  /** Inclusive RFC3339 instant or `YYYY-MM-DD` lower bound. */
   start?: string;
-  /** Inclusive `YYYY-MM-DD` upper bound, matched against `started_at` in UTC. */
+  /**
+   * Exclusive RFC3339 instant, or inclusive `YYYY-MM-DD` upper bound.
+   * Vehicle-calendar pages should pass `useRangeState().endInstantExclusive`.
+   */
   end?: string;
   /** Row cap for one request. The API rejects anything above 1,000. */
   limit?: number;

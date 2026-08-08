@@ -20,6 +20,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback?: string | { defaultValue?: string }) =>
       typeof fallback === 'string' ? fallback : (fallback?.defaultValue ?? _key),
+    i18n: { language: 'en-US', changeLanguage: vi.fn() },
   }),
 }));
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
@@ -39,6 +40,7 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
+    unitPrefs: { temperature: '°C', duration: 'h' },
     formatDuration: () => '10 min',
     formatTemperature: (value: number) => `${value} °C`,
   }),
@@ -94,6 +96,6 @@ describe('cabin analytics runtime pages', () => {
     renderPage(<CabinThermalPage />);
 
     expect(screen.getByRole('heading', { name: 'Cabin Thermal Model' })).toBeInTheDocument();
-    expect(screen.getByText('Time Constant τ')).toBeInTheDocument();
+    expect(screen.getByText('Accepted median τ')).toBeInTheDocument();
   });
 });

@@ -64,7 +64,7 @@ export function useChargingHistory(vehicleId?: string, limit = 1000) {
     queryKey: chargingKeys.history(vehicleId ?? '', boundedLimit),
     queryFn: ({ signal }) =>
       request<ChargingSession[]>(
-        `/charging-sessions?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        `/charging?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
         { signal },
       ),
     enabled: !!vehicleId,

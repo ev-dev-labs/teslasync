@@ -574,23 +574,31 @@ describe('SleepEfficiencyData & SleepDrainEvent', () => {
     {
       id: 1,
       start_date: '2024-01-01T22:00:00Z',
+      end_date: '2024-01-02T06:00:00Z',
       duration_hours: 8,
       battery_lost: 2,
       drain_rate: 0.25,
       sentry_mode: false,
       outside_temp: 12,
+      start_battery: 80,
+      end_battery: 78,
     },
     {
       id: 2,
       start_date: '2024-01-02T22:00:00Z',
+      end_date: '2024-01-03T06:00:00Z',
       duration_hours: 8,
       battery_lost: 5,
       drain_rate: 0.625,
       sentry_mode: true,
       outside_temp: null,
+      start_battery: 78,
+      end_battery: 73,
     },
   ];
   const sleep: SleepEfficiencyData = {
+    vehicle_id: 7,
+    period_days: 30,
     sleep_efficiency_pct: 60,
     time_to_sleep_avg_min: 22,
     sentry_on_drain_rate: 0.625,
@@ -601,50 +609,91 @@ describe('SleepEfficiencyData & SleepDrainEvent', () => {
     sentry_extra_monthly_kwh: 7.2,
     sentry_extra_monthly_cost: 2.7,
     state_distribution: [
-      { state: 'asleep', total_minutes: 600 },
-      { state: 'awake', total_minutes: 400 },
+      { state: 'asleep', count: 12, total_minutes: 600 },
+      { state: 'awake', count: 8, total_minutes: 400 },
     ],
     sentry_comparison: [
-      { sentry_mode: false, avg_drain_rate: 0.25, avg_battery_lost: 2 },
-      { sentry_mode: true, avg_drain_rate: 0.625, avg_battery_lost: 5 },
+      {
+        sentry_mode: false,
+        count: 4,
+        avg_drain_rate: 0.25,
+        avg_duration_hours: 8,
+        avg_battery_lost: 2,
+        avg_temp: 12,
+      },
+      {
+        sentry_mode: true,
+        count: 5,
+        avg_drain_rate: 0.625,
+        avg_duration_hours: 8,
+        avg_battery_lost: 5,
+        avg_temp: 10,
+      },
     ],
+    battery_capacity_wh: 75_000,
+    capacity_source: 'vin_estimate',
+    base_cost_per_kwh: 0.12,
     recent_events: recent,
+    total_events: 2,
+    avg_sentry_duration_hours: 8,
   };
 
   it('derives the sentry extra drain rate as on - off and bounds efficiency', () => {
-    expect(sleep.sentry_extra_drain_rate).toBeCloseTo(
-      sleep.sentry_on_drain_rate - sleep.sentry_off_drain_rate,
+    expect(sleep.sentry_extra_drain_rate ?? 0).toBeCloseTo(
+      (sleep.sentry_on_drain_rate ?? 0) - (sleep.sentry_off_drain_rate ?? 0),
       6,
     );
-    expect(sleep.sleep_efficiency_pct).toBeGreaterThanOrEqual(0);
-    expect(sleep.sleep_efficiency_pct).toBeLessThanOrEqual(100);
-    expect(sleep.sentry_on_drain_rate).toBeGreaterThan(sleep.sentry_off_drain_rate);
+    expect(sleep.sleep_efficiency_pct ?? -1).toBeGreaterThanOrEqual(0);
+    expect(sleep.sleep_efficiency_pct ?? 101).toBeLessThanOrEqual(100);
+    expect(sleep.sentry_on_drain_rate ?? 0).toBeGreaterThan(
+      sleep.sentry_off_drain_rate ?? 0,
+    );
   });
 
   it('exposes typed state_distribution / sentry_comparison / recent_events arrays', () => {
-    expect(sleep.state_distribution.reduce((s, e) => s + e.total_minutes, 0)).toBe(1000);
-    expect(sleep.sentry_comparison).toHaveLength(2);
-    expect(sleep.sentry_comparison[1].sentry_mode).toBe(true);
-    expect(sleep.recent_events).toHaveLength(2);
+    expect(
+      (sleep.state_distribution ?? []).reduce(
+        (sum, entry) => sum + (entry.total_minutes ?? 0),
+        0,
+      ),
+    ).toBe(1000);
+    expect(sleep.sentry_comparison ?? []).toHaveLength(2);
+    expect((sleep.sentry_comparison ?? [])[1]?.sentry_mode).toBe(true);
+    expect(sleep.recent_events ?? []).toHaveLength(2);
     expectTypeOf<SleepEfficiencyData['state_distribution']>().toEqualTypeOf<
-      { state: string; total_minutes: number }[]
+      | {
+          state?: string | null;
+          count?: number | null;
+          total_minutes?: number | null;
+        }[]
+      | null
+      | undefined
     >();
-    expectTypeOf<SleepEfficiencyData['recent_events']>().toEqualTypeOf<SleepDrainEvent[]>();
+    expectTypeOf<SleepEfficiencyData['recent_events']>().toEqualTypeOf<
+      SleepDrainEvent[] | null | undefined
+    >();
   });
 
-  it('SleepDrainEvent allows a null outside_temp and locks its shape', () => {
+  it('SleepDrainEvent includes endpoint timestamps and battery levels defensively', () => {
     expect(recent[0].outside_temp).toBe(12);
     expect(recent[1].outside_temp).toBeNull();
     expect(recent[1].sentry_mode).toBe(true);
-    expectTypeOf<SleepDrainEvent['outside_temp']>().toEqualTypeOf<number | null>();
+    expect(recent[0].end_date).toBe('2024-01-02T06:00:00Z');
+    expect(recent[0].start_battery).toBe(80);
+    expectTypeOf<SleepDrainEvent['outside_temp']>().toEqualTypeOf<
+      number | null | undefined
+    >();
     expectTypeOf<SleepDrainEvent>().toEqualTypeOf<{
-      id: number;
-      start_date: string;
-      duration_hours: number;
-      battery_lost: number;
-      drain_rate: number;
-      sentry_mode: boolean;
-      outside_temp: number | null;
+      id?: number | null;
+      start_date?: string | null;
+      end_date?: string | null;
+      duration_hours?: number | null;
+      battery_lost?: number | null;
+      drain_rate?: number | null;
+      sentry_mode?: boolean | null;
+      outside_temp?: number | null;
+      start_battery?: number | null;
+      end_battery?: number | null;
     }>();
   });
 });

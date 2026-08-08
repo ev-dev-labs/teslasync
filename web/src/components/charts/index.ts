@@ -10,7 +10,11 @@ export {
 } from './temperatureGaugeRange';
 export { MiniChart } from './MiniChart';
 export { SmallMultiplesChart, type SmallMultiplesChartProps } from './SmallMultiplesChart';
-export { ChartContainer } from './ChartContainer';
+export {
+  ChartContainer,
+  type ChartDataColumn,
+  type ChartDataRow,
+} from './ChartContainer';
 export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
 export { Sparkline } from './Sparkline';

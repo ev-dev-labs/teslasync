@@ -295,6 +295,8 @@ describe('useSleepEfficiency', () => {
     const { result } = renderHook(() => useSleepEfficiency('7'), { wrapper: makeWrapper(makeClient()) });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(calledUrl()).toBe('/analytics/sleep?vehicle_id=7&days=30');
+    expect(calledUrl()).not.toContain('/api/v1');
+    expect(calledOpts().signal).toBeInstanceOf(AbortSignal);
   });
 
   it('appends &start&end when BOTH bounds are supplied (canonical range picker)', async () => {
@@ -312,6 +314,35 @@ describe('useSleepEfficiency', () => {
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     expect(calledUrl()).toBe('/analytics/sleep?vehicle_id=7&days=14');
     expect(calledUrl()).not.toContain('start=');
+  });
+
+  it('is disabled without a vehicle id', async () => {
+    const { result } = renderHook(
+      () => useSleepEfficiency(null, 30, '2025-01-01', '2025-01-30'),
+      { wrapper: makeWrapper(makeClient()) },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('safely encodes every query value', async () => {
+    mockedRequest.mockResolvedValueOnce({ state_distribution: [] });
+    renderHook(
+      () =>
+        useSleepEfficiency(
+          'fleet/7 &x',
+          30,
+          '2025-01-01 &start',
+          '2025-01-30 &end',
+        ),
+      { wrapper: makeWrapper(makeClient()) },
+    );
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    expect(calledUrl()).toBe(
+      '/analytics/sleep?vehicle_id=fleet%2F7+%26x&days=30&start=2025-01-01+%26start&end=2025-01-30+%26end',
+    );
+    expect(calledUrl()).not.toContain('vehicleId=');
   });
 });
 

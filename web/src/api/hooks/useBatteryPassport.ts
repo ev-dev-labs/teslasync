@@ -3,10 +3,9 @@ import { request } from '../client';
 import { STALE_TIMES } from '@/lib/constants';
 
 /**
- * Battery Passport — a verifiable, tamper-evident State-of-Health provenance
- * certificate for a vehicle's battery (aligned with the EU Battery Passport
- * regulation). These hooks read the two backend routes registered in
- * internal/api/router.go (mounted under the versioned API group):
+ * Battery Passport — the server's current certificate-reported SoH evidence
+ * and digest comparison. These hooks read the two backend routes registered
+ * in internal/api/router.go (mounted under the versioned API group):
  *
  *   GET /vehicles/{vehicleID}/battery-passport
  *   GET /vehicles/{vehicleID}/battery-passport/verify?hash=<hex>
@@ -58,7 +57,7 @@ export interface BatteryPassport {
   provenance_hash: string;
 }
 
-/** Tamper-evidence result: `valid` is true when the supplied hash matches. */
+/** Digest result: `valid` is true when current recomputation matches. */
 export interface BatteryPassportVerifyResponse {
   valid: boolean;
   expected_hash: string;
@@ -78,9 +77,9 @@ export function useBatteryPassport(vehicleId: string | null) {
 
 /**
  * Recompute the current passport hash server-side and compare it to `hash`
- * (tamper-evidence). Disabled until both the vehicle and a non-empty hash are
- * available, so the certificate's "Verified ✓" badge only fires once the
- * passport has loaded and yielded its `provenance_hash`.
+ * (digest agreement). Disabled until both the vehicle and a non-empty hash
+ * are available, so verification starts only after the certificate has
+ * yielded its `provenance_hash`.
  */
 export function useVerifyPassport(vehicleId: string | null, hash: string | null) {
   return useQuery({

@@ -265,7 +265,7 @@ describe('useChargingHistory', () => {
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const [url, opts] = mockedRequest.mock.calls[0];
-    expect(url).toBe('/charging-sessions?vehicle_id=7&limit=1000');
+    expect(url).toBe('/charging?vehicle_id=7&limit=1000');
     expect(opts).toHaveProperty('signal');
     expect(result.current.data).toHaveLength(1);
   });

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  CABIN_ROW_EXCLUSION_REASONS,
+  CANDIDATE_REJECTION_REASONS,
   buildSoakCurve,
   fitSoakEvents,
   minutesToReach,
@@ -36,6 +38,23 @@ function soak(opts: {
   });
 }
 
+function gaps(
+  values: readonly number[],
+  startMinOffset = 0,
+  ambientC = 20,
+  stepMin = 10,
+): CabinSample[] {
+  return values.map((gap, index) => ({
+    timestamp: new Date(
+      BASE + (startMinOffset + index * stepMin) * 60_000,
+    ).toISOString(),
+    insideTemp: ambientC + gap,
+    outsideTemp: ambientC,
+    isAcOn: false,
+    hvacPower: false,
+  }));
+}
+
 describe('fitSoakEvents', () => {
   it('recovers a known time constant', () => {
     const { events } = fitSoakEvents(
@@ -69,6 +88,32 @@ describe('fitSoakEvents', () => {
     const samples = soak({ startMinOffset: 0, startC: 40, ambientC: 20, tauMin: 90, points: 12 })
       .map((s) => ({ ...s, isAcOn: false, hvacPower: true }));
     expect(fitSoakEvents(samples).events).toHaveLength(0);
+  });
+
+  it('keeps unknown HVAC state out of candidate evidence', () => {
+    const samples = soak({
+      startMinOffset: 0,
+      startC: 40,
+      ambientC: 20,
+      tauMin: 90,
+      points: 12,
+    }).map(({ hvacPower: _hvacPower, isAcOn: _isAcOn, ...sample }) => sample);
+    const summary = summarizeCabinThermal(samples);
+
+    expect(summary.events).toHaveLength(0);
+    expect(summary.candidates).toHaveLength(0);
+    expect(summary.coverage).toMatchObject({
+      hvacOnSamples: 0,
+      hvacOffSamples: 0,
+      hvacUnknownSamples: 12,
+      hvacOnRuns: 0,
+      hvacUnknownRuns: 1,
+    });
+    expect(summary.accounting).toMatchObject({
+      normalizedRows: 12,
+      hvacUnknownRows: 12,
+      candidateSampleRows: 0,
+    });
   });
 
   it('splits windows across an HVAC-on interruption', () => {
@@ -150,6 +195,280 @@ describe('summarizeCabinThermal', () => {
     expect(s.warmingTauMin).toBeGreaterThan(35);
     expect(s.warmingTauMin).toBeLessThan(45);
     expect(s.halfLifeMin).toBe(Math.round(s.tauMin! * Math.LN2));
+  });
+
+  it('accounts for every returned row with one mutually exclusive outcome', () => {
+    const validTs = new Date(BASE + 10 * 60_000).toISOString();
+    const rows: CabinSample[] = [
+      { insideTemp: 30, outsideTemp: 20 },
+      { timestamp: 'not-a-date', insideTemp: 30, outsideTemp: 20 },
+      { timestamp: new Date(BASE + 1).toISOString(), insideTemp: null, outsideTemp: 20 },
+      { timestamp: new Date(BASE + 2).toISOString(), insideTemp: Number.NaN, outsideTemp: 20 },
+      { timestamp: new Date(BASE + 3).toISOString(), insideTemp: 30, outsideTemp: null },
+      { timestamp: new Date(BASE + 4).toISOString(), insideTemp: 30, outsideTemp: Number.POSITIVE_INFINITY },
+      { timestamp: validTs, insideTemp: 30, outsideTemp: 20 },
+      { timestamp: validTs, insideTemp: 31, outsideTemp: 20 },
+    ];
+
+    const summary = summarizeCabinThermal(rows);
+    expect(summary.accounting).toMatchObject({
+      returnedRows: 8,
+      excludedRows: 7,
+      normalizedRows: 1,
+    });
+    for (const reason of CABIN_ROW_EXCLUSION_REASONS) {
+      expect(summary.rowExclusions[reason]).toBe(1);
+    }
+    expect(
+      summary.accounting.normalizedRows + summary.rowExclusions.total,
+    ).toBe(summary.accounting.returnedRows);
+    expect(summary.normalizedSamples[0]?.insideC).toBe(30);
+  });
+
+  it.each([
+    [
+      'insufficient_samples',
+      gaps([10, 9, 8]),
+    ],
+    [
+      'below_minimum_duration',
+      gaps([10, 9, 8, 7], 0, 20, 5),
+    ],
+    [
+      'initial_gap_below_threshold',
+      gaps([1, 0.9, 0.8, 0.7]),
+    ],
+    [
+      'ambient_crossing',
+      gaps([10, 6, 0, -1]),
+    ],
+    [
+      'regression_unavailable',
+      gaps([10, 10, 10, 10]),
+    ],
+    [
+      'non_relaxing_gap',
+      gaps([5, 6, 7, 8]),
+    ],
+    [
+      'r2_below_gate',
+      gaps([10, 5, 9, 4, 7, 3]),
+    ],
+    [
+      'invalid_tau',
+      soak({
+        startMinOffset: 0,
+        startC: 40,
+        ambientC: 20,
+        tauMin: 2_000,
+        points: 12,
+      }),
+    ],
+  ] as const)('assigns exactly the %s rejection reason', (reason, rows) => {
+    const summary = summarizeCabinThermal(rows);
+    expect(summary.candidates).toHaveLength(1);
+    expect(summary.candidates[0]?.reason).toBe(reason);
+    expect(summary.accounting.acceptedFits).toBe(0);
+    expect(summary.accounting.rejectedCandidates).toBe(1);
+    expect(
+      summary.rejectionReasonCounts.find((item) => item.reason === reason)?.count,
+    ).toBe(1);
+  });
+
+  it('exposes every rejection category in stable gate order, including zeroes', () => {
+    const summary = summarizeCabinThermal([]);
+    expect(summary.rejectionReasonCounts.map((item) => item.reason)).toEqual(
+      CANDIDATE_REJECTION_REASONS,
+    );
+    expect(summary.rejectionReasonCounts.every((item) => item.count === 0)).toBe(true);
+  });
+
+  it('retains candidate details even when an early gate rejects the window', () => {
+    const candidate = summarizeCabinThermal(
+      gaps([10, 9, 8], 0),
+    ).candidates[0]!;
+
+    expect(candidate).toMatchObject({
+      samples: 3,
+      durationMin: 20,
+      ambientC: 20,
+      initialGapC: 10,
+      direction: 'cooling',
+      disposition: 'rejected',
+      reason: 'insufficient_samples',
+    });
+    expect(candidate.startTs).toBe(new Date(BASE).toISOString());
+    expect(candidate.endTs).toBe(new Date(BASE + 20 * 60_000).toISOString());
+  });
+
+  it('exposes the exact resolved thresholds used by the fit', () => {
+    const summary = summarizeCabinThermal([], {
+      maxGapMin: 30,
+      minDurationMin: 15,
+      minSamples: 5,
+      minDeltaC: 4,
+      minR2: 0.9,
+      candidateDisplayCap: 7,
+    });
+
+    expect(summary.thresholds).toMatchObject({
+      maxGapMin: 30,
+      minDurationMin: 15,
+      minSamples: 5,
+      minDeltaC: 4,
+      minR2: 0.9,
+      candidateDisplayCap: 7,
+    });
+  });
+
+  it('keeps candidate and rejection identities exact', () => {
+    const rows: CabinSample[] = [
+      ...gaps([10, 9, 8], 0),
+      ...gaps([1, 0.9, 0.8, 0.7], 200),
+      ...soak({
+        startMinOffset: 400,
+        startC: 40,
+        ambientC: 20,
+        tauMin: 90,
+        points: 10,
+      }),
+    ];
+    const summary = summarizeCabinThermal(rows);
+    const rejectionTotal = summary.rejectionReasonCounts.reduce(
+      (sum, item) => sum + item.count,
+      0,
+    );
+
+    expect(summary.accounting.candidateWindows).toBe(3);
+    expect(summary.accounting.acceptedFits).toBe(1);
+    expect(summary.accounting.rejectedCandidates).toBe(2);
+    expect(rejectionTotal).toBe(summary.accounting.rejectedCandidates);
+    expect(
+      summary.accounting.acceptedFits + summary.accounting.rejectedCandidates,
+    ).toBe(summary.accounting.candidateWindows);
+    expect(summary.acceptanceFunnel.at(-1)?.count).toBe(1);
+  });
+
+  it('sorts deterministically, keeps the first duplicate, and never mutates input', () => {
+    const firstTs = new Date(BASE).toISOString();
+    const later = gaps([10, 9, 8, 7], 200);
+    const earlier = gaps([10, 9, 8, 7], 0);
+    const duplicateFirst: CabinSample = Object.freeze({
+      timestamp: firstTs,
+      insideTemp: 30,
+      outsideTemp: 20,
+      isAcOn: false,
+      hvacPower: false,
+    });
+    const duplicateSecond: CabinSample = Object.freeze({
+      timestamp: firstTs,
+      insideTemp: 99,
+      outsideTemp: 20,
+      isAcOn: false,
+      hvacPower: false,
+    });
+    const input = Object.freeze([
+      ...later.map((row) => Object.freeze(row)),
+      duplicateFirst,
+      duplicateSecond,
+      ...earlier.slice(1).map((row) => Object.freeze(row)),
+    ]);
+    const originalOrder = input.map((row) => row.timestamp);
+
+    const first = summarizeCabinThermal(input);
+    const second = summarizeCabinThermal(input);
+
+    expect(first.candidates.map((candidate) => candidate.startMs)).toEqual([
+      BASE,
+      BASE + 200 * 60_000,
+    ]);
+    expect(first.normalizedSamples[0]?.insideC).toBe(30);
+    expect(first).toEqual(second);
+    expect(input.map((row) => row.timestamp)).toEqual(originalOrder);
+  });
+
+  it('caps the newest-first candidate directory with an exact omission count', () => {
+    const rows = Array.from({ length: 5 }, (_, index) =>
+      gaps([1, 0.9, 0.8, 0.7], index * 200),
+    ).flat();
+    const summary = summarizeCabinThermal(rows, { candidateDisplayCap: 2 });
+
+    expect(summary.candidates.map((candidate) => candidate.index)).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
+    expect(summary.candidateDirectory.items.map((candidate) => candidate.index)).toEqual([
+      5, 4,
+    ]);
+    expect(summary.candidateDirectory).toMatchObject({
+      total: 5,
+      displayed: 2,
+      omitted: 3,
+      cap: 2,
+    });
+  });
+
+  it('turns an 83-window all-rejected payload into reasoned evidence', () => {
+    const rows = Array.from({ length: 83 }, (_, index) =>
+      gaps([1.5, 1.4, 1.3, 1.2], index * 120),
+    ).flat();
+    const summary = summarizeCabinThermal(rows);
+
+    expect(summary.accounting).toMatchObject({
+      candidateWindows: 83,
+      acceptedFits: 0,
+      rejectedCandidates: 83,
+    });
+    expect(summary.tauMin).toBeNull();
+    expect(
+      summary.rejectionReasonCounts.find(
+        (item) => item.reason === 'initial_gap_below_threshold',
+      )?.count,
+    ).toBe(83);
+    expect(summary.candidateDirectory.displayed).toBe(50);
+    expect(summary.candidateDirectory.omitted).toBe(33);
+  });
+
+  it('reports source cadence, HVAC boundaries, and long-gap segmentation', () => {
+    const rows: CabinSample[] = [
+      ...gaps([10, 9, 8, 7], 0),
+      {
+        ...gaps([6], 40)[0]!,
+        hvacPower: true,
+      },
+      {
+        ...gaps([5], 50)[0]!,
+        hvacPower: true,
+      },
+      ...gaps([10, 9, 8, 7], 200),
+    ];
+    const coverage = summarizeCabinThermal(rows).coverage;
+
+    expect(coverage.hvacOnSamples).toBe(2);
+    expect(coverage.hvacOffSamples).toBe(8);
+    expect(coverage.hvacUnknownSamples).toBe(0);
+    expect(coverage.hvacOnRuns).toBe(1);
+    expect(coverage.hvacUnknownRuns).toBe(0);
+    expect(coverage.hvacBoundaryCount).toBe(1);
+    expect(coverage.longGapCount).toBe(1);
+    expect(coverage.longGapSegments).toBe(2);
+    expect(coverage.medianCadenceMin).toBe(10);
+    expect(coverage.maxObservedGapMin).toBe(150);
+  });
+
+  it('handles hostile runtime field types and nonfinite values without throwing', () => {
+    const hostile: CabinSample[] = [
+      { timestamp: 123, insideTemp: 30, outsideTemp: 20 },
+      { timestamp: new Date(BASE).toISOString(), insideTemp: '30', outsideTemp: 20 },
+      { timestamp: new Date(BASE + 1).toISOString(), insideTemp: 30, outsideTemp: '-Infinity' },
+      { created_at: new Date(BASE + 2).toISOString(), insideTemp: Number.NEGATIVE_INFINITY, outsideTemp: 20 },
+    ];
+    const summary = summarizeCabinThermal(hostile);
+
+    expect(summary.accounting.returnedRows).toBe(4);
+    expect(summary.accounting.normalizedRows).toBe(0);
+    expect(summary.rowExclusions.invalid_timestamp).toBe(1);
+    expect(summary.rowExclusions.nonfinite_inside_temperature).toBe(2);
+    expect(summary.rowExclusions.nonfinite_outside_temperature).toBe(1);
   });
 });
 
