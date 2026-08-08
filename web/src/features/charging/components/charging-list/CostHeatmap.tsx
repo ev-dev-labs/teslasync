@@ -124,6 +124,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
           </div>
         </div>
       ) : (
+        // no-action: transient — useChargingOptimizer keys weekly_heatmap off vehicleId only, so no page filter reset would populate it sooner.
         <EmptyState
           message={t(
             'charging.optimizer.heatmapEmpty',

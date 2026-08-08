@@ -79,6 +79,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 import { OrderCard } from './OrderCard';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 /** Build a well-formed order; every field is overridable per case. */
 function makeOrder(over: Partial<TeslaOrder> = {}): TeslaOrder {
@@ -144,7 +145,7 @@ describe('OrderCard', () => {
       { status: 'CANCELED', label: 'Canceled', bg: 'bg-red-100' },
       // READY_FOR_DELIVERY contains "DELIVER" but READY wins → info, not success.
       { status: 'READY_FOR_DELIVERY', label: 'Ready For Delivery', bg: 'bg-blue-100' },
-      { status: 'WEIRD_STATE', label: 'Weird State', bg: 'bg-gray-100' },
+      { status: 'WEIRD_STATE', label: 'Weird State', bg: BADGE_VARIANTS.neutral },
     ] as const;
 
     for (const c of cases) {

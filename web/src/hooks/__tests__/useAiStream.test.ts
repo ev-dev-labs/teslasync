@@ -179,6 +179,80 @@ describe('useAiStream — happy path', () => {
     expect(events).toHaveLength(4);
     expect(events[0]).toMatchObject({ type: 'delta', text: 'The ' });
     expect(events[3]).toMatchObject({ type: 'done', finish_reason: 'stop' });
+    expect(result.current.usage).toEqual({ in: 10, out: 20 });
+    expect(result.current.finishReason).toBe('stop');
+  });
+
+  it('retains an ordered, privacy-safe tool activity trail', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('tool_call', {
+        id: 'call-1',
+        name: 'query_vehicle_state',
+        arguments: { vehicle_id: 42 },
+      }),
+      sseFrame('tool_result', {
+        id: 'call-1',
+        name: 'query_vehicle_state',
+        ok: true,
+        data: { latitude: 45.5, longitude: -122.6 },
+      }),
+      sseFrame('tool_call', {
+        id: 'call-2',
+        name: 'query_alerts_active',
+        arguments: {},
+      }),
+      sseFrame('tool_result', {
+        id: 'call-2',
+        name: 'query_alerts_active',
+        ok: false,
+        error: 'unavailable',
+      }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 30, out: 12 } }),
+    ]);
+
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/chatbot', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('done'));
+
+    expect(result.current.activity).toEqual([
+      { id: 'call-1', name: 'query_vehicle_state', status: 'succeeded' },
+      { id: 'call-2', name: 'query_alerts_active', status: 'failed' },
+    ]);
+    expect(JSON.stringify(result.current.activity)).not.toContain('vehicle_id');
+    expect(JSON.stringify(result.current.activity)).not.toContain('latitude');
+  });
+
+  it('resets activity and completion metadata for a new run', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('tool_call', { id: 'call-1', name: 'query_vehicle_state', arguments: {} }),
+      sseFrame('tool_result', {
+        id: 'call-1',
+        name: 'query_vehicle_state',
+        ok: true,
+        data: {},
+      }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 10, out: 5 } }),
+    ]);
+
+    const { result, rerender } = renderHook(
+      ({ body }) => useAiStream({ url: '/ai/chatbot', body, onEvent: () => {} }),
+      { initialProps: { body: { turn: 1 } } },
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('done'));
+    expect(result.current.activity).toHaveLength(1);
+
+    globalThis.fetch = mockFetchOK([
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 2, out: 1 } }),
+    ]);
+    rerender({ body: { turn: 2 } });
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.usage).toEqual({ in: 2, out: 1 }));
+
+    expect(result.current.activity).toEqual([]);
+    expect(result.current.finishReason).toBe('stop');
   });
 
   it('handles SSE frames split across multiple network chunks', async () => {
@@ -231,13 +305,30 @@ describe('useAiStream — error paths', () => {
   });
 
   it('surfaces a server error event as state=error', async () => {
-    globalThis.fetch = mockFetchOK([sseFrame('error', { message: 'stream_stalled' })]);
+    globalThis.fetch = mockFetchOK([
+      sseFrame('tool_call', { id: 'call-1', name: 'query_vehicle_state', arguments: {} }),
+      sseFrame('error', { message: 'stream_stalled' }),
+    ]);
     const { result } = renderHook(() =>
       useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
     );
     act(() => result.current.start());
     await waitFor(() => expect(result.current.state).toBe('error'));
     expect(result.current.error).toBe('stream_stalled');
+    expect(result.current.activity).toEqual([
+      { id: 'call-1', name: 'query_vehicle_state', status: 'failed' },
+    ]);
+  });
+
+  it('treats EOF without a terminal event as an incomplete stream', async () => {
+    globalThis.fetch = mockFetchOK([sseFrame('delta', { text: 'partial' })]);
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('error'));
+    expect(result.current.error).toBe('stream_incomplete');
+    expect(result.current.text).toBe('partial');
   });
 
   it('drops malformed events and continues', async () => {
@@ -262,11 +353,17 @@ describe('useAiStream — cancellation', () => {
     let abortSignal: AbortSignal | undefined;
     globalThis.fetch = vi.fn(async (_input, init: RequestInit | undefined) => {
       abortSignal = init?.signal ?? undefined;
-      // Return a stream that never closes — only abort terminates it.
+      const encoder = new TextEncoder();
       return new Response(
         new ReadableStream<Uint8Array>({
-          start() {
-            // never enqueue, never close
+          start(controller) {
+            controller.enqueue(encoder.encode(
+              sseFrame('tool_call', {
+                id: 'call-1',
+                name: 'query_vehicle_state',
+                arguments: {},
+              }),
+            ));
           },
         }),
         { status: 200 },
@@ -278,9 +375,16 @@ describe('useAiStream — cancellation', () => {
     );
     act(() => result.current.start());
     await waitFor(() => expect(result.current.state).toBe('streaming'));
+    await waitFor(() => expect(result.current.activity).toEqual([
+      { id: 'call-1', name: 'query_vehicle_state', status: 'running' },
+    ]));
 
     act(() => result.current.cancel());
     expect(abortSignal?.aborted).toBe(true);
+    expect(result.current.state).toBe('idle');
+    await waitFor(() => expect(result.current.activity).toEqual([
+      { id: 'call-1', name: 'query_vehicle_state', status: 'failed' },
+    ]));
   });
 
   it('aborts on unmount', async () => {

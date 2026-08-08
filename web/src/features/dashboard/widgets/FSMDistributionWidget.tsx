@@ -66,7 +66,7 @@ function DonutTooltip({
   if (!active || !payload?.[0]) return null;
   const seg = payload[0].payload;
   return (
-    <div className="rounded-lg border border-[var(--border-subtle)] bg-gray-900/95 px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] backdrop-blur-xl px-3 py-2 text-xs shadow-lg">
       <div className="flex items-center gap-2">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"

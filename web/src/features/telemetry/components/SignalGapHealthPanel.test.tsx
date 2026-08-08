@@ -59,7 +59,7 @@ vi.mock('react-i18next', () => ({
 // layout, so the BarChart / Bar / Cell / axes echo their bound props as
 // data-* attributes to make the segment count, series name and per-bucket
 // fills observable.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 vi.mock('@/components/charts', () => ({
   ResponsiveContainer: ({ children }: any) => (
     <div data-testid="responsive-container">{children}</div>
@@ -98,7 +98,7 @@ vi.mock('@/components/feedback', () => ({
     </div>
   ),
 }));
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 import { SignalGapHealthPanel } from './SignalGapHealthPanel';
 import type { SignalGapAnalysis } from '../hooks/useSignalGapAnalysis';

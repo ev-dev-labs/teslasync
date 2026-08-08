@@ -26,7 +26,7 @@ import {
 import { VehicleSelect } from '@/components/forms';
 import { MetricCard, TimeStamp, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge,
+  LinearGauge,
   LineChart,
   Line,
   XAxis,
@@ -107,7 +107,7 @@ export function enabledCount(snap: SafetySnapshot): number {
 export const TOTAL_FEATURES = 9;
 
 /** Semantic gauge color — kept as a computed value so it can drive the
- *  RadialGauge `color` prop directly (dynamic, not a static var style). */
+ *  LinearGauge `color` prop directly (dynamic, not a static var style). */
 export function scoreColor(pct: number): string {
   if (pct >= 80) return '#10b981';
   if (pct >= 50) return '#f59e0b';
@@ -454,6 +454,7 @@ export default function SafetySettingsPage() {
   );
 
   const selectVehicleMsg = t('safety.selectVehicle', 'Select a vehicle to view its safety settings.');
+  const selectVehicleAction = { label: t('safety.selectVehicleCta', 'Go to vehicles'), to: '/vehicles' };
 
   const refreshAll = () => {
     latestQuery.refetch();
@@ -491,7 +492,11 @@ export default function SafetySettingsPage() {
           {noVehicle ? (
             <div className="col-span-full">
               <GlassPanel className="p-4 sm:p-5">
-                <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+                <EmptyState
+                  icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                  message={selectVehicleMsg}
+                  actionTo={selectVehicleAction}
+                />
               </GlassPanel>
             </div>
           ) : latestQuery.isLoading && !latest ? (
@@ -507,6 +512,7 @@ export default function SafetySettingsPage() {
               <GlassPanel className="p-4 sm:p-5">
                 <EmptyState
                   icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                  /* no-action: transient — this KPI band fills once useSafety() returns its first payload for the selected vehicle; the header Refresh action (refreshAll) already covers a manual retry. */
                   message={t('safety.noData', 'No safety data available for this vehicle.')}
                 />
               </GlassPanel>
@@ -541,7 +547,11 @@ export default function SafetySettingsPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <PanelTitle className="mb-3">{t('safety.scoreTitle', 'Safety Score')}</PanelTitle>
             {noVehicle ? (
-              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+              <EmptyState
+                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                message={selectVehicleMsg}
+                actionTo={selectVehicleAction}
+              />
             ) : latestQuery.isLoading && !latest ? (
               <Skeleton height={220} />
             ) : latestQuery.isError ? (
@@ -549,20 +559,20 @@ export default function SafetySettingsPage() {
             ) : !latest ? (
               <EmptyState
                 icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                /* no-action: transient — the gauge renders once the safety payload arrives; recovery is the page header's Refresh action (refreshAll), not a control local to this panel. */
                 message={t('safety.noData', 'No safety data available for this vehicle.')}
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-4">
-                <RadialGauge
+                <LinearGauge
                   value={enabled}
                   max={TOTAL_FEATURES}
                   label={t('Safety Score')}
-                  unit={`${fmtInt(scorePct)}%`}
                   color={scoreColor(scorePct)}
                   size={140}
                 />
                 <Badge variant={scoreBadgeVariant(scorePct)}>
-                  {enabled}/{TOTAL_FEATURES} {t('enabled')}
+                  {enabled}/{TOTAL_FEATURES} {t('enabled')} · {fmtInt(scorePct)}%
                 </Badge>
               </div>
             )}
@@ -572,7 +582,11 @@ export default function SafetySettingsPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3">{t('safety.liveSignals', 'Live Safety Signals')}</PanelTitle>
             {noVehicle ? (
-              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+              <EmptyState
+                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                message={selectVehicleMsg}
+                actionTo={selectVehicleAction}
+              />
             ) : securityQuery.isLoading && !securityData ? (
               <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -647,7 +661,11 @@ export default function SafetySettingsPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3">{t('ADAS Features')}</PanelTitle>
             {noVehicle ? (
-              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+              <EmptyState
+                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                message={selectVehicleMsg}
+                actionTo={selectVehicleAction}
+              />
             ) : latestQuery.isLoading && !latest ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -659,6 +677,7 @@ export default function SafetySettingsPage() {
             ) : featureCards.length === 0 ? (
               <EmptyState
                 icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                /* no-action: transient — this grid populates once buildFeatureCards() has data from the same useSafety() payload as the KPI band above; the header Refresh button already provides manual retry. */
                 message={t('safety.noFeatures', 'No ADAS feature data available for this vehicle.')}
               />
             ) : (
@@ -680,7 +699,11 @@ export default function SafetySettingsPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <PanelTitle className="mb-3">{t('safety.drivingStats', 'Driving Statistics')}</PanelTitle>
             {noVehicle ? (
-              <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+              <EmptyState
+                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                message={selectVehicleMsg}
+                actionTo={selectVehicleAction}
+              />
             ) : latestQuery.isLoading && !latest ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 {Array.from({ length: 2 }).map((_, i) => (
@@ -692,6 +715,7 @@ export default function SafetySettingsPage() {
             ) : !latest ? (
               <EmptyState
                 icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                /* no-action: transient — driving-stat metrics come from the same useSafety() payload as the KPI band above; nothing distinct to trigger from this card, the header Refresh button covers retry. */
                 message={t('safety.noStats', 'No driving statistics available for this vehicle.')}
               />
             ) : (
@@ -729,7 +753,11 @@ export default function SafetySettingsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3">{t('Safety States Over Time')}</PanelTitle>
           {noVehicle ? (
-            <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+            <EmptyState
+              icon={<Car className="h-8 w-8" aria-hidden="true" />}
+              message={selectVehicleMsg}
+              actionTo={selectVehicleAction}
+            />
           ) : historyQuery.isLoading && history.length === 0 ? (
             <Skeleton height={300} />
           ) : historyQuery.isError ? (
@@ -737,6 +765,7 @@ export default function SafetySettingsPage() {
           ) : chartData.length === 0 ? (
             <EmptyState
               icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+              /* no-action: transient — this trend chart fills once useSafetyHistory() has accumulated snapshots for the vehicle; the header Refresh button already re-triggers the query. */
               message={t('safety.noChart', 'No safety state history to chart yet.')}
             />
           ) : (
@@ -793,7 +822,11 @@ export default function SafetySettingsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3">{t('Safety Settings History')}</PanelTitle>
           {noVehicle ? (
-            <EmptyState icon={<Car className="h-8 w-8" aria-hidden="true" />} message={selectVehicleMsg} />
+            <EmptyState
+              icon={<Car className="h-8 w-8" aria-hidden="true" />}
+              message={selectVehicleMsg}
+              actionTo={selectVehicleAction}
+            />
           ) : historyQuery.isLoading && history.length === 0 ? (
             <Skeleton height={280} />
           ) : historyQuery.isError ? (
@@ -801,6 +834,7 @@ export default function SafetySettingsPage() {
           ) : sortedHistory.length === 0 ? (
             <EmptyState
               icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+              /* no-action: transient — this table lists the same safety-history snapshots as the chart above; the header Refresh button covers a manual retry while telemetry is still producing rows. */
               message={t('safety.noHistory', 'No history records found.')}
             />
           ) : (

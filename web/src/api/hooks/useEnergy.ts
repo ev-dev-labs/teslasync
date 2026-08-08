@@ -146,13 +146,19 @@ export function useSleepEfficiency(
   // the actual chosen window. The `days` param is still sent for backward
   // compatibility with backends that may not yet support start/end (and is
   // ignored by the modern handler when start/end are present).
-  const dateParams =
-    startDate && endDate ? `&start=${startDate}&end=${endDate}` : '';
+  const params = new URLSearchParams({
+    vehicle_id: vehicleId ?? '',
+    days: String(days),
+  });
+  if (startDate && endDate) {
+    params.set('start', startDate);
+    params.set('end', endDate);
+  }
   return useQuery({
     queryKey: ['sleep-efficiency', vehicleId, days, startDate ?? '', endDate ?? ''],
     queryFn: ({ signal }) =>
       request<SleepEfficiencyData>(
-        `/analytics/sleep?vehicle_id=${vehicleId}&days=${days}${dateParams}`,
+        `/analytics/sleep?${params.toString()}`,
         { signal },
       ),
     enabled: vehicleId !== null,

@@ -343,6 +343,11 @@ export default function SignalDiffPage() {
           loading={initialLoading}
           error={error}
           onRetry={() => refetch()}
+          filterActive={filterActive}
+          onClearFilters={() => {
+            setSignalFilter('');
+            setActiveCategory(null);
+          }}
           pinnedSignals={pinnedSignals}
         />
       </FadeIn>
@@ -369,6 +374,7 @@ export default function SignalDiffPage() {
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
             </div>
           ) : allRows.length === 0 && !filterActive && atAIso && atBIso ? (
+            // no-action: this branch is explicitly gated on !filterActive — filters are confirmed off, so it is genuinely zero diffs, not a filtered-away result.
             <EmptyState
               icon={<GitCompare className="h-10 w-10" aria-hidden="true" />}
               message={t('signalDiff.noChanges', 'No signals changed between the two snapshots')}

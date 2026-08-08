@@ -32,7 +32,7 @@
  *     + `cleanSafetyEnum` run, so the derivations are genuinely exercised.
  *   - `@/components/charts` is stubbed so the recharts internals (which need a
  *     measured container jsdom can't provide) don't render; the LineChart stub
- *     captures the exact derived `data`, and the RadialGauge stub prints its
+ *     captures the exact derived `data`, and the LinearGauge stub prints its
  *     value/max/unit for assertions.
  *   - The VehicleSelect toolbar control is stubbed via React.createElement
  *     (keeps jsx-a11y off the mock markup).
@@ -179,7 +179,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 // Stub the chart primitives: recharts needs a measured container jsdom can't
-// give it. LineChart captures the exact derived `data`; RadialGauge prints
+// give it. LineChart captures the exact derived `data`; LinearGauge prints
 // value/max/unit; everything else is inert.
 vi.mock('@/components/charts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
@@ -187,7 +187,7 @@ vi.mock('@/components/charts', async () => {
   const Pass = ({ children }: { children?: ReactNode }) =>
     React.createElement(React.Fragment, null, children);
   return {
-    RadialGauge: function RadialGauge({
+    LinearGauge: function LinearGauge({
       value,
       max,
       unit,
@@ -200,7 +200,7 @@ vi.mock('@/components/charts', async () => {
     }) {
       return React.createElement(
         'div',
-        { 'data-testid': 'radial-gauge', 'data-label': label },
+        { 'data-testid': 'linear-gauge', 'data-label': label },
         `${value}/${max} ${unit ?? ''}`,
       );
     },
@@ -406,7 +406,7 @@ describe('SafetySettingsPage', () => {
     ).toHaveLength(7);
     // No data-driven content leaked through.
     expect(screen.queryByText('67%')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('radial-gauge')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
   });
 
   it('renders the KPI band + gauge from the derived safety score', () => {
@@ -423,7 +423,11 @@ describe('SafetySettingsPage', () => {
     expect(within(kpi).getByText('3')).toBeInTheDocument();
 
     const overview = screen.getByRole('region', { name: 'Safety overview' });
-    expect(within(overview).getByTestId('radial-gauge')).toHaveTextContent('6/9 67%');
+    // The ring counts enabled features against the total; the percentage is a
+    // derived summary and belongs on the badge, not smuggled through the gauge's
+    // `unit` slot (which rendered "6 67%" and captioned the scale as "0 – 967%").
+    expect(within(overview).getByTestId('linear-gauge')).toHaveTextContent('6/9');
+    expect(within(overview).getByText('6/9 enabled · 67%')).toBeInTheDocument();
   });
 
   it('renders live security signals and falls back to "—" for unknown values', () => {
@@ -502,7 +506,7 @@ describe('SafetySettingsPage', () => {
       screen.getByRole('heading', { level: 1, name: 'Safety Settings' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('Total Features')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('radial-gauge')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Select a vehicle to view its safety settings.'),
     ).not.toBeInTheDocument();

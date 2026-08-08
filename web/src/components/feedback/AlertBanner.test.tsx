@@ -46,14 +46,14 @@ describe('AlertBanner', () => {
     expect(container.querySelector('p')).toBeNull()
   })
 
-  it('maps each variant to its themed border + title colour', () => {
-    const cases: Array<[AlertVariant, RegExp, RegExp]> = [
-      ['info', /border-neon-cyan/, /text-cyan-300/],
-      ['success', /border-neon-green/, /text-emerald-300/],
-      ['warning', /border-neon-amber/, /text-amber-300/],
-      ['danger', /border-neon-red/, /text-rose-300/],
+  it('maps each variant to theme-safe border, title, and body colours', () => {
+    const cases: Array<[AlertVariant, RegExp, string, string, string, string]> = [
+      ['info', /border-neon-cyan/, 'text-cyan-800', 'dark:text-cyan-300', 'text-cyan-800', 'dark:text-cyan-200'],
+      ['success', /border-neon-green/, 'text-emerald-800', 'dark:text-emerald-300', 'text-emerald-800', 'dark:text-emerald-200'],
+      ['warning', /border-neon-amber/, 'text-amber-800', 'dark:text-amber-300', 'text-amber-800', 'dark:text-amber-200'],
+      ['danger', /border-neon-red/, 'text-rose-800', 'dark:text-rose-300', 'text-rose-800', 'dark:text-rose-200'],
     ]
-    for (const [variant, borderRe, titleRe] of cases) {
+    for (const [variant, borderRe, lightTitle, darkTitle, lightBody, darkBody] of cases) {
       const { container, unmount } = render(
         <AlertBanner variant={variant} title="T">
           body
@@ -61,7 +61,10 @@ describe('AlertBanner', () => {
       )
       const banner = container.firstElementChild as HTMLElement
       expect(banner.className).toMatch(borderRe)
-      expect(screen.getByText('T').className).toMatch(titleRe)
+      expect(screen.getByText('T').className).toContain(lightTitle)
+      expect(screen.getByText('T').className).toContain(darkTitle)
+      expect(screen.getByText('body').className).toContain(lightBody)
+      expect(screen.getByText('body').className).toContain(darkBody)
       unmount()
     }
   })

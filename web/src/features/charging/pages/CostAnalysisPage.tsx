@@ -120,6 +120,7 @@ export default function CostAnalysisPage() {
             isLoading={sessionsLoading}
             error={sessionsError}
             onRetry={retrySessions}
+            onResetRange={() => setRangeBatch({ from: null, to: null })}
           />
         </section>
       </FadeIn>

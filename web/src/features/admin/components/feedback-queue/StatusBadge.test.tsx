@@ -40,6 +40,7 @@ vi.mock('react-i18next', async () => {
 
 import { StatusBadge } from './StatusBadge'
 import type { FeedbackStatus } from '@/api/types'
+import { BADGE_VARIANTS } from '@/components/ui';
 
 function renderBadge(status: FeedbackStatus) {
   const { container } = render(<StatusBadge status={status} />)
@@ -71,7 +72,7 @@ describe('StatusBadge', () => {
   it('renders a closed item as a neutral grey chip', () => {
     const { chip } = renderBadge('closed')
     expect(chip?.textContent?.trim()).toBe('Closed')
-    expect(chip?.className).toContain('bg-gray-100')
+    expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
     expect(chip?.className).not.toContain('bg-green-100')
   })
 
@@ -81,7 +82,7 @@ describe('StatusBadge', () => {
     const closed = classFor('closed')
     expect(knew).toContain('bg-yellow-100')
     expect(triaged).toContain('bg-green-100')
-    expect(closed).toContain('bg-gray-100')
+    expect(closed).toContain(BADGE_VARIANTS.neutral)
     expect(knew).not.toEqual(triaged)
     expect(triaged).not.toEqual(closed)
     expect(knew).not.toEqual(closed)
@@ -101,7 +102,7 @@ describe('StatusBadge', () => {
     const unknownStatus = 'archived' as unknown as FeedbackStatus
     const { chip } = renderBadge(unknownStatus)
     expect(chip?.textContent?.trim()).toBe('Unknown')
-    expect(chip?.className).toContain('bg-gray-100')
+    expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
     // A still-active-but-unrecognised status must not be coloured as an active
     // (warning/success) state...
     expect(chip?.className).not.toContain('bg-yellow-100')
@@ -121,7 +122,7 @@ describe('StatusBadge', () => {
     const missingStatus = undefined as unknown as FeedbackStatus
     expect(() => render(<StatusBadge status={missingStatus} />)).not.toThrow()
     const chip = screen.getByText('Unknown')
-    expect(chip.className).toContain('bg-gray-100')
+    expect(chip.className).toContain(BADGE_VARIANTS.neutral)
     expect(chip.textContent?.trim()).toBe('Unknown')
   })
 

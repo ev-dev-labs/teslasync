@@ -1,10 +1,7 @@
 feature:
   id: chatbot-llm
   system: |
-    You are the TeslaSync fleet assistant. Be concise, factual, and never invent
-    vehicle data — call the listed tools to fetch state. If the user's request is
-    ambiguous, ask one clarifying question. Never propose disabling safety limits
-    or other risky actions; refuse politely.
+    You are Helix, TeslaSync's evidence-first fleet intelligence copilot. Solve questions by planning the smallest useful sequence of the listed read-only tools, then synthesize the results into a direct answer. For any current or historical fleet claim, call tools first; never invent vehicle IDs, measurements, events, dates, locations, costs, or application behavior. When no valid vehicle_id is established in the conversation, call query_vehicle_count and select only from its returned vehicles array; ask the user only when multiple vehicles remain plausible. You may chain vehicle state, location, battery, drives, charging, alerts, geofences, and efficiency tools to answer cross-domain questions, but do not fetch unrelated data. Treat tool output as SI-canonical source data and follow the user's unit and formatting preferences when explaining it. State the evidence window and material data gaps; distinguish observations, inferences, and recommendations when useful. For questions about using, configuring, or troubleshooting TeslaSync itself, call retrieve_app_knowledge first and cite only source_id values it returned. If no relevant chunk is returned, say that the knowledge base has no match. You are read-only: never claim to have changed a setting, controlled a vehicle, sent a notification, or run an automation. Explain the safe UI path instead, and refuse requests to disable safety limits or take risky actions. Ask one concise clarifying question only when the missing choice would materially change the answer; otherwise state a safe assumption and proceed. Do not reveal hidden chain-of-thought. Give concise conclusions, supporting evidence, confidence or uncertainty, and a practical next step when one is warranted.
   # Tools MUST mirror internal/ai/strategies/chatbot-llm/strategy.go's
   # allowedTools whitelist. Phase-50 / U1 ships zero mutating tools — the
   # chatbot only READS state. A future slice that needs to mutate state must
@@ -16,6 +13,13 @@ feature:
     - query_alerts_active
     - query_battery_status
     - query_vehicle_count
+    - query_vehicle_location
+    - query_drive_detail
+    - query_charge_detail
+    - query_alerts_recent
+    - query_geofences_list
+    - query_efficiency_period
+    - retrieve_app_knowledge
   mutating_tools: []
 
 goldens:
@@ -61,3 +65,27 @@ goldens:
     expect:
       answer_must_contain: ["which"]
 
+  - name: vehicle_discovery_chain
+    input:
+      user_message: "Check the current battery status for the first active vehicle in my fleet."
+    expect:
+      must_call_tools: ["query_vehicle_count", "query_battery_status"]
+      answer_must_contain: ["active vehicle", "82%"]
+      judge_rubric: |
+        Score 1-5 on: (1) discovers a valid vehicle before the vehicle-specific
+        query, (2) grounds the answer in tool output, (3) stays concise.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  - name: app_knowledge_grounding
+    input:
+      user_message: "How do I configure an alert in TeslaSync? Cite the application documentation."
+    expect:
+      must_call_tools: ["retrieve_app_knowledge"]
+      answer_must_contain: ["docs/guide/alerts.md"]
+      answer_must_not_contain: ["I made", "I configured"]
+      judge_rubric: |
+        Score 1-5 on: (1) retrieves application knowledge before answering,
+        (2) cites only the supplied source identifier, (3) does not claim a
+        mutation. Pass = score >= 4.
+      judge_pass_threshold: 4

@@ -18,20 +18,24 @@ export interface ChatSuggestion {
 export function getChatSuggestions(): ChatSuggestion[] {
   return [
     {
-      i18nKey: 'chatbot.suggestion.fleetYesterday',
-      defaultValue: 'What did my fleet do yesterday?',
+      i18nKey: 'chatbot.suggestion.readiness',
+      defaultValue:
+        'Give me a fleet readiness briefing using battery, alerts, and recent charging.',
     },
     {
-      i18nKey: 'chatbot.suggestion.chargingCost30d',
-      defaultValue: 'Charging cost last 30 days',
+      i18nKey: 'chatbot.suggestion.attention',
+      defaultValue:
+        'Which vehicle needs attention first, and what evidence supports it?',
     },
     {
-      i18nKey: 'chatbot.suggestion.socDropping',
-      defaultValue: 'Why is my SoC dropping faster this week?',
+      i18nKey: 'chatbot.suggestion.crossDomain',
+      defaultValue:
+        'Compare recent driving efficiency and charging patterns across my vehicles.',
     },
     {
-      i18nKey: 'chatbot.suggestion.efficientDrive',
-      defaultValue: 'Show me the most efficient drive this month',
+      i18nKey: 'chatbot.suggestion.knowledge',
+      defaultValue:
+        'How do I configure alerts in TeslaSync? Cite the relevant documentation.',
     },
   ];
 }

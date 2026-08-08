@@ -3,7 +3,7 @@ import { Lock, Unlock, Shield, Wind, Cpu } from 'lucide-react'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { FadeIn } from '@/components/motion/FadeIn'
 import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarViz'
-import { RadialGauge } from '@/components/charts/RadialGauge'
+import { LinearGauge } from '@/components/charts/LinearGauge'
 import { MetricBar } from '@/components/data-display/MetricBar'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
@@ -21,7 +21,7 @@ const COLOR = {
 }
 
 /**
- * Gauge upper bounds are expressed in SI so the RadialGauge percent fill
+ * Gauge upper bounds are expressed in SI so the LinearGauge percent fill
  * reflects the same physical quantity regardless of
  * the user's display preference (km/h vs mph, km vs mi).
  *   600 mi  ≈ 965_606 m         — practical upper bound for rated range
@@ -86,7 +86,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
     },
   ]
 
-  // Pre-convert SI values to user-pref numerics so RadialGauge / MetricBar
+  // Pre-convert SI values to user-pref numerics so LinearGauge / MetricBar
   // receive matching value/max pairs in the SAME unit.
   const rangeDisplay = convertDistanceFromSI(ratedRange, unitPrefs.distance)
   const rangeMax = convertDistanceFromSI(MAX_RANGE_METERS, unitPrefs.distance)
@@ -118,9 +118,9 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
 
           {/* Gauges + metrics */}
           <div className="flex flex-col gap-6">
-            {/* Radial gauge row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 justify-items-center">
-              <RadialGauge
+            {/* Gauge row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <LinearGauge
                 value={batteryLevel}
                 max={100}
                 label={t('common.battery', 'Battery')}
@@ -128,7 +128,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 color={batteryColor(batteryLevel)}
                 size={110}
               />
-              <RadialGauge
+              <LinearGauge
                 value={Math.round(rangeDisplay)}
                 max={Math.round(rangeMax)}
                 label={t('common.range', 'Range')}
@@ -136,7 +136,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 color={COLOR.CYAN}
                 size={110}
               />
-              <RadialGauge
+              <LinearGauge
                 value={Math.round(speedDisplay)}
                 max={Math.round(speedMax)}
                 label={t('common.speed', 'Speed')}
@@ -144,7 +144,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 color={speed > 0 ? COLOR.PURPLE : COLOR.DARK}
                 size={110}
               />
-              <RadialGauge
+              <LinearGauge
                 value={chargerPower}
                 max={250}
                 label={t('common.power', 'Power')}

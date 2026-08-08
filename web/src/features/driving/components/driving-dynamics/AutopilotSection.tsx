@@ -9,6 +9,7 @@ import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
+import { INTERVALS } from '@/lib/constants';
 
 import { latestNumeric, latestText } from '@/lib/signalObservation';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
@@ -60,14 +61,20 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
 
   const speedUnit = unitPrefs.speed;
 
-  const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 5_000 });
+  const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: INTERVALS.REALTIME });
+  // Cruise set-speed and follow distance are cold signals — the vehicle only
+  // re-emits them when the driver changes them, so they are read from the
+  // latest signal_log row. They still need a cadence: without one these two
+  // queries fetched exactly once per mount and the panel showed a set-speed
+  // from whenever the page happened to load.
   const { data: cruiseSetObs } = useSignalObservations(
     vehicleId ?? undefined,
-    { signal_name: 'CruiseSetSpeed', limit: 1 },
+    { signal_name: 'CruiseSetSpeed', limit: 1, refetchInterval: INTERVALS.FAST },
   );
   const { data: followObs } = useSignalObservations(vehicleId ?? undefined, {
     signal_name: 'CruiseFollowDistance',
     limit: 1,
+    refetchInterval: INTERVALS.FAST,
   });
 
   const vehicleState = stateData?.state;

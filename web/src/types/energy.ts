@@ -194,29 +194,62 @@ export interface ProjectedRangeData {
   avg_daily_km: number;
 }
 
+export interface SleepStateDistributionRow {
+  state?: string | null;
+  /** Count of FSM transitions whose destination was `state`. */
+  count?: number | null;
+  /**
+   * Reconstructed dwell minutes. The current backend intentionally emits
+   * zero until transition-pair dwell reconstruction is implemented.
+   */
+  total_minutes?: number | null;
+}
+
+export interface SleepSentryGroup {
+  sentry_mode?: boolean | null;
+  count?: number | null;
+  avg_drain_rate?: number | null;
+  avg_duration_hours?: number | null;
+  avg_battery_lost?: number | null;
+  /** Average outside temperature in SI degrees Celsius. */
+  avg_temp?: number | null;
+}
+
 export interface SleepEfficiencyData {
-  sleep_efficiency_pct: number;
-  time_to_sleep_avg_min: number;
-  sentry_on_drain_rate: number;
-  sentry_off_drain_rate: number;
-  sentry_monthly_cost: number;
-  sentry_monthly_kwh: number;
-  sentry_extra_drain_rate: number;
-  sentry_extra_monthly_kwh: number;
-  sentry_extra_monthly_cost: number;
-  state_distribution: { state: string; total_minutes: number }[];
-  sentry_comparison: { sentry_mode: boolean; avg_drain_rate: number; avg_battery_lost: number }[];
-  recent_events: SleepDrainEvent[];
+  vehicle_id?: number | null;
+  period_days?: number | null;
+  sleep_efficiency_pct?: number | null;
+  time_to_sleep_avg_min?: number | null;
+  sentry_on_drain_rate?: number | null;
+  sentry_off_drain_rate?: number | null;
+  sentry_monthly_cost?: number | null;
+  sentry_monthly_kwh?: number | null;
+  sentry_extra_drain_rate?: number | null;
+  sentry_extra_monthly_kwh?: number | null;
+  sentry_extra_monthly_cost?: number | null;
+  /** Estimated battery capacity in SI watt-hours. */
+  battery_capacity_wh?: number | null;
+  capacity_source?: string | null;
+  base_cost_per_kwh?: number | null;
+  total_events?: number | null;
+  avg_sentry_duration_hours?: number | null;
+  state_distribution?: SleepStateDistributionRow[] | null;
+  sentry_comparison?: SleepSentryGroup[] | null;
+  recent_events?: SleepDrainEvent[] | null;
 }
 
 export interface SleepDrainEvent {
-  id: number;
-  start_date: string;
-  duration_hours: number;
-  battery_lost: number;
-  drain_rate: number;
-  sentry_mode: boolean;
-  outside_temp: number | null;
+  id?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  duration_hours?: number | null;
+  battery_lost?: number | null;
+  drain_rate?: number | null;
+  sentry_mode?: boolean | null;
+  /** Outside temperature in SI degrees Celsius. */
+  outside_temp?: number | null;
+  start_battery?: number | null;
+  end_battery?: number | null;
 }
 
 // Tesla Energy Site History types

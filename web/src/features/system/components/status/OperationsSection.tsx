@@ -5,7 +5,7 @@ import { Bell, Send, CheckCircle, XCircle } from 'lucide-react';
 import { Grid } from '@/components/layout';
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -138,13 +138,14 @@ export function OperationsSection() {
                 </Grid>
 
                 <div className="flex justify-center mb-4">
-                  <RadialGauge
+                  <LinearGauge
                     value={successRate}
                     max={100}
                     label={t('Success')}
                     unit="%"
                     color={successRate >= 95 ? '#22c55e' : successRate >= 80 ? '#f59e0b' : '#ef4444'}
                     size={120}
+                    className="max-w-xs"
                   />
                 </div>
               </>

@@ -18,7 +18,10 @@ import { STALE_TIMES } from '@/lib/constants';
 
 /** One hour of the diurnal grid carbon-intensity curve. */
 export interface CarbonHourIntensity {
-  /** Local clock hour 0..23. */
+  /**
+   * Backend/model clock-hour 0..23. The endpoint does not expose the
+   * timezone used by its EXTRACT(HOUR FROM started_at) attribution.
+   */
   hour_of_day: number;
   /** Grams of CO2 attributed per kWh drawn during this hour. */
   g_co2_per_kwh: number;

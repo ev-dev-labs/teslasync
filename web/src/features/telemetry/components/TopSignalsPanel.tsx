@@ -71,6 +71,7 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
       </PanelTitle>
 
       {rows.length === 0 ? (
+        // no-action: transient — the leaderboard fills once the live SSE tail delivers its first buffered signal frame; nothing the user can trigger.
         <EmptyState
           icon={<ListOrdered className="h-8 w-8" aria-hidden="true" />}
           message={t('liveMonitor.noBuffer', 'No signals buffered yet')}

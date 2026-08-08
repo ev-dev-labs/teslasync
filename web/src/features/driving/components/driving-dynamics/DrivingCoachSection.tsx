@@ -5,7 +5,7 @@ import { Zap, ShieldCheck, Lightbulb } from 'lucide-react';
 import { GlassPanel, Badge, DataTable, PanelTitle, SectionTitle, Caption, Text, type Column } from '@/components/ui';
 import {
   ChartTooltip,
-  RadialGauge,
+  LinearGauge,
   AREA_DEFAULTS,
   LineChart,
   Line,
@@ -21,14 +21,21 @@ import { FadeIn } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
-import type { DrivingCoachData, CoachDriveScore } from '@/types/driving';
+import { useDrivingCoach } from '@/api/hooks/useDriving';
+import { INTERVALS } from '@/lib/constants';
+import type { CoachDriveScore } from '@/types/driving';
 
 interface DrivingCoachSectionProps {
-  coachData: DrivingCoachData | undefined;
+  vehicleId: string | undefined;
 }
 
-export default function DrivingCoachSection({ coachData }: DrivingCoachSectionProps) {
+export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionProps) {
   const { t } = useTranslation();
+
+  // The coach model aggregates 30 days of drives — it only shifts when a
+  // drive completes, so it refreshes on the slow analytics cadence rather
+  // than inheriting the page's 5s live-motor poll.
+  const { data: coachData } = useDrivingCoach(vehicleId, 30, INTERVALS.ANALYTICS);
 
   const coachColumns: Column<CoachDriveScore>[] = useMemo(
     () => [
@@ -82,7 +89,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:gap-5">
         <FadeIn delay={0.43} className="h-full">
           <GlassPanel className="flex h-full flex-col items-center justify-center p-4 sm:p-5">
-            <RadialGauge
+            <LinearGauge
               value={coachData?.overall_score ?? 0}
               max={100}
               label={t('dynamics.coach.overallScore', 'Driving Score')}

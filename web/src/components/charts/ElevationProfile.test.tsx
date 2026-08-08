@@ -104,7 +104,7 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
   const React = await vi.importActual<typeof import('react')>('react');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const AreaChart = (props: any) => {
     const { children, data, onClick, className } = props;
     const fire = (activeTooltipIndex: unknown) => () =>
@@ -132,10 +132,10 @@ vi.mock('recharts', async () => {
       React.createElement('svg', { key: 'svg' }, children),
     );
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const ResponsiveContainer = (props: any) =>
     React.createElement('div', { 'data-testid': 'responsive-container' }, props.children);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const ReferenceLine = (props: any) =>
     React.createElement('g', { 'data-testid': 'reference-line', 'data-x': String(props.x) });
   const Noop = () => null;

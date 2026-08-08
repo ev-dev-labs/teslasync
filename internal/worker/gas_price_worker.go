@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,6 +28,8 @@ func gasPriceTracer() oteltrace.Tracer { return otel.Tracer(gasPriceTracerName) 
 // Must match the factor in the EIA adapter.
 const gallonToKWhFactor = 7.14
 
+const litersPerUSGallon = 3.785411784
+
 // GasPriceWorker polls an external price provider for the latest gasoline price.
 type GasPriceWorker struct {
 	db       *database.DB
@@ -36,7 +39,8 @@ type GasPriceWorker struct {
 	mu             sync.Mutex
 	pollInterval   string
 	lastPollTime   time.Time
-	lastPrice      float64 // gallon price
+	lastPrice      float64 // price in the configured gas unit
+	lastPriceGal   float64 // provider price persisted in backward-compatible gallons
 	lastPriceKWhEq float64 // kWh-equivalent price
 	running        atomic.Bool
 
@@ -132,28 +136,25 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 		return
 	}
 
-	price := result.PricePerGallon
+	pricePerGallon := result.PricePerGallon
 	kwhEqPrice := result.PricePerKWh
 
-	// Record in gas_price_history (close current period, insert new)
-	if err := w.recordPrice(ctx, price); err != nil {
+	// Persist the provider's per-gallon quote in the user's configured unit.
+	pricePerUnit, gasUnit, err := w.recordPrice(ctx, pricePerGallon)
+	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "record price failed")
-		log.Error().Err(err).Float64("price", price).Msg("gas price poll: failed to record price")
-		return
-	}
-
-	// Update settings table with the new price
-	if err := w.updateSettingsPrice(ctx, price); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "update settings failed")
-		log.Error().Err(err).Float64("price", price).Msg("gas price poll: failed to update settings")
+		log.Error().
+			Err(err).
+			Float64("price_per_gallon", pricePerGallon).
+			Msg("gas price poll: failed to record price")
 		return
 	}
 
 	w.mu.Lock()
 	w.lastPollTime = time.Now()
-	w.lastPrice = price
+	w.lastPrice = pricePerUnit
+	w.lastPriceGal = pricePerGallon
 	w.lastPriceKWhEq = kwhEqPrice
 	w.mu.Unlock()
 
@@ -161,30 +162,35 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 	w.persistState(ctx)
 
 	span.SetAttributes(
-		attribute.Float64("gas_price.value", price),
+		attribute.Float64("gas_price.value", pricePerUnit),
+		attribute.String("gas_price.unit", gasUnit),
 		attribute.String("gas_price.region", result.Region),
 		attribute.String("gas_price.currency", result.Currency),
 		attribute.String("gas_price.outcome", "ok"),
 	)
 	log.Info().
-		Float64("price", price).
+		Float64("price", pricePerUnit).
+		Str("unit", gasUnit).
 		Str("region", result.Region).
 		Str("currency", result.Currency).
 		Msg("gas price poll: updated successfully")
 }
 
-// recordPrice closes the current gas_price_history period and inserts a new one.
-func (w *GasPriceWorker) recordPrice(ctx context.Context, price float64) error {
+// recordPrice atomically records history and updates the configured comparison price.
+func (w *GasPriceWorker) recordPrice(
+	ctx context.Context,
+	pricePerGallon float64,
+) (float64, string, error) {
 	tx, err := w.db.Pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return 0, "", fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	// Close current active period
 	if _, err := tx.Exec(ctx,
 		`UPDATE gas_price_history SET effective_to = NOW() WHERE effective_to IS NULL`); err != nil {
-		return fmt.Errorf("close period: %w", err)
+		return 0, "", fmt.Errorf("close period: %w", err)
 	}
 
 	// Get current efficiency from settings (key-value table)
@@ -198,24 +204,29 @@ func (w *GasPriceWorker) recordPrice(ctx context.Context, price float64) error {
 		gasUnit = "gallon"
 		efficiencyMPG = 25
 	}
+	gasUnit = normalizeGasPriceUnit(gasUnit)
+	pricePerUnit := gasPricePerConfiguredUnit(pricePerGallon, gasUnit)
 
 	// Insert new period
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO gas_price_history (price_per_unit, unit, efficiency_mpg, effective_from) VALUES ($1, $2, $3, NOW())`,
-		price, gasUnit, efficiencyMPG); err != nil {
-		return fmt.Errorf("insert period: %w", err)
+		pricePerUnit, gasUnit, efficiencyMPG); err != nil {
+		return 0, "", fmt.Errorf("insert period: %w", err)
 	}
 
-	return tx.Commit(ctx)
-}
-
-// updateSettingsPrice upserts the gas_price_per_unit in the key-value settings table.
-func (w *GasPriceWorker) updateSettingsPrice(ctx context.Context, price float64) error {
-	_, err := w.db.Pool.Exec(ctx,
+	if _, err := tx.Exec(ctx,
 		`INSERT INTO settings (key, value_num, data_kind, created_at, updated_at)
 		VALUES ('gas_price_per_unit', $1, 'number', NOW(), NOW())
-		ON CONFLICT (key) DO UPDATE SET value_num = $1, updated_at = NOW()`, price)
-	return err
+		ON CONFLICT (key) DO UPDATE SET value_num = $1, updated_at = NOW()`,
+		pricePerUnit,
+	); err != nil {
+		return 0, "", fmt.Errorf("update setting: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, "", fmt.Errorf("commit price: %w", err)
+	}
+	return pricePerUnit, gasUnit, nil
 }
 
 // Stop signals the worker to stop auto-polling.
@@ -292,7 +303,7 @@ func (w *GasPriceWorker) tickerDuration() time.Duration {
 func (w *GasPriceWorker) persistState(ctx context.Context) {
 	w.mu.Lock()
 	lastPoll := w.lastPollTime
-	lastPrice := w.lastPrice
+	lastPriceGal := w.lastPriceGal
 	interval := w.pollInterval
 	w.mu.Unlock()
 
@@ -306,7 +317,7 @@ func (w *GasPriceWorker) persistState(ctx context.Context) {
 			poll_interval = EXCLUDED.poll_interval,
 			last_poll_time = EXCLUDED.last_poll_time,
 			last_price = EXCLUDED.last_price
-	`, running, interval, lastPoll, lastPrice)
+	`, running, interval, lastPoll, lastPriceGal)
 	if err != nil {
 		log.Warn().Err(err).Msg("gas price worker: failed to persist state")
 	}
@@ -318,10 +329,18 @@ func (w *GasPriceWorker) restoreState(ctx context.Context) {
 	var interval string
 	var lastPoll time.Time
 	var lastPrice float64
+	var gasUnit string
 
 	err := w.db.Pool.QueryRow(ctx,
-		`SELECT enabled, poll_interval, last_poll_time, last_price FROM gas_price_poll_state WHERE id = 1`,
-	).Scan(&enabled, &interval, &lastPoll, &lastPrice)
+		`SELECT
+			enabled,
+			poll_interval,
+			last_poll_time,
+			last_price,
+			COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon')
+		FROM gas_price_poll_state
+		WHERE id = 1`,
+	).Scan(&enabled, &interval, &lastPoll, &lastPrice, &gasUnit)
 	if err != nil {
 		// Table may not exist yet or no row — use config defaults
 		return
@@ -330,7 +349,8 @@ func (w *GasPriceWorker) restoreState(ctx context.Context) {
 	w.mu.Lock()
 	w.pollInterval = interval
 	w.lastPollTime = lastPoll
-	w.lastPrice = lastPrice
+	w.lastPrice = gasPricePerConfiguredUnit(lastPrice, gasUnit)
+	w.lastPriceGal = lastPrice
 	if lastPrice > 0 {
 		w.lastPriceKWhEq = lastPrice / gallonToKWhFactor
 	}
@@ -343,4 +363,20 @@ func (w *GasPriceWorker) restoreState(ctx context.Context) {
 		Time("last_poll_time", lastPoll).
 		Float64("last_price", lastPrice).
 		Msg("gas price worker: restored persisted state")
+}
+
+func normalizeGasPriceUnit(unit string) string {
+	switch strings.ToLower(strings.TrimSpace(unit)) {
+	case "liter", "liters", "litre", "litres":
+		return "liter"
+	default:
+		return "gallon"
+	}
+}
+
+func gasPricePerConfiguredUnit(pricePerGallon float64, unit string) float64 {
+	if normalizeGasPriceUnit(unit) == "liter" {
+		return pricePerGallon / litersPerUSGallon
+	}
+	return pricePerGallon
 }

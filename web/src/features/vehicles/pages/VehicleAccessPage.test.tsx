@@ -137,7 +137,7 @@ const mockCreateInvitation = useCreateVehicleInvitation as unknown as ReturnType
 const mockRevokeInvitation = useRevokeVehicleInvitation as unknown as ReturnType<typeof vi.fn>;
 const mockVehicle = useVehicle as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -152,7 +152,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeMutation(over: Record<string, unknown> = {}): any {
   return { mutate: vi.fn(), isPending: false, ...over };
 }

@@ -10,6 +10,7 @@ import {
   useLatestTirePressure,
 } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
+import { resolveHvacActive } from '@/lib/climateState';
 import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
 import { cleanNil } from '@/lib/cleanNil';
 import { WidgetShell } from './WidgetShell';
@@ -45,6 +46,9 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
   const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
 
   const hasData = motor || climate || security || tires;
+  const climateHvacState = climate
+    ? resolveHvacActive(climate.hvac_power, climate.is_ac_on)
+    : null;
 
   return (
     <WidgetShell
@@ -115,7 +119,11 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 />
                 <Row
                   label={t('widget.hvac', 'HVAC')}
-                  value={isFiniteNumber(climate.hvac_power) ? `${fmtNumber(climate.hvac_power, 1)} kW` : '—'}
+                  value={climateHvacState == null
+                    ? '—'
+                    : climateHvacState
+                      ? t('widget.hvacOn', 'On')
+                      : t('widget.hvacOff', 'Off')}
                 />
               </>
             ) : (

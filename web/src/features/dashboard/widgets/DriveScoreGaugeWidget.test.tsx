@@ -68,7 +68,7 @@ const mockUseDriveScore = vi.mocked(useDriveScore);
 const mockUseVehicles = vi.mocked(useVehicles);
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
-// inside <WidgetShell>, and <MetricBar>/<RadialGauge> motion) reads it.
+// inside <WidgetShell>, and <MetricBar>/<LinearGauge> motion) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,

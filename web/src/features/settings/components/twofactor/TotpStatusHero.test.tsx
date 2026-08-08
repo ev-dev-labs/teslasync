@@ -70,6 +70,7 @@ vi.mock('@/hooks/useDateFormat', () => ({
 
 import { TotpStatusHero } from './TotpStatusHero'
 import TotpStatusHeroDefault from './TotpStatusHero'
+import { BADGE_VARIANTS } from '@/components/ui';
 
 type Props = ComponentProps<typeof TotpStatusHero>
 
@@ -252,7 +253,7 @@ describe('TotpStatusHero — variant mapping & module surface', () => {
     unmount()
 
     renderHero({ activated: false })
-    expect(screen.getByTestId('totp-status-pill')).toHaveClass('bg-gray-100')
+    expect(screen.getByTestId('totp-status-pill')).toHaveClass(BADGE_VARIANTS.neutral)
   })
 
   it('exposes the same component as its default export', () => {

@@ -71,6 +71,7 @@ import type {
   FeatureFlagChange,
   FeatureFlagOperation,
 } from '@/types/admin-diagnostics'
+import { BADGE_VARIANTS } from '@/components/ui'
 
 // U+2014 EM DASH — the universal "missing value" placeholder. Referenced by
 // codepoint so the test source stays ASCII-clean and unambiguous.
@@ -184,7 +185,7 @@ describe('ChangesPanel', () => {
 
     expect(screen.getByText('set').className).toContain('bg-green-100')
     expect(screen.getByText('delete').className).toContain('bg-red-100')
-    expect(screen.getByText('archive').className).toContain('bg-gray-100')
+    expect(screen.getByText('archive').className).toContain(BADGE_VARIANTS.neutral)
   })
 
   it('shows the global empty state when there are no rows and not loading', () => {

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
@@ -12,6 +12,10 @@ export const telemetryKeys = {
   liveSignals: (vehicleId?: number) => ['live-signals', vehicleId] as const,
   signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
   signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
+  signalAnalysisHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
+    ['signal-analysis-history', vehicleId, signal, hours, limit] as const,
+  signalEvidenceHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
+    ['signal-evidence-history', vehicleId, signal, hours, limit] as const,
   signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
   signalDiff: (vehicleId: number, signal: string, from: string, to: string) => ['signal-diff', vehicleId, signal, from, to] as const,
   signalDiffServer: (vehicleId: number, atA: string, atB: string, signalsCsv: string) =>
@@ -40,6 +44,20 @@ export interface VehicleLiveSignal {
   age_ms?: number;
   /** Typed timestamp mirror of `timestamp`. */
   ts?: string;
+}
+
+export interface SignalEvidenceBundleSeries {
+  signal: string;
+  response: SignalHistoryResponse;
+}
+
+export interface SignalEvidenceBundleResult {
+  data: SignalEvidenceBundleSeries[];
+  isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
 }
 
 export interface VehicleLiveSignalsResponse {
@@ -153,6 +171,96 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
       request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal: abortSignal }),
     enabled: vehicleId > 0 && !!signal,
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/**
+ * Fetches the backend's largest supported signal window for statistical
+ * analysis without expanding ordinary sparkline/history queries.
+ */
+export function useSignalAnalysisHistory(
+  vehicleId: number,
+  signalName: string,
+  hours: number,
+  limit = 10_000,
+) {
+  const boundedHours = Number.isFinite(hours)
+    ? Math.max(1, Math.min(24 * 365, Math.floor(hours)))
+    : 24;
+  const boundedLimit = Number.isFinite(limit)
+    ? Math.max(1, Math.min(10_000, Math.floor(limit)))
+    : 10_000;
+  return useQuery({
+    queryKey: telemetryKeys.signalAnalysisHistory(
+      vehicleId,
+      signalName,
+      boundedHours,
+      boundedLimit,
+    ),
+    queryFn: ({ signal }) =>
+      request<SignalHistoryResponse>(
+        `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,
+        { signal },
+      ),
+    enabled: vehicleId > 0 && signalName.length > 0,
+    staleTime: STALE_TIMES.MODERATE,
+    refetchInterval: INTERVALS.STANDARD,
+    refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Loads a bounded set of signal histories for local evidence analysis.
+ * Each signal keeps an independent cache entry and cancellation signal so
+ * changing the focal signal does not strand obsolete multi-request work.
+ */
+export function useSignalEvidenceBundle(
+  vehicleId: number,
+  signalNames: readonly string[],
+  hours: number,
+  limit = 10_000,
+): SignalEvidenceBundleResult {
+  const boundedHours = Number.isFinite(hours)
+    ? Math.max(1, Math.min(24 * 365, Math.floor(hours)))
+    : 72;
+  const boundedLimit = Number.isFinite(limit)
+    ? Math.max(1, Math.min(10_000, Math.floor(limit)))
+    : 10_000;
+  const normalizedSignals = Array.from(
+    new Set(signalNames.map((name) => name.trim()).filter((name) => name.length > 0)),
+  ).slice(0, 8);
+
+  return useQueries({
+    queries: normalizedSignals.map((signalName) => ({
+      queryKey: telemetryKeys.signalEvidenceHistory(
+        vehicleId,
+        signalName,
+        boundedHours,
+        boundedLimit,
+      ),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        request<SignalHistoryResponse>(
+          `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,
+          { signal },
+        ),
+      enabled: vehicleId > 0,
+      staleTime: STALE_TIMES.MODERATE,
+      refetchInterval: false,
+    })),
+    combine: (results): SignalEvidenceBundleResult => ({
+      data: results.flatMap((result, index) =>
+        result.data == null
+          ? []
+          : [{ signal: normalizedSignals[index]!, response: result.data }],
+      ),
+      isLoading: results.some((result) => result.isLoading),
+      isFetching: results.some((result) => result.isFetching),
+      isError: results.some((result) => result.isError),
+      error: results.find((result) => result.error != null)?.error ?? null,
+      refetch: async () => {
+        await Promise.all(results.map((result) => result.refetch()));
+      },
+    }),
   });
 }
 
@@ -348,7 +456,7 @@ export function useSignalCatalog() {
  */
 export function useSignalObservations(
   vehicleId: number | string | undefined,
-  opts?: { signal_name?: string; since?: string; until?: string; limit?: number },
+  opts?: { signal_name?: string; since?: string; until?: string; limit?: number; refetchInterval?: number },
 ) {
   const params = new URLSearchParams();
   if (vehicleId != null) params.set('vehicle_id', String(vehicleId));
@@ -371,6 +479,7 @@ export function useSignalObservations(
     },
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.REALTIME,
+    refetchInterval: opts?.refetchInterval,
   });
 }
 

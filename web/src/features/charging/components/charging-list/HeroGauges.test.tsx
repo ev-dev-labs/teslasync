@@ -1,14 +1,17 @@
 /**
  * HeroGauges — the charging-list hero KPI strip.
  *
- * The four radial gauges (`<RadialGauge>`) and the animated "$/kWh" tile
- * (`<AnimatedNumber>`) are presentational leaves: RadialGauge draws an SVG ring
- * that jsdom sizes at 0×0, and AnimatedNumber eases its display over a
- * `requestAnimationFrame` loop that never settles synchronously in jsdom. So —
- * like the sibling ChartsRow suite — we stub those two leaves with prop-echoing
- * doubles and assert the ONE thing HeroGauges actually owns: deriving each
- * gauge's `value` / `max` / `label` / `unit` / `color` from `stats`, plus the
- * hardening (null-safety + the locale-truncation and double-rounding bug fixes).
+ * The strip used to be four radial gauges whose ceilings were derived from the
+ * readings themselves: `max={Math.max(count, 50)}` renders a completely full
+ * ring for every count above 50, and the energy and cost gauges did the same.
+ * A user with 60 sessions and a user with 6,000 saw the identical picture. The
+ * three unbounded totals are now plain readings; average power keeps a scale
+ * because 250 kW (the Supercharger peak) is a real one.
+ *
+ * `MetricTile` and `ThresholdBar` are stubbed with prop-echoing doubles so the
+ * derivation this component owns — which reading goes where, in what unit, at
+ * what precision, and against which scale — is directly assertable. jsdom sizes
+ * the real SVG/flex leaves at 0×0, so their internals are not the subject here.
  *
  * `react-i18next` is stubbed so `t(key, 'Default')` returns the English default,
  * making the label / empty-state assertions exact.
@@ -31,51 +34,69 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// Prop-echoing double for the SVG gauge. Each instance is discoverable by its
-// `data-label`, and every derived prop is exposed as a data-attribute so the
-// derivation logic (and its bug fixes) is directly assertable.
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+
+interface Band {
+  from: number;
+  to: number;
+  label?: string;
+}
+
 vi.mock('@/components/charts', () => ({
-  RadialGauge: ({
+  ThresholdBar: ({
     value,
+    min,
     max,
+    bands,
     label,
     unit,
-    color,
+    decimals,
   }: {
     value: number;
+    min: number;
     max: number;
+    bands?: Band[];
     label: string;
     unit?: string;
-    color?: string;
+    decimals?: number;
   }) => (
     <div
-      data-testid="radial-gauge"
+      data-testid="threshold-bar"
       data-label={label}
       data-value={String(value)}
+      data-min={String(min)}
       data-max={String(max)}
       data-unit={unit ?? ''}
-      data-color={color ?? ''}
+      data-decimals={String(decimals)}
+      data-bands={(bands ?? []).map((b) => `${b.label}:${b.from}-${b.to}`).join('|')}
     />
   ),
 }));
 
-// Prop-echoing double for the animated total — renders synchronously so the
-// value/decimals it receives are observable without pumping RAF.
 vi.mock('@/components/data-display', () => ({
-  AnimatedNumber: ({
+  MetricTile: ({
     value,
+    unit,
+    label,
     decimals,
+    accentClass,
   }: {
     value: number;
+    unit?: string;
+    label: string;
     decimals?: number;
+    accentClass?: string;
   }) => (
-    <span
-      data-testid="animated-number"
+    <div
+      data-testid="metric-tile"
+      data-label={label}
       data-value={String(value)}
+      data-unit={unit ?? ''}
       data-decimals={String(decimals)}
-    >
-      {value.toFixed(decimals ?? 0)}
-    </span>
+      data-accent={accentClass ?? ''}
+    />
   ),
 }));
 
@@ -99,98 +120,98 @@ function makeStats(overrides: Partial<ChargingStats> = {}): ChargingStats {
   };
 }
 
-function gauge(container: HTMLElement, label: string): HTMLElement {
+function readout(container: HTMLElement, label: string): HTMLElement {
   const el = container.querySelector<HTMLElement>(`[data-label="${label}"]`);
-  if (!el) throw new Error(`gauge "${label}" not rendered`);
+  if (!el) throw new Error(`readout "${label}" not rendered`);
   return el;
 }
 
 describe('HeroGauges — empty state', () => {
-  it('renders an EmptyState (role="status") and no gauges when stats is null', () => {
+  it('renders an EmptyState (role="status") and no readouts when stats is null', () => {
     const { container } = render(<HeroGauges stats={null} />);
 
     const status = screen.getByRole('status');
     expect(status).toBeInTheDocument();
     expect(status).toHaveTextContent(EMPTY_MESSAGE);
 
-    // The gauge strip must not render at all in the empty branch.
-    expect(container.querySelectorAll('[data-testid="radial-gauge"]')).toHaveLength(0);
-    expect(screen.queryByTestId('animated-number')).toBeNull();
+    expect(container.querySelectorAll('[data-testid="metric-tile"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid="threshold-bar"]')).toHaveLength(0);
   });
 });
 
-describe('HeroGauges — populated strip', () => {
-  it('renders exactly four gauges plus the $/kWh tile with correct labels', () => {
-    render(<HeroGauges stats={makeStats()} />);
-
-    expect(screen.getAllByTestId('radial-gauge')).toHaveLength(4);
-    // No empty-state placeholder leaks through when data is present.
-    expect(screen.queryByRole('status')).toBeNull();
-    expect(screen.getByTestId('animated-number')).toBeInTheDocument();
-  });
-
-  it('maps each gauge to its unit + brand color (the static contract)', () => {
+describe('HeroGauges — unbounded totals carry no scale', () => {
+  it('renders session count, energy, cost and unit cost as plain readings', () => {
     const { container } = render(<HeroGauges stats={makeStats()} />);
 
-    expect(gauge(container, 'Sessions').getAttribute('data-unit')).toBe('');
-    expect(gauge(container, 'Sessions').getAttribute('data-color')).toBe('#00f0ff');
-    expect(gauge(container, 'Energy').getAttribute('data-unit')).toBe('kWh');
-    expect(gauge(container, 'Energy').getAttribute('data-color')).toBe('#10b981');
-    expect(gauge(container, 'Total Cost').getAttribute('data-unit')).toBe('$');
-    expect(gauge(container, 'Total Cost').getAttribute('data-color')).toBe('#f59e0b');
-    expect(gauge(container, 'Avg Power').getAttribute('data-unit')).toBe('kW');
-    expect(gauge(container, 'Avg Power').getAttribute('data-color')).toBe('#a855f7');
+    expect(screen.getAllByTestId('metric-tile')).toHaveLength(4);
+    expect(screen.queryByRole('status')).toBeNull();
+
+    expect(readout(container, 'Sessions').getAttribute('data-value')).toBe('12');
+    expect(readout(container, 'Energy').getAttribute('data-value')).toBe('345.6');
+    expect(readout(container, 'Energy').getAttribute('data-unit')).toBe('kWh');
+    expect(readout(container, 'Total Cost').getAttribute('data-value')).toBe('487.5');
+    expect(readout(container, 'Avg cost').getAttribute('data-value')).toBe('0.128');
   });
 
-  it('derives value + max: rounds energy/power/cost, passes sessions through', () => {
-    const { container } = render(
-      <HeroGauges stats={makeStats({ count: 12, totalEnergy: 345.6, avgPower: 47.4, totalCost: 487.5 })} />,
-    );
-
-    // Sessions: raw count, floor-50 axis.
-    expect(gauge(container, 'Sessions').getAttribute('data-value')).toBe('12');
-    expect(gauge(container, 'Sessions').getAttribute('data-max')).toBe('50');
-
-    // Energy: Math.round(345.6) = 346, floor-500 axis.
-    expect(gauge(container, 'Energy').getAttribute('data-value')).toBe('346');
-    expect(gauge(container, 'Energy').getAttribute('data-max')).toBe('500');
-
-    // Avg Power: Math.round(47.4) = 47, fixed 250 axis.
-    expect(gauge(container, 'Avg Power').getAttribute('data-value')).toBe('47');
-    expect(gauge(container, 'Avg Power').getAttribute('data-max')).toBe('250');
-
-    // Total Cost: Math.round(487.5) = 488, axis tracks the raw total.
-    expect(gauge(container, 'Total Cost').getAttribute('data-value')).toBe('488');
-    expect(gauge(container, 'Total Cost').getAttribute('data-max')).toBe('487.5');
+  it('resolves the cost unit from the reader currency, never a hardcoded $', () => {
+    const { container } = render(<HeroGauges stats={makeStats()} />);
+    expect(readout(container, 'Total Cost').getAttribute('data-unit')).toBe('$');
   });
 
-  it('passes the raw $/kWh through to AnimatedNumber at 3-decimal precision', () => {
-    render(<HeroGauges stats={makeStats({ avgCostPerKwh: 0.128 })} />);
+  it('keeps the third decimal on the unit cost that the reading depends on', () => {
+    const { container } = render(<HeroGauges stats={makeStats({ avgCostPerKwh: 0.128 })} />);
+    expect(readout(container, 'Avg cost').getAttribute('data-decimals')).toBe('3');
+  });
 
-    const animated = screen.getByTestId('animated-number');
-    // The raw value flows through — NOT pre-rounded to 2 decimals (0.13), which
-    // would have made the requested 3rd decimal permanently dead.
-    expect(animated.getAttribute('data-value')).toBe('0.128');
-    expect(animated.getAttribute('data-decimals')).toBe('3');
-    expect(animated).toHaveTextContent('0.128');
+  // Regression guard for the two rounding defects the old gauges carried.
+  it('passes totals through unrounded rather than truncating at a separator', () => {
+    const { container } = render(<HeroGauges stats={makeStats({ totalCost: 1234.56 })} />);
+
+    // The old code did parseFloat(fmtNumber(1234.56, 0)) === parseFloat('1,234') === 1.
+    const cost = readout(container, 'Total Cost');
+    expect(cost.getAttribute('data-value')).toBe('1234.56');
+    expect(cost.getAttribute('data-value')).not.toBe('1');
+    // Rounding is now the formatter's job, declared once as a precision.
+    expect(cost.getAttribute('data-decimals')).toBe('0');
+  });
+
+  it('never derives a ceiling from the reading — 60 and 6000 sessions differ', () => {
+    const { container: few } = render(<HeroGauges stats={makeStats({ count: 60 })} />);
+    const a = readout(few, 'Sessions').getAttribute('data-value');
+    const { container: many } = render(<HeroGauges stats={makeStats({ count: 6000 })} />);
+    const b = readout(many, 'Sessions').getAttribute('data-value');
+
+    expect(a).toBe('60');
+    expect(b).toBe('6000');
+    expect(a).not.toBe(b);
   });
 });
 
-describe('HeroGauges — bug guards', () => {
-  it('does NOT truncate a >= 1,000 total via the locale thousands separator', () => {
-    const { container } = render(<HeroGauges stats={makeStats({ totalCost: 1234.56 })} />);
+describe('HeroGauges — average power keeps a real scale', () => {
+  it('scales average power against the 250 kW Supercharger peak', () => {
+    const { container } = render(<HeroGauges stats={makeStats({ avgPower: 47.4 })} />);
 
-    const cost = gauge(container, 'Total Cost');
-    // Regression guard: parseFloat(fmtNumber(1234.56, 0)) === parseFloat('1,234') === 1.
-    // Math.round keeps the real magnitude.
-    expect(cost.getAttribute('data-value')).toBe('1235');
-    expect(cost.getAttribute('data-value')).not.toBe('1');
-    expect(cost.getAttribute('data-max')).toBe('1234.56');
+    const power = readout(container, 'Avg Power');
+    expect(power.getAttribute('data-testid')).toBe('threshold-bar');
+    expect(power.getAttribute('data-value')).toBe('47.4');
+    expect(power.getAttribute('data-min')).toBe('0');
+    expect(power.getAttribute('data-max')).toBe('250');
+    expect(power.getAttribute('data-unit')).toBe('kW');
   });
 
-  it('coerces absent numeric fields to 0 — no NaN reaches a gauge or the total', () => {
+  it('names the charging regimes so the scale is legible without the numbers', () => {
+    const { container } = render(<HeroGauges stats={makeStats()} />);
+
+    expect(readout(container, 'Avg Power').getAttribute('data-bands')).toBe(
+      'AC:0-22|DC fast:22-150|Supercharge:150-250',
+    );
+  });
+});
+
+describe('HeroGauges — hardening', () => {
+  it('coerces absent numeric fields to 0 — no NaN reaches any readout', () => {
     // `stats` is truthy (renders the strip) but every metric is missing, the
-    // exact snake_case/absent-field shape the API can hand back.
+    // exact absent-field shape the API can hand back.
     const partial = {} as ChargingStats;
 
     let container!: HTMLElement;
@@ -198,16 +219,14 @@ describe('HeroGauges — bug guards', () => {
       container = render(<HeroGauges stats={partial} />).container;
     }).not.toThrow();
 
-    expect(gauge(container, 'Sessions').getAttribute('data-value')).toBe('0');
-    expect(gauge(container, 'Energy').getAttribute('data-value')).toBe('0');
-    expect(gauge(container, 'Total Cost').getAttribute('data-value')).toBe('0');
-    expect(gauge(container, 'Avg Power').getAttribute('data-value')).toBe('0');
-    expect(screen.getByTestId('animated-number').getAttribute('data-value')).toBe('0');
+    expect(readout(container, 'Sessions').getAttribute('data-value')).toBe('0');
+    expect(readout(container, 'Energy').getAttribute('data-value')).toBe('0');
+    expect(readout(container, 'Total Cost').getAttribute('data-value')).toBe('0');
+    expect(readout(container, 'Avg Power').getAttribute('data-value')).toBe('0');
+    expect(readout(container, 'Avg cost').getAttribute('data-value')).toBe('0');
 
-    // Floors still apply, so a "no data" gauge has a sane, positive axis.
-    expect(gauge(container, 'Sessions').getAttribute('data-max')).toBe('50');
-    expect(gauge(container, 'Energy').getAttribute('data-max')).toBe('500');
-
+    // The power scale stays fixed and positive even with no data.
+    expect(readout(container, 'Avg Power').getAttribute('data-max')).toBe('250');
     expect(container.textContent).not.toMatch(/NaN/);
   });
 });

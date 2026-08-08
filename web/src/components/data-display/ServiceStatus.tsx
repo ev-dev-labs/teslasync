@@ -53,7 +53,7 @@ const HEALTH_TONE: Record<'healthy' | 'degraded' | 'unhealthy' | 'unknown', { do
   healthy: { dot: 'bg-neon-green', glow: 'shadow-[0_0_6px_rgba(16,185,129,0.5)]' },
   degraded: { dot: 'bg-neon-amber', glow: 'shadow-[0_0_6px_rgba(245,158,11,0.5)]' },
   unhealthy: { dot: 'bg-neon-red', glow: 'shadow-[0_0_6px_rgba(239,68,68,0.5)]' },
-  unknown: { dot: 'bg-white/25', glow: '' },
+  unknown: { dot: 'bg-[var(--text-muted)]', glow: '' },
 }
 
 function healthTone(overall?: string): keyof typeof HEALTH_TONE {

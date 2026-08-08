@@ -180,8 +180,8 @@ describe('AIChatbotIndicator — badge anatomy + accessibility', () => {
 
     const badge = screen.getByRole('img', { name: 'Helix' })
     const title = badge.getAttribute('title') ?? ''
-    expect(title).toContain('AI assistant')
-    expect(title).toContain('redacted fleet context')
+    expect(title).toContain('redacted TeslaSync data')
+    expect(title).toContain('explicit tool evidence')
   })
 })
 

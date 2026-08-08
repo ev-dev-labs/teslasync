@@ -34,6 +34,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 
 import { LiveTelemetry } from './LiveTelemetry';
+import { BADGE_VARIANTS } from '@/components/ui';
 import type {
   MotorData,
   ClimateData,
@@ -177,7 +178,7 @@ describe('LiveTelemetry', () => {
     cleanup();
 
     renderLive({ motorData: { ...motor, gear: 'P' } });
-    expect(screen.getByText('P').className).toContain('gray');
+    expect(screen.getByText('P').className).toContain(BADGE_VARIANTS.neutral);
   });
 
   it('falls back to an em dash for every missing drivetrain value', () => {
@@ -349,7 +350,7 @@ describe('LiveTelemetry', () => {
     cleanup();
 
     renderLive({ mediaData: { ...media, playback_status: 'Stopped' } });
-    expect(screen.getByText('Stopped').className).toContain('gray'); // neutral
+    expect(screen.getByText('Stopped').className).toContain(BADGE_VARIANTS.neutral); // neutral
     cleanup();
 
     renderLive({ mediaData: { ...media, audio_volume: 5, audio_volume_max: 0 } });

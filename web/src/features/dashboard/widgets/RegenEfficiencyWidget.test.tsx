@@ -5,11 +5,11 @@
  * (`vehicleId` prop → first vehicle from `useVehicles` → undefined) and reads
  * that vehicle's regenerative-braking rollup (`useRegenEfficiency`). It renders
  * one of two layouts inside `WidgetShell`:
- *   - compact (cols ≤ 1)  → a titleless `WidgetGaugeHero` (radial recovery gauge
+ *   - compact (cols ≤ 1)  → a titleless `WidgetGaugeHero` (recovery gauge
  *                            only, no stat tiles).
  *   - standard (cols > 1) → a titled shell (with a help affordance) wrapping the
- *                           gauge plus a 3-up stat strip: Total Recovered (energy),
- *                           Monthly Avg (power), and Free Charges (integer count).
+ *                           gauge plus a 3-up stat strip: Total Recovered,
+ *                           Drive Energy, and Free Charges (integer count).
  * The gauge stroke colour is threshold-driven: > 30% recovery is green, > 15% is
  * amber, everything else is red. The shell owns the loading skeleton, the error
  * `QueryError`, and the freshness / refresh affordance. The body is never a blank
@@ -17,7 +17,7 @@
  *
  * The two data hooks are mocked at their module boundaries so every orchestration
  * branch is deterministic and the network is never touched. `useUnits` is stubbed
- * with deterministic `formatEnergy` / `formatPower` spies so the SI pass-through,
+ * with deterministic `formatEnergy` spies so the SI pass-through,
  * the `{ precision: 1 }` override, and the null-placeholder path are all exact and
  * inspectable. `react-i18next` is echo-mocked (returns the English fallback);
  * `useSettings` / `useTimezone` come from the global stub in src/test-setup.ts.
@@ -84,7 +84,6 @@ vi.mock('@/api/hooks/useDriving', async (importActual) => {
 // widget's memoised `stats` keeps stable formatter references between renders.
 const units = vi.hoisted(() => ({
   formatEnergy: vi.fn((v?: number | null) => (v == null ? '—' : `${v} Wh`)),
-  formatPower: vi.fn((v?: number | null) => (v == null ? '—' : `${v} W`)),
 }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => units }));
 
@@ -107,6 +106,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useRegenEfficiency } from '@/api/hooks/useDriving';
 import type { RegenEfficiencyData } from '@/types/driving';
 import type { WidgetProps, WidgetSize } from './types';
+import { hasGauge, hasGaugeColor } from '@/test/gaugeTestUtils';
 
 const mockVehicles = vi.mocked(useVehicles);
 const mockRegen = vi.mocked(useRegenEfficiency);
@@ -114,9 +114,8 @@ const mockRegen = vi.mocked(useRegenEfficiency);
 const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 
-// The RadialGauge progress arc is the only element carrying a hex `stroke`
+// The LinearGauge progress arc is the only element carrying a hex `stroke`
 // (the track uses `currentColor`), so this selector uniquely targets the gauge.
-const GAUGE_SVG = 'svg[class~="-rotate-90"]';
 const GREEN = '#10b981';
 const AMBER = '#f59e0b';
 const RED = '#ef4444';
@@ -143,11 +142,18 @@ function vehicles(ids: number[]): never {
 
 function makeData(over: Partial<RegenEfficiencyData> = {}): RegenEfficiencyData {
   return {
+    vehicleId: 1,
     totalRegenWh: 1234,
     totalDriveWh: 5000,
-    regenRatio: 0.4,
+    // `/analytics/regen` returns regen_ratio already as a percentage
+    // (1234 / 5000 * 100), not a 0-1 fraction.
+    regenRatio: 24.7,
     monthlyAvgRegen: 56,
     freeCharges: 7,
+    monthlySummary: [],
+    drives: [],
+    batteryCapacityWh: 75_000,
+    capacitySource: 'default',
     ...over,
   };
 }
@@ -204,23 +210,23 @@ describe('RegenEfficiencyWidget — standard layout', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText('Regen Braking')).toBeInTheDocument();
-    // Gauge recovery label (rounded percentage) — 0.4 → 40%.
-    expect(screen.getByText('40%')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).not.toBeNull();
+    // Gauge recovery label (rounded percentage) — 24.7 → 25%.
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(hasGauge(container)).toBe(true);
 
     // Three stat tiles with their formatted values.
     expect(screen.getByText('Total Recovered')).toBeInTheDocument();
     expect(screen.getByText('1234 Wh')).toBeInTheDocument();
-    expect(screen.getByText('Monthly Avg')).toBeInTheDocument();
-    expect(screen.getByText('56 W')).toBeInTheDocument();
+    expect(screen.getByText('Drive Energy')).toBeInTheDocument();
+    expect(screen.getByText('5000 Wh')).toBeInTheDocument();
 
     // Free charges renders through the integer formatter within its own tile.
     const freeTile = screen.getByText('Free Charges').parentElement as HTMLElement;
     expect(within(freeTile).getByText('7')).toBeInTheDocument();
 
-    // Energy/power formatters receive the SI value + the 1-dp precision override.
+    // Energy formatters receive both SI values + the 1-dp precision override.
     expect(units.formatEnergy).toHaveBeenCalledWith(1234, { precision: 1 });
-    expect(units.formatPower).toHaveBeenCalledWith(56, { precision: 1 });
+    expect(units.formatEnergy).toHaveBeenCalledWith(5000, { precision: 1 });
   });
 
   it('exposes an accessible help affordance describing regen recovery', () => {
@@ -237,11 +243,11 @@ describe('RegenEfficiencyWidget — compact layout', () => {
     const { container } = renderWidget(COMPACT);
 
     expect(screen.queryByText('Regen Braking')).toBeNull();
-    expect(screen.getByText('40%')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).not.toBeNull();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(hasGauge(container)).toBe(true);
     // Stats are suppressed in the compact gauge hero.
     expect(screen.queryByText('Total Recovered')).toBeNull();
-    expect(screen.queryByText('Monthly Avg')).toBeNull();
+    expect(screen.queryByText('Drive Energy')).toBeNull();
   });
 
   it('shows the empty state (never a blank panel) when there is no data', () => {
@@ -249,24 +255,51 @@ describe('RegenEfficiencyWidget — compact layout', () => {
     const { container } = renderWidget(COMPACT);
 
     expect(screen.getByText('No regen data')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).toBeNull();
+    expect(hasGauge(container)).toBe(false);
   });
 });
 
 describe('RegenEfficiencyWidget — recovery colour thresholds', () => {
   it.each([
-    { ratio: 0.5, label: '50%', color: GREEN, band: 'green' },
-    { ratio: 0.31, label: '31%', color: GREEN, band: 'green' },
-    { ratio: 0.3, label: '30%', color: AMBER, band: 'amber (boundary: 30 is not > 30)' },
-    { ratio: 0.16, label: '16%', color: AMBER, band: 'amber' },
-    { ratio: 0.15, label: '15%', color: RED, band: 'red (boundary: 15 is not > 15)' },
-    { ratio: 0.05, label: '5%', color: RED, band: 'red' },
+    { ratio: 50, label: '50%', color: GREEN, band: 'green' },
+    { ratio: 31, label: '31%', color: GREEN, band: 'green' },
+    { ratio: 30, label: '30%', color: AMBER, band: 'amber (boundary: 30 is not > 30)' },
+    { ratio: 16, label: '16%', color: AMBER, band: 'amber' },
+    { ratio: 15, label: '15%', color: RED, band: 'red (boundary: 15 is not > 15)' },
+    { ratio: 5, label: '5%', color: RED, band: 'red' },
   ])('paints the gauge $band at $label recovery', ({ ratio, label, color }) => {
     mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: ratio }) }));
     const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText(label)).toBeInTheDocument();
-    expect(container.querySelector(`circle[stroke="${color}"]`)).not.toBeNull();
+    expect(hasGaugeColor(container, color)).toBe(true);
+  });
+});
+
+describe('RegenEfficiencyWidget — API scale contract', () => {
+  it('does not re-scale the percentage the API already returns', () => {
+    // Regression: the widget multiplied regen_ratio by 100. Because
+    // /analytics/regen returns regenWh / driveWh * 100 (a percentage), a real
+    // 25% recovery rendered as "2500%", the gauge clamped to its 100 max so it
+    // sat permanently full, and regenColor's > 30 branch made it always green.
+    mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 25 }) }));
+    const { container } = renderWidget(STANDARD);
+
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.queryByText('2500%')).toBeNull();
+    // 25 is not > 30, so the band must be amber — proof the colour thresholds
+    // still discriminate rather than saturating green.
+    expect(hasGaugeColor(container, AMBER)).toBe(true);
+    expect(hasGaugeColor(container, GREEN)).toBe(false);
+  });
+
+  it('keeps the gauge off its ceiling for a typical recovery rate', () => {
+    mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 18 }) }));
+    renderWidget(STANDARD);
+
+    const meter = screen.getByRole('meter');
+    expect(meter).toHaveAttribute('aria-valuenow', '18');
+    expect(meter).toHaveAttribute('aria-valuemax', '100');
   });
 });
 
@@ -276,7 +309,7 @@ describe('RegenEfficiencyWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(container.querySelector(GAUGE_SVG)).toBeNull();
+    expect(hasGauge(container)).toBe(false);
     expect(screen.queryByText('No regen data')).toBeNull();
   });
 
@@ -295,7 +328,7 @@ describe('RegenEfficiencyWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText('No regen data')).toBeInTheDocument();
-    expect(container.querySelector(GAUGE_SVG)).toBeNull();
+    expect(hasGauge(container)).toBe(false);
   });
 });
 
@@ -306,7 +339,7 @@ describe('RegenEfficiencyWidget — null-safety', () => {
         data: makeData({
           regenRatio: undefined as unknown as number,
           totalRegenWh: undefined as unknown as number,
-          monthlyAvgRegen: undefined as unknown as number,
+          totalDriveWh: undefined as unknown as number,
           freeCharges: undefined as unknown as number,
         }),
       }),
@@ -315,12 +348,11 @@ describe('RegenEfficiencyWidget — null-safety', () => {
 
     // regenRatio undefined → 0% gauge, red band (0 is not > 15).
     expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(container.querySelector(`circle[stroke="${RED}"]`)).not.toBeNull();
+    expect(hasGaugeColor(container, RED)).toBe(true);
 
-    // Energy + power formatters are still called with the undefined SI value and
-    // return the placeholder (never a blank tile).
+    // Both energy formatters are still called; missing drive energy returns
+    // the placeholder (never a blank tile).
     expect(units.formatEnergy).toHaveBeenCalledWith(undefined, { precision: 1 });
-    expect(units.formatPower).toHaveBeenCalledWith(undefined, { precision: 1 });
     expect(screen.getAllByText('—')).toHaveLength(2);
 
     // freeCharges undefined → integer formatter coalesces to "0".

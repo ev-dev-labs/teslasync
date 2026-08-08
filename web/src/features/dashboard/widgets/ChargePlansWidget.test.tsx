@@ -100,7 +100,7 @@ const mockPlans = useChargePlans as unknown as ReturnType<typeof vi.fn>;
 const mockRates = useRatePlans as unknown as ReturnType<typeof vi.fn>;
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -142,7 +142,7 @@ const STANDARD = { cols: 2, rows: 4 };
 const COMPACT = { cols: 1, rows: 2 };
 
 function setup(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   opts: { plans?: any; rates?: any; vehicles?: any } = {},
 ) {
   mockVehicles.mockReturnValue(opts.vehicles ?? makeQuery({ data: [{ id: 42 }] }));

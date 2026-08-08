@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Calendar, DollarSign, Lightbulb, Shield } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { AlertBanner } from '@/components/feedback';
@@ -64,7 +64,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
         {/* Battery Health Score */}
         <FadeIn delay={0.25}>
           <GlassPanel className="flex flex-col items-center justify-center p-6">
-            <RadialGauge
+            <LinearGauge
               value={score}
               max={100}
               label={t('charging.optimizer.batteryScore', 'Battery-Friendly Score')}

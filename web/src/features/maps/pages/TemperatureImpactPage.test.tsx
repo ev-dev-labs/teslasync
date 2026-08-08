@@ -151,7 +151,7 @@ const B_HOT = '> 30°C';
 // boundary assertions read on concrete numbers rather than re-deriving maths.
 const KM_PER_MILE = 1.609344;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -197,7 +197,7 @@ function fullData(over: Partial<TemperatureImpactResponse> = {}): TemperatureImp
   return { points: POINTS, efficiency: [], vampire_drain: [], monthly_trend: MONTHLY, ...over };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function selected(vehicleId: number | null): any {
   return {
     vehicleId,

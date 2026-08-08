@@ -35,7 +35,7 @@ export interface ClimateState {
   driverTempSetting?: number | null;
   passengerTempSetting?: number | null;
   // HVAC system
-  hvacPower?: string | null;
+  hvacPower?: boolean | null;
   isAcOn?: boolean | null;
   hvacAutoMode?: string | null;
   fanSpeed?: number | null;

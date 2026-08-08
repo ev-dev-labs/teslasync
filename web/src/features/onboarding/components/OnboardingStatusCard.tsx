@@ -6,6 +6,7 @@ import { GlassPanel, IconBox, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { type NeonColor } from '@/lib/tokens';
+import { VisuallyHidden } from '@/components/a11y';
 
 /**
  * A single onboarding anchor status card.
@@ -50,9 +51,9 @@ export function OnboardingStatusCard({
     <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading}>
       {loading ? (
         <div className="space-y-2" role="status">
-          <span className="sr-only">
+          <VisuallyHidden>
             {t('onboarding.status.loading', 'Loading status…')}
-          </span>
+          </VisuallyHidden>
           <Skeleton width="55%" height={12} />
           <Skeleton width="70%" height={24} />
           <Skeleton width="45%" height={12} />

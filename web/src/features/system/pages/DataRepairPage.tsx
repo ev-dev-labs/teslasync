@@ -158,6 +158,7 @@ export default function DataRepairPage() {
                 resourceName={t('dataRepair.charging.resource', 'Charging sessions')}
               />
             ) : staleCharging.length === 0 ? (
+              // no-action: transient — the charging worklist re-polls every 30s (useStaleSessions' refetchInterval); this is a positive "all clear" state, not a failure to retry.
               <EmptyState
                 icon={<CheckCircle className="h-8 w-8" />}
                 title={t('dataRepair.charging.emptyTitle', 'All charging sessions are complete')}
@@ -209,6 +210,7 @@ export default function DataRepairPage() {
                 resourceName={t('dataRepair.drives.resource', 'Drives')}
               />
             ) : staleDrives.length === 0 ? (
+              // no-action: transient — the drives worklist re-polls every 30s (useStaleSessions' refetchInterval); this is a positive "all clear" state, not a failure to retry.
               <EmptyState
                 icon={<CheckCircle className="h-8 w-8" />}
                 title={t('dataRepair.drives.emptyTitle', 'All drives are complete')}

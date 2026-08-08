@@ -45,6 +45,15 @@ export interface SignalDiffBreakdownProps {
   error?: unknown;
   /** Retry callback wired into each panel's `QueryError`. */
   onRetry?: () => void;
+  /**
+   * True when `rows` is scoped by an active signal-name or category filter
+   * upstream. Paired with `onClearFilters` — when both are supplied and a
+   * panel is empty, the empty state offers a "Clear filters" CTA instead of
+   * a dead end (the filter, not a lack of changes, is what emptied it).
+   */
+  filterActive?: boolean;
+  /** Clears the upstream signal-name/category filter. */
+  onClearFilters?: () => void;
   /** Signals the user has pinned, for the third panel. */
   pinnedSignals: Set<string>;
   className?: string;
@@ -63,6 +72,8 @@ export function SignalDiffBreakdown({
   loading,
   error,
   onRetry,
+  filterActive,
+  onClearFilters,
   pinnedSignals,
   className,
 }: SignalDiffBreakdownProps) {
@@ -120,6 +131,11 @@ export function SignalDiffBreakdown({
           <EmptyState
             icon={<Layers className="h-8 w-8" aria-hidden="true" />}
             message={t('signalDiff.breakdown.categoryEmpty', 'No categorized changes to summarize')}
+            action={
+              filterActive && onClearFilters
+                ? { label: t('signalDiff.breakdown.clearFilters', 'Clear filters'), onClick: onClearFilters }
+                : undefined
+            }
           />
         ) : (
           <div className="space-y-3">
@@ -151,6 +167,11 @@ export function SignalDiffBreakdown({
           <EmptyState
             icon={<Database className="h-8 w-8" aria-hidden="true" />}
             message={t('signalDiff.breakdown.sourceEmpty', 'No source-layer data yet')}
+            action={
+              filterActive && onClearFilters
+                ? { label: t('signalDiff.breakdown.clearFilters', 'Clear filters'), onClick: onClearFilters }
+                : undefined
+            }
           />
         ) : (
           <div className="space-y-3">
@@ -175,6 +196,7 @@ export function SignalDiffBreakdown({
           {t('signalDiff.breakdown.pinnedTitle', 'Pinned signals')}
         </PanelTitle>
         {pinned.length === 0 ? (
+          // no-action: pinning happens per-row in the diff table below; unrelated to the name/category filter this panel would otherwise clear.
           <EmptyState
             icon={<Pin className="h-8 w-8" aria-hidden="true" />}
             message={t('signalDiff.breakdown.pinnedEmpty', 'No pinned signals — pin a row to track it here')}

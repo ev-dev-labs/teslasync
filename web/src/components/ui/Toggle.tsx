@@ -103,12 +103,12 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
             trackSize[size],
             isChecked
               ? 'bg-cyan-500 dark:bg-cyan-600'
-              : 'bg-gray-300 dark:bg-gray-600',
+              : 'bg-[var(--control-track-off)]',
           )}
         >
           <span
             className={cn(
-              'pointer-events-none inline-block rounded-full bg-white shadow-sm transition-transform duration-normal',
+              'pointer-events-none inline-block rounded-full bg-[var(--control-thumb)] shadow-sm transition-transform duration-normal',
               // Outline the thumb so it remains
               // distinguishable from the (now system-coloured) track.
               'forced-colors:border forced-colors:border-[ButtonBorder]',

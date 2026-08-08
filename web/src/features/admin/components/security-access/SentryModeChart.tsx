@@ -89,6 +89,7 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
           icon={<Activity className="h-8 w-8" aria-hidden="true" />}
           message={t('common.noData', 'No data available')}
           className="py-8"
+          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
         />
       )}
     </GlassPanel>

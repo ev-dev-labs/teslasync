@@ -27,7 +27,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
   const { t } = useTranslation('vehicles');
   const { formatDistance } = useUnits();
 
-  const { data: allStates, isLoading } = useQuery({
+  const { data: allStates, isLoading, refetch } = useQuery({
     queryKey: ['fleet-battery-states', vehicles.map((v) => v.id).sort((a, b) => a - b)],
     queryFn: async () => {
       const entries = await Promise.all(
@@ -67,6 +67,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
       ) : bars.length === 0 ? (
         <EmptyState
           message={t('fleet.noBatteryData', 'No battery data available for the current fleet.')}
+          action={{ label: t('common.retry', 'Retry'), onClick: () => void refetch() }}
         />
       ) : (
         <div className="space-y-3">

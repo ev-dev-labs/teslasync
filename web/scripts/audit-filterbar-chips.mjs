@@ -46,6 +46,10 @@ function walk(dir) {
       continue;
     }
     if (!p.endsWith('.tsx')) continue;
+    // Same rationale as the __tests__ skip above: co-located `*.test.tsx`
+    // files mount <FilterBar> in isolation to exercise the primitive itself,
+    // so requiring a sibling <ActiveFilterChips> there tests nothing real.
+    if (p.endsWith('.test.tsx')) continue;
     auditFile(p);
   }
 }

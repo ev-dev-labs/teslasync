@@ -170,7 +170,7 @@ describe('SystemHealthDot', () => {
   it('falls back to a muted "unknown" dot while data is loading (no query cache)', () => {
     renderDot()
     const dot = screen.getByRole('img')
-    expect(dot.className).toContain('bg-white/25')
+    expect(dot.className).toContain('bg-[var(--text-muted)]')
     expect(dot.className).not.toContain('bg-neon-')
     expect(dot).toHaveAttribute('aria-label', 'System: unknown')
   })

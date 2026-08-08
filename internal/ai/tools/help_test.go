@@ -365,6 +365,41 @@ func TestRegisterHelpTools_DuplicateRegistrationPanics(t *testing.T) {
 	RegisterHelpTools(r, HelpSources{Retriever: &fakeRetriever{}})
 }
 
+func TestRegisterChatbotKnowledgeTool_UsesIndependentName(t *testing.T) {
+	t.Parallel()
+	r := NewRegistry()
+	ret := &fakeRetriever{}
+	RegisterHelpTools(r, HelpSources{Retriever: ret})
+	RegisterChatbotKnowledgeTool(r, HelpSources{Retriever: ret})
+
+	tool, ok := r.Get("retrieve_app_knowledge")
+	if !ok {
+		t.Fatal("retrieve_app_knowledge not registered")
+	}
+	if tool.Mutates() {
+		t.Fatal("retrieve_app_knowledge must be read-only")
+	}
+	for _, must := range []string{"application usage", "fleet query tools", "DO NOT fabricate"} {
+		if !strings.Contains(tool.Description(), must) {
+			t.Errorf("Description() missing %q: %q", must, tool.Description())
+		}
+	}
+	if strings.Contains(tool.Description(), "i18n") || strings.Contains(string(tool.InputSchema()), "i18n") {
+		t.Fatalf("chatbot knowledge advertises unavailable i18n corpus: description=%q schema=%s",
+			tool.Description(), tool.InputSchema())
+	}
+	validated, err := tool.Validate(json.RawMessage(`{"query":"configure Helix","source_types":["docs","runbooks"],"k":3}`))
+	if err != nil {
+		t.Fatalf("Validate supported corpora: %v", err)
+	}
+	if got := validated.(retrieveDocsInput).SourceTypes; len(got) != 2 || got[0] != "docs" || got[1] != "runbooks" {
+		t.Fatalf("validated source types = %v", got)
+	}
+	if _, err := tool.Validate(json.RawMessage(`{"query":"button label","source_types":["i18n"]}`)); err == nil {
+		t.Fatal("Validate accepted unavailable i18n corpus")
+	}
+}
+
 func TestAllowedHelpSourceTypes_ReturnsDefensiveCopySorted(t *testing.T) {
 	t.Parallel()
 	a := AllowedHelpSourceTypes()

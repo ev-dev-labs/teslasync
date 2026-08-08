@@ -1,13 +1,38 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
-const variants = {
-  primary: 'bg-[var(--theme-primary)] text-[var(--theme-on-primary)] hover:brightness-110 focus-visible:ring-[var(--theme-primary)] forced-colors:border forced-colors:border-[ButtonBorder]',
-  secondary: 'bg-gray-100 text-[var(--text-primary)] hover:bg-gray-200 dark:bg-gray-700 forced-colors:border forced-colors:border-[ButtonBorder]',
-  outline: 'border border-gray-300 bg-transparent hover:bg-gray-50 dark:border-gray-600 forced-colors:border-[ButtonBorder]',
-  danger: 'bg-red-600 text-[var(--text-primary)] hover:bg-red-700 focus-visible:ring-red-500 forced-colors:border forced-colors:border-[ButtonBorder]',
-  ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 forced-colors:border forced-colors:border-[ButtonBorder]',
+// Neutral variants resolve their chrome from the `--control-*` tokens
+// (index.css → CONTROL SURFACE) rather than Tailwind's fixed `gray-*` ramp.
+// Previously `secondary`/`outline`/`ghost` rendered the same slate grey on
+// every one of the 140 presets, so a Dracula or Solarized user got buttons
+// that did not belong to their palette. They now track the active theme.
+export const BUTTON_VARIANTS = {
+  primary: 'bg-[var(--theme-primary)] text-[var(--theme-on-primary)] hover:brightness-110 forced-colors:border forced-colors:border-[ButtonBorder]',
+  secondary: 'bg-[var(--control-bg)] text-[var(--text-primary)] border border-[var(--control-border)] hover:bg-[var(--control-bg-hover)] hover:border-[var(--control-border-hover)] forced-colors:border forced-colors:border-[ButtonBorder]',
+  outline: 'border border-[var(--control-border)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] hover:border-[var(--control-border-hover)] forced-colors:border-[ButtonBorder]',
+  danger: 'bg-red-600 text-[var(--text-on-accent)] hover:bg-red-700 focus-visible:ring-red-500 forced-colors:border forced-colors:border-[ButtonBorder]',
+  ghost: 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder]',
 } as const;
+
+/**
+ * Chrome shared by every Button — shape, focus ring and disabled treatment.
+ *
+ * Exported because a handful of CTAs must render as `<a>`/`<Link>` rather than
+ * `<button>` (EmptyState's `actionTo`), and previously hand-copied these
+ * classes. Those copies silently drifted when the neutral variants moved onto
+ * the `--control-*` tokens, leaving link CTAs on the old slate-grey ramp. Reuse
+ * this constant instead of re-deriving it.
+ */
+export const BUTTON_BASE =
+  'inline-flex items-center justify-center gap-2 rounded-shape-sm font-medium transition-all duration-fast ' +
+  // Unified focus ring: always the active accent, so it stays visible on
+  // every preset instead of inheriting whatever the variant happened to
+  // set. Offset colour is pinned to the app background so the ring reads
+  // as a gap rather than a white halo on dark themes.
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] ' +
+  'disabled:pointer-events-none disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100';
+
+const variants = BUTTON_VARIANTS;
 
 const sizes = {
   sm: 'h-8 px-3 text-xs',
@@ -30,9 +55,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-md font-medium transition',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-        'disabled:pointer-events-none disabled:opacity-50',
+        BUTTON_BASE,
         variants[variant],
         sizes[size],
         className,

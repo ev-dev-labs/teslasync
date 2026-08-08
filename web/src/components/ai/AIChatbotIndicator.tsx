@@ -47,7 +47,7 @@ function InnerIndicator() {
       role="img"
       title={t(
         'helix.tooltip',
-        'Helix is your AI assistant. It generates responses using your redacted fleet context.',
+        'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
       )}
       aria-label={t('helix.ariaLabel', 'Helix')}
     >

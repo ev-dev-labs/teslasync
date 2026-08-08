@@ -2,7 +2,7 @@
 //
 // Coverage (the panel's single export — `BatteryRangePanel`):
 //   1. Battery gauge: renders the level / unit / label, drives the shared
-//      RadialGauge colour through `batteryColor`'s three bands (green > 60,
+//      LinearGauge colour through `batteryColor`'s three bands (green > 60,
 //      amber 25–60, red <= 25), and — the bug this suite locks in —
 //      null-safes an undefined `battery_level` to 0 so the gauge never emits
 //      `strokeDashoffset={NaN}` nor mislabels an unknown battery as red-critical.
@@ -64,6 +64,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { BatteryRangePanel } from './BatteryRangePanel'
+import { gaugeColor, gaugeWidth, gaugeFraction } from '@/test/gaugeTestUtils';
 
 function makeState(overrides: Partial<VehicleState> = {}): VehicleState {
   return {
@@ -91,12 +92,10 @@ function makeState(overrides: Partial<VehicleState> = {}): VehicleState {
   }
 }
 
-// The RadialGauge renders two <circle>s: [0] is the static track
-// (stroke="currentColor"), [1] is the value arc whose `stroke` is the
-// battery colour and whose `stroke-dashoffset` encodes the level.
-function progressCircle(container: HTMLElement): SVGCircleElement {
-  const circles = container.querySelectorAll('circle')
-  return circles[1] as SVGCircleElement
+// The LinearGauge paints the battery colour onto its fill element, whose
+// width encodes the level.
+function gaugeHex(container: HTMLElement): string | undefined {
+  return gaugeColor(container)
 }
 
 beforeEach(() => {
@@ -118,17 +117,17 @@ describe('BatteryRangePanel — battery gauge', () => {
 
   it('colours the gauge emerald above the 60% band', () => {
     const { container } = render(<BatteryRangePanel state={makeState({ battery_level: 72 })} />)
-    expect(progressCircle(container)).toHaveAttribute('stroke', '#10b981')
+    expect(gaugeHex(container)).toBe('#10b981')
   })
 
   it('colours the gauge amber inside the 25–60% band', () => {
     const { container } = render(<BatteryRangePanel state={makeState({ battery_level: 40 })} />)
-    expect(progressCircle(container)).toHaveAttribute('stroke', '#f59e0b')
+    expect(gaugeHex(container)).toBe('#f59e0b')
   })
 
   it('colours the gauge red at or below the 25% band', () => {
     const { container } = render(<BatteryRangePanel state={makeState({ battery_level: 10 })} />)
-    expect(progressCircle(container)).toHaveAttribute('stroke', '#ef4444')
+    expect(gaugeHex(container)).toBe('#ef4444')
   })
 
   it('null-safes an undefined battery level to 0 without emitting NaN geometry', () => {
@@ -139,12 +138,11 @@ describe('BatteryRangePanel — battery gauge', () => {
     // Value falls back to 0 (not NaN → "0" via the gauge formatter)...
     expect(screen.getByText('0')).toBeInTheDocument()
     // ...an unknown battery is treated as the critical-low colour...
-    expect(progressCircle(container)).toHaveAttribute('stroke', '#ef4444')
-    // ...and crucially the arc geometry stays a finite number (the fix:
-    // an undefined level previously produced strokeDashoffset={NaN}).
-    const offset = progressCircle(container).getAttribute('stroke-dashoffset')
-    expect(offset).not.toBeNull()
-    expect(Number.isNaN(Number(offset))).toBe(false)
+    expect(gaugeHex(container)).toBe('#ef4444')
+    // ...and crucially the fill geometry stays a finite number (the fix:
+    // an undefined level previously produced a NaN width).
+    expect(Number.isNaN(gaugeFraction(container))).toBe(false)
+    expect(gaugeWidth(container)).toBe('0%')
   })
 })
 

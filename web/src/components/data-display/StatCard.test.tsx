@@ -108,7 +108,7 @@ describe('StatCard — icon', () => {
 });
 
 describe('StatCard — trend', () => {
-  it('renders an up arrow, positive colour and the sr-only "increased" word', () => {
+  it('renders an up arrow, positive colour and the visually-hidden "increased" word', () => {
     render(
       <StatCard
         label="Range"

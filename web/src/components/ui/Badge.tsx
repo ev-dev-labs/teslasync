@@ -1,13 +1,26 @@
 import { forwardRef, type HTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
-const variants = {
+/**
+ * Badge palette — exported as the single source of truth.
+ *
+ * Semantic variants keep fixed hues because the colour *is* the meaning.
+ * `neutral` has none, so it must follow the active theme's control surface
+ * rather than pinning slate-grey across all 140 presets.
+ *
+ * Tests must assert against this map rather than re-typing the class literals:
+ * 26 suites previously hardcoded `bg-gray-100`, so re-skinning the neutral chip
+ * broke every one of them even though the component was correct.
+ */
+export const BADGE_VARIANTS = {
   info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
   danger: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  neutral: 'bg-gray-100 text-[var(--text-primary)] dark:bg-gray-700',
+  neutral: 'bg-[var(--control-bg)] text-[var(--text-primary)]',
 } as const;
+
+const variants = BADGE_VARIANTS;
 
 const badgeSizes = {
   sm: 'px-1.5 py-0.5 text-xs',

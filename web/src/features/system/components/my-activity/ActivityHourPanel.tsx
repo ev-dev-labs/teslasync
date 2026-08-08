@@ -61,6 +61,7 @@ export function ActivityHourPanel({
         ) : isError ? (
           <QueryError error={error} onRetry={onRetry} />
         ) : isEmpty || rows.length === 0 ? (
+          // no-action: the hourly distribution's window is controlled by the RangePicker in the page header; a different range repopulates it.
           <EmptyState
             icon={<Icons.clock className="h-8 w-8" />}
             message={t('activity.myActivity.byHour.empty', 'No activity to chart by hour yet.')}

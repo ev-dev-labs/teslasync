@@ -93,7 +93,8 @@ describe('Card', () => {
     );
     const withHover = screen.getByTestId('card').className;
     expect(withHover).toContain('cursor-pointer');
-    expect(withHover).toContain('hover:shadow-md');
+    expect(withHover).toContain('hover:shadow-panel-hover');
+    expect(withHover).toContain('hover:border-[var(--panel-border-hover)]');
 
     rerender(<Card data-testid="card">x</Card>);
     expect(screen.getByTestId('card').className).not.toContain('cursor-pointer');

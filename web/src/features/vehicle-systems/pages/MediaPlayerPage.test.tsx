@@ -15,7 +15,7 @@
  * page indexes into (`CHART_COLORS`) and spreads (`chartGrid`/`axisTickSm`) are
  * real-shaped, and two stubs deliberately surface props the page computes:
  *   - `YAxis` echoes its `domain` so the volume-axis ceiling maths is assertable.
- *   - `RadialGauge` echoes `value`/`max` so the volume gauge wiring is assertable.
+ *   - `LinearGauge` echoes `value`/`max` so the volume gauge wiring is assertable.
  *
  * Facets covered:
  *   - no-vehicle guard: every section shows its "select a vehicle" copy, KPIs
@@ -105,8 +105,8 @@ vi.mock('@/components/charts', () => {
     YAxis: ({ domain }: { domain?: unknown }) => (
       <g data-testid="volume-yaxis" data-domain={JSON.stringify(domain ?? null)} />
     ),
-    RadialGauge: ({ value, max, label }: { value?: number; max?: number; label?: string }) => (
-      <div data-testid="radial-gauge" data-value={String(value)} data-max={String(max)} aria-label={label} />
+    LinearGauge: ({ value, max, label }: { value?: number; max?: number; label?: string }) => (
+      <div data-testid="linear-gauge" data-value={String(value)} data-max={String(max)} aria-label={label} />
     ),
   };
 });
@@ -155,7 +155,7 @@ const mockRange = useRangeState as unknown as ReturnType<typeof vi.fn>;
 
 const RANGE = { start: '2026-06-01', end: '2026-06-30' };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -216,7 +216,7 @@ const HISTORY: MediaSnapshot[] = [
   snapshot({ id: 3, now_playing_title: 'Mid Track', now_playing_artist: 'Artist M', playback_source: 'Bluetooth', playback_status: 'Stopped', audio_volume: 6, created_at: '2026-06-12T12:00:00Z' }),
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function selected(vehicleId: number | null): any {
   return {
     vehicleId,
@@ -362,7 +362,7 @@ describe('MediaPlayerPage — populated happy path', () => {
     renderPage();
     const region = nowPlayingRegion();
 
-    const gauge = within(region).getByTestId('radial-gauge');
+    const gauge = within(region).getByTestId('linear-gauge');
     expect(gauge).toHaveAttribute('data-value', '5');
     expect(gauge).toHaveAttribute('data-max', '10');
     expect(within(region).getByText(/Step:/)).toHaveTextContent('0.50');

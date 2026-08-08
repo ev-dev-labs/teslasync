@@ -3,7 +3,7 @@ import { PieChart as PieChartIcon } from 'lucide-react';
 
 import { GlassPanel, Badge } from '@/components/ui';
 import { PanelTitle, Caption } from '@/components/ui/Typography';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { fmtInt, safeNumber } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -21,7 +21,7 @@ interface FeatureConfigDistributionProps {
 const GAUGE_COLOR = '#10b981';
 
 /**
- * Overview panel that visualises the enabled ratio as a radial gauge plus
+ * Overview panel that visualises the enabled ratio as a level gauge plus
  * enabled/disabled count chips, and surfaces the last sync timestamp. Owns
  * its own loading / error / empty states so it is safe to drop into the
  * bento grid independently of the sibling panels.
@@ -64,7 +64,7 @@ export function FeatureConfigDistribution({
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-2">
-          <RadialGauge
+          <LinearGauge
             value={enabledRate}
             max={100}
             unit="%"

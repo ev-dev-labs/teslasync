@@ -159,8 +159,8 @@ describe('ExplorePage — results layout', () => {
     // The Home band is present for everyone.
     expect(screen.getByRole('heading', { level: 2, name: 'Home' })).toBeInTheDocument();
     const homeList = screen.getByTestId('explore-section-home');
-    // Home has exactly five items in navSections.
-    expect(within(homeList).getAllByRole('listitem')).toHaveLength(5);
+    // Home includes the decision inbox alongside the five established entries.
+    expect(within(homeList).getAllByRole('listitem')).toHaveLength(6);
 
     // A representative card + its description render.
     expect(screen.getByTestId('explore-card-/')).toBeInTheDocument();

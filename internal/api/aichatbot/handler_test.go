@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	apichatbot "github.com/ev-dev-labs/teslasync/internal/api/chatbot"
 )
 
@@ -133,4 +134,47 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 			tc.fn()
 		})
 	}
+}
+
+func TestRecordingStreamWriterTracksSuccessfulTerminalState(t *testing.T) {
+	t.Parallel()
+
+	t.Run("done", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		inner, _, err := stream.New(context.Background(), response)
+		if err != nil {
+			t.Fatalf("stream.New: %v", err)
+		}
+		writer := &recordingStreamWriter{inner: inner}
+		if err := writer.WriteDelta("complete"); err != nil {
+			t.Fatalf("WriteDelta: %v", err)
+		}
+		if err := writer.WriteDoneFull("stop", 4, 2); err != nil {
+			t.Fatalf("WriteDoneFull: %v", err)
+		}
+		if !writer.succeeded() {
+			t.Fatal("successful done terminal was not recorded")
+		}
+	})
+
+	t.Run("structured limit", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		inner, _, err := stream.New(context.Background(), response)
+		if err != nil {
+			t.Fatalf("stream.New: %v", err)
+		}
+		writer := &recordingStreamWriter{inner: inner}
+		if err := writer.WriteDelta("partial"); err != nil {
+			t.Fatalf("WriteDelta: %v", err)
+		}
+		if err := writer.EmitLimitError("limit reached", "rate_limit", 30, "warn", true); err != nil {
+			t.Fatalf("EmitLimitError: %v", err)
+		}
+		if err := writer.WriteDoneFull("stop", 4, 1); err != nil {
+			t.Fatalf("idempotent WriteDoneFull: %v", err)
+		}
+		if writer.succeeded() {
+			t.Fatal("structured limit terminal was recorded as successful")
+		}
+	})
 }

@@ -37,6 +37,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
 import { StopReasonPanel } from './StopReasonPanel';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 // English-fallback i18n: `t(key, default)` → default, with {{placeholder}}
 // interpolation (repo convention — mirrors QuickMetrics.test.tsx).
@@ -181,7 +182,7 @@ describe('StopReasonPanel — populated (reason present)', () => {
     // signal that must read neutral, and is a real value distinct from EMPTY.
     renderPanel({ reason: 'None' });
     const badge = screen.getByText('None');
-    expect(badge.className).toContain('bg-gray-100'); // neutral variant
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral); // neutral variant
     expect(screen.queryByRole('status')).toBeNull(); // NOT the empty placeholder
   });
 });

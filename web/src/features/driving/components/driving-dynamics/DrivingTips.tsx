@@ -4,7 +4,7 @@ import { AlertTriangle, Lightbulb, ShieldCheck, type LucideIcon } from 'lucide-r
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import type { MotorStats } from './helpers';
+import { useMotorStats } from './useMotorStats';
 
 /**
  * Tone drives the per-tip icon. It is derived from the tip itself so the
@@ -20,7 +20,7 @@ interface Tip {
 }
 
 interface DrivingTipsProps {
-  motorStats: MotorStats | null;
+  vehicleId: number | null | undefined;
 }
 
 const TONE_ICON: Record<TipTone, LucideIcon> = {
@@ -35,8 +35,9 @@ const TONE_ICON_CLASS: Record<TipTone, string> = {
   caution: 'text-amber-300',
 };
 
-export default function DrivingTips({ motorStats }: DrivingTipsProps) {
+export default function DrivingTips({ vehicleId }: DrivingTipsProps) {
   const { t } = useTranslation();
+  const { motorStats } = useMotorStats(vehicleId);
 
   const tips = useMemo<Tip[]>(() => {
     const list: Tip[] = [];

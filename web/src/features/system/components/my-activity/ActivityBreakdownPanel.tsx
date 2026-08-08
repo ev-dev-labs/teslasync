@@ -71,6 +71,7 @@ export function ActivityBreakdownPanel({
         ) : showError ? (
           <QueryError error={error} onRetry={onRetry} />
         ) : isEmpty || rows.length === 0 ? (
+          // no-action: this shared breakdown panel's window is controlled by the RangePicker in the page header; a different range is the real recovery path, not a duplicate control here.
           <EmptyState icon={emptyIcon} message={emptyMessage} />
         ) : (
           <ul className="space-y-3">

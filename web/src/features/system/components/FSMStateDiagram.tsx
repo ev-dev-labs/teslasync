@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { FSM_STATES, FSM_EDGES, getStateColor } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
+import { VisuallyHidden } from '@/components/a11y';
 
 interface FSMStateDiagramProps {
   fsmType: string;
@@ -89,7 +90,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                       aria-hidden="true"
                       className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-400 animate-pulse"
                     />
-                    <span className="sr-only">{t('fsm.currentState', 'current state')}</span>
+                    <VisuallyHidden>{t('fsm.currentState', 'current state')}</VisuallyHidden>
                   </>
                 )}
               </div>

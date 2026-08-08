@@ -61,6 +61,7 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 }));
 
 import BatteryGaugeWidget, { batteryColor } from './BatteryGaugeWidget';
+import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -227,7 +228,7 @@ describe('BatteryGaugeWidget — populated', () => {
       makeResult({ data: { state: makeState({ battery_level: 72 }), live: true } }),
     );
     const { container } = renderWidget();
-    expect(container.querySelector('circle[stroke="#10b981"]')).not.toBeNull();
+    expect(hasGaugeColor(container, '#10b981')).toBe(true);
   });
 
   it('floors a missing battery_level to 0 (no NaN) and shows the red arc', () => {
@@ -237,7 +238,7 @@ describe('BatteryGaugeWidget — populated', () => {
     const { container } = renderWidget();
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.queryByText('NaN')).toBeNull();
-    expect(container.querySelector('circle[stroke="#ef4444"]')).not.toBeNull();
+    expect(hasGaugeColor(container, '#ef4444')).toBe(true);
   });
 
   it('shows the charging indicator with an a11y-hidden bolt while charging', () => {

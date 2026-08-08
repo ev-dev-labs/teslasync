@@ -33,6 +33,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { WidgetRankedList, type RankedItem } from './WidgetRankedList';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
@@ -200,7 +201,7 @@ describe('WidgetRankedList', () => {
     expect(screen.getByText('Warn')).toHaveClass('bg-yellow-100');
     // 'error' → the Badge's `danger` variant (red).
     expect(screen.getByText('Bad')).toHaveClass('bg-red-100');
-    expect(screen.getByText('Meh')).toHaveClass('bg-gray-100');
+    expect(screen.getByText('Meh')).toHaveClass(BADGE_VARIANTS.neutral);
   });
 
   it('renders the empty state (role=status) with a default message when the list is empty', () => {

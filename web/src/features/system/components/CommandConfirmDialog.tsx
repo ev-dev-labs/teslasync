@@ -83,7 +83,7 @@ export function CommandConfirmDialog({
       onClose={onClose}
       size="sm"
       ariaLabel={t(def.labelKey, def.labelFallback)}
-      className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-red-500/20"
+      className="bg-[var(--surface-1)] backdrop-blur-xl border border-red-500/20"
     >
       <div onKeyDown={handleKeyDown}>
         <div className="flex items-center gap-3 mb-4">

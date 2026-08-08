@@ -96,9 +96,9 @@ const baseSettings = {
 type FacetKey = 'new' | 'triaged' | 'closed' | 'bug' | 'feature' | 'other'
 const FACET_KEYS: FacetKey[] = ['new', 'triaged', 'closed', 'bug', 'feature', 'other']
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type AnyRow = any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 interface Scenario { main: any; counts: Record<FacetKey, any> }
 
 let refetches: Record<string, ReturnType<typeof vi.fn>>
@@ -212,7 +212,7 @@ function mainResult() {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function feedbackListImpl(params: any = {}) {
   if (params?.limit === 1) {
     const facet: FacetKey | undefined = params.status ?? params.category

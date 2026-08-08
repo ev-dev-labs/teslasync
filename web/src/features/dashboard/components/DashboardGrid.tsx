@@ -439,6 +439,7 @@ export function DashboardGrid({
         />
       )}
       {widgets.length === 0 ? (
+        // no-action: the "Add widget" floating action button rendered by the parent DashboardPage is the real trigger; this grid only lays out widgets that already exist.
         <EmptyState
           title={t('dashboard.grid.emptyTitle', 'No widgets yet')}
           message={t('dashboard.grid.emptyMessage', 'Add widgets to start building your dashboard.')}

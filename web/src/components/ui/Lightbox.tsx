@@ -459,7 +459,7 @@ export function Lightbox({
           className={cn(
             'pointer-events-auto max-h-full max-w-full select-none object-contain',
             decoded ? 'opacity-100' : 'opacity-0',
-            'transition-opacity duration-150',
+            'transition-opacity duration-fast',
           )}
         />
 

@@ -174,7 +174,7 @@ function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeader
     >
       <Icons.next
         className={cn(
-          'h-3 w-3 shrink-0 transition-transform duration-150 ease-out',
+          'h-3 w-3 shrink-0 transition-transform duration-fast ease-out',
           expanded ? 'rotate-90' : 'rotate-0',
         )}
         aria-hidden

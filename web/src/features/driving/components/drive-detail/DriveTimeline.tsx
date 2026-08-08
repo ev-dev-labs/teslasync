@@ -5,6 +5,7 @@ import { FadeIn } from '@/components/motion';
 import { formatTime } from '@/lib/dateFormat';
 import { formatDuration } from './helpers';
 import type { DriveDetail } from '@/types/driving';
+import { VisuallyHidden } from '@/components/a11y';
 
 interface DriveTimelineProps {
   drive: DriveDetail;
@@ -44,20 +45,22 @@ export function DriveTimeline({ drive }: DriveTimelineProps) {
         >
           <span className="flex items-center gap-1 text-green-400">
             <Flag className="h-3 w-3" aria-hidden="true" />
-            <span className="sr-only">{t('driveDetail.timeline.startedAt', 'Started at ')}</span>
+            <VisuallyHidden>{t('driveDetail.timeline.startedAt', 'Started at ')}</VisuallyHidden>
             <span>{startLabel}</span>
           </span>
           <span className="text-[var(--text-muted)]">
-            <span className="sr-only">{t('driveDetail.timeline.durationPrefix', 'Duration ')}</span>
+            <VisuallyHidden>
+              {t('driveDetail.timeline.durationPrefix', 'Duration ')}
+            </VisuallyHidden>
             <span>{durationLabel}</span>
           </span>
           <span className="flex items-center gap-1 text-red-400">
             <Flag className="h-3 w-3" aria-hidden="true" />
-            <span className="sr-only">
+            <VisuallyHidden>
               {inProgress
                 ? t('driveDetail.timeline.statusPrefix', 'Status ')
                 : t('driveDetail.timeline.endedAt', 'Ended at ')}
-            </span>
+            </VisuallyHidden>
             <span>{endLabel}</span>
           </span>
         </div>

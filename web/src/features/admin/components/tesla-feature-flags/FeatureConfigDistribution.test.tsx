@@ -7,7 +7,7 @@
  * the page's bento grid independently. The facets pinned here exercise every
  * branch of the component:
  *
- *   • populated: renders the enabled-rate <RadialGauge> (labelled "Enabled
+ *   • populated: renders the enabled-rate <LinearGauge> (labelled "Enabled
  *     Rate", value at 0 decimals + a "%" unit) plus success/neutral count chips
  *     that locale-format the enabled/disabled totals;
  *   • a fractional rate rounds to a whole percent (the gauge is passed
@@ -82,6 +82,7 @@ vi.mock('@/lib/dateFormat', async () => {
 
 import { FeatureConfigDistribution } from './FeatureConfigDistribution';
 import type { FeatureFlagSummary } from './parseFeatureFlags';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 type Props = ComponentProps<typeof FeatureConfigDistribution>;
 
@@ -134,7 +135,7 @@ describe('FeatureConfigDistribution', () => {
     renderPanel({ summary: makeSummary({ total: 4, enabled: 3, disabled: 1, enabledRate: 75 }) });
 
     expect(screen.getByText('Enabled: 3').className).toContain('bg-green-100');
-    expect(screen.getByText('Disabled: 1').className).toContain('bg-gray-100');
+    expect(screen.getByText('Disabled: 1').className).toContain(BADGE_VARIANTS.neutral);
   });
 
   it('formats large enabled/disabled counts with locale thousands separators', () => {

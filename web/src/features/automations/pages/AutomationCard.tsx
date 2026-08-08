@@ -132,7 +132,7 @@ export function AutomationCard({
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--border-subtle)] bg-gray-900 py-1 shadow-xl">
+                  <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] py-1 shadow-xl">
                     <UiButton
                       type="button"
                       variant="ghost"

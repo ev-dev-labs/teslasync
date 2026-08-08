@@ -28,6 +28,7 @@ export function IncidentTimelineList({ updates }: IncidentTimelineListProps) {
 
   if (items.length === 0) {
     return (
+      // no-action: the trigger surface is the adjacent "Post an update" form in the sibling panel on this page.
       <EmptyState
         icon={<MessageSquare className="h-8 w-8" aria-hidden="true" />}
         message={t('incidentTimeline.noUpdates', 'No updates recorded yet.')}

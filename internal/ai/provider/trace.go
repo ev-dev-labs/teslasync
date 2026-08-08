@@ -116,6 +116,13 @@ func relayChunks(ctx context.Context, span trace.Span, src <-chan Chunk, out cha
 				span.RecordError(c.Err)
 				span.SetStatus(codes.Error, c.Err.Error())
 			}
+			if c.Done {
+				span.SetAttributes(
+					attribute.String("ai.finish_reason", c.FinishReason),
+					attribute.Int("ai.tokens.input", c.InputTokens),
+					attribute.Int("ai.tokens.output", c.OutputTokens),
+				)
+			}
 			select {
 			case out <- c:
 			case <-ctx.Done():

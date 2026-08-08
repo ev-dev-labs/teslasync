@@ -503,6 +503,42 @@ func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*n
 	return logs, rows.Err()
 }
 
+// GetAlertLogs returns only notification events backed by an alert rule.
+// Manual channel tests and other ad-hoc notifications have a NULL alert_id
+// and are intentionally excluded.
+func (r *NotificationRepo) GetAlertLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT `+notificationLogColumns+`
+		 FROM notification_logs
+		 WHERE alert_id IS NOT NULL
+		 ORDER BY created_at DESC
+		 LIMIT $1 OFFSET $2`, limit, offset,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query alert-backed notification logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*notificationmodel.NotificationLog
+	for rows.Next() {
+		l := &notificationmodel.NotificationLog{}
+		if err := scanNotificationLog(rows, l); err != nil {
+			return nil, fmt.Errorf("scan alert-backed notification log: %w", err)
+		}
+		logs = append(logs, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate alert-backed notification logs: %w", err)
+	}
+	return logs, nil
+}
+
 func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64, limit int) ([]*notificationmodel.NotificationLog, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT `+notificationLogColumns+`

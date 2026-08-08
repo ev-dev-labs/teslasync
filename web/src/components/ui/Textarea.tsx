@@ -66,7 +66,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
             sizeClasses[size],
             'focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30',
-            'resize-y transition-colors',
+            'resize-y transition-colors disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
             error && 'border-red-500/50',
             className,
           )}

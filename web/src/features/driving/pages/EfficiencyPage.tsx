@@ -11,7 +11,7 @@ import {
 import { MetricCard, MetricBar, SavedViewMenu } from '@/components/data-display';
 import {
   ChartContainer, ChartTooltip, renderAnnotationLines,
-  AREA_DEFAULTS, areaGradient, RadialGauge,
+  AREA_DEFAULTS, areaGradient, LinearGauge,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from '@/components/charts';
@@ -36,6 +36,17 @@ import type { Drive } from '@/types/driving';
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Ceiling for the average-consumption gauge and bar, expressed in **Wh/km**.
+ *
+ * It must be converted through `toEfficiencyDisplay` before use, exactly like
+ * the reading it is compared against. A bare `max={300}` was a Wh/km-sized
+ * ceiling applied to Wh/mi values: a perfectly ordinary 250 Wh/mi (155 Wh/km)
+ * filled 83% of the ring for a miles user while the identical car showed 52%
+ * in km, and anything above 300 Wh/mi pegged the gauge full.
+ */
+const EFFICIENCY_GAUGE_MAX_WH_PER_KM = 300;
 
 /** Efficiency → color ramp (dynamic; used as a computed chart/dot color). */
 export function efficiencyColor(wh: number): string {
@@ -336,16 +347,18 @@ export default function EfficiencyPage() {
               ) : (
                 <div className="space-y-5">
                   <div className="flex justify-center">
-                    <RadialGauge
+                    <LinearGauge
                       value={Math.round(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))}
-                      max={300}
+                      max={Math.round(toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM))}
                       size={148}
-                      label={`${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`}
+                      label={t('efficiency.avg', 'Avg')}
+                      unit={` ${efficiencyUnit}`}
                       color={efficiencyColor(stats.avgEfficiencyWhKm ?? 0)}
+                    className="max-w-xs"
                     />
                   </div>
                   <div className="space-y-4">
-                    <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0)} max={300} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`} />
+                    <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0)} max={toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM)} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`} />
                     <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0)} max={150} color="#10b981" sublabel={`${fmtInt(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`} />
                     <MetricBar label={t('efficiency.regenRatio', 'Regen Ratio')} value={(stats.regenRatio ?? 0) * 100} max={100} color="#a855f7" sublabel={`${fmtNumber((stats.regenRatio ?? 0) * 100)}%`} />
                     <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationS ?? 0} max={Math.max(stats.totalDurationS ?? 0, 36000)} color="#f59e0b" sublabel={formatDuration(stats.totalDurationS ?? 0, { precision: 1 })} />

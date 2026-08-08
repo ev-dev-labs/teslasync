@@ -36,7 +36,12 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 }
 
 export const drivingKeys = {
-  drives: (vehicleId?: string) => ['drives', vehicleId] as const,
+  drives: (vehicleId?: string, window?: DriveWindow) =>
+    (window?.start || window?.end || window?.limit
+      ? ['drives', vehicleId, window.start ?? null, window.end ?? null, window.limit ?? null] as const
+      : ['drives', vehicleId] as const),
+  history: (vehicleId?: string, limit = 1000) =>
+    ['drives', vehicleId, 'history', limit] as const,
   // Detail key is namespaced under 'drive' (singular) so it never collides
   // with `drives(vehicleId)` when the vehicleId numerically equals the drive
   // id. The collision swapped the cached value between `Drive[]` (list) and
@@ -58,12 +63,72 @@ export const drivingKeys = {
     ['drive', driveId, 'why-ended', window] as const,
 };
 
-export function useDrives(vehicleId?: string) {
+/**
+ * Options for scoping a drives query on the server.
+ *
+ * Without them the API applies its own 50-row default page, so a caller that
+ * filters or paginates client-side can only ever see the newest 50 drives no
+ * matter what range or page size the user asked for.
+ */
+export interface DriveWindow {
+  /** Inclusive RFC3339 instant or `YYYY-MM-DD` lower bound. */
+  start?: string;
+  /**
+   * Exclusive RFC3339 instant, or inclusive `YYYY-MM-DD` upper bound.
+   * Vehicle-calendar pages should pass `useRangeState().endInstantExclusive`.
+   */
+  end?: string;
+  /** Row cap for one request. The API rejects anything above 1,000. */
+  limit?: number;
+  refetchInterval?: number;
+}
+
+export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
+  // The second parameter used to be a bare refetch interval; keep that shape
+  // working so callers that only poll are unaffected.
+  const opts: DriveWindow = typeof options === 'number' ? { refetchInterval: options } : (options ?? {});
+  const boundedLimit = opts.limit == null
+    ? undefined
+    : Math.max(1, Math.min(1000, Math.floor(opts.limit)));
+  const window: DriveWindow = { start: opts.start, end: opts.end, limit: boundedLimit };
+
   return useQuery({
-    queryKey: drivingKeys.drives(vehicleId),
-    queryFn: ({ signal }) =>
-      request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives', { signal }),
+    queryKey: drivingKeys.drives(vehicleId, window),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams();
+      if (vehicleId) params.set('vehicle_id', vehicleId);
+      if (opts.start) params.set('start', opts.start);
+      if (opts.end) params.set('end', opts.end);
+      if (boundedLimit != null) params.set('limit', String(boundedLimit));
+      const qs = params.toString();
+      return request<Drive[]>(qs ? `/drives?${qs}` : '/drives', { signal });
+    },
     enabled: !!vehicleId,
+    select: safeArray,
+    refetchInterval: opts.refetchInterval,
+  });
+}
+
+/**
+ * Fetches a deliberately larger, isolated history window for client-side
+ * analytical models. The list page keeps its existing lightweight query and
+ * cache key; analytical pages opt into this hook so an annual/cumulative model
+ * is never silently trained on the API's default 50-row page.
+ *
+ * The backend caps one request at 1,000 rows. Callers must still describe the
+ * result as an observed history window rather than guaranteed lifetime data.
+ */
+export function useDriveHistory(vehicleId?: string, limit = 1000) {
+  const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  return useQuery({
+    queryKey: drivingKeys.history(vehicleId, boundedLimit),
+    queryFn: ({ signal }) =>
+      request<Drive[]>(
+        `/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
   });
 }
@@ -204,12 +269,13 @@ export function useDriveTelemetry(driveId: string) {
   });
 }
 
-export function useDrivingCoach(vehicleId?: string, days = 30) {
+export function useDrivingCoach(vehicleId?: string, days = 30, refetchInterval?: number) {
   return useQuery({
     queryKey: drivingKeys.coach(vehicleId, days),
     queryFn: ({ signal }) => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.SLOW,
+    refetchInterval,
   });
 }
 
@@ -305,4 +371,3 @@ export function useDriveWhyEnded(
     retry: 1,
   });
 }
-

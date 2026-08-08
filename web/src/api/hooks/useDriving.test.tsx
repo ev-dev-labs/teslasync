@@ -37,6 +37,7 @@ import {
   getDrives,
   drivingKeys,
   useDrives,
+  useDriveHistory,
   useDrive,
   useDriveScore,
   useDrivingStats,
@@ -93,6 +94,7 @@ beforeEach(() => {
 describe('drivingKeys', () => {
   it('produces stable, namespaced tuples for each domain', () => {
     expect(drivingKeys.drives('5')).toEqual(['drives', '5']);
+    expect(drivingKeys.history('5')).toEqual(['drives', '5', 'history', 1000]);
     expect(drivingKeys.score('5')).toEqual(['drive-score', '5']);
     expect(drivingKeys.stats('5')).toEqual(['driving-stats', '5']);
     expect(drivingKeys.dynamics('5')).toEqual(['driving-dynamics', '5']);
@@ -103,6 +105,17 @@ describe('drivingKeys', () => {
     expect(drivingKeys.routeEfficiency('5')).toEqual(['route-efficiency', '5']);
     expect(drivingKeys.coach('5', 30)).toEqual(['driving-coach', '5', 30]);
     expect(drivingKeys.whyEnded('5', '60s')).toEqual(['drive', '5', 'why-ended', '60s']);
+  });
+
+  it('keeps the unwindowed list key stable and prefixes windowed variants under it', () => {
+    // An empty window must produce the original two-element key so the 36
+    // callers that pass no window keep sharing one cache entry.
+    expect(drivingKeys.drives('5', {})).toEqual(['drives', '5']);
+    // A window extends that key rather than replacing it, so the `['drives']`
+    // prefix invalidation fired after a bulk delete still reaches it.
+    const windowed = drivingKeys.drives('5', { start: '2026-01-01', end: '2026-02-01', limit: 1000 });
+    expect(windowed).toEqual(['drives', '5', '2026-01-01', '2026-02-01', 1000]);
+    expect(windowed.slice(0, 2)).toEqual(['drives', '5']);
   });
 
   it('namespaces the detail key under `drive` so it never collides with the `drives` list key', () => {
@@ -174,6 +187,84 @@ describe('useDrives', () => {
     const { result } = renderHook(() => useDrives('5'), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
+  });
+
+  // Regression: without an explicit limit the API applies its own 50-row
+  // default page, so a caller filtering/paginating client-side could only
+  // ever see the 50 newest drives no matter what range or page size was
+  // requested. The list page now scopes the request on the server.
+  it('scopes the request server-side when given a window', async () => {
+    mockedRequest.mockResolvedValueOnce([]);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useDrives('5', { start: '2026-01-01', end: '2026-08-06', limit: 1000 }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe(
+      '/drives?vehicle_id=5&start=2026-01-01&end=2026-08-06&limit=1000',
+    );
+  });
+
+  it('clamps limit to the backend-accepted 1..1000 range', async () => {
+    mockedRequest.mockResolvedValueOnce([]);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useDrives('5', { limit: 99999 }), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/drives?vehicle_id=5&limit=1000');
+  });
+
+  it('still treats a bare number as the legacy refetch interval', async () => {
+    mockedRequest.mockResolvedValueOnce([]);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useDrives('5', 30_000), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/drives?vehicle_id=5');
+  });
+
+  // Two different windows must not share one cache entry, otherwise
+  // switching the date range would render the previous range's rows.
+  it('keys distinct windows separately', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const { Wrapper } = makeWrapper();
+    const { result: a } = renderHook(
+      () => useDrives('5', { start: '2026-01-01', end: '2026-02-01', limit: 1000 }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(a.current.isSuccess).toBe(true));
+    const { result: b } = renderHook(
+      () => useDrives('5', { start: '2026-03-01', end: '2026-04-01', limit: 1000 }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(b.current.isSuccess).toBe(true));
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('useDriveHistory', () => {
+  it('uses an isolated key and requests the backend maximum history window', async () => {
+    mockedRequest.mockResolvedValueOnce([{ id: 1 }]);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useDriveHistory('5'), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/drives?vehicle_id=5&limit=1000');
+    expect(result.current.data).toHaveLength(1);
+  });
+
+  it('bounds a custom limit and stays disabled without a vehicle', async () => {
+    mockedRequest.mockResolvedValueOnce([]);
+    const first = makeWrapper();
+    const { result } = renderHook(() => useDriveHistory('5', 5000), {
+      wrapper: first.Wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/drives?vehicle_id=5&limit=1000');
+
+    mockedRequest.mockReset();
+    const second = makeWrapper();
+    renderHook(() => useDriveHistory(undefined), { wrapper: second.Wrapper });
+    await tick();
+    expect(mockedRequest).not.toHaveBeenCalled();
   });
 });
 

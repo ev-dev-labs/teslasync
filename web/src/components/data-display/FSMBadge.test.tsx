@@ -33,13 +33,14 @@ vi.mock('react-i18next', async () => {
 });
 
 import { FSMBadge } from './FSMBadge';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 const VARIANT_BG = {
   info: 'bg-blue-100',
   success: 'bg-green-100',
   warning: 'bg-yellow-100',
   danger: 'bg-red-100',
-  neutral: 'bg-gray-100',
+  neutral: BADGE_VARIANTS.neutral,
 } as const;
 
 interface KnownCase {
@@ -124,7 +125,7 @@ describe('FSMBadge — unknown / empty / nullish input never blanks the chip', (
   it('shows the raw trimmed value with the neutral variant for an unknown type', () => {
     const { container } = render(<FSMBadge type="  mystery_machine  " />);
     expect(screen.getByText('mystery_machine')).toBeInTheDocument();
-    expect(chip(container).className).toContain('bg-gray-100');
+    expect(chip(container).className).toContain(BADGE_VARIANTS.neutral);
   });
 
   it('renders the em-dash placeholder (via i18n) for an empty string', () => {
@@ -141,7 +142,7 @@ describe('FSMBadge — unknown / empty / nullish input never blanks the chip', (
   it('renders the placeholder when type is null', () => {
     const { container } = render(<FSMBadge type={null} />);
     expect(chip(container).textContent).toBe('—');
-    expect(chip(container).className).toContain('bg-gray-100');
+    expect(chip(container).className).toContain(BADGE_VARIANTS.neutral);
   });
 
   it('renders the placeholder when type is undefined', () => {

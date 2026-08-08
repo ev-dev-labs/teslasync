@@ -116,7 +116,7 @@ const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
 const PALETTE = ['#0a', '#0b', '#0c', '#0d', '#0e', '#0f', '#1a', '#1b'];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

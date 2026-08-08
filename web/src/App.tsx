@@ -54,6 +54,44 @@ const ProjectedRange = lazy(() => import('./features/battery/pages/ProjectedRang
 const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficiencyPage'))
 const BatteryPassport = lazy(() => import('./features/battery/pages/BatteryPassportPage'))
 
+// Phase-51 — advanced analytics family. Each of these is backed by a pure,
+// unit-tested `features/{domain}/lib/*.ts` module rather than a new endpoint;
+// they derive novel signal from data the API already returns.
+const PackCapacity = lazy(() => import('./features/battery/pages/PackCapacityPage'))
+const EnergyLedger = lazy(() => import('./features/battery/pages/EnergyLedgerPage'))
+const DepartureForecast = lazy(() => import('./features/driving/pages/DepartureForecastPage'))
+const DriveArchetypes = lazy(() => import('./features/analytics/pages/DriveArchetypesPage'))
+const FirmwareImpact = lazy(() => import('./features/analytics/pages/FirmwareImpactPage'))
+const CabinThermal = lazy(() => import('./features/vehicle-systems/pages/CabinThermalPage'))
+const ChargerHealth = lazy(() => import('./features/charging/pages/ChargerHealthPage'))
+const AlertFatigue = lazy(() => import('./features/notifications/pages/AlertFatiguePage'))
+const CommandReliability = lazy(() => import('./features/system/pages/CommandReliabilityPage'))
+const SignalCorrelation = lazy(() => import('./features/telemetry/pages/SignalCorrelationPage'))
+
+// Phase-52 — decision intelligence family. These pages apply distinct
+// statistical models to existing SI-canonical API data; no endpoint aliases or
+// re-skinned legacy features are involved.
+const ArrivalReliability = lazy(() => import('./features/driving/pages/ArrivalReliabilityPage'))
+const DestinationTransitions = lazy(() => import('./features/driving/pages/DestinationTransitionsPage'))
+const JourneyFragmentation = lazy(() => import('./features/driving/pages/JourneyFragmentationPage'))
+const SeasonalEfficiency = lazy(() => import('./features/driving/pages/SeasonalEfficiencyPage'))
+const ChargeInterruption = lazy(() => import('./features/charging/pages/ChargeInterruptionPage'))
+const ChargerResilience = lazy(() => import('./features/charging/pages/ChargerResiliencePage'))
+const ChargeDepartureAlignment = lazy(() => import('./features/charging/pages/ChargeDepartureAlignmentPage'))
+const ChargingThermalTax = lazy(() => import('./features/charging/pages/ChargingThermalTaxPage'))
+const CycleStress = lazy(() => import('./features/battery/pages/CycleStressPage'))
+const HvacCycling = lazy(() => import('./features/vehicle-systems/pages/HvacCyclingPage'))
+const ComfortConsistency = lazy(() => import('./features/vehicle-systems/pages/ComfortConsistencyPage'))
+const PreconditioningEffectiveness = lazy(() => import('./features/vehicle-systems/pages/PreconditioningEffectivenessPage'))
+const TireDifferentialDrift = lazy(() => import('./features/vehicle-systems/pages/TireDifferentialDriftPage'))
+const SignalEntropy = lazy(() => import('./features/telemetry/pages/SignalEntropyPage'))
+const SignalTrend = lazy(() => import('./features/telemetry/pages/SignalTrendPage'))
+const SignalChangePoints = lazy(() => import('./features/telemetry/pages/SignalChangePointsPage'))
+const SignalDeadband = lazy(() => import('./features/telemetry/pages/SignalDeadbandPage'))
+const SignalMutualInformation = lazy(() => import('./features/telemetry/pages/SignalMutualInformationPage'))
+const NotificationBurnRate = lazy(() => import('./features/notifications/pages/NotificationBurnRatePage'))
+const NotificationLatency = lazy(() => import('./features/notifications/pages/NotificationLatencyPage'))
+
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
 const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
@@ -68,6 +106,22 @@ const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficie
 const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'))
 const DriveDNA = lazy(() => import('./features/driving/pages/DriveDNAPage'))
 const WhatIf = lazy(() => import('./features/driving/pages/WhatIfPage'))
+const TripLogbook = lazy(() => import('./features/driving/pages/TripLogbookPage'))
+const RangeBuffer = lazy(() => import('./features/driving/pages/RangeBufferPage'))
+const DrivingRhythm = lazy(() => import('./features/driving/pages/DrivingRhythmPage'))
+const SpeedSweetSpot = lazy(() => import('./features/driving/pages/SpeedSweetSpotPage'))
+const ParkingAnalytics = lazy(() => import('./features/vehicles/pages/ParkingAnalyticsPage'))
+const MileageBudget = lazy(() => import('./features/analytics/pages/MileageBudgetPage'))
+const BatteryCare = lazy(() => import('./features/battery/pages/BatteryCarePage'))
+const ChargeAdvisor = lazy(() => import('./features/battery/pages/ChargeAdvisorPage'))
+const DriveCalendar = lazy(() => import('./features/analytics/pages/DriveCalendarPage'))
+const Explorer = lazy(() => import('./features/driving/pages/ExplorerPage'))
+const DriveCompare = lazy(() => import('./features/driving/pages/DriveComparePage'))
+const EfficiencyTarget = lazy(() => import('./features/driving/pages/EfficiencyTargetPage'))
+const Milestones = lazy(() => import('./features/analytics/pages/MilestonesPage'))
+const ColdStart = lazy(() => import('./features/driving/pages/ColdStartPage'))
+const ShareCard = lazy(() => import('./features/sharing/pages/ShareCardPage'))
+const Utilization = lazy(() => import('./features/vehicles/pages/UtilizationPage'))
 const Segments = lazy(() => import('./features/driving/pages/SegmentsPage'))
 
 // Analytics & Statistics
@@ -131,6 +185,42 @@ const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspecto
 // Diagnostics
 const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
 const RemainingUsefulLife = lazy(() => import('./features/diagnostics/pages/RemainingUsefulLifePage'))
+const RootCauseIntelligence = lazy(() => import('./features/diagnostics/pages/RootCauseIntelligencePage'))
+const ServiceEvidencePack = lazy(() => import('./features/diagnostics/pages/ServiceEvidencePackPage'))
+
+// Differentiated local intelligence and operations
+const DashcamIntelligence = lazy(() => import('./features/dashcam/pages/DashcamIntelligencePage'))
+const WholeHomeEnergy = lazy(() => import('./features/home-energy/pages/WholeHomeEnergyPage'))
+const ServiceIntelligence = lazy(() => import('./features/service-intelligence/pages/ServiceIntelligencePage'))
+const PrivacyBenchmarks = lazy(() => import('./features/benchmarks/pages/PrivacyBenchmarksPage'))
+const IntelligencePackMarketplace = lazy(() => import('./features/intelligence-packs/pages/IntelligencePackMarketplacePage'))
+const WarrantyResaleVault = lazy(() => import('./features/resale-vault/pages/WarrantyResaleVaultPage'))
+const FleetOperations = lazy(() => import('./features/fleet-ops/pages/FleetOperationsPage'))
+const ActionCenter = lazy(() => import('./features/action-center/pages/ActionCenterPage'))
+const TwinLab = lazy(() => import('./features/advanced-intelligence/pages/TwinLabPage'))
+const FirmwareCanary = lazy(() => import('./features/advanced-intelligence/pages/FirmwareCanaryPage'))
+const ComponentSurvival = lazy(() => import('./features/advanced-intelligence/pages/ComponentSurvivalPage'))
+const RoadHazardMesh = lazy(() => import('./features/advanced-intelligence/pages/RoadHazardMeshPage'))
+const BehavioralSentinel = lazy(() => import('./features/advanced-intelligence/pages/BehavioralSentinelPage'))
+const ChargingForensics = lazy(() => import('./features/advanced-intelligence/pages/ChargingForensicsPage'))
+const JourneyAssurance = lazy(() => import('./features/advanced-intelligence/pages/JourneyAssurancePage'))
+const ChargingSiteTwin = lazy(() => import('./features/advanced-intelligence/pages/ChargingSiteTwinPage'))
+const FederatedLearningStudio = lazy(() => import('./features/advanced-intelligence/pages/FederatedLearningStudioPage'))
+const EmergencyResilience = lazy(() => import('./features/advanced-intelligence/pages/EmergencyResiliencePage'))
+const CausalExperimentLab = lazy(() => import('./features/advanced-intelligence/pages/CausalExperimentationPage'))
+const TCOOptimizer = lazy(() => import('./features/advanced-intelligence/pages/TCOOptimizerPage'))
+
+// Ownership Intelligence
+const InsuranceTelematics = lazy(() => import('./features/ownership/pages/InsuranceTelematicsPage'))
+const TariffLab = lazy(() => import('./features/ownership/pages/TariffLabPage'))
+const ChargingReconciliation = lazy(() => import('./features/ownership/pages/ChargingReconciliationPage'))
+const DriverAttribution = lazy(() => import('./features/ownership/pages/DriverAttributionPage'))
+const WarrantyCommand = lazy(() => import('./features/ownership/pages/WarrantyCommandPage'))
+const DataGovernance = lazy(() => import('./features/ownership/pages/DataGovernancePage'))
+const ModelTrust = lazy(() => import('./features/ownership/pages/ModelTrustPage'))
+const JurisdictionCompliance = lazy(() => import('./features/ownership/pages/JurisdictionCompliancePage'))
+const ConsumablesLifecycle = lazy(() => import('./features/ownership/pages/ConsumablesLifecyclePage'))
+const SubscriptionROI = lazy(() => import('./features/ownership/pages/SubscriptionROIPage'))
 
 // Admin & DevTools
 const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
@@ -523,6 +613,38 @@ export default function App() {
             and the toggle is enabled). */}
         <Route path="analytics/anomalies" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
         <Route path="diagnostics/rul" element={<SafeRoute name="RemainingUsefulLife"><RemainingUsefulLife /></SafeRoute>} />
+        <Route path="diagnostics/root-cause" element={<SafeRoute name="RootCauseIntelligence"><RootCauseIntelligence /></SafeRoute>} />
+        <Route path="diagnostics/service-evidence" element={<SafeRoute name="ServiceEvidencePack"><ServiceEvidencePack /></SafeRoute>} />
+        <Route path="dashcam" element={<SafeRoute name="DashcamIntelligence"><DashcamIntelligence /></SafeRoute>} />
+        <Route path="energy-orchestrator" element={<SafeRoute name="WholeHomeEnergy"><WholeHomeEnergy /></SafeRoute>} />
+        <Route path="service-intelligence" element={<SafeRoute name="ServiceIntelligence"><ServiceIntelligence /></SafeRoute>} />
+        <Route path="benchmarks/privacy" element={<SafeRoute name="PrivacyBenchmarks"><PrivacyBenchmarks /></SafeRoute>} />
+        <Route path="intelligence-packs" element={<SafeRoute name="IntelligencePackMarketplace"><IntelligencePackMarketplace /></SafeRoute>} />
+        <Route path="resale-vault" element={<SafeRoute name="WarrantyResaleVault"><WarrantyResaleVault /></SafeRoute>} />
+        <Route path="fleet-operations" element={<SafeRoute name="FleetOperations"><FleetOperations /></SafeRoute>} />
+        <Route path="action-center" element={<SafeRoute name="ActionCenter"><ActionCenter /></SafeRoute>} />
+        <Route path="intelligence/twin-lab" element={<SafeRoute name="TwinLab"><TwinLab /></SafeRoute>} />
+        <Route path="intelligence/firmware-canary" element={<SafeRoute name="FirmwareCanary"><FirmwareCanary /></SafeRoute>} />
+        <Route path="intelligence/component-survival" element={<SafeRoute name="ComponentSurvival"><ComponentSurvival /></SafeRoute>} />
+        <Route path="intelligence/road-hazards" element={<SafeRoute name="RoadHazardMesh"><RoadHazardMesh /></SafeRoute>} />
+        <Route path="intelligence/behavioral-sentinel" element={<SafeRoute name="BehavioralSentinel"><BehavioralSentinel /></SafeRoute>} />
+        <Route path="intelligence/charging-forensics" element={<SafeRoute name="ChargingForensics"><ChargingForensics /></SafeRoute>} />
+        <Route path="intelligence/journey-assurance" element={<SafeRoute name="JourneyAssurance"><JourneyAssurance /></SafeRoute>} />
+        <Route path="intelligence/charging-site-twin" element={<SafeRoute name="ChargingSiteTwin"><ChargingSiteTwin /></SafeRoute>} />
+        <Route path="intelligence/federated-learning" element={<SafeRoute name="FederatedLearningStudio"><FederatedLearningStudio /></SafeRoute>} />
+        <Route path="intelligence/emergency-resilience" element={<SafeRoute name="EmergencyResilience"><EmergencyResilience /></SafeRoute>} />
+        <Route path="intelligence/causal-lab" element={<SafeRoute name="CausalExperimentLab"><CausalExperimentLab /></SafeRoute>} />
+        <Route path="intelligence/tco-optimizer" element={<SafeRoute name="TCOOptimizer"><TCOOptimizer /></SafeRoute>} />
+        <Route path="ownership/insurance-telematics" element={<SafeRoute name="InsuranceTelematics"><InsuranceTelematics /></SafeRoute>} />
+        <Route path="ownership/tariff-lab" element={<SafeRoute name="TariffLab"><TariffLab /></SafeRoute>} />
+        <Route path="ownership/charging-reconciliation" element={<SafeRoute name="ChargingReconciliation"><ChargingReconciliation /></SafeRoute>} />
+        <Route path="ownership/driver-attribution" element={<SafeRoute name="DriverAttribution"><DriverAttribution /></SafeRoute>} />
+        <Route path="ownership/warranty-command" element={<SafeRoute name="WarrantyCommand"><WarrantyCommand /></SafeRoute>} />
+        <Route path="ownership/data-governance" element={<SafeRoute name="DataGovernance"><DataGovernance /></SafeRoute>} />
+        <Route path="ownership/model-trust" element={<SafeRoute name="ModelTrust"><ModelTrust /></SafeRoute>} />
+        <Route path="ownership/jurisdiction-compliance" element={<SafeRoute name="JurisdictionCompliance"><JurisdictionCompliance /></SafeRoute>} />
+        <Route path="ownership/consumables-lifecycle" element={<SafeRoute name="ConsumablesLifecycle"><ConsumablesLifecycle /></SafeRoute>} />
+        <Route path="ownership/subscription-roi" element={<SafeRoute name="SubscriptionROI"><SubscriptionROI /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature
@@ -573,9 +695,57 @@ export default function App() {
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
                 <Route path="drive-dna" element={<SafeRoute name="DriveDNA"><DriveDNA /></SafeRoute>} />
                 <Route path="what-if" element={<SafeRoute name="WhatIf"><WhatIf /></SafeRoute>} />
+                <Route path="logbook" element={<SafeRoute name="TripLogbook"><TripLogbook /></SafeRoute>} />
+                <Route path="range-buffer" element={<SafeRoute name="RangeBuffer"><RangeBuffer /></SafeRoute>} />
+                <Route path="driving-rhythm" element={<SafeRoute name="DrivingRhythm"><DrivingRhythm /></SafeRoute>} />
+                <Route path="speed-sweetspot" element={<SafeRoute name="SpeedSweetSpot"><SpeedSweetSpot /></SafeRoute>} />
+                <Route path="parking" element={<SafeRoute name="ParkingAnalytics"><ParkingAnalytics /></SafeRoute>} />
+                <Route path="mileage-budget" element={<SafeRoute name="MileageBudget"><MileageBudget /></SafeRoute>} />
+                <Route path="battery-care" element={<SafeRoute name="BatteryCare"><BatteryCare /></SafeRoute>} />
+                <Route path="charge-advisor" element={<SafeRoute name="ChargeAdvisor"><ChargeAdvisor /></SafeRoute>} />
+                <Route path="drive-calendar" element={<SafeRoute name="DriveCalendar"><DriveCalendar /></SafeRoute>} />
+                <Route path="explorer" element={<SafeRoute name="Explorer"><Explorer /></SafeRoute>} />
+                <Route path="drive-compare" element={<SafeRoute name="DriveCompare"><DriveCompare /></SafeRoute>} />
+                <Route path="efficiency-target" element={<SafeRoute name="EfficiencyTarget"><EfficiencyTarget /></SafeRoute>} />
+                <Route path="milestones" element={<SafeRoute name="Milestones"><Milestones /></SafeRoute>} />
+                <Route path="cold-start" element={<SafeRoute name="ColdStart"><ColdStart /></SafeRoute>} />
+                <Route path="share-card" element={<SafeRoute name="ShareCard"><ShareCard /></SafeRoute>} />
+                <Route path="utilization" element={<SafeRoute name="Utilization"><Utilization /></SafeRoute>} />
                 <Route path="segments" element={<SafeRoute name="Segments"><Segments /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="battery-passport" element={<SafeRoute name="BatteryPassport"><BatteryPassport /></SafeRoute>} />
+        {/* Phase-51 — advanced analytics family. */}
+        <Route path="pack-capacity" element={<SafeRoute name="PackCapacity"><PackCapacity /></SafeRoute>} />
+        <Route path="energy-ledger" element={<SafeRoute name="EnergyLedger"><EnergyLedger /></SafeRoute>} />
+        <Route path="departure-forecast" element={<SafeRoute name="DepartureForecast"><DepartureForecast /></SafeRoute>} />
+        <Route path="drive-archetypes" element={<SafeRoute name="DriveArchetypes"><DriveArchetypes /></SafeRoute>} />
+        <Route path="firmware-impact" element={<SafeRoute name="FirmwareImpact"><FirmwareImpact /></SafeRoute>} />
+        <Route path="cabin-thermal" element={<SafeRoute name="CabinThermal"><CabinThermal /></SafeRoute>} />
+        <Route path="charger-health" element={<SafeRoute name="ChargerHealth"><ChargerHealth /></SafeRoute>} />
+        <Route path="alert-fatigue" element={<SafeRoute name="AlertFatigue"><AlertFatigue /></SafeRoute>} />
+        <Route path="command-reliability" element={<SafeRoute name="CommandReliability"><CommandReliability /></SafeRoute>} />
+        <Route path="signal-correlation" element={<SafeRoute name="SignalCorrelation"><SignalCorrelation /></SafeRoute>} />
+        {/* Phase-52 — decision intelligence family. */}
+        <Route path="arrival-reliability" element={<SafeRoute name="ArrivalReliability"><ArrivalReliability /></SafeRoute>} />
+        <Route path="destination-transitions" element={<SafeRoute name="DestinationTransitions"><DestinationTransitions /></SafeRoute>} />
+        <Route path="journey-fragmentation" element={<SafeRoute name="JourneyFragmentation"><JourneyFragmentation /></SafeRoute>} />
+        <Route path="seasonal-efficiency" element={<SafeRoute name="SeasonalEfficiency"><SeasonalEfficiency /></SafeRoute>} />
+        <Route path="charge-interruption" element={<SafeRoute name="ChargeInterruption"><ChargeInterruption /></SafeRoute>} />
+        <Route path="charger-resilience" element={<SafeRoute name="ChargerResilience"><ChargerResilience /></SafeRoute>} />
+        <Route path="charge-departure-alignment" element={<SafeRoute name="ChargeDepartureAlignment"><ChargeDepartureAlignment /></SafeRoute>} />
+        <Route path="charging-thermal-tax" element={<SafeRoute name="ChargingThermalTax"><ChargingThermalTax /></SafeRoute>} />
+        <Route path="cycle-stress" element={<SafeRoute name="CycleStress"><CycleStress /></SafeRoute>} />
+        <Route path="hvac-cycling" element={<SafeRoute name="HvacCycling"><HvacCycling /></SafeRoute>} />
+        <Route path="comfort-consistency" element={<SafeRoute name="ComfortConsistency"><ComfortConsistency /></SafeRoute>} />
+        <Route path="preconditioning-effectiveness" element={<SafeRoute name="PreconditioningEffectiveness"><PreconditioningEffectiveness /></SafeRoute>} />
+        <Route path="tire-differential-drift" element={<SafeRoute name="TireDifferentialDrift"><TireDifferentialDrift /></SafeRoute>} />
+        <Route path="signal-entropy" element={<SafeRoute name="SignalEntropy"><SignalEntropy /></SafeRoute>} />
+        <Route path="signal-trend" element={<SafeRoute name="SignalTrend"><SignalTrend /></SafeRoute>} />
+        <Route path="signal-change-points" element={<SafeRoute name="SignalChangePoints"><SignalChangePoints /></SafeRoute>} />
+        <Route path="signal-deadband" element={<SafeRoute name="SignalDeadband"><SignalDeadband /></SafeRoute>} />
+        <Route path="signal-mutual-information" element={<SafeRoute name="SignalMutualInformation"><SignalMutualInformation /></SafeRoute>} />
+        <Route path="notification-burn-rate" element={<SafeRoute name="NotificationBurnRate"><NotificationBurnRate /></SafeRoute>} />
+        <Route path="notification-latency" element={<SafeRoute name="NotificationLatency"><NotificationLatency /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
             against frontend route `/analytics/tco`; the canonical app path

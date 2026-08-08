@@ -87,7 +87,7 @@ const mockUseVehicleState = useVehicleState as unknown as ReturnType<typeof vi.f
 // source file's byte encoding.
 const DEG = '\u00B0';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

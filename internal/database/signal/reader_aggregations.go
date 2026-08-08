@@ -190,6 +190,65 @@ func (r *SignalLogReader) IntegrateDriveDistanceMeters(ctx context.Context, vehi
 	return meters, nil
 }
 
+// DriveEndpoints holds the first and last GPS fix recorded inside a drive's
+// time window. Either side is nil when the window holds no usable fix.
+type DriveEndpoints struct {
+	StartLat, StartLon *float64
+	EndLat, EndLon     *float64
+}
+
+// DriveEndpointCoordinates returns the earliest and latest GPS fix in a drive's
+// window, read from the same signal_log rows the route map is drawn from.
+//
+// It exists because a drive's stored start_lat/end_lat cannot be trusted. When
+// the boundary moment carries no Location sample, completion falls back to a
+// point-in-time snapshot that can resolve to the same fix for both ends, so the
+// row lands with end_lat/end_lng equal to start_lat/start_lng. The route map
+// hides that — it renders the track, not the stored endpoints — but the place
+// labels are geocoded from the stored columns, so both ends of a many-mile
+// drive resolve to one address and Journey Details shows an identical Start and
+// Destination.
+//
+// Latitude and longitude arrive as two separate signal_log rows sharing one
+// timestamp, so they are pivoted per ts and only complete pairs are considered.
+// A (0,0) fix is treated as absent: it is the null-island placeholder written
+// when a decoder yields no position, never a real driven location.
+func (r *SignalLogReader) DriveEndpointCoordinates(ctx context.Context, vehicleID int64, from, to time.Time) (*DriveEndpoints, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	const numCol = "COALESCE(float_value, int_value::float8)"
+	query := `
+		WITH fixes AS (
+			SELECT ts,
+			       MAX(` + numCol + `) FILTER (WHERE field = 'LocationLatitude')  AS lat,
+			       MAX(` + numCol + `) FILTER (WHERE field = 'LocationLongitude') AS lon
+			FROM signal_log
+			WHERE vehicle_id = $1
+			  AND ts >= $2
+			  AND ts <= $3
+			  AND field IN ('LocationLatitude', 'LocationLongitude')
+			GROUP BY ts
+		), valid AS (
+			SELECT ts, lat, lon FROM fixes
+			WHERE lat IS NOT NULL AND lon IS NOT NULL
+			  AND NOT (lat = 0 AND lon = 0)
+		)
+		SELECT
+			(SELECT lat FROM valid ORDER BY ts ASC  LIMIT 1),
+			(SELECT lon FROM valid ORDER BY ts ASC  LIMIT 1),
+			(SELECT lat FROM valid ORDER BY ts DESC LIMIT 1),
+			(SELECT lon FROM valid ORDER BY ts DESC LIMIT 1)`
+
+	e := &DriveEndpoints{}
+	if err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
+		&e.StartLat, &e.StartLon, &e.EndLat, &e.EndLon,
+	); err != nil {
+		return nil, fmt.Errorf("drive endpoint coordinates for vehicle %d: %w", vehicleID, err)
+	}
+	return e, nil
+}
+
 // BrickVoltageHistoryEntry represents one hourly-bucketed row of brick voltage data.
 type BrickVoltageHistoryEntry struct {
 	Bucket     time.Time

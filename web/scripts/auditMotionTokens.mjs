@@ -48,8 +48,14 @@ const PATTERN = /\bduration-(\d+)\b/g;
 // Files to skip (paths relative to web/src). The tokens module legitimately
 // references the raw `duration-NNN` form for documentation; excluding it
 // keeps the audit honest without forcing a circular reference.
+//
+// `lib/cn.test.ts` asserts that the custom `duration-fast|normal|slow` keys
+// were registered into twMerge's SAME class group as the built-in numeric
+// scale — proving that requires spelling a raw `duration-200` as test input.
+// It ships no CSS, so it cannot cause the timing drift this audit prevents.
 const IGNORED = new Set([
   'lib/tokens.ts',
+  'lib/cn.test.ts',
 ]);
 
 const files = globSync(FILE_GLOB, { cwd: ROOT });

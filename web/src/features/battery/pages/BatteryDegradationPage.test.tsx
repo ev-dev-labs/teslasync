@@ -127,7 +127,7 @@ const mockDeg = useBatteryDegradation as unknown as ReturnType<typeof vi.fn>;
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -375,7 +375,7 @@ describe('BatteryDegradationPage — SOH verdict + battery-age branches', () => 
 
   it('guards a non-finite pack age (undefined → "0 months", never "NaN")', () => {
     mockHealth.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       makeQuery({ data: { ...HEALTH, battery_age_months: undefined as any } }),
     );
     renderPage();

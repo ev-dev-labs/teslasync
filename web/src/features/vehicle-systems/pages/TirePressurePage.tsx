@@ -10,7 +10,7 @@ import { GlassPanel, Badge, DataTable, PanelTitle, useSortToggle, type Column } 
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS, axisTickSm,
+  ThresholdBar, ChartTooltip, CHART_COLORS, AREA_DEFAULTS, axisTickSm,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
@@ -74,7 +74,13 @@ const NORMAL_MIN_PA = 250_000; // 2.5 bar
 const NORMAL_MAX_PA = 350_000; // 3.5 bar
 const SOFT_LOW_PA = 200_000; // 2.0 bar
 const SOFT_HIGH_PA = 400_000; // 4.0 bar
-const GAUGE_MAX_PA = 500_000; // 5.0 bar
+// Domain shown on the per-tyre threshold bars. A mounted tyre never reaches
+// 0 Pa, so anchoring the track at zero would spend most of its width on
+// states that cannot physically occur and compress the band that matters
+// (2.0-4.0 bar) into a sliver. These sit just outside the critical
+// thresholds so the reader always sees the edges they could drift toward.
+const DOMAIN_MIN_PA = 150_000; // 1.5 bar
+const DOMAIN_MAX_PA = 450_000; // 4.5 bar
 
 /**
  * Interim adapter that coerces a raw TPMS value to Pa.
@@ -217,7 +223,38 @@ export default function TirePressurePage() {
   const pressureDisplayValue = (pa: number) =>
     convertPressureFromSI(pa / 1000, unitPrefs.pressure);
 
-  const gaugeMax = pressureDisplayValue(GAUGE_MAX_PA);
+  // Qualitative regions of the pressure domain, in display units. Edges and
+  // colours are derived from the same pressureStatus()/pressureColor() helpers
+  // the status Badge uses, so the coloured track can never drift out of sync
+  // with the label sitting next to it.
+  const pressureDomain = useMemo(
+    () => ({
+      min: pressureDisplayValue(DOMAIN_MIN_PA),
+      max: pressureDisplayValue(DOMAIN_MAX_PA),
+    }),
+    [unitPrefs.pressure],
+  );
+
+  const pressureBands = useMemo(() => {
+    const edges = [
+      DOMAIN_MIN_PA,
+      SOFT_LOW_PA,
+      NORMAL_MIN_PA,
+      NORMAL_MAX_PA,
+      SOFT_HIGH_PA,
+      DOMAIN_MAX_PA,
+    ];
+    return edges.slice(0, -1).map((fromPa, i) => {
+      const toPa = edges[i + 1];
+      const midPa = (fromPa + toPa) / 2;
+      return {
+        from: pressureDisplayValue(fromPa),
+        to: pressureDisplayValue(toPa),
+        color: `${pressureColor(midPa)}8c`,
+        label: statusLabel(pressureStatus(midPa)),
+      };
+    });
+  }, [unitPrefs.pressure, statusLabel]);
 
   // Header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
@@ -519,7 +556,7 @@ export default function TirePressurePage() {
           aria-label={t('tirePressure.readings', 'Current readings and trend')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
-          {/* Current readings — four corner radial gauges */}
+          {/* Current readings — four corner threshold bars */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -547,29 +584,21 @@ export default function TirePressurePage() {
                 )}
               />
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-2">
+              <div className="flex flex-col gap-5">
                 {TIRE_POSITIONS.map((pos) => {
                   const value = getTirePressureValue(latest, pos);
-                  const color = pressureColor(value);
-                  const status = pressureStatus(value);
                   return (
-                    <GlassPanel
+                    <ThresholdBar
                       key={pos}
-                      hover
-                      className="flex min-w-0 flex-col items-center gap-3 p-3"
-                    >
-                      <RadialGauge
-                        value={pressureDisplayValue(value)}
-                        max={gaugeMax}
-                        label={tireLabel(pos)}
-                        unit={pressureUnit}
-                        color={color}
-                        size={120}
-                      />
-                      <Badge variant={statusVariant(status)} size="sm">
-                        {statusLabel(status)}
-                      </Badge>
-                    </GlassPanel>
+                      value={pressureDisplayValue(value)}
+                      min={pressureDomain.min}
+                      max={pressureDomain.max}
+                      bands={pressureBands}
+                      statusLabel={statusLabel(pressureStatus(value))}
+                      label={tireLabel(pos)}
+                      unit={pressureUnit}
+                      decimals={1}
+                    />
                   );
                 })}
               </div>

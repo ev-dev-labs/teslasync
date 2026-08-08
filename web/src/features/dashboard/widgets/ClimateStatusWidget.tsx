@@ -3,7 +3,8 @@ import { Thermometer, Snowflake, Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
+import { resolveHvacActive } from '@/lib/climateState';
+import { fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
@@ -26,6 +27,9 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
+  const hvacState = climateData
+    ? resolveHvacActive(climateData.hvac_power, climateData.is_ac_on)
+    : null;
 
   return (
     <WidgetShell
@@ -58,11 +62,11 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
           />
           <Row
             label={t('widget.hvac', 'HVAC')}
-            value={
-              isFiniteNumber(climateData.hvac_power)
-                ? `${fmtNumber(climateData.hvac_power, 1)} kW`
-                : '—'
-            }
+            value={hvacState == null
+              ? '—'
+              : hvacState
+                ? t('widget.hvacOn', 'On')
+                : t('widget.hvacOff', 'Off')}
           />
           <div className="flex items-center gap-2 flex-wrap">
             {climateData.defrost_mode && climateData.defrost_mode !== 'Off' && (

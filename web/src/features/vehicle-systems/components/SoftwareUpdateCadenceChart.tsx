@@ -54,7 +54,7 @@ export function SoftwareUpdateCadenceChart({ data }: SoftwareUpdateCadenceChartP
 
   if (points.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: defensive only — the sole caller (SoftwareUpdatesPage) already checks `cadence.length === 0` and renders its own EmptyState before ever mounting this chart with data. */
         icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
         message={t('softwareUpdates.cadence.empty', 'No update activity in this range')}
       />

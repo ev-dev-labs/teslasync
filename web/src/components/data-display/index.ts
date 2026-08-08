@@ -11,7 +11,7 @@ export {
   type UsageCardBanner,
   type UsageCardFooterLink,
 } from './UsageCard';
-export { KVList } from './KVList';
+export { KVList, type KVItem, type KVListProps } from './KVList';
 export {
   Avatar,
   avatarColorIndex,
@@ -33,6 +33,7 @@ export { AnimatedNumber } from './AnimatedNumber';
 export { Timeline, type TimelineItemData, type TimelineProps } from './Timeline';
 export { RecentActivityFeed, type RecentActivityFeedProps } from './RecentActivityFeed';
 export { MetricCard } from './MetricCard';
+export { MetricTile, type MetricTileProps } from './MetricTile';
 export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
 export { TimelineItem, type TimelineItemProps } from './TimelineItem';

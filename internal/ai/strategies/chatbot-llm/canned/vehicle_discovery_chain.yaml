@@ -1,0 +1,19 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_vehicle_discovery_1
+        name: query_vehicle_count
+        arguments: '{}'
+    input_tokens: 28
+    output_tokens: 10
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_vehicle_battery_1
+        name: query_battery_status
+        arguments: '{"vehicle_id": 1}'
+    input_tokens: 36
+    output_tokens: 12
+  - finish_reason: stop
+    content: "The first active vehicle is currently at 82% battery."
+    input_tokens: 48
+    output_tokens: 14

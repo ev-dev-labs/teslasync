@@ -89,3 +89,15 @@ describe('Input — required indicator', () => {
     expect(label?.className).toMatch(/font-medium/);
   });
 });
+
+describe('Input — readable disabled state', () => {
+  it('uses semantic surface and text tokens without fading the whole control', () => {
+    render(<Input aria-label="Disabled input" disabled />);
+    const input = screen.getByRole('textbox', { name: 'Disabled input' });
+    expect(input).toBeDisabled();
+    expect(input.className).toContain('disabled:bg-[var(--surface-2)]');
+    expect(input.className).toContain('disabled:text-[var(--text-secondary)]');
+    expect(input.className).toContain('disabled:opacity-100');
+    expect(input.className).not.toContain('disabled:opacity-50');
+  });
+});

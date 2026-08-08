@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
-import { RadialGauge } from '@/components/charts';
+import { BipolarBar } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
@@ -13,6 +13,10 @@ import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 
 const TORQUE_MAX = 600;
+
+/* Regen absorbs far less than the drive limit puts down, so the two ends of
+ * the torque scale are sized independently rather than mirrored. */
+const TORQUE_REGEN_MAX = 250;
 
 // Live poll cadence (ms) for the motor telemetry tile. Mirrors the 5s interval
 // every other live-telemetry widget (door/window, live signals, energy flow)
@@ -106,13 +110,16 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
     >
       {hasData ? (
         <div className="flex flex-col items-center gap-3">
-          <RadialGauge
-            value={Math.abs(torque)}
+          <BipolarBar
+            value={torque}
             max={TORQUE_MAX}
-            label={fmtInt(torque)}
-            unit={t('widget.motorPerformance.nm', 'Nm')}
-            color={gaugeColor}
-            size={100}
+            min={TORQUE_REGEN_MAX}
+            label={t('widget.motorPerformance.torque', 'Torque')}
+            unit={` ${t('widget.motorPerformance.nm', 'Nm')}`}
+            positiveColor={gaugeColor}
+            negativeColor={gaugeColor}
+            negativeLabel={t('widget.motorPerformance.regen', 'Regen')}
+            positiveLabel={t('widget.motorPerformance.drive', 'Drive')}
           />
           <div className="grid grid-cols-2 gap-3 w-full">
             <StatCard

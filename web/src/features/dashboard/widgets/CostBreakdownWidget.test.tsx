@@ -186,6 +186,7 @@ function makeEntry(over: Partial<MonthlyCostEntry> = {}): MonthlyCostEntry {
 
 function makeData(over: Partial<CostBreakdown> = {}): CostBreakdown {
   return {
+    vehicle_id: 1,
     total_charging_cost: 240,
     total_wh: 0,
     total_sessions: 0,
@@ -200,7 +201,9 @@ function makeData(over: Partial<CostBreakdown> = {}): CostBreakdown {
     maintenance_savings_estimate: 0,
     months_of_ownership: 0,
     gas_price: 0,
+    gas_unit: 'gallon',
     gas_efficiency_mpg: 0,
+    base_cost_per_kwh: 0,
     monthly_breakdown: [
       makeEntry({ month: '2025-01', ev_cost: 50 }),
       makeEntry({ month: '2025-02', ev_cost: 70 }),

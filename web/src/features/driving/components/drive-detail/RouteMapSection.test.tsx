@@ -105,11 +105,11 @@ vi.mock('@/components/maps', async () => {
         {children}
       </div>
     ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     Polyline: ({ positions, pathOptions }: any) => (
       <div data-testid="polyline" data-color={pathOptions?.color} data-count={String((positions ?? []).length)} />
     ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     CircleMarker: ({ center, pathOptions, children }: any) => (
       <div data-testid="circle-marker" data-center={JSON.stringify(center)} data-color={pathOptions?.color}>
         {children}
@@ -118,7 +118,7 @@ vi.mock('@/components/maps', async () => {
     Popup: ({ children }: { children?: ReactNode }) => <div data-testid="popup">{children}</div>,
     MapTileLayer: ({ style }: { style?: string }) => <div data-testid="tile-layer" data-style={style} />,
     MapInvalidator: () => <div data-testid="map-invalidator" />,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     MapLayerSwitcher: ({ current, onChange }: any) => (
       <div data-testid="layer-switcher">
         {(['dark', 'satellite', 'streets', 'terrain'] as const).map((s) => (

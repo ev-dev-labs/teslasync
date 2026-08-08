@@ -18,7 +18,23 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 import MotorEfficiencyInsights from '../MotorEfficiencyInsights'
-import type { MotorStats, ThrottleStyle } from '../helpers'
+import type { MotorStats } from '../helpers'
+
+// The panel now owns its data via the shared useMotorStats hook and derives
+// the throttle style itself (getThrottleStyle is covered by helpers.test.ts),
+// so the hook is stubbed and driven from `mockMotorStats`.
+let mockMotorStats: MotorStats | null = null
+
+vi.mock('../useMotorStats', () => ({
+  MOTOR_HISTORY_LIMIT: 200,
+  useMotorStats: () => ({
+    motorStats: mockMotorStats,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
+  }),
+}))
 
 import { vi } from 'vitest'
 
@@ -56,14 +72,13 @@ const baseStats: MotorStats = {
 
 function renderInsights(opts: {
   stats?: MotorStats | null
-  style?: ThrottleStyle | null
   tempUnit?: '°C' | '°F'
   toTemperatureDisplay?: (v: number) => number
 } = {}) {
+  mockMotorStats = opts.stats === undefined ? baseStats : opts.stats
   return render(
     <MotorEfficiencyInsights
-      motorStats={opts.stats ?? baseStats}
-      throttleStyle={opts.style ?? 'conservative'}
+      vehicleId={1}
       toTemperatureDisplay={opts.toTemperatureDisplay ?? ((v) => v)}
       tempUnit={opts.tempUnit ?? '°C'}
     />,

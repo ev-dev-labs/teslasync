@@ -27,6 +27,7 @@ export function SessionsOpenModeNotice() {
       role="region"
       aria-label={title}
     >
+      {/* no-action: the fix is a reverse-proxy configuration change (inject X-Forwarded-User) outside this SPA; there is no in-app control that can enable forward-auth mode. */}
       <EmptyState
         icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
         title={title}

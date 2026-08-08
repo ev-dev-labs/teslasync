@@ -43,6 +43,8 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
           ))}
         </div>
       ) : !latest ? (
+        // no-action: same 5s-poll latest-state query as the sibling security
+        // panels — resolves once the vehicle reports in; no retry needed.
         <EmptyState
           icon={<ShieldQuestion className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.security.status.noData', 'No security state available for this vehicle yet')}

@@ -1149,7 +1149,7 @@ export interface ClimateSnapshot {
   outside_temp?: number | null
   driver_temp_setting?: number | null
   passenger_temp_setting?: number | null
-  hvac_power?: number | null
+  hvac_power?: boolean | null
   is_ac_on?: boolean | null
   hvac_ac_enabled?: boolean | null
   hvac_fan_status?: number | null

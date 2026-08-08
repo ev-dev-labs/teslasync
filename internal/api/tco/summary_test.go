@@ -22,6 +22,7 @@
 package tco
 
 import (
+	"math"
 	"reflect"
 	"sort"
 	"testing"
@@ -48,6 +49,7 @@ func TestComputeTCOSummary_StructFieldsPinWireShape(t *testing.T) {
 		"first_date",
 		"gas_efficiency_mpg",
 		"gas_price",
+		"gas_unit",
 		"last_date",
 		"maintenance_savings_estimate",
 		"monthly_breakdown",
@@ -79,6 +81,67 @@ func TestComputeTCOSummary_StructFieldsPinWireShape(t *testing.T) {
 	sort.Strings(gotMonthly)
 	if !equalStringSlices(gotMonthly, wantMonthly) {
 		t.Fatalf("TCOMonthlyEntry JSON keys drifted:\ngot:  %v\nwant: %v", gotMonthly, wantMonthly)
+	}
+}
+
+func TestGasCostForDistanceKm_UsesConfiguredPriceUnit(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		distanceKm   float64
+		pricePerUnit float64
+		efficiency   float64
+		unit         string
+		want         float64
+	}{
+		{
+			name:         "gallon price",
+			distanceKm:   160.934,
+			pricePerUnit: 3.50,
+			efficiency:   25,
+			unit:         "gallon",
+			want:         14,
+		},
+		{
+			name:         "liter price",
+			distanceKm:   160.934,
+			pricePerUnit: 1.50,
+			efficiency:   25,
+			unit:         "liter",
+			want:         4 * litersPerUSGallon * 1.50,
+		},
+		{
+			name:         "case insensitive liter",
+			distanceKm:   160.934,
+			pricePerUnit: 1.50,
+			efficiency:   25,
+			unit:         " LITER ",
+			want:         4 * litersPerUSGallon * 1.50,
+		},
+		{
+			name:         "invalid denominator",
+			distanceKm:   160.934,
+			pricePerUnit: 3.50,
+			efficiency:   0,
+			unit:         "gallon",
+			want:         0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := gasCostForDistanceKm(
+				tt.distanceKm,
+				tt.pricePerUnit,
+				tt.efficiency,
+				tt.unit,
+			)
+			if math.Abs(got-tt.want) > 0.000_001 {
+				t.Fatalf("gasCostForDistanceKm() = %f, want %f", got, tt.want)
+			}
+		})
 	}
 }
 

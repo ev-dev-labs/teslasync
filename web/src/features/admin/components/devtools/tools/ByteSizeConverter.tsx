@@ -86,6 +86,8 @@ export function ByteSizeConverterTool() {
             })}
           </ul>
         ) : (
+          // no-action: the Value input directly above is the trigger surface —
+          // this panel only renders empty before a value has been typed.
           <EmptyState message={emptyMessage} className="py-8" />
         )}
       </div>

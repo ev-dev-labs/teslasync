@@ -183,19 +183,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Capture streamed deltas so the completed assistant reply can be persisted.
 	rec := &recordingStreamWriter{inner: sseW}
 
-	// 10) Run the dispatcher. The deferred WriteDone in
-	// dispatch.Run will close the SSE stream cleanly on any path.
+	// 10) Run the dispatcher. It emits a done frame only for a complete
+	// response and an error frame for failed or truncated streams.
 	in := strategy.StrategyInput{
 		LastMessage: body.Message,
 		History:     history,
 	}
-	if err := d.Run(ctx, h.strategy, in, rec); err != nil {
-		// Errors are also surfaced on the SSE wire by the
-		// dispatcher's terminal frame (WriteError or
-		// EmitLimitError on the underlying writer); we just log
-		// + persist the partial reply (if any) so the user can
-		// see what they got.
-		log.Error().Err(err).Str("session_id", body.SessionID).Msg("ai chatbot: dispatcher returned error")
+	if runErr := d.Run(ctx, h.strategy, in, rec); runErr != nil {
+		// Errors are already surfaced on the SSE wire. Do not persist partial
+		// output into future conversation history as if it were complete.
+		log.Error().Err(runErr).Str("session_id", body.SessionID).Msg("ai chatbot: dispatcher returned error")
+		return
+	}
+	if !rec.succeeded() {
+		// Structured limit events are terminal errors on the wire but are
+		// intentionally handled by the dispatcher without a Go error.
+		return
 	}
 
 	// 11) Persist the assistant turn (best-effort, like the user
@@ -266,8 +269,10 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 // The dispatcher contract is single-producer-single-consumer per Run
 // invocation, so the buffer needs no synchronisation.
 type recordingStreamWriter struct {
-	inner *stream.Writer
-	buf   strings.Builder
+	inner     *stream.Writer
+	buf       strings.Builder
+	completed bool
+	failed    bool
 }
 
 // WriteDelta records the fragment and forwards writer errors to the dispatcher.
@@ -295,7 +300,25 @@ func (r *recordingStreamWriter) WriteToolError(name string, err error) error {
 // call WriteDone exactly once; the inner stream.Writer enforces
 // single-call semantics via a sync.Once.
 func (r *recordingStreamWriter) WriteDone() error {
-	return r.inner.WriteDone()
+	err := r.inner.WriteDone()
+	if err == nil && !r.failed {
+		r.completed = true
+	}
+	return err
+}
+
+func (r *recordingStreamWriter) WriteDoneFull(finishReason string, usageIn, usageOut int) error {
+	err := r.inner.WriteDoneFull(finishReason, usageIn, usageOut)
+	if err == nil && !r.failed {
+		r.completed = true
+	}
+	return err
+}
+
+func (r *recordingStreamWriter) WriteError(err error) error {
+	r.failed = true
+	r.completed = false
+	return r.inner.WriteError(err)
 }
 
 // EmitLimitError satisfies the optional dispatch.LimitErrorEmitter
@@ -304,6 +327,8 @@ func (r *recordingStreamWriter) WriteDone() error {
 // underlying SSE writer's WriteLimitError preserves the structured
 // payload the frontend banner reads.
 func (r *recordingStreamWriter) EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error {
+	r.failed = true
+	r.completed = false
 	return r.inner.WriteLimitError(message, stream.LimitDecisionPayload{
 		Reason:            reason,
 		RetryAfterS:       retryAfterS,
@@ -319,9 +344,15 @@ func (r *recordingStreamWriter) text() string {
 	return r.buf.String()
 }
 
+func (r *recordingStreamWriter) succeeded() bool {
+	return r.completed && !r.failed
+}
+
 // Compile-time assertions: recordingStreamWriter satisfies the
 // dispatcher's StreamWriter port + the optional LimitErrorEmitter.
 var (
 	_ dispatch.StreamWriter      = (*recordingStreamWriter)(nil)
+	_ dispatch.CompletionWriter  = (*recordingStreamWriter)(nil)
+	_ dispatch.ErrorEmitter      = (*recordingStreamWriter)(nil)
 	_ dispatch.LimitErrorEmitter = (*recordingStreamWriter)(nil)
 )

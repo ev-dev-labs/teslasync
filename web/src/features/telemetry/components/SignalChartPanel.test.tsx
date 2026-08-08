@@ -57,7 +57,7 @@ vi.mock('@/components/motion', () => ({
 // Charts barrel double. The overlay `LineChart` / `Line` / axes and the grid
 // `SmallMultiplesChart` echo their bound props as data-* attributes so the
 // mode/axis/animation wiring is observable without recharts' real layout.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 vi.mock('@/components/charts', () => ({
   ResponsiveContainer: ({ children }: any) => (
     <div data-testid="responsive-container">{children}</div>
@@ -94,7 +94,7 @@ vi.mock('@/components/charts', () => ({
     />
   ),
 }));
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 import { SignalChartPanel, type SignalChartPanelProps } from './SignalChartPanel';
 import type { SignalStat } from '../hooks/useLiveSignalStream';

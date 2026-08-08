@@ -8,8 +8,8 @@
  * `size`:
  *
  *   - size.cols <= 1 → compact tile: gear + torque only, no title.
- *   - otherwise      → full tile: titled header + a torque RadialGauge + a
- *                      2×2 StatCard grid (stator temp / gear / lateral +
+ *   - otherwise      → full tile: titled header + a signed torque BipolarBar +
+ *                      a 2×2 StatCard grid (stator temp / gear / lateral +
  *                      longitudinal G).
  *   - no motor data  → the accessible "No motor data" empty state.
  *   - isLoading / error → skeleton / QueryError chrome.
@@ -21,8 +21,8 @@
  *
  *  B. The component behaviour: full vs compact vs empty/loading/error views;
  *     the SI-Celsius → display-unit temperature conversion (°C and °F); the
- *     stator-temp and gear fallback chains; the regen (negative-torque) gauge
- *     that shows magnitude in the dial but the signed value in the label; the
+ *     stator-temp and gear fallback chains; the regen (negative-torque) bar
+ *     that renders the sign as direction rather than clamping it away; the
  *     null-safe em-dash placeholders; the id-resolution fallback chain wired to
  *     the 5s live-refresh interval; and the accessible refresh control.
  *
@@ -226,9 +226,12 @@ describe('MotorPerformanceWidget — full view', () => {
     // Full tile shows the header title.
     expect(screen.getByText('Motor Performance')).toBeInTheDocument();
 
-    // The gauge renders the torque magnitude twice (dial centre + label) and
-    // carries the "Nm" unit.
-    expect(screen.getAllByText('150')).toHaveLength(2);
+    // The torque bar renders the reading once and carries the "Nm" unit.
+    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute(
+      'aria-valuenow',
+      '150',
+    );
+    expect(screen.getByText('150')).toBeInTheDocument();
     expect(screen.getByText('Nm')).toBeInTheDocument();
 
     // Stator temp: 30 °C stays 30 under a °C preference, tagged with the unit.
@@ -280,18 +283,51 @@ describe('MotorPerformanceWidget — full view', () => {
     renderWidget(FULL, { query: makeQuery({ data: makeMotor() }) });
 
     expect(screen.getAllByText('—')).toHaveLength(4);
-    // Torque coalesces to a real 0 in the dial rather than a dash.
-    expect(screen.getAllByText('0')).toHaveLength(2);
+    // Torque coalesces to a real 0 in the bar rather than a dash.
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
-  it('shows torque magnitude in the dial but the signed value in the label under regen', () => {
-    // Regen produces negative torque: the dial fills by |torque| while the
-    // label keeps the sign so the direction is not lost.
+  it('renders regen as a signed reading rather than clamping the sign away', () => {
+    // Regen produces negative torque. The old dial fed it |torque|, so regen
+    // and an equal drive torque drew an identical arc and the centre number
+    // disagreed with the caption. The bar carries the sign directly.
     renderWidget(FULL, { query: makeQuery({ data: makeMotor({ di_torque: -150 }) }) });
 
-    // Dial centre shows the magnitude; the label shows the signed value.
-    expect(screen.getByText('150')).toBeInTheDocument();
+    const meter = screen.getByRole('meter', { name: 'Torque' });
+    expect(meter).toHaveAttribute('aria-valuenow', '-150');
     expect(screen.getByText('-150')).toBeInTheDocument();
+    // The unsigned magnitude must NOT also be on screen — that was the
+    // confusing double readout.
+    expect(screen.queryByText('150')).toBeNull();
+  });
+
+  it('scales regen and drive independently and labels both directions', () => {
+    renderWidget(FULL, { query: makeQuery({ data: makeMotor({ di_torque: 100 }) }) });
+
+    const meter = screen.getByRole('meter', { name: 'Torque' });
+    expect(meter).toHaveAttribute('aria-valuemax', '600');
+    expect(meter).toHaveAttribute('aria-valuemin', '-250');
+    expect(screen.getByText('Regen')).toBeInTheDocument();
+    expect(screen.getByText('Drive')).toBeInTheDocument();
+  });
+
+  it('distinguishes regen from an equal drive torque (the clamping regression)', () => {
+    const regen = renderWidget(FULL, {
+      query: makeQuery({ data: makeMotor({ di_torque: -150 }) }),
+    });
+    const regenNow = screen
+      .getByRole('meter', { name: 'Torque' })
+      .getAttribute('aria-valuenow');
+    regen.unmount();
+
+    renderWidget(FULL, { query: makeQuery({ data: makeMotor({ di_torque: 150 }) }) });
+    const driveNow = screen
+      .getByRole('meter', { name: 'Torque' })
+      .getAttribute('aria-valuenow');
+
+    expect(regenNow).toBe('-150');
+    expect(driveNow).toBe('150');
+    expect(regenNow).not.toBe(driveNow);
   });
 });
 

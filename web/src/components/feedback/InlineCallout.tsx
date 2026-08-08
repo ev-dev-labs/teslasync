@@ -7,8 +7,8 @@ export type CalloutVariant = 'info' | 'success' | 'warning' | 'danger';
 const VARIANT_STYLES: Record<CalloutVariant, { bg: string; ring: string; text: string; iconText: string }> = {
   info:    { bg: 'bg-cyan-500/5',     ring: 'ring-cyan-400/20',     text: 'text-[var(--text-secondary)]', iconText: 'text-cyan-300' },
   success: { bg: 'bg-emerald-500/5',  ring: 'ring-emerald-400/20',  text: 'text-[var(--text-secondary)]', iconText: 'text-emerald-300' },
-  warning: { bg: 'bg-amber-500/5',    ring: 'ring-amber-400/25',    text: 'text-amber-200/85',            iconText: 'text-amber-300' },
-  danger:  { bg: 'bg-rose-500/5',     ring: 'ring-rose-400/25',     text: 'text-rose-200/85',             iconText: 'text-rose-300' },
+  warning: { bg: 'bg-amber-500/5',    ring: 'ring-amber-400/25',    text: 'text-amber-800 dark:text-amber-200', iconText: 'text-amber-300' },
+  danger:  { bg: 'bg-rose-500/5',     ring: 'ring-rose-400/25',     text: 'text-rose-800 dark:text-rose-200',   iconText: 'text-rose-300' },
 };
 
 export interface InlineCalloutProps {
@@ -74,7 +74,7 @@ export function InlineCallout({
     'inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 ring-1 transition-colors',
     v.bg,
     v.ring,
-    action && 'hover:bg-white/[0.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+    action && 'hover:bg-[var(--surface-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
     className,
   );
 

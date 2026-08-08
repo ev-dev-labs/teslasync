@@ -77,6 +77,7 @@ export function TotpBackupCodesModal({ open, codes, onDownload, onClose }: TotpB
             // Never render an empty grid with a copy button that copies nothing
             // — surface an actionable empty state and a way out instead.
             <div className="space-y-4" data-testid="totp-backup-empty">
+              {/* no-action: the Close button below already gives a way out (dismiss and regenerate from two-factor settings). */}
               <EmptyState
                 message={t(
                   'totp.backupCodes.empty',

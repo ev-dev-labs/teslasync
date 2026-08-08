@@ -107,7 +107,7 @@ import SlowQueriesPage from './SlowQueriesPage';
 
 const mockUseSlowQueries = useSlowQueries as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

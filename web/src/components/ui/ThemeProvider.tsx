@@ -145,7 +145,7 @@ const builtinModes: Record<string, ModeTheme> = {
     glassBorder: 'rgba(0, 0, 0, 0.08)',
     textPrimary: '#0f172a',
     textSecondary: '#475569',
-    textMuted: '#94a3b8',
+    textMuted: '#64748b',
     colorScheme: 'light',
   },
   oled: {
@@ -420,4 +420,3 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     </ThemeContext.Provider>
   )
 }
-

@@ -33,7 +33,12 @@ import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
-import type { AiStreamState } from '@/hooks/useAiStream'
+import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail'
+import type {
+  AiStreamState,
+  AiToolActivity,
+  AiUsage,
+} from '@/hooks/useAiStream'
 
 export interface AiOutputPanelProps {
   /** Accumulated `delta.text` payload from useAiStream. */
@@ -42,6 +47,10 @@ export interface AiOutputPanelProps {
   state: AiStreamState
   /** Terminal error message; only read when state === 'error'. */
   error: string | null
+  /** Ordered privacy-safe provenance records from useAiStream. */
+  activity?: AiToolActivity[]
+  /** Terminal token accounting from useAiStream. */
+  usage?: AiUsage | null
   /**
    * Optional override of the body shown when the stream is open
    * but no text has arrived yet. Default is the animated
@@ -55,10 +64,17 @@ export function AiOutputPanel({
   text,
   state,
   error,
+  activity = [],
+  usage = null,
   pendingChild,
 }: AiOutputPanelProps): JSX.Element | null {
   const { t } = useTranslation()
-  const hasAnything = text.length > 0 || state === 'streaming' || state === 'error' || state === 'done'
+  const hasAnything =
+    text.length > 0 ||
+    activity.length > 0 ||
+    state === 'streaming' ||
+    state === 'error' ||
+    state === 'done'
   if (!hasAnything) return null
   return (
     <div
@@ -93,6 +109,7 @@ export function AiOutputPanel({
       ) : (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-primary)]">{text}</p>
       )}
+      <HelixEvidenceTrail activity={activity} state={state} usage={usage} />
     </div>
   )
 }

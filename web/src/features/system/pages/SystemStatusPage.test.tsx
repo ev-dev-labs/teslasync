@@ -168,6 +168,7 @@ import { useNotificationStats } from '@/api/hooks/useNotifications'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 import SystemStatusPage from './SystemStatusPage'
+import { BADGE_VARIANTS } from '@/components/ui';
 
 const mockUseQuery = vi.mocked(useQuery)
 const mockUseQueryClient = vi.mocked(useQueryClient)
@@ -366,29 +367,29 @@ beforeEach(() => {
         isFetching: false,
         error: null,
         refetch: vi.fn(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
       }) as any,
   )
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   mockUseQueryClient.mockReturnValue({ invalidateQueries } as any)
 
   mockSystemHealth.mockReturnValue(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     q(systemHealth(), { refetch: refetchHealth, dataUpdatedAt: NOW }) as any,
   )
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   mockBackupRuns.mockReturnValue(q([backupRun({ completedAt: new Date(NOW - 3600_000).toISOString() })]) as any)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   mockBackupConfigs.mockReturnValue(q([backupConfig()]) as any)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   mockMaintenance.mockReturnValue(q(maintenance()) as any)
   mockAuthStatus.mockReturnValue(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     q(authStatus({ expires_at: new Date(NOW + 30 * DAY).toISOString() })) as any,
   )
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   mockNotifStats.mockReturnValue(q(notifStats()) as any)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   mockVehicles.mockReturnValue(q([{ id: 1 }, { id: 2 }]) as any)
   mockLiveSSE.mockReturnValue({
     snapshot: null,
@@ -483,7 +484,7 @@ describe('SystemStatusPage — healthy populated view', () => {
 describe('SystemStatusPage — operator action items', () => {
   beforeEach(() => {
     const NOW = Date.now()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockMaintenance.mockReturnValue(q(maintenance({ mode: 'maintenance', maintenance_message: 'Upgrading DB' })) as any)
     inline['update-check'] = updateCheck({ update_available: true, current: '1.2.3', latest: '1.3.0' })
     inline['api-usage'] = apiUsage({ estimated_cost: 15, monthly_credit: 10 })
@@ -498,14 +499,14 @@ describe('SystemStatusPage — operator action items', () => {
     })
     inline.errors = errorStats({ total_errors: 3, uptime: '2h' })
     mockAuthStatus.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(authStatus({ expires_at: new Date(NOW + 3.5 * DAY).toISOString() })) as any,
     )
     mockBackupRuns.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q([backupRun({ completedAt: new Date(NOW - 10.5 * DAY).toISOString() })]) as any,
     )
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockNotifStats.mockReturnValue(q(notifStats({ failed: 2 })) as any)
   })
 
@@ -546,7 +547,7 @@ describe('SystemStatusPage — auth + backup edge branches', () => {
   it('shows the token-expired action + unhealthy tesla-auth summary', () => {
     const NOW = Date.now()
     mockAuthStatus.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(authStatus({ authenticated: true, expires_at: new Date(NOW - DAY).toISOString() })) as any,
     )
     renderPage()
@@ -556,11 +557,11 @@ describe('SystemStatusPage — auth + backup edge branches', () => {
   })
 
   it('shows not-connected + no-backup actions when auth is off and runs are empty', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockAuthStatus.mockReturnValue(q(authStatus({ authenticated: false })) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockBackupRuns.mockReturnValue(q([]) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockBackupConfigs.mockReturnValue(q([backupConfig()]) as any)
     renderPage()
 
@@ -574,7 +575,7 @@ describe('SystemStatusPage — auth + backup edge branches', () => {
 describe('SystemStatusPage — loading / stale / error', () => {
   it('shows the skeleton and no hero while the health query is loading', () => {
     mockSystemHealth.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(undefined, { isLoading: true, isFetching: true, dataUpdatedAt: 0 }) as any,
     )
     renderPage()
@@ -589,7 +590,7 @@ describe('SystemStatusPage — loading / stale / error', () => {
   it('marks the hero unknown + stale when the last check is older than 2 minutes', () => {
     const NOW = Date.now()
     mockSystemHealth.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(systemHealth(), { dataUpdatedAt: NOW - 3 * 60_000 }) as any,
     )
     renderPage()
@@ -600,7 +601,7 @@ describe('SystemStatusPage — loading / stale / error', () => {
 
   it('renders the health-check error in the hero subline', () => {
     mockSystemHealth.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(undefined, { error: new Error('db unreachable'), dataUpdatedAt: 0 }) as any,
     )
     renderPage()
@@ -611,7 +612,7 @@ describe('SystemStatusPage — loading / stale / error', () => {
 
   it('stringifies a non-Error rejection instead of printing "undefined" (hardening)', () => {
     mockSystemHealth.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(undefined, { error: 'boom-string', dataUpdatedAt: 0 }) as any,
     )
     renderPage()
@@ -625,19 +626,19 @@ describe('SystemStatusPage — missing data placeholders', () => {
   it('shows honest placeholders across the page when optional sources are absent', () => {
     // Every inline query + every hook returns undefined.
     inline = {}
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockSystemHealth.mockReturnValue(q(undefined, { dataUpdatedAt: 0 }) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockBackupRuns.mockReturnValue(q(undefined) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockBackupConfigs.mockReturnValue(q(undefined) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockMaintenance.mockReturnValue(q(undefined) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockAuthStatus.mockReturnValue(q(undefined) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockNotifStats.mockReturnValue(q(undefined) as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockVehicles.mockReturnValue(q(undefined) as any)
     renderPage()
 
@@ -661,7 +662,7 @@ describe('SystemStatusPage — missing data placeholders', () => {
 
   it('does not crash and shows an empty component list when components is missing', () => {
     mockSystemHealth.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(systemHealth({ components: undefined })) as any,
     )
     renderPage()
@@ -713,7 +714,7 @@ describe('SystemStatusPage — interactions', () => {
 
   it('disables the refresh control and marks it busy while fetching', () => {
     mockSystemHealth.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       q(systemHealth(), { isFetching: true, refetch: refetchHealth }) as any,
     )
     renderPage()
@@ -746,6 +747,6 @@ describe('SystemStatusPage — error-count severity (ordering-bug fix)', () => {
     renderPage()
 
     const badge = screen.getByText('50')
-    expect(badge.className).toContain('bg-gray-100') // neutral
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral) // neutral
   })
 })

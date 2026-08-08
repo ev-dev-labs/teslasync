@@ -78,7 +78,7 @@ function isoAgo(ms: number): string {
   return new Date(Date.now() - ms).toISOString();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -111,11 +111,11 @@ const STANDARD = { cols: 2, rows: 2 };
 
 function setup(
   opts: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     obs?: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mqtt?: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     vehicles?: any;
   } = {},
 ) {

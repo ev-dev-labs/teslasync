@@ -80,6 +80,27 @@ function renderSection(ui: ReactNode) {
   )
 }
 
+// The section now owns its own useDrivingCoach subscription (slow analytics
+// cadence) instead of receiving a prop from the page, so the coach model
+// refreshes as drives complete. The hook is stubbed and driven by
+// `renderCoach`.
+let mockCoachData: DrivingCoachData | undefined
+
+vi.mock('@/api/hooks/useDriving', () => ({
+  useDrivingCoach: () => ({
+    data: mockCoachData,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
+  }),
+}))
+
+function renderCoach(coachData: DrivingCoachData | undefined) {
+  mockCoachData = coachData
+  return renderSection(<DrivingCoachSection vehicleId="1" />)
+}
+
 const RECOMMENDATIONS: CoachRecommendation[] = [
   { category: 'acceleration', impact: 'high', tip: 'Ease off the accelerator below 40 km/h.' },
   { category: 'braking', impact: 'medium', tip: 'Coast earlier to capture more regen.' },
@@ -121,7 +142,7 @@ function makeCoachData(overrides: Partial<DrivingCoachData> = {}): DrivingCoachD
 
 describe('DrivingCoachSection — empty / undefined data', () => {
   it('shows all four empty states and a zeroed gauge when coachData is undefined', () => {
-    renderSection(<DrivingCoachSection coachData={undefined} />)
+    renderCoach(undefined)
 
     // Section + panel scaffolding always renders (never a blank panel).
     expect(screen.getByText('Driving Coach')).toBeInTheDocument()
@@ -142,7 +163,7 @@ describe('DrivingCoachSection — empty / undefined data', () => {
   })
 
   it('still renders the driving-pattern rows (at 0%) when there is no data', () => {
-    renderSection(<DrivingCoachSection coachData={undefined} />)
+    renderCoach(undefined)
     // Patterns are always visible — they degrade to 0%, never disappear.
     expect(screen.getByText('Hard Acceleration')).toBeInTheDocument()
     expect(screen.getByText('Highway Driving')).toBeInTheDocument()
@@ -154,7 +175,7 @@ describe('DrivingCoachSection — empty / undefined data', () => {
 
 describe('DrivingCoachSection — full data', () => {
   it('renders the overall score gauge, drives-analyzed caption, and efficiency stats', () => {
-    renderSection(<DrivingCoachSection coachData={makeCoachData()} />)
+    renderCoach(makeCoachData())
 
     expect(screen.getByText('82')).toBeInTheDocument()
     expect(screen.getByText('20 drives analyzed')).toBeInTheDocument()
@@ -167,7 +188,7 @@ describe('DrivingCoachSection — full data', () => {
   })
 
   it('renders the style breakdown legend with per-style drive counts', () => {
-    renderSection(<DrivingCoachSection coachData={makeCoachData()} />)
+    renderCoach(makeCoachData())
 
     // The style-breakdown empty state must be gone once drives exist.
     expect(screen.queryByText('Drive more to see your style breakdown.')).toBeNull()
@@ -181,7 +202,7 @@ describe('DrivingCoachSection — full data', () => {
   })
 
   it('renders each recommendation tip with an impact badge', () => {
-    renderSection(<DrivingCoachSection coachData={makeCoachData()} />)
+    renderCoach(makeCoachData())
 
     expect(screen.queryByText('Recommendations will appear after more drives.')).toBeNull()
     expect(screen.getByText('Ease off the accelerator below 40 km/h.')).toBeInTheDocument()
@@ -194,7 +215,7 @@ describe('DrivingCoachSection — full data', () => {
   })
 
   it('renders the per-drive score table with a row per drive', () => {
-    renderSection(<DrivingCoachSection coachData={makeCoachData()} />)
+    renderCoach(makeCoachData())
 
     expect(screen.queryByText('Drive data will appear after your first trip.')).toBeNull()
     const table = screen.getByRole('table')
@@ -213,7 +234,7 @@ describe('DrivingCoachSection — full data', () => {
 describe('DrivingCoachSection — weekly-trend threshold', () => {
   it('shows the "need ≥2 weeks" empty state with a single week of data', () => {
     const data = makeCoachData({ weekly_trend: [WEEKLY_TREND[0]] })
-    renderSection(<DrivingCoachSection coachData={data} />)
+    renderCoach(data)
     expect(
       screen.getByText('Need at least 2 weeks of data for trend analysis.'),
     ).toBeInTheDocument()
@@ -221,7 +242,7 @@ describe('DrivingCoachSection — weekly-trend threshold', () => {
 
   it('renders the trend chart (no empty state) once two weeks exist', () => {
     const data = makeCoachData({ weekly_trend: WEEKLY_TREND.slice(0, 2) })
-    renderSection(<DrivingCoachSection coachData={data} />)
+    renderCoach(data)
     expect(screen.getByText('Weekly Score Trend')).toBeInTheDocument()
     expect(
       screen.queryByText('Need at least 2 weeks of data for trend analysis.'),
@@ -235,7 +256,7 @@ describe('DrivingCoachSection — null-safety regressions', () => {
     // Pre-fix `coachData?.patterns.hard_accel_pct` threw here.
     const data = makeCoachData({ patterns: undefined as unknown as DrivingCoachData['patterns'] })
     expect(() =>
-      renderSection(<DrivingCoachSection coachData={data} />),
+      renderCoach(data),
     ).not.toThrow()
     // Pattern rows still render, degraded to 0%.
     expect(screen.getByText('Hard Acceleration')).toBeInTheDocument()
@@ -250,7 +271,7 @@ describe('DrivingCoachSection — null-safety regressions', () => {
       style_breakdown: undefined as unknown as DrivingCoachData['style_breakdown'],
     })
     expect(() =>
-      renderSection(<DrivingCoachSection coachData={data} />),
+      renderCoach(data),
     ).not.toThrow()
     // The panel opened (not the empty state) and counts fell back to 0.
     expect(screen.getByText('Style Breakdown')).toBeInTheDocument()

@@ -60,6 +60,7 @@ export function BrowserTabSignalsPanel({ className }: BrowserTabSignalsPanelProp
               'settings.tab.empty',
               'Tab signal preferences are unavailable right now.',
             )}
+            action={{ label: t('common.retry', 'Retry'), onClick: () => void refetch() }}
           />
         ) : (
           <div className="space-y-3" aria-busy={isSaving}>

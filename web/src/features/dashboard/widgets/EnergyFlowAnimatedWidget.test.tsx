@@ -70,7 +70,7 @@ const mockUseVehicleState = useVehicleState as unknown as ReturnType<typeof vi.f
 // The 5s polling cadence the widget always requests from useVehicleState.
 const STATE_OPTS = { refetchInterval: 5_000 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

@@ -27,9 +27,20 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
+        // Card and GlassPanel now render the identical panel surface, so they
+        // must also print identically. `[data-print-card]` is the print-stylesheet
+        // opt-in marker (index.css) that gives a surface a visible border on
+        // white and keeps it off a page break; without it a Card printed
+        // borderless next to a bordered GlassPanel of the same visual weight.
+        data-print-card=""
         className={cn(
-          'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-sm',
-          // In forced-colors mode, the glass-border
+          // Identical panel surface contract to GlassPanel (index.css → PANEL
+          // SURFACE). Previously Card and GlassPanel disagreed on all four
+          // decisions — surface-1 vs surface-2, glass-border vs border-subtle,
+          // rounded-lg vs rounded-xl, shadow-sm vs none — so adjacent panels
+          // visibly failed to line up. One contract now drives both.
+          'rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] text-[var(--text-primary)] shadow-panel',
+          // In forced-colors mode, the panel border
           // alpha collapses to invisible against OS Canvas, and box-shadow
           // is suppressed entirely. Pin the boundary to a system color so
           // cards remain perceivable in Windows High Contrast.
@@ -37,7 +48,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           // Fall back to the default `md` scale if an out-of-union value
           // is passed at runtime, so a card never renders edge-to-edge.
           PADDINGS[padding] ?? PADDINGS.md,
-          hover && 'cursor-pointer transition-shadow hover:shadow-md',
+          hover &&
+            'cursor-pointer transition-all duration-normal hover:border-[var(--panel-border-hover)] hover:shadow-panel-hover',
           className,
         )}
         {...props}
@@ -69,7 +81,7 @@ export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
 
 export function CardFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('mt-4 flex items-center justify-end gap-2 border-t border-[var(--glass-border)] pt-4', className)}>
+    <div className={cn('mt-4 flex items-center justify-end gap-2 border-t border-[var(--panel-border)] pt-4', className)}>
       {children}
     </div>
   );

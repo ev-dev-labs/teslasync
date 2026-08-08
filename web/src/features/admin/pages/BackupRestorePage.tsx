@@ -772,6 +772,8 @@ export default function BackupRestorePage() {
             ) : runsError ? (
               <QueryError error={runsError} onRetry={() => runsQuery.refetch()} />
             ) : runs.length === 0 ? (
+              // no-action: the Backup History panel below owns the "Quick
+              // Backup" CTA for this same runs===0 condition — avoid duplicating it here.
               <EmptyState
                 icon={<Icons.archive className="h-10 w-10 text-[var(--text-muted)]" />}
                 message={t('backup.noRunsReliability', 'No backup runs to analyze yet.')}
@@ -870,6 +872,7 @@ export default function BackupRestorePage() {
               icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noRuns', 'No backup runs yet')}
               message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
+              action={{ label: t('backup.quickBackup', 'Quick Backup'), onClick: () => quickBackupMutation.mutate() }}
             />
           ) : (
             <DataTable<BackupRun>
@@ -1065,6 +1068,8 @@ export default function BackupRestorePage() {
                 />
               </div>
             ) : (
+              // no-action: reflects the specific backup being previewed — its
+              // table list is fixed at capture time; pick a different backup instead.
               <EmptyState message={t('backup.noTables', 'No tables found in backup')} />
             )}
 

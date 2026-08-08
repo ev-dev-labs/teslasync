@@ -69,12 +69,14 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           message={t('signalGap.selectVehiclePrompt', 'Select a vehicle to inspect its signal freshness.')}
+          actionTo={{ label: t('signalGap.manageVehicles', 'Manage vehicles'), to: '/vehicles' }}
         />
       ) : query.isLoading ? (
         <Skeleton height={260} />
       ) : query.isError ? (
         <QueryError error={query.error} onRetry={() => query.refetch()} />
       ) : (buckets.total ?? 0) === 0 ? (
+        // no-action: transient — the distribution fills once this vehicle streams its first signal; nothing the user can trigger sooner.
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           message={t('signalGap.noData', 'No signal data available')}

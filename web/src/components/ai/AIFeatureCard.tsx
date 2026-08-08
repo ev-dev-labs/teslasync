@@ -60,7 +60,11 @@ import { HelixMark } from '@/components/branding/HelixMark'
 import { AiOutputPanel } from '@/components/ai/AiOutputPanel'
 import { AIThinkingDots } from '@/components/ai/AIThinkingIndicator'
 import { Button, GlassPanel } from '@/components/ui'
-import type { AiStreamState } from '@/hooks/useAiStream'
+import type {
+  AiStreamState,
+  AiToolActivity,
+  AiUsage,
+} from '@/hooks/useAiStream'
 
 // AIFeatureStream is the narrow slice of useAiStream's result shape
 // that AIFeatureCard reads. We deliberately do NOT take the whole
@@ -70,6 +74,8 @@ export interface AIFeatureStream {
   state: AiStreamState
   text: string
   error: string | null
+  activity?: AiToolActivity[]
+  usage?: AiUsage | null
   start: () => void
 }
 
@@ -203,15 +209,15 @@ export function AIBadge({ label }: { label?: string }): JSX.Element {
   const text = label ?? t('helix.badge', 'Helix')
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+      className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-800 dark:text-cyan-300"
       title={t(
         'helix.tooltip',
-        'Helix is your AI assistant. It generates responses using your redacted fleet context.',
+        'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
       )}
       aria-label={t('helix.ariaLabel', 'Helix')}
     >
       <HelixMark
-        className="h-3.5 w-3.5 text-cyan-300"
+        className="h-3.5 w-3.5 text-cyan-800 dark:text-cyan-300"
         aria-hidden="true"
       />
       {text}
@@ -284,7 +290,7 @@ export function AIFeatureCard({
           aria-hidden="true"
         />
       }
-      className="gap-1.5 whitespace-nowrap shrink-0 border-cyan-400/40 bg-cyan-500/5 text-cyan-100 dark:border-cyan-400/40 hover:border-cyan-400/70 hover:bg-cyan-500/15 hover:text-[var(--text-primary)] focus-visible:ring-cyan-400/60 transition-all"
+      className="gap-1.5 whitespace-nowrap shrink-0 border-cyan-400/40 bg-cyan-500/5 text-cyan-800 dark:border-cyan-400/40 dark:text-cyan-100 hover:border-cyan-400/70 hover:bg-cyan-500/15 hover:text-[var(--text-primary)] focus-visible:ring-cyan-400/60 transition-all"
       disabled={buttonDisabled}
       aria-disabled={buttonDisabled ? 'true' : 'false'}
       aria-busy={isStreaming || undefined}
@@ -334,6 +340,8 @@ export function AIFeatureCard({
           text={stream.text}
           state={stream.state}
           error={stream.error}
+          activity={stream.activity}
+          usage={stream.usage}
         />
       </div>
     </GlassPanel>

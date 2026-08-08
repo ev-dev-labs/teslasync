@@ -8,7 +8,7 @@ import {
 import { Grid } from '@/components/layout';
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard, StatCard } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -112,7 +112,7 @@ export function DataPipelineSection() {
                   <MetricCard label={t('Compressed')} value={fmtInt(compression.compressed_positions)} icon={<Archive className="h-4 w-4" />} color="cyan" />
                 </Grid>
                 <div className="mt-4 flex justify-center">
-                  <RadialGauge value={compression.savings_percent} max={100} label={t('Savings')} unit="%" color="#22c55e" size={140} />
+                  <LinearGauge value={compression.savings_percent} max={100} label={t('Savings')} unit="%" color="#22c55e" size={140} className="max-w-xs" />
                 </div>
               </>
             ) : (

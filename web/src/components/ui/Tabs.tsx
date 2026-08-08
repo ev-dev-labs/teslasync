@@ -76,7 +76,7 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
 
   return (
     <div
-      className={cn('flex gap-1 border-b border-gray-200 dark:border-gray-700', className)}
+      className={cn('flex gap-1 border-b border-[var(--panel-border)]', className)}
       role="tablist"
       aria-label={ariaLabel}
     >

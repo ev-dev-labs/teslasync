@@ -52,6 +52,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { TirePressureSection } from './TirePressureSection'
+import { BADGE_VARIANTS } from '@/components/ui';
 
 // Backend SI pascals chosen to land squarely inside each status band.
 // Thresholds (Pa): LOW_CRITICAL 206_800 · LOW_WARNING 241_300 ·
@@ -185,7 +186,7 @@ describe('TirePressureSection — null-value safety', () => {
 
     const badge = screen.getByText('No Data')
     expect(badge).toBeInTheDocument()
-    expect(badge.className).toContain('bg-gray-100')
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral)
 
     // The rest of the grid still renders — the panel is never left blank.
     expect(screen.getByText('Front Left')).toBeInTheDocument()

@@ -232,6 +232,22 @@ export function priorPeriod(
   };
 }
 
+/**
+ * Shift a `YYYY-MM-DD` day key by `days` (negative shifts backwards).
+ * Returns `null` for malformed input.
+ *
+ * Used to pad a server-side fetch window. The API filters `started_at` in
+ * UTC while this page buckets drives by the *vehicle's* local day, so an
+ * unpadded window can omit rows that the vehicle-tz filter would keep. One
+ * day of padding covers the whole ±14h range of real world offsets.
+ */
+export function shiftDayKey(key: string | undefined, days: number): string | null {
+  if (!key) return null;
+  const ms = ymdToUtcMillis(key);
+  if (ms == null) return null;
+  return utcMillisToYmd(ms + days * 86_400_000);
+}
+
 function ymdToUtcMillis(key: string): number | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
   if (!m) return null;

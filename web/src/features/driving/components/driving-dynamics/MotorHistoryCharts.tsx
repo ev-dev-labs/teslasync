@@ -23,17 +23,27 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import type { MotorSnapshot } from '@/api/types';
+import { useMotorHistory } from '@/api/hooks/useVehicles';
+import { INTERVALS } from '@/lib/constants';
+import { MOTOR_HISTORY_LIMIT } from './useMotorStats';
 
 interface MotorHistoryChartsProps {
-  motorHistory: MotorSnapshot[] | undefined;
+  vehicleId: number | null | undefined;
   toSpeedDisplay: (v: number) => number;
   speedUnit: string;
 }
 
-export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsProps) {
+export default function MotorHistoryCharts({ vehicleId }: MotorHistoryChartsProps) {
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
+
+  // Same query key as useMotorStats, so the four history-derived panels
+  // share one request and one cache entry while each refreshes on its own.
+  const { data: motorHistory } = useMotorHistory(
+    vehicleId ?? 0,
+    MOTOR_HISTORY_LIMIT,
+    INTERVALS.FAST,
+  );
 
   // URL-persisted hidden-series state for the
   // power-vs-regen trace; users often want to isolate one or the other

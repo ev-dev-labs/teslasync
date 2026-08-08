@@ -18,7 +18,7 @@ function regenColor(pct: number): string {
 
 export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { formatEnergy, formatPower } = useUnits();
+  const { formatEnergy } = useUnits();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
@@ -29,7 +29,10 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   const isCompact = size.cols <= 1;
 
-  const regenPct = (data?.regenRatio ?? 0) * 100;
+  // `/analytics/regen` already returns regen_ratio as a percentage
+  // (regenWh / driveWh * 100, see internal/api/regen/handler.go). Do not
+  // scale it again — that pinned the gauge at max and forced regenColor green.
+  const regenPct = data?.regenRatio ?? 0;
   const color = useMemo(() => regenColor(regenPct), [regenPct]);
 
   const stats: GaugeHeroStat[] = useMemo(() => [
@@ -37,15 +40,17 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       label: t('widget.regenEfficiency.totalKwh', 'Total Recovered'),
       value: formatEnergy(data?.totalRegenWh, { precision: 1 }),
     },
+    // Do not surface `monthlyAvgRegen`: despite its legacy name, the backend
+    // field is average absolute drive power, not measured regenerative power.
     {
-      label: t('widget.regenEfficiency.monthlyAvg', 'Monthly Avg'),
-      value: formatPower(data?.monthlyAvgRegen, { precision: 1 }),
+      label: t('widget.regenEfficiency.driveEnergy', 'Drive Energy'),
+      value: formatEnergy(data?.totalDriveWh, { precision: 1 }),
     },
     {
       label: t('widget.regenEfficiency.freeCharges', 'Free Charges'),
       value: fmtInt(data?.freeCharges ?? 0),
     },
-  ], [data, t, formatEnergy, formatPower]);
+  ], [data, t, formatEnergy]);
 
   const gaugeConfig = useMemo(() => ({
     value: Math.round(regenPct),

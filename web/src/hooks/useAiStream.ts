@@ -134,6 +134,24 @@ export interface AiLimitInfo {
   message: string;
 }
 
+export type AiToolActivityStatus = 'running' | 'succeeded' | 'failed';
+
+/**
+ * Privacy-safe execution metadata for one Helix tool call. Arguments and
+ * result payloads intentionally stay in the event callback rather than shared
+ * UI state because they can contain locations, VINs, or other fleet details.
+ */
+export interface AiToolActivity {
+  id: string;
+  name: string;
+  status: AiToolActivityStatus;
+}
+
+export interface AiUsage {
+  in: number;
+  out: number;
+}
+
 // UseAiStreamResult is the return shape. `start` and `cancel` are
 // stable functional handles; `state` and `text` re-render the
 // component on change.
@@ -156,6 +174,12 @@ export interface UseAiStreamResult {
    * when `limit !== null && limit.baselineAvailable`.
    */
   limit: AiLimitInfo | null;
+  /** Ordered, privacy-safe tool execution trail for provenance UI. */
+  activity: AiToolActivity[];
+  /** Token usage reported by the terminal frame, or null while incomplete. */
+  usage: AiUsage | null;
+  /** Provider finish reason reported by the terminal frame. */
+  finishReason: string | null;
 }
 
 // SSE_DELIM is the standard event terminator: a blank line. The
@@ -184,6 +208,9 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState<AiLimitInfo | null>(null);
+  const [activity, setActivity] = useState<AiToolActivity[]>([]);
+  const [usage, setUsage] = useState<AiUsage | null>(null);
+  const [finishReason, setFinishReason] = useState<string | null>(null);
 
   // Latest callback ref so closing over `onEvent` does not stale-pin
   // the parser. Same trick used by useEffect-flavoured event
@@ -205,6 +232,8 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
       abortRef.current = null;
     }
     runningRef.current = false;
+    setActivity(markRunningActivitiesFailed);
+    setState((current) => (current === 'streaming' ? 'idle' : current));
   }, []);
 
   // Cleanup on unmount. Dependency is empty so this fires only on
@@ -227,12 +256,17 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
     setText('');
     setError(null);
     setLimit(null);
+    setActivity([]);
+    setUsage(null);
+    setFinishReason(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
 
     const requestBody = body !== undefined ? JSON.stringify(body) : undefined;
     const fullURL = `${getApiBase()}/api/v1${url.startsWith('/') ? url : `/${url}`}`;
+    let terminalSeen = false;
+    let confirmationPending = false;
 
     void (async () => {
       try {
@@ -287,17 +321,13 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
           const ev = parseSSEFrame(buffer);
           if (ev) handleEvent(ev);
         }
-        // If the loop ended without a terminal event AND we're still
-        // in `streaming`, mark as done so the caller's UI doesn't sit
-        // in `streaming`. Critically: do NOT promote `paused-confirm`
-        // — the server intentionally closes the connection after a
-        // confirm_request and the SPA is expected to keep that
-        // paused state until the user's decision arrives via a fresh
-        // start() against the continuation endpoint.
-        setState((cur) => (cur === 'streaming' ? 'done' : cur));
+        if (!terminalSeen && !confirmationPending) {
+          finalizeError('stream_incomplete');
+        }
       } catch (err) {
         // AbortError is the user-cancel path — don't flag as error.
         if (err instanceof Error && err.name === 'AbortError') {
+          setActivity(markRunningActivitiesFailed);
           setState((cur) => (cur === 'streaming' ? 'idle' : cur));
           runningRef.current = false;
           return;
@@ -317,12 +347,32 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
           setText((prev) => prev + ev.text);
           break;
         case 'confirm_request':
+          confirmationPending = true;
           setState('paused-confirm');
           break;
+        case 'tool_call':
+          setActivity((current) => mergeAiToolActivity(current, {
+            id: ev.id,
+            name: ev.name,
+            status: 'running',
+          }));
+          break;
+        case 'tool_result':
+          setActivity((current) => mergeAiToolActivity(current, {
+            id: ev.id,
+            name: ev.name,
+            status: ev.ok ? 'succeeded' : 'failed',
+          }));
+          break;
         case 'done':
+          terminalSeen = true;
+          setUsage(ev.usage);
+          setFinishReason(ev.finish_reason);
+          setActivity(markRunningActivitiesFailed);
           setState('done');
           break;
         case 'error':
+          terminalSeen = true;
           // F9: capture the structured limit fields so the
           // AiLimitBanner can render the right banner. Plain-error
           // frames (no `reason`) yield limit === null, which the
@@ -338,20 +388,32 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
           }
           finalizeError(ev.message);
           break;
-        default:
-          // tool_call and tool_result update the caller's transcript
-          // via onEvent; no internal state change.
-          break;
       }
     }
 
     function finalizeError(message: string) {
+      setActivity(markRunningActivitiesFailed);
       setError(message);
       setState('error');
     }
   }, [url, body, state]);
 
-  return { start, cancel, state, text, error, limit };
+  return { start, cancel, state, text, error, limit, activity, usage, finishReason };
+}
+
+export function markRunningActivitiesFailed(current: AiToolActivity[]): AiToolActivity[] {
+  return current.map((item) => (
+    item.status === 'running' ? { ...item, status: 'failed' } : item
+  ));
+}
+
+export function mergeAiToolActivity(
+  current: AiToolActivity[],
+  next: AiToolActivity,
+): AiToolActivity[] {
+  const index = current.findIndex((item) => item.id === next.id);
+  if (index === -1) return [...current, next];
+  return current.map((item, itemIndex) => (itemIndex === index ? next : item));
 }
 
 /**

@@ -53,6 +53,7 @@ export interface FeatureCatalogEntry {
 const DESCRIPTIONS: Record<string, string> = {
   // ── Home ───────────────────────────────────────────────────────────
   '/': 'Your daily summary — battery, last drive, charging, and alerts at a glance.',
+  '/action-center': 'Prioritized decisions with evidence, confidence, safe actions, and no fabricated impact.',
   '/explore': 'Browse and search every feature in TeslaSync with a 1-line description for each.',
   '/live': 'Real-time map of where your vehicle is right now.',
   '/timeline': 'Hour-by-hour history of drives, charges, and events.',
@@ -63,6 +64,25 @@ const DESCRIPTIONS: Record<string, string> = {
   '/digital-twin': 'A live 3D model of your car mirroring doors, lights, and motion.',
   '/vehicle-comparison': 'Side-by-side stats for two or more of your vehicles.',
   '/locations': 'Frequent destinations — home, work, favorite Superchargers.',
+  '/parking': 'Parking patterns, dwell time, location mix, and recurring occupancy.',
+  '/utilization': 'Vehicle availability and productive use across your fleet.',
+  '/time-machine': 'Reconstruct vehicle state at any recorded point in time.',
+  '/fleet-operations': 'Coordinate drivers, bookings, policies, work orders, and utilization.',
+  '/resale-vault': 'Create verifiable, selectively disclosed vehicle-history reports.',
+
+  // ── Advanced Intelligence ──────────────────────────────────────────
+  '/intelligence/twin-lab': 'Run calibrated vehicle counterfactuals with explicit uncertainty and sensitivity.',
+  '/intelligence/firmware-canary': 'Gate firmware rollout using matched pre/post cohorts instead of simple averages.',
+  '/intelligence/component-survival': 'Model event-free component horizons, competing risks, and intervention sensitivity.',
+  '/intelligence/road-hazards': 'Reveal privacy-safe crash and airbag clusters without exposing exact coordinates.',
+  '/intelligence/behavioral-sentinel': 'Detect command and telemetry behavior shifts without claiming attack attribution.',
+  '/intelligence/charging-forensics': 'Separate recorded charging facts from unsupported meter and billing assumptions.',
+  '/intelligence/journey-assurance': 'Stress-test departure readiness against reserve, climate, and uncertainty.',
+  '/intelligence/charging-site-twin': 'Simulate charging-site queues, failures, and fallback capacity before deployment.',
+  '/intelligence/federated-learning': 'Train local aggregate models with explicit privacy-budget accounting.',
+  '/intelligence/emergency-resilience': 'Build confirmed emergency energy plans from vehicles, home reserve, and loads.',
+  '/intelligence/causal-lab': 'Run confirmed treatment/control analyses with transparent effect limitations.',
+  '/intelligence/tco-optimizer': 'Compare ownership scenarios without inventing prices, tariffs, or depreciation.',
 
   // ── Driving ────────────────────────────────────────────────────────
   '/drives': 'Every drive with route, energy used, and efficiency.',
@@ -77,6 +97,24 @@ const DESCRIPTIONS: Record<string, string> = {
   '/driving-dynamics': 'G-forces, lateral and longitudinal acceleration analysis.',
   '/regen-efficiency': 'How much energy regenerative braking recaptures.',
   '/route-efficiency': 'Compare actual vs predicted Wh/mile for a route.',
+  '/logbook': 'Review and annotate a searchable chronological trip log.',
+  '/mileage-budget': 'Track distance budgets and forecast when thresholds will be reached.',
+  '/driving-rhythm': 'See recurring departure, duration, and travel-time patterns.',
+  '/speed-sweetspot': 'Find the speed band where your vehicle is most efficient.',
+  '/efficiency-target': 'Set an efficiency goal and measure progress toward it.',
+  '/cold-start': 'Quantify the energy and range cost of cold departures.',
+  '/drive-compare': 'Compare two drives across route, speed, energy, and conditions.',
+  '/explorer': 'Slice and inspect drive history with advanced filters.',
+  '/drive-calendar': 'Browse driving activity and totals on a calendar.',
+  '/milestones': 'Celebrate distance, efficiency, and ownership achievements.',
+  '/drive-dna': 'Profile the repeatable characteristics of your driving style.',
+  '/what-if': 'Simulate how speed, weather, load, and climate change efficiency.',
+  '/departure-forecast': 'Predict likely departure times from historical routines.',
+  '/arrival-reliability': 'Estimate arrival-time reliability and route uncertainty.',
+  '/destination-transitions': 'Map recurring movement between destinations and likely next stops.',
+  '/journey-fragmentation': 'Measure trip chains, stopovers, and avoidable journey fragments.',
+  '/seasonal-efficiency': 'Compare efficiency patterns across seasons and weather regimes.',
+  '/segments': 'Race your historical best on repeated road segments.',
 
   // ── Charging ───────────────────────────────────────────────────────
   '/charging': 'All charging sessions — Supercharger, home, third-party.',
@@ -85,6 +123,11 @@ const DESCRIPTIONS: Record<string, string> = {
   '/charging-heatmap': 'When and where you charge, visualised as a heatmap.',
   '/smart-charge': 'Schedule charging for off-peak or solar-surplus windows.',
   '/powershare': 'Use your vehicle as a backup home battery (V2H).',
+  '/charger-health': 'Track charging-site performance, faults, and declining power.',
+  '/charge-interruption': 'Explain incomplete sessions and recurring charging interruptions.',
+  '/charger-resilience': 'Measure dependence on individual sites and charging alternatives.',
+  '/charge-departure-alignment': 'Check whether charging finishes before predicted departures.',
+  '/charging-thermal-tax': 'Quantify battery-heating overhead during charging sessions.',
 
   // ── Battery ────────────────────────────────────────────────────────
   '/battery': 'Pack health: SoH, full-charge capacity, and degradation curve.',
@@ -93,22 +136,38 @@ const DESCRIPTIONS: Record<string, string> = {
   '/projected-range': 'Range forecast adjusted for weather, terrain, and driving style.',
   '/vampire-drain': 'Standby energy loss while parked and asleep.',
   '/sleep-efficiency': 'How quickly the car drops into low-power sleep when parked.',
+  '/battery-passport': 'Issue a verifiable battery health and provenance certificate.',
+  '/pack-capacity': 'Estimate usable pack capacity from charging and driving evidence.',
+  '/cycle-stress': 'Measure depth-of-discharge and cycle stress on the battery.',
+  '/range-buffer': 'Track reserve-range habits and low-state-of-charge exposure.',
+  '/battery-care': 'Turn battery behavior into practical longevity recommendations.',
+  '/charge-advisor': 'Recommend charging limits and timing for battery care.',
 
   // ── Energy ─────────────────────────────────────────────────────────
   '/energy': 'Daily kWh in and out of the pack.',
   '/energy-flow': 'Animated flow diagram showing where the energy is going right now.',
   '/power-flow': 'Live power draw and regen at the wheels.',
   '/energy-products': 'Solar production and Powerwall stats from your Tesla account.',
+  '/energy-ledger': 'Reconcile vehicle energy, cost, charging losses, and sources.',
+  '/energy-orchestrator': 'Optimize vehicles, solar, Powerwall, tariffs, and panel capacity.',
 
   // ── Service ────────────────────────────────────────────────────────
   '/tire-pressure': 'Current and historical pressure per tire.',
   '/drivetrain-health': 'Motor temperatures, inverter status, and fault codes.',
   '/software-updates': 'Available firmware updates and changelog.',
   '/maintenance': 'Tire rotations, brake fluid, cabin filter — overdue items first.',
+  '/tire-differential-drift': 'Detect persistent pressure drift between tires.',
+  '/firmware-impact': 'Compare efficiency and reliability before and after firmware updates.',
+  '/service-intelligence': 'Match recalls and service bulletins to vehicle evidence.',
+  '/diagnostics/service-evidence': 'Export an integrity-checked package of service evidence.',
 
   // ── Cabin ──────────────────────────────────────────────────────────
   '/climate-control': 'Pre-heat, pre-cool, or run Dog Mode remotely.',
   '/media-player': 'See what is playing and control playback.',
+  '/cabin-thermal': 'Model cabin heating, cooling, and heat-retention behavior.',
+  '/hvac-cycling': 'Detect excessive compressor cycling and unstable HVAC operation.',
+  '/comfort-consistency': 'Measure how consistently the cabin holds its target temperature.',
+  '/preconditioning-effectiveness': 'Score cabin and battery readiness before departure.',
 
   // ── Reports ────────────────────────────────────────────────────────
   '/statistics': 'Bar and pie charts across every metric in the system.',
@@ -118,10 +177,15 @@ const DESCRIPTIONS: Record<string, string> = {
   '/temperature-impact': 'How outside temperature affects range and efficiency.',
   '/cost-analysis': 'Electricity cost per drive and per mile.',
   '/tco': 'Total cost of ownership — energy, insurance, service, depreciation.',
+  '/share-card': 'Design privacy-aware visual summaries ready to share.',
+  '/analytics/carbon': 'Track charging emissions and lower-carbon alternatives.',
+  '/drive-archetypes': 'Discover recurring drive patterns and representative journeys.',
+  '/benchmarks/privacy': 'Compare with similar vehicles without uploading raw trips.',
 
   // ── Commands ───────────────────────────────────────────────────────
   '/commands': 'Send a remote command (wake, lock, climate, port, …).',
   '/command-history': 'Audit log of every command sent and its result.',
+  '/command-reliability': 'Measure command latency, success rate, and recurring failures.',
 
   // ── Automation ─────────────────────────────────────────────────────
   '/automations': 'Trigger actions on geofence, time, or vehicle state.',
@@ -135,6 +199,9 @@ const DESCRIPTIONS: Record<string, string> = {
   '/notifications/webhooks': 'POST alerts to your own URL for downstream automation.',
   '/notifications/browser': 'Enable browser push notifications for this device.',
   '/notifications/quiet-hours': 'Mute non-critical alerts during set times.',
+  '/alert-fatigue': 'Identify noisy alert rules and reduce repetitive notifications.',
+  '/notification-burn-rate': 'Track notification reliability against its error budget.',
+  '/notification-latency': 'Measure delivery speed and tail latency by channel.',
 
   // ── Security ───────────────────────────────────────────────────────
   '/security-access': 'Manage who can drive, charge, and unlock your vehicle.',
@@ -161,6 +228,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/integrations/helix': 'Configure the Helix AI assistant — provider, model, API key, and cost cap.',
   '/api-keys': 'Issue and revoke API keys for external integrations.',
   '/gas-price': 'Compare your $/mile against gasoline at current prices.',
+  '/intelligence-packs': 'Install signed, sandboxed community analytics and automations.',
 
   // ── Data ───────────────────────────────────────────────────────────
   '/data-export': 'Export drives, charging sessions, and signals to CSV.',
@@ -171,6 +239,15 @@ const DESCRIPTIONS: Record<string, string> = {
   '/system-status': 'Health of every dependent service — MQTT, Redis, DB, Tesla API.',
   '/db-health': 'Database size, query latency, and replication lag.',
   '/anomaly-detection': 'Auto-detected outliers in charging, range, and drives.',
+  '/diagnostics/rul': 'Estimate remaining useful life for monitored components.',
+  '/diagnostics/root-cause': 'Rank evidence-backed explanations for vehicle anomalies.',
+  '/dashcam': 'Search, redact, and reconstruct Dashcam and Sentry incidents locally.',
+  '/signal-correlation': 'Find signals that move together across a selected time window.',
+  '/signal-entropy': 'Measure signal variability and information density.',
+  '/signal-trend': 'Detect robust long-term telemetry trends and direction changes.',
+  '/signal-change-points': 'Locate statistically meaningful shifts in signal behavior.',
+  '/signal-deadband': 'Recommend noise thresholds that preserve meaningful telemetry.',
+  '/signal-mutual-information': 'Discover nonlinear dependencies between telemetry signals.',
   '/signals': 'Live values for every telemetry signal the car publishes.',
   '/admin/live-signals': 'Inspect a single signal in real time with history.',
   '/admin/ingest-xray': 'See every payload as it lands from Fleet Telemetry.',
@@ -189,6 +266,18 @@ const DESCRIPTIONS: Record<string, string> = {
   '/admin/telemetry/coverage': 'Which Fleet Telemetry fields are wired vs missing.',
   '/api-logs': 'Recent HTTP requests with status, duration, and payload size.',
   '/api-playground': 'Try any API endpoint with parameter forms.',
+
+  // ── Ownership Intelligence ─────────────────────────────────────────
+  '/ownership/insurance-telematics': 'Driving-risk scoring and premium evidence for your insurer.',
+  '/ownership/tariff-lab': 'Compare utility rate plans against your real charging history.',
+  '/ownership/charging-reconciliation': 'Match charging invoices to sessions and raise disputes.',
+  '/ownership/driver-attribution': 'Cluster driving fingerprints to attribute trips to drivers.',
+  '/ownership/warranty-command': 'Coverage windows, expiry risk, and claim-readiness evidence.',
+  '/ownership/data-governance': 'Plan retention and purge policies before anything is deleted.',
+  '/ownership/model-trust': 'Score prediction accuracy, calibration, bias, and drift.',
+  '/ownership/jurisdiction-compliance': 'Apportion distance by region for road-usage charges.',
+  '/ownership/consumables-lifecycle': 'Wear-part life remaining from real usage stress.',
+  '/ownership/subscription-roi': 'Whether each recurring feature earns back its cost.',
 
   // ── About ──────────────────────────────────────────────────────────
   '/roadmap': 'Upcoming features grouped by quarter.',
@@ -251,6 +340,8 @@ export function filterFeatureCatalog(
 ): FeatureCatalogEntry[] {
   const q = query.trim().toLowerCase();
   if (!q) return entries;
+  const exactSection = entries.find((entry) => entry.section.toLowerCase() === q)?.section;
+  if (exactSection) return entries.filter((entry) => entry.section === exactSection);
   const tokens = q.split(/\s+/);
   return entries.filter((e) => {
     const haystack = `${e.label} ${e.section} ${e.description} ${e.to}`.toLowerCase();

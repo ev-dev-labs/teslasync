@@ -101,6 +101,7 @@ export function AutomationStatusPanel({
         <EmptyState
           icon={<Icons.workflow className="h-8 w-8" />}
           message={t('automationList.status.empty', 'No automations to summarize yet')}
+          actionTo={{ label: t('automationList.empty.cta', 'Open builder'), to: '/automations/new' }}
         />
       ) : (
         <div className="space-y-4">

@@ -190,6 +190,8 @@ export function LiveVehicleState({ latest, isLoading, error, onRetry, className 
           ))}
         </div>
       ) : (
+        // no-action: mirrors DigitalTwinPanel's 5s-poll latest-state query —
+        // this panel self-heals once telemetry lands.
         <EmptyState
           icon={<CircleDot className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.security.live.noData', 'No live state data available')}

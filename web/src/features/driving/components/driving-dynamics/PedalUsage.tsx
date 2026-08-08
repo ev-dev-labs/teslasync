@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Footprints } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { EmptyState, Spinner, QueryError } from '@/components/feedback';
 import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
@@ -65,7 +65,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
     body = (
       <div className="grid grid-cols-1 gap-4 @md:grid-cols-3">
         <div className="flex flex-col items-center gap-2">
-          <RadialGauge
+          <LinearGauge
             value={throttle ?? 0}
             max={100}
             label={t('dynamics.throttle', 'Throttle')}
@@ -76,7 +76,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
           <Caption>{t('dynamics.throttlePosition', 'Throttle Position')}</Caption>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <RadialGauge
+          <LinearGauge
             value={brakePos ?? 0}
             max={100}
             label={t('dynamics.brake', 'Brake')}

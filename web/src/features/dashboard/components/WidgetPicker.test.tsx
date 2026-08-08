@@ -52,7 +52,7 @@ const RECENT_KEY = 'teslasync-widgets-recent';
 
 // Globally-unique widget descriptions — used to target specific cards by their
 // accessible name (which concatenates icon + name + description + size).
-const BATTERY_GAUGE_DESC = 'Battery percentage with radial gauge';
+const BATTERY_GAUGE_DESC = 'Battery percentage with level gauge';
 const RANGE_ESTIMATE_DESC = 'Rated, ideal, and estimated range';
 const VEHICLE_HERO_DESC = 'Vehicle name, model, state, battery at a glance';
 

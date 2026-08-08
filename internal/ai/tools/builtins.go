@@ -77,10 +77,10 @@ type AlertRuleSource interface {
 	GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error)
 }
 
-// NotificationSource is the read surface the recent-alerts tool
-// needs. Implemented by *dbnotif.NotificationRepo.GetLogs.
+// NotificationSource is the read surface the recent-alerts tool needs.
+// Implemented by *dbnotif.NotificationRepo.GetAlertLogs.
 type NotificationSource interface {
-	GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error)
+	GetAlertLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error)
 }
 
 // GeofenceSource is the read surface the geofences tool needs.
@@ -173,7 +173,7 @@ type queryVehicleCount struct{ src VehicleSource }
 
 func (t *queryVehicleCount) Name() string { return "query_vehicle_count" }
 func (t *queryVehicleCount) Description() string {
-	return "Return the number of vehicles in the fleet."
+	return "Discover the fleet: return the vehicle count plus safe summaries containing each numeric vehicle ID, display name, model, and active status. Call this before vehicle-specific tools when the conversation has not established a valid vehicle_id."
 }
 func (t *queryVehicleCount) InputSchema() json.RawMessage  { return CachedSchema(emptyInput{}) }
 func (t *queryVehicleCount) OutputSchema() json.RawMessage { return nil }
@@ -190,7 +190,28 @@ func (t *queryVehicleCount) Execute(ctx context.Context, in any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"count": len(vs)}, nil
+	type vehicleSummary struct {
+		ID          int64   `json:"id"`
+		DisplayName string  `json:"display_name"`
+		Model       *string `json:"model,omitempty"`
+		Active      bool    `json:"active"`
+	}
+	summaries := make([]vehicleSummary, 0, len(vs))
+	for _, vehicle := range vs {
+		if vehicle == nil {
+			continue
+		}
+		summaries = append(summaries, vehicleSummary{
+			ID:          vehicle.ID,
+			DisplayName: vehicle.DisplayName,
+			Model:       vehicle.Model,
+			Active:      vehicle.IsActive(),
+		})
+	}
+	return map[string]any{
+		"count":    len(summaries),
+		"vehicles": summaries,
+	}, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +219,7 @@ func (t *queryVehicleCount) Execute(ctx context.Context, in any) (any, error) {
 // ---------------------------------------------------------------------------
 
 type vehicleIDInput struct {
-	VehicleID int64 `json:"vehicle_id" validate:"required,gte=1" desc:"Numeric vehicle ID from query_vehicle_count or query_vehicles."`
+	VehicleID int64 `json:"vehicle_id" validate:"required,gte=1" desc:"Numeric vehicle ID from the vehicles array returned by query_vehicle_count."`
 }
 
 type queryVehicleState struct {
@@ -464,7 +485,7 @@ type queryAlertsRecent struct{ src NotificationSource }
 
 func (t *queryAlertsRecent) Name() string { return "query_alerts_recent" }
 func (t *queryAlertsRecent) Description() string {
-	return "Return the most-recent fired alerts (notification log entries), newest first."
+	return "Return the most-recent alert-backed notification events and delivery status, newest first. Manual test notifications are excluded."
 }
 func (t *queryAlertsRecent) InputSchema() json.RawMessage  { return CachedSchema(alertsRecentInput{}) }
 func (t *queryAlertsRecent) OutputSchema() json.RawMessage { return nil }
@@ -482,7 +503,7 @@ func (t *queryAlertsRecent) Execute(ctx context.Context, in any) (any, error) {
 	if limit == 0 {
 		limit = 10
 	}
-	logs, err := t.src.GetLogs(ctx, limit, 0)
+	logs, err := t.src.GetAlertLogs(ctx, limit, 0)
 	if err != nil {
 		return nil, err
 	}

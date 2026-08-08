@@ -146,7 +146,7 @@ export default function DriveDetailPage() {
             </AlertBanner>
           )}
 
-          {/* Hero — radial gauge summary of the drive. */}
+          {/* Hero — headline summary of the drive. */}
           {hasMeaningfulDriveStats && (
             <SectionErrorBoundary name="drive-detail:hero-gauges" fallbackTitle={t('driveDetail.section.heroGaugesFailed', 'Hero gauges failed to load')}>
               <HeroGauges drive={drive} stats={stats} />

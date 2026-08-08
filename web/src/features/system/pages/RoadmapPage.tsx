@@ -445,6 +445,7 @@ function DeliveryProgress({
 
         <div className="min-w-0 flex-1">
           {total === 0 ? (
+            // no-action: derived from the hardcoded roadmapItems array in this file — never empty without a source-code edit.
             <EmptyState message={t('roadmap.progress.empty', 'No roadmap items to display yet.')} />
           ) : (
             <>
@@ -519,6 +520,7 @@ function PhaseSection({
 
         {list.length === 0 ? (
           <GlassPanel className="p-4 sm:p-5">
+            {/* no-action: derived from the hardcoded roadmapItems array in this file, filtered by phase. */}
             <EmptyState message={t('roadmap.noItems', 'No items in this phase yet.')} />
           </GlassPanel>
         ) : (

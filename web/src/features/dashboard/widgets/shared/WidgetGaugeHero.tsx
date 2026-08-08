@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 
 export interface GaugeHeroConfig {
   value: number;
@@ -7,6 +7,9 @@ export interface GaugeHeroConfig {
   label: string;
   unit: string;
   color: string;
+  /** Optional reference tick (e.g. a configured charge limit). */
+  marker?: number;
+  markerLabel?: string;
 }
 
 export interface GaugeHeroStat {
@@ -27,10 +30,10 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
   // widgets via container queries (handled below by the wrapper).
   const size = compact ? 70 : 100;
 
-  // Guard the numbers the gauge feeds into its arc math. A missing / non-finite
-  // value collapses to 0, and a non-positive max would make the RadialGauge
-  // divide by zero — producing a NaN stroke offset and a visually broken ring —
-  // so it falls back to a sane 100-unit scale.
+  // Guard the numbers the gauge feeds into its fill math. A missing /
+  // non-finite value collapses to 0, and a non-positive max would make the
+  // LinearGauge divide by zero — producing a NaN width and a blank track — so
+  // it falls back to a sane 100-unit scale.
   const value = Number.isFinite(gauge?.value) ? gauge.value : 0;
   const max = Number.isFinite(gauge?.max) && gauge.max > 0 ? gauge.max : 100;
 
@@ -39,13 +42,15 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
 
   return (
     <div className="flex flex-col items-center justify-center gap-2">
-      <RadialGauge
+      <LinearGauge
         value={value}
         max={max}
         label={gauge?.label ?? ''}
         unit={gauge?.unit ?? ''}
         color={gauge?.color}
         size={size}
+        marker={gauge?.marker}
+        markerLabel={gauge?.markerLabel}
       />
 
       {!compact && items.length > 0 && (

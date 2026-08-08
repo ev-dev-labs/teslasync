@@ -80,8 +80,8 @@ export function KioskOverlay({
       {isCursorHidden && (
         // Non-interactive kiosk wallpaper layer that injects cursor-hiding CSS.
         // Not a dialog; new interactive dialogs MUST use <Modal>.
-        // eslint-disable-next-line no-restricted-syntax
         <div
+          // eslint-disable-next-line no-restricted-syntax
           className="fixed inset-0 z-[9997] pointer-events-none"
           aria-hidden="true"
           data-testid="kiosk-cursor-style"

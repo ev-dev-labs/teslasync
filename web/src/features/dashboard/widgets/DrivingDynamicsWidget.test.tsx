@@ -11,7 +11,7 @@
  *        - compact (cols <= 1): a title-less shell showing the peak-g big
  *          number + a "Smooth"/"Aggressive" Badge, or an EmptyState.
  *        - standard/wide (cols >= 2): a titled "Driving Dynamics" shell with
- *          three RadialGauges (Accel/Brake/Lateral), a severity Badge, and —
+ *          three LinearGauges (Accel/Brake/Lateral), a severity Badge, and —
  *          only when wide (cols >= 3) and the histogram has buckets — a
  *          "G-Force Distribution" bar chart.
  *   2. The peak-g "smooth" classification (`isSmooth`: maxG < 0.4) selecting
@@ -41,7 +41,7 @@
  * stubbed (via importOriginal, keeping every other export real) so
  * `useThemeChartPalette()` — which the widget calls unconditionally — resolves
  * a deterministic palette without a ThemeProvider ancestor. The shared
- * WidgetShell / RadialGauge / Badge / DataFreshness / EmptyState primitives all
+ * WidgetShell / LinearGauge / Badge / DataFreshness / EmptyState primitives all
  * run for real, so assertions exercise the true rendered DOM. `<MemoryRouter>`
  * wraps every render because the error branch's <QueryError> uses `useNavigate`.
  */
@@ -53,6 +53,7 @@ import type {
   AccelerationDistributionData,
 } from '@/types/driving';
 import DrivingDynamicsWidget from './DrivingDynamicsWidget';
+import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 // jsdom lacks matchMedia; DataFreshness → useMotionPreference reads it during
 // render. Install a benign stub before any component mounts.
@@ -121,7 +122,7 @@ vi.mock('@/components/ui/ThemeProvider', async (importOriginal) => {
 });
 
 // Colour tokens returned by the widget's internal `gaugeColor()` and rendered
-// as each RadialGauge arc `stroke`.
+// as each LinearGauge arc `stroke`.
 const GREEN = '#10b981';
 const CYAN = '#22d3ee';
 const AMBER = '#f59e0b';
@@ -194,8 +195,9 @@ function renderWidget(
   );
 }
 
-function gaugeArc(container: HTMLElement, color: string): SVGCircleElement | null {
-  return container.querySelector(`circle[stroke="${color}"]`);
+/** True when a LinearGauge in the tree is filled with `color`. */
+function gaugeArc(container: HTMLElement, color: string): boolean {
+  return hasGaugeColor(container, color);
 }
 
 beforeEach(() => {
@@ -296,11 +298,11 @@ describe('DrivingDynamicsWidget — gauge colour thresholds', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(gaugeArc(container, GREEN)).toBeTruthy();
-    expect(gaugeArc(container, CYAN)).toBeTruthy();
-    expect(gaugeArc(container, AMBER)).toBeTruthy();
+    expect(gaugeArc(container, GREEN)).toBe(true);
+    expect(gaugeArc(container, CYAN)).toBe(true);
+    expect(gaugeArc(container, AMBER)).toBe(true);
     // No gauge crossed the red (>= 0.6) threshold.
-    expect(gaugeArc(container, RED)).toBeNull();
+    expect(gaugeArc(container, RED)).toBe(false);
   });
 
   it('paints a gauge red once a g-force reaches the 0.6 threshold', () => {
@@ -316,8 +318,8 @@ describe('DrivingDynamicsWidget — gauge colour thresholds', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(gaugeArc(container, RED)).toBeTruthy();
-    expect(gaugeArc(container, GREEN)).toBeNull();
+    expect(gaugeArc(container, RED)).toBe(true);
+    expect(gaugeArc(container, GREEN)).toBe(false);
   });
 });
 
@@ -456,7 +458,7 @@ describe('DrivingDynamicsWidget — query states', () => {
     expect(screen.getByText('Accel')).toBeInTheDocument();
     expect(screen.getByText('Calm')).toBeInTheDocument();
     // Every g-force degraded to 0 → all three gauges paint green (< 0.2).
-    expect(gaugeArc(container, GREEN)).toBeTruthy();
+    expect(gaugeArc(container, GREEN)).toBe(true);
   });
 });
 

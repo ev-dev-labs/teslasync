@@ -5,7 +5,8 @@ import { Grid } from '@/components/layout';
 import { GlassPanel, Badge, PanelTitle, Caption, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import type { MotorSnapshot } from '@/api/types';
+import { useMotorLatest } from '@/api/hooks/useVehicles';
+import { INTERVALS } from '@/lib/constants';
 import type { Drive } from '@/types/driving';
 
 function shiftColor(shift: string | null | undefined): string {
@@ -28,7 +29,7 @@ function shiftBadgeVariant(shift: string | null | undefined): 'success' | 'dange
 }
 
 interface SpeedGearPanelProps {
-  motorLatest: MotorSnapshot | null | undefined;
+  vehicleId: number | null | undefined;
   filteredDrives: Drive[];
   toSpeedDisplay: (v: number) => number;
   speedUnit: string;
@@ -49,8 +50,14 @@ function SpeedStat({ label, value, unit }: { label: string; value: string; unit:
   );
 }
 
-export default function SpeedGearPanel({ motorLatest, filteredDrives, toSpeedDisplay, speedUnit }: SpeedGearPanelProps) {
+export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDisplay, speedUnit }: SpeedGearPanelProps) {
   const { t } = useTranslation();
+
+  // Shares the ['motor-latest', vehicleId] cache entry with LiveMotorStatus —
+  // TanStack dedupes on the key, so owning the subscription here costs no
+  // extra request and keeps the gear readout live even if the sibling panel
+  // unmounts.
+  const { data: motorLatest } = useMotorLatest(vehicleId ?? 0, INTERVALS.REALTIME);
 
   // Compute drive-level aggregates in SI (m/s) and convert ONCE at render
   // time. The pre-fix code called `toSpeedDisplay` once during the

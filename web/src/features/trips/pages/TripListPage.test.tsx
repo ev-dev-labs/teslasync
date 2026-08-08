@@ -198,7 +198,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import TripListPage from './TripListPage';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type AnyFn = ReturnType<typeof vi.fn> & any;
 const mockUseTrips = useTrips as unknown as AnyFn;
 const mockSelected = useSelectedVehicle as unknown as AnyFn;
@@ -207,7 +207,7 @@ const mockFormatting = useFormatting as unknown as AnyFn;
 const mockExportCSV = exportAsCSV as unknown as AnyFn;
 const mockExportJSON = exportAsJSON as unknown as AnyFn;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

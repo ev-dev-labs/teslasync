@@ -3,7 +3,7 @@ import { Navigation, BatteryCharging, MapPin } from 'lucide-react'
 
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
-import { RadialGauge } from '@/components/charts'
+import { LinearGauge } from '@/components/charts'
 import { useUnits } from '@/hooks/useUnits'
 import { fmtNumber } from '@/lib/numberFormat'
 import type { VehicleState } from '@/api/types'
@@ -19,7 +19,7 @@ export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
 
   // Null-safe battery level. `state.battery_level` can arrive undefined/null
   // from partial SignalStore snapshots (or the camelCaseKeys transform): the
-  // RadialGauge would otherwise compute `strokeDashoffset={NaN}` and
+  // LinearGauge would otherwise compute `strokeDashoffset={NaN}` and
   // `batteryColor` would misreport an unknown level as critical-low red.
   const batteryLevel = state.battery_level ?? 0
   const isCharging = Boolean(state.is_charging)
@@ -33,7 +33,7 @@ export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
     <GlassPanel className="p-6">
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
         <div className="relative">
-          <RadialGauge
+          <LinearGauge
             value={batteryLevel}
             max={100}
             label={t('common.battery', 'Battery')}

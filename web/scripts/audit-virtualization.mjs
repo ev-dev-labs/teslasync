@@ -41,7 +41,6 @@ const ROOT = path.resolve(process.cwd(), 'src');
 // given prompt (READ-only — modifications still go through the normal
 // allowlist gate).
 const HOT_TABLE_PAGES = [
-  'features/notifications/pages/AlertsPage.tsx',
   'features/admin/pages/LiveLogsPage.tsx',
   'features/charging/pages/TeslaChargingSessionsPage.tsx',
   'features/charging/pages/TeslaChargingHistoryPage.tsx',
@@ -54,7 +53,14 @@ const HOT_TABLE_PAGES = [
 // component that doesn't exist; document the gap so the future work can
 // migrate them to DataTable+virtualized.
 const PENDING_MIGRATION = [
-  'features/notifications/pages/NotificationsPage.tsx',
+  // Successor to the deleted NotificationsPage.tsx (renamed in #64
+  // "Refactor/filters"). The page itself is a thin shell — rows are mapped
+  // into <NotificationRow> inside InboxBody, so that is what must migrate.
+  'features/notifications/components/InboxBody.tsx',
+  // Successor to the deleted AlertsPage.tsx (same PR). Renders rows via a
+  // raw .map() rather than <DataTable/>, so it cannot satisfy HOT_TABLE_PAGES.
+  // Currently bounded by client-side Pagination, hence migration not urgent.
+  'features/notifications/pages/AlertsListPage.tsx',
   'features/admin/pages/ApiLogsPage.tsx',
   'features/driving/pages/DrivesListPage.tsx',
   'features/charging/pages/ChargingListPage.tsx',
@@ -221,11 +227,19 @@ if (exemptedWaiver.length > 0) {
 // PENDING_MIGRATION — informational only. These pages render long
 // lists via raw `.map()` and ought to migrate to DataTable+virtualized
 // in a follow-up. Surfaced as warnings so the backlog stays visible.
+//
+// A *stale* entry is a hard failure, not a warning: a path that no longer
+// exists silently stops auditing the surface it was meant to track, which
+// is how NotificationsPage.tsx/AlertsPage.tsx rotted through #64.
 const pendingMissing = [];
 for (const rel of PENDING_MIGRATION) {
   const full = path.join(ROOT, rel);
   if (!existsSync(full)) {
     pendingMissing.push(rel);
+    failures.push({
+      file: rel,
+      reason: 'file not found (PENDING_MIGRATION is stale — repoint it at the renamed file or drop the entry)',
+    });
   }
 }
 if (PENDING_MIGRATION.length > 0) {

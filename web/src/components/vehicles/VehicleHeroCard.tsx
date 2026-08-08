@@ -5,7 +5,8 @@ import { Gauge } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { LinearGauge } from '@/components/charts/LinearGauge';
+import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
@@ -85,7 +86,13 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
     /* Range gauge max scales with display unit so the arc fills meaningfully
      * — Tesla long-range packs cap around 400 mi ≈ 644 km. */
     const rangeMax = distanceLabel === 'km' ? 644 : 400;
-    const tempMax = temperatureLabel === '°C' ? 50 : 122;
+    /* Both ends are converted together: a degree scale has a non-zero origin,
+     * so converting only the ceiling makes the same temperature sweep a
+     * different arc in °F. The floor also sits below freezing so sub-zero
+     * outside readings render instead of clamping to an empty ring. */
+    const tempRange = ambientTemperatureGaugeRange((c) =>
+      convertTempFromSI(c, temperatureLabel),
+    );
 
     return (
       <GlassPanel
@@ -131,8 +138,8 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             of collapsing the section, so the panel is never a blank shell. */}
         {vs ? (
           <>
-            <div className="flex flex-wrap items-center justify-center gap-6">
-              <RadialGauge
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+              <LinearGauge
                 value={vs.battery_level ?? 0}
                 max={100}
                 label={t('vehicleHero.gauge.battery', 'Battery')}
@@ -140,7 +147,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 color={(vs.battery_level ?? 0) > 20 ? '#22d3ee' : '#ef4444'}
                 size={100}
               />
-              <RadialGauge
+              <LinearGauge
                 value={rangeDisplay}
                 max={rangeMax}
                 label={t('vehicleHero.gauge.range', 'Range')}
@@ -148,17 +155,17 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 color="#4ade80"
                 size={100}
               />
-              <RadialGauge
+              <LinearGauge
                 value={insideTempDisplay}
-                max={tempMax}
+                {...tempRange}
                 label={t('vehicleHero.gauge.inside', 'Inside')}
                 unit={temperatureLabel}
                 color="#f59e0b"
                 size={100}
               />
-              <RadialGauge
+              <LinearGauge
                 value={outsideTempDisplay}
-                max={tempMax}
+                {...tempRange}
                 label={t('vehicleHero.gauge.outside', 'Outside')}
                 unit={temperatureLabel}
                 color="#a78bfa"

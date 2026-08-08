@@ -114,10 +114,14 @@ func TestAnthropic_Stream_SSE(t *testing.T) {
 	t.Parallel()
 	a := newAdapter(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "event: message_start\n")
+		_, _ = io.WriteString(w, "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":5}}}\n\n")
 		_, _ = io.WriteString(w, "event: content_block_delta\n")
 		_, _ = io.WriteString(w, "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"hel\"}}\n\n")
 		_, _ = io.WriteString(w, "event: content_block_delta\n")
 		_, _ = io.WriteString(w, "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"lo\"}}\n\n")
+		_, _ = io.WriteString(w, "event: message_delta\n")
+		_, _ = io.WriteString(w, "data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":2}}\n\n")
 		_, _ = io.WriteString(w, "event: message_stop\n")
 		_, _ = io.WriteString(w, "data: {\"type\":\"message_stop\"}\n\n")
 	}))
@@ -128,13 +132,13 @@ func TestAnthropic_Stream_SSE(t *testing.T) {
 		t.Fatalf("Stream: %v", err)
 	}
 	got := ""
-	doneSeen := false
+	var terminal provider.Chunk
 	for c := range out {
 		if c.Err != nil {
 			t.Fatalf("stream err: %v", c.Err)
 		}
 		if c.Done {
-			doneSeen = true
+			terminal = c
 			continue
 		}
 		got += c.Delta
@@ -142,8 +146,51 @@ func TestAnthropic_Stream_SSE(t *testing.T) {
 	if got != "hello" {
 		t.Fatalf("stream payload=%q", got)
 	}
-	if !doneSeen {
+	if !terminal.Done {
 		t.Fatalf("done chunk not emitted")
+	}
+	if terminal.FinishReason != provider.FinishStop ||
+		terminal.InputTokens != 5 || terminal.OutputTokens != 2 {
+		t.Fatalf("terminal = %+v", terminal)
+	}
+}
+
+func TestAnthropic_Stream_AssemblesToolInputDeltas(t *testing.T) {
+	t.Parallel()
+	a := newAdapter(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "event: content_block_start\n")
+		_, _ = io.WriteString(w, `data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"tool_1","name":"query_vehicle_state","input":{}}}`+"\n\n")
+		_, _ = io.WriteString(w, "event: content_block_delta\n")
+		_, _ = io.WriteString(w, `data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"vehicle"}}`+"\n\n")
+		_, _ = io.WriteString(w, "event: content_block_delta\n")
+		_, _ = io.WriteString(w, `data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"_id\":9}"}}`+"\n\n")
+		_, _ = io.WriteString(w, "event: message_delta\n")
+		_, _ = io.WriteString(w, `data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":8}}`+"\n\n")
+		_, _ = io.WriteString(w, "event: message_stop\n")
+		_, _ = io.WriteString(w, "data: {\"type\":\"message_stop\"}\n\n")
+	}))
+	out, err := a.Stream(context.Background(), provider.ChatRequest{
+		Messages: []provider.Message{{Role: provider.RoleUser, Content: "state"}},
+	})
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	var calls []provider.ToolCall
+	for chunk := range out {
+		if chunk.Err != nil {
+			t.Fatalf("stream err: %v", chunk.Err)
+		}
+		if chunk.ToolDelta != nil {
+			calls = append(calls, *chunk.ToolDelta)
+		}
+	}
+	if len(calls) != 1 {
+		t.Fatalf("tool calls = %+v, want one assembled call", calls)
+	}
+	if calls[0].ID != "tool_1" || calls[0].Name != "query_vehicle_state" ||
+		string(calls[0].Arguments) != `{"vehicle_id":9}` {
+		t.Fatalf("assembled call = %+v", calls[0])
 	}
 }
 

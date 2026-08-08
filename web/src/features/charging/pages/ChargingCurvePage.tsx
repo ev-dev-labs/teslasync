@@ -35,7 +35,7 @@ export default function ChargingCurvePage() {
   const activeVehicleId = vehicleId ?? null;
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end, setRange, reset } = useRangeState({
     persistKey: 'charging-curve.range',
     defaultPresetId: 'all',
   });
@@ -132,6 +132,7 @@ export default function ChargingCurvePage() {
           <EmptyState
             icon={<BatteryCharging className="h-8 w-8" aria-hidden="true" />}
             message={emptyMessage}
+            action={{ label: t('charging.curve.resetRange', 'Reset date range'), onClick: reset }}
           />
         </GlassPanel>
       );
@@ -214,6 +215,7 @@ export default function ChargingCurvePage() {
               </div>
             ) : (
               <GlassPanel className="flex min-h-64 items-center justify-center p-4 sm:p-5">
+                {/* no-action: the Inspect-session Select control sits directly above this panel and is the trigger. */}
                 <EmptyState
                   icon={<BatteryCharging className="h-8 w-8" aria-hidden="true" />}
                   message={t(

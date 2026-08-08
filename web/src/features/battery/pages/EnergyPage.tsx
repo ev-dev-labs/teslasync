@@ -12,7 +12,7 @@ import {
   MetricLabel, HelperText, type Column,
 } from '@/components/ui';
 import {
-  RadialGauge, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
+  ThresholdBar, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -21,7 +21,7 @@ import {
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
-import { Currency, SavedViewMenu, MetricCard } from '@/components/data-display';
+import { Currency, SavedViewMenu, MetricCard, MetricTile } from '@/components/data-display';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
@@ -43,6 +43,20 @@ import type { ChargingSession } from '@/api/types';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
+
+/**
+ * Efficiency thresholds, in Wh per **metre** — the unit the API reports
+ * (`avg_efficiency_wh_per_m`) and the input `toEfficiencyDisplay` expects.
+ *
+ * The previous ceiling was `toEfficiencyDisplay(300)`, which fed 300 Wh/m into
+ * a converter that multiplies by 1000, producing a 300 000 Wh/km scale. A real
+ * 180 Wh/km reading filled 0.06% of that ring, so the gauge was blank for every
+ * user. The intended ceiling was plainly 300 Wh/km = 0.3 Wh/m.
+ */
+const EFFICIENCY_EXCELLENT_WH_PER_M = 0.14;
+const EFFICIENCY_GOOD_WH_PER_M = 0.18;
+const EFFICIENCY_AVERAGE_WH_PER_M = 0.22;
+const EFFICIENCY_MAX_WH_PER_M = 0.3;
 
 function CostComparisonCard({
   label, evCost, gasCost, icon,
@@ -166,7 +180,7 @@ export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
   const { unitPrefs, formatEnergy } = useUnits();
-  const { formatCurrency } = useFormatting();
+  const { formatCurrency, currencySymbol } = useFormatting();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const toEnergyDisplay = (wh: number) => convertEnergyFromSI(wh, unitPrefs.energy);
 
@@ -212,6 +226,37 @@ export default function EnergyPage() {
   const totalDistance = stats?.total_distance_m ?? 0;
   const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
 
+  // Qualitative efficiency regions, converted to whichever display unit the
+  // reading itself uses so the bands never disagree with the number.
+  const efficiencyBands = useMemo(
+    () => [
+      {
+        from: 0,
+        to: toEfficiencyDisplay(EFFICIENCY_EXCELLENT_WH_PER_M),
+        color: '#10b9818c',
+        label: t('energy.gauge.band.excellent', 'Excellent'),
+      },
+      {
+        from: toEfficiencyDisplay(EFFICIENCY_EXCELLENT_WH_PER_M),
+        to: toEfficiencyDisplay(EFFICIENCY_GOOD_WH_PER_M),
+        color: '#38bdf88c',
+        label: t('energy.gauge.band.good', 'Good'),
+      },
+      {
+        from: toEfficiencyDisplay(EFFICIENCY_GOOD_WH_PER_M),
+        to: toEfficiencyDisplay(EFFICIENCY_AVERAGE_WH_PER_M),
+        color: '#f59e0b8c',
+        label: t('energy.gauge.band.average', 'Average'),
+      },
+      {
+        from: toEfficiencyDisplay(EFFICIENCY_AVERAGE_WH_PER_M),
+        to: toEfficiencyDisplay(EFFICIENCY_MAX_WH_PER_M),
+        color: '#ef44448c',
+        label: t('energy.gauge.band.heavy', 'Heavy'),
+      },
+    ],
+    [unitPrefs.distance, t],
+  );
   // Guard against hand-edited / malformed `from`/`to` URL params: an invalid
   // Date yields NaN which `Math.max(1, NaN)` propagates (NaN), corrupting every
   // downstream projection and the "Last {days} Days" labels. Fall back to the
@@ -248,7 +293,7 @@ export default function EnergyPage() {
 
   /* ── No-data banner gate ───────────────────────────────────────────
    * Replay vehicles + brand-new accounts have no charging sessions and
-   * no computed energy stats. Showing 4 RadialGauges all at 0 looks
+   * no computed energy stats. Showing 4 LinearGauges all at 0 looks
    * like a perfectly efficient car using zero energy. Render an
    * honest empty hero instead of misleading zeros.
    */
@@ -479,33 +524,33 @@ export default function EnergyPage() {
               />
             ) : (
               <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-4 sm:gap-6">
-                <RadialGauge
+                <MetricTile
                   value={toEnergyDisplay(totalEnergy)}
-                  max={Math.max(toEnergyDisplay(totalEnergy) * 1.3, 100)}
                   label={t('energy.gauge.energyUsed', 'Energy Used')}
                   unit={energyUnit}
-                  color="#00f0ff"
+                  accentClass="text-cyan-300"
                 />
-                <RadialGauge
+                <ThresholdBar
                   value={toEfficiencyDisplay(avgEfficiency || (totalDistance > 0 ? totalEnergy / totalDistance : 0))}
-                  max={toEfficiencyDisplay(300)}
+                  min={0}
+                  max={toEfficiencyDisplay(EFFICIENCY_MAX_WH_PER_M)}
+                  bands={efficiencyBands}
                   label={t('energy.gauge.efficiency', 'Efficiency')}
                   unit={efficiencyUnit}
-                  color="#10b981"
+                  decimals={0}
+                  className="col-span-2 sm:col-span-1"
                 />
-                <RadialGauge
+                <MetricTile
                   value={co2Saved}
-                  max={Math.max(co2Saved * 1.5, 50)}
                   label={t('energy.gauge.co2Saved', 'CO₂ Saved')}
                   unit="kg"
-                  color="#a855f7"
+                  accentClass="text-purple-300"
                 />
-                <RadialGauge
+                <MetricTile
                   value={totalCost}
-                  max={Math.max(totalCost * 1.5, 50)}
                   label={t('energy.gauge.totalCost', 'Total Cost')}
-                  unit="$"
-                  color="#f59e0b"
+                  unit={currencySymbol}
+                  accentClass="text-amber-300"
                 />
               </div>
             )}

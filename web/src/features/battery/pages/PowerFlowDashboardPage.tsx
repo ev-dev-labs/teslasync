@@ -9,7 +9,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, PanelTitle, Caption } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { StatCard, KVList, Energy } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -293,7 +293,7 @@ export default function PowerFlowDashboardPage() {
               />
             ) : (
               <div className="flex flex-col items-center gap-5">
-                <RadialGauge
+                <LinearGauge
                   value={soc ?? 0}
                   max={100}
                   label={t('powerFlow.stateOfCharge', 'State of Charge')}

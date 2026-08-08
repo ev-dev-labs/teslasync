@@ -99,7 +99,7 @@ export function AICostCapSpendBar({ capCents }: { capCents: number }) {
         aria-label={t('ai.settings.costCap.barLabel', 'Helix cost cap usage')}
       >
         <div
-          className={`h-full transition-all duration-500 ${FILL_CLASS[level]}`}
+          className={`h-full transition-all duration-slow ${FILL_CLASS[level]}`}
           style={{ width: `${pct}%` }}
         />
       </div>

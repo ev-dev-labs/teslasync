@@ -432,6 +432,7 @@ export default function GrafanaPanelPage() {
                 )}
               </Text>
               {sortedPanelTypes.length === 0 ? (
+                // no-action: unreachable — sortedPanelTypes sorts the static CURATED_PANEL_TYPES constant, which never has zero entries.
                 <EmptyState
                   icon={<LayoutDashboard className="h-8 w-8" aria-hidden="true" />}
                   message={t('powerGrafana.panelTypes.empty', 'No panel types available.')}
@@ -467,6 +468,7 @@ export default function GrafanaPanelPage() {
                 )}
               </Text>
               {sortedDatasourceTypes.length === 0 ? (
+                // no-action: unreachable — sortedDatasourceTypes sorts the static CURATED_DATASOURCE_TYPES constant, never empty.
                 <EmptyState
                   icon={<Database className="h-8 w-8" aria-hidden="true" />}
                   message={t('powerGrafana.datasourceTypes.empty', 'No datasource types available.')}
@@ -512,6 +514,7 @@ export default function GrafanaPanelPage() {
               )}
             </Text>
             {sortedTables.length === 0 ? (
+              // no-action: unreachable — sortedTables sorts the static CURATED_TABLES constant, never empty.
               <EmptyState
                 icon={<Table2 className="h-8 w-8" aria-hidden="true" />}
                 message={t('powerGrafana.tables.empty', 'No tables available.')}

@@ -6,7 +6,7 @@ import { Grid } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { LinearGauge } from '@/components/charts/LinearGauge';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
@@ -58,7 +58,7 @@ export function HealthGaugeGrid({
             />
           ) : (
             <>
-              <RadialGauge
+              <LinearGauge
                 value={healthScore}
                 max={100}
                 label={t('drivetrain.healthScore', 'Health Score')}

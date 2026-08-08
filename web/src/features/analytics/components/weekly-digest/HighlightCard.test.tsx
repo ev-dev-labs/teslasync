@@ -34,6 +34,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import { HighlightCard } from './HighlightCard';
+import { GLOW_CLASSES } from '@/components/ui/GlassPanel';
 
 type CardProps = Parameters<typeof HighlightCard>[0];
 
@@ -86,12 +87,12 @@ describe('HighlightCard — colour accent + glow', () => {
     const iconSpan = screen.getByTestId('metric-icon').parentElement as HTMLElement;
     expect(iconSpan).toHaveClass('text-cyan-300');
     // hover + glow="cyan" → the cyan hover-border utility is present.
-    expect(root(container).className).toContain('hover:border-cyan-400/30');
+    expect(root(container).className).toContain(GLOW_CLASSES.cyan);
   });
 
   it.each([
-    ['green', 'text-emerald-300', 'hover:border-green-400/30'],
-    ['purple', 'text-purple-300', 'hover:border-purple-400/30'],
+    ['green', 'text-emerald-300', GLOW_CLASSES.green],
+    ['purple', 'text-purple-300', GLOW_CLASSES.purple],
   ] as const)('maps color=%s to its accent + glow', (color, accentClass, glowClass) => {
     const { container } = renderCard({ color });
 
@@ -107,9 +108,9 @@ describe('HighlightCard — colour accent + glow', () => {
     expect(iconSpan).toHaveClass('text-amber-300');
     // amber maps to glow="none" — no coloured hover-border glow leaks in.
     const cls = root(container).className;
-    expect(cls).not.toContain('hover:border-cyan-400/30');
-    expect(cls).not.toContain('hover:border-green-400/30');
-    expect(cls).not.toContain('hover:border-purple-400/30');
+    expect(cls).not.toContain(GLOW_CLASSES.cyan);
+    expect(cls).not.toContain(GLOW_CLASSES.green);
+    expect(cls).not.toContain(GLOW_CLASSES.purple);
   });
 
   it('uses the rose accent for color="red" with no glow', () => {
@@ -117,7 +118,7 @@ describe('HighlightCard — colour accent + glow', () => {
 
     const iconSpan = screen.getByTestId('metric-icon').parentElement as HTMLElement;
     expect(iconSpan).toHaveClass('text-rose-300');
-    expect(root(container).className).not.toContain('hover:border-cyan-400/30');
+    expect(root(container).className).not.toContain(GLOW_CLASSES.cyan);
   });
 
   it('degrades an unknown colour to the cyan accent instead of crashing', () => {

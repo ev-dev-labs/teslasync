@@ -12,7 +12,7 @@
  *     and the display_name → VIN fallback
  *   - the asleep branch: placeholder copy + wake-up action, offline badge, and
  *     the guarantee that no live gauges render
- *   - the idle layout: which radial gauges show (battery/range/temps) and which
+ *   - the idle layout: which gauges show (battery/range/temps) and which
  *     stay hidden (speed/charge power), plus the firmware passthrough
  *   - the driving layout, which is where the hardened bug lives: the always-on
  *     "Power" tile must NOT duplicate the driving-context "Power" tile (that
@@ -29,7 +29,7 @@
  *
  * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
  * read the English defaults without booting the i18n runtime. The shared
- * GlassPanel / Button / RadialGauge / StatusBadge / FreshnessIndicator
+ * GlassPanel / Button / LinearGauge / StatusBadge / FreshnessIndicator
  * primitives run for real (useSettings / useTimezone are stubbed globally in
  * src/test-setup.ts). No network is touched.
  */
@@ -40,6 +40,7 @@ import type { ComponentProps } from 'react';
 
 import { VehicleHero } from './VehicleHero';
 import type { Vehicle, VehicleState } from '../types';
+import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -100,7 +101,6 @@ function renderHero(overrides: Partial<Props> = {}) {
     toDistanceDisplay: identity,
     toSpeedDisplay: identity,
     toTemperatureDisplay: identity,
-    isFahrenheit: false,
     distanceUnit: 'km',
     speedUnit: 'km/h',
     tempUnit: '°C',
@@ -297,12 +297,12 @@ describe('VehicleHero', () => {
 
   it('colours the battery gauge amber below 50% and green above it', () => {
     const low = renderHero({ state: { ...baseState, battery_level: 20 } });
-    // Amber stroke is unique to a low battery gauge.
-    expect(low.container.querySelector('circle[stroke="#f59e0b"]')).toBeTruthy();
+    // Amber fill is unique to a low battery gauge.
+    expect(hasGaugeColor(low.container as HTMLElement, '#f59e0b')).toBe(true);
     cleanup();
 
     const high = renderHero({ state: { ...baseState, battery_level: 90 } });
-    // Green stroke — only the battery gauge uses it when idle (not charging).
-    expect(high.container.querySelector('circle[stroke="#10b981"]')).toBeTruthy();
+    // Green fill — only the battery gauge uses it when idle (not charging).
+    expect(hasGaugeColor(high.container as HTMLElement, '#10b981')).toBe(true);
   });
 });

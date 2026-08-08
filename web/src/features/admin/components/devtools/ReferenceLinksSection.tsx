@@ -33,6 +33,8 @@ export function ReferenceLinksSection() {
 
   if (links.length === 0) {
     return (
+      // no-action: REFERENCE_LINKS is a hardcoded module constant in ./constants.ts,
+      // curated at build time — it is never empty in a running deployment.
       <EmptyState
         icon={<BookOpen className="h-6 w-6" aria-hidden="true" />}
         message={t('devtools.ref.empty', 'No reference links available')}

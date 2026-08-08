@@ -10,13 +10,17 @@ import (
 // captureWriter is an in-memory StreamWriter for tests and
 // non-streaming HTTP responses.
 type captureWriter struct {
-	mu      sync.Mutex
-	deltas  []string
-	tcalls  []provider.ToolCall
-	tres    map[string][]json.RawMessage
-	terr    map[string][]error
-	done    bool
-	doneErr error
+	mu       sync.Mutex
+	deltas   []string
+	tcalls   []provider.ToolCall
+	tres     map[string][]json.RawMessage
+	terr     map[string][]error
+	done     bool
+	doneErr  error
+	runErr   error
+	finish   string
+	usageIn  int
+	usageOut int
 }
 
 // NewCaptureWriter returns a concurrency-safe in-memory StreamWriter.
@@ -63,10 +67,24 @@ func (c *CaptureWriter) WriteToolError(name string, err error) error {
 }
 
 func (c *CaptureWriter) WriteDone() error {
+	return c.WriteDoneFull(provider.FinishStop, 0, 0)
+}
+
+func (c *CaptureWriter) WriteDoneFull(finishReason string, usageIn, usageOut int) error {
 	c.inner.mu.Lock()
 	defer c.inner.mu.Unlock()
 	c.inner.done = true
+	c.inner.finish = finishReason
+	c.inner.usageIn = usageIn
+	c.inner.usageOut = usageOut
 	return c.inner.doneErr
+}
+
+func (c *CaptureWriter) WriteError(err error) error {
+	c.inner.mu.Lock()
+	defer c.inner.mu.Unlock()
+	c.inner.runErr = err
+	return nil
 }
 
 // Deltas returns every WriteDelta payload, in order.
@@ -118,4 +136,18 @@ func (c *CaptureWriter) Done() bool {
 	c.inner.mu.Lock()
 	defer c.inner.mu.Unlock()
 	return c.inner.done
+}
+
+// RunError returns the terminal run error emitted by the dispatcher.
+func (c *CaptureWriter) RunError() error {
+	c.inner.mu.Lock()
+	defer c.inner.mu.Unlock()
+	return c.inner.runErr
+}
+
+// Completion returns the successful terminal metadata.
+func (c *CaptureWriter) Completion() (string, int, int) {
+	c.inner.mu.Lock()
+	defer c.inner.mu.Unlock()
+	return c.inner.finish, c.inner.usageIn, c.inner.usageOut
 }

@@ -509,6 +509,7 @@ export default function AlertRulesPage() {
               <EmptyState
                 icon={<Icons.alertCircle className="h-8 w-8" />}
                 message={t('alertRules.insights.noSeverity', 'No rules to summarise yet')}
+                actionTo={{ label: t('alertRules.empty.cta', 'Open Alert Studio'), to: '/notifications/studio' }}
               />
             ) : (
               <>
@@ -565,6 +566,7 @@ export default function AlertRulesPage() {
               <EmptyState
                 icon={<Icons.power className="h-8 w-8" />}
                 message={t('alertRules.insights.noStatus', 'No rules to summarise yet')}
+                actionTo={{ label: t('alertRules.empty.cta', 'Open Alert Studio'), to: '/notifications/studio' }}
               />
             ) : (
               <div className="space-y-4">
@@ -596,6 +598,7 @@ export default function AlertRulesPage() {
               <EmptyState
                 icon={<Icons.filter className="h-8 w-8" />}
                 message={t('alertRules.insights.noSignals', 'No monitored signals yet')}
+                actionTo={{ label: t('alertRules.empty.cta', 'Open Alert Studio'), to: '/notifications/studio' }}
               />
             ) : (
               <div className="space-y-4">

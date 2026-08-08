@@ -40,7 +40,7 @@ export function CommandSelectDialog({
       // No visible `title` prop is used (the heading lives in the body), so the
       // dialog needs an explicit accessible name for assistive tech.
       ariaLabel={commandLabel}
-      className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-[var(--border-subtle)]"
+      className="bg-[var(--surface-1)] backdrop-blur-xl border border-[var(--border-subtle)]"
     >
       <div onKeyDown={handleKeyDown}>
         <div className="flex items-center gap-3 mb-5">

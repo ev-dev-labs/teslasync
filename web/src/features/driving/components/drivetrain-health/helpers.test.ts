@@ -9,7 +9,7 @@
  *   healthBadgeVariant  — feeds <Badge variant={…}> in HealthOverview.
  *   getAlertVariant     — feeds <AlertBanner variant={…}> (only shown when the
  *                         drivetrain is NOT healthy, but the pure fn is total).
- *   tempSeverityColor   — <RadialGauge color> / <MetricBar color>; must return
+ *   tempSeverityColor   — <LinearGauge color> / <MetricBar color>; must return
  *                         a real HEALTH_COLOR hex, or the neutral swatch when a
  *                         reading can't be ranked.
  *   tempNeonColor       — <MetricCard color>; the neon twin of the above,

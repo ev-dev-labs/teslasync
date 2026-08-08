@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
+import { LinearGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
@@ -159,10 +159,10 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
     >
       {dynamics ? (
         <div className="h-full flex flex-col gap-3">
-          {/* 3 RadialGauges */}
+          {/* 3 LinearGauges */}
           <div className="flex items-center justify-around gap-2">
             <div className="flex flex-col items-center gap-1">
-              <RadialGauge
+              <LinearGauge
                 value={dynamics.avgAccelerationG ?? 0}
                 max={G_MAX}
                 label={fmtNumber(dynamics.avgAccelerationG ?? 0, 2)}
@@ -174,7 +174,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
               </span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <RadialGauge
+              <LinearGauge
                 value={dynamics.avgBrakingG ?? 0}
                 max={G_MAX}
                 label={fmtNumber(dynamics.avgBrakingG ?? 0, 2)}
@@ -186,7 +186,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
               </span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <RadialGauge
+              <LinearGauge
                 value={dynamics.maxCorneringG ?? 0}
                 max={G_MAX}
                 label={fmtNumber(dynamics.maxCorneringG ?? 0, 2)}

@@ -409,6 +409,7 @@ type azureWireMsg struct {
 }
 
 type azureWireToolCall struct {
+	Index    int    `json:"index,omitempty"`
 	ID       string `json:"id"`
 	Type     string `json:"type"`
 	Function struct {
@@ -448,6 +449,10 @@ type azureStreamFrame struct {
 		} `json:"delta"`
 		FinishReason string `json:"finish_reason,omitempty"`
 	} `json:"choices"`
+	Usage struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	} `json:"usage"`
 	// Error is the wrapped error payload some Azure deployments
 	// emit mid-stream when the upstream guard rails kick in. The
 	// outer envelope is a normal `data: {…}` SSE frame so a relay
@@ -547,6 +552,35 @@ func (r *azureChatResponse) toChatResponse() *provider.ChatResponse {
 func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Chunk) {
 	defer close(out)
 	defer body.Close()
+	var toolCalls provider.ToolCallAccumulator
+	var finishReason string
+	var inputTokens, outputTokens int
+	emitTerminal := func() {
+		calls := toolCalls.Calls()
+		if finishReason == "" {
+			if len(calls) > 0 {
+				send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream ended without a tool_calls finish reason", provider.ErrUpstream)})
+				return
+			}
+			finishReason = provider.FinishStop
+		}
+		if len(calls) > 0 && finishReason != provider.FinishToolCalls {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure emitted tool fragments with finish reason %q", provider.ErrUpstream, finishReason)})
+			return
+		}
+		if finishReason == provider.FinishToolCalls {
+			for _, call := range calls {
+				callCopy := call
+				send(ctx, out, provider.Chunk{ToolDelta: &callCopy})
+			}
+		}
+		send(ctx, out, provider.Chunk{
+			Done:         true,
+			FinishReason: finishReason,
+			InputTokens:  inputTokens,
+			OutputTokens: outputTokens,
+		})
+	}
 	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	for scanner.Scan() {
@@ -564,7 +598,7 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 		}
 		payload := strings.TrimSpace(strings.TrimPrefix(raw, streamPrefixData))
 		if payload == streamSentinel {
-			send(ctx, out, provider.Chunk{Done: true})
+			emitTerminal()
 			return
 		}
 		var frame azureStreamFrame
@@ -579,6 +613,12 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 				provider.ErrUpstream, frame.Error.Code, frame.Error.Message)})
 			return
 		}
+		if frame.Usage.PromptTokens > 0 {
+			inputTokens = frame.Usage.PromptTokens
+		}
+		if frame.Usage.CompletionTokens > 0 {
+			outputTokens = frame.Usage.CompletionTokens
+		}
 		if len(frame.Choices) == 0 {
 			// Azure also emits content-filter / annotation frames
 			// with empty choices that carry no usable delta. Skip
@@ -590,19 +630,22 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 			send(ctx, out, provider.Chunk{Delta: ch.Delta.Content})
 		}
 		for _, tc := range ch.Delta.ToolCalls {
-			send(ctx, out, provider.Chunk{ToolDelta: &provider.ToolCall{
-				ID:        tc.ID,
-				Name:      tc.Function.Name,
-				Arguments: json.RawMessage(tc.Function.Arguments),
-			}})
+			toolCalls.Add(tc.Index, tc.ID, tc.Function.Name, tc.Function.Arguments)
 		}
 		if ch.FinishReason != "" {
-			send(ctx, out, provider.Chunk{Done: true})
-			return
+			finishReason = provider.NormalizeFinishReason(ch.FinishReason)
+			if finishReason == "" {
+				send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure returned unknown finish reason %q", provider.ErrUpstream, ch.FinishReason)})
+				return
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
 		send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream read: %v", provider.ErrUpstream, err)})
+		return
+	}
+	if finishReason != "" {
+		emitTerminal()
 	}
 }
 

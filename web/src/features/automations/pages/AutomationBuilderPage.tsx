@@ -74,6 +74,7 @@ import type {
   AutomationConditionStepInput,
   AutomationTriggerStepInput,
 } from '../components/stepInputTypes';
+import { VisuallyHidden } from '@/components/a11y';
 
 interface FormState {
   name: string;
@@ -859,11 +860,11 @@ export default function AutomationBuilderPage() {
                       >
                         {item.label}
                       </Text>
-                      <span className="sr-only">
+                      <VisuallyHidden>
                         {item.ok
                           ? t('automations.builder.readyDone', 'complete')
                           : t('automations.builder.readyPending', 'incomplete')}
-                      </span>
+                      </VisuallyHidden>
                     </li>
                   ))}
                 </ul>

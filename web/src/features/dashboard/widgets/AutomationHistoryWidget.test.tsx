@@ -130,6 +130,7 @@ vi.mock('./shared', () => ({
 }));
 
 import AutomationHistoryWidget from './AutomationHistoryWidget';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -281,7 +282,7 @@ describe('AutomationHistoryWidget — full layout', () => {
     renderWidget(FULL);
 
     const badge = screen.getByText(/0\.0% Success Rate/);
-    expect(badge).toHaveClass('bg-gray-100');
+    expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
     expect(screen.queryByText(/^\d+ runs$/)).toBeNull();
     expect(screen.getByTestId('feed-empty')).toHaveTextContent('No automation runs yet');
   });
@@ -378,7 +379,7 @@ describe('AutomationHistoryWidget — badge grading', () => {
     renderWidget(FULL);
 
     const badge = screen.getByText(/0\.0% Success Rate/);
-    expect(badge).toHaveClass('bg-gray-100');
+    expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
     expect(badge).not.toHaveClass('bg-red-100');
     expect(screen.getByTestId('feed-empty')).toHaveTextContent('No automation runs yet');
   });

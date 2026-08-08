@@ -12,7 +12,7 @@ import {
 } from '@/components/ui';
 import { MetricCard, MetricBar, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge, ChartContainer, ChartLegend, ChartTooltip, renderAnnotationLines,
+  LinearGauge, ChartContainer, ChartLegend, ChartTooltip, renderAnnotationLines,
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
@@ -329,7 +329,7 @@ export default function BatteryDegradationPage() {
                 <Skeleton height={200} />
               ) : (
                 <>
-                  <RadialGauge
+                  <LinearGauge
                     value={soh}
                     max={100}
                     label={t('Current SOH')}

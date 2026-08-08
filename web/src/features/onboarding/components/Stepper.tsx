@@ -100,7 +100,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
 
   if (items.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: the only caller (OnboardingPage) always supplies a fixed 3-step checklist built with useMemo; this guards the shared component against a hypothetical empty `steps` array, not a reachable product state. */
         icon={<ListChecks className="h-8 w-8" aria-hidden="true" />}
         message={t('onboarding.stepper.empty', 'No setup steps to show right now.')}
       />

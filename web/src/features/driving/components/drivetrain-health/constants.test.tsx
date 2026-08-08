@@ -8,9 +8,9 @@
  * via typed construction — a shape regression fails `tsc --noEmit` — and at
  * runtime via real assertions on the constructed values):
  *
- *   HEALTH_SCORE  — RadialGauge `max={100}` + AnimatedNumber `suffix="%"` both
+ *   HEALTH_SCORE  — LinearGauge `max={100}` + AnimatedNumber `suffix="%"` both
  *                   assume a 0..100 value ranked by severity (good>warn>crit).
- *   HEALTH_COLOR  — RadialGauge `color` + helpers.tempSeverityColor return these;
+ *   HEALTH_COLOR  — LinearGauge `color` + helpers.tempSeverityColor return these;
  *                   must be valid, distinct, severity-appropriate hex.
  *   HEALTH_GLOW   — fed straight into <GlassPanel glow=…>; every value must be a
  *                   real, renderable GlassPanel accent (never the empty 'none').
@@ -25,7 +25,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { isValidElement } from 'react';
 
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, GLOW_CLASSES } from '@/components/ui';
 
 import {
   HEALTH_SCORE,
@@ -51,7 +51,7 @@ describe('HEALTH_SCORE', () => {
   });
 
   it('keeps every score within the 0–100 gauge range', () => {
-    // RadialGauge max={100} + AnimatedNumber suffix="%" would render a
+    // LinearGauge max={100} + AnimatedNumber suffix="%" would render a
     // nonsensical arc / percentage for an out-of-range value.
     for (const s of ALL_STATUSES) {
       expect(HEALTH_SCORE[s]).toBeGreaterThanOrEqual(0);
@@ -120,11 +120,10 @@ describe('HEALTH_GLOW', () => {
     // Prove each value is a live GlassPanel accent, not just a string that
     // happens to type-check: rendered (with hover, which gates the glow) each
     // status must apply its matching accent token.
-    const expectedAccent: Record<HealthStatus, string> = {
-      good: 'green-400',
-      warning: 'cyan-400',
-      critical: 'purple-400',
-    };
+    //
+    // The expected class is derived from GlassPanel's own exported GLOW_CLASSES
+    // map rather than hardcoded, so re-skinning the accent (e.g. green →
+    // emerald) cannot silently invalidate this contract check.
     for (const status of ALL_STATUSES) {
       const { container, unmount } = render(
         <GlassPanel hover glow={HEALTH_GLOW[status]}>
@@ -132,8 +131,10 @@ describe('HEALTH_GLOW', () => {
         </GlassPanel>,
       );
       const panel = container.querySelector('[data-print-card]');
+      const expected = GLOW_CLASSES[HEALTH_GLOW[status]];
       expect(panel).not.toBeNull();
-      expect(panel?.className).toContain(expectedAccent[status]);
+      expect(expected, `${status} must map to a non-empty accent`).not.toBe('');
+      expect(panel?.className).toContain(expected);
       unmount();
     }
   });

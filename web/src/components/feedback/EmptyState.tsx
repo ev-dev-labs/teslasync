@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { Button as CtaButton } from '@/components/ui/Button';
+import { Button as CtaButton, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui/Button';
 import { Heading, Text } from '@/components/ui/Typography';
 
 interface EmptyStateProps {
@@ -14,15 +14,11 @@ interface EmptyStateProps {
   className?: string;
 }
 
-// Button-equivalent classes for the Link-based actionTo CTA. Mirrors
-// the canonical secondary/sm CTA variant so the visual stays in
-// lock-step with the shared component library.
-const linkButtonClasses = cn(
-  'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-  'bg-gray-100 text-[var(--text-primary)] hover:bg-gray-200 dark:bg-gray-700',
-  'h-8 px-3 text-xs',
-);
+// Button-equivalent classes for the Link-based actionTo CTA. Derived from the
+// shared Button constants rather than hand-copied, so the visual stays in
+// lock-step with the component library by construction — a re-skin of the
+// neutral variants now reaches this CTA automatically.
+const linkButtonClasses = cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-8 px-3 text-xs');
 
 export function EmptyState({ icon, title, message, action, actionTo, className }: EmptyStateProps) {
   return (

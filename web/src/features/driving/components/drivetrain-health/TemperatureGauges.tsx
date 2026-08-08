@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Thermometer } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
-import { RadialGauge } from '@/components/charts/RadialGauge';
+import { LinearGauge } from '@/components/charts/LinearGauge';
+import { temperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
 
 import type { TempSensor } from './constants';
 import { tempSeverityColor } from './helpers';
@@ -47,17 +47,13 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
           <Grid cols={{ default: 2, md: 4 }} gap={6}>
             {list.map((sensor) => (
               <div key={sensor.key} className="flex flex-col items-center">
-                <RadialGauge
+                <LinearGauge
                   value={sensor.value != null ? toTemperatureDisplay(sensor.value) : 0}
-                  max={toTemperatureDisplay(sensor.maxTemp)}
+                  {...temperatureGaugeRange(toTemperatureDisplay, { maxC: sensor.maxTemp })}
                   label={t(sensor.labelKey, sensor.defaultLabel)}
                   unit={tempUnit}
                   color={tempSeverityColor(sensor.value, sensor.maxTemp)}
                 />
-                <Text as="p" variant="caption" className="mt-2">
-                  {t('drivetrain.maxLabel', 'Max')}: {fmtNumber(toTemperatureDisplay(sensor.maxTemp), 0)}
-                  {tempUnit}
-                </Text>
               </div>
             ))}
           </Grid>

@@ -66,13 +66,14 @@ import {
   useChargingTelemetryLatest,
 } from '@/api/hooks/useVehicles';
 import DigitalTwinMiniWidget from './DigitalTwinMiniWidget';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockSecurity = useSecurityLatest as unknown as ReturnType<typeof vi.fn>;
 const mockState = useVehicleState as unknown as ReturnType<typeof vi.fn>;
 const mockCharging = useChargingTelemetryLatest as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: null,
@@ -244,7 +245,7 @@ describe('DigitalTwinMiniWidget — lock status badge', () => {
     renderWidget();
 
     const badge = screen.getByText('—');
-    expect(badge.className).toContain('bg-gray-100');
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral);
     expect(badge.className).not.toContain('bg-green-100');
     expect(badge.className).not.toContain('bg-red-100');
   });
@@ -266,7 +267,7 @@ describe('DigitalTwinMiniWidget — sentry status badge', () => {
 
     const badge = screen.getByText('Off');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('bg-gray-100');
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral);
   });
 
   it('omits the sentry badge entirely when sentry mode is unknown', () => {

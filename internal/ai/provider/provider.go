@@ -103,14 +103,20 @@ type ChatResponse struct {
 
 // Chunk is one frame of a streaming response from [Provider.Stream].
 //
-// Exactly one of Delta, ToolDelta, Done=true, or Err non-nil is set on
-// any single chunk. The producer closes the channel after the terminal
-// chunk (Done or Err); consumers MUST drain on cancellation.
+// Exactly one of Delta, ToolDelta, Done=true, or Err non-nil is set on any
+// single chunk. A Done chunk also carries normalized finish metadata and
+// best-effort token usage. ToolDelta always carries one complete, executable
+// tool call; provider adapters assemble vendor-specific argument fragments
+// before emitting it. The producer closes the channel after the terminal chunk
+// (Done or Err); consumers MUST drain on cancellation.
 type Chunk struct {
-	Delta     string
-	ToolDelta *ToolCall
-	Done      bool
-	Err       error
+	Delta        string
+	ToolDelta    *ToolCall
+	Done         bool
+	FinishReason string
+	InputTokens  int
+	OutputTokens int
+	Err          error
 }
 
 // EmbedRequest is the input to [Provider.Embed].

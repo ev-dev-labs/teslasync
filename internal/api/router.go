@@ -15,6 +15,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 
+	docsfs "github.com/ev-dev-labs/teslasync/docs"
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
@@ -91,6 +92,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterydegradation"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterypassport"
+	apibenchmark "github.com/ev-dev-labs/teslasync/internal/api/benchmark"
 	apicarbon "github.com/ev-dev-labs/teslasync/internal/api/carbon"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
@@ -119,6 +121,7 @@ import (
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apiexports "github.com/ev-dev-labs/teslasync/internal/api/exports"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
+	apifleetops "github.com/ev-dev-labs/teslasync/internal/api/fleetops"
 	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
@@ -154,6 +157,7 @@ import (
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
 	apisegments "github.com/ev-dev-labs/teslasync/internal/api/segments"
+	apiserviceintelligence "github.com/ev-dev-labs/teslasync/internal/api/serviceintelligence"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisettings "github.com/ev-dev-labs/teslasync/internal/api/settings"
 	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
@@ -203,6 +207,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/yearreview"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	actioncenterdb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
+	advancedintelligencedb "github.com/ev-dev-labs/teslasync/internal/database/advancedintelligence"
+	ownershipinteldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
@@ -224,6 +231,7 @@ import (
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
+	"github.com/ev-dev-labs/teslasync/internal/integrations/nhtsa"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -365,7 +373,10 @@ import (
 
 	// Hexagonal adapters used by legacy route composition.
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/advancedintelligencesvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
@@ -374,6 +385,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
+	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
+	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
+	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -774,6 +788,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Drives:  drivedb.NewDriveRepo(db),
 		Charges: chargingdb.NewChargingRepo(db),
 	})
+	// Helix Chat searches the embedded application documentation locally. This
+	// corpus works when AI is enabled after startup and adds no embedding-provider
+	// egress or dependency on the separate rag-help feature toggle.
+	aiChatbotKnowledgeRetriever, err := rag.NewLexicalDocsRetriever(docsfs.FS)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai chatbot: knowledge retriever wiring failed")
+	}
+	tools.RegisterChatbotKnowledgeTool(aiToolRegistry, tools.HelpSources{
+		Retriever: aiChatbotKnowledgeRetriever,
+	})
 	aiChatbotHandler := aichatbot.NewHandler(
 		dbnotif.NewChatRepo(db),
 		aiRegistry,
@@ -852,6 +876,52 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	costForecastHandler := costforecast.NewHandler(db)
 	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
 	anomalyHandler := apianomaly.NewHandler(db)
+	benchmarkHandler := apibenchmark.NewBenchmarkHandler(db, cfg.Auth.ForwardAuthHeader)
+	advancedIntelligenceService := advancedintelligencesvc.New(
+		advancedintelligencedb.NewSourceRepository(db),
+		stateReader,
+		advancedintelligencedb.NewDurableRepository(db),
+	)
+	advancedIntelligenceHandler := advancedintelligencehandler.NewHandler(
+		advancedIntelligenceService,
+		cfg.Auth.ForwardAuthHeader,
+	)
+	ownershipIntelService := ownershipintelsvc.New(
+		ownershipinteldb.NewSourceRepository(db),
+		ownershipinteldb.NewDurableRepository(db),
+	)
+	ownershipIntelHandler := ownershipintelhandler.NewHandler(
+		ownershipIntelService,
+		cfg.Auth.ForwardAuthHeader,
+	)
+	actionCenterService := actioncentersvc.New(
+		actioncenterdb.NewSourceRepository(db),
+		actioncenterdb.NewStateRepository(db),
+		actioncentersvc.WithAdvancedIntelligence(advancedIntelligenceService),
+	)
+	actionCenterHandler := actioncenterhandler.NewHandler(
+		actionCenterService,
+		cfg.Auth.ForwardAuthHeader,
+	)
+	fleetOpsHandler := apifleetops.NewHandler(db)
+	nhtsaClient := nhtsa.NewClient(nhtsa.Config{})
+	communicationsProvider := apiserviceintelligence.NewDatabaseManufacturerCommunicationsProvider(db)
+	communicationsBulkClient := nhtsa.NewCommunicationsBulkClient(nhtsa.CommunicationsBulkConfig{})
+	communicationsImportService := apiserviceintelligence.NewCommunicationsImportService(
+		db,
+		communicationsBulkClient,
+	)
+	communicationsAdminHandler := apiserviceintelligence.NewCommunicationsAdminHandler(
+		communicationsImportService,
+	)
+	serviceIntelligenceHandler := apiserviceintelligence.NewServiceIntelligenceHandler(
+		apiserviceintelligence.NewService(
+			apiserviceintelligence.NewDatabaseVehicleReader(db),
+			apiserviceintelligence.NewSignalObservationReader(db),
+			nhtsaClient,
+			communicationsProvider,
+		),
+	)
 	// register the anomaly-explanations
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_anomaly_context` for the
@@ -3394,6 +3464,46 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/anomalies", anomalyHandler.GetAnomalies)
 		r.Get("/analytics/lifetime", lifetimeHandler.GetLifetimeStats)
 		r.Get("/analytics/year-review", yearReviewHandler.GetYearReview)
+
+		// Privacy-preserving cohort benchmarks require a stable authenticated
+		// subject so consent and epsilon accounting cannot be reset in open mode.
+		r.Route("/benchmarks", func(r chi.Router) {
+			r.Use(tsauth.RequireSubjectMiddleware(cfg.Auth.ForwardAuthHeader))
+			r.Get("/privacy", benchmarkHandler.Status)
+			r.With(httprate.LimitByIP(10, time.Minute)).
+				Put("/privacy/consent", benchmarkHandler.Consent)
+			r.With(httprate.LimitByIP(10, time.Minute)).
+				Delete("/privacy/consent", benchmarkHandler.Revoke)
+			r.Get("/releases", benchmarkHandler.ListReleases)
+			r.With(httprate.LimitByIP(10, time.Minute)).
+				Post("/releases", benchmarkHandler.CreateRelease)
+		})
+
+		// Unified decision inbox. Forward-auth users receive isolated state;
+		// open-mode installs use one local subject because no identity exists.
+		advancedIntelligenceHandler.MountRoutes(r)
+		ownershipIntelHandler.MountRoutes(r)
+		r.Get("/action-center", actionCenterHandler.List)
+		r.Get("/action-center/{recommendationID}/history", actionCenterHandler.History)
+		r.With(httprate.LimitByIP(30, time.Minute)).
+			Post("/action-center/{recommendationID}/actions", actionCenterHandler.ApplyAction)
+
+		// Fleet operations owns its write throttles. Service-intelligence
+		// vehicle reads use the local normalized NHTSA catalog; bulk catalog
+		// imports require sudo and carry their own strict write throttle.
+		apifleetops.MountRoutes(r, fleetOpsHandler)
+		apiserviceintelligence.Mount(r, serviceIntelligenceHandler)
+		r.Get(
+			"/admin/service-intelligence/communications/status",
+			communicationsAdminHandler.Status,
+		)
+		r.With(
+			httprate.LimitByIP(10, time.Hour),
+			RequireSudo(sudoStore, sudoCfg),
+		).Post(
+			"/admin/service-intelligence/communications/import",
+			communicationsAdminHandler.Import,
+		)
 
 		// Charge Planner (smart scheduling)
 		r.Route("/charge-planner", func(r chi.Router) {

@@ -85,7 +85,7 @@ const REGEN_DESC = 'Regenerative braking recovery rate, total kWh recovered, max
 const RECENT_DRIVES_DESC = 'Last 5 drives with distance and efficiency';
 const TRIP_SUMMARY_DESC = 'Recent trips: start→end, distance, duration, drive segments, charge stops';
 // A widget from another category — must NOT surface once 'Driving' is selected.
-const BATTERY_GAUGE_DESC = 'Battery percentage with radial gauge';
+const BATTERY_GAUGE_DESC = 'Battery percentage with level gauge';
 
 /**
  * Drive the registry's OWN `React.lazy` factory to completion so we prove the

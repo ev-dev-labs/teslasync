@@ -28,7 +28,7 @@ import {
 } from '@/api/hooks/useChat';
 import type { ChatMessage } from '@/api/types';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
-import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream';
+import { useAiStream, mergeAiToolActivity, type AiStreamEvent } from '@/hooks/useAiStream';
 
 import {
   ChatMessageItem,
@@ -262,6 +262,36 @@ export default function ChatbotPage() {
               : m,
           ),
         );
+      } else if (ev.type === 'tool_call') {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id
+              ? {
+                  ...m,
+                  aiActivity: mergeAiToolActivity(m.aiActivity ?? [], {
+                    id: ev.id,
+                    name: ev.name,
+                    status: 'running',
+                  }),
+                }
+              : m,
+          ),
+        );
+      } else if (ev.type === 'tool_result') {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id
+              ? {
+                  ...m,
+                  aiActivity: mergeAiToolActivity(m.aiActivity ?? [], {
+                    id: ev.id,
+                    name: ev.name,
+                    status: ev.ok ? 'succeeded' : 'failed',
+                  }),
+                }
+              : m,
+          ),
+        );
       } else if (ev.type === 'done') {
         setMessages((prev) =>
           prev.map((m) =>
@@ -271,6 +301,7 @@ export default function ChatbotPage() {
                   isStreaming: false,
                   content: m.streamedText ?? m.content,
                   streamedText: undefined,
+                  aiUsage: ev.usage,
                 }
               : m,
           ),
@@ -297,6 +328,7 @@ export default function ChatbotPage() {
                       message: ev.message,
                     }),
                   streamedText: undefined,
+                  aiActivity: settlePendingActivity(m.aiActivity),
                 }
               : m,
           ),
@@ -341,6 +373,7 @@ export default function ChatbotPage() {
                 isStreaming: false,
                 content: m.streamedText ?? m.content,
                 streamedText: undefined,
+                aiActivity: settlePendingActivity(m.aiActivity),
               }
             : m,
         ),
@@ -379,6 +412,7 @@ export default function ChatbotPage() {
                     message: aiStream.error ?? 'stream failed',
                   }),
                 streamedText: undefined,
+                aiActivity: settlePendingActivity(m.aiActivity),
               }
             : m,
         ),
@@ -522,6 +556,7 @@ export default function ChatbotPage() {
                       isStreaming: false,
                       content: m.streamedText ?? m.content,
                       streamedText: undefined,
+                      aiActivity: settlePendingActivity(m.aiActivity),
                     }
                   : m,
               ),
@@ -710,6 +745,7 @@ export default function ChatbotPage() {
                 isStreaming: false,
                 content: m.streamedText ?? m.content,
                 streamedText: undefined,
+                aiActivity: settlePendingActivity(m.aiActivity),
               }
             : m,
         ),
@@ -724,7 +760,10 @@ export default function ChatbotPage() {
   return (
     <PageContainer
       title={t('chatbot.title', 'Helix')}
-      subtitle={t('chatbot.subtitle', 'Ask Helix anything about your Tesla fleet')}
+      subtitle={t(
+        'chatbot.subtitle',
+        'Evidence-grounded intelligence across your fleet and TeslaSync knowledge',
+      )}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <AIChatbotIndicator />
@@ -842,7 +881,12 @@ export default function ChatbotPage() {
                         <GlassPanel className="flex items-center gap-2 !p-3">
                           <TypingDots reduceMotion={motion.reduce} />
                           <Text size="sm" color="secondary">
-                            {t('chatbot.thinking', 'Helix is thinking…')}
+                            {aiStream.activity.length > 0
+                              ? t(
+                                  'chatbot.grounding',
+                                  'Helix is grounding the answer in TeslaSync evidence…',
+                                )
+                              : t('chatbot.planning', 'Helix is planning the investigation…')}
                           </Text>
                         </GlassPanel>
                       </div>
@@ -870,7 +914,7 @@ export default function ChatbotPage() {
                         onKeyDown={handleKeyDown}
                         placeholder={t(
                           'chatbot.placeholder',
-                          'Ask about your fleet…',
+                          'Ask Helix to investigate, compare, or explain…',
                         )}
                         rows={1}
                         className="max-h-40 min-h-[44px] resize-none"
@@ -913,6 +957,14 @@ export default function ChatbotPage() {
 
 function toUIMessage(m: ChatMessage): UIChatMessage {
   return { ...m };
+}
+
+function settlePendingActivity(
+  activity: UIChatMessage['aiActivity'],
+): UIChatMessage['aiActivity'] {
+  return activity?.map((item) =>
+    item.status === 'running' ? { ...item, status: 'failed' } : item,
+  );
 }
 
 let localIdSeq = 0;

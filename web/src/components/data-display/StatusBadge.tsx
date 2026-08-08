@@ -32,7 +32,7 @@ export function StatusBadge({ status, size = 'md', className }: StatusBadgeProps
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border border-gray-200 bg-gray-50 font-medium dark:border-gray-700 dark:bg-gray-800',
+        'inline-flex items-center rounded-full border border-[var(--control-border)] bg-[var(--control-bg)] font-medium',
         s.gap,
         s.px,
         s.text,

@@ -126,6 +126,7 @@ import {
 } from '@/api/hooks/useEnergy';
 import { useRangeState } from '@/hooks/useRangeState';
 import PowerFlowDashboardPage from './PowerFlowDashboardPage';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 const mockLive = useTeslaEnergyLiveStatus as unknown as ReturnType<typeof vi.fn>;
 const mockHistory = useTeslaEnergyLiveStatusHistory as unknown as ReturnType<typeof vi.fn>;
@@ -135,7 +136,7 @@ const mockRange = useRangeState as unknown as ReturnType<typeof vi.fn>;
 const SINCE = '2026-06-25';
 const UNTIL = '2026-07-01';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -388,12 +389,12 @@ describe('PowerFlowDashboardPage — edge branches', () => {
 
     // Bug-fix #2 — status strip: unknown is neutral, never a red danger chip.
     const stripBadge = within(statusRegion()).getByText('Grid: Unknown');
-    expect(stripBadge.className).toContain('bg-gray-100');
+    expect(stripBadge.className).toContain(BADGE_VARIANTS.neutral);
     expect(stripBadge.className).not.toContain('bg-red-100');
 
     // Bug-fix #2 — site-details panel: same neutral mapping for the bare value.
     const siteBadge = within(overviewRegion()).getByText('Unknown');
-    expect(siteBadge.className).toContain('bg-gray-100');
+    expect(siteBadge.className).toContain(BADGE_VARIANTS.neutral);
     expect(siteBadge.className).not.toContain('bg-red-100');
 
     // Storm/backup off render their negative-state values.

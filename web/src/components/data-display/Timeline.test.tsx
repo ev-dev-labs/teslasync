@@ -128,7 +128,7 @@ describe('Timeline — dot / icon rendering', () => {
   it('applies the neutral border/text classes when no color is provided', () => {
     const { container } = render(<Timeline items={[item()]} />);
     const dot = outerDots(container)[0];
-    expect(dot.className).toContain('border-gray-300');
+    expect(dot.className).toContain('border-[var(--control-border)]');
     expect(dot.className).toContain('text-[var(--text-muted)]');
   });
 
@@ -137,7 +137,7 @@ describe('Timeline — dot / icon rendering', () => {
     const dot = outerDots(container)[0] as HTMLElement;
     expect(dot).toHaveStyle({ borderColor: '#10b981', color: '#10b981' });
     // With an explicit color the neutral fallback class must NOT be applied.
-    expect(dot.className).not.toContain('border-gray-300');
+    expect(dot.className).not.toContain('border-[var(--control-border)]');
     const inner = defaultDots(container)[0] as HTMLElement;
     expect(inner).toHaveStyle({ backgroundColor: '#10b981' });
   });

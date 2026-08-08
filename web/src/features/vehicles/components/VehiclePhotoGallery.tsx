@@ -116,7 +116,7 @@ export function VehiclePhotoGallery({
                 src={photo.src}
                 alt={photo.alt}
                 loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                className="h-full w-full object-cover transition-transform duration-normal group-hover:scale-[1.03]"
               />
             </button>
           </li>

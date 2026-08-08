@@ -52,7 +52,7 @@ import MQTTStatusWidget, { deriveMqttStats } from './MQTTStatusWidget';
 
 const mockMqtt = useMQTTStatus as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -77,7 +77,7 @@ function minutesAgoIso(mins: number): string {
   return new Date(Date.now() - mins * 60_000 - 5_000).toISOString();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeStatus(over: Record<string, unknown> = {}): any {
   return {
     connected: true,

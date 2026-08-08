@@ -223,6 +223,7 @@ function CategoryCard({ category, fields, isLoading, isError, error, onRetry }: 
       ) : isError ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : fields.length === 0 ? (
+        // no-action: the Timeline scrubber above lets the user jump to a different reconstruction instant where this category may have signals; nothing to trigger from inside a single category card.
         <EmptyState
           icon={<Icon className="h-6 w-6" aria-hidden="true" />}
           message={t('timeMachine.emptyCategory', 'No {{category}} signals at this instant', {
@@ -406,6 +407,7 @@ export default function TimeMachinePage() {
                 ) : rangeQ.isError ? (
                   <QueryError error={rangeQ.error} onRetry={() => rangeQ.refetch()} />
                 ) : !bounds ? (
+                  // no-action: transient — this resolves automatically once Fleet Telemetry streams the vehicle's first signals; there is nothing to trigger from here.
                   <EmptyState
                     icon={<Rewind className="h-8 w-8" aria-hidden="true" />}
                     title={t('timeMachine.noHistory', 'No signal history')}

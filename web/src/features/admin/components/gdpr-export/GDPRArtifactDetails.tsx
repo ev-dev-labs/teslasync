@@ -85,6 +85,8 @@ export function GDPRArtifactDetails({ artifact, loading, className }: GDPRArtifa
           )}
         </dl>
       ) : (
+        // no-action: purely mirrors the parent's `artifact` prop — the
+        // export ID lookup input above the panel is the trigger surface.
         <EmptyState
           message={t(
             'admin.gdprExport.metaEmpty',

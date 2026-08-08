@@ -62,6 +62,64 @@ func (s *scriptedProvider) Capabilities() provider.Capabilities {
 	return provider.Capabilities{Tools: true}
 }
 
+type streamingScriptedProvider struct {
+	mu          sync.Mutex
+	streams     [][]provider.Chunk
+	streamErr   error
+	chatResp    *provider.ChatResponse
+	chatCalls   int
+	streamCalls int
+	requests    []provider.ChatRequest
+}
+
+func (s *streamingScriptedProvider) Name() string { return "streaming-scripted" }
+func (s *streamingScriptedProvider) Capabilities() provider.Capabilities {
+	return provider.Capabilities{Tools: true, Streaming: true}
+}
+func (s *streamingScriptedProvider) Chat(_ context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.chatCalls++
+	s.requests = append(s.requests, req)
+	if s.chatResp == nil {
+		return nil, errors.New("unexpected Chat call")
+	}
+	return s.chatResp, nil
+}
+func (s *streamingScriptedProvider) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
+	s.mu.Lock()
+	s.streamCalls++
+	s.requests = append(s.requests, req)
+	if s.streamErr != nil {
+		err := s.streamErr
+		s.mu.Unlock()
+		return nil, err
+	}
+	index := s.streamCalls - 1
+	if index >= len(s.streams) {
+		s.mu.Unlock()
+		return nil, errors.New("unexpected Stream call")
+	}
+	chunks := append([]provider.Chunk(nil), s.streams[index]...)
+	s.mu.Unlock()
+
+	out := make(chan provider.Chunk, len(chunks))
+	go func() {
+		defer close(out)
+		for _, chunk := range chunks {
+			select {
+			case <-ctx.Done():
+				return
+			case out <- chunk:
+			}
+		}
+	}()
+	return out, nil
+}
+func (s *streamingScriptedProvider) Embed(context.Context, provider.EmbedRequest) (*provider.EmbedResponse, error) {
+	return nil, provider.ErrCapabilityNotSupported
+}
+
 // In-process tools used by dispatch tests.
 
 type pingInput struct{}
@@ -154,6 +212,211 @@ func TestDispatcher_SimpleChatNoTools(t *testing.T) {
 	}
 	if got := w.Deltas(); len(got) != 1 || got[0] != "hello back" {
 		t.Errorf("Deltas = %v", got)
+	}
+}
+
+func TestDispatcher_InjectsHelixIntelligenceContract(t *testing.T) {
+	t.Parallel()
+
+	p := newScripted(&provider.ChatResponse{
+		Message: provider.Message{Role: provider.RoleAssistant, Content: "grounded"},
+	})
+	d := New(tools.NewRegistry(), p, nil, 0)
+	w := NewCaptureWriter()
+	if err := d.Run(
+		context.Background(),
+		fakeStrategy{system: "feature format"},
+		strategy.StrategyInput{LastMessage: "question"},
+		w,
+	); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(p.requests) != 1 {
+		t.Fatalf("request count = %d, want 1", len(p.requests))
+	}
+	messages := p.requests[0].Messages
+	if len(messages) != 3 {
+		t.Fatalf("messages = %+v, want feature system + Helix contract + user", messages)
+	}
+	if messages[1].Role != provider.RoleSystem ||
+		!strings.Contains(messages[1].Content, "Ground every fleet-specific factual claim") ||
+		!strings.Contains(messages[1].Content, "generic advice") {
+		t.Fatalf("Helix intelligence contract missing or incomplete: %+v", messages[1])
+	}
+}
+
+func TestDispatcher_StreamsProviderDeltasWithoutUsingChat(t *testing.T) {
+	t.Parallel()
+
+	p := &streamingScriptedProvider{streams: [][]provider.Chunk{{
+		{Delta: "Hel"},
+		{Delta: "ix"},
+		{Done: true},
+	}}}
+	d := New(tools.NewRegistry(), p, nil, 0)
+	w := NewCaptureWriter()
+
+	if err := d.Run(context.Background(), fakeStrategy{}, strategy.StrategyInput{LastMessage: "hi"}, w); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := w.Deltas(); len(got) != 2 || got[0] != "Hel" || got[1] != "ix" {
+		t.Fatalf("Deltas() = %v, want token chunks", got)
+	}
+	if p.streamCalls != 1 || p.chatCalls != 0 {
+		t.Fatalf("provider calls: stream=%d chat=%d", p.streamCalls, p.chatCalls)
+	}
+}
+
+func TestDispatcher_StreamingToolChainRoundTripsCompleteCall(t *testing.T) {
+	t.Parallel()
+
+	p := &streamingScriptedProvider{streams: [][]provider.Chunk{
+		{
+			{ToolDelta: &provider.ToolCall{Name: "ping", Arguments: json.RawMessage(`{}`)}},
+			{Done: true},
+		},
+		{
+			{Delta: "Grounded answer"},
+			{Done: true},
+		},
+	}}
+	r := tools.NewRegistry()
+	r.Register(&pingTool{})
+	d := New(r, p, nil, 0)
+	w := NewCaptureWriter()
+
+	if err := d.Run(context.Background(), fakeStrategy{tools: []string{"ping"}}, strategy.StrategyInput{LastMessage: "check"}, w); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := w.ToolCalls(); len(got) != 1 || got[0].ID != "helix_call_1_1" {
+		t.Fatalf("ToolCalls() = %+v, want normalized complete call", got)
+	}
+	if got := strings.Join(w.Deltas(), ""); got != "Grounded answer" {
+		t.Fatalf("joined deltas = %q", got)
+	}
+	if len(p.requests) != 2 {
+		t.Fatalf("request count = %d, want 2", len(p.requests))
+	}
+	second := p.requests[1].Messages
+	if len(second) < 3 {
+		t.Fatalf("second request history = %+v", second)
+	}
+	assistant := second[len(second)-2]
+	toolMessage := second[len(second)-1]
+	if len(assistant.ToolCalls) != 1 || assistant.ToolCalls[0].ID != "helix_call_1_1" {
+		t.Fatalf("assistant tool-call history = %+v", assistant.ToolCalls)
+	}
+	if toolMessage.Role != provider.RoleTool || toolMessage.ToolID != "helix_call_1_1" {
+		t.Fatalf("tool result history = %+v", toolMessage)
+	}
+}
+
+func TestDispatcher_RejectsIncompleteProviderStream(t *testing.T) {
+	t.Parallel()
+
+	p := &streamingScriptedProvider{streams: [][]provider.Chunk{{
+		{Delta: "partial"},
+	}}}
+	d := New(tools.NewRegistry(), p, nil, 0)
+	w := NewCaptureWriter()
+
+	err := d.Run(context.Background(), fakeStrategy{}, strategy.StrategyInput{}, w)
+	if !errors.Is(err, ErrStreamIncomplete) {
+		t.Fatalf("Run error = %v, want ErrStreamIncomplete", err)
+	}
+	if w.Done() {
+		t.Fatal("incomplete stream emitted a success-shaped done event")
+	}
+	if !errors.Is(w.RunError(), ErrStreamIncomplete) {
+		t.Fatalf("terminal error = %v, want ErrStreamIncomplete", w.RunError())
+	}
+}
+
+func TestDispatcher_RejectsTruncatedCompletionBeforeToolExecution(t *testing.T) {
+	t.Parallel()
+	p := &streamingScriptedProvider{streams: [][]provider.Chunk{{
+		{ToolDelta: &provider.ToolCall{ID: "call_1", Name: "ping", Arguments: json.RawMessage(`{}`)}},
+		{Done: true, FinishReason: provider.FinishLength},
+	}}}
+	r := tools.NewRegistry()
+	r.Register(&pingTool{})
+	d := New(r, p, nil, 0)
+	w := NewCaptureWriter()
+
+	err := d.Run(context.Background(), fakeStrategy{tools: []string{"ping"}}, strategy.StrategyInput{}, w)
+	if !errors.Is(err, ErrCompletionTruncated) {
+		t.Fatalf("Run error = %v, want ErrCompletionTruncated", err)
+	}
+	if len(w.ToolCalls()) != 0 || len(w.ToolResults()) != 0 {
+		t.Fatalf("truncated completion executed tool: calls=%v results=%v", w.ToolCalls(), w.ToolResults())
+	}
+	if w.Done() {
+		t.Fatal("truncated completion emitted done")
+	}
+}
+
+func TestDispatcher_PreservesTerminalUsage(t *testing.T) {
+	t.Parallel()
+	p := &streamingScriptedProvider{streams: [][]provider.Chunk{{
+		{Delta: "grounded"},
+		{Done: true, FinishReason: provider.FinishStop, InputTokens: 21, OutputTokens: 7},
+	}}}
+	d := New(tools.NewRegistry(), p, nil, 0)
+	w := NewCaptureWriter()
+
+	if err := d.Run(context.Background(), fakeStrategy{}, strategy.StrategyInput{}, w); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	finishReason, inputTokens, outputTokens := w.Completion()
+	if finishReason != provider.FinishStop || inputTokens != 21 || outputTokens != 7 {
+		t.Fatalf("completion = %q %d/%d", finishReason, inputTokens, outputTokens)
+	}
+}
+
+func TestPrivacySafeToolResultRedactsNestedLocationFields(t *testing.T) {
+	t.Parallel()
+	raw := json.RawMessage(`{
+		"drive":{"start_lat":37.5,"end_lon":-122.3,"start_address":"1 Main St","distance_m":1200},
+		"geofences":[{"name":"Home","polygon_wkt":"POLYGON((-122 37))"}],
+		"heading":180
+	}`)
+	safe, err := privacySafeToolResult(raw)
+	if err != nil {
+		t.Fatalf("privacySafeToolResult: %v", err)
+	}
+	got := string(safe)
+	for _, secret := range []string{"37.5", "-122.3", "1 Main St", "POLYGON"} {
+		if strings.Contains(got, secret) {
+			t.Errorf("sanitized tool result retained %q: %s", secret, got)
+		}
+	}
+	for _, retained := range []string{`"distance_m":1200`, `"heading":180`, `"name":"Home"`} {
+		if !strings.Contains(got, retained) {
+			t.Errorf("sanitized tool result lost %s: %s", retained, got)
+		}
+	}
+}
+
+func TestDispatcher_FallsBackWhenStreamCapabilityDrifts(t *testing.T) {
+	t.Parallel()
+
+	p := &streamingScriptedProvider{
+		streamErr: provider.ErrCapabilityNotSupported,
+		chatResp: &provider.ChatResponse{
+			Message: provider.Message{Role: provider.RoleAssistant, Content: "fallback"},
+		},
+	}
+	d := New(tools.NewRegistry(), p, nil, 0)
+	w := NewCaptureWriter()
+
+	if err := d.Run(context.Background(), fakeStrategy{}, strategy.StrategyInput{}, w); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := strings.Join(w.Deltas(), ""); got != "fallback" {
+		t.Fatalf("joined deltas = %q", got)
+	}
+	if p.streamCalls != 1 || p.chatCalls != 1 {
+		t.Fatalf("provider calls: stream=%d chat=%d", p.streamCalls, p.chatCalls)
 	}
 }
 

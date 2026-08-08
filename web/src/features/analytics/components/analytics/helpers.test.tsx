@@ -30,9 +30,12 @@
 import { render } from '@testing-library/react';
 import { MetricSkeleton, MetricBandSkeleton } from './helpers';
 
-// The GlassPanel primitive always carries this class — used as the "one card"
-// marker (mirrors the PageLoadSkeleton suite's panel-counting convention).
-const CARD_SELECTOR = '.backdrop-blur-sm';
+// The GlassPanel primitive always carries this attribute — used as the "one
+// card" marker (mirrors the PageLoadSkeleton suite's panel-counting
+// convention). Deliberately an attribute rather than a styling class: the
+// panel surface is token-driven, so its utility classes are an implementation
+// detail that shifts whenever the design-token layer changes.
+const CARD_SELECTOR = '[data-print-card]';
 // The inner <Skeleton> shimmer bars animate via this class.
 const SHIMMER_SELECTOR = '.animate-pulse';
 
@@ -43,7 +46,8 @@ describe('MetricSkeleton', () => {
     const card = container.firstElementChild as HTMLElement;
     expect(card).not.toBeNull();
     // It is a GlassPanel (padded surface), not a bare div.
-    expect(card).toHaveClass('backdrop-blur-sm', 'p-3');
+    expect(card).toHaveAttribute('data-print-card');
+    expect(card).toHaveClass('p-3');
     // Two shimmer bars: the value line + the label line.
     expect(container.querySelectorAll(SHIMMER_SELECTOR)).toHaveLength(2);
   });

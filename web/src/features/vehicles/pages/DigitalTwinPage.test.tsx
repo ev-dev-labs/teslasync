@@ -56,11 +56,11 @@ const h = vi.hoisted(() => ({
   vehicle: null as Veh | null,
   vehicles: [] as Veh[],
   vehiclesLoading: false,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   security: undefined as any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   state: undefined as any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   charging: undefined as any,
 }));
 
@@ -213,7 +213,7 @@ function makeCharging(o: Partial<ChargingTelemetry> = {}): ChargingTelemetry {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeState(stateOverrides: Record<string, any> = {}, live = true) {
   return {
     state: {

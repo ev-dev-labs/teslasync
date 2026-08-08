@@ -18,6 +18,8 @@ interface CostSummaryCardsProps {
   isLoading?: boolean;
   error?: unknown;
   onRetry?: () => void;
+  /** Clears the page's date range back to its default lookback when there are no sessions in the selected window. */
+  onResetRange?: () => void;
 }
 
 const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6';
@@ -30,6 +32,7 @@ export function CostSummaryCards({
   isLoading,
   error,
   onRetry,
+  onResetRange,
 }: CostSummaryCardsProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
@@ -71,6 +74,11 @@ export function CostSummaryCards({
             'costAnalysis.stats.emptyMessage',
             'No charging sessions in the selected range. Charge your vehicle or widen the date range to see cost metrics.',
           )}
+          action={
+            onResetRange
+              ? { label: t('costAnalysis.stats.resetRange', 'Reset date range'), onClick: onResetRange }
+              : undefined
+          }
         />
       </GlassPanel>
     );

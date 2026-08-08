@@ -81,7 +81,10 @@ export default function YearReviewPage() {
     if (data) return content(data);
     return (
       <GlassPanel className="p-4 sm:p-5">
-        <EmptyState message={t('yearReview.selectVehiclePrompt', 'Select a vehicle to view its year in review')} />
+        <EmptyState
+          message={t('yearReview.selectVehiclePrompt', 'Select a vehicle to view its year in review')}
+          actionTo={{ label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' }}
+        />
       </GlassPanel>
     );
   };

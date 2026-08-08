@@ -6,6 +6,7 @@ import {
   avgGrade,
   computePeriodStats,
   priorPeriod,
+  shiftDayKey,
   detectAnomalies,
   detectNotable,
   detectCommutes,
@@ -202,6 +203,27 @@ describe('priorPeriod', () => {
   it('returns null for malformed input', () => {
     expect(priorPeriod(undefined, '2026-05-12')).toBeNull();
     expect(priorPeriod('not-a-date', '2026-05-12')).toBeNull();
+  });
+});
+
+describe('shiftDayKey', () => {
+  it('shifts forwards and backwards across month boundaries', () => {
+    expect(shiftDayKey('2026-03-01', -1)).toBe('2026-02-28');
+    expect(shiftDayKey('2026-01-31', 1)).toBe('2026-02-01');
+    expect(shiftDayKey('2026-12-31', 1)).toBe('2027-01-01');
+  });
+
+  it('handles leap days', () => {
+    expect(shiftDayKey('2028-03-01', -1)).toBe('2028-02-29');
+  });
+
+  it('returns the same day for a zero shift', () => {
+    expect(shiftDayKey('2026-05-12', 0)).toBe('2026-05-12');
+  });
+
+  it('returns null for malformed or missing input', () => {
+    expect(shiftDayKey(undefined, 1)).toBeNull();
+    expect(shiftDayKey('not-a-date', 1)).toBeNull();
   });
 });
 

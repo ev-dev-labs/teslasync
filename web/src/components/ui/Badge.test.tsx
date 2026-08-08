@@ -20,6 +20,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createRef } from 'react';
 import { Badge } from './Badge';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 describe('Badge', () => {
   it('renders a native <span> carrying its children', () => {
@@ -33,7 +34,7 @@ describe('Badge', () => {
     render(<Badge>Default</Badge>);
     const badge = screen.getByText('Default');
     // neutral background + md horizontal padding are the documented defaults.
-    expect(badge.className).toContain('bg-gray-100');
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral);
     expect(badge.className).toContain('px-2');
     expect(badge.className).toContain('rounded-full');
   });
@@ -43,7 +44,7 @@ describe('Badge', () => {
     ['success', 'bg-green-100'],
     ['warning', 'bg-yellow-100'],
     ['danger', 'bg-red-100'],
-    ['neutral', 'bg-gray-100'],
+    ['neutral', BADGE_VARIANTS.neutral],
   ] as const)('applies the %s variant background token', (variant, expected) => {
     render(
       <Badge variant={variant} data-testid="chip">
@@ -98,7 +99,7 @@ describe('Badge', () => {
       </Badge>,
     );
     const badge = screen.getByTestId('chip');
-    expect(badge.className).toContain('bg-gray-100');
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral);
     expect(badge.className).not.toContain('bg-blue-100');
     expect(badge.className).not.toContain('undefined');
   });

@@ -32,7 +32,7 @@ describe('Skeleton — single-bar mode', () => {
     const el = bars(container);
 
     expect(el).toHaveLength(1);
-    expect(el[0]).toHaveClass('animate-pulse', 'bg-gray-200', 'dark:bg-gray-700', 'rounded');
+    expect(el[0]).toHaveClass('animate-pulse', 'bg-[var(--skeleton-bg)]', 'rounded');
     expect(el[0]).not.toHaveClass('rounded-full');
     expect(el[0]).toHaveStyle({ width: '100%', height: '16px' });
     // The single-bar root is the placeholder itself, not a stacking wrapper.

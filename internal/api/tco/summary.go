@@ -11,9 +11,15 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+)
+
+const (
+	kilometersPerMile = 1.60934
+	litersPerUSGallon = 3.785411784
 )
 
 // TCOMonthlyEntry is one monthly_breakdown row. JSON tags mirror the original
@@ -46,6 +52,7 @@ type TCOSummary struct {
 	MonthlySavings             float64           `json:"monthly_savings"`
 	MaintenanceSavingsEstimate float64           `json:"maintenance_savings_estimate"`
 	GasPrice                   float64           `json:"gas_price"`
+	GasUnit                    string            `json:"gas_unit"`
 	GasEfficiencyMPG           float64           `json:"gas_efficiency_mpg"`
 	BaseCostPerKWh             float64           `json:"base_cost_per_kwh"`
 	MonthlyBreakdown           []TCOMonthlyEntry `json:"monthly_breakdown"`
@@ -86,12 +93,14 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 	}
 
 	var baseCostPerKWh, gasPrice, gasEfficiencyMPG float64
+	var gasUnit string
 	if err := db.Pool.QueryRow(ctx,
 		`SELECT
 		   COALESCE((SELECT value_num FROM settings WHERE key = 'base_cost_per_kwh'), 0.12),
 		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
-		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
-	).Scan(&baseCostPerKWh, &gasPrice, &gasEfficiencyMPG); err != nil {
+		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25),
+		   COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon')`,
+	).Scan(&baseCostPerKWh, &gasPrice, &gasEfficiencyMPG, &gasUnit); err != nil {
 		return TCOSummary{}, fmt.Errorf("api: ComputeTCOSummary: settings: %w", err)
 	}
 	// Guard against zero/negative values that would cause
@@ -105,6 +114,7 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 	if gasPrice <= 0 {
 		gasPrice = 3.50
 	}
+	gasUnit = normalizeGasUnit(gasUnit)
 
 	var monthsOfOwnership float64 = 1
 	if firstDate != nil && lastDate != nil && !firstDate.IsZero() && !lastDate.IsZero() {
@@ -120,11 +130,14 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 	var costPerKmEV, costPerKmICE, totalSavings, monthlySavings float64
 	if totalKm > 0 {
 		costPerKmEV = totalChargingCost / totalKm
-		totalMiles := totalKm / 1.60934
-		gallonsUsed := totalMiles / gasEfficiencyMPG
-		equivalentGasCost := gallonsUsed * gasPrice
+		equivalentGasCost := gasCostForDistanceKm(
+			totalKm,
+			gasPrice,
+			gasEfficiencyMPG,
+			gasUnit,
+		)
 		costPerKmICE = equivalentGasCost / totalKm
-		totalSavings = (costPerKmICE - costPerKmEV) * totalKm
+		totalSavings = equivalentGasCost - totalChargingCost
 		monthlySavings = totalSavings / monthsOfOwnership
 	}
 
@@ -155,7 +168,7 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		// Keep the pre-refactor heuristic: infer monthly distance from energy instead
 		// of adding a per-month distance lookup, because the chart pins this contract.
 		equivGas := 0.0
-		if baseCostPerKWh > 0 && gasEfficiencyMPG > 0 {
+		if gasEfficiencyMPG > 0 {
 			kmPerKWh := 0.0
 			if totalWh > 0 && totalKm > 0 {
 				kmPerKWh = totalKm / (totalWh / 1000.0)
@@ -163,9 +176,12 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 				kmPerKWh = 5.0 // reasonable EV default
 			}
 			estimatedKm := (monthlyWh / 1000.0) * kmPerKWh
-			estimatedMiles := estimatedKm / 1.60934
-			gallons := estimatedMiles / gasEfficiencyMPG
-			equivGas = gallons * gasPrice
+			equivGas = gasCostForDistanceKm(
+				estimatedKm,
+				gasPrice,
+				gasEfficiencyMPG,
+				gasUnit,
+			)
 		}
 		monthSavings := equivGas - monthlyCost
 		cumulativeSavings += monthSavings
@@ -184,9 +200,12 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 
 	equivalentGasCostTotal := 0.0
 	if totalKm > 0 {
-		totalMiles := totalKm / 1.60934
-		gallonsUsed := totalMiles / gasEfficiencyMPG
-		equivalentGasCostTotal = gallonsUsed * gasPrice
+		equivalentGasCostTotal = gasCostForDistanceKm(
+			totalKm,
+			gasPrice,
+			gasEfficiencyMPG,
+			gasUnit,
+		)
 	}
 
 	firstDateStr := ""
@@ -222,8 +241,32 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		MonthlySavings:             safeF(math.Round(monthlySavings*100) / 100),
 		MaintenanceSavingsEstimate: safeF(math.Round(maintenanceSavingsEstimate*100) / 100),
 		GasPrice:                   safeF(gasPrice),
+		GasUnit:                    gasUnit,
 		GasEfficiencyMPG:           safeF(gasEfficiencyMPG),
 		BaseCostPerKWh:             safeF(baseCostPerKWh),
 		MonthlyBreakdown:           monthlyBreakdown,
 	}, nil
+}
+
+func normalizeGasUnit(unit string) string {
+	if strings.EqualFold(strings.TrimSpace(unit), "liter") {
+		return "liter"
+	}
+	return "gallon"
+}
+
+func gasCostForDistanceKm(
+	distanceKm float64,
+	pricePerUnit float64,
+	efficiencyMPG float64,
+	gasUnit string,
+) float64 {
+	if distanceKm <= 0 || pricePerUnit <= 0 || efficiencyMPG <= 0 {
+		return 0
+	}
+	gallons := distanceKm / kilometersPerMile / efficiencyMPG
+	if normalizeGasUnit(gasUnit) == "liter" {
+		return gallons * litersPerUSGallon * pricePerUnit
+	}
+	return gallons * pricePerUnit
 }

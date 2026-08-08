@@ -8,7 +8,7 @@ import {
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, SectionTitle, PanelTitle, Text, Label } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { RadialGauge } from '@/components/charts';
+import { LinearGauge } from '@/components/charts';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
@@ -157,18 +157,16 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
             </InfoTile>
             <InfoTile label={t('energy.siteInfo.backupReserve', 'Backup Reserve')}>
               {info.backup_reserve_percent != null ? (
-                <div className="flex items-center gap-2">
-                  <RadialGauge
-                    value={info.backup_reserve_percent}
-                    max={100}
-                    size={36}
-                    label=""
-                    color="#06b6d4"
-                  />
-                  <Text variant="body" className="font-medium">
-                    {fmtNumber(info.backup_reserve_percent, 0)}%
-                  </Text>
-                </div>
+                <LinearGauge
+                  value={info.backup_reserve_percent}
+                  max={100}
+                  size={36}
+                  label=""
+                  ariaLabel={t('energy.siteInfo.backupReserve', 'Backup Reserve')}
+                  unit="%"
+                  decimals={0}
+                  color="#06b6d4"
+                />
               ) : (
                 <Text size="sm" color="muted">—</Text>
               )}

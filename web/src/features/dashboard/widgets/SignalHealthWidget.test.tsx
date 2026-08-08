@@ -145,7 +145,7 @@ function renderWidget(size: WidgetSize, opts: { vehicleId?: number } = {}) {
 
 /** Read the bold value rendered inside the StatCard with the given label. */
 function statValue(label: string): string {
-  const card = screen.getByText(label).closest('div.rounded-lg');
+  const card = screen.getByText(label).closest('[data-print-card]');
   if (!card) throw new Error(`StatCard "${label}" not found`);
   return card.querySelector('.text-2xl')?.textContent ?? '';
 }

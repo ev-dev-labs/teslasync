@@ -8,6 +8,7 @@ import { Icons } from '@/lib/icons';
 import { formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import type { Automation } from '@/api/types';
+import { VisuallyHidden } from '@/components/a11y';
 
 type RowKey = string | number;
 
@@ -217,9 +218,9 @@ export function AutomationListTable({
 
       {isLoading ? (
         <div role="status" aria-busy="true">
-          <span className="sr-only">
+          <VisuallyHidden>
             {t('automationList.loading', 'Loading automations…')}
-          </span>
+          </VisuallyHidden>
           <div className="space-y-2" aria-hidden="true">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -261,6 +262,22 @@ export function AutomationListTable({
           onSort={onSort}
           mobileColumns={['name', 'status']}
           pagination
+          exportable
+          exportFilename="automations"
+          exportRow={(a) => ({
+            id: a.id,
+            name: a.name ?? '',
+            description: a.description ?? '',
+            vehicle:
+              a.vehicle_id != null
+                ? lookup.get(a.vehicle_id) ?? `#${a.vehicle_id}`
+                : t('automationList.allVehicles', 'All vehicles'),
+            execution_count: a.execution_count ?? 0,
+            failure_count: a.failure_count ?? 0,
+            last_triggered_at: a.last_triggered_at ?? '',
+            enabled: a.enabled,
+            auto_disabled: a.auto_disabled,
+          })}
           emptyMessage={t('automationList.noMatch', 'No automations match your filters')}
         />
       )}

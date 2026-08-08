@@ -69,6 +69,8 @@ export function JsonFormatterTool() {
             {result.detail && <p className="text-xs text-[var(--text-muted)]">{result.detail}</p>}
           </div>
         ) : (
+          // no-action: the JSON Input textarea directly above is the trigger
+          // surface — this panel only renders empty before text is pasted in.
           <EmptyState
             message={t('devtools.utils.jsonEmpty', 'Paste JSON above to validate and pretty-print it.')}
             className="py-8"

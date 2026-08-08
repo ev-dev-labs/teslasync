@@ -11,7 +11,7 @@ import { GlassPanel, Badge, Button, DataTable, PanelTitle, Caption, Text, type C
 import { MetricCard } from '@/components/data-display';
 import { AIVampireDrainExplanation } from '@/components/ai/AIVampireDrainExplanation';
 import {
-  RadialGauge, ChartTooltip, AREA_DEFAULTS,
+  LinearGauge, ChartTooltip, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -185,7 +185,11 @@ export default function VampireDrainPage() {
         >
           {!enabled ? (
             <GlassPanel className="col-span-2 p-4 sm:p-5 lg:col-span-4">
-              <EmptyState icon={<Zap className="h-8 w-8" />} message={noVehicleMsg} />
+              <EmptyState
+                icon={<Zap className="h-8 w-8" />}
+                message={noVehicleMsg}
+                actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+              />
             </GlassPanel>
           ) : statsQuery.isLoading ? (
             <>
@@ -246,13 +250,22 @@ export default function VampireDrainPage() {
               {t('vampireDrain.trend.title', 'Drain Rate Trend')}
             </PanelTitle>
             {!enabled ? (
-              <EmptyState icon={<TrendingDown className="h-8 w-8" />} message={noVehicleMsg} />
+              <EmptyState
+                icon={<TrendingDown className="h-8 w-8" />}
+                message={noVehicleMsg}
+                actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+              />
             ) : eventsQuery.isLoading ? (
               <Skeleton height={240} />
             ) : eventsQuery.isError ? (
               <QueryError error={eventsQuery.error} onRetry={() => { void eventsQuery.refetch(); }} />
             ) : trend.length === 0 ? (
-              <EmptyState icon={<TrendingDown className="h-8 w-8" />} message={noEventsMsg} />
+              <EmptyState
+                /* no-action: transient — the trend needs more parked-drain sessions to plot;
+                   the header Refresh control (RefreshCw button) already covers manual re-checks. */
+                icon={<TrendingDown className="h-8 w-8" />}
+                message={noEventsMsg}
+              />
             ) : (
               <div className="h-56 sm:h-64 xl:h-72">
                 <ResponsiveContainer width="100%" height="100%">
@@ -274,16 +287,25 @@ export default function VampireDrainPage() {
               {t('vampireDrain.gauge.title', 'Drain Rate')}
             </PanelTitle>
             {!enabled ? (
-              <EmptyState icon={<Gauge className="h-8 w-8" />} message={noVehicleMsg} />
+              <EmptyState
+                icon={<Gauge className="h-8 w-8" />}
+                message={noVehicleMsg}
+                actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+              />
             ) : statsQuery.isLoading ? (
               <div className="flex justify-center py-4"><Skeleton width="180px" height={180} rounded /></div>
             ) : statsQuery.isError ? (
               <QueryError error={statsQuery.error} onRetry={() => { void statsQuery.refetch(); }} />
             ) : avg == null ? (
-              <EmptyState icon={<Gauge className="h-8 w-8" />} message={noEventsMsg} />
+              <EmptyState
+                /* no-action: transient — no parked-drain stats yet to average; the header
+                   Refresh control (RefreshCw button) already covers manual re-checks. */
+                icon={<Gauge className="h-8 w-8" />}
+                message={noEventsMsg}
+              />
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <RadialGauge
+                <LinearGauge
                   value={avg}
                   max={GAUGE_MAX}
                   label={t('vampireDrain.gauge.label', 'Avg %/day')}
@@ -321,13 +343,22 @@ export default function VampireDrainPage() {
               {t('vampireDrain.daily.title', 'Daily Drain While Parked')}
             </PanelTitle>
             {!enabled ? (
-              <EmptyState icon={<BatteryWarning className="h-8 w-8" />} message={noVehicleMsg} />
+              <EmptyState
+                icon={<BatteryWarning className="h-8 w-8" />}
+                message={noVehicleMsg}
+                actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+              />
             ) : eventsQuery.isLoading ? (
               <Skeleton height={260} />
             ) : eventsQuery.isError ? (
               <QueryError error={eventsQuery.error} onRetry={() => { void eventsQuery.refetch(); }} />
             ) : daily.length === 0 ? (
-              <EmptyState icon={<BatteryWarning className="h-8 w-8" />} message={noEventsMsg} />
+              <EmptyState
+                /* no-action: transient — daily aggregates build up as parked-drain sessions are
+                   recorded; the header Refresh control (RefreshCw button) already covers manual re-checks. */
+                icon={<BatteryWarning className="h-8 w-8" />}
+                message={noEventsMsg}
+              />
             ) : (
               <div className="h-56 sm:h-64 xl:h-72">
                 <ResponsiveContainer width="100%" height="100%">
@@ -376,7 +407,11 @@ export default function VampireDrainPage() {
             </Badge>
           </div>
           {!enabled ? (
-            <EmptyState icon={<Activity className="h-8 w-8" />} message={noVehicleMsg} />
+            <EmptyState
+              icon={<Activity className="h-8 w-8" />}
+              message={noVehicleMsg}
+              actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+            />
           ) : eventsQuery.isLoading ? (
             <Skeleton height={220} />
           ) : eventsQuery.isError ? (

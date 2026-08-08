@@ -357,7 +357,13 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         aria-labelledby={titleId}
         aria-describedby={fallbackId}
         className={cn(
-          'group rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900',
+          // Chart frames are panels too: resolve them from the same panel
+          // surface contract as GlassPanel and Card (index.css → PANEL
+          // SURFACE). Previously pinned to `bg-white dark:bg-gray-900`, which
+          // ignored the active theme entirely — on all 140 presets a chart
+          // frame rendered generic white/near-black instead of the palette's
+          // own surface, so charts never matched the panels beside them.
+          'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-4 shadow-panel',
           // Tailwind preflight already removes default <figure> margins;
           // re-state `m-0` defensively so any consumer override of preflight
           // doesn't shift the chart vertical rhythm.
@@ -559,7 +565,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                       key={col.key}
                       scope="col"
                       className={cn(
-                        'border border-gray-200 px-2 py-1 text-left font-medium',
+                        'border border-[var(--panel-border)] px-2 py-1 text-left font-medium',
                         'forced-colors:border-[CanvasText]',
                       )}
                     >
@@ -583,7 +589,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                         <td
                           key={col.key}
                           className={cn(
-                            'border border-gray-200 px-2 py-1',
+                            'border border-[var(--panel-border)] px-2 py-1',
                             'forced-colors:border-[CanvasText]',
                           )}
                         >

@@ -11,18 +11,19 @@ import {
 import { StatCard } from '@/components/data-display';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
-import type { MotorStats } from './helpers';
+import { useMotorStats } from './useMotorStats';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 
 interface SummaryStatsProps {
-  motorStats: MotorStats | null;
+  vehicleId: number | null | undefined;
   toTemperatureDisplay: (v: number) => number;
   // See MotorEfficiencyInsights tempUnit comment — already includes '°'.
   tempUnit: TemperatureUnitPref;
 }
 
-export default function SummaryStats({ motorStats, toTemperatureDisplay, tempUnit }: SummaryStatsProps) {
+export default function SummaryStats({ vehicleId, toTemperatureDisplay, tempUnit }: SummaryStatsProps) {
   const { t } = useTranslation();
+  const { motorStats } = useMotorStats(vehicleId);
 
   return (
     <FadeIn delay={0.4}>

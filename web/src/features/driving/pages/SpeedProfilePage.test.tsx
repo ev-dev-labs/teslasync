@@ -26,7 +26,7 @@
  *   - `@/components/charts` is stubbed so the recharts internals (which need
  *     a measured container jsdom can't provide) don't render; the BarChart
  *     and Scatter stubs capture the exact `data` the page computed, and the
- *     RadialGauge stub prints its value+unit for assertions.
+ *     LinearGauge stub prints its value+unit for assertions.
  *   - The two toolbar controls are stubbed to plain elements via
  *     React.createElement (keeps jsx-a11y off the mock markup).
  *   - react-i18next resolves the developer fallback string, interpolating
@@ -169,7 +169,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 // Stub the chart primitives: recharts needs a measured container jsdom can't
-// give it. BarChart + Scatter capture the exact derived `data`; RadialGauge
+// give it. BarChart + Scatter capture the exact derived `data`; LinearGauge
 // prints value+unit; everything else is inert.
 vi.mock('@/components/charts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
@@ -196,7 +196,7 @@ vi.mock('@/components/charts', async () => {
       captured.scatterData = data;
       return React.createElement('div', { 'data-testid': 'scatter' }, children);
     },
-    RadialGauge: function RadialGauge({
+    LinearGauge: function LinearGauge({
       value,
       label,
       unit,

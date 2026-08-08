@@ -74,7 +74,7 @@ export default function SoftwareUpdatesPage() {
   const { vehicleId, vehicles } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
   const setUrl = useUrlBatch();
-  const { start, end } = useRangeState({
+  const { start, end, presetId, reset: resetRange } = useRangeState({
     persistKey: 'software-updates.range',
     defaultPresetId: 'all',
   });
@@ -239,6 +239,11 @@ export default function SoftwareUpdatesPage() {
               <EmptyState
                 icon={<BarChart3 className="h-8 w-8" />}
                 message={t('softwareUpdates.cadence.empty', 'No update activity in this range')}
+                action={
+                  presetId !== 'all'
+                    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+                    : undefined
+                }
               />
             ) : (
               <SoftwareUpdateCadenceChart data={cadence} />
@@ -258,6 +263,11 @@ export default function SoftwareUpdatesPage() {
               <EmptyState
                 icon={<ListChecks className="h-8 w-8" />}
                 message={t('softwareUpdates.breakdown.empty', 'No updates to summarize')}
+                action={
+                  presetId !== 'all'
+                    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+                    : undefined
+                }
               />
             ) : (
               <SoftwareUpdateStatusBreakdown counts={statusCounts} total={totalUpdates} />
@@ -289,6 +299,11 @@ export default function SoftwareUpdatesPage() {
               icon={<Smartphone className="h-12 w-12" />}
               title={t('softwareUpdates.timeline.emptyTitle', 'No update history')}
               message={t('softwareUpdates.timeline.empty', 'No software update history available for this vehicle yet.')}
+              action={
+                presetId !== 'all'
+                  ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+                  : undefined
+              }
             />
           ) : (
             <>
@@ -320,7 +335,7 @@ export default function SoftwareUpdatesPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={t('softwareUpdates.timeline.releaseNotes', 'Release notes for {{version}}', { version: u.version })}
-                            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-white/5 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+                            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
                           >
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           </a>

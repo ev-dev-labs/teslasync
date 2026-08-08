@@ -166,7 +166,7 @@ const mockBulkDelete = useBulkDeleteDrives as unknown as ReturnType<typeof vi.fn
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -402,8 +402,17 @@ describe('DrivesListPage — populated (km)', () => {
     // Day-group headers (UTC bucketing via the global useTimezone stub).
     expect(screen.getByText('Apr 24, 2026')).toBeInTheDocument();
     expect(screen.getByText('Apr 20, 2026')).toBeInTheDocument();
-    // Hook wiring: stringified vehicle id.
-    expect(mockDrives).toHaveBeenCalledWith('7');
+    // Hook wiring: stringified vehicle id plus a server-side window.
+    // The window must span the prior comparison period (Mar 2 – Mar 31 for
+    // this April range) and is padded a day either side because the API
+    // filters in UTC while this page buckets by the vehicle's local day.
+    // Without the explicit limit the API's 50-row default page silently
+    // truncated the list no matter what range or page size was requested.
+    expect(mockDrives).toHaveBeenCalledWith('7', {
+      start: '2026-03-01',
+      end: '2026-05-01',
+      limit: 1000,
+    });
   });
 });
 
@@ -562,6 +571,30 @@ describe('DrivesListPage — export links', () => {
     expect(csvHref).toContain('start=2026-04-01');
     expect(csvHref).toContain('end=2026-04-30');
     expect(json.getAttribute('href') ?? '').toContain('format=json');
+  });
+});
+
+describe('DrivesListPage — fetch truncation', () => {
+  // The page fetches one 1,000-row page. When the range holds at least that
+  // many drives the list is necessarily a subset, so say so instead of
+  // silently presenting it as the complete range.
+  it('warns when the range fills a whole fetch page', () => {
+    const many = Array.from({ length: 1000 }, (_, i) =>
+      makeDrive({
+        id: 1000 + i,
+        startTs: `2026-04-${String((i % 30) + 1).padStart(2, '0')}T12:00:00Z`,
+        distanceM: 40000,
+      }),
+    );
+    mockDrives.mockReturnValue(makeQuery({ data: many }));
+    renderPage();
+
+    expect(screen.getByText(/Showing the 1000 most recent drives/)).toBeInTheDocument();
+  });
+
+  it('stays silent when the range fits in one page', () => {
+    renderPage();
+    expect(screen.queryByText(/most recent drives in this range/)).toBeNull();
   });
 });
 

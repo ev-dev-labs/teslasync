@@ -62,7 +62,11 @@ const TARGETS = [
   },
   {
     name: 'notification-channels',
-    path: 'src/features/notifications/components/NotificationChannelsView.tsx',
+    // The former single-file NotificationChannelsView.tsx was decomposed into
+    // this directory (ChannelCard / ChannelFormModal / ChannelProvidersPanel /
+    // ChannelsGrid / ChannelStatsBand). Point at the directory so the target
+    // survives further decomposition inside it.
+    path: 'src/features/notifications/components/channels',
     min: 4,
   },
 ];

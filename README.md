@@ -67,7 +67,7 @@ settings header.
 
 | Surface | Route | What it is |
 |---|---|---|
-| **Helix Chat** | `/chatbot` | Conversational assistant with tool-use over your fleet data |
+| **Helix Chat** | `/chatbot` | Evidence-first fleet agent with live tool use, cross-domain analysis, app knowledge, and visible provenance |
 | **AI Settings** | `/settings/ai` | Per-feature toggles, provider config, usage card, redaction controls |
 | **AI Usage Card** | `/settings/ai` | Per-call audit log + spend visualisation across providers |
 | **AI Restore Panel** | `/settings/ai` | Re-issue a past AI answer from the audit log |
@@ -127,6 +127,14 @@ Bypass Report — also off by default.
 - **Per-call audit log** — every invocation is recorded with feature ID,
   provider, latency, token counts, and redaction status. Visible in the
   AI Usage Card.
+- **Evidence-first answers** — a shared intelligence contract requires
+  fleet claims to come from current tool or context evidence, separates
+  observations from inference, and surfaces sparse or conflicting data.
+  Helix surfaces show the tools used and their completion state.
+- **Real streaming tool use** — provider tokens and fragmented function calls
+  stream end to end. OpenAI, Azure OpenAI, Anthropic, and Ollama tool calls are
+  normalized before execution; incomplete streams fail instead of producing
+  a success-shaped answer.
 - **Outbound PII redaction** — every request passes through an F8 redact
   decorator before leaving the network. Per-(feature, provider) bypass
   events are surfaced in the Redaction Bypass Report.

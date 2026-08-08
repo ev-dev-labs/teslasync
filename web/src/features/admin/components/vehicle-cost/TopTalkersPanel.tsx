@@ -67,6 +67,7 @@ export function TopTalkersPanel({
         <EmptyState
           icon={<Flame className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.vehicleCost.topTalkersEmpty', 'No vehicles have ingested signals yet.')}
+          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
         />
       ) : (
         <ul

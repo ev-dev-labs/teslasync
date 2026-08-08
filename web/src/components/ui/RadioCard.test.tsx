@@ -147,7 +147,7 @@ describe('RadioCard', () => {
     // accent — the source falls back to the cyan token map.
     expect(() =>
       render(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         <RadioCard label="Bad" value="b" accent={'lime' as any} checked onChange={() => {}} />,
       ),
     ).not.toThrow();

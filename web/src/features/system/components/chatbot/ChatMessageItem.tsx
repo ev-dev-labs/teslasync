@@ -6,6 +6,8 @@ import { Avatar } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/dateFormat';
 import type { ChatMessage } from '@/api/types';
+import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail';
+import type { AiToolActivity, AiUsage } from '@/hooks/useAiStream';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
 /**
@@ -18,6 +20,10 @@ export interface UIChatMessage extends ChatMessage {
   isStreaming?: boolean;
   /** Partial reveal during the typewriter animation. Falls back to content. */
   streamedText?: string;
+  /** Privacy-safe tool provenance retained for this assistant turn. */
+  aiActivity?: AiToolActivity[];
+  /** Token accounting retained for this assistant turn. */
+  aiUsage?: AiUsage;
 }
 
 interface ChatMessageItemProps {
@@ -179,6 +185,11 @@ export function ChatMessageItem({
                 aria-hidden="true"
               />
             )}
+            <HelixEvidenceTrail
+              activity={message.aiActivity ?? []}
+              state={message.isStreaming ? 'streaming' : 'done'}
+              usage={message.aiUsage}
+            />
           </div>
         )}
 

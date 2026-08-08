@@ -279,7 +279,7 @@ func TestStream_HappyPath(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"he\"}}]}\n\n")
 		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"llo\"}}]}\n\n")
-		_, _ = io.WriteString(w, "data: {\"choices\":[{\"finish_reason\":\"stop\",\"delta\":{}}]}\n\n")
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"finish_reason\":\"stop\",\"delta\":{}}],\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":3}}\n\n")
 		_, _ = io.WriteString(w, "data: [DONE]\n\n")
 	}))
 	ch, err := a.Stream(context.Background(), provider.ChatRequest{
@@ -289,21 +289,56 @@ func TestStream_HappyPath(t *testing.T) {
 		t.Fatalf("Stream: %v", err)
 	}
 	var content string
-	var done bool
+	var terminal provider.Chunk
 	for c := range ch {
 		if c.Err != nil {
 			t.Fatalf("chunk err: %v", c.Err)
 		}
 		content += c.Delta
 		if c.Done {
-			done = true
+			terminal = c
 		}
 	}
-	if !done {
+	if !terminal.Done {
 		t.Fatal("expected Done chunk")
 	}
 	if content != "hello" {
 		t.Fatalf("content=%q", content)
+	}
+	if terminal.FinishReason != provider.FinishStop ||
+		terminal.InputTokens != 11 || terminal.OutputTokens != 3 {
+		t.Fatalf("terminal = %+v", terminal)
+	}
+}
+
+func TestStream_AssemblesToolCallFragments(t *testing.T) {
+	t.Parallel()
+	a := newAdapter(t, provider.AzureFlavorOpenAI, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"query_drives_recent","arguments":"{\"vehicle_id\":"}}]}}]}`+"\n\n")
+		_, _ = io.WriteString(w, `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"7,\"limit\":5}"}}]},"finish_reason":"tool_calls"}]}`+"\n\n")
+	}))
+	ch, err := a.Stream(context.Background(), provider.ChatRequest{
+		Messages: []provider.Message{{Role: provider.RoleUser, Content: "drives"}},
+	})
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	var calls []provider.ToolCall
+	for chunk := range ch {
+		if chunk.Err != nil {
+			t.Fatalf("chunk err: %v", chunk.Err)
+		}
+		if chunk.ToolDelta != nil {
+			calls = append(calls, *chunk.ToolDelta)
+		}
+	}
+	if len(calls) != 1 {
+		t.Fatalf("tool calls = %+v, want one assembled call", calls)
+	}
+	if calls[0].Name != "query_drives_recent" ||
+		string(calls[0].Arguments) != `{"vehicle_id":7,"limit":5}` {
+		t.Fatalf("assembled call = %+v", calls[0])
 	}
 }
 

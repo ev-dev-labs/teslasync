@@ -102,12 +102,12 @@ vi.mock('framer-motion', () => {
 
 // ── charts: deterministic doubles. The page renders raw recharts through the
 //    shared barrel; recharts needs a sized container that jsdom can't give it,
-//    so we swap the whole module for inert passthroughs. RadialGauge surfaces
+//    so we swap the whole module for inert passthroughs. LinearGauge surfaces
 //    its label/value/max as data-* so gauge maths stays assertable. ───────────
 vi.mock('@/components/charts', () => {
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   return {
-    RadialGauge: ({
+    LinearGauge: ({
       label,
       value,
       unit,
@@ -179,7 +179,7 @@ const mockLive = useChargingTelemetryLatest as unknown as ReturnType<typeof vi.f
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 const mockFormatting = useFormatting as unknown as ReturnType<typeof vi.fn>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -336,7 +336,7 @@ function kvValue(label: string): string {
   return screen.getByText(label).closest('div')?.querySelector('dd')?.textContent ?? '';
 }
 
-/** The RadialGauge double carrying a given label. */
+/** The LinearGauge double carrying a given label. */
 function gauge(label: string): HTMLElement {
   const el = screen.getAllByTestId('gauge').find((g) => g.getAttribute('data-label') === label);
   if (!el) throw new Error(`gauge not found: ${label}`);

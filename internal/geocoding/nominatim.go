@@ -48,20 +48,28 @@ func currentGeoSink() httputil.APICallSink {
 
 // NominatimResult represents the JSON response from Nominatim reverse geocoding.
 type NominatimResult struct {
-	DisplayName string           `json:"display_name"`
-	Address     NominatimAddress `json:"address"`
+	DisplayName string `json:"display_name"`
+	// Name carries the POI label ("Costco Wholesale") when the matched OSM
+	// element is a named feature rather than a bare road segment.
+	Name    string           `json:"name"`
+	Address NominatimAddress `json:"address"`
 }
 
 type NominatimAddress struct {
-	HouseNumber string `json:"house_number"`
-	Road        string `json:"road"`
-	City        string `json:"city"`
-	Town        string `json:"town"`
-	Village     string `json:"village"`
-	County      string `json:"county"`
-	State       string `json:"state"`
-	Country     string `json:"country"`
-	PostCode    string `json:"postcode"`
+	Amenity       string `json:"amenity"`
+	Shop          string `json:"shop"`
+	Building      string `json:"building"`
+	HouseNumber   string `json:"house_number"`
+	Road          string `json:"road"`
+	Neighbourhood string `json:"neighbourhood"`
+	Suburb        string `json:"suburb"`
+	City          string `json:"city"`
+	Town          string `json:"town"`
+	Village       string `json:"village"`
+	County        string `json:"county"`
+	State         string `json:"state"`
+	Country       string `json:"country"`
+	PostCode      string `json:"postcode"`
 }
 
 // Client provides reverse geocoding via OpenStreetMap Nominatim (free, no API key).
@@ -136,46 +144,40 @@ func (r *NominatimResult) toGeoResult() *GeoResult {
 		city = a.Village
 	}
 
-	result := &GeoResult{
+	// A named feature can arrive either as the top-level `name` or, with
+	// addressdetails=1, as the amenity/shop/building tag that matched.
+	name := r.Name
+	if name == "" {
+		name = a.Amenity
+	}
+	if name == "" {
+		name = a.Shop
+	}
+	if name == "" {
+		name = a.Building
+	}
+
+	suburb := a.Neighbourhood
+	if suburb == "" {
+		suburb = a.Suburb
+	}
+
+	return &GeoResult{
 		DisplayName: r.DisplayName,
+		Name:        name,
+		HouseNumber: a.HouseNumber,
 		Road:        a.Road,
+		Suburb:      suburb,
 		City:        city,
 		State:       a.State,
 		Country:     a.Country,
 		PostCode:    a.PostCode,
 	}
-
-	// Preserve the richer ShortName logic from NominatimResult.
-	if a.Road != "" && city != "" && a.HouseNumber != "" {
-		result.DisplayName = fmt.Sprintf("%s %s, %s", a.HouseNumber, a.Road, city)
-	}
-	return result
 }
 
 // ShortName returns a short, human-readable location name from the result.
+// It delegates to GeoResult.ShortName so provider-specific and canonical
+// results can never drift into two different labelling rules.
 func (r *NominatimResult) ShortName() string {
-	a := r.Address
-	// Prefer city, fall back to town, then village
-	locality := a.City
-	if locality == "" {
-		locality = a.Town
-	}
-	if locality == "" {
-		locality = a.Village
-	}
-
-	if a.Road != "" && locality != "" {
-		if a.HouseNumber != "" {
-			return fmt.Sprintf("%s %s, %s", a.HouseNumber, a.Road, locality)
-		}
-		return fmt.Sprintf("%s, %s", a.Road, locality)
-	}
-	if locality != "" {
-		return locality
-	}
-	// Fallback to full display name truncated
-	if len(r.DisplayName) > 60 {
-		return r.DisplayName[:60] + "..."
-	}
-	return r.DisplayName
+	return r.toGeoResult().ShortName()
 }

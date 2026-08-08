@@ -262,7 +262,7 @@ const NO_VEHICLE = 'Select a vehicle to view its vampire drain.'
 beforeEach(() => {
   mockedRequest.mockReset()
   window.localStorage.clear()
-  // fmtNumber / RadialGauge read module-global precision + locale that
+  // fmtNumber / LinearGauge read module-global precision + locale that
   // useSettings would normally seed; pin them so assertions are deterministic.
   setGlobalPrecision(2)
   setGlobalLocale('en-US')

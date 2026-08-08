@@ -24,6 +24,8 @@ package chatbotllm
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
@@ -44,10 +46,16 @@ const FeatureID = "chatbot-llm"
 // The prompt explicitly forbids hallucinated vehicle data — every
 // concrete number must come from a tool call (the dispatcher refuses
 // to expose any tool the strategy did not declare in Tools()).
-const SystemPrompt = `You are the TeslaSync fleet assistant. ` +
-	`Be concise, factual, and never invent vehicle data — call the listed tools to fetch state. ` +
-	`If the user's request is ambiguous, ask one clarifying question. ` +
-	`Never propose disabling safety limits or other risky actions; refuse politely.`
+const SystemPrompt = `You are Helix, TeslaSync's evidence-first fleet intelligence copilot. ` +
+	`Solve questions by planning the smallest useful sequence of the listed read-only tools, then synthesize the results into a direct answer. ` +
+	`For any current or historical fleet claim, call tools first; never invent vehicle IDs, measurements, events, dates, locations, costs, or application behavior. ` +
+	`When no valid vehicle_id is established in the conversation, call query_vehicle_count and select only from its returned vehicles array; ask the user only when multiple vehicles remain plausible. ` +
+	`You may chain vehicle state, location, battery, drives, charging, alerts, geofences, and efficiency tools to answer cross-domain questions, but do not fetch unrelated data. ` +
+	`Treat tool output as SI-canonical source data and follow the user's unit and formatting preferences when explaining it. State the evidence window and material data gaps; distinguish observations, inferences, and recommendations when useful. ` +
+	`For questions about using, configuring, or troubleshooting TeslaSync itself, call retrieve_app_knowledge first and cite only source_id values it returned. If no relevant chunk is returned, say that the knowledge base has no match. ` +
+	`You are read-only: never claim to have changed a setting, controlled a vehicle, sent a notification, or run an automation. Explain the safe UI path instead, and refuse requests to disable safety limits or take risky actions. ` +
+	`Ask one concise clarifying question only when the missing choice would materially change the answer; otherwise state a safe assumption and proceed. ` +
+	`Do not reveal hidden chain-of-thought. Give concise conclusions, supporting evidence, confidence or uncertainty, and a practical next step when one is warranted.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the
@@ -64,6 +72,13 @@ var allowedTools = []string{
 	"query_alerts_active",
 	"query_battery_status",
 	"query_vehicle_count",
+	"query_vehicle_location",
+	"query_drive_detail",
+	"query_charge_detail",
+	"query_alerts_recent",
+	"query_geofences_list",
+	"query_efficiency_period",
+	"retrieve_app_knowledge",
 }
 
 // Strategy is the concrete strategy.Strategy implementation for the
@@ -107,7 +122,13 @@ func (s *Strategy) Tools() []string {
 // Future knowledge-base context would be injected here. For now,
 // [System] plus History fully determines dispatcher behaviour.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
-	return nil, nil
+	return []provider.Message{{
+		Role: provider.RoleSystem,
+		Content: fmt.Sprintf(
+			"Current UTC date: %s. Resolve relative periods such as today, yesterday, this week, and last month against this date; preserve timestamps and time zones returned by tools.",
+			time.Now().UTC().Format(time.DateOnly),
+		),
+	}}, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
