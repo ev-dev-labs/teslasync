@@ -101,7 +101,130 @@
     "barFull": "Sessions charged to {{pct}}%+",
     "barDeep": "Drives arriving below 10%",
     "barDc": "Energy from DC fast charging",
-    "noData": "No charging sessions with SoC data yet."
+    "noData": "No charging sessions with SoC data yet.",
+    "arrivals": {
+      "bucket": {
+        "below10": "Below 10%",
+        "10to19": "10–19%",
+        "20to49": "20–49%",
+        "50plus": "50% or above"
+      },
+      "title": "Arrival-SoC evidence",
+      "description": "Observed end-of-drive SoC, without assumptions about subsequent parking or charging",
+      "empty": "No drives with a valid arrival SoC are available in the returned window.",
+      "eligible": "{{count}} eligible",
+      "median": "Median drive-arrival SoC",
+      "bucketValue": "{{pct}} · {{count}} drives"
+    },
+    "summary": {
+      "title": "Observed care summary",
+      "description": "Descriptive signals from the returned charging and drive windows",
+      "empty": "No usable session-end or drive-arrival SoC evidence is available yet.",
+      "calibrating": "calibrating evidence",
+      "arrivalEvidence": "of {{count}} drive arrivals below 10%",
+      "classifiedEnergy": "of classified AC/DC energy"
+    },
+    "method": {
+      "capBoth": "Both sources filled their requested caps ({{sessions}} sessions and {{drives}} drives); older rows may be absent.",
+      "capSessions": "Charging history filled its {{limit}}-row request cap; older sessions may be absent.",
+      "capDrives": "Drive history filled its {{limit}}-row request cap; older drives may be absent.",
+      "capOpen": "Neither source filled its requested row cap, but the result is still a returned observation window rather than a lifetime claim.",
+      "title": "Coverage & methodology",
+      "description": "What qualified, what was excluded, and when the descriptive index is shown",
+      "empty": "Coverage details will appear after charging sessions or drives are returned.",
+      "ready": "Composite available",
+      "building": "Composite withheld",
+      "returnedSessions": "Sessions returned",
+      "eligibleSessions": "End-SoC eligible",
+      "returnedDrives": "Drives returned",
+      "eligibleDrives": "Arrival-SoC eligible",
+      "calibration": "The composite requires at least {{sessions}} valid session ends, {{drives}} valid drive arrivals, and {{energy}} classified-energy sessions with at least {{coverage}} metadata coverage.",
+      "exclusions": "Excluded: {{sessions}} sessions without valid end SoC, {{drives}} drives without valid arrival SoC, and {{energy}} sessions without positive measured energy. {{unknown}} energy sessions remain unclassified.",
+      "classification": "AC/DC classification uses explicit charger labels; an unlabeled session is treated as DC only when peak power exceeds {{power}}. Other energy remains unclassified.",
+      "window": "Returned dated evidence spans {{start}} to {{end}}. {{capMessage}}",
+      "limitation": "The index describes observed habits only. It does not measure battery health, infer degradation, or know time spent at a given SoC."
+    },
+    "risk": {
+      "outsideBand": "Session finishes outside 20–80%",
+      "deduction": "−{{points}} / {{max}} pts",
+      "awaiting": "Not calibrated · {{count}} samples",
+      "title": "Score & risk decomposition",
+      "description": "Observed index deductions; unavailable components are never assumed to be zero",
+      "empty": "Usable session-end, arrival-SoC, and classified-energy samples are needed to decompose the index.",
+      "ready": "Index calibrated",
+      "building": "Building evidence",
+      "indexLabel": "Observed care index / 100",
+      "componentsReady": "{{ready}} of {{total}} components calibrated",
+      "disclaimer": "This descriptive habit index is not a battery-health measurement or a degradation estimate."
+    },
+    "energy": {
+      "ac": "AC",
+      "dc": "DC fast",
+      "unknown": "Unclassified",
+      "title": "AC/DC energy evidence",
+      "description": "Delivered energy is classified only when charger metadata or high-power evidence supports it",
+      "empty": "No charging sessions with positive measured energy are available in the returned window.",
+      "coverageBadge": "{{pct}} classified",
+      "noCoverage": "No classification",
+      "total": "Measured energy returned",
+      "classified": "Classified AC/DC energy",
+      "bucketValue": "{{energy}} · {{count}} sessions",
+      "denominator": "The DC KPI uses classified AC/DC energy only; unclassified energy stays visible here and can withhold the score."
+    },
+    "targets": {
+      "bucket": {
+        "below": "Below 20%",
+        "band": "20–80%",
+        "above": "Above 80% to below 95%",
+        "high": "95–100%"
+      },
+      "title": "Charging target evidence",
+      "description": "Observed session-end SoC; this does not measure how long the pack remained at a level",
+      "empty": "No charging sessions with a valid end SoC are available in the returned window.",
+      "eligible": "{{count}} eligible",
+      "median": "Median session-end SoC",
+      "bucketValue": "{{pct}} · {{count}} sessions"
+    },
+    "trend": {
+      "score": "Care index",
+      "sessions": "Eligible sessions",
+      "drives": "Eligible drives",
+      "month": "Month",
+      "scoreValue": "{{score}} / 100",
+      "region": "Monthly Battery Care trend",
+      "title": "Monthly care trend",
+      "description": "Monthly scores require at least 3 eligible sessions, 3 eligible drives, and 2 classified-energy sessions",
+      "aria": "Monthly descriptive care index with eligible charging-session and drive sample counts",
+      "calibrated": "{{count}} calibrated months",
+      "empty": "No eligible charging or drive observations fall inside the displayed monthly window.",
+      "sampleValue": "{{count}} samples"
+    },
+    "actions": {
+      "highFinish": {
+        "title": "Review routine high-SoC finishes",
+        "detail": "{{pct}} of {{count}} eligible sessions ended at {{threshold}}% or above. If trip needs allow, a lower routine target would reduce this index component."
+      },
+      "deepArrival": {
+        "title": "Review very low drive arrivals",
+        "detail": "{{pct}} of {{count}} eligible drives ended below 10%. When practical, charging before similarly low arrivals would reduce this observed component."
+      },
+      "dcEnergy": {
+        "title": "Review the classified DC energy mix",
+        "detail": "{{pct}} of classified energy was DC fast across {{count}} classified sessions. When equally convenient, adding AC charging would reduce this mix component."
+      },
+      "outsideBand": {
+        "title": "Review routine finish targets",
+        "detail": "{{pct}} of {{count}} eligible sessions ended outside 20–80%. When range needs allow, more finishes inside that band would reduce this index component."
+      },
+      "title": "Ranked habit opportunities",
+      "description": "Ranked by descriptive index deduction, not estimated battery damage",
+      "empty": "No usable evidence is available to rank charging or arrival observations.",
+      "ranked": "{{count}} ranked",
+      "noneSupported": "No calibrated observation crossed the ranking thresholds in this returned window.",
+      "noneCalibrated": "More eligible evidence is needed before an observation can be ranked.",
+      "rank": "#{{rank}}",
+      "contribution": "Current index deduction: {{points}} points"
+    }
   },
   "chargeAdvisor": {
     "title": "Charge Advisor",
@@ -122,6 +245,7 @@
     "today": "Today",
     "forecast": "Week-Ahead Battery Projection",
     "forecastHint": "Expected daily use from your weekday habits; the dashed line is the {{pct}}% reserve floor",
+    "forecast.aria": "Projected battery percentage for the next seven days with expected daily consumption",
     "expectedUse": "Expected use",
     "projected": "Projected battery",
     "noForecast": "Not enough battery history yet to project the week ahead.",
@@ -242,21 +366,214 @@
     "col": {
       "month": "Month",
       "newPlaces": "New places"
+    },
+    "coverage": {
+      "percentValue": "{{value}}%",
+      "eligible": "Eligible arrivals",
+      "locatedRows": "Rows with usable end coordinates",
+      "timestampFallbacks": "Start-time proxies",
+      "locationShare": "Usable endpoint-coordinate coverage",
+      "timestampShare": "Usable arrival-time coverage",
+      "days": "{{count}} days",
+      "medianGap": "Median gap",
+      "longestGap": "Longest gap",
+      "latestGap": "Latest gap",
+      "cadence": "Discovery cadence",
+      "discoveryCount": "{{count}} discoveries",
+      "cadenceInsufficient": "Three destination discoveries are required before interval cadence is reported.",
+      "title": "Coverage & discovery cadence",
+      "capReached": "{{limit}}-row cap reached",
+      "belowCap": "Observed window below the row cap",
+      "empty": "Coverage will appear when drive history is returned for the selected vehicle.",
+      "cappedWindow": "The request returned {{limit}} rows and reached the API cap. Results describe only this bounded window; older drives may be absent.",
+      "observedWindow": "Results describe {{count}} returned rows, up to the {{limit}}-row request cap.",
+      "missingTimestamp": "Missing timestamp",
+      "invalidTimestamp": "Invalid timestamp",
+      "missingCoordinates": "Missing end coordinates",
+      "invalidCoordinates": "Non-finite end coordinates",
+      "outOfRangeCoordinates": "Out-of-range end coordinates",
+      "exclusions": "Exclusive exclusion accounting"
+    },
+    "destination": {
+      "empty": "No non-base destination clusters are present in this observed window.",
+      "unnamed": "Unnamed destination {{number}}",
+      "repeatVisits": "Repeat arrivals",
+      "fromBase": "From inferred base",
+      "baseEvidence": "Distances stay hidden until at least three located arrivals include a repeated inferred-base cluster."
+    },
+    "section": {
+      "directory": "Observed destination directory",
+      "rankings": "Farthest and rarely observed destination rankings",
+      "distanceBands": "Base-relative distance and radius bands",
+      "coverage": "Location coverage, exclusions, and discovery cadence",
+      "method": "Explorer methodology and evidence thresholds",
+      "monthly": "Monthly exploration and discovery trend",
+      "behavior": "New versus repeat destination behavior"
+    },
+    "rankings": {
+      "title": "Destination rankings",
+      "ready": "Comparison ready",
+      "building": "Two destinations required",
+      "empty": "A repeated inferred base and at least two destinations are required for comparative rankings.",
+      "farthest": "Farthest observed",
+      "farthestHint": "Great-circle distance from the inferred observed base",
+      "distanceVisits": "{{distance}} · {{count}} arrivals",
+      "rare": "Rare destinations",
+      "rareHint": "One or two arrivals, then farthest first within each visit count",
+      "noRare": "Every ranked destination has more than two arrivals.",
+      "rareDetail": "{{count}} arrivals · first observed {{date}}"
+    },
+    "distanceBands": {
+      "local": "Under {{max}}",
+      "near": "{{min}}–{{max}}",
+      "regional": "{{min}}–{{max}}",
+      "far": "{{min}} and beyond",
+      "radiusSubtitle": "Visit-weighted p90 radius: {{radius}}",
+      "subtitle": "Destination clusters and arrival volume by base-relative distance",
+      "title": "Distance & radius bands",
+      "aria": "Destination and arrival counts grouped by distance from the inferred observed base",
+      "band": "Distance band",
+      "destinations": "Destinations",
+      "arrivals": "Arrivals",
+      "needsBase": "At least three located arrivals, including two in the inferred-base cluster, are required for distance bands.",
+      "empty": "No non-base destinations are available for distance bands.",
+      "destinationSeries": "Destinations",
+      "arrivalSeries": "Arrivals"
+    },
+    "kpi": {
+      "farthest": {
+        "unnamed": "Unnamed destination",
+        "label": "Farthest observed destination"
+      },
+      "destinations": {
+        "label": "Observed destinations",
+        "subtitle": "{{count}} eligible located arrivals"
+      },
+      "radius": {
+        "label": "P90 roaming radius",
+        "subtitle": "90% of non-base arrivals are within this distance",
+        "insufficient": "Needs a repeated observed base"
+      },
+      "base": {
+        "label": "Inferred observed base",
+        "unnamed": "Unnamed arrival cluster",
+        "subtitle": "{{count}} arrivals; inferred, not a verified home"
+      },
+      "empty": "No drives were returned in this observed history window."
+    },
+    "method": {
+      "clustering": "Valid drive-end coordinates are rounded into 0.01° cells (roughly 1 km north–south). This is coarse grid clustering, not a geofence; east–west width varies by latitude and adjacent points can split at a cell edge.",
+      "base": "The most-observed arrival cell across the returned window is the inferred observed base. It is not verified as home, work, or any saved place; ties use earliest arrival and then a stable internal cell key.",
+      "newRepeat": "When base evidence is supported, the inferred-base cell is excluded from destination behavior; otherwise every observed cluster remains a destination. A destination’s first chronological arrival is new, and later arrivals in the same cell are repeat.",
+      "distance": "Distances use great-circle geometry between cluster centroids. Roaming radius is the visit-weighted 90th percentile of non-base arrival distances.",
+      "timestamps": "A valid drive-end timestamp is preferred for arrival order. When it is absent or invalid, a valid drive-start timestamp is counted and disclosed as a proxy.",
+      "capped": "The {{limit}}-row API cap was reached, so all findings describe a bounded observed window and may omit older drives.",
+      "window": "Findings describe {{count}} rows returned in this observed window, up to the {{limit}}-row API cap.",
+      "title": "Methodology & limits",
+      "baseReady": "Base evidence supported",
+      "baseBuilding": "Base evidence building",
+      "minimums": "Minimum evidence",
+      "locatedMinimum": "Located arrivals for base distance",
+      "baseMinimum": "Arrivals in inferred-base cluster",
+      "cadenceMinimum": "Discoveries for cadence",
+      "rankingMinimum": "Comparative rankings additionally require at least {{count}} non-base destinations."
+    },
+    "state": {
+      "loading": "Loading exploration behavior analysis"
+    },
+    "monthly": {
+      "subtitle": "First arrivals, return arrivals, and cumulative observed destinations",
+      "aria": "Monthly new destinations, repeat destination arrivals, and cumulative destinations",
+      "repeatArrivals": "Repeat arrivals",
+      "cumulativePlaces": "Cumulative places",
+      "empty": "No non-base destination arrivals are available for a monthly trend.",
+      "repeatSeries": "Repeat arrivals",
+      "cumulativeSeries": "Cumulative places"
+    },
+    "behavior": {
+      "title": "New vs repeat behavior",
+      "supported": "Behavior mix supported",
+      "building": "More arrivals needed",
+      "empty": "No non-base destination arrivals are available to classify as new or repeat.",
+      "destinationArrivals": "Destination arrivals",
+      "firstArrivals": "First arrivals",
+      "returnArrivals": "Return arrivals",
+      "newShare": "First-arrival share",
+      "percentValue": "{{value}}%",
+      "repeatShare": "Repeat-arrival share",
+      "definition": "The first chronological arrival in each destination cluster is new; later arrivals to that same cluster are repeat."
     }
   },
   "driveCompare": {
     "title": "Drive Compare",
-    "subtitle": "Put any two drives head to head",
+    "subtitle": "Compare context, efficiency, and telemetry from any two drives",
     "pickA": "Choose drive A",
     "pickB": "Choose drive B",
-    "duel": "Head to Head",
+    "duel": "Full head-to-head",
     "metric": "Metric",
     "driveA": "Drive A",
     "driveB": "Drive B",
-    "winner": "winner",
+    "winner": "Winner",
+    "loading": "Loading drive comparison",
     "needTwo": "At least two drives are needed for a comparison.",
-    "samePick": "Pick two different drives to compare.",
+    "samePick": "Pick two different drives with the A and B selectors above to continue.",
+    "detailsUnavailable": "Drive details are not available for this comparison.",
     "browseDrives": "Browse drives",
+    "noMetrics": "No comparison metrics are available.",
+    "gridAria": "Drive A and Drive B metric comparison",
+    "sections": {
+      "verdict": "Comparison verdict and advantages",
+      "context": "Drive identity and context",
+      "profiles": "Normalized telemetry comparisons"
+    },
+    "verdict": {
+      "title": "Fair comparison verdict",
+      "aLeads": "Drive A leads",
+      "bLeads": "Drive B leads",
+      "tie": "Dead heat",
+      "insufficient": "Not enough comparable data",
+      "leadBody": "{{leader}} wins {{wins}} of {{count}} fair metrics.",
+      "tieBody": "The fair score is level at {{wins}}–{{wins}}, with {{ties}} tied metrics.",
+      "insufficientBody": "Both drives need valid consumption, regen, or drive-score data before a fair verdict is possible.",
+      "neutralNote": "Distance, duration, total energy, and absolute battery use stay neutral because trip size changes those totals.",
+      "scoreAria": "Fair metric score: Drive A {{a}}, Drive B {{b}}"
+    },
+    "identity": {
+      "title": "Drive {{side}} context",
+      "route": "Route",
+      "battery": "Battery",
+      "conditions": "Conditions",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "statusUnknown": "Status unavailable"
+    },
+    "breakdown": {
+      "title": "What decided it",
+      "subtitle": "Fair, distance-aware advantages only",
+      "count": "{{count}} of 3 fair metrics have data on both drives.",
+      "even": "Even",
+      "unavailable": "Not comparable",
+      "edge": "{{value}} edge",
+      "noEdge": "No measurable edge",
+      "needsBoth": "Needs valid data from both drives",
+      "note": "Regen is scored only on trips of at least 1 km; total energy and battery drop never award a winner."
+    },
+    "chart": {
+      "speedTitle": "Speed through trip progress",
+      "speedSubtitle": "Each drive is normalized from start to finish",
+      "speedAria": "Drive A and Drive B speed compared over normalized trip progress",
+      "batteryTitle": "Battery through trip progress",
+      "batterySubtitle": "State of charge from start to finish",
+      "batteryAria": "Drive A and Drive B battery state of charge over normalized trip progress",
+      "progress": "Trip progress",
+      "progressValue": "{{value}}% complete",
+      "driveASpeed": "Drive A speed",
+      "driveBSpeed": "Drive B speed",
+      "driveASoc": "Drive A SOC",
+      "driveBSoc": "Drive B SOC",
+      "noSpeed": "Both drives need at least two speed samples for a progress comparison.",
+      "noBattery": "Both drives need at least two battery samples for a progress comparison."
+    },
     "m": {
       "distance": "Distance",
       "duration": "Duration",
@@ -266,58 +583,271 @@
       "consumption": "Consumption",
       "regenShare": "Regen share",
       "socUsed": "Battery used",
-      "temp": "Outside temp"
+      "temp": "Outside temp",
+      "score": "Drive score"
     }
   },
   "effTarget": {
     "title": "Efficiency Target",
-    "subtitle": "Set a consumption goal and defend it week after week",
+    "subtitle": "A completed-week goal workspace built from the observed history window",
     "kpis": "Efficiency target summary metrics",
     "targetInput": "Weekly consumption target",
     "target": "Target",
-    "streak": "Current Streak",
+    "streak": "Completed-week streak",
     "weeks": "{{count}} weeks",
-    "longest": "longest: {{count}}",
-    "hitRate": "Hit Rate",
-    "ofWeeks": "of {{count}} weeks",
-    "overall": "Overall",
-    "analyzed": "{{count}} drives analyzed",
+    "longest": "Longest completed run: {{count}}",
+    "hitRate": "Completed-week hit rate",
+    "ofWeeks": "Across {{count}} completed weeks",
+    "overall": "Observed overall",
+    "analyzed": "{{eligible}} of {{observed}} drives eligible",
+    "loading": "Loading efficiency target analysis",
     "chart": "Weekly Consumption vs Target",
     "chartHint": "Green weeks beat the target; the dashed line is your goal",
     "consumption": "Consumption",
     "methodNote": "Weeks run Monday to Sunday in your local time. A week hits the target when its distance-weighted consumption lands at or below your goal.",
-    "noData": "No drives with energy data yet.",
+    "noData": "No drives with at least 1 km of distance and measured energy are available in this observed window.",
     "browseDrives": "Browse drives",
     "whPerMi": "Wh/mi",
     "whPerKm": "Wh/km",
+    "kpi": {
+      "canonical": "Saved canonically in Wh/km"
+    },
+    "sections": {
+      "pulse": "Goal pulse and active-week snapshot",
+      "weekly": "Weekly consumption and rolling trend",
+      "weekday": "Weekday efficiency pattern",
+      "consistency": "Completed-week target consistency bands",
+      "scorecard": "Recent completed-week scorecard",
+      "method": "Confidence, methodology, and coverage"
+    },
+    "status": {
+      "onTarget": "On target",
+      "nearMiss": "Near miss",
+      "offTrack": "Off track",
+      "ungraded": "Ungraded",
+      "inProgress": "In progress · not graded",
+      "snapshot": "Active snapshot"
+    },
+    "pulse": {
+      "title": "Goal pulse",
+      "observed": "Observed history",
+      "latestCompleted": "Latest completed week",
+      "weekOf": "Week of {{date}}",
+      "underTarget": "{{value}} under target",
+      "overTarget": "{{value}} over target",
+      "consumption": "Consumption",
+      "activeWeek": "Active week",
+      "activeHint": "Snapshot only",
+      "distance": "Distance",
+      "drives": "Drives",
+      "noCompleted": "No completed eligible week is available to grade yet.",
+      "noActive": "No eligible drives have been observed in the active week."
+    },
+    "weekly": {
+      "title": "Weekly consumption vs target",
+      "subtitle": "Bars show observed weekly consumption; the line is a trailing four-calendar-week distance-weighted trend.",
+      "aria": "Weekly consumption bars, target line, and rolling four-week trend with the active partial week distinguished",
+      "consumptionSeries": "Weekly consumption",
+      "rollingSeries": "Rolling 4-week trend",
+      "activeLegend": "Target {{target}} · active = snapshot",
+      "activePhase": "Active · partial",
+      "completePhase": "Completed",
+      "empty": "No eligible weekly observations are available for this chart."
+    },
+    "weekday": {
+      "title": "Weekday efficiency pattern",
+      "subtitle": "Each day uses distance-weighted eligible drives from the observed history window.",
+      "aria": "Distance-weighted consumption by weekday with target reference",
+      "consumptionSeries": "Observed consumption",
+      "empty": "No eligible drives are available for a weekday pattern.",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "unknown": "—"
+    },
+    "consistency": {
+      "title": "Target consistency",
+      "subtitle": "Completed weeks: on target ≤ goal, near miss ≤ 10% over, off track > 10% over.",
+      "aria": "Completed week counts across on-target, near-miss, and off-track bands",
+      "empty": "No completed eligible weeks are available for consistency bands.",
+      "weekValue": "{{count}} weeks",
+      "completedSeries": "Completed weeks"
+    },
+    "score": {
+      "title": "Recent completed-week scorecard",
+      "subtitle": "Rank 1 is the lowest-consumption completed week in the observed history window.",
+      "rank": "Rank",
+      "rankValue": "#{{rank}}",
+      "empty": "No completed eligible weeks are available for the scorecard."
+    },
+    "method": {
+      "title": "Coverage & methodology",
+      "returned": "Rows returned",
+      "eligible": "Eligible drives",
+      "graded": "Completed weeks",
+      "calendar": "Weeks run Monday through Sunday in local browser time.",
+      "eligibility": "A drive qualifies with measured positive energy and at least 1 km of distance.",
+      "weighting": "Consumption is total energy divided by total distance, not an average of drive averages.",
+      "activeExclusion": "The active week stays visible as a snapshot but is excluded from hit rate, streaks, bands, and ranking.",
+      "rolling": "The rolling line weights eligible energy and distance observed in the current and previous three calendar weeks.",
+      "capReached": "{{limit}}-drive cap reached",
+      "belowCap": "Observed window below API cap",
+      "empty": "Coverage will appear when drive history is returned for the selected vehicle.",
+      "coverage": "{{eligible}} eligible and {{excluded}} excluded across {{observed}} returned rows.",
+      "capped": "This request reached the {{limit}}-drive API cap. Results describe the returned history window; older drives may not be represented.",
+      "window": "Results describe the {{count}} drives returned in this observed history window, up to the {{limit}}-drive API limit."
+    },
     "col": {
       "week": "Week",
       "consumption": "Consumption",
-      "hit": "Target hit"
+      "hit": "Target hit",
+      "rolling": "Rolling 4-week trend",
+      "phase": "Week phase",
+      "status": "Status",
+      "weekday": "Weekday",
+      "distance": "Distance",
+      "drives": "Drives",
+      "band": "Band",
+      "weeks": "Completed weeks",
+      "share": "Share (%)",
+      "gap": "Target gap"
     }
   },
   "milestones": {
     "title": "Odometer Milestones",
-    "subtitle": "Round-number birthdays for your odometer, dated and forecast",
-    "kpis": "Milestone summary metrics",
-    "baseInput": "Odometer before first logged drive",
-    "current": "Odometer",
-    "calibrated": "incl. calibration offset",
-    "pace": "Pace",
-    "day": "day",
-    "trailing": "trailing 90 days",
-    "next": "Next Milestone",
-    "toGo": "{{dist}} to go",
-    "eta": "Next ETA",
-    "atPace": "at current pace",
-    "passed": "Milestones Reached",
-    "reachedOn": "reached {{date}}",
-    "nonePassed": "No ladder milestones crossed in the logged history yet.",
-    "upcoming": "Coming Up",
-    "etaAround": "~{{date}}",
-    "noUpcoming": "No drive history yet to project milestones from.",
-    "km": "km",
-    "mi": "mi"
+    "subtitle": "Observed progress, unit-round milestones, and evidence-based forecasts",
+    "loading": "Loading odometer milestone workspace",
+    "units": {
+      "km": "km",
+      "mi": "mi",
+      "ft": "ft"
+    },
+    "controls": {
+      "baseLabel": "Window-start odometer",
+      "baseInput": "Odometer immediately before the chronologically first eligible returned drive",
+      "baseHelpBody": "Enter the odometer reading immediately before the first eligible drive in this returned history window."
+    },
+    "actions": {
+      "browseDrives": "Browse drives"
+    },
+    "sections": {
+      "kpis": "Milestone summary metrics",
+      "progress": "Progress to next milestone",
+      "growth": "Observed odometer growth history",
+      "monthly": "Monthly distance and pace context",
+      "reached": "Milestones reached in observed history",
+      "roadmap": "Upcoming milestone roadmap",
+      "scenarios": "Pace and forecast scenarios",
+      "method": "Coverage calibration and methodology"
+    },
+    "kpi": {
+      "odometer": "Calibrated observed odometer",
+      "odometerEvidence": "Calibration + {{count}} eligible returned drives",
+      "pace": "Supported 90-day pace",
+      "perDay": "{{distance}} / day",
+      "paceEvidence": "{{count}} drives across {{days}} observed days",
+      "paceUnsupported": "Needs at least {{minimum}} eligible recent drives",
+      "next": "Next round milestone",
+      "remaining": "{{distance}} remaining",
+      "eta": "Next projected ETA",
+      "etaEvidence": "Trailing-90-day projection, not a guarantee",
+      "etaOutOfRange": "Supported pace, but beyond forecast horizon",
+      "etaUnsupported": "Unavailable without supported 90-day evidence",
+      "empty": "No eligible positive-distance drives are available in the returned history window."
+    },
+    "progress": {
+      "title": "Progress to the next round number",
+      "complete": "complete",
+      "aria": "{{percent}} percent progress toward the next milestone",
+      "previous": "Previous milestone",
+      "current": "Current odometer",
+      "next": "Next milestone",
+      "remaining": "Remaining",
+      "noEvidence": "Progress currently reflects calibration only; eligible drives will add observed growth.",
+      "cappedEvidence": "The 1,000-row cap was reached, so older distance may be absent and odometer completeness is unknown.",
+      "supportedEvidence": "Forecast evidence uses {{count}} drives across {{days}} observed days; projections can change.",
+      "thinEvidence": "Progress is observed, but no ETA is shown until five eligible drives support the trailing pace."
+    },
+    "chart": {
+      "date": "Date",
+      "month": "Month",
+      "driveCount": "Drive count"
+    },
+    "growth": {
+      "title": "Observed odometer growth",
+      "subtitle": "Cumulative eligible drive distance added to the window-start calibration; visual points may be downsampled.",
+      "aria": "Calibrated odometer growth across the returned eligible drive history",
+      "odometerSeries": "Calibrated odometer",
+      "observedDistance": "Observed distance ({{unit}})",
+      "empty": "No eligible drive distance is available for an odometer growth series."
+    },
+    "monthly": {
+      "title": "Monthly distance & drive frequency",
+      "subtitle": "UTC calendar-month distance bars with eligible drive-count context.",
+      "aria": "Observed monthly distance bars with an eligible drive-count line",
+      "distanceSeries": "Observed distance",
+      "drivesSeries": "Eligible drives",
+      "endingOdometer": "Ending odometer ({{unit}})",
+      "driveValue": "{{count}} drives",
+      "empty": "No eligible drives are available for monthly context."
+    },
+    "reached": {
+      "title": "Milestones reached",
+      "crossing": "Crossed during eligible drive #{{id}}",
+      "empty": "No round milestone was crossed by an eligible drive in this returned history window."
+    },
+    "roadmap": {
+      "title": "Upcoming milestone roadmap",
+      "empty": "Eligible drive history is needed before the upcoming roadmap can be projected.",
+      "remaining": "{{distance}} remaining",
+      "noEta": "Projection unavailable",
+      "outOfRange": "Beyond forecast horizon",
+      "range": "Scenario range {{from}}–{{to}}",
+      "caveat": "Dates use the supported trailing-90-day pace. They are projections, not guarantees."
+    },
+    "scenarios": {
+      "title": "Pace & forecast scenarios",
+      "subtitle": "Each projection divides eligible distance by its actual observed span through this page’s frozen as-of time.",
+      "trailing30": "Trailing 30 days",
+      "trailing90": "Trailing 90 days",
+      "observedHistory": "Full observed history",
+      "supported": "Supported",
+      "insufficient": "Insufficient evidence",
+      "samples": "Eligible samples",
+      "driveValue": "{{count}} drives",
+      "observedDays": "Observed span",
+      "dayValue": "{{days}} days",
+      "distance": "Eligible distance",
+      "distancePerDay": "Distance / day",
+      "nextEta": "Next-milestone ETA",
+      "outOfRange": "Beyond forecast horizon",
+      "empty": "No eligible drives are available to evaluate pace scenarios.",
+      "caveat": "Scenarios are sensitivity checks, not promises of future driving."
+    },
+    "method": {
+      "title": "Coverage, calibration & methodology",
+      "coverageWindow": "{{from}} to {{to}} eligible drive starts",
+      "noCoverage": "No eligible drive timestamps in the returned window",
+      "capReached": "{{limit}}-row cap reached",
+      "belowCap": "Returned window below API cap",
+      "returned": "Rows returned",
+      "eligible": "Eligible drives",
+      "excludedDetail": "Excluded: {{invalid}} date · {{future}} future · {{nonFinite}} non-finite · {{zero}} zero · {{negative}} negative",
+      "capped": "Exactly {{limit}} rows were returned. Older drives may be absent, so calibration and odometer completeness cannot be assumed.",
+      "window": "Results describe this returned history window, not guaranteed lifetime history.",
+      "calibration": "Calibration is stored canonically in kilometres and means the odometer immediately before the chronologically first eligible returned drive.",
+      "ladder": "The ladder is round in {{unit}}: every 10,000 through 100,000, then every 50,000.",
+      "inclusion": "Eligible rows need a valid non-future start time and a finite, positive distance; every other row is excluded once.",
+      "months": "Monthly context groups eligible drive starts by UTC calendar month.",
+      "pace": "Each pace needs at least {{minimum}} eligible drives. Its denominator is the elapsed time from the later of its boundary or first eligible row through the frozen as-of time.",
+      "forecast": "Roadmap dates use unrounded trailing-90-day pace; scenario ranges show sensitivity to other supported windows.",
+      "horizon": "Invalid or extreme projections beyond {{days}} days are withheld.",
+      "uncertainty": "Driving frequency changes. Every ETA is a projection, never a guarantee."
+    }
   },
   "coldStart": {
     "title": "Cold Start Cost",
@@ -337,7 +867,95 @@
     "takeaway": "Warm-up overhead added {{energy}} across this period. Preconditioning while plugged in shifts that energy to the wall.",
     "noData": "Not enough cold and warm starts in this period to compare fairly (5+ of each needed).",
     "whPerMi": "Wh/mi",
-    "whPerKm": "Wh/km"
+    "whPerKm": "Wh/km",
+    "loading": "Loading cold-start analysis",
+    "penaltyVsWarm": "{{sign}}{{pct}}% vs warm starts",
+    "emptyWindow": "No drives with usable energy and a known preceding parking gap were returned for this selected window.",
+    "sections": {
+      "comparison": "Cold and warm aggregate comparison",
+      "monthly": "Monthly cold and warm trend",
+      "gaps": "Parking-gap classification coverage",
+      "temperature": "Temperature and consumption evidence",
+      "opportunities": "Cold-start opportunities",
+      "method": "Confidence and methodology"
+    },
+    "comparison": {
+      "awaitingDelta": "Aggregate difference withheld",
+      "sufficient": "Aggregate sample ready",
+      "building": "Building aggregate confidence",
+      "samples": "{{cold}} cold and {{warm}} warm observations",
+      "noGroups": "This window has no drives in the warm or cold parking-gap groups.",
+      "noPositivePenalty": "Cold starts did not consume more than the weighted warm baseline in this selected observed window, so no avoidable energy is claimed.",
+      "help": "A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous."
+    },
+    "monthly": {
+      "title": "Monthly cold vs warm trend",
+      "subtitle": "Distance-weighted observations are descriptive by month; only the aggregate 5+ per group supports a penalty claim.",
+      "aria": "Monthly cold and warm consumption lines with sample-count bars",
+      "month": "Month",
+      "coldSeries": "Cold consumption",
+      "warmSeries": "Warm consumption",
+      "coldSamples": "Cold samples",
+      "warmSamples": "Warm samples",
+      "sampleValue": "{{count}} drives",
+      "empty": "No classified cold or warm drives are available for a monthly trend in this window."
+    },
+    "gaps": {
+      "title": "Parking-gap distribution",
+      "subtitle": "{{count}} drives had a known preceding gap in the selected observed window.",
+      "aria": "Drive counts split across warm, ambiguous, and three cold parking-gap buckets",
+      "warm": "≤1 h · warm",
+      "ambiguous": "1–6 h · ambiguous",
+      "cold6To12": "6–12 h · cold",
+      "cold12To24": "12–24 h · cold",
+      "cold24Plus": "24 h+ · cold",
+      "bucket": "Gap bucket",
+      "drives": "Drives",
+      "share": "Share",
+      "driveValue": "{{count}} drives",
+      "empty": "No usable preceding parking gaps are available to classify in this window."
+    },
+    "temperature": {
+      "title": "Temperature vs consumption",
+      "subtitle": "{{cold}} cold and {{warm}} warm drives with outside-temperature readings; marker size follows distance.",
+      "aria": "Scatter plot of outside temperature against consumption, split into cold and warm starts",
+      "cold": "Cold",
+      "warm": "Warm",
+      "coldSeries": "Cold starts",
+      "warmSeries": "Warm starts",
+      "temperature": "Outside temperature",
+      "consumption": "Consumption",
+      "distance": "Distance",
+      "date": "Date",
+      "group": "Group",
+      "empty": "No classified drives in this window include a usable outside-temperature reading."
+    },
+    "opportunities": {
+      "title": "Top cold-start opportunities",
+      "subtitle": "Largest positive drive-level differences from the valid weighted warm baseline",
+      "listAria": "Ranked cold-start energy opportunities",
+      "insufficient": "Opportunities appear only after at least five cold and five warm drives establish the aggregate baseline.",
+      "noPenalty": "No positive aggregate cold penalty was observed, so this window has no claimed avoidable-energy opportunities.",
+      "empty": "No individual cold start consumed more than the valid warm baseline in this window.",
+      "gapValue": "{{gap}} preceding gap",
+      "rank": "#{{rank}}",
+      "distance": "Distance",
+      "temperature": "Temperature",
+      "energy": "Above baseline"
+    },
+    "method": {
+      "title": "Confidence & method",
+      "ready": "Penalty claim supported",
+      "building": "More samples needed",
+      "empty": "Method confidence will appear when drives are returned for the selected observed window.",
+      "coldEvidence": "Cold evidence",
+      "warmEvidence": "Warm evidence",
+      "classified": "Classified",
+      "thresholds": "Warm is ≤{{warm}} h, cold is ≥{{cold}} h, and {{ambiguous}} observations between them remain ambiguous.",
+      "coverage": "{{unclassified}} usable drives could not be classified, including the first observed drive when its preceding park falls outside the window.",
+      "capped": "The selected observed window reached the {{limit}}-drive API cap; older drives inside the range may not be represented.",
+      "window": "This analysis uses {{count}} drives returned for the selected observed window (up to {{limit}}). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify."
+    }
   },
   "shareCard": {
     "title": "Share Card Studio",
@@ -384,7 +1002,137 @@
     "totalCost": "Energy cost in period",
     "energy": "Energy used",
     "noData": "No drives in this period yet.",
-    "browseDrives": "Browse drives"
+    "browseDrives": "Browse drives",
+    "consistency": {
+      "activeDaysSeries": "Active days",
+      "activeRateSeries": "Observed-day rate",
+      "partial": "Partial coverage",
+      "full": "Full 7-day coverage",
+      "title": "Active-day consistency",
+      "subtitle": "Latest 26 UTC weeks at most; partial first or final weeks remain explicitly marked.",
+      "aria": "Weekly active-day counts and share of observed days with eligible drives",
+      "longestStreak": "Longest active streak: {{count}} days",
+      "empty": "No observed drive days are available for a consistency profile."
+    },
+    "sections": {
+      "consistency": "Active-day consistency",
+      "busiest": "Ranked busiest observed days",
+      "distributions": "Drive duration and distance distributions",
+      "timeCost": "Observed time split and energy-only cost ledger",
+      "method": "Coverage and methodology",
+      "trend": "Monthly utilization trend",
+      "weekday": "Weekday utilization profile"
+    },
+    "sample": {
+      "supported": "{{count}} observations",
+      "limited": "Limited sample: {{count}} of {{minimum}}"
+    },
+    "columns": {
+      "weekStarting": "Week starting",
+      "activeDays": "Active days",
+      "observedDays": "Observed days",
+      "activeRate": "Active-day rate (%)",
+      "coverage": "Coverage",
+      "durationBand": "Duration band",
+      "drives": "Drives",
+      "sampleShare": "Sample share (%)",
+      "distanceBand": "Distance band",
+      "month": "Month",
+      "distanceWithUnit": "Distance ({{unit}})",
+      "drivingHours": "Driving hours",
+      "weekday": "Weekday"
+    },
+    "value": {
+      "days": "{{count}} days",
+      "drives": "{{count}} drives",
+      "distance": "{{value}} {{unit}}"
+    },
+    "busiest": {
+      "title": "Busiest observed days",
+      "subtitle": "Ranked by logged driving time, then distance, drive count, and date.",
+      "empty": "No active observed days are available to rank.",
+      "rank": "#{{rank}}",
+      "drivingTime": "Driving time",
+      "distance": "Distance",
+      "drives": "Drives",
+      "energy": "Energy"
+    },
+    "distribution": {
+      "driveSeries": "Eligible drives",
+      "under": "Under {{maximum}}",
+      "between": "{{minimum}}–{{maximum}}",
+      "plus": "{{minimum}}+",
+      "durationTitle": "Drive duration distribution",
+      "durationSubtitle": "Eligible drives grouped by logged duration.",
+      "durationAria": "Drive counts across logged duration bands",
+      "durationEmpty": "No eligible drives include a usable duration.",
+      "distanceTitle": "Drive distance distribution",
+      "distanceSubtitle": "Eligible drives grouped in canonical SI distance bands and converted for display.",
+      "distanceAria": "Drive counts across distance bands",
+      "distanceEmpty": "No eligible drives include a usable positive distance."
+    },
+    "energyRate": "Settings electricity rate",
+    "energyRateValue": "{{rate}} / kWh",
+    "costCoverage": "Energy coverage",
+    "costCoverageValue": "{{measured}} of {{eligible}} eligible drives",
+    "unrecordedDriveHours": "Time without a recorded drive",
+    "timeSplitCaution": "Time without a recorded drive is not labelled as waste, avoidable idle time, or any other cause.",
+    "costNoEnergy": "No eligible drives include usable energy measurements for this period.",
+    "costAssumption": "Energy-only estimate using the Settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.",
+    "observedCalendarDays": "{{active}} of {{days}} observed UTC days",
+    "method": {
+      "returned": "Rows returned",
+      "eligible": "Eligible drives",
+      "excluded": "Timestamp exclusions",
+      "observedDays": "Exact observed days",
+      "invalidTimestamp": "Invalid or missing timestamp",
+      "futureTimestamp": "At or after frozen as-of time",
+      "beforeRange": "Before selected start",
+      "afterRange": "After selected end",
+      "durationCoverage": "Usable duration ({{truncated}} boundary-clipped)",
+      "distanceCoverage": "Usable positive distance",
+      "energyCoverage": "Usable positive energy",
+      "scope": "The API request uses the selected inclusive UTC dates. The model converts the selected end to exclusive next-midnight and never analyzes past the frozen page clock.",
+      "window": "The observed window begins at the first eligible returned drive, avoiding claims about time before the first in-range record.",
+      "si": "Distance and energy remain canonical meters and watt-hours in the model; display units are applied only while rendering.",
+      "rollups": "Drive counts are attributed to the UTC start day, and logged duration is clipped at the analysis boundary and split across crossed UTC days. For a boundary-crossing drive, full-drive distance, energy, and duration-band evidence are withheld because they cannot be apportioned safely.",
+      "cost": "Total cost applies the Settings electricity rate to usable energy. Per-distance and per-hour costs use only energy from rows with the matching usable distance or duration, and exclude non-energy ownership costs.",
+      "nonCausal": "Time without a recorded drive and inactive observed days are descriptive; this workspace does not infer waste, availability, telemetry health, or why the vehicle was not driven.",
+      "title": "Coverage & methodology",
+      "capReached": "{{limit}}-drive cap reached",
+      "belowCap": "Ranged response below API cap",
+      "empty": "Coverage will appear when ranged drive history is returned for the selected vehicle.",
+      "selectedScope": "Selected UTC scope: {{start}} to {{end}}. Analysis as-of is frozen for this page mount.",
+      "timestampExclusions": "Timestamp eligibility",
+      "fieldCoverageTitle": "Metric field coverage",
+      "fieldCoverageValue": "{{usable}} usable · {{excluded}} excluded",
+      "capped": "The request returned {{limit}} rows. Results describe that capped ranged response; additional matching drives may exist.",
+      "uncapped": "The ranged response returned {{count}} rows below the {{limit}}-drive API limit."
+    },
+    "loading": "Loading utilization analysis",
+    "trend": {
+      "distanceSeries": "Observed distance",
+      "activeDaysSeries": "Active days",
+      "title": "Monthly utilization trend",
+      "subtitle": "UTC month distance with active-day context; partial boundary months remain observed snapshots.",
+      "aria": "Monthly observed distance bars with an active-day line",
+      "empty": "No eligible drives are available for a monthly trend."
+    },
+    "weekday": {
+      "activeRateSeries": "Active-day rate",
+      "distanceSeries": "Distance per active day",
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "title": "Weekday profile",
+      "subtitle": "UTC weekday active-day rate and average distance on days with eligible drives.",
+      "aria": "Active-day rate bars and average active-day distance by UTC weekday",
+      "empty": "No eligible drives are available for a weekday profile."
+    }
   },
   "rangeBuffer": {
     "title": "Range Buffer",
@@ -397,8 +1145,10 @@
     "lowArrivals": "Low Arrivals",
     "belowPct": "below {{pct}}%",
     "histogram": "Arrival Battery Distribution",
+    "histogram.aria": "Histogram of arrival battery percentage across drives",
     "drives": "Drives",
     "trend": "Monthly Median Arrival",
+    "trend.aria": "Monthly median arrival battery percentage line chart",
     "closeCalls": "Closest Calls",
     "date": "Date",
     "distance": "Distance",
@@ -434,18 +1184,127 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
+    },
+    "sections": {
+      "consistency": "Departure consistency by weekday",
+      "method": "Coverage and methodology",
+      "hourly": "Hourly departure distribution",
+      "monthly": "Monthly rhythm and predictability trend",
+      "slots": "Strongest departure time slots",
+      "comparison": "Weekday and weekend comparison",
+      "punchcard": "Weekly punchcard"
+    },
+    "consistency": {
+      "title": "Departure consistency",
+      "subtitle": "Typical 24-hour departure and median circular deviation by local weekday in {{timezone}}.",
+      "empty": "No valid departures are available for weekday profiles.",
+      "sampleBadge": "{{count}}/{{minimum}}",
+      "typical": "Circular median",
+      "deviation": "Median deviation",
+      "moreNeeded": "Below sample floor"
+    },
+    "kpi": {
+      "timestampCoverage": "{{included}} of {{observed}} returned rows included",
+      "returnedCoverage": "{{count}} returned rows included",
+      "noFavorite": "No valid departure starts",
+      "predictabilityFloor": "Needs at least {{count}} valid drives"
+    },
+    "method": {
+      "timezoneFallback": "The requested local timezone was invalid, so UTC is used for every weekday, hour, day, and month grouping.",
+      "timeSemantics": "The API applies the selected date-only bounds in UTC. Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.",
+      "timestampRules": "Blank or malformed starts are invalid; valid starts after the page’s frozen analysis clock are counted as future and excluded.",
+      "predictability": "Predictability is 100 minus normalized Shannon entropy across 24 local start hours. Overall and monthly scores require at least {{count}} valid starts.",
+      "consistency": "Typical departures use a circular median so midnight-adjacent times stay close. Median circular deviation requires {{count}} starts on that weekday.",
+      "distance": "Distance stays in canonical SI meters in the model. Only finite non-negative values feed distance totals, and display conversion follows your unit preference.",
+      "scope": "These are descriptive departure patterns. They do not identify causes or predict a specific future trip.",
+      "title": "Coverage & methodology",
+      "capReached": "{{limit}}-row cap reached",
+      "belowCap": "Returned window below API cap",
+      "windowLabel": "{{start}} – {{end}} selected date scope",
+      "returned": "Rows returned",
+      "included": "Valid starts included",
+      "invalid": "Invalid timestamps",
+      "future": "Future timestamps",
+      "empty": "Coverage will appear when the selected date scope returns drives.",
+      "noIncluded": "Returned rows were accounted for, but none had an eligible non-future start.",
+      "observedSpan": "Included span: {{first}} to {{last}} · distance available for {{measured}} of {{included}} included drives.",
+      "capped": "The request returned {{limit}} rows, so additional drives inside the selected dates may be absent. Every result describes only this returned subset.",
+      "coverage": "All {{count}} rows returned for the selected date scope were accounted for, up to the {{limit}}-row API limit."
+    },
+    "loading": "Loading driving rhythm evidence",
+    "hourly": {
+      "drives": "Drive starts",
+      "distance": "Logged distance",
+      "title": "Hourly departure distribution",
+      "subtitle": "Valid starts by local hour; the distance line shows measured SI distance converted to your display unit.",
+      "aria": "Drive starts and logged distance across all 24 local departure hours",
+      "hour": "Local hour",
+      "share": "Drive share",
+      "empty": "No valid departure hours are available in this window.",
+      "driveValue": "{{count}} drives"
+    },
+    "monthly": {
+      "drives": "Valid drives",
+      "predictability": "Predictability score",
+      "driveValue": "{{count}} drives",
+      "scoreValue": "{{score}} of 100",
+      "title": "Monthly rhythm & predictability",
+      "subtitle": "Drive volume and local-hour concentration by month; scores require at least {{count}} valid drives in that month.",
+      "aria": "Monthly valid drive counts and departure-hour predictability scores",
+      "month": "Local month",
+      "activeDays": "Active local days",
+      "activeSlots": "Active weekday-hour slots",
+      "distance": "Logged distance",
+      "empty": "No valid local months are available for a trend."
+    },
+    "slots": {
+      "title": "Strongest time slots",
+      "subtitle": "Ranked by valid start count; ties resolve Monday-first, then by earlier local hour.",
+      "empty": "No occupied weekday-hour slots are available to rank.",
+      "rank": "#{{rank}}",
+      "slotLabel": "{{day}} at {{hour}}:00",
+      "evidence": "{{share}}% of valid starts · {{distance}} logged across {{measured}} measured drives",
+      "supported": "sample supported",
+      "sparse": "below {{count}}-drive floor"
+    },
+    "comparison": {
+      "weekday": "Weekdays",
+      "weekend": "Weekends",
+      "title": "Weekday vs weekend",
+      "normalized": "Calendar-day normalized",
+      "subtitle": "Per-day rates use every selected calendar day, including days with no drive.",
+      "empty": "No valid drives are available for a weekday/weekend comparison.",
+      "shareValue": "{{share}}%",
+      "drives": "Valid drives",
+      "perDay": "Drives / selected day",
+      "activeDays": "Active local days",
+      "averageDistance": "Avg measured distance",
+      "coverage": "{{active}} active of {{calendar}} selected calendar days · {{distance}} logged",
+      "noCalendarScope": "Selected calendar-day coverage is unavailable; raw counts remain valid.",
+      "interpretation": "Compare the per-selected-day rates rather than raw shares when judging weekday and weekend frequency."
+    },
+    "weeklyPunchcard": {
+      "timezone": "24-hour departures grouped in {{timezone}}",
+      "aria": "Drive starts by local weekday and hour; strongest slot {{slot}}",
+      "cell": "{{day}} {{hour}}:00 · {{count}} drives"
     }
   },
   "parking": {
     "title": "Parking Analytics",
     "subtitle": "Where your car spends its time between drives",
     "kpis": "Parking summary metrics",
+    "kpis.observedSample": "{{drives}} usable drives · {{stints}} reconstructed stints",
+    "kpis.overnightSample": "22:00–06:00 · {{count}} stints",
+    "kpis.longestSample": "{{location}} · longest of {{count}} stints",
+    "kpis.locationQuality": "{{known}} located · {{missing}} missing",
     "parkedShare": "Time Parked",
     "vsDriving": "vs time driving",
     "nightShare": "Overnight Share",
     "nightWindow": "22:00–06:00",
     "longestStint": "Longest Stint",
     "locations": "Locations",
+    "locations.subtitle": "{{count}} location groups across {{stints}} reconstructed stints",
+    "locations.empty": "No destination-linked parking stints are available in this window.",
     "stintCount": "{{count}} stints",
     "topLocations": "Where It Sits",
     "location": "Location",
@@ -458,13 +1317,108 @@
     "durationH": "{{h}}h",
     "durationM": "{{m}}m",
     "noData": "Not enough drives in this period to reconstruct parking.",
-    "browseDrives": "Browse drives"
+    "browseDrives": "Browse drives",
+    "durationBands": {
+      "under1h": "Under 1 h",
+      "1to4h": "1–4 h",
+      "4to12h": "4–12 h",
+      "12to24h": "12–24 h",
+      "1to3d": "1–3 d",
+      "3dPlus": "3 d+"
+    },
+    "durationDistribution": {
+      "countSeries": "Stints",
+      "dwellSeries": "Observed dwell ({{unit}})",
+      "title": "Parking Duration Distribution",
+      "subtitle": "{{count}} reconstructed stints; final observed stints may be right-censored.",
+      "aria": "Bar and line chart of parking stint counts and observed dwell by duration band",
+      "band": "Duration band",
+      "empty": "No positive parking gaps are available to distribute in this window."
+    },
+    "sections": {
+      "duration": "Parking duration distribution",
+      "longest": "Longest parking stints",
+      "monthly": "Monthly parking trend",
+      "overnight": "Overnight and daytime parking context",
+      "coverage": "Parking coverage and methodology",
+      "temporal": "Time-of-day and weekday parking profile",
+      "locations": "Top parking locations"
+    },
+    "longest": {
+      "rank": "Rank",
+      "started": "Parked at",
+      "duration": "Observed duration",
+      "status": "Status",
+      "ongoing": "Ongoing",
+      "rangeEdge": "Range edge",
+      "complete": "Between drives",
+      "title": "Longest Observed Stints",
+      "subtitle": "Showing {{shown}} of {{count}} reconstructed stints; range-edge durations are observed minimums.",
+      "empty": "No positive parking gaps are available to rank in this window."
+    },
+    "monthly": {
+      "dwellSeries": "Observed dwell ({{unit}})",
+      "countSeries": "Stints",
+      "title": "Monthly Dwell & Stint Trend",
+      "subtitle": "{{count}} stints grouped by parking-start month in {{timeZone}}; observed dwell includes right-censored tails.",
+      "aria": "Monthly bars for observed parking dwell with a line for reconstructed stint counts",
+      "month": "Month",
+      "average": "Average stint ({{unit}})",
+      "empty": "No reconstructed stints are available for a monthly trend."
+    },
+    "overnight": {
+      "night": "22:00–06:00",
+      "daytime": "06:00–22:00",
+      "subtitle": "{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in {{timeZone}}.",
+      "subtitleEmpty": "Observed dwell will be split at 22:00 and 06:00 in {{timeZone}}.",
+      "title": "Overnight vs Daytime Context",
+      "aria": "Donut chart splitting observed parking duration into local overnight and daytime windows",
+      "window": "Local window",
+      "duration": "Observed dwell ({{unit}})",
+      "empty": "No reconstructed dwell is available for an overnight split."
+    },
+    "coverage": {
+      "title": "Coverage & Method",
+      "cappedBadge": "Potentially capped",
+      "withinCapBadge": "Within request cap",
+      "empty": "No drive records were returned for this selected UTC window.",
+      "returned": "Records returned",
+      "usable": "Usable drives",
+      "reconstructed": "Reconstructed stints",
+      "located": "Location coverage",
+      "utcWindow": "The server filters drive starts from {{start}} through {{end}} as UTC calendar dates; parking before the first returned drive cannot be reconstructed.",
+      "localTime": "Hour, weekday, month, and the 22:00–06:00 split use {{timeZone}}. Dwell is assigned to the period in which parking starts.",
+      "ongoing": "The final stint is ongoing as of the frozen page clock ({{time}}); its duration can only increase.",
+      "rangeEdge": "The final stint is right-censored at the selected range edge ({{time}}); a later drive outside this window is unknown.",
+      "noTrailing": "No positive trailing stint was reconstructed; parking before the first usable drive remains unknown.",
+      "quality": "{{excluded}} drive records and {{gaps}} non-positive gaps were excluded; {{missing}} of {{stints}} stints lack a destination address.",
+      "capped": "The API returned the {{limit}}-drive request cap. Because results are newest-first, older drives inside the selected window may be omitted; all results are observed-window descriptions.",
+      "window": "This workspace uses {{count}} server-scoped drives from the selected window, up to the {{limit}}-drive request cap."
+    },
+    "states": {
+      "loading": "Loading parking analysis"
+    },
+    "temporal": {
+      "hourLabel": "{{hour}}:00",
+      "hourProfile": "Hour",
+      "weekdayProfile": "Weekday",
+      "startsSeries": "Parking starts",
+      "title": "When Parking Starts",
+      "subtitle": "{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.",
+      "aria": "Bar charts of reconstructed parking starts by local hour and weekday",
+      "profile": "Profile",
+      "period": "Period",
+      "empty": "No reconstructed parking starts are available for a time profile.",
+      "byHour": "By local hour",
+      "byWeekday": "By local weekday"
+    }
   },
   "mileageBudget": {
     "title": "Mileage Budget",
     "subtitle": "Lease and warranty allowance pacing with overage forecast",
     "kpis": "Mileage budget summary metrics",
     "used": "Driven This Term",
+    "usedObserved": "Observed in Returned Window",
     "allowedToDate": "allowed so far: {{allowed}}",
     "pace": "Pace",
     "overPace": "over budget pace",
@@ -485,38 +1439,159 @@
     "termProgress": "Term elapsed",
     "daysLeft": "{{days}} days left",
     "allowanceUsed": "Allowance used",
+    "allowanceUsedObserved": "Observed allowance usage",
     "chart": "Distance vs Allowance",
+    "chart.aria": "Cumulative driven distance against the pro-rata allowance, by month",
+    "chartObserved": "Observed Distance vs Allowance",
+    "chartObservedAria": "Cumulative distance in the capped returned history against the pro-rata allowance, by month",
     "driven": "Driven",
     "allowed": "Allowed",
     "col": {
       "month": "Month",
       "used": "Driven",
+      "observedUsed": "Observed driven",
       "allowed": "Allowed"
+    },
+    "cap": {
+      "title": "History window reached its row cap",
+      "body": "The request returned {{limit}} drives. Older term drives may be absent, so pace, term-total, and overage projections are withheld until the selected history is complete.",
+      "observed": "At least this much is present; older term drives may be absent",
+      "unavailable": "unavailable while history is capped"
     }
   },
   "sweetSpot": {
     "title": "Speed Sweet Spot",
-    "subtitle": "The cruising speed where your car sips the least energy",
+    "subtitle": "Observed efficiency by whole-drive average speed — not instantaneous cruising speed or a recommended road speed",
+    "loading": "Loading speed sweet spot evidence",
     "kpis": "Sweet spot summary metrics",
-    "spot": "Sweet Spot",
-    "atSpot": "At Sweet Spot",
-    "overall": "Your Overall",
-    "analyzed": "{{count}} drives analyzed",
-    "saving": "Potential Saving",
-    "savingHint": "if all driving hit the spot",
-    "curve": "Consumption vs Average Speed",
-    "curveHint": "Bars show distance logged per speed band; the shaded band is your sweet spot",
-    "distanceLogged": "Distance logged",
+    "spot": "Best qualified band",
+    "atSpot": "Consumption in band",
+    "overall": "Overall weighted consumption",
+    "observedGap": "Observed efficiency gap",
+    "observedGapHint": "descriptive comparison, not a savings forecast",
+    "emptyWindow": "No drives were returned for this selected window.",
+    "qualified": "Qualified",
+    "unqualified": "Below sample floor",
+    "curveHint": "Distance-weighted band consumption; distance bars show evidence volume and dashed points are below the sample floor.",
+    "distanceLogged": "Observed distance",
     "consumption": "Consumption",
     "mph": "mph",
     "kmh": "km/h",
     "whPerMi": "Wh/mi",
     "whPerKm": "Wh/km",
+    "band": {
+      "range": "{{from}}–{{to}} {{unit}}"
+    },
+    "kpi": {
+      "bandSample": "{{drives}} drives · {{distance}} observed",
+      "noQualified": "No band meets the sample floor",
+      "weightedBand": "distance-weighted within this band",
+      "windowSample": "{{eligible}} eligible of {{observed}} returned drives",
+      "cappedWindowSample": "{{eligible}} eligible · returned window hit the row cap"
+    },
+    "sections": {
+      "evidence": "Sweet spot evidence and confidence",
+      "curve": "Consumption by average-speed band",
+      "scatter": "Drive-level speed and consumption evidence",
+      "monthly": "Monthly operating context",
+      "coverage": "Speed-band distance and drive coverage",
+      "scorecard": "Detailed speed-band scorecard",
+      "method": "Coverage and methodology"
+    },
+    "evidence": {
+      "title": "Evidence & confidence",
+      "subtitle": "A band needs at least {{count}} eligible whole drives before it can rank.",
+      "qualified": "Qualified comparison",
+      "insufficient": "Insufficient evidence",
+      "eligible": "Eligible drives",
+      "winningDrives": "Drives in best band",
+      "winningDistance": "Distance in best band",
+      "distanceShare": "Eligible distance share",
+      "qualifiedBands": "Qualified bands",
+      "empty": "No speed band has enough eligible drives to support a best-band comparison in this window.",
+      "runnerUp": "Next-best qualified band {{band}} measured {{gap}} higher than the winner ({{percent}}).",
+      "noRunnerUp": "Only one band qualifies, so there is no runner-up contrast yet."
+    },
+    "curve": {
+      "title": "Consumption vs whole-drive average speed",
+      "aria": "Distance-weighted consumption across whole-drive average-speed bands with qualification and the best band identified",
+      "empty": "No eligible drives are available to form speed bands.",
+      "qualifiedSeries": "Qualified consumption",
+      "unqualifiedSeries": "Unqualified consumption"
+    },
+    "scatter": {
+      "title": "Drive-level whole-drive evidence",
+      "subtitle": "{{shown}} eligible drives; marker size follows distance and each point is one whole drive.",
+      "cappedSubtitle": "{{shown}} evenly sampled points from {{total}} eligible drives; every eligible drive still feeds the aggregates.",
+      "aria": "Scatter plot of whole-drive average speed against drive consumption with distance represented by marker size",
+      "sampled": "Visual sample",
+      "allPoints": "All eligible points",
+      "empty": "No eligible drives are available for drive-level evidence.",
+      "inBand": "Best-band drives",
+      "other": "Other eligible drives",
+      "speed": "Whole-drive average speed",
+      "drive": "Drive",
+      "date": "Date",
+      "group": "Evidence group"
+    },
+    "monthly": {
+      "title": "Monthly operating context",
+      "subtitle": "Monthly speed is total distance ÷ total duration and consumption is distance-weighted; co-movement is not evidence that speed caused the change.",
+      "aria": "Monthly distance-weighted consumption and aggregate whole-drive average speed with drive counts",
+      "consumptionSeries": "Weighted consumption",
+      "speedSeries": "Aggregate average speed",
+      "monthCount": "{{count}} observed months",
+      "tick": "{{month}} · {{count}}",
+      "sample": "{{count}} drives",
+      "empty": "No eligible drives with valid dates are available for monthly context."
+    },
+    "coverage": {
+      "title": "Evidence coverage by speed band",
+      "subtitle": "Bars show observed distance and the line shows eligible drives; muted bars are below the qualification floor.",
+      "aria": "Observed distance and drive count distributed across whole-drive average-speed bands",
+      "distanceSeries": "Distance",
+      "drivesSeries": "Drive count",
+      "qualifiedCount": "{{count}} qualified",
+      "driveValue": "{{count}} drives",
+      "empty": "No eligible distance is available to distribute across speed bands."
+    },
+    "score": {
+      "title": "Detailed band scorecard",
+      "subtitle": "Qualified bands rank by lowest distance-weighted consumption; unqualified bands remain visible but unranked.",
+      "rank": "Rank",
+      "rankValue": "#{{rank}}",
+      "gapBest": "Gap to best",
+      "gapOverall": "Gap to overall",
+      "empty": "No eligible speed bands are available for the scorecard."
+    },
+    "method": {
+      "title": "Coverage & methodology",
+      "windowLabel": "{{start}} – {{end}} selected window",
+      "returned": "Rows returned",
+      "eligible": "Eligible drives",
+      "excluded": "Excluded drives",
+      "capReached": "{{limit}}-row cap reached",
+      "belowCap": "Observed window below API cap",
+      "empty": "Coverage will appear when the selected window returns drives.",
+      "capped": "The request returned {{limit}} rows, so this describes the observed selected-window subset; additional drives in the date range may not be represented.",
+      "window": "This describes all {{count}} rows returned for the selected window, up to the {{limit}}-row API limit.",
+      "eligibility": "Eligibility requires positive measured energy and average speed, at least {{distance}} km, and at least {{minutes}} minutes.",
+      "buckets": "Whole-drive average speed is grouped into {{width}} km/h half-open bands; at least {{count}} drives qualify a band.",
+      "weighting": "Band, monthly, and overall consumption use total energy ÷ total distance, not an average of drive-level ratios.",
+      "monthly": "Monthly average speed is total eligible distance ÷ total eligible duration. Drives with malformed dates stay in non-calendar aggregates.",
+      "scatter": "The scatter shows at most {{limit}} evenly spaced chronological points, including the endpoints; all eligible drives feed every aggregate.",
+      "scope": "This is whole-drive average-speed evidence, not instantaneous cruising speed and not a recommended road speed.",
+      "confounders": "Route, weather, elevation, HVAC, traffic, and trip length can confound the association. The observed gap is descriptive, not causal and not a savings forecast."
+    },
     "col": {
-      "speed": "Speed",
+      "band": "Speed band",
       "consumption": "Consumption",
-      "distance": "Distance logged",
-      "drives": "Drives"
+      "distance": "Distance",
+      "drives": "Drives",
+      "distanceShare": "Distance share",
+      "qualification": "Qualification",
+      "month": "Month and sample",
+      "sample": "Sample"
     }
   },
   "logbook": {
@@ -809,16 +1884,19 @@
       "body": "Arrivals are clustered into ~1 km cells; the most-visited cell becomes your home base and everything else counts as a destination. The roaming radius is the distance covering 90% of your arrivals.",
       "iconLabel": "More info about explorer stats"
     },
+    "explorerWorkspace": {
+      "iconLabel": "More information about destination clustering"
+    },
     "driveCompare": {
-      "body": "Pick two drives and compare them metric by metric. Rows with a clear efficiency meaning (energy, consumption, regen share, battery used) crown a winner; distance, speed, and temperature are context.",
+      "body": "Consumption, regen share, and drive score can decide the verdict when both drives have enough data. Trip totals remain neutral context.",
       "iconLabel": "More info about drive compare"
     },
     "efficiencyTarget": {
-      "body": "A week's consumption is total energy divided by total distance across its drives — short sub-km hops are excluded so parking maneuvers don't distort the grade.",
+      "body": "Weekly consumption is total measured energy divided by total eligible distance. The active local week is descriptive until Sunday ends.",
       "iconLabel": "More info about the target math"
     },
     "milestones": {
-      "body": "TeslaSync logs per-drive distance rather than absolute odometer, so set the calibration field to your odometer reading from before the first logged drive. Every ladder step (each 10k, then each 50k past 100k) is then dated by the drive that crossed it.",
+      "body": "Calibration is the odometer immediately before the chronologically first eligible drive in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit.",
       "iconLabel": "More info about milestone math"
     },
     "coldStart": {
@@ -831,7 +1909,8 @@
     },
     "utilization": {
       "body": "The observed window runs from the first drive in the picked period to its end. Driving hours come from logged drive durations; everything else is the car sitting still. Costs use your electricity rate from Settings and cover energy only.",
-      "iconLabel": "More info about utilization"
+      "iconLabel": "More info about utilization",
+      "methodologyLabel": "More info about utilization coverage"
     }
   },
   "date": {

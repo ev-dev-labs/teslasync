@@ -31,6 +31,8 @@ export interface MonthlyBudgetPoint {
 
 export interface MileageBudgetResult {
   ok: boolean;
+  historyLimit: number;
+  historyCapReached: boolean;
   termStartMs: number;
   termEndMs: number;
   elapsedDays: number;
@@ -71,7 +73,11 @@ export function computeMileageBudget(
   drives: readonly Drive[],
   config: MileageBudgetConfig,
   nowMs: number,
+  historyLimit = 1_000,
 ): MileageBudgetResult {
+  if (!Number.isInteger(historyLimit) || historyLimit <= 0) {
+    throw new RangeError('historyLimit must be a positive integer');
+  }
   const termStartMs = new Date(`${config.termStartIso}T00:00:00`).getTime();
   const termEndMs = addMonths(termStartMs, config.termMonths);
   const totalDays = Math.max(1, Math.round((termEndMs - termStartMs) / DAY_MS));
@@ -127,6 +133,8 @@ export function computeMileageBudget(
 
   return {
     ok: isValidBudgetConfig(config),
+    historyLimit,
+    historyCapReached: drives.length >= historyLimit,
     termStartMs,
     termEndMs,
     elapsedDays: Math.round(elapsedDays),

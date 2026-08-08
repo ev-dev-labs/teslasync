@@ -1,26 +1,32 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { HeartPulse, BatteryFull, BatteryWarning, Zap, Percent } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, HelpTooltip } from '@/components/ui';
+import { useChargingHistory } from '@/api/hooks/useCharging';
+import { useDriveHistory } from '@/api/hooks/useDriving';
 import { VehicleSelect } from '@/components/forms';
-import { MetricCard, MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
-
-import { useDrives } from '@/api/hooks/useDriving';
-import { useChargingSessions } from '@/api/hooks/useCharging';
-import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { chartTokens } from '@/lib/tokens';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
-import { computeBatteryCare } from '../lib/batteryCare';
+import {
+  ArrivalSocEvidence,
+  BatteryCareKpiBand,
+  BatteryCareMethodology,
+  CareScoreBreakdown,
+  ChargingEnergyMix,
+  EndSocDistribution,
+  MonthlyCareTrend,
+  RankedCareHabits,
+  type BatteryCareSectionState,
+} from '../components/battery-care';
+import {
+  BATTERY_CARE_HISTORY_LIMIT,
+  computeBatteryCare,
+} from '../lib/batteryCare';
 
-function pct(v: number | null): string {
-  return v != null ? `${Math.round(v * 100)}%` : '—';
-}
+const ANALYSIS_COLUMNS = { default: 1, xl: 5 } as const;
 
 export default function BatteryCarePage() {
   const { t } = useTranslation();
@@ -28,138 +34,132 @@ export default function BatteryCarePage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
+  const [analysisNowMs] = useState(() => Date.now());
 
-  const sessionsQuery = useChargingSessions(vehicleIdStr);
-  const drivesQuery = useDrives(vehicleIdStr);
-
+  const sessionsQuery = useChargingHistory(
+    vehicleIdStr,
+    BATTERY_CARE_HISTORY_LIMIT,
+  );
+  const drivesQuery = useDriveHistory(
+    vehicleIdStr,
+    BATTERY_CARE_HISTORY_LIMIT,
+  );
+  const sessions = useMemo(
+    () => sessionsQuery.data ?? [],
+    [sessionsQuery.data],
+  );
+  const drives = useMemo(
+    () => drivesQuery.data ?? [],
+    [drivesQuery.data],
+  );
   const care = useMemo(
-    () => computeBatteryCare(sessionsQuery.data ?? [], drivesQuery.data ?? []),
-    [sessionsQuery.data, drivesQuery.data],
+    () =>
+      computeBatteryCare(sessions, drives, {
+        nowMs: analysisNowMs,
+        sessionLimit: BATTERY_CARE_HISTORY_LIMIT,
+        driveLimit: BATTERY_CARE_HISTORY_LIMIT,
+      }),
+    [analysisNowMs, drives, sessions],
   );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('batteryCare.title', 'Battery Care')} />;
+    return (
+      <NoVehicleSelected
+        pageTitle={t('batteryCare.title', 'Battery Care')}
+      />
+    );
   }
 
-  const isLoading = sessionsQuery.isLoading || drivesQuery.isLoading;
-  const isError = sessionsQuery.isError || drivesQuery.isError;
-  const error = sessionsQuery.error ?? drivesQuery.error;
-  const retry = () => {
-    if (sessionsQuery.isError) void sessionsQuery.refetch();
-    if (drivesQuery.isError) void drivesQuery.refetch();
+  const chargingState: BatteryCareSectionState = {
+    isLoading: sessionsQuery.isLoading,
+    error: sessionsQuery.isError ? sessionsQuery.error : null,
+    onRetry: () => {
+      void sessionsQuery.refetch();
+    },
+  };
+  const driveState: BatteryCareSectionState = {
+    isLoading: drivesQuery.isLoading,
+    error: drivesQuery.isError ? drivesQuery.error : null,
+    onRetry: () => {
+      void drivesQuery.refetch();
+    },
+  };
+  const combinedState: BatteryCareSectionState = {
+    isLoading: sessionsQuery.isLoading || drivesQuery.isLoading,
+    error: sessionsQuery.isError
+      ? sessionsQuery.error
+      : drivesQuery.isError
+        ? drivesQuery.error
+        : null,
+    onRetry: () => {
+      if (sessionsQuery.isError) void sessionsQuery.refetch();
+      if (drivesQuery.isError) void drivesQuery.refetch();
+    },
   };
 
   return (
     <PageContainer
       title={t('batteryCare.title', 'Battery Care')}
-      subtitle={t('batteryCare.subtitle', 'How gently your charging habits treat the pack')}
+      subtitle={t(
+        'batteryCare.subtitle',
+        'How gently your charging habits treat the pack',
+      )}
       query={[sessionsQuery, drivesQuery]}
       actions={<VehicleSelect />}
     >
-      {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('batteryCare.kpis', 'Battery care summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={error} onRetry={retry} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('batteryCare.score', 'Care Score')}
-                value={care.score != null ? care.score : '—'}
-                subtitle={t('batteryCare.of100', 'of 100')}
-                icon={<HeartPulse className="h-5 w-5" />}
-                color={care.score == null ? 'cyan' : care.score >= 80 ? 'green' : care.score >= 60 ? 'amber' : 'red'}
-              />
-              <MetricCard
-                label={t('batteryCare.fullCharges', 'Charges to {{pct}}%+', { pct: care.fullChargePct })}
-                value={pct(care.fullChargeShare)}
-                subtitle={t('batteryCare.ofSessions', 'of {{count}} sessions', { count: care.sessionsAnalyzed })}
-                icon={<BatteryFull className="h-5 w-5" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('batteryCare.deepDischarges', 'Deep Discharges')}
-                value={pct(care.deepDischargeShare)}
-                subtitle={t('batteryCare.below10', 'arrivals below 10%')}
-                icon={<BatteryWarning className="h-5 w-5" />}
-                color="red"
-              />
-              <MetricCard
-                label={t('batteryCare.dcShare', 'DC Fast Energy')}
-                value={pct(care.dcEnergyShare)}
-                subtitle={t('batteryCare.ofEnergy', 'of charged energy')}
-                icon={<Zap className="h-5 w-5" />}
-                color="purple"
-              />
-            </>
-          )}
-        </section>
+        <BatteryCareKpiBand care={care} state={combinedState} />
       </FadeIn>
 
-      {/* 2 — Habit breakdown */}
+      <FadeIn delay={0.05}>
+        <Grid cols={ANALYSIS_COLUMNS} gap={4}>
+          <CareScoreBreakdown
+            care={care}
+            state={combinedState}
+            className="xl:col-span-3"
+          />
+          <EndSocDistribution
+            care={care}
+            state={chargingState}
+            className="xl:col-span-2"
+          />
+        </Grid>
+      </FadeIn>
+
       <FadeIn delay={0.1}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-4 flex items-center gap-2">
-            <Percent className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('batteryCare.habits', 'Habit Breakdown')}
-            <HelpTooltip
-              size="sm"
-              i18nKey="help.batteryCare.body"
-              defaultValue="Lithium packs age fastest when held full, drained deep, or fast-charged often. The score starts at 100 and pays for each habit: full charges and deep discharges cost up to 30 points each; DC fast energy and time outside the 20–80% band cost up to 20 each."
-              ariaLabel={t('help.batteryCare.iconLabel', 'More info about the care score')}
-            />
-          </PanelTitle>
-          {isError ? (
-            <QueryError error={error} onRetry={retry} />
-          ) : isLoading ? (
-            <Skeleton height={200} />
-          ) : care.sessionsAnalyzed === 0 ? (
-            <EmptyState /* no-action: needs charging history to grade; appears only before the first synced session. */
-              icon={<HeartPulse className="h-8 w-8" />}
-              message={t('batteryCare.noData', 'No charging sessions with SoC data yet.')}
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-x-8 gap-y-4 xl:grid-cols-2">
-              <MetricBar
-                label={t('batteryCare.barBand', 'Sessions finishing inside 20–80%')}
-                value={(care.bandFinishShare ?? 0) * 100}
-                max={100}
-                color={chartTokens.series[1]}
-                sublabel={pct(care.bandFinishShare)}
-              />
-              <MetricBar
-                label={t('batteryCare.barFull', 'Sessions charged to {{pct}}%+', { pct: care.fullChargePct })}
-                value={(care.fullChargeShare ?? 0) * 100}
-                max={100}
-                color={chartTokens.series[2]}
-                sublabel={pct(care.fullChargeShare)}
-              />
-              <MetricBar
-                label={t('batteryCare.barDeep', 'Drives arriving below 10%')}
-                value={(care.deepDischargeShare ?? 0) * 100}
-                max={100}
-                color={chartTokens.series[3]}
-                sublabel={pct(care.deepDischargeShare)}
-              />
-              <MetricBar
-                label={t('batteryCare.barDc', 'Energy from DC fast charging')}
-                value={(care.dcEnergyShare ?? 0) * 100}
-                max={100}
-                color={chartTokens.series[4]}
-                sublabel={pct(care.dcEnergyShare)}
-              />
-            </div>
-          )}
-        </GlassPanel>
+        <Grid cols={ANALYSIS_COLUMNS} gap={4}>
+          <ChargingEnergyMix
+            care={care}
+            state={chargingState}
+            className="xl:col-span-3"
+          />
+          <ArrivalSocEvidence
+            care={care}
+            state={driveState}
+            className="xl:col-span-2"
+          />
+        </Grid>
+      </FadeIn>
+
+      <FadeIn delay={0.15}>
+        <MonthlyCareTrend care={care} state={combinedState} />
+      </FadeIn>
+
+      <FadeIn delay={0.2}>
+        <Grid cols={ANALYSIS_COLUMNS} gap={4}>
+          <RankedCareHabits
+            care={care}
+            state={combinedState}
+            className="xl:col-span-3"
+          />
+          <BatteryCareMethodology
+            care={care}
+            state={combinedState}
+            sessionLimit={BATTERY_CARE_HISTORY_LIMIT}
+            driveLimit={BATTERY_CARE_HISTORY_LIMIT}
+            className="xl:col-span-2"
+          />
+        </Grid>
       </FadeIn>
     </PageContainer>
   );

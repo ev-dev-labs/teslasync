@@ -122,4 +122,30 @@ describe('computeMileageBudget', () => {
     expect(r.remainingDays).toBe(0);
     expect(r.elapsedDays).toBe(r.totalDays);
   });
+
+  it('flags a capped history response so full-term claims can be withheld', () => {
+    const now = new Date(2026, 6, 1).getTime();
+    const capped = computeMileageBudget(
+      [
+        drive('2026-02-10T10:00:00Z', 1_000_000),
+        drive('2026-03-10T10:00:00Z', 1_000_000),
+      ],
+      CONFIG,
+      now,
+      2,
+    );
+    const uncapped = computeMileageBudget(
+      [drive('2026-02-10T10:00:00Z', 1_000_000)],
+      CONFIG,
+      now,
+      2,
+    );
+
+    expect(capped.historyLimit).toBe(2);
+    expect(capped.historyCapReached).toBe(true);
+    expect(uncapped.historyCapReached).toBe(false);
+    expect(() =>
+      computeMileageBudget([], CONFIG, now, 0),
+    ).toThrow('historyLimit must be a positive integer');
+  });
 });

@@ -15,7 +15,6 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
-import type { Drive } from '@/types/driving';
 
 import {
   computeShareStats,
@@ -40,19 +39,15 @@ export default function ShareCardPage() {
 
   const [theme, setTheme] = useState<ShareCardTheme>('midnight');
 
-  const drivesQuery = useDrives(vehicleIdStr);
-  const allDrives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
-
-  const drives = useMemo<Drive[]>(() => {
-    if (!allDrives.length) return [];
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
-    return allDrives.filter((d) => {
-      if (!d.startTs) return false;
-      const ts = new Date(d.startTs).getTime();
-      return ts >= startMs && ts <= endMs;
-    });
-  }, [allDrives, start, end]);
+  const drivesQuery = useDrives(vehicleIdStr, {
+    start,
+    end,
+    limit: 1_000,
+  });
+  const drives = useMemo(
+    () => drivesQuery.data ?? [],
+    [drivesQuery.data],
+  );
 
   const stats = useMemo(() => computeShareStats(drives), [drives]);
 
@@ -150,13 +145,15 @@ export default function ShareCardPage() {
 
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(SHARE_CARD_THEMES) as ShareCardTheme[]).map((key) => (
-                  <button
+                  <Button
                     key={key}
                     type="button"
+                    variant="outline"
+                    size="sm"
                     aria-label={t('shareCard.pickTheme', 'Use the {{name}} theme', { name: key })}
                     aria-pressed={theme === key}
                     onClick={() => setTheme(key)}
-                    className={`h-11 w-11 rounded-xl border transition-colors ${
+                    className={`h-11 w-11 rounded-xl p-0 transition-colors ${
                       theme === key ? 'border-cyan-400/60' : 'border-[var(--border-subtle)]'
                     }`}
                     style={{ background: SHARE_CARD_THEMES[key].bg }}
@@ -166,7 +163,7 @@ export default function ShareCardPage() {
                       style={{ background: SHARE_CARD_THEMES[key].accent }}
                       aria-hidden="true"
                     />
-                  </button>
+                  </Button>
                 ))}
               </div>
 

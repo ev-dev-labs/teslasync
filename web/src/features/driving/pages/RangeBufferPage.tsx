@@ -22,7 +22,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
-import type { Drive } from '@/types/driving';
 
 import {
   summarizeRangeBuffer,
@@ -51,19 +50,15 @@ export default function RangeBufferPage() {
     defaultPresetId: 'all',
   });
 
-  const drivesQuery = useDrives(vehicleIdStr);
-  const allDrives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
-
-  const drives = useMemo<Drive[]>(() => {
-    if (!allDrives.length) return [];
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
-    return allDrives.filter((d) => {
-      if (!d.startTs) return false;
-      const ts = new Date(d.startTs).getTime();
-      return ts >= startMs && ts <= endMs;
-    });
-  }, [allDrives, start, end]);
+  const drivesQuery = useDrives(vehicleIdStr, {
+    start,
+    end,
+    limit: 1_000,
+  });
+  const drives = useMemo(
+    () => drivesQuery.data ?? [],
+    [drivesQuery.data],
+  );
 
   const summary = useMemo(() => summarizeRangeBuffer(drives), [drives]);
 

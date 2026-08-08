@@ -15,7 +15,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from '@/components/charts';
 
-import { useDrives } from '@/api/hooks/useDriving';
+import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -41,7 +41,7 @@ export default function ChargeAdvisorPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const drivesQuery = useDrives(vehicleIdStr);
+  const drivesQuery = useDriveHistory(vehicleIdStr, 1_000);
   const drives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
   const live = useVehicleLive(vehicleId ?? undefined);
 
