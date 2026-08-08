@@ -20,11 +20,11 @@
  *      converters are `useCallback`-memoised, so equal inputs must yield the
  *      SAME array reference (a regression guard for the memo-defeat bug the
  *      inline closures used to cause).
- *   9. Live band wiring + range-picker → URL-batch write.
+ *   9. Live band wiring + range-picker → shared range write.
  *
  * Strategy (mirrors web/src/features/admin/pages/VehicleCostPage.test.tsx):
  *   - Every data hook + the vehicle selector + useUnits / useDateFormat /
- *     url-state are mocked with hoisted vi.fn()s so the network is never
+ *     range-state are mocked with hoisted vi.fn()s so the network is never
  *     touched and each render is deterministic. The REAL `HEALTH_SCORE`
  *     constant + REAL `convertDistanceFromSI` / `convertTempFromSI` run, so
  *     the conversions are genuinely exercised.
@@ -74,9 +74,9 @@ const {
   dateFormatMock,
   selectedVehicleMock,
   vehicleLiveMock,
-  urlStringMock,
+  rangeStateMock,
   refetchMock,
-  setRangeBatchMock,
+  setRangeMock,
   formatDateShort,
   formatTime,
   UNIT_PREFS_KM,
@@ -91,9 +91,9 @@ const {
   dateFormatMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   vehicleLiveMock: vi.fn(),
-  urlStringMock: vi.fn(),
+  rangeStateMock: vi.fn(),
   refetchMock: vi.fn(),
-  setRangeBatchMock: vi.fn(),
+  setRangeMock: vi.fn(),
   formatDateShort: (v: unknown) => `D:${String(v)}`,
   formatTime: (v: unknown) => `T:${String(v)}`,
   UNIT_PREFS_KM: {
@@ -160,10 +160,7 @@ vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
 vi.mock('@/hooks/useDateFormat', () => ({ useDateFormat: () => dateFormatMock() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => selectedVehicleMock() }));
 vi.mock('@/hooks/useVehicleLive', () => ({ useVehicleLive: (...args: unknown[]) => vehicleLiveMock(...args) }));
-vi.mock('@/hooks/useUrlState', () => ({
-  useUrlString: (key: string) => urlStringMock(key),
-  useUrlBatch: () => setRangeBatchMock,
-}));
+vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => rangeStateMock() }));
 
 // Stub the 12 sections so we can capture the exact props the page computed.
 vi.mock('../components/drivetrain-health', async () => {
@@ -190,7 +187,7 @@ vi.mock('../components/drivetrain-health', async () => {
 });
 
 // Stub the two toolbar controls; RangePicker forwards a fixed range on click so
-// the URL-batch wiring can be asserted.
+// the shared range wiring can be asserted.
 vi.mock('@/components/forms', async () => {
   const actual = await vi.importActual<typeof import('@/components/forms')>('@/components/forms');
   const React = await vi.importActual<typeof import('react')>('react');
@@ -344,11 +341,6 @@ const MOTOR_LATEST = makeMotor({ ts: 'latest', motor_temp_c_front: 45 });
 
 const LIVE_STATE = { isolationResistance: 987 };
 
-// Stable tuples so `[startDate]`/`[endDate]` reads keep identical primitives
-// across re-renders (memo-stability spec).
-const FROM_TUPLE: [string, () => void] = ['2024-01-01', () => {}];
-const TO_TUPLE: [string, () => void] = ['2024-01-31', () => {}];
-
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -373,7 +365,11 @@ beforeEach(() => {
   dateFormatMock.mockReturnValue({ formatTime, formatDateShort });
   selectedVehicleMock.mockReturnValue({ vehicleId: 42, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
   vehicleLiveMock.mockReturnValue({ state: LIVE_STATE, connected: true });
-  urlStringMock.mockImplementation((key: string) => (key === 'from' ? FROM_TUPLE : TO_TUPLE));
+  rangeStateMock.mockReturnValue({
+    start: '2024-01-01',
+    end: '2024-01-31',
+    setRange: setRangeMock,
+  });
 });
 
 /* ── Specs ────────────────────────────────────────────────────────── */
@@ -566,10 +562,13 @@ describe('DrivetrainHealthPage', () => {
     expect(captured.live.motorLatest).toBe(MOTOR_LATEST);
   });
 
-  it('pushes range-picker changes into the URL batch as from/to', () => {
+  it('commits range-picker changes through shared range state', () => {
     renderPage();
 
     fireEvent.click(screen.getByTestId('range-picker'));
-    expect(setRangeBatchMock).toHaveBeenCalledWith({ from: '2024-03-01', to: '2024-03-31' });
+    expect(setRangeMock).toHaveBeenCalledWith({
+      start: '2024-03-01',
+      end: '2024-03-31',
+    });
   });
 });

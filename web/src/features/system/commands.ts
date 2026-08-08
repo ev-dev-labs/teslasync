@@ -49,6 +49,9 @@ export interface SelectOption {
   value: string;
   labelKey: string;
   labelFallback: string;
+  descriptionKey?: string;
+  descriptionFallback?: string;
+  /** @deprecated Prefer descriptionKey + descriptionFallback for visible copy. */
   description?: string;
 }
 
@@ -88,20 +91,22 @@ export interface Vehicle {
   display_name: string;
   model: string;
   state: string;
-  battery_level: number;
-  battery_range: number;
+  battery_level?: number | null;
+  battery_range?: number | null;
   updated_at: string;
 }
 
 export interface VehicleState {
-  battery_level: number;
-  rated_range: number;
-  is_locked: boolean;
-  is_charging: boolean;
-  is_climate_on: boolean;
-  sentry_mode: boolean;
-  inside_temp: number;
-  speed: number;
+  vehicle_id?: number;
+  state?: string;
+  battery_level?: number | null;
+  rated_range?: number | null;
+  is_locked?: boolean | null;
+  is_charging?: boolean | null;
+  is_climate_on?: boolean | null;
+  sentry_mode?: boolean | null;
+  inside_temp?: number | null;
+  speed?: number | null;
 }
 
 export interface CommandLogEntry {
@@ -357,9 +362,27 @@ export const COMMANDS: CommandDef[] = [
     selectConfig: {
       paramName: 'cop_temp',
       options: [
-        { value: '0', labelKey: 'commands.climate.copLow', labelFallback: 'Low', description: '90°F / 30°C' },
-        { value: '1', labelKey: 'commands.climate.copMedium', labelFallback: 'Medium', description: '95°F / 35°C' },
-        { value: '2', labelKey: 'commands.climate.copHigh', labelFallback: 'High', description: '100°F / 40°C' },
+        {
+          value: '0',
+          labelKey: 'commands.climate.copLow',
+          labelFallback: 'Low',
+          descriptionKey: 'commands.climate.copLowTemperature',
+          descriptionFallback: '90°F / 30°C',
+        },
+        {
+          value: '1',
+          labelKey: 'commands.climate.copMedium',
+          labelFallback: 'Medium',
+          descriptionKey: 'commands.climate.copMediumTemperature',
+          descriptionFallback: '95°F / 35°C',
+        },
+        {
+          value: '2',
+          labelKey: 'commands.climate.copHigh',
+          labelFallback: 'High',
+          descriptionKey: 'commands.climate.copHighTemperature',
+          descriptionFallback: '100°F / 40°C',
+        },
       ],
     },
   },

@@ -165,6 +165,7 @@ beforeEach(() => {
   activityResult = baseEntries();
   activityError = null;
   pending = false;
+  window.localStorage.clear();
   mockedRequest.mockReset();
   mockedRequest.mockImplementation((url: string, opts?: ReqOpts) => routeRequest(url, opts));
 });

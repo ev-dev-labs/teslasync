@@ -27,7 +27,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useUrlString } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -93,14 +94,10 @@ export default function StatisticsPage() {
     }
   };
 
-  const defaultStart = useMemo(() => {
-    const d = new Date(); d.setFullYear(d.getFullYear() - 1);
-    return d.toISOString().slice(0, 10);
-  }, []);
-  const defaultEnd = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [startDate] = useUrlString('from', defaultStart);
-  const [endDate] = useUrlString('to', defaultEnd);
-  const setRangeBatch = useUrlBatch();
+  const { start: startDate, end: endDate, setRange } = useRangeState({
+    persistKey: 'statistics.range',
+    defaultPresetId: '1y',
+  });
 
   // Reactive chart palette: color-blind safe or neon per user preference.
   const palette = useChartPalette();
@@ -177,7 +174,7 @@ export default function StatisticsPage() {
       )}
       <RangePicker
         value={{ start: startDate, end: endDate }}
-        onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+        onChange={setRange}
         align="end"
         triggerTestId="statistics-range"
       />

@@ -32,7 +32,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
@@ -194,15 +194,10 @@ export default function EnergyPage() {
   const { vehicleId } = useSelectedVehicle();
 
   /* ── Date range ───────────────────────────────────────────────── */
-  const defaultStartDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStartDate);
-  const [endDate] = useUrlString('to', defaultEndDate);
-  const setRangeBatch = useUrlBatch();
+  const { start: startDate, end: endDate, setRange } = useRangeState({
+    persistKey: 'energy.range',
+    defaultPresetId: '30d',
+  });
 
   /* URL-persisted hidden-series state for the two-series
      energy/efficiency composed chart. */
@@ -264,7 +259,7 @@ export default function EnergyPage() {
   const startMs = new Date(startDate).getTime();
   const endMs = new Date(endDate).getTime();
   const periodDays = Number.isFinite(startMs) && Number.isFinite(endMs)
-    ? Math.max(1, Math.ceil((endMs - startMs) / 86400000))
+    ? Math.max(1, Math.floor((endMs - startMs) / 86400000) + 1)
     : 30;
   const costPerKm = totalDistance > 0 ? totalCost / totalDistance : 0;
   const costPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
@@ -481,7 +476,7 @@ export default function EnergyPage() {
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
-            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            onChange={setRange}
             align="end"
             triggerTestId="energy-range"
           />

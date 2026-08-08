@@ -20,7 +20,7 @@ type GroupProps = ComponentProps<typeof CollapsibleCommandGroup>;
 function renderGroup(overrides: Partial<GroupProps> = {}) {
   const props: GroupProps = {
     category: 'security',
-    vehicleId: 1,
+    vehicleKey: 1,
     count: 3,
     children: <span data-testid="cmd-child">CHILD TILE</span>,
     ...overrides,
@@ -48,7 +48,7 @@ describe('CollapsibleCommandGroup', () => {
   });
 
   it('expands on click: children mount, aria-expanded flips true, aria-controls points at the panel, state persisted', () => {
-    renderGroup({ vehicleId: 1, category: 'security' });
+    renderGroup({ vehicleKey: 1, category: 'security' });
     const button = screen.getByRole('button');
 
     fireEvent.click(button);
@@ -69,7 +69,7 @@ describe('CollapsibleCommandGroup', () => {
   });
 
   it('honours defaultOpen and collapses (persisting "false") on click', () => {
-    renderGroup({ vehicleId: 5, category: 'charging', defaultOpen: true });
+    renderGroup({ vehicleKey: 5, category: 'charging', defaultOpen: true });
     expect(screen.getByTestId('cmd-child')).toBeInTheDocument();
     const button = screen.getByRole('button');
     expect(button).toHaveAttribute('aria-expanded', 'true');
@@ -84,14 +84,14 @@ describe('CollapsibleCommandGroup', () => {
   it('restores a persisted OPEN state from sessionStorage, overriding defaultOpen=false', () => {
     sessionStorage.setItem('teslasync-cat-7-charging', 'true');
     // defaultOpen omitted → false, but the stored value wins.
-    renderGroup({ vehicleId: 7, category: 'charging' });
+    renderGroup({ vehicleKey: 7, category: 'charging' });
     expect(screen.getByTestId('cmd-child')).toBeInTheDocument();
     expect(screen.getByRole('button')).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('restores a persisted CLOSED state from sessionStorage, overriding defaultOpen=true', () => {
     sessionStorage.setItem('teslasync-cat-2-climate', 'false');
-    renderGroup({ vehicleId: 2, category: 'climate', defaultOpen: true });
+    renderGroup({ vehicleKey: 2, category: 'climate', defaultOpen: true });
     expect(screen.queryByTestId('cmd-child')).toBeNull();
     expect(screen.getByRole('button')).toHaveAttribute('aria-expanded', 'false');
   });
@@ -122,7 +122,7 @@ describe('CollapsibleCommandGroup', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('storage blocked');
     });
-    renderGroup({ vehicleId: 9, category: 'drive', defaultOpen: true });
+    renderGroup({ vehicleKey: 9, category: 'drive', defaultOpen: true });
     expect(screen.getByTestId('cmd-child')).toBeInTheDocument();
     expect(screen.getByRole('button')).toHaveAttribute('aria-expanded', 'true');
   });
@@ -131,7 +131,7 @@ describe('CollapsibleCommandGroup', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError');
     });
-    renderGroup({ vehicleId: 3, category: 'doors' });
+    renderGroup({ vehicleKey: 3, category: 'doors' });
     const button = screen.getByRole('button');
 
     expect(() => fireEvent.click(button)).not.toThrow();

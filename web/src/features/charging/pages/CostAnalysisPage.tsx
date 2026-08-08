@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -12,7 +12,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
@@ -48,15 +48,15 @@ export default function CostAnalysisPage() {
   const { vehicleId } = useSelectedVehicle();
 
   // ── Filters ──────────────────────────────────────────────────────────
-  const defaultStartDate = useMemo(() => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - 1);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStartDate);
-  const [endDate] = useUrlString('to', defaultEndDate);
-  const setRangeBatch = useUrlBatch();
+  const {
+    start: startDate,
+    end: endDate,
+    setRange,
+    reset: resetRange,
+  } = useRangeState({
+    persistKey: 'cost-analysis.range',
+    defaultPresetId: '1y',
+  });
 
   // ── Gas calculator inputs ────────────────────────────────────────────
   const [gasPrice, setGasPrice] = useState(DEFAULT_GAS_PRICE);
@@ -89,7 +89,7 @@ export default function CostAnalysisPage() {
       <VehicleSelect />
       <RangePicker
         value={{ start: startDate, end: endDate }}
-        onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+        onChange={setRange}
         align="end"
         triggerTestId="cost-analysis-range"
       />
@@ -120,7 +120,7 @@ export default function CostAnalysisPage() {
             isLoading={sessionsLoading}
             error={sessionsError}
             onRetry={retrySessions}
-            onResetRange={() => setRangeBatch({ from: null, to: null })}
+            onResetRange={resetRange}
           />
         </section>
       </FadeIn>

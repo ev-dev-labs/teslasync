@@ -3,8 +3,7 @@
  *
  * DriveScorePage default-exports the page plus a set of pure helpers that are
  * unit-tested directly (the scoring algorithm, grade mapping, tip/achievement
- * builders, the default date window, and the newly-extracted
- * `computePeriodStats`). The page's file-local sub-components
+ * builders, and `computePeriodStats`). The page's file-local sub-components
  * (CategoryGaugeCard, the nine render bands) are exercised transitively through
  * the full page render.
  *
@@ -23,8 +22,8 @@
  *      (the date-filter + state wiring).
  *   7. REFRESH — the icon-only refresh control is labelled and calls refetch.
  *   8. HELPERS — scoreDrive branches (typical / null-fallbacks / floors),
- *      gradeFromScore boundaries, gradeVariant, gradeColor, the default date
- *      window, buildTips, buildAchievements checks, and computePeriodStats
+ *      gradeFromScore boundaries, gradeVariant, gradeColor, buildTips,
+ *      buildAchievements checks, and computePeriodStats
  *      including the cross-month "Best Week" collision fix.
  *
  * Network is never hit: the data hooks, vehicle picker, form controls, and the
@@ -134,8 +133,6 @@ import DriveScorePage, {
   gradeFromScore,
   gradeVariant,
   gradeColor,
-  getDefaultStartDate,
-  getDefaultEndDate,
   buildTips,
   buildAchievements,
   computePeriodStats,
@@ -538,25 +535,6 @@ describe('gradeVariant / gradeColor', () => {
     expect(gradeColor('A+')).toBe('#39ff14');
     expect(gradeColor('F')).toBe('#f87171');
     expect(gradeColor('Z')).toBe('#94a3b8');
-  });
-});
-
-describe('default date window', () => {
-  it('returns a today→30-days-ago ISO window', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2024-06-15T12:00:00Z'));
-    try {
-      const end = getDefaultEndDate();
-      const start = getDefaultStartDate();
-      // getDefaultEndDate is a pure UTC slice → deterministic across timezones.
-      expect(end).toBe('2024-06-15');
-      expect(start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      const spanDays =
-        (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY_MS;
-      expect(spanDays).toBe(30);
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });
 

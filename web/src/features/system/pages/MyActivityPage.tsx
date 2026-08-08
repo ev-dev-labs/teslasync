@@ -23,7 +23,7 @@ import { FadeIn } from '@/components/motion';
 import { RangePicker } from '@/components/forms';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { ApiError } from '@/lib/resilience';
 import { useMyRecentActivity } from '@/api/hooks/useUser';
 import {
@@ -35,31 +35,18 @@ import {
   ActivityFeedPanel,
 } from '../components/my-activity';
 
-const DEFAULT_WINDOW_DAYS = 30;
 const ACTIVITY_LIMIT = 200;
-
-/** Returns a YYYY-MM-DD string for the given date, in local time. */
-function isoDate(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 export default function MyActivityPage() {
   const { t } = useTranslation();
   usePageTitle(t('activity.myActivity.title', 'My Activity'));
 
-  const defaults = useMemo(() => {
-    const today = new Date();
-    const startDay = new Date(today);
-    startDay.setDate(startDay.getDate() - (DEFAULT_WINDOW_DAYS - 1));
-    return { start: isoDate(startDay), end: isoDate(today) };
-  }, []);
-
-  const [start] = useUrlString('start', defaults.start);
-  const [end] = useUrlString('end', defaults.end);
-  const setRangeBatch = useUrlBatch();
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'my-activity.range',
+    defaultPresetId: '30d',
+    fromKey: 'start',
+    toKey: 'end',
+  });
 
   const query = useMyRecentActivity({ start, end, limit: ACTIVITY_LIMIT });
   const { data, isLoading, isError, error, refetch } = query;
@@ -89,7 +76,7 @@ export default function MyActivityPage() {
   const actions = (
     <RangePicker
       value={{ start, end }}
-      onChange={(r) => setRangeBatch({ start: r.start, end: r.end })}
+      onChange={setRange}
       align="end"
       triggerTestId="my-activity-range"
     />

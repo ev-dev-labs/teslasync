@@ -76,6 +76,14 @@ vi.mock('react-i18next', async () => {
   }
 })
 
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => ({
+    start: '2025-06-01',
+    end: '2025-06-30',
+    setRange: vi.fn(),
+  }),
+}))
+
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'

@@ -38,7 +38,7 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStat
 
   // Keyboard parity for the sanctioned role="button" tile (see eslint.config.js:
   // click sites are remediated with role="button" + onKeyDown). Ignore key
-  // events that bubble up from the nested favorite <button> so pressing
+  // events that bubble up from the nested favorite control so pressing
   // Enter/Space while it is focused never also fires the command.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
@@ -59,7 +59,7 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStat
       aria-busy={loading || undefined}
       aria-disabled={loading || undefined}
       className={cn(
-        'p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[100px] justify-center cursor-pointer relative group',
+        'p-3 sm:p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[116px] justify-center cursor-pointer relative group',
         'outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--theme-primary)]',
         hoverStyles[variant] ?? hoverStyles.default,
         loading && 'opacity-50 cursor-not-allowed',
@@ -74,12 +74,14 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStat
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
         aria-pressed={isFavorite}
         className={cn(
-          'absolute left-1.5 top-1.5 h-auto rounded p-0.5 transition-opacity hover:bg-transparent',
-          isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-[var(--text-muted)]',
+          'absolute left-0 top-0 min-h-11 min-w-11 rounded p-0 transition-opacity hover:bg-transparent',
+          isFavorite
+            ? 'opacity-100 text-amber-300'
+            : 'opacity-60 text-[var(--text-muted)] focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-60',
         )}
         aria-label={t('commands.toggleFavorite', 'Toggle favorite')}
       >
-        <Star aria-hidden="true" className={cn('h-3 w-3', isFavorite && 'fill-current')} />
+        <Star aria-hidden="true" className={cn('h-3.5 w-3.5', isFavorite && 'fill-current')} />
       </ControlButton>
 
       {def.dangerous && (

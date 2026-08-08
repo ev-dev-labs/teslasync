@@ -1,8 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useRangeState } from '../useRangeState';
+import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '../useRangeState';
 
 function withRouter(initialEntries: string[]) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -123,6 +123,120 @@ describe('useRangeState — localStorage persistence', () => {
     // Should fall back to 7d default rather than crash.
     expect(result.current.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
+
+  it('inherits the last selection across page-specific storage keys', () => {
+    const firstPage = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+    act(() => {
+      firstPage.result.current.setRange({
+        start: '2025-02-01',
+        end: '2025-02-28',
+      });
+    });
+    firstPage.unmount();
+
+    const secondPage = renderHook(
+      () => useRangeState({ persistKey: 'drives.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+    expect(secondPage.result.current.start).toBe('2025-02-01');
+    expect(secondPage.result.current.end).toBe('2025-02-28');
+  });
+
+  it('uses an explicit URL instead of the shared selection', () => {
+    window.localStorage.setItem(
+      SHARED_RANGE_STORAGE_KEY,
+      JSON.stringify({ start: '2024-06-01', end: '2024-06-30' }),
+    );
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'drives.list.range' }),
+      { wrapper: withRouter(['/charging?from=2025-03-01&to=2025-03-31']) },
+    );
+
+    expect(result.current.start).toBe('2025-03-01');
+    expect(result.current.end).toBe('2025-03-31');
+    expect(JSON.parse(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}'))
+      .toEqual({ start: '2025-03-01', end: '2025-03-31' });
+  });
+
+  it('prefers shared storage over a legacy page-specific selection', () => {
+    window.localStorage.setItem(
+      SHARED_RANGE_STORAGE_KEY,
+      JSON.stringify({ start: '2025-04-01', end: '2025-04-30' }),
+    );
+    window.localStorage.setItem(
+      'charging.list.range',
+      JSON.stringify({ start: '2024-06-01', end: '2024-06-30' }),
+    );
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(result.current.start).toBe('2025-04-01');
+    expect(result.current.end).toBe('2025-04-30');
+  });
+
+  it('promotes a non-default legacy page selection when shared storage is empty', () => {
+    window.localStorage.setItem(
+      'charging.list.range',
+      JSON.stringify({ start: '2024-06-01', end: '2024-06-30' }),
+    );
+    renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range', defaultPresetId: '30d' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(JSON.parse(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}'))
+      .toEqual({ start: '2024-06-01', end: '2024-06-30' });
+  });
+
+  it('ignores malformed shared storage and falls back to the page selection', () => {
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, '{not json');
+    window.localStorage.setItem(
+      'charging.list.range',
+      JSON.stringify({ start: '2024-07-01', end: '2024-07-31' }),
+    );
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(result.current.start).toBe('2024-07-01');
+    expect(result.current.end).toBe('2024-07-31');
+  });
+
+  it('clamps the page range without shrinking the shared selection', () => {
+    const shared = { start: '2020-01-01', end: '2025-01-31' };
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify(shared));
+    const { result } = renderHook(
+      () => useRangeState({
+        persistKey: 'limited-data.range',
+        minDate: '2024-01-01',
+      }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(result.current.start).toBe('2024-01-01');
+    expect(result.current.end).toBe('2025-01-31');
+    expect(JSON.parse(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}'))
+      .toEqual(shared);
+  });
+
+  it('stores the page default as the shared range after an explicit reset', () => {
+    const { result } = renderHook(
+      () => useRangeState({ defaultPresetId: '7d' }),
+      { wrapper: withRouter(['/charging?from=2025-01-01&to=2025-01-31']) },
+    );
+    act(() => result.current.reset());
+
+    const stored = JSON.parse(
+      window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}',
+    );
+    expect(stored).toEqual({ start: result.current.start, end: result.current.end });
+  });
 });
 
 describe('useRangeState — preset id derivation', () => {
@@ -234,6 +348,29 @@ describe('useRangeState — atomic updates', () => {
     });
     rerender();
     expect(urlSnap).toMatch(/^\d{4}-\d{2}-\d{2}\|\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('updates related URL keys in the same navigation as the range', () => {
+    const { result } = renderHook(() => {
+      const range = useRangeState();
+      const [params] = useSearchParams();
+      return { range, query: params.toString() };
+    }, {
+      wrapper: withRouter(['/charging?page=4']),
+    });
+
+    act(() => {
+      result.current.range.setRangeWithUrlUpdates(
+        { start: '2025-05-01', end: '2025-05-31' },
+        { page: null, q: 'roadtrip' },
+      );
+    });
+
+    const params = new URLSearchParams(result.current.query);
+    expect(params.get('from')).toBe('2025-05-01');
+    expect(params.get('to')).toBe('2025-05-31');
+    expect(params.get('page')).toBeNull();
+    expect(params.get('q')).toBe('roadtrip');
   });
 
   it('reset removes from/to/compare from the URL', () => {

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
@@ -49,6 +49,7 @@ import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -210,16 +211,6 @@ function scoreTextClass(score: number | null): string {
   if (score >= 80) return 'text-emerald-300';
   if (score >= 60) return 'text-amber-300';
   return 'text-rose-300';
-}
-
-export function getDefaultStartDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 30);
-  return d.toISOString().slice(0, 10);
-}
-
-export function getDefaultEndDate(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 /* ------------------------------------------------------------------ */
@@ -603,8 +594,10 @@ export default function DriveScorePage() {
     `${fmtInt(efficiencyDisplay(whPerKm))} ${efficiencyUnit}`;
 
   /* ---- date filter ---- */
-  const [startDate, setStartDate] = useState<string>(getDefaultStartDate);
-  const [endDate, setEndDate] = useState<string>(getDefaultEndDate);
+  const { start: startDate, end: endDate, setRange } = useRangeState({
+    persistKey: 'drive-score.range',
+    defaultPresetId: '30d',
+  });
 
   /* ---- table sort (shared DataTable controlled sort) ---- */
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date', 'desc');
@@ -1001,10 +994,7 @@ export default function DriveScorePage() {
       <VehicleSelect />
       <RangePicker
         value={{ start: startDate, end: endDate }}
-        onChange={(r) => {
-          setStartDate(r.start);
-          setEndDate(r.end);
-        }}
+        onChange={setRange}
         align="end"
         triggerTestId="drive-score-range"
       />

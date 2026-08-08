@@ -12,7 +12,7 @@ import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
 import {
@@ -44,15 +44,10 @@ export default function DrivetrainHealthPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const defaultStartDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStartDate);
-  const [endDate] = useUrlString('to', defaultEndDate);
-  const setRangeBatch = useUrlBatch();
+  const { start: startDate, end: endDate, setRange } = useRangeState({
+    persistKey: 'drivetrain-health.range',
+    defaultPresetId: '30d',
+  });
 
   const healthQuery = useDrivetrainHealth(vehicleIdStr);
   const {
@@ -161,7 +156,7 @@ export default function DrivetrainHealthPage() {
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
-            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            onChange={setRange}
             align="end"
             triggerTestId="drivetrain-health-range-picker"
           />
