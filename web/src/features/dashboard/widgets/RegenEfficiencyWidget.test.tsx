@@ -8,8 +8,8 @@
  *   - compact (cols ≤ 1)  → a titleless `WidgetGaugeHero` (recovery gauge
  *                            only, no stat tiles).
  *   - standard (cols > 1) → a titled shell (with a help affordance) wrapping the
- *                           gauge plus a 3-up stat strip: Total Recovered (energy),
- *                           Monthly Avg (power), and Free Charges (integer count).
+ *                           gauge plus a 3-up stat strip: Total Recovered,
+ *                           Drive Energy, and Free Charges (integer count).
  * The gauge stroke colour is threshold-driven: > 30% recovery is green, > 15% is
  * amber, everything else is red. The shell owns the loading skeleton, the error
  * `QueryError`, and the freshness / refresh affordance. The body is never a blank
@@ -17,7 +17,7 @@
  *
  * The two data hooks are mocked at their module boundaries so every orchestration
  * branch is deterministic and the network is never touched. `useUnits` is stubbed
- * with deterministic `formatEnergy` / `formatPower` spies so the SI pass-through,
+ * with deterministic `formatEnergy` spies so the SI pass-through,
  * the `{ precision: 1 }` override, and the null-placeholder path are all exact and
  * inspectable. `react-i18next` is echo-mocked (returns the English fallback);
  * `useSettings` / `useTimezone` come from the global stub in src/test-setup.ts.
@@ -84,7 +84,6 @@ vi.mock('@/api/hooks/useDriving', async (importActual) => {
 // widget's memoised `stats` keeps stable formatter references between renders.
 const units = vi.hoisted(() => ({
   formatEnergy: vi.fn((v?: number | null) => (v == null ? '—' : `${v} Wh`)),
-  formatPower: vi.fn((v?: number | null) => (v == null ? '—' : `${v} W`)),
 }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => units }));
 
@@ -143,6 +142,7 @@ function vehicles(ids: number[]): never {
 
 function makeData(over: Partial<RegenEfficiencyData> = {}): RegenEfficiencyData {
   return {
+    vehicleId: 1,
     totalRegenWh: 1234,
     totalDriveWh: 5000,
     // `/analytics/regen` returns regen_ratio already as a percentage
@@ -150,6 +150,10 @@ function makeData(over: Partial<RegenEfficiencyData> = {}): RegenEfficiencyData 
     regenRatio: 24.7,
     monthlyAvgRegen: 56,
     freeCharges: 7,
+    monthlySummary: [],
+    drives: [],
+    batteryCapacityWh: 75_000,
+    capacitySource: 'default',
     ...over,
   };
 }
@@ -213,16 +217,16 @@ describe('RegenEfficiencyWidget — standard layout', () => {
     // Three stat tiles with their formatted values.
     expect(screen.getByText('Total Recovered')).toBeInTheDocument();
     expect(screen.getByText('1234 Wh')).toBeInTheDocument();
-    expect(screen.getByText('Monthly Avg')).toBeInTheDocument();
-    expect(screen.getByText('56 W')).toBeInTheDocument();
+    expect(screen.getByText('Drive Energy')).toBeInTheDocument();
+    expect(screen.getByText('5000 Wh')).toBeInTheDocument();
 
     // Free charges renders through the integer formatter within its own tile.
     const freeTile = screen.getByText('Free Charges').parentElement as HTMLElement;
     expect(within(freeTile).getByText('7')).toBeInTheDocument();
 
-    // Energy/power formatters receive the SI value + the 1-dp precision override.
+    // Energy formatters receive both SI values + the 1-dp precision override.
     expect(units.formatEnergy).toHaveBeenCalledWith(1234, { precision: 1 });
-    expect(units.formatPower).toHaveBeenCalledWith(56, { precision: 1 });
+    expect(units.formatEnergy).toHaveBeenCalledWith(5000, { precision: 1 });
   });
 
   it('exposes an accessible help affordance describing regen recovery', () => {
@@ -243,7 +247,7 @@ describe('RegenEfficiencyWidget — compact layout', () => {
     expect(hasGauge(container)).toBe(true);
     // Stats are suppressed in the compact gauge hero.
     expect(screen.queryByText('Total Recovered')).toBeNull();
-    expect(screen.queryByText('Monthly Avg')).toBeNull();
+    expect(screen.queryByText('Drive Energy')).toBeNull();
   });
 
   it('shows the empty state (never a blank panel) when there is no data', () => {
@@ -335,7 +339,7 @@ describe('RegenEfficiencyWidget — null-safety', () => {
         data: makeData({
           regenRatio: undefined as unknown as number,
           totalRegenWh: undefined as unknown as number,
-          monthlyAvgRegen: undefined as unknown as number,
+          totalDriveWh: undefined as unknown as number,
           freeCharges: undefined as unknown as number,
         }),
       }),
@@ -346,10 +350,9 @@ describe('RegenEfficiencyWidget — null-safety', () => {
     expect(screen.getByText('0%')).toBeInTheDocument();
     expect(hasGaugeColor(container, RED)).toBe(true);
 
-    // Energy + power formatters are still called with the undefined SI value and
-    // return the placeholder (never a blank tile).
+    // Both energy formatters are still called; missing drive energy returns
+    // the placeholder (never a blank tile).
     expect(units.formatEnergy).toHaveBeenCalledWith(undefined, { precision: 1 });
-    expect(units.formatPower).toHaveBeenCalledWith(undefined, { precision: 1 });
     expect(screen.getAllByText('—')).toHaveLength(2);
 
     // freeCharges undefined → integer formatter coalesces to "0".

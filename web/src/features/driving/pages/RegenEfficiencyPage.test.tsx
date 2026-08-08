@@ -1,71 +1,48 @@
-/**
- * RegenEfficiencyPage — behaviour + hardening coverage.
- *
- * The page default-exports the orchestrator plus three pure helpers that are
- * unit-tested directly:
- *   - `regenColor`        — ratio → threshold color (every band + boundaries).
- *   - `getRegenRatio`     — per-drive recovery ratio. Regression: the old guard
- *                           gated the ratio on `avgPowerW`, an independently
- *                           nullable field, so drives imported without power
- *                           telemetry showed "—" despite valid energy counters.
- *   - `buildMonthlyTrend` — month-bucketed kWh trend. Regression: the old
- *                           `parseFloat(fmtNumber(x, 1))` round-trip truncated
- *                           high-regen months (a thousands separator turned
- *                           "1,234.5" into `1`).
- *
- * Page render coverage: READY (every section, KPI, panel, caption + the
- * avgPowerW bug fix surfaced end-to-end), LOADING (skeletons, no ready values
- * leak), ERROR (regen band + drives band degrade to QueryError with a wired
- * Retry), EMPTY (per-section EmptyState, never a blank panel, KPI band still
- * shows), FILTER (an out-of-range window empties the client-derived sections),
- * and a11y (KPI landmark, chart image label, icon-only help control label).
- *
- * Network is never hit: the data hooks, vehicle picker, unit formatters, form
- * controls, and the chart-annotation read are all stubbed. i18n is stubbed so
- * visible copy is the English fallback with {{placeholder}} interpolation.
- */
-
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ToastProvider } from '@/components/feedback/Toast';
-import { chartTokens } from '@/lib/tokens';
+import { ToastProvider } from '@/components/feedback';
 import type { Drive, RegenEfficiencyData } from '@/types/driving';
 
-// ── Hoisted, per-test controllable state ─────────────────────────────
 const h = vi.hoisted(() => ({
-  regen: undefined as unknown,
+  aggregate: undefined as unknown,
   drives: undefined as unknown,
   vehicleId: 7 as number | null,
+  aggregateHook: vi.fn(),
+  drivesHook: vi.fn(),
 }));
 
-const regenRefetch = vi.fn();
+const aggregateRefetch = vi.fn();
 const drivesRefetch = vi.fn();
+const csvMocks = vi.hoisted(() => ({
+  objectsToCSV: vi.fn(
+    (_rows: readonly Record<string, unknown>[]) => 'csv',
+  ),
+  downloadCSV: vi.fn(),
+}));
 
 vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  const actual = await vi.importActual<typeof import('react-i18next')>(
+    'react-i18next',
+  );
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, arg2?: unknown, arg3?: unknown) => {
-        let template = key;
-        let options: Record<string, unknown> | undefined;
-        if (typeof arg2 === 'string') {
-          template = arg2;
-          if (arg3 && typeof arg3 === 'object') options = arg3 as Record<string, unknown>;
-        } else if (arg2 && typeof arg2 === 'object') {
-          options = arg2 as Record<string, unknown>;
-          if (typeof options.defaultValue === 'string') template = options.defaultValue;
-        }
-        if (options) {
-          template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
-            options && options[name] != null ? String(options[name]) : '',
-          );
-        }
-        return template;
+      t: (key: string, fallback?: unknown, options?: unknown) => {
+        let text = typeof fallback === 'string' ? fallback : key;
+        const values =
+          options && typeof options === 'object'
+            ? (options as Record<string, unknown>)
+            : {};
+        text = text.replace(
+          /\{\{\s*(\w+)\s*\}\}/g,
+          (_match, name: string) =>
+            values[name] != null ? String(values[name]) : '',
+        );
+        return text;
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
@@ -77,8 +54,34 @@ vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useDriving')>();
   return {
     ...actual,
-    useRegenEfficiency: () => h.regen,
-    useDrives: () => h.drives,
+    useRegenEfficiency: (
+      vehicleId?: string,
+      start?: string,
+      end?: string,
+    ) => {
+      h.aggregateHook(vehicleId, start, end);
+      return h.aggregate;
+    },
+    useDrives: (
+      vehicleId?: string,
+      options?: {
+        start?: string;
+        end?: string;
+        limit?: number;
+      },
+    ) => {
+      h.drivesHook(vehicleId, options);
+      return h.drives;
+    },
+  };
+});
+
+vi.mock('@/lib/csvExport', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/csvExport')>();
+  return {
+    ...actual,
+    objectsToCSV: csvMocks.objectsToCSV,
+    downloadCSV: csvMocks.downloadCSV,
   };
 });
 
@@ -91,40 +94,46 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   }),
 }));
 
-// Deterministic formatters — echo the raw SI number so assertions read cleanly
-// and don't depend on the real unit-conversion lib (which has its own tests).
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return {
+    ...actual,
+    useTimezone: () => 'America/Los_Angeles',
+  };
+});
+
+const unitPrefs = {
+  distance: 'km',
+  speed: 'km/h',
+  temperature: '°C',
+  pressure: 'bar',
+  energy: 'kWh',
+  duration: 'h',
+  power: 'kW',
+  locale: 'en-US',
+  precision: 1,
+} as const;
+
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    unitPrefs: {
-      distance: 'km',
-      speed: 'km/h',
-      temperature: '°C',
-      pressure: 'bar',
-      energy: 'kWh',
-      duration: 'h',
-      power: 'kW',
-      locale: 'en-US',
-      precision: undefined,
-    },
-    formatDistance: (v: number | null | undefined) => String(v ?? 0),
-    formatSpeed: (v: number | null | undefined) => String(v ?? 0),
-    formatTemperature: (v: number | null | undefined) => String(v ?? 0),
-    formatPressure: (v: number | null | undefined) => String(v ?? 0),
-    formatEnergy: (v: number | null | undefined) => String(v ?? 0),
-    formatDuration: (v: number | null | undefined) => String(v ?? 0),
-    formatPower: (v: number | null | undefined) => String(v ?? 0),
+    unitPrefs,
+    formatDistance: (value: number | null | undefined) =>
+      value == null ? '—' : `${value} distance`,
+    formatSpeed: (value: number | null | undefined) =>
+      value == null ? '—' : `${value} speed`,
+    formatTemperature: (value: number | null | undefined) =>
+      value == null ? '—' : `${value} °C`,
+    formatPressure: (value: number | null | undefined) =>
+      value == null ? '—' : `${value} pressure`,
+    formatEnergy: (value: number | null | undefined) =>
+      value == null ? '—' : `${value} energy`,
+    formatDuration: (value: number | null | undefined) =>
+      value == null ? '—' : `${value} duration`,
+    formatPower: (value: number | null | undefined) =>
+      value == null ? '—' : `${value} power`,
   }),
 }));
 
-// ChartContainer's `annotations={…}` prop fires a GET for saved annotations.
-// Stub the read so the composed-chart section stays network-free.
-vi.mock('@/api/hooks/useAnnotations', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/api/hooks/useAnnotations')>();
-  return { ...actual, useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false }) };
-});
-
-// RangePicker → a button that commits a fixed far-future range so the client
-// date filter empties the derived sections. VehicleSelect → an inert marker.
 vi.mock('@/components/forms', () => ({
   RangePicker: ({
     value,
@@ -132,16 +141,17 @@ vi.mock('@/components/forms', () => ({
     triggerTestId,
   }: {
     value: { start: string; end: string };
-    onChange: (r: { start: string; end: string }) => void;
+    onChange: (range: { start: string; end: string }) => void;
     triggerTestId?: string;
-    align?: string;
   }) => (
     <button
       type="button"
-      data-testid={triggerTestId ?? 'range-picker'}
+      data-testid={triggerTestId}
       data-start={value.start}
       data-end={value.end}
-      onClick={() => onChange({ start: '2099-01-01', end: '2099-01-31' })}
+      onClick={() =>
+        onChange({ start: '2026-01-01', end: '2026-01-31' })
+      }
     >
       change range
     </button>
@@ -149,81 +159,61 @@ vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
 
-import RegenEfficiencyPage, {
-  regenColor,
-  getRegenRatio,
-  buildMonthlyTrend,
-} from './RegenEfficiencyPage';
+import RegenEfficiencyPage from './RegenEfficiencyPage';
 
-// jsdom lacks matchMedia (framer-motion's useReducedMotion via FadeIn).
-if (!window.matchMedia) {
-  window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  })) as unknown as typeof window.matchMedia;
-}
-
-// ── Fixtures ─────────────────────────────────────────────────────────
 function makeDrive(overrides: Partial<Drive> = {}): Drive {
   return {
     id: 1,
     vehicleId: 7,
-    startTs: '2024-01-15T12:00:00Z',
-    endTs: '2024-01-15T13:00:00Z',
-    durationS: 3600,
-    distanceM: 100_000,
+    startTs: '2025-01-15T12:00:00Z',
+    endTs: '2025-01-15T12:30:00Z',
+    durationS: 1_800,
+    distanceM: 25_000,
     startAddress: null,
     endAddress: null,
     startLat: null,
     startLon: null,
     endLat: null,
     endLon: null,
-    startBatteryPct: 80,
+    startBatteryPct: 70,
     endBatteryPct: 60,
     energyUsedWh: 8_000,
     regenEnergyWh: 2_000,
-    avgSpeedMps: 20,
-    maxSpeedMps: 40,
-    avgPowerW: 30_000,
-    outsideTempAvgC: 20,
+    avgSpeedMps: 15,
+    maxSpeedMps: 30,
+    avgPowerW: 4_000,
+    outsideTempAvgC: 15,
     insideTempAvgC: 21,
     score: null,
     endedStatus: 'completed',
-    createdAt: '2024-01-15T12:00:00Z',
-    updatedAt: '2024-01-15T13:00:00Z',
-    live: false,
+    createdAt: '2025-01-15T12:00:00Z',
+    updatedAt: '2025-01-15T12:30:00Z',
     ...overrides,
   };
 }
 
-const regenData: RegenEfficiencyData = {
-  totalRegenWh: 50_000,
-  totalDriveWh: 200_000,
-  regenRatio: 18,
-  monthlyAvgRegen: 7_000,
-  freeCharges: 3,
-};
-
-// Two months, both with regen > 0. driveB has avgPowerW: null — the row must
-// still show a ratio (the removed-guard regression) → 30.00%.
-const driveJan = makeDrive({ id: 1, startTs: '2024-01-15T12:00:00Z', regenEnergyWh: 2_000, energyUsedWh: 8_000 });
-const driveFeb = makeDrive({
-  id: 2,
-  startTs: '2024-02-20T12:00:00Z',
-  regenEnergyWh: 3_000,
-  energyUsedWh: 10_000,
-  avgPowerW: null,
-});
+function makeAggregate(
+  overrides: Partial<RegenEfficiencyData> = {},
+): RegenEfficiencyData {
+  return {
+    vehicleId: 7,
+    totalRegenWh: 50_000,
+    totalDriveWh: 200_000,
+    regenRatio: 25,
+    monthlyAvgRegen: 7_000,
+    freeCharges: 0.7,
+    monthlySummary: [],
+    drives: [],
+    batteryCapacityWh: 75_000,
+    capacitySource: 'vin_estimate',
+    ...overrides,
+  };
+}
 
 interface QueryStub {
   data: unknown;
   isLoading: boolean;
+  isSuccess: boolean;
   isError: boolean;
   error: unknown;
   isFetching: boolean;
@@ -232,26 +222,32 @@ interface QueryStub {
   refetch: () => void;
 }
 
-function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
+function query(
+  overrides: Partial<QueryStub> = {},
+  refetch = aggregateRefetch,
+): QueryStub {
+  const isLoading = overrides.isLoading ?? false;
+  const isError = overrides.isError ?? false;
   return {
     data: undefined,
-    isLoading: false,
-    isError: false,
+    isLoading,
+    isSuccess: overrides.isSuccess ?? (!isLoading && !isError),
+    isError,
     error: null,
     isFetching: false,
     isStale: false,
     dataUpdatedAt: Date.now(),
-    refetch: regenRefetch,
+    refetch,
     ...overrides,
   };
 }
 
 function renderPage() {
-  const qc = new QueryClient({
+  const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={qc}>
+    <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={['/driving/regen']}>
           <RegenEfficiencyPage />
@@ -265,245 +261,387 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
   h.vehicleId = 7;
-  h.regen = makeQuery({ data: regenData, refetch: regenRefetch });
-  h.drives = makeQuery({ data: [driveJan, driveFeb], refetch: drivesRefetch });
+  h.aggregate = query({ data: makeAggregate() }, aggregateRefetch);
+  h.drives = query(
+    {
+      data: [
+        makeDrive(),
+        makeDrive({
+          id: 2,
+          startTs: '2025-02-20T12:00:00Z',
+          energyUsedWh: 10_000,
+          regenEnergyWh: 3_000,
+          outsideTempAvgC: 5,
+          startBatteryPct: 85,
+        }),
+      ],
+    },
+    drivesRefetch,
+  );
 });
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-/* ── Page render ─────────────────────────────────────────────────── */
 
 describe('RegenEfficiencyPage', () => {
-  it('renders every section, KPI card, panel, and the recovered caption when ready', () => {
+  it('renders the ready state with all eight persistent evidence sections', () => {
     renderPage();
 
-    // Page shell.
     expect(
-      screen.getByRole('heading', { level: 1, name: /Regenerative Braking/i }),
+      screen.getByRole('heading', { level: 1, name: 'Regenerative Braking' }),
     ).toBeInTheDocument();
-
-    // KPI landmark + all six metric cards (never hidden).
-    const kpis = screen.getByRole('region', { name: 'Regen summary metrics' });
+    for (const testId of [
+      'regen-kpis',
+      'regen-overview',
+      'regen-monthly',
+      'regen-distribution',
+      'regen-temperature',
+      'regen-soc',
+      'regen-evidence',
+      'regen-methodology',
+    ]) {
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+    }
+    const kpis = screen.getByTestId('regen-kpis');
     for (const label of [
-      'Total Regen',
-      'Recovery Rate',
-      'Monthly Avg kW',
-      'Free Charges',
-      'Lifetime Regen kWh',
-      'Lifetime Drive kWh',
+      'Aggregate recovered',
+      'Aggregate recovery share',
+      'Equivalent full-pack cycles',
+      'Aggregate drive energy',
+      'Detailed rows returned',
+      'Eligible detailed coverage',
     ]) {
       expect(within(kpis).getByText(label)).toBeInTheDocument();
     }
-    // Server recovery rate surfaces as a formatted percent.
-    expect(within(kpis).getByText('18.00%')).toBeInTheDocument();
-
-    // Panel titles across the page.
-    for (const title of ['Energy Recovery', 'Regen Metrics', 'Recent Regen Drives']) {
-      expect(screen.getByText(title)).toBeInTheDocument();
-    }
-    // "Monthly Regen Trend" is both a PanelTitle and the ChartContainer title.
-    expect(screen.getAllByText('Monthly Regen Trend').length).toBeGreaterThanOrEqual(1);
-
-    // Recovered caption interpolates energy + free-charge count.
-    expect(screen.getByText(/recovered 50000/)).toBeInTheDocument();
-
-    // The Feb drive has avgPowerW: null yet still yields a ratio (30.00%) —
-    // the removed-guard regression, proven end-to-end through the table.
-    expect(screen.getByText('30.00%')).toBeInTheDocument();
+    expect(screen.getByText('Drive #2')).toBeInTheDocument();
+    expect(screen.queryByText('Monthly Avg kW')).not.toBeInTheDocument();
   });
 
-  it('shows skeletons while loading and leaks no ready metric values', () => {
-    h.regen = makeQuery({ isLoading: true, isFetching: true, data: undefined, dataUpdatedAt: 0 });
-    h.drives = makeQuery({
+  it('keeps every section shell visible while both queries load', () => {
+    h.aggregate = query({
       isLoading: true,
       isFetching: true,
-      data: undefined,
       dataUpdatedAt: 0,
-      refetch: drivesRefetch,
     });
+    h.drives = query(
+      { isLoading: true, isFetching: true, dataUpdatedAt: 0 },
+      drivesRefetch,
+    );
 
     const { container } = renderPage();
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: /Regenerative Braking/i }),
-    ).toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    // No resolved KPI/metric values leak while loading.
-    expect(screen.queryByText('Total Regen')).not.toBeInTheDocument();
-    expect(screen.queryByText('18.00%')).not.toBeInTheDocument();
+    for (const testId of [
+      'regen-kpis',
+      'regen-overview',
+      'regen-monthly',
+      'regen-distribution',
+      'regen-temperature',
+      'regen-soc',
+      'regen-evidence',
+      'regen-methodology',
+    ]) {
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText('Loading…').length).toBeGreaterThanOrEqual(6);
+    expect(
+      screen.queryByText('Below the 1,000-row request cap'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No detailed rows returned'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No detailed drives were returned for this window.'),
+    ).not.toBeInTheDocument();
   });
 
-  it('degrades the regen band to QueryError and wires Retry to the regen refetch', () => {
-    h.regen = makeQuery({ isError: true, error: new Error('boom'), data: undefined, dataUpdatedAt: 0 });
-
-    renderPage();
-
-    // KPI band + Energy Recovery + Regen Metrics each surface the banner.
-    expect(screen.getAllByText(/Can't reach server/i).length).toBeGreaterThanOrEqual(3);
-
-    const retry = screen.getAllByRole('button', { name: /^Retry$/i });
-    expect(retry.length).toBeGreaterThanOrEqual(3);
-
-    fireEvent.click(retry[0]);
-    expect(regenRefetch).toHaveBeenCalledTimes(1);
-    expect(drivesRefetch).not.toHaveBeenCalled();
-  });
-
-  it('degrades the drives-derived sections to QueryError wired to the drives refetch', () => {
-    h.drives = makeQuery({
+  it('isolates an aggregate error while detailed evidence remains available', () => {
+    h.aggregate = query({
       isError: true,
-      error: new Error('boom'),
-      data: undefined,
-      dataUpdatedAt: 0,
-      refetch: drivesRefetch,
+      error: new Error('aggregate down'),
     });
 
     renderPage();
 
-    // Monthly trend + recent drives degrade; the regen band stays healthy.
-    const banners = screen.getAllByText(/Can't reach server/i);
-    expect(banners.length).toBe(2);
-    expect(screen.getAllByText('Total Regen').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
+    expect(screen.getByText('Monthly recovery trend')).toBeInTheDocument();
+    expect(screen.getByText('Drive #2')).toBeInTheDocument();
+    expect(screen.getByText('Ambient-temperature context')).toBeInTheDocument();
 
-    const retry = screen.getAllByRole('button', { name: /^Retry$/i });
-    fireEvent.click(retry[0]);
-    expect(drivesRefetch).toHaveBeenCalledTimes(1);
+    const errorRegion = screen.getByTestId('regen-kpis-aggregate-error');
+    fireEvent.click(within(errorRegion).getByRole('button', { name: 'Retry' }));
+    expect(aggregateRefetch).toHaveBeenCalledTimes(1);
+    expect(drivesRefetch).not.toHaveBeenCalled();
   });
 
-  it('renders a per-section EmptyState (never a blank panel) with no regen data', () => {
-    h.regen = makeQuery({ data: undefined, refetch: regenRefetch });
-    h.drives = makeQuery({ data: [], refetch: drivesRefetch });
+  it('isolates a detailed-drives error while complete aggregate evidence remains available', () => {
+    h.drives = query(
+      { isError: true, error: new Error('drives down') },
+      drivesRefetch,
+    );
 
     renderPage();
 
-    // Energy Recovery + Regen Metrics both show the no-data message.
+    expect(screen.getByText('50000 energy')).toBeInTheDocument();
+    expect(screen.getByText('Complete aggregate')).toBeInTheDocument();
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '25');
+    expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText('No regen efficiency data available yet').length,
-    ).toBeGreaterThanOrEqual(2);
-    // Chart + table have their own empty copy.
-    expect(screen.getByText('No data available')).toBeInTheDocument();
-    expect(screen.getByText('No regen drives in this period yet')).toBeInTheDocument();
+      screen.queryByText('Below the 1,000-row request cap'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No detailed rows returned'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No detailed drives were returned for this window.'),
+    ).not.toBeInTheDocument();
 
-    // KPI band still renders its labels (structural completeness).
-    expect(screen.getByText('Total Regen')).toBeInTheDocument();
+    const errorRegion = screen.getByTestId('regen-kpis-detail-error');
+    fireEvent.click(within(errorRegion).getByRole('button', { name: 'Retry' }));
+    expect(drivesRefetch).toHaveBeenCalledTimes(1);
+    expect(aggregateRefetch).not.toHaveBeenCalled();
   });
 
-  it('empties the drives-derived sections when an out-of-range window is committed', () => {
+  it('uses availability copy until the detailed query resolves successfully', () => {
+    h.drives = query(
+      { data: undefined, isSuccess: false },
+      drivesRefetch,
+    );
+
     renderPage();
 
-    // Ready first: the Feb drive's ratio row is present.
-    expect(screen.getByText('30.00%')).toBeInTheDocument();
-    expect(screen.queryByText('No regen drives in this period yet')).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        'Detailed data availability has not resolved.',
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText('Detailed availability not resolved'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Below the 1,000-row request cap'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No detailed rows returned'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No detailed drives were returned for this window.'),
+    ).not.toBeInTheDocument();
+  });
 
-    // Commit a far-future range that excludes both 2024 drives.
+  it('renders explicit empty content in every section', () => {
+    h.aggregate = query({
+      data: makeAggregate({
+        totalRegenWh: 0,
+        totalDriveWh: 0,
+        regenRatio: 0,
+        freeCharges: 0,
+      }),
+    });
+    h.drives = query({ data: [] }, drivesRefetch);
+
+    renderPage();
+
+    expect(
+      screen.getByText(
+        'No aggregate energy or detailed drives were returned for this selected window.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'The complete aggregate contains no drive-energy denominator for this window.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('No detailed drives were returned for this window.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No eligible dated drives are available for a monthly trend.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No eligible per-drive ratios are available for a distribution.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No returned drives include usable ambient-temperature context.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No returned drives include usable starting-SoC context.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('No eligible detailed drives are available to rank.'),
+    ).toBeInTheDocument();
+  });
+
+  it('warns throughout detailed sections when the 1,000-row cap is reached', () => {
+    h.drives = query(
+      {
+        data: Array.from({ length: 1_000 }, (_, index) =>
+          makeDrive({
+            id: index + 1,
+            startTs: `2025-01-${String((index % 28) + 1).padStart(2, '0')}T12:00:00Z`,
+          }),
+        ),
+      },
+      drivesRefetch,
+    );
+
+    renderPage();
+
+    expect(screen.getByText('1,000-row cap reached')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Detailed history cap reached').length,
+    ).toBeGreaterThanOrEqual(6);
+  });
+
+  it('calls both hooks with timezone-resolved instant bounds and a 1,000-row detailed limit', async () => {
+    renderPage();
+
+    expect(h.aggregateHook).toHaveBeenLastCalledWith(
+      '7',
+      expect.any(String),
+      expect.any(String),
+    );
+    expect(h.drivesHook).toHaveBeenLastCalledWith('7', {
+      start: expect.any(String),
+      end: expect.any(String),
+      limit: 1_000,
+    });
+
     fireEvent.click(screen.getByTestId('regen-efficiency-range'));
 
-    expect(screen.getByText('No regen drives in this period yet')).toBeInTheDocument();
-    expect(screen.queryByText('30.00%')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(h.aggregateHook).toHaveBeenLastCalledWith(
+        '7',
+        '2026-01-01T08:00:00.000Z',
+        '2026-02-01T08:00:00.000Z',
+      );
+      expect(h.drivesHook).toHaveBeenLastCalledWith('7', {
+        start: '2026-01-01T08:00:00.000Z',
+        end: '2026-02-01T08:00:00.000Z',
+        limit: 1_000,
+      });
+    });
   });
 
-  it('labels the KPI landmark, the trend chart image, and the icon-only help control', () => {
+  it('uses the selected timezone for ranked drive dates', () => {
+    h.drives = query(
+      {
+        data: [
+          makeDrive({
+            startTs: '2025-03-01T01:30:00Z',
+            endTs: '2025-03-01T02:00:00Z',
+          }),
+        ],
+      },
+      drivesRefetch,
+    );
+
     renderPage();
 
-    expect(screen.getByRole('region', { name: 'Regen summary metrics' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: /Monthly regen energy and drive count/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /More info about regen metrics/i }),
-    ).toBeInTheDocument();
-  });
-});
-
-/* ── regenColor ──────────────────────────────────────────────────── */
-
-describe('regenColor', () => {
-  it('maps each recovery band to its palette color', () => {
-    expect(regenColor(30)).toBe(chartTokens.series[1]); // emerald
-    expect(regenColor(20)).toBe(chartTokens.series[5]); // cyan
-    expect(regenColor(10)).toBe(chartTokens.series[2]); // amber
-    expect(regenColor(5)).toBe(chartTokens.series[3]);  // rose
+    expect(screen.getByText('Feb 28, 2025')).toBeInTheDocument();
+    expect(screen.queryByText('Mar 1, 2025')).not.toBeInTheDocument();
   });
 
-  it('is inclusive at every band boundary', () => {
-    expect(regenColor(25)).toBe(chartTokens.series[1]);
-    expect(regenColor(15)).toBe(chartTokens.series[5]);
-    expect(regenColor(8)).toBe(chartTokens.series[2]);
-    expect(regenColor(7.99)).toBe(chartTokens.series[3]);
-  });
-});
-
-/* ── getRegenRatio ───────────────────────────────────────────────── */
-
-describe('getRegenRatio', () => {
-  it('computes regen ÷ energy as a percent for a typical drive', () => {
-    expect(getRegenRatio(makeDrive({ regenEnergyWh: 2_000, energyUsedWh: 8_000 }))).toBe(25);
-    expect(
-      getRegenRatio(makeDrive({ regenEnergyWh: 1_500, energyUsedWh: 9_000 })),
-    ).toBeCloseTo(16.6667, 3);
-  });
-
-  it('still resolves a ratio when avgPowerW is null (removed-guard regression)', () => {
-    // Pre-fix this returned null purely because avgPowerW was absent, even
-    // though both energy counters were present and valid.
-    expect(
-      getRegenRatio(makeDrive({ regenEnergyWh: 3_000, energyUsedWh: 10_000, avgPowerW: null })),
-    ).toBe(30);
-  });
-
-  it('returns null when either energy input is missing or non-positive', () => {
-    expect(getRegenRatio(makeDrive({ regenEnergyWh: null, energyUsedWh: 8_000 }))).toBeNull();
-    expect(getRegenRatio(makeDrive({ regenEnergyWh: 2_000, energyUsedWh: null }))).toBeNull();
-    expect(getRegenRatio(makeDrive({ regenEnergyWh: 2_000, energyUsedWh: 0 }))).toBeNull();
-    expect(getRegenRatio(makeDrive({ regenEnergyWh: 0, energyUsedWh: 8_000 }))).toBeNull();
-  });
-});
-
-/* ── buildMonthlyTrend ───────────────────────────────────────────── */
-
-describe('buildMonthlyTrend', () => {
-  it('returns an empty array for no drives', () => {
-    expect(buildMonthlyTrend([])).toEqual([]);
-  });
-
-  it('buckets by YYYY-MM, sums regen in kWh, counts drives, and sorts ascending', () => {
-    const trend = buildMonthlyTrend([
-      makeDrive({ startTs: '2024-02-10T00:00:00Z', regenEnergyWh: 1_000 }),
-      makeDrive({ startTs: '2024-01-05T00:00:00Z', regenEnergyWh: 2_000 }),
-      makeDrive({ startTs: '2024-01-25T00:00:00Z', regenEnergyWh: 500 }),
-    ]);
-    expect(trend).toEqual([
-      { month: '2024-01', regenKwh: 2.5, drives: 2 },
-      { month: '2024-02', regenKwh: 1, drives: 1 },
-    ]);
-  });
-
-  it('rounds high-regen months numerically (parseFloat/locale regression)', () => {
-    // 1,234,500 Wh → 1234.5 kWh. The old parseFloat(fmtNumber(x, 1)) path saw
-    // the "1,234.5" thousands separator and truncated it to 1.
-    const trend = buildMonthlyTrend([
-      makeDrive({ startTs: '2024-03-01T00:00:00Z', regenEnergyWh: 1_234_500 }),
-    ]);
-    expect(trend[0].regenKwh).toBe(1234.5);
-  });
-
-  it('treats null regen as zero but still counts the drive', () => {
-    const trend = buildMonthlyTrend([
-      makeDrive({ startTs: '2024-04-01T00:00:00Z', regenEnergyWh: null }),
-      makeDrive({ startTs: '2024-04-15T00:00:00Z', regenEnergyWh: 1_000 }),
-    ]);
-    expect(trend).toEqual([{ month: '2024-04', regenKwh: 1, drives: 2 }]);
-  });
-
-  it('caps the series at the most recent 12 months', () => {
-    const drives = Array.from({ length: 14 }, (_, i) =>
-      makeDrive({ startTs: `20${25 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}-01T00:00:00Z`, regenEnergyWh: 1_000 }),
+  it('shows and exports unavailable monthly measurements as gaps rather than zeros', () => {
+    h.drives = query(
+      {
+        data: [
+          makeDrive({
+            id: 1,
+            startTs: '2025-01-15T12:00:00Z',
+          }),
+          makeDrive({
+            id: 2,
+            startTs: '2025-02-15T12:00:00Z',
+            regenEnergyWh: null,
+          }),
+        ],
+      },
+      drivesRefetch,
     );
-    const trend = buildMonthlyTrend(drives);
-    expect(trend).toHaveLength(12);
-    // Oldest two months dropped → the earliest retained is 2025-03.
-    expect(trend[0].month).toBe('2025-03');
+
+    renderPage();
+
+    const caption = screen.getByText(
+      'Monthly recovery trend — data table',
+    );
+    const table = caption.closest('table');
+    expect(table).not.toBeNull();
+    const februaryRow = Array.from(
+      table!.querySelectorAll('tbody tr'),
+    ).find((row) => row.querySelector('td')?.textContent === '2025-02');
+    expect(februaryRow).toBeDefined();
+    expect(
+      Array.from(februaryRow!.querySelectorAll('td')).map(
+        (cell) => cell.textContent,
+      ),
+    ).toEqual(['2025-02', '—', '—', '—', '0', '1']);
+
+    const monthlySection = screen.getByTestId('regen-monthly');
+    fireEvent.click(
+      within(monthlySection).getByRole('button', { name: 'Export chart' }),
+    );
+    fireEvent.click(
+      within(monthlySection).getByRole('menuitem', {
+        name: 'Download data as CSV',
+      }),
+    );
+
+    const exportRows = csvMocks.objectsToCSV.mock.calls.at(-1)?.[0];
+    expect(exportRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Month: '2025-02',
+          'Recovered energy (kWh)': '—',
+          'Drive energy (kWh)': '—',
+          'Weighted recovery share': '—',
+        }),
+      ]),
+    );
+  });
+
+  it('shows no aggregate recovery percentage without a finite positive denominator', () => {
+    h.aggregate = query({
+      data: makeAggregate({
+        totalRegenWh: 1_000,
+        totalDriveWh: 0,
+        regenRatio: 0,
+      }),
+    });
+    h.drives = query({ data: [] }, drivesRefetch);
+
+    renderPage();
+
+    const shareCard = screen
+      .getByText('Aggregate recovery share')
+      .closest('div.rounded-xl');
+    expect(shareCard).not.toBeNull();
+    expect(within(shareCard as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+
+  it('calls out zero aggregate totals when measured detail proves aggregate unavailability', () => {
+    h.aggregate = query({
+      data: makeAggregate({
+        totalRegenWh: 0,
+        totalDriveWh: 0,
+        regenRatio: 0,
+        freeCharges: 0,
+      }),
+    });
+
+    renderPage();
+
+    expect(screen.getByText('Aggregate totals unavailable')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Treat the complete aggregate as unavailable, not as evidence of 0% recovery/,
+      ),
+    ).toBeInTheDocument();
   });
 });

@@ -38,6 +38,8 @@ import type {
   SpeedProfileData,
   SpeedBucket,
   RegenEfficiencyData,
+  RegenEfficiencyDriveSummary,
+  RegenEfficiencyMonthlySummary,
   RouteEfficiencyData,
   RouteSummary,
   DrivingCoachData,
@@ -499,21 +501,62 @@ describe('SpeedProfileData + SpeedBucket contract', () => {
 /* ── RegenEfficiencyData + RouteEfficiencyData ──────────────────────────── */
 
 describe('RegenEfficiencyData contract', () => {
-  it('maps regen totals and ratio', () => {
+  it('maps the complete aggregate, capacity, month, and embedded-drive response', () => {
     const regen = camelCaseKeys({
+      vehicle_id: 2,
       total_regen_wh: 30000,
       total_drive_wh: 150000,
-      regen_ratio: 0.2,
+      regen_ratio: 20,
       monthly_avg_regen: 2500,
       free_charges: 1.2,
+      monthly_summary: [{
+        month: '2025-03',
+        drive_count: 4,
+        avg_regen_power_kw: 2500,
+        avg_speed: 31.5,
+        avg_efficiency: 171,
+      }],
+      drives: [{
+        id: 9,
+        start_date: '2025-03-01T10:00:00Z',
+        distance: 22.5,
+        duration_s: 1800,
+        avg_speed_mps: 18,
+        avg_power_w: 6200,
+        min_power_w: -48000,
+        start_soc_pct: 80,
+        end_soc_pct: 68,
+        efficiency: 171,
+        regen_score: 22,
+      }],
+      battery_capacity_wh: 75000,
+      capacity_source: 'vin_estimate',
     }) as RegenEfficiencyData;
 
     expectHasKeys(regen, [
-      'totalRegenWh', 'totalDriveWh', 'regenRatio', 'monthlyAvgRegen', 'freeCharges',
+      'vehicleId', 'totalRegenWh', 'totalDriveWh', 'regenRatio',
+      'monthlyAvgRegen', 'freeCharges', 'monthlySummary', 'drives',
+      'batteryCapacityWh', 'capacitySource',
     ]);
     expect(regen.totalRegenWh).toBe(30000);
-    expect(regen.regenRatio).toBe(0.2);
+    expect(regen.regenRatio).toBe(20);
     expect(regen.freeCharges).toBeCloseTo(1.2, 6);
+    expect(regen.batteryCapacityWh).toBe(75000);
+    expect(regen.capacitySource).toBe('vin_estimate');
+
+    const month: RegenEfficiencyMonthlySummary = regen.monthlySummary[0];
+    expectHasKeys(month, [
+      'month', 'driveCount', 'avgRegenPowerKw', 'avgSpeed', 'avgEfficiency',
+    ]);
+    expect(month.avgRegenPowerKw).toBe(2500);
+
+    const drive: RegenEfficiencyDriveSummary = regen.drives[0];
+    expectHasKeys(drive, [
+      'id', 'startDate', 'distance', 'durationS', 'avgSpeedMps', 'avgPowerW',
+      'minPowerW', 'startSocPct', 'endSocPct', 'efficiency', 'regenScore',
+    ]);
+    expect(drive.avgSpeedMps).toBe(18);
+    expect(drive.minPowerW).toBe(-48000);
   });
 });
 

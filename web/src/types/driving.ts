@@ -157,7 +157,56 @@ export interface SpeedBucket {
   avgPowerW?: number;
 }
 
+/**
+ * Legacy per-drive evidence embedded in `/analytics/regen`.
+ *
+ * The page intentionally uses canonical {@link Drive} rows from `/drives`
+ * instead: this embedded shape contains legacy distance semantics and does not
+ * expose measured recovered energy. It remains typed here because it is part
+ * of the complete response contract.
+ */
+export interface RegenEfficiencyDriveSummary {
+  id: number;
+  startDate: string;
+  /** Legacy miles field from the regen handler; do not use for SI displays. */
+  distance: number;
+  /** Drive duration in seconds (SI canonical). */
+  durationS: number;
+  /** Average speed in metres per second (SI canonical). */
+  avgSpeedMps: number | null;
+  /** Average absolute drive power in watts; not regenerative power. */
+  avgPowerW: number | null;
+  /** Minimum observed drive power in watts. */
+  minPowerW: number | null;
+  startSocPct: number | null;
+  endSocPct: number | null;
+  efficiency: number;
+  regenScore: number;
+}
+
+/**
+ * Legacy month summary embedded in `/analytics/regen`.
+ *
+ * `avgRegenPowerKw` is the camel-cased form of the historical
+ * `avg_regen_power_kw` key, but its value is watts and represents average
+ * absolute drive power. It is not measured regenerative power.
+ */
+export interface RegenEfficiencyMonthlySummary {
+  month: string;
+  driveCount: number;
+  avgRegenPowerKw: number;
+  /** Legacy miles-per-hour value from this endpoint; do not use for SI displays. */
+  avgSpeed: number;
+  avgEfficiency: number;
+}
+
+export type RegenCapacitySource =
+  | 'vin_estimate'
+  | 'model_estimate'
+  | 'default';
+
 export interface RegenEfficiencyData {
+  vehicleId: number;
   totalRegenWh: number;
   totalDriveWh: number;
   /**
@@ -168,8 +217,17 @@ export interface RegenEfficiencyData {
    * same name but is a 0-1 fraction. Do not multiply this one by 100.
    */
   regenRatio: number;
+  /**
+   * Average of the legacy monthly absolute-drive-power field, in watts.
+   * This is not regenerative power and must not be presented as such.
+   */
   monthlyAvgRegen: number;
   freeCharges: number;
+  monthlySummary: RegenEfficiencyMonthlySummary[];
+  drives: RegenEfficiencyDriveSummary[];
+  /** Estimated usable battery capacity in watt-hours. */
+  batteryCapacityWh: number;
+  capacitySource: RegenCapacitySource;
 }
 
 export interface RouteEfficiencyData {
