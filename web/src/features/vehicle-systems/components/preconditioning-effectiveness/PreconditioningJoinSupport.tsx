@@ -32,15 +32,15 @@ export function PreconditioningJoinSupport({
   const items = [
     [t('preconditioningEffectiveness.join.overlap', 'Drive windows overlapping coverage'), fmtInt(summary.coverage.overlappingDriveWindows)],
     [t('preconditioningEffectiveness.join.withRows', 'Departures with window rows'), fmtInt(support.departuresWithWindowRows)],
-    [t('preconditioningEffectiveness.join.withThermal', 'Departures with thermal support'), fmtInt(support.departuresWithThermalSupport)],
+    [t('preconditioningEffectiveness.join.withThermal', 'Departures with distinct-state support'), fmtInt(support.departuresWithThermalSupport)],
     [t('preconditioningEffectiveness.join.references', 'Window-row references'), fmtInt(support.windowRowReferences)],
     [t('preconditioningEffectiveness.join.uniqueUsed', 'Unique climate rows used'), fmtInt(support.climateRowsUsed)],
     [t('preconditioningEffectiveness.join.reused', 'Climate rows reused'), fmtInt(support.climateRowsReused)],
     [t('preconditioningEffectiveness.join.medianRows', 'Median window rows'), support.medianWindowRows != null ? fmtInt(support.medianWindowRows) : '—'],
-    [t('preconditioningEffectiveness.join.medianThermal', 'Median thermal samples'), support.medianThermalSamples != null ? fmtInt(support.medianThermalSamples) : '—'],
+    [t('preconditioningEffectiveness.join.medianThermal', 'Median distinct cabin states'), support.medianThermalSamples != null ? fmtInt(support.medianThermalSamples) : '—'],
     [t('preconditioningEffectiveness.join.medianSpan', 'Median observation span'), formatDuration(support.medianObservationSpanS, { precision: 2 })],
-    [t('preconditioningEffectiveness.join.medianLead', 'Median final-sample lead'), formatDuration(support.medianLastSampleLeadS, { precision: 2 })],
-    [t('preconditioningEffectiveness.join.p90Lead', 'P90 final-sample lead'), formatDuration(support.p90LastSampleLeadS, { precision: 2 })],
+    [t('preconditioningEffectiveness.join.medianLead', 'Median final-state lead'), formatDuration(support.medianLastSampleLeadS, { precision: 2 })],
+    [t('preconditioningEffectiveness.join.p90Lead', 'P90 final-state lead'), formatDuration(support.p90LastSampleLeadS, { precision: 2 })],
   ] as const;
 
   return (

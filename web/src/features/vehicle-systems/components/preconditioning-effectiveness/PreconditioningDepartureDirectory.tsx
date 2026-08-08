@@ -46,23 +46,23 @@ export function PreconditioningDepartureDirectory({
             'Newest first; every unique valid drive retains its terminal disposition and available window diagnostics.',
           )}
         </Text>
-        <Text as="p" variant="caption" className="mb-4 mt-1">
-          {t(
-            'preconditioningEffectiveness.directory.cap',
-            'Showing {{shown}} of {{total}} departures; {{omitted}} omitted by the {{cap}}-departure model cap.',
-            {
-              shown: fmtInt(directory.displayed),
-              total: fmtInt(directory.total),
-              omitted: fmtInt(directory.omitted),
-              cap: fmtInt(directory.cap),
-            },
-          )}
-        </Text>
         <PreconditioningSectionBody
           summary={summary}
           state={state}
           requirement="directory"
         >
+          <Text as="p" variant="caption" className="mb-4 mt-1">
+            {t(
+              'preconditioningEffectiveness.directory.cap',
+              'Showing {{shown}} of {{total}} departures; {{omitted}} omitted by the {{cap}}-departure model cap.',
+              {
+                shown: fmtInt(directory.displayed),
+                total: fmtInt(directory.total),
+                omitted: fmtInt(directory.omitted),
+                cap: fmtInt(directory.cap),
+              },
+            )}
+          </Text>
           <ol className="max-h-[52rem] space-y-3 overflow-y-auto pr-1">
             {directory.items.map((item) => (
               <PreconditioningDepartureCard

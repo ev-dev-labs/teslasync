@@ -53,7 +53,10 @@ export function preconditioningRegimeLabel(
   if (regime === 'cold') {
     return t('preconditioningEffectiveness.regime.cold', 'Cold-start stratum');
   }
-  return t('preconditioningEffectiveness.regime.all', 'All classified departures');
+  return t(
+    'preconditioningEffectiveness.regime.all',
+    'Common-support pooled strata',
+  );
 }
 
 export function preconditioningDispositionLabel(
@@ -71,7 +74,7 @@ export function preconditioningDispositionLabel(
     ),
     insufficient_thermal_samples: t(
       'preconditioningEffectiveness.disposition.insufficientSamples',
-      'Insufficient thermal samples',
+      'Insufficient distinct cabin states',
     ),
     insufficient_observation_span: t(
       'preconditioningEffectiveness.disposition.insufficientSpan',

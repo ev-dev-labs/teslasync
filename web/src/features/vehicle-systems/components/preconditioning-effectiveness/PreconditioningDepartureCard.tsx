@@ -72,7 +72,7 @@ export function PreconditioningDepartureCard({
           value={fmtInt(item.windowRowCount)}
         />
         <Detail
-          label={t('preconditioningEffectiveness.directory.thermalRows', 'Thermal samples')}
+          label={t('preconditioningEffectiveness.directory.thermalRows', 'Distinct cabin states')}
           value={fmtInt(item.thermalSampleCount)}
         />
         <Detail
@@ -88,11 +88,11 @@ export function PreconditioningDepartureCard({
           )}
         />
         <Detail
-          label={t('preconditioningEffectiveness.directory.firstLead', 'First-sample lead')}
+          label={t('preconditioningEffectiveness.directory.firstLead', 'First-state lead')}
           value={formatDuration(item.firstSampleLeadS, { precision: 2 })}
         />
         <Detail
-          label={t('preconditioningEffectiveness.directory.finalLead', 'Final-sample lead')}
+          label={t('preconditioningEffectiveness.directory.finalLead', 'Final-state lead')}
           value={formatDuration(item.lastSampleLeadS, { precision: 2 })}
         />
         <Detail

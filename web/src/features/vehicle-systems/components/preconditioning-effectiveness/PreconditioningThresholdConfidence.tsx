@@ -41,9 +41,9 @@ export function PreconditioningThresholdConfidence({
   const gates = [
     [t('preconditioningEffectiveness.thresholds.window', 'Pre-drive window'), formatDuration(threshold.preDriveWindowS, { precision: 2 }), summary.driveRows.uniqueValidDrives],
     [t('preconditioningEffectiveness.thresholds.initial', 'Minimum initial gap'), formatDelta(threshold.minInitialDeltaC), summary.departureAccounting.initialInBand],
-    [t('preconditioningEffectiveness.thresholds.samples', 'Minimum thermal samples'), fmtInt(threshold.minThermalSamples), summary.departureAccounting.insufficientThermalSamples],
+    [t('preconditioningEffectiveness.thresholds.samples', 'Minimum distinct cabin states'), fmtInt(threshold.minThermalSamples), summary.departureAccounting.insufficientThermalSamples],
     [t('preconditioningEffectiveness.thresholds.span', 'Minimum observation span'), formatDuration(threshold.minObservationSpanS, { precision: 2 }), summary.departureAccounting.insufficientObservationSpan],
-    [t('preconditioningEffectiveness.thresholds.age', 'Maximum final-sample age'), formatDuration(threshold.maxDepartureSampleAgeS, { precision: 2 }), summary.departureAccounting.staleDepartureSample],
+    [t('preconditioningEffectiveness.thresholds.age', 'Maximum final-state age'), formatDuration(threshold.maxDepartureSampleAgeS, { precision: 2 }), summary.departureAccounting.staleDepartureSample],
     [t('preconditioningEffectiveness.thresholds.target', 'Maximum target shift'), formatDelta(threshold.maxTargetShiftC), summary.departureAccounting.targetShiftExclusions],
     [t('preconditioningEffectiveness.thresholds.cap', 'Directory display cap'), fmtInt(threshold.directoryLimit), summary.directory.omitted],
   ] as const;
@@ -117,7 +117,7 @@ export function PreconditioningThresholdConfidence({
           <Text as="p" variant="caption" className="mt-4">
             {t(
               'preconditioningEffectiveness.thresholds.confidenceMethod',
-              'Confidence is descriptive support, not statistical significance: balance confidence times volume confidence, with comparative effects withheld when either group count is zero.',
+              'Confidence is descriptive support, not statistical significance: balance confidence times volume confidence over strata containing both groups; effects are withheld without within-stratum overlap.',
             )}
           </Text>
         </PreconditioningSectionBody>

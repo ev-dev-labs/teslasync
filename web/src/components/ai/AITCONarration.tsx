@@ -133,11 +133,11 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     <AIFeatureCard
       title={t(
         'tco.aiNarration.title',
-        'Explain my total cost of ownership',
+        'Explain my lifetime operating cost',
       )}
       description={t(
         'tco.aiNarration.description',
-        'Ask Helix to walk through the deterministic operating-cost figures shown below — the EV charging spend, the equivalent gas cost, the cumulative savings, and the cost-per-kilometre comparison. The narrator quotes the same numbers the chart shows and is honest about the four limiting assumptions: operating cost only (no depreciation, resale, insurance, registration, or financing); a flat $50/month maintenance heuristic; equivalent gas cost estimated from charged energy not real-world distance; and gas-price / efficiency / electricity-rate defaults from your editable Settings.',
+        'Ask Helix to explain the deterministic operating-cost evidence below. Lifetime equivalent gas cost is derived from positive-drive distance, configured gas price per unit, and comparison MPG; only monthly equivalent gas rows estimate distance from recorded-cost charging energy. The layer also discloses the positive-cost charging filter, the flat $50-per-modeled-month maintenance heuristic, and the excluded ownership costs.',
       )}
       buttonLabel={t(
         'tco.aiNarration.button',

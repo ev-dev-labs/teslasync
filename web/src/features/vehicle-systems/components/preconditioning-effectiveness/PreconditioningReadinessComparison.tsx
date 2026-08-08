@@ -65,7 +65,7 @@ export function PreconditioningReadinessComparison({
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.readiness.subtitle',
-            'Median absolute cabin-to-front-row-target gap at the final qualified pre-drive sample; lower means closer to target.',
+            'Median absolute cabin-to-front-row-target gap at the final qualified distinct cabin state; lower means closer to target.',
           )}
         </Text>
         <PreconditioningSectionBody

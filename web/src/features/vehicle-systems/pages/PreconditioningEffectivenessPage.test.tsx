@@ -134,10 +134,12 @@ import PreconditioningEffectivenessPage from './PreconditioningEffectivenessPage
 interface QueryStub<T> {
   data: T | undefined;
   isLoading: boolean;
+  isPending: boolean;
   isSuccess: boolean;
   isError: boolean;
   error: unknown;
   isFetching: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   isStale: boolean;
   dataUpdatedAt: number;
   refetch: () => void;
@@ -152,10 +154,12 @@ function query<T>(
   return {
     data: undefined,
     isLoading,
+    isPending: overrides.isPending ?? isLoading,
     isSuccess: overrides.isSuccess ?? (!isLoading && !isError),
     isError,
     error: null,
     isFetching: isLoading,
+    fetchStatus: overrides.fetchStatus ?? (isLoading ? 'fetching' : 'idle'),
     isStale: false,
     dataUpdatedAt: BASE,
     refetch,
@@ -221,8 +225,8 @@ function comparisonEvidence(): {
     climate: [
       climateAt(BASE, 30, 35, false),
       climateAt(BASE, 5, 24, true),
-      climateAt(second, 30, 5, false),
-      climateAt(second, 5, 7, false),
+      climateAt(second, 30, 34, false),
+      climateAt(second, 5, 33, false),
     ],
     drives: [drive(1, BASE), drive(2, second)],
   };
@@ -348,6 +352,28 @@ describe('PreconditioningEffectivenessPage', () => {
     })).toBeInTheDocument();
   });
 
+  it('does not infer an empty response while initial queries are paused offline', () => {
+    h.climateQuery = query(h.climateRefetch, {
+      isPending: true,
+      isSuccess: false,
+      fetchStatus: 'paused',
+    });
+    h.driveQuery = query(h.driveRefetch, {
+      isPending: true,
+      isSuccess: false,
+      fetchStatus: 'paused',
+    });
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByText(
+      'Evidence loading is paused while the network is unavailable; no empty response has been inferred.',
+    )).toBeInTheDocument();
+    expect(screen.queryByText(
+      'Both endpoints returned valid empty responses, so no readiness comparison is published.',
+    )).not.toBeInTheDocument();
+  });
+
   it('shows a one-source failure with one retry and all shells retained', () => {
     h.climateQuery = query(h.climateRefetch, {
       isError: true,
@@ -437,10 +463,10 @@ describe('PreconditioningEffectivenessPage', () => {
     expect(within(readiness).getAllByText('HVAC-active').length).toBeGreaterThan(0);
     expect(within(readiness)
       .getAllByText('Explicit-off control').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('+11.0 °C').length).toBeGreaterThan(0);
     expect(screen.getAllByText('+9.0 °C').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('+10.0 °C').length).toBeGreaterThan(0);
     expect(within(screen.getByTestId('preconditioning-availability'))
-      .getByText('Both groups present')).toBeInTheDocument();
+      .getByText('Within-stratum overlap present')).toBeInTheDocument();
 
     const directory = screen.getByTestId('preconditioning-departure-directory');
     const entries = within(directory).getAllByRole('listitem');
@@ -452,6 +478,6 @@ describe('PreconditioningEffectivenessPage', () => {
     h.temperature = '°F';
     renderPage();
 
-    expect(screen.getAllByText('+19.8 °F').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('+18.0 °F').length).toBeGreaterThan(0);
   });
 });

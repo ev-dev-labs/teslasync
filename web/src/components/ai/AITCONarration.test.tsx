@@ -191,9 +191,9 @@ describe('AITCONarration — ADR-015 visibility gate', () => {
     expect(root).toHaveAttribute('data-ai-feature', 'tco-narration');
 
     expect(
-      screen.getByRole('heading', { name: /Explain my total cost of ownership/i }),
+      screen.getByRole('heading', { name: /Explain my lifetime operating cost/i }),
     ).toBeInTheDocument();
-    expect(root).toHaveTextContent(/deterministic operating-cost figures/i);
+    expect(root).toHaveTextContent(/deterministic operating-cost evidence/i);
     // Badge label passed as "Helix"; its visible text is exactly "Helix"
     // (the button's visible CTA is "Ask Helix", not an exact match).
     expect(screen.getByText('Helix')).toBeInTheDocument();

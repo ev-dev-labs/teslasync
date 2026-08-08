@@ -1,9 +1,4 @@
-import {
-  Database,
-  LoaderCircle,
-  RefreshCw,
-  ShieldAlert,
-} from 'lucide-react';
+import { Database, LoaderCircle, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, EmptyState, QueryError } from '@/components/feedback';
@@ -22,11 +17,11 @@ export function PreconditioningQueryStatus({
 }: PreconditioningQueryStatusProps) {
   const { t } = useTranslation();
   const loading = state.climate.isLoading || state.drives.isLoading;
-  const refreshing =
-    (state.climate.isFetching && state.climate.hasData)
+  const refreshing = (state.climate.isFetching && state.climate.hasData)
     || (state.drives.isFetching && state.drives.hasData);
-  const refreshFailed =
-    Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError);
+  const paused = state.climate.isPaused || state.drives.isPaused;
+  const refreshFailed = Boolean(state.climate.refreshError)
+    || Boolean(state.drives.refreshError);
 
   if (!state.vehicleSelected) {
     return (
@@ -57,6 +52,24 @@ export function PreconditioningQueryStatus({
           {t(
             'preconditioningEffectiveness.states.loading',
             'Loading the climate timeline and bounded drive history...',
+          )}
+        </Text>
+      </AlertBanner>
+    );
+  }
+  if (paused) {
+    return (
+      <AlertBanner
+        className="mt-4"
+        variant="warning"
+        role="status"
+        aria-live="polite"
+        icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
+      >
+        <Text as="p" variant="caption">
+          {t(
+            'preconditioningEffectiveness.states.paused',
+            'Evidence loading is paused while the network is unavailable; no empty response has been inferred.',
           )}
         </Text>
       </AlertBanner>
@@ -177,7 +190,7 @@ export function PreconditioningQueryStatus({
         <Text as="p" variant="caption">
           {t(
             'preconditioningEffectiveness.states.oneGroup',
-            'Classified departures exist, but comparison remains withheld because both observational groups are not present.',
+            'Classified departures exist, but comparison remains withheld because no hot/cold stratum contains both observational groups.',
           )}
         </Text>
       </AlertBanner>

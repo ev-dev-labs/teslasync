@@ -12,13 +12,17 @@ import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
 import { fmtInt } from '@/lib/numberFormat';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
+import { PreconditioningSectionBody } from './PreconditioningSectionBody';
+import type { PreconditioningQueryState } from './types';
 
 interface PreconditioningMethodologyProps {
   summary: PreconditioningSummary;
+  state: PreconditioningQueryState;
 }
 
 export function PreconditioningMethodology({
   summary,
+  state,
 }: PreconditioningMethodologyProps) {
   const { t } = useTranslation();
   const items = [
@@ -28,7 +32,7 @@ export function PreconditioningMethodology({
       title: t('preconditioningEffectiveness.method.sourcesTitle', 'Bounded source contract'),
       body: t(
         'preconditioningEffectiveness.method.sourcesBody',
-        'Climate history defaults to seven days while drive history is capped at 1,000 rows. Results describe only their returned overlap, not lifetime behavior.',
+        'Climate history is a forward-folded seven-day state timeline and drive history is capped at 1,000 rows. Repeated carried cabin values are not independent observations.',
       ),
     },
     {
@@ -37,7 +41,7 @@ export function PreconditioningMethodology({
       title: t('preconditioningEffectiveness.method.windowsTitle', 'Ordered qualification gates'),
       body: t(
         'preconditioningEffectiveness.method.windowsBody',
-        'Coverage, non-empty windows, sample count, observation span, final-sample freshness, target stability, initial gap, and HVAC certainty are separate gates.',
+        'Coverage, non-empty windows, distinct cabin-value transitions, observation span, final-state freshness, target stability, initial gap, and HVAC certainty are separate gates.',
       ),
     },
     {
@@ -64,7 +68,7 @@ export function PreconditioningMethodology({
       title: t('preconditioningEffectiveness.method.comparisonTitle', 'Median comparison and support'),
       body: t(
         'preconditioningEffectiveness.method.comparisonBody',
-        'Comparative medians publish only when both groups exist. Confidence multiplies group-balance and total-volume support and is not a significance test.',
+        'Comparative medians publish only within hot/cold strata containing both groups. The headline pool excludes strata without common support; confidence is not a significance test.',
       ),
     },
     {
@@ -108,19 +112,26 @@ export function PreconditioningMethodology({
             </article>
           ))}
         </div>
-        <AlertBanner className="mt-4" variant="warning">
-          <Text as="p" variant="caption">
-            {t(
-              'preconditioningEffectiveness.method.notice',
-              '{{climate}} climate rows, {{drives}} unique valid drives, and {{classified}} classified departures support only the disclosed observational summaries.',
-              {
-                climate: fmtInt(summary.climateRows.returnedRows),
-                drives: fmtInt(summary.driveRows.uniqueValidDrives),
-                classified: fmtInt(summary.joinedDepartures),
-              },
-            )}
-          </Text>
-        </AlertBanner>
+        <PreconditioningSectionBody
+          summary={summary}
+          state={state}
+          className="mt-4"
+          skeletonHeight={64}
+        >
+          <AlertBanner variant="warning">
+            <Text as="p" variant="caption">
+              {t(
+                'preconditioningEffectiveness.method.notice',
+                '{{climate}} climate rows, {{drives}} unique valid drives, and {{classified}} classified departures support only the disclosed observational summaries.',
+                {
+                  climate: fmtInt(summary.climateRows.returnedRows),
+                  drives: fmtInt(summary.driveRows.uniqueValidDrives),
+                  classified: fmtInt(summary.joinedDepartures),
+                },
+              )}
+            </Text>
+          </AlertBanner>
+        </PreconditioningSectionBody>
       </GlassPanel>
     </section>
   );

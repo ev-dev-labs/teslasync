@@ -40,20 +40,20 @@ export function PreconditioningDepartureDisposition({
     },
     {
       key: 'samples',
-      label: t('preconditioningEffectiveness.departures.samples', 'Insufficient thermal samples'),
-      detail: t('preconditioningEffectiveness.departures.samplesDetail', 'Too few rows contain both cabin temperature and a front-row target.'),
+      label: t('preconditioningEffectiveness.departures.samples', 'Insufficient distinct cabin states'),
+      detail: t('preconditioningEffectiveness.departures.samplesDetail', 'Too few cabin-value transitions contain a front-row target; repeated forward-filled values do not count again.'),
       value: a.insufficientThermalSamples,
     },
     {
       key: 'span',
       label: t('preconditioningEffectiveness.departures.span', 'Insufficient observation span'),
-      detail: t('preconditioningEffectiveness.departures.spanDetail', 'Thermal samples exist, but their elapsed span is below the gate.'),
+      detail: t('preconditioningEffectiveness.departures.spanDetail', 'Distinct cabin states exist, but their elapsed span is below the gate.'),
       value: a.insufficientObservationSpan,
     },
     {
       key: 'stale',
       label: t('preconditioningEffectiveness.departures.stale', 'Stale final sample'),
-      detail: t('preconditioningEffectiveness.departures.staleDetail', 'The last thermal sample is too old to represent departure readiness.'),
+      detail: t('preconditioningEffectiveness.departures.staleDetail', 'The last distinct cabin-state transition is too old to represent departure readiness.'),
       value: a.staleDepartureSample,
     },
     {

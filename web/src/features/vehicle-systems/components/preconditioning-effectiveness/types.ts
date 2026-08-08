@@ -3,6 +3,7 @@ export interface PreconditioningSourceQueryState {
   isLoading: boolean;
   isResolved: boolean;
   isFetching: boolean;
+  isPaused: boolean;
   error: unknown;
   refreshError: unknown;
   onRetry: () => void;

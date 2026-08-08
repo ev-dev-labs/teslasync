@@ -233,6 +233,26 @@ describe('summarizePreconditioningEffectiveness join and classification gates', 
     expect(result.directory.items[0]?.lastSampleLeadS).toBe(20 * 60);
   });
 
+  it('does not count repeated forward-folded cabin state as fresh thermal evidence', () => {
+    const result = summarizePreconditioningEffectiveness(
+      [
+        climate(30, 35, false),
+        climate(20, 35, true),
+        climate(5, 35, true),
+      ],
+      [drive()],
+    );
+
+    expect(result.joinedDepartures).toBe(0);
+    expect(result.departureAccounting.insufficientThermalSamples).toBe(1);
+    expect(result.directory.items[0]).toMatchObject({
+      thermalSampleCount: 1,
+      hvacOnSamples: 2,
+      hvacOffSamples: 1,
+      unknownHvacSamples: 0,
+    });
+  });
+
   it('separates insufficient samples from insufficient observation span', () => {
     const insufficientSamples = summarizePreconditioningEffectiveness(
       [
@@ -359,6 +379,31 @@ describe('summarizePreconditioningEffectiveness comparisons and profiles', () =>
     expect(result.overall.startDeltaAdvantageC).toBeNull();
     expect(result.overall.improvementLiftC).toBeNull();
     expect(result.overall.balanceCount).toBe(0);
+  });
+
+  it('withholds headline effects when groups exist only in different strata', () => {
+    const coldDeparture = DEPARTURE + 60 * 60_000;
+    const result = summarizePreconditioningEffectiveness(
+      [
+        climateAt(DEPARTURE, 30, 35, true),
+        climateAt(DEPARTURE, 5, 24, true),
+        climateAt(coldDeparture, 30, 5, false),
+        climateAt(coldDeparture, 5, 7, false),
+      ],
+      [drive(1), drive(2, coldDeparture)],
+    );
+
+    expect(result.conditionedDepartures).toBe(1);
+    expect(result.unconditionedDepartures).toBe(1);
+    expect(result.strata.every((comparison) => comparison.evidence === 'none'))
+      .toBe(true);
+    expect(result.overall).toMatchObject({
+      conditionedCount: 0,
+      unconditionedCount: 0,
+      evidence: 'none',
+      startDeltaAdvantageC: null,
+      improvementLiftC: null,
+    });
   });
 
   it('reports balanced evidence strength without claiming causality', () => {

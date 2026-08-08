@@ -236,6 +236,7 @@ interface NormalizedClimate {
   insideC: number | null;
   targetC: number | null;
   hvacOn: boolean | null;
+  insideStateChanged: boolean;
 }
 
 interface ClimateNormalization {
@@ -485,9 +486,21 @@ function normalizeClimate(
     } else {
       rows.completeHvacOffRows += 1;
     }
-    timeline.push({ ms: parsed.ms, insideC, targetC, hvacOn });
+    timeline.push({
+      ms: parsed.ms,
+      insideC,
+      targetC,
+      hvacOn,
+      insideStateChanged: false,
+    });
   }
   timeline.sort((a, b) => a.ms - b.ms);
+  for (let index = 0; index < timeline.length; index += 1) {
+    const previous = timeline[index - 1];
+    const current = timeline[index]!;
+    current.insideStateChanged =
+      previous == null || current.insideC !== previous.insideC;
+  }
   return { timeline, rows, sources };
 }
 
@@ -828,9 +841,27 @@ export function summarizePreconditioningEffectiveness(
       climateUseCounts.set(row.ms, (climateUseCounts.get(row.ms) ?? 0) + 1);
     }
 
+    const hvacOnSamples = windowRows.filter(
+      (row) => row.hvacOn === true,
+    ).length;
+    const hvacOffSamples = windowRows.filter(
+      (row) => row.hvacOn === false,
+    ).length;
+    const unknownHvacSamples =
+      windowRows.length - hvacOnSamples - hvacOffSamples;
+    Object.assign(item, {
+      hvacOnSamples,
+      hvacOffSamples,
+      unknownHvacSamples,
+    });
+
+    // /climate is a forward-folded state timeline. Repeated cabin values on
+    // unrelated emissions are carried state, not fresh thermal observations.
     const thermalRows = windowRows.filter(
       (row): row is NormalizedClimate & { insideC: number; targetC: number } =>
-        row.insideC != null && row.targetC != null,
+        row.insideStateChanged
+        && row.insideC != null
+        && row.targetC != null,
     );
     item.thermalSampleCount = thermalRows.length;
     if (thermalRows.length < thresholds.minThermalSamples) {
@@ -852,14 +883,6 @@ export function summarizePreconditioningEffectiveness(
     const initialDeltaC = Math.abs(initialSignedDeltaC);
     const startDeltaC = Math.abs(last.insideC - last.targetC);
     const improvementC = initialDeltaC - startDeltaC;
-    const hvacOnSamples = windowRows.filter(
-      (row) => row.hvacOn === true,
-    ).length;
-    const hvacOffSamples = windowRows.filter(
-      (row) => row.hvacOn === false,
-    ).length;
-    const unknownHvacSamples =
-      windowRows.length - hvacOnSamples - hvacOffSamples;
 
     Object.assign(item, {
       regime: initialSignedDeltaC > 0 ? 'hot' : 'cold',
@@ -938,6 +961,18 @@ export function summarizePreconditioningEffectiveness(
     (departure) => departure.regime === 'hot',
   ).length;
   const coldDepartures = departures.length - hotDepartures;
+  const strata = [
+    medianComparison(departures, 'hot'),
+    medianComparison(departures, 'cold'),
+  ];
+  const comparableRegimes = new Set(
+    strata
+      .filter((comparison) => comparison.evidence !== 'none')
+      .map((comparison) => comparison.regime),
+  );
+  const commonSupportDepartures = departures.filter(
+    (departure) => comparableRegimes.has(departure.regime),
+  );
   const departureOutcomeTotal = Object.values(accounting).reduce(
     (sum, value) => sum + value,
     0,
@@ -1006,11 +1041,8 @@ export function summarizePreconditioningEffectiveness(
         : null,
     hotDepartures,
     coldDepartures,
-    overall: medianComparison(departures, 'all'),
-    strata: [
-      medianComparison(departures, 'hot'),
-      medianComparison(departures, 'cold'),
-    ],
+    overall: medianComparison(commonSupportDepartures, 'all'),
+    strata,
     hourlyProfile: buildHourlyProfile(departures),
     improvementDistribution: buildImprovementDistribution(departures),
     thresholds,

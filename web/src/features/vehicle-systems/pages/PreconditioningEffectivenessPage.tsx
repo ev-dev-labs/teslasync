@@ -80,16 +80,19 @@ export default function PreconditioningEffectivenessPage() {
       vehicleSelected: vehicleId != null,
       climate: {
         hasData: climateHasData,
-        isLoading: climateQuery.isLoading && !climateHasData,
-        isResolved:
-          climateQuery.isSuccess
-          || climateHasData
-          || (
-            vehicleId != null
-            && !climateQuery.isLoading
-            && !climateQuery.isError
+        isLoading:
+          !climateHasData
+          && (
+            climateQuery.isLoading
+            || (
+              climateQuery.isPending
+              && climateQuery.fetchStatus === 'fetching'
+            )
           ),
+        isResolved: climateQuery.isSuccess || climateHasData,
         isFetching: climateQuery.isFetching,
+        isPaused:
+          !climateHasData && climateQuery.fetchStatus === 'paused',
         error:
           climateQuery.isError && !climateHasData
             ? climateQuery.error
@@ -102,16 +105,19 @@ export default function PreconditioningEffectivenessPage() {
       },
       drives: {
         hasData: drivesHaveData,
-        isLoading: drivesQuery.isLoading && !drivesHaveData,
-        isResolved:
-          drivesQuery.isSuccess
-          || drivesHaveData
-          || (
-            vehicleId != null
-            && !drivesQuery.isLoading
-            && !drivesQuery.isError
+        isLoading:
+          !drivesHaveData
+          && (
+            drivesQuery.isLoading
+            || (
+              drivesQuery.isPending
+              && drivesQuery.fetchStatus === 'fetching'
+            )
           ),
+        isResolved: drivesQuery.isSuccess || drivesHaveData,
         isFetching: drivesQuery.isFetching,
+        isPaused:
+          !drivesHaveData && drivesQuery.fetchStatus === 'paused',
         error:
           drivesQuery.isError && !drivesHaveData
             ? drivesQuery.error
@@ -127,15 +133,19 @@ export default function PreconditioningEffectivenessPage() {
     [
       climateHasData,
       climateQuery.error,
+      climateQuery.fetchStatus,
       climateQuery.isError,
       climateQuery.isFetching,
       climateQuery.isLoading,
+      climateQuery.isPending,
       climateQuery.isSuccess,
       drivesHaveData,
       drivesQuery.error,
+      drivesQuery.fetchStatus,
       drivesQuery.isError,
       drivesQuery.isFetching,
       drivesQuery.isLoading,
+      drivesQuery.isPending,
       drivesQuery.isSuccess,
       refreshAll,
       retryClimate,
@@ -286,7 +296,7 @@ export default function PreconditioningEffectivenessPage() {
         <PreconditioningDataAvailability summary={summary} state={queryState} />
       </FadeIn>
       <FadeIn delay={0.16}>
-        <PreconditioningMethodology summary={summary} />
+        <PreconditioningMethodology summary={summary} state={queryState} />
       </FadeIn>
     </PageContainer>
   );

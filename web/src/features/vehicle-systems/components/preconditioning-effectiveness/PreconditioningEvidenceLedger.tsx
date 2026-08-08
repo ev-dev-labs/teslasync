@@ -48,6 +48,11 @@ export function PreconditioningEvidenceLedger({
           'preconditioningEffectiveness.kpis.loading',
           'Waiting for climate and drive history...',
         )
+      : state.climate.isPaused || state.drives.isPaused
+        ? t(
+            'preconditioningEffectiveness.kpis.paused',
+            'Evidence loading is paused while the network is unavailable.',
+          )
       : state.climate.error || state.drives.error
         ? t(
             'preconditioningEffectiveness.kpis.error',

@@ -116,6 +116,7 @@ function assertCostBreakdownShape(c: CostBreakdown): void {
   for (const k of numeric) expect(typeof c[k]).toBe('number');
   expect(typeof c.first_date).toBe('string');
   expect(typeof c.last_date).toBe('string');
+  expect(['gallon', 'liter']).toContain(c.gas_unit);
   expect(Array.isArray(c.monthly_breakdown)).toBe(true);
   c.monthly_breakdown.forEach(assertMonthlyCostEntryShape);
 }
@@ -195,6 +196,7 @@ const costWire = {
   monthly_savings: 67.27,
   maintenance_savings_estimate: 450,
   gas_price: 3.5,
+  gas_unit: 'gallon',
   gas_efficiency_mpg: 25,
   base_cost_per_kwh: 0.12,
   monthly_breakdown: [

@@ -11,6 +11,7 @@ import {
 } from '@/components/ui';
 import { fmtInt } from '@/lib/numberFormat';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
+import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type {
   PreconditioningQueryState,
   PreconditioningSourceQueryState,
@@ -45,6 +46,9 @@ export function PreconditioningDataAvailability({
     }
     if (source.isLoading) {
       return result(t('preconditioningEffectiveness.availability.loading', 'Initial load'), 'info');
+    }
+    if (source.isPaused) {
+      return result(t('preconditioningEffectiveness.availability.paused', 'Paused offline'), 'warning');
     }
     if (source.error) {
       return result(t('preconditioningEffectiveness.availability.failed', 'Query failed'), 'warning');
@@ -95,7 +99,7 @@ export function PreconditioningDataAvailability({
     },
     {
       key: 'thermal',
-      label: t('preconditioningEffectiveness.availability.thermal', 'Thermal join support'),
+      label: t('preconditioningEffectiveness.availability.thermal', 'Distinct-state join support'),
       available: summary.windowSupport.departuresWithThermalSupport > 0,
       support: fmtInt(summary.windowSupport.departuresWithThermalSupport),
     },
@@ -122,8 +126,8 @@ export function PreconditioningDataAvailability({
       label: t('preconditioningEffectiveness.availability.comparison', 'Published comparison'),
       available: summary.overall.evidence !== 'none',
       support: summary.overall.evidence !== 'none'
-        ? t('preconditioningEffectiveness.availability.bothGroups', 'Both groups present')
-        : t('preconditioningEffectiveness.availability.requiresBoth', 'Requires both groups'),
+        ? t('preconditioningEffectiveness.availability.bothGroups', 'Within-stratum overlap present')
+        : t('preconditioningEffectiveness.availability.requiresBoth', 'Requires both groups in one stratum'),
     },
   ];
 
@@ -157,35 +161,41 @@ export function PreconditioningDataAvailability({
             </div>
           </div>
         </Grid>
-        <Grid cols={{ default: 1, sm: 2, xl: 5 }} gap={3} className="mt-3">
-          {items.map((item) => (
-            <div
-              key={item.key}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <MetricLabel>{item.label}</MetricLabel>
-                <Badge variant={item.available ? 'success' : 'neutral'}>
-                  {item.available
-                    ? t('preconditioningEffectiveness.availability.available', 'Available')
-                    : t('preconditioningEffectiveness.availability.withheld', 'Withheld')}
-                </Badge>
+        <PreconditioningSectionBody
+          summary={summary}
+          state={state}
+          className="mt-3"
+        >
+          <Grid cols={{ default: 1, sm: 2, xl: 5 }} gap={3}>
+            {items.map((item) => (
+              <div
+                key={item.key}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <MetricLabel>{item.label}</MetricLabel>
+                  <Badge variant={item.available ? 'success' : 'neutral'}>
+                    {item.available
+                      ? t('preconditioningEffectiveness.availability.available', 'Available')
+                      : t('preconditioningEffectiveness.availability.withheld', 'Withheld')}
+                  </Badge>
+                </div>
+                <Text as="p" variant="caption" className="mt-2">
+                  {item.support}
+                </Text>
               </div>
-              <Text as="p" variant="caption" className="mt-2">
-                {item.support}
-              </Text>
-            </div>
-          ))}
-        </Grid>
-        <div className="mt-4 flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-3">
-          <DatabaseZap className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-          <Text as="p" variant="caption">
-            {t(
-              'preconditioningEffectiveness.availability.note',
-              'A successful empty response is valid evidence of no returned rows; it is not treated as a transport failure.',
-            )}
-          </Text>
-        </div>
+            ))}
+          </Grid>
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-3">
+            <DatabaseZap className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+            <Text as="p" variant="caption">
+              {t(
+                'preconditioningEffectiveness.availability.note',
+                'A successful empty response is valid evidence of no returned rows; it is not treated as a transport failure.',
+              )}
+            </Text>
+          </div>
+        </PreconditioningSectionBody>
       </GlassPanel>
     </section>
   );

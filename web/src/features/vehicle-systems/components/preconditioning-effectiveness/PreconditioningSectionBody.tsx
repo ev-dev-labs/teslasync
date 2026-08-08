@@ -85,6 +85,17 @@ export function PreconditioningSectionBody({
       </div>
     );
   }
+  if (sources.some((source) => source.isPaused)) {
+    return (
+      <PassiveState
+        className={className}
+        message={t(
+          'preconditioningEffectiveness.states.pausedPassive',
+          'Required evidence is paused while the network is unavailable; this is not treated as an empty response.',
+        )}
+      />
+    );
+  }
   if (sources.some((source) => source.error)) {
     return (
       <PassiveState

@@ -99,6 +99,7 @@ export interface DailyMileageResponse {
 }
 
 export interface CostBreakdown {
+  vehicle_id: number;
   total_charging_cost: number;
   total_wh: number;
   total_sessions: number;
@@ -113,7 +114,9 @@ export interface CostBreakdown {
   maintenance_savings_estimate: number;
   months_of_ownership: number;
   gas_price: number;
+  gas_unit: 'gallon' | 'liter';
   gas_efficiency_mpg: number;
+  base_cost_per_kwh: number;
   monthly_breakdown: MonthlyCostEntry[];
 }
 
@@ -121,6 +124,7 @@ export interface MonthlyCostEntry {
   month: string;
   ev_cost: number;
   equiv_gas_cost: number;
+  savings: number;
   cumulative_savings: number;
   energy_wh: number;
 }
