@@ -248,6 +248,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/utilization', name: 'Utilization', label: 'Utilization', i18nKey: 'routes.utilization' },
   { path: '/vampire-drain', name: 'VampireDrain', label: 'Vampire Drain', i18nKey: 'routes.vampireDrain' },
   { path: '/vehicle-comparison', name: 'FleetCompare', label: 'Fleet Compare', i18nKey: 'routes.fleetCompare' },
+  { path: '/vehicle-management', name: 'VehicleManagement', label: 'Vehicle Management', i18nKey: 'routes.vehicleManagement' },
   { path: '/vehicle-systems/software', name: 'SoftwareUpdates', label: 'Software Updates', i18nKey: 'routes.softwareUpdates' },
   { path: '/vehicles', name: 'Vehicles', label: 'Vehicles', i18nKey: 'routes.vehicles' },
   { path: '/vehicles/:id', name: 'VehicleDetail', label: 'Vehicle Detail', i18nKey: 'routes.vehicleDetail', hidden: true },

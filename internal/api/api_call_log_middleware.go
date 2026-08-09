@@ -61,6 +61,15 @@ const (
 // that may carry secret material; matching values are replaced with REDACTED.
 var redactKeyPattern = regexp.MustCompile(`(?i)token|key|secret|password|cookie`)
 
+// opaqueVehicleManagementPathPattern identifies pricing and state-changing
+// payer requests whose undocumented payloads and responses must never be
+// captured. An optional trailing slash is covered so a router redirect or 404
+// cannot persist a submitted opaque object. The local vehicle id remains
+// available to the handler's structured operation/status log.
+var opaqueVehicleManagementPathPattern = regexp.MustCompile(
+	`^/api/v1/(?:tesla/vehicle-pricing|vehicles/[^/]+/enterprise-payer)/?$`,
+)
+
 // APICallLogger is the writer port the middleware depends on.
 //
 // Deprecated: use apilog.Logger. Will be removed in phase-48.
@@ -134,7 +143,7 @@ func DefaultAPILogSkip(path string) bool {
 		"/api/v1/system/status":
 		return true
 	}
-	return false
+	return opaqueVehicleManagementPathPattern.MatchString(path)
 }
 
 // APICallLogMiddleware enqueues one sanitized log entry per non-skipped request.

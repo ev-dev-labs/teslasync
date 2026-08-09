@@ -6,7 +6,14 @@ import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState } from '../types';
+import type {
+  EnterprisePayerVariables,
+  TeslaJSONValue,
+  VehicleInfoEnvelope,
+  VehicleManagementResult,
+  VehiclePricingVariables,
+  VehicleState,
+} from '../types';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
 
 export const vehicleKeys = {
@@ -384,11 +391,6 @@ export function useFleetStates(vehicles: Vehicle[]) {
 
 // ---------- Vehicle Info (mobile enabled, options, specs) ----------
 
-interface VehicleInfoEnvelope<T> {
-  data: T | null;
-  fetched_at: string | null;
-}
-
 interface MobileEnabledData {
   enabled: boolean;
 }
@@ -450,7 +452,10 @@ export function useRefreshVehicleSpecs(vehicleId?: string) {
   const queryClient = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs/refresh`, { method: 'POST' }),
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs/refresh`, {
+      method: 'POST',
+      body: JSON.stringify({ confirmed: true }),
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-specs', vehicleId] });
       success('toast.vehicles.specs.refresh.success', 'Vehicle specs refreshed');
@@ -527,5 +532,100 @@ export function useRefreshWarrantyDetails() {
       success('toast.vehicles.warranty.refresh.success', 'Warranty details refreshed');
     },
     onError: (e) => error(e, 'toast.vehicles.warranty.refresh.error', 'Failed to refresh warranty details'),
+  });
+}
+
+// ---------- Official Vehicle Management: pricing + enterprise ----------
+
+export function useVehiclePricing() {
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ payload }: VehiclePricingVariables) =>
+      request<VehicleManagementResult>('/tesla/vehicle-pricing', {
+        method: 'POST',
+        body: JSON.stringify({ payload }),
+      }),
+    onSuccess: () => {
+      success(
+        'toast.vehicles.pricing.success',
+        'Tesla vehicle pricing query completed',
+      );
+    },
+    onError: (e) =>
+      error(
+        e,
+        'toast.vehicles.pricing.error',
+        'Failed to query Tesla vehicle pricing',
+      ),
+  });
+}
+
+export function useEnterpriseRoles(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-enterprise-roles', vehicleId],
+    queryFn: ({ signal }) =>
+      request<VehicleInfoEnvelope<TeslaJSONValue>>(
+        `/vehicles/${vehicleId}/enterprise-roles`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.RARE,
+  });
+}
+
+export function useRefreshEnterpriseRoles(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: () =>
+      request<VehicleInfoEnvelope<TeslaJSONValue>>(
+        `/vehicles/${vehicleId}/enterprise-roles/refresh`,
+        { method: 'POST' },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['vehicle-enterprise-roles', vehicleId],
+      });
+      success(
+        'toast.vehicles.enterpriseRoles.refresh.success',
+        'Enterprise roles refreshed',
+      );
+    },
+    onError: (e) =>
+      error(
+        e,
+        'toast.vehicles.enterpriseRoles.refresh.error',
+        'Failed to refresh enterprise roles',
+      ),
+  });
+}
+
+export function useSetEnterprisePayer(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ payload, confirmed }: EnterprisePayerVariables) =>
+      request<VehicleManagementResult>(
+        `/vehicles/${vehicleId}/enterprise-payer`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ payload, confirmed }),
+        },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['vehicle-enterprise-roles', vehicleId],
+      });
+      success(
+        'toast.vehicles.enterprisePayer.success',
+        'Enterprise payer updated',
+      );
+    },
+    onError: (e) =>
+      error(
+        e,
+        'toast.vehicles.enterprisePayer.error',
+        'Failed to update enterprise payer',
+      ),
   });
 }

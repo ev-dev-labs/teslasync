@@ -94,6 +94,10 @@ import {
   useRefreshVehicleUpgrades,
   useWarrantyDetails,
   useRefreshWarrantyDetails,
+  useVehiclePricing,
+  useEnterpriseRoles,
+  useRefreshEnterpriseRoles,
+  useSetEnterprisePayer,
 } from './useVehicles';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -602,6 +606,9 @@ describe.each(refreshFamily)('$label', ({ hook, segment, invalidateKey, toastKey
 
     expect(lastUrl()).toBe(`/vehicles/5/${segment}/refresh`);
     expect(lastOpts().method).toBe('POST');
+    if (segment === 'specs') {
+      expect(lastOpts().body).toBe(JSON.stringify({ confirmed: true }));
+    }
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: invalidateKey });
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith(toastKey, expect.any(String)));
   });
@@ -769,5 +776,84 @@ describe('warranty details', () => {
         expect.any(String),
       ),
     );
+  });
+});
+
+describe('official vehicle-management partner hooks', () => {
+  it('submits pricing to the fixed route with only the opaque payload wrapper', async () => {
+    requestMock.mockResolvedValueOnce({ data: { quote: 17 } });
+    const { result } = renderH(() => useVehiclePricing());
+    const payload = { opaque: { nested: [1, true] } };
+
+    await result.current.mutateAsync({ payload });
+
+    expect(lastUrl()).toBe('/tesla/vehicle-pricing');
+    expect(lastOpts().method).toBe('POST');
+    expect(JSON.parse(String(lastOpts().body))).toEqual({ payload });
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        'toast.vehicles.pricing.success',
+        expect.any(String),
+      ),
+    );
+  });
+
+  it('reads cached enterprise roles only when a vehicle is selected', async () => {
+    requestMock.mockResolvedValueOnce({
+      data: { roles: ['fleet_manager'] },
+      fetched_at: '2026-08-08T12:00:00Z',
+    });
+    const { result } = renderH(() => useEnterpriseRoles('5'));
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(lastUrl()).toBe('/vehicles/5/enterprise-roles');
+    expect(lastOpts()).toHaveProperty('signal');
+
+    requestMock.mockClear();
+    renderH(() => useEnterpriseRoles(undefined));
+    await tick();
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('refreshes enterprise roles explicitly and invalidates the cached GET', async () => {
+    requestMock.mockResolvedValueOnce({
+      data: { roles: [] },
+      fetched_at: '2026-08-08T12:00:00Z',
+    });
+    const client = makeClient();
+    const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useRefreshEnterpriseRoles('5'), {
+      wrapper: makeWrapper(client),
+    });
+
+    await result.current.mutateAsync();
+
+    expect(lastUrl()).toBe('/vehicles/5/enterprise-roles/refresh');
+    expect(lastOpts().method).toBe('POST');
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['vehicle-enterprise-roles', '5'],
+    });
+  });
+
+  it('sends the exact payer object with explicit confirmation and invalidates roles', async () => {
+    requestMock.mockResolvedValueOnce({ data: { updated: true } });
+    const client = makeClient();
+    const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useSetEnterprisePayer('5'), {
+      wrapper: makeWrapper(client),
+    });
+    const payload = { opaque: { nested: [1, true] } };
+
+    await result.current.mutateAsync({ payload, confirmed: true });
+
+    expect(lastUrl()).toBe('/vehicles/5/enterprise-payer');
+    expect(lastOpts().method).toBe('POST');
+    expect(JSON.parse(String(lastOpts().body))).toEqual({
+      payload,
+      confirmed: true,
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['vehicle-enterprise-roles', '5'],
+    });
   });
 });

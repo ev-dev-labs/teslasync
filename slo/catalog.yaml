@@ -34,6 +34,16 @@ slos:
     owner: platform
     tags: [http, latency]
 
+  - name: vehicle_management_availability
+    description: "Tesla Vehicle Management metadata and enterprise operations must complete without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/(warranty(|/refresh)|vehicle-pricing)|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/(warranty(|/refresh)|vehicle-pricing)|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|enterprise-roles)(|/refresh)|enterprise-payer))\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, vehicle-management, upstream]
+
   - name: service_intelligence_availability
     description: "Recall and service-intelligence requests must return without a server or upstream-gateway failure."
     sli:

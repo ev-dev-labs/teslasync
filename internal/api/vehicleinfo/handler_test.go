@@ -58,8 +58,9 @@ var (
 )
 
 type teslaCall struct {
-	method string
-	vin    string
+	method  string
+	vin     string
+	payload tesla.JSONRequestObject
 }
 
 // fakeTeslaClient returns the same canned (body,status,err) for every fetch
@@ -101,6 +102,27 @@ func (f *fakeTeslaClient) GetUpgradeEligibility(_ context.Context, vin string) (
 
 func (f *fakeTeslaClient) GetWarrantyDetails(_ context.Context) ([]byte, int, error) {
 	return f.record("warranty", "")
+}
+
+func (f *fakeTeslaClient) GetVehiclePricing(
+	_ context.Context,
+	payload tesla.JSONRequestObject,
+) ([]byte, int, error) {
+	f.calls = append(f.calls, teslaCall{method: "vehicle_pricing", payload: payload})
+	return f.body, f.status, f.err
+}
+
+func (f *fakeTeslaClient) GetEnterpriseRoles(_ context.Context, vin string) ([]byte, int, error) {
+	return f.record("enterprise_roles", vin)
+}
+
+func (f *fakeTeslaClient) SetEnterprisePayer(
+	_ context.Context,
+	vin string,
+	payload tesla.JSONRequestObject,
+) ([]byte, int, error) {
+	f.calls = append(f.calls, teslaCall{method: "enterprise_payer", vin: vin, payload: payload})
+	return f.body, f.status, f.err
 }
 
 type upsertCall struct {
@@ -168,6 +190,17 @@ func okVehicle() *vehiclemodel.Vehicle {
 // the same way the production router does.
 func vehReq(method, vehicleID string) *http.Request {
 	r := httptest.NewRequest(method, "/x", nil)
+	if vehicleID != "" {
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("vehicleID", vehicleID)
+		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+	}
+	return r
+}
+
+func vehJSONReq(method, vehicleID, body string) *http.Request {
+	r := httptest.NewRequest(method, "/x", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
 	if vehicleID != "" {
 		rctx := chi.NewRouteContext()
 		rctx.URLParams.Add("vehicleID", vehicleID)
@@ -329,6 +362,7 @@ func TestGetHandlers_ConfigKeyRouting(t *testing.T) {
 		{"specs", (*Handler).VehicleSpecs, "vehicle_specs:" + testVIN, true},
 		{"subscriptions", (*Handler).SubscriptionEligibility, "subscriptions:" + testVIN, true},
 		{"upgrades", (*Handler).UpgradeEligibility, "upgrades:" + testVIN, true},
+		{"enterprise-roles", (*Handler).EnterpriseRoles, "enterprise_roles:" + testVIN, true},
 		{"warranty", (*Handler).WarrantyDetails, "warranty", false},
 	}
 	for _, tt := range tests {
@@ -448,13 +482,15 @@ func TestRefresh_SuccessAndPersistence(t *testing.T) {
 		wantKey    string
 		wantData   string
 		needsVIN   bool
+		confirmed  bool
 	}{
-		{"mobile-enabled", (*Handler).RefreshMobileEnabled, `{"response":true}`, "mobile_enabled", "mobile_enabled:" + testVIN, `{"enabled":true}`, true},
-		{"options", (*Handler).RefreshVehicleOptions, `{"response":{"codes":["A"]}}`, "vehicle_options", "vehicle_options:" + testVIN, `{"codes":["A"]}`, true},
-		{"specs", (*Handler).RefreshVehicleSpecs, `{"response":{"weight":1000}}`, "vehicle_specs", "vehicle_specs:" + testVIN, `{"weight":1000}`, true},
-		{"subscriptions", (*Handler).RefreshSubscriptionEligibility, `{"response":{"eligible":true}}`, "subscriptions", "subscriptions:" + testVIN, `{"eligible":true}`, true},
-		{"upgrades", (*Handler).RefreshUpgradeEligibility, `{"response":{"tier":"x"}}`, "upgrades", "upgrades:" + testVIN, `{"tier":"x"}`, true},
-		{"warranty", (*Handler).RefreshWarrantyDetails, `{"response":{"active":true}}`, "warranty", "warranty", `{"active":true}`, false},
+		{"mobile-enabled", (*Handler).RefreshMobileEnabled, `{"response":true}`, "mobile_enabled", "mobile_enabled:" + testVIN, `{"enabled":true}`, true, false},
+		{"options", (*Handler).RefreshVehicleOptions, `{"response":{"codes":["A"]}}`, "vehicle_options", "vehicle_options:" + testVIN, `{"codes":["A"]}`, true, false},
+		{"specs", (*Handler).RefreshVehicleSpecs, `{"response":{"weight":1000}}`, "vehicle_specs", "vehicle_specs:" + testVIN, `{"weight":1000}`, true, true},
+		{"subscriptions", (*Handler).RefreshSubscriptionEligibility, `{"response":{"eligible":true}}`, "subscriptions", "subscriptions:" + testVIN, `{"eligible":true}`, true, false},
+		{"upgrades", (*Handler).RefreshUpgradeEligibility, `{"response":{"tier":"x"}}`, "upgrades", "upgrades:" + testVIN, `{"tier":"x"}`, true, false},
+		{"enterprise-roles", (*Handler).RefreshEnterpriseRoles, `{"response":{"roles":["fleet_manager"]}}`, "enterprise_roles", "enterprise_roles:" + testVIN, `{"roles":["fleet_manager"]}`, true, false},
+		{"warranty", (*Handler).RefreshWarrantyDetails, `{"response":{"active":true}}`, "warranty", "warranty", `{"active":true}`, false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -467,7 +503,11 @@ func TestRefresh_SuccessAndPersistence(t *testing.T) {
 			if tt.needsVIN {
 				vehicleID = "7"
 			}
-			tt.call(h, rec, vehReq(http.MethodPost, vehicleID))
+			req := vehReq(http.MethodPost, vehicleID)
+			if tt.confirmed {
+				req = vehJSONReq(http.MethodPost, vehicleID, `{"confirmed":true}`)
+			}
+			tt.call(h, rec, req)
 
 			if rec.Code != http.StatusOK {
 				t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
@@ -528,10 +568,10 @@ func TestRefresh_ErrorPaths(t *testing.T) {
 			wantStatus: http.StatusBadGateway,
 		},
 		{
-			name:       "tesla non-2xx → 502",
+			name:       "tesla authorization failure remains 403",
 			tc:         &fakeTeslaClient{validToken: true, status: http.StatusForbidden, body: []byte(`{"error":"nope"}`)},
 			cfg:        newFakeConfigStore(),
-			wantStatus: http.StatusBadGateway,
+			wantStatus: http.StatusForbidden,
 		},
 		{
 			name:       "unparseable tesla json → 500",
@@ -684,7 +724,7 @@ func TestRefreshVehicleSpecs_FreshnessGuard(t *testing.T) {
 			h := newHandler(tc, cfg, &fakeVehicleFinder{vehicle: okVehicle()})
 
 			rec := httptest.NewRecorder()
-			h.RefreshVehicleSpecs(rec, vehReq(http.MethodPost, "7"))
+			h.RefreshVehicleSpecs(rec, vehJSONReq(http.MethodPost, "7", `{"confirmed":true}`))
 
 			if rec.Code != tt.wantStatus {
 				t.Fatalf("status = %d, want %d; body=%s", rec.Code, tt.wantStatus, rec.Body.String())
@@ -693,6 +733,25 @@ func TestRefreshVehicleSpecs_FreshnessGuard(t *testing.T) {
 				t.Fatalf("tesla called = %v, want %v", calledTesla, tt.wantTesla)
 			}
 		})
+	}
+}
+
+func TestRefreshVehicleSpecs_RequiresExplicitConfirmation(t *testing.T) {
+	tc := &fakeTeslaClient{validToken: true, status: http.StatusOK, body: []byte(`{"response":{}}`)}
+	cfg := newFakeConfigStore()
+	h := newHandler(tc, cfg, &fakeVehicleFinder{vehicle: okVehicle()})
+
+	rec := httptest.NewRecorder()
+	h.RefreshVehicleSpecs(rec, vehJSONReq(http.MethodPost, "7", `{"confirmed":false}`))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	}
+	if len(tc.calls) != 0 {
+		t.Fatalf("Tesla calls = %d, want 0", len(tc.calls))
+	}
+	if len(cfg.upserts) != 0 {
+		t.Fatalf("upserts = %d, want 0", len(cfg.upserts))
 	}
 }
 
@@ -705,7 +764,7 @@ func TestRefreshVehicleSpecs_GuardDoesNotPersist(t *testing.T) {
 	h := newHandler(tc, cfg, &fakeVehicleFinder{vehicle: okVehicle()})
 
 	rec := httptest.NewRecorder()
-	h.RefreshVehicleSpecs(rec, vehReq(http.MethodPost, "7"))
+	h.RefreshVehicleSpecs(rec, vehJSONReq(http.MethodPost, "7", `{"confirmed":true}`))
 
 	if rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("status = %d, want 429", rec.Code)
@@ -740,5 +799,321 @@ func TestWarranty_DoesNotRequireVehicleID(t *testing.T) {
 	env := decodeEnvelope(t, rec)
 	if string(env.Data) != `{"active":true}` {
 		t.Fatalf("warranty data = %s, want {\"active\":true}", env.Data)
+	}
+}
+
+func TestOpaqueManagementRequestsRejectInvalidBodiesWithoutTeslaCall(t *testing.T) {
+	oversized := `{"payload":{"blob":"` +
+		strings.Repeat("x", int(maxOpaqueRequestBodyBytes)) +
+		`"}}`
+	tests := []struct {
+		name       string
+		call       func(*Handler, http.ResponseWriter, *http.Request)
+		vehicleID  string
+		body       string
+		wantStatus int
+	}{
+		{
+			name:       "pricing body required",
+			call:       (*Handler).VehiclePricing,
+			body:       "",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "pricing payload rejects array",
+			call:       (*Handler).VehiclePricing,
+			body:       `{"payload":[]}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "pricing payload rejects scalar",
+			call:       (*Handler).VehiclePricing,
+			body:       `{"payload":"unknown schema"}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "pricing payload rejects null",
+			call:       (*Handler).VehiclePricing,
+			body:       `{"payload":null}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "pricing payload rejects empty object",
+			call:       (*Handler).VehiclePricing,
+			body:       `{"payload":{}}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "pricing rejects trailing JSON",
+			call:       (*Handler).VehiclePricing,
+			body:       `{"payload":{"opaque":true}} {}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "pricing rejects unknown wrapper fields",
+			call:       (*Handler).VehiclePricing,
+			body:       `{"payload":{"opaque":true},"method":"DELETE"}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "pricing enforces small body limit",
+			call:       (*Handler).VehiclePricing,
+			body:       oversized,
+			wantStatus: http.StatusRequestEntityTooLarge,
+		},
+		{
+			name:       "payer requires explicit confirmation",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       `{"payload":{"opaque":true}}`,
+			wantStatus: http.StatusPreconditionFailed,
+		},
+		{
+			name:       "payer rejects false confirmation",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       `{"payload":{"opaque":true},"confirmed":false}`,
+			wantStatus: http.StatusPreconditionFailed,
+		},
+		{
+			name:       "payer rejects empty object",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       `{"payload":{},"confirmed":true}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "payer rejects array",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       `{"payload":[1],"confirmed":true}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "payer rejects scalar",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       `{"payload":"unknown schema","confirmed":true}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "payer rejects null",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       `{"payload":null,"confirmed":true}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "payer rejects trailing JSON",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       `{"payload":{"opaque":true},"confirmed":true} null`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "payer enforces small body limit",
+			call:       (*Handler).EnterprisePayer,
+			vehicleID:  "7",
+			body:       strings.Replace(oversized, "}}", `},"confirmed":true}`, 1),
+			wantStatus: http.StatusRequestEntityTooLarge,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tc := &fakeTeslaClient{
+				status: http.StatusOK,
+				body:   []byte(`{"response":{"ok":true}}`),
+			}
+			cfg := newFakeConfigStore()
+			h := newHandler(tc, cfg, &fakeVehicleFinder{vehicle: okVehicle()})
+			rec := httptest.NewRecorder()
+
+			tt.call(h, rec, vehJSONReq(http.MethodPost, tt.vehicleID, tt.body))
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d; body=%s", rec.Code, tt.wantStatus, rec.Body.String())
+			}
+			if len(tc.calls) != 0 {
+				t.Fatalf("invalid request made %d Tesla call(s), want 0", len(tc.calls))
+			}
+			if len(cfg.upserts) != 0 {
+				t.Fatalf("invalid request persisted %d config row(s), want 0", len(cfg.upserts))
+			}
+		})
+	}
+}
+
+func TestVehiclePricingForwardsOnlyOpaqueObject(t *testing.T) {
+	tc := &fakeTeslaClient{
+		status: http.StatusOK,
+		body:   []byte(`{"response":{"currency":"USD","quote":17}}`),
+	}
+	cfg := newFakeConfigStore()
+	h := newHandler(tc, cfg, &fakeVehicleFinder{vehicle: okVehicle()})
+	rec := httptest.NewRecorder()
+
+	h.VehiclePricing(
+		rec,
+		vehJSONReq(
+			http.MethodPost,
+			"",
+			`{"payload":{"opaque":{"nested":[1,true]}}}`,
+		),
+	)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if len(tc.calls) != 1 || tc.calls[0].method != "vehicle_pricing" {
+		t.Fatalf("calls = %+v, want one vehicle_pricing call", tc.calls)
+	}
+	if got := string(tc.calls[0].payload["opaque"]); got != `{"nested":[1,true]}` {
+		t.Fatalf("opaque payload = %s", got)
+	}
+	if len(cfg.upserts) != 0 {
+		t.Fatalf("pricing persisted %d row(s), want 0", len(cfg.upserts))
+	}
+	var result operationResultEnvelope
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if string(result.Data) != `{"currency":"USD","quote":17}` {
+		t.Fatalf("response data = %s", result.Data)
+	}
+}
+
+func TestEnterpriseRolesCachedReadAndExplicitRefresh(t *testing.T) {
+	key := "enterprise_roles:" + testVIN
+	cfg := newFakeConfigStore()
+	cfg.byType[key] = &teslamodel.TeslaUserConfig{
+		ConfigType: key,
+		Data:       `{"roles":["cached_role"]}`,
+		FetchedAt:  time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC),
+	}
+	tc := &fakeTeslaClient{
+		validToken: false,
+		status:     http.StatusOK,
+		body:       []byte(`{"response":{"roles":["refreshed_role"]}}`),
+	}
+	h := newHandler(tc, cfg, &fakeVehicleFinder{vehicle: okVehicle()})
+
+	rec := httptest.NewRecorder()
+	h.EnterpriseRoles(rec, vehReq(http.MethodGet, "7"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("cached GET status = %d, want 200", rec.Code)
+	}
+	if len(tc.calls) != 0 {
+		t.Fatalf("cached GET made %d Tesla call(s), want 0", len(tc.calls))
+	}
+	if got := string(decodeEnvelope(t, rec).Data); got != `{"roles":["cached_role"]}` {
+		t.Fatalf("cached data = %s", got)
+	}
+
+	rec = httptest.NewRecorder()
+	h.RefreshEnterpriseRoles(rec, vehReq(http.MethodPost, "7"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("refresh status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if len(tc.calls) != 1 || tc.calls[0].method != "enterprise_roles" {
+		t.Fatalf("calls = %+v, want one enterprise_roles call", tc.calls)
+	}
+	if tc.calls[0].vin != testVIN {
+		t.Fatalf("roles VIN = %q, want test VIN", tc.calls[0].vin)
+	}
+	if len(cfg.upserts) != 1 || cfg.upserts[0].configType != key {
+		t.Fatalf("upserts = %+v, want enterprise roles cache row", cfg.upserts)
+	}
+}
+
+func TestPartnerOnlyRefreshDoesNotRequireUserToken(t *testing.T) {
+	tc := &fakeTeslaClient{
+		validToken: false,
+		status:     http.StatusOK,
+		body:       []byte(`{"response":{"mass_kg":1800}}`),
+	}
+	h := newHandler(tc, newFakeConfigStore(), &fakeVehicleFinder{vehicle: okVehicle()})
+	rec := httptest.NewRecorder()
+
+	h.RefreshVehicleSpecs(rec, vehJSONReq(http.MethodPost, "7", `{"confirmed":true}`))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if len(tc.calls) != 1 || tc.calls[0].method != "vehicle_specs" {
+		t.Fatalf("calls = %+v, want partner-scoped specs call", tc.calls)
+	}
+}
+
+func TestEnterprisePayerRequiresConfirmationAndNeverPersistsPayload(t *testing.T) {
+	tc := &fakeTeslaClient{
+		status: http.StatusOK,
+		body:   []byte(`{"response":{"updated":true}}`),
+	}
+	cfg := newFakeConfigStore()
+	h := newHandler(tc, cfg, &fakeVehicleFinder{vehicle: okVehicle()})
+	rec := httptest.NewRecorder()
+
+	h.EnterprisePayer(
+		rec,
+		vehJSONReq(
+			http.MethodPost,
+			"7",
+			`{"payload":{"opaque":{"nested":[1,true]}},"confirmed":true}`,
+		),
+	)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if len(tc.calls) != 1 || tc.calls[0].method != "enterprise_payer" {
+		t.Fatalf("calls = %+v, want one enterprise_payer call", tc.calls)
+	}
+	if tc.calls[0].vin != testVIN {
+		t.Fatalf("payer VIN = %q, want test VIN", tc.calls[0].vin)
+	}
+	if got := string(tc.calls[0].payload["opaque"]); got != `{"nested":[1,true]}` {
+		t.Fatalf("payer payload = %s", got)
+	}
+	if len(cfg.upserts) != 0 {
+		t.Fatalf("payer persisted %d row(s), want 0", len(cfg.upserts))
+	}
+}
+
+func TestPartnerCapabilityFailuresPreserveExpectedStatus(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     int
+		err        error
+		wantStatus int
+	}{
+		{"partner credentials missing", 0, tesla.ErrPartnerCredentialsMissing, http.StatusPreconditionFailed},
+		{"partner authentication", http.StatusUnauthorized, errors.New("unauthorized"), http.StatusUnauthorized},
+		{"payment required", http.StatusPaymentRequired, nil, http.StatusPaymentRequired},
+		{"scope forbidden", http.StatusForbidden, nil, http.StatusForbidden},
+		{"precondition", http.StatusPreconditionFailed, nil, http.StatusPreconditionFailed},
+		{"rate limited", http.StatusTooManyRequests, nil, http.StatusTooManyRequests},
+		{"upstream server error", http.StatusInternalServerError, errors.New("upstream"), http.StatusBadGateway},
+		{"transport error", 0, errors.New("timeout"), http.StatusBadGateway},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tc := &fakeTeslaClient{status: tt.status, err: tt.err}
+			h := newHandler(tc, newFakeConfigStore(), &fakeVehicleFinder{vehicle: okVehicle()})
+			rec := httptest.NewRecorder()
+
+			h.VehiclePricing(
+				rec,
+				vehJSONReq(http.MethodPost, "", `{"payload":{"opaque":true}}`),
+			)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d; body=%s", rec.Code, tt.wantStatus, rec.Body.String())
+			}
+			if strings.Contains(rec.Body.String(), `"data"`) {
+				t.Fatalf("failure returned success-shaped data: %s", rec.Body.String())
+			}
+		})
 	}
 }

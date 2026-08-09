@@ -3628,6 +3628,7 @@
     "historyAria": "Location history"
   },
   "routes": {
+    "vehicleManagement": "Vehicle Management",
     "twinLab": "Vehicle Twin Lab",
     "firmwareCanary": "Firmware Canary",
     "componentSurvival": "Component Survival",
@@ -5028,6 +5029,20 @@
           "success": "Warranty details refreshed",
           "error": "Failed to refresh warranty details"
         }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed",
+        "error": "Failed to query Tesla vehicle pricing"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed",
+          "error": "Failed to refresh enterprise roles"
+        }
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated",
+        "error": "Failed to update enterprise payer"
       }
     },
     "ordersRefreshed": "Orders refreshed",
@@ -13463,6 +13478,131 @@
       "notConfigured": "Step-up reauth is not configured on this server. Ask your administrator to set TESLASYNC_SUDO_PASSWORD or TESLASYNC_SUDO_TOTP_SECRET.",
       "typedConfirmationMismatch": "Type {{token}} exactly to confirm.",
       "unknown": "Reauthentication failed."
+    }
+  },
+  "vehicleManagement": {
+    "pageTitle": "Vehicle Management",
+    "pageSubtitle": "Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.",
+    "selectVehicle": "Select management vehicle",
+    "vehicle": {
+      "fallbackName": "Vehicle {{id}}"
+    },
+    "roster": {
+      "loadingTitle": "Loading vehicle context",
+      "loading": "Vehicle-scoped cards remain unavailable while the fleet loads. Cached account-level warranty data can still load.",
+      "errorTitle": "Vehicle context unavailable",
+      "error": "The vehicle list could not be loaded. Account-level cached data remains available.",
+      "emptyTitle": "No vehicles available",
+      "empty": "Connect and sync a Tesla vehicle to enable vehicle-scoped management APIs. Account-level warranty data remains available."
+    },
+    "title": "Vehicle Management workspace",
+    "description": "Account metadata, paid specifications, pricing, and enterprise controls are separate from physical vehicle commands.",
+    "catalogBadge": "8 official endpoints",
+    "noVehicleTitle": "Vehicle selection required",
+    "noVehicle": "All endpoint cards remain visible, but vehicle-scoped reads and mutations stay unavailable until a vehicle is selected.",
+    "prerequisite": {
+      "user": "User access",
+      "partner": "Partner token",
+      "enterprise": "Enterprise"
+    },
+    "summary": {
+      "model": "Model",
+      "trim": "Trim",
+      "status": "Status",
+      "expiry": "Expiry",
+      "items": "Items",
+      "fields": "Fields returned",
+      "roles": "Roles"
+    },
+    "data": {
+      "redacted": "Redacted",
+      "emptyObject": "Empty object",
+      "emptyArray": "Empty list",
+      "noData": "No value",
+      "true": "Yes",
+      "false": "No",
+      "maxDepth": "Additional nested data",
+      "item": "Item {{index}}"
+    },
+    "state": {
+      "vehicleRequired": "Select a vehicle",
+      "vehicleRequiredDetail": "This endpoint is unavailable until a vehicle is selected.",
+      "loading": "Loading cached data",
+      "unavailable": "Capability unavailable",
+      "prerequisiteError": "Tesla did not confirm the required account scope or prerequisite.",
+      "error": "Request failed",
+      "errorDetail": "The request could not be completed.",
+      "success": "Request completed",
+      "successDetail": "Tesla accepted the request. Any returned data is shown below.",
+      "empty": "No cached data",
+      "emptyDetail": "Use refresh to request this information from Tesla when the required access is available.",
+      "fetchedAt": "Cached {{time}}",
+      "notFetched": "Not cached"
+    },
+    "action": {
+      "refresh": "Refresh from Tesla"
+    },
+    "json": {
+      "schemaTitle": "Tesla-controlled undocumented schema",
+      "label": "JSON object",
+      "invalid": "Enter valid JSON with no trailing content.",
+      "objectRequired": "The payload must be a JSON object, not an array, scalar, or null.",
+      "empty": "The JSON object must contain at least one field."
+    },
+    "options": {
+      "title": "Vehicle options",
+      "description": "Option codes and factory configuration available to the connected Tesla user."
+    },
+    "specs": {
+      "title": "Vehicle specifications",
+      "description": "Partner-scoped vehicle specifications cached for 24 hours by TeslaSync.",
+      "costTitle": "Paid Tesla API result",
+      "costWarning": "Tesla bills $0.10 for each successful specifications result. TeslaSync also enforces a 24-hour refresh guard.",
+      "confirmTitle": "Request paid vehicle specifications?",
+      "confirmMessage": "A successful Tesla response costs $0.10. Continue only if the cached result needs updating.",
+      "confirmAction": "Request $0.10 result"
+    },
+    "warranty": {
+      "title": "Warranty details",
+      "description": "Tesla account warranty coverage details; VIN behavior can vary by account."
+    },
+    "subscriptions": {
+      "title": "Subscription eligibility",
+      "description": "Eligibility information for Tesla vehicle subscriptions."
+    },
+    "upgrades": {
+      "title": "Upgrade eligibility",
+      "description": "Available or eligible Tesla vehicle upgrades returned for the selected VIN."
+    },
+    "pricing": {
+      "title": "Vehicle pricing",
+      "description": "Read-only partner pricing query sent by POST with a Tesla-defined request object.",
+      "action": "Open pricing query",
+      "empty": "No session result",
+      "emptyDetail": "Pricing payloads are not persisted. Submit a Tesla-controlled JSON object to view a result for this session.",
+      "dialogTitle": "Query vehicle pricing",
+      "schema": "Tesla does not publish this request schema. Submit only an object obtained from a trusted Tesla workflow; TeslaSync forwards it unchanged in meaning.",
+      "submit": "Submit pricing query"
+    },
+    "roles": {
+      "title": "Enterprise roles",
+      "description": "Cached business roles for the selected VIN. Refresh is the only action that contacts Tesla."
+    },
+    "payer": {
+      "title": "Enterprise payer",
+      "description": "State-changing enterprise billing operation for the selected vehicle.",
+      "action": "Configure payer change",
+      "empty": "No payer change submitted",
+      "emptyDetail": "Payer request objects are never cached. A successful response is shown only for the current session.",
+      "warningTitle": "Changes enterprise billing responsibility",
+      "warning": "Only continue with an object supplied by an authorized Tesla enterprise workflow. Access is not assumed.",
+      "dialogTitle": "Prepare payer change",
+      "schema": "Tesla controls this undocumented schema. TeslaSync validates only that the payload is a non-empty JSON object.",
+      "continue": "Continue to confirmation",
+      "confirmTitle": "Confirm enterprise payer change",
+      "confirmMessage": "This changes enterprise billing responsibility for the selected vehicle. TeslaSync will send the staged object only after this confirmation.",
+      "confirmAction": "Change enterprise payer",
+      "typeConfirmation": "Type PAYER to confirm the billing change"
     }
   },
   "commands": {

@@ -209,7 +209,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	actioncenterdb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
 	advancedintelligencedb "github.com/ev-dev-labs/teslasync/internal/database/advancedintelligence"
-	ownershipinteldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
@@ -221,6 +220,7 @@ import (
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	ownershipinteldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
@@ -376,12 +376,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/advancedintelligencesvc"
-	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
@@ -390,6 +390,43 @@ import (
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
+
+type vehicleManagementRouteHandler interface {
+	VehicleOptions(http.ResponseWriter, *http.Request)
+	RefreshVehicleOptions(http.ResponseWriter, *http.Request)
+	VehicleSpecs(http.ResponseWriter, *http.Request)
+	RefreshVehicleSpecs(http.ResponseWriter, *http.Request)
+	SubscriptionEligibility(http.ResponseWriter, *http.Request)
+	RefreshSubscriptionEligibility(http.ResponseWriter, *http.Request)
+	UpgradeEligibility(http.ResponseWriter, *http.Request)
+	RefreshUpgradeEligibility(http.ResponseWriter, *http.Request)
+	WarrantyDetails(http.ResponseWriter, *http.Request)
+	RefreshWarrantyDetails(http.ResponseWriter, *http.Request)
+	VehiclePricing(http.ResponseWriter, *http.Request)
+	EnterpriseRoles(http.ResponseWriter, *http.Request)
+	RefreshEnterpriseRoles(http.ResponseWriter, *http.Request)
+	EnterprisePayer(http.ResponseWriter, *http.Request)
+}
+
+func mountVehicleScopedManagementRoutes(r chi.Router, h vehicleManagementRouteHandler) {
+	r.Get("/options", h.VehicleOptions)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/options/refresh", h.RefreshVehicleOptions)
+	r.Get("/specs", h.VehicleSpecs)
+	r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/specs/refresh", h.RefreshVehicleSpecs)
+	r.Get("/subscriptions", h.SubscriptionEligibility)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", h.RefreshSubscriptionEligibility)
+	r.Get("/upgrades", h.UpgradeEligibility)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", h.RefreshUpgradeEligibility)
+	r.Get("/enterprise-roles", h.EnterpriseRoles)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/enterprise-roles/refresh", h.RefreshEnterpriseRoles)
+	r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/enterprise-payer", h.EnterprisePayer)
+}
+
+func mountAccountVehicleManagementRoutes(r chi.Router, h vehicleManagementRouteHandler) {
+	r.Get("/tesla/warranty", h.WarrantyDetails)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/warranty/refresh", h.RefreshWarrantyDetails)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/vehicle-pricing", h.VehiclePricing)
+}
 
 // NewRouter creates and configures the main HTTP router with all API routes,
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
@@ -3053,16 +3090,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Vehicle info: mobile access, options, specs
 				r.Get("/mobile-enabled", vehicleInfoHandler.MobileEnabled)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/mobile-enabled/refresh", vehicleInfoHandler.RefreshMobileEnabled)
-				r.Get("/options", vehicleInfoHandler.VehicleOptions)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/options/refresh", vehicleInfoHandler.RefreshVehicleOptions)
-				r.Get("/specs", vehicleInfoHandler.VehicleSpecs)
-				r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/specs/refresh", vehicleInfoHandler.RefreshVehicleSpecs)
-
-				// Vehicle lifecycle: subscriptions & upgrades
-				r.Get("/subscriptions", vehicleInfoHandler.SubscriptionEligibility)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", vehicleInfoHandler.RefreshSubscriptionEligibility)
-				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
+				mountVehicleScopedManagementRoutes(r, vehicleInfoHandler)
 
 				// /guard endpoints restored.
 				// Status + Events are read-only and rate-limit-free
@@ -3224,9 +3252,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/profile/refresh", teslaUserProfileHandler.RefreshProfile)
 		})
 
-		// Tesla Warranty Details (account-level)
-		r.Get("/tesla/warranty", vehicleInfoHandler.WarrantyDetails)
-		r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/warranty/refresh", vehicleInfoHandler.RefreshWarrantyDetails)
+		// Tesla Vehicle Management account-level endpoints.
+		mountAccountVehicleManagementRoutes(r, vehicleInfoHandler)
 
 		// Geofences
 		r.Route("/geofences", func(r chi.Router) {

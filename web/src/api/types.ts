@@ -63,6 +63,38 @@ export interface Vehicle {
   updated_at: string
 }
 
+/** JSON values returned by Tesla-controlled, undocumented Fleet API schemas. */
+export type TeslaJSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | TeslaJSONValue[]
+  | TeslaOpaqueObject
+
+/** Opaque Tesla-controlled JSON object for undocumented request schemas. */
+export type TeslaOpaqueObject = { [key: string]: TeslaJSONValue }
+
+/** Cached vehicle-management response stored in tesla_user_config. */
+export interface VehicleInfoEnvelope<T = TeslaOpaqueObject> {
+  data: T | null
+  fetched_at: string | null
+}
+
+/** Non-persisted response from an opaque Vehicle Management mutation. */
+export interface VehicleManagementResult {
+  data: TeslaJSONValue
+}
+
+export interface VehiclePricingVariables {
+  payload: TeslaOpaqueObject
+}
+
+export interface EnterprisePayerVariables {
+  payload: TeslaOpaqueObject
+  confirmed: boolean
+}
+
 // VehicleLiveState removed — vehicle_live_state table dropped.
 // Use VehicleState (from /vehicles/{id}/state via SignalStore) or
 // VehicleLiveState from hooks/useVehicleLive (SSE) instead.

@@ -4,12 +4,30 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 )
+
+const (
+	vehicleSpecsRouteTemplate    = "/api/1/vehicles/{vin}/specs"
+	enterpriseRolesRouteTemplate = "/api/1/dx/enterprise/v1/{vin}/roles"
+	enterprisePayerRouteTemplate = "/api/1/dx/enterprise/v1/{vin}/payer"
+	vehiclePricingPath           = "/api/1/dx/vehicles/pricing"
+)
+
+// JSONRequestObject is an opaque, non-empty JSON object accepted by Tesla
+// endpoints whose request schema is not publicly documented. RawMessage
+// values preserve nested JSON without resorting to map[string]interface{}.
+type JSONRequestObject map[string]json.RawMessage
+
+// ErrEmptyJSONRequestObject is returned before token acquisition or any Fleet
+// API call when an opaque request object contains no fields.
+var ErrEmptyJSONRequestObject = errors.New("Tesla request payload must be a non-empty JSON object")
 
 // GetNearbyChargingSites returns charging sites near the vehicle's current location.
 // GET /api/1/vehicles/{vin}/nearby_charging_sites
@@ -54,36 +72,136 @@ func (c *Client) GetMobileEnabled(ctx context.Context, vin string) ([]byte, int,
 
 // GetVehicleOptions calls GET /api/1/dx/vehicles/options?vin={vin}.
 func (c *Client) GetVehicleOptions(ctx context.Context, vin string) ([]byte, int, error) {
-	path := fmt.Sprintf("/api/1/dx/vehicles/options?vin=%s", vin)
+	path := fmt.Sprintf("/api/1/dx/vehicles/options?vin=%s", url.QueryEscape(vin))
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
 // GetVehicleSpecs calls GET /api/1/vehicles/{vin}/specs using a partner token.
 // NOTE: This endpoint costs $0.10 per successful call — cache aggressively.
-func (c *Client) GetVehicleSpecs(ctx context.Context, vin string) ([]byte, int, error) {
-	partnerToken, err := c.GetPartnerToken(ctx)
+func (c *Client) GetVehicleSpecs(ctx context.Context, vin string) (body []byte, status int, err error) {
+	ctx, span := startSpan(ctx, "tesla.GetVehicleSpecs")
+	defer endSpan(span, &err)
+
+	partnerToken, err := c.getPartnerToken(ctx, partnerScopeVehicleSpecs)
 	if err != nil {
-		return nil, 0, fmt.Errorf("get partner token: %w", err)
+		return nil, partnerTokenStatus(err), fmt.Errorf("get vehicle specs partner token: %w", err)
 	}
-	path := fmt.Sprintf("/api/1/vehicles/%s/specs", vin)
-	return c.doRequestWithToken(ctx, http.MethodGet, path, nil, partnerToken)
+	path := fmt.Sprintf("/api/1/vehicles/%s/specs", url.PathEscape(vin))
+	return c.doPrivateRequestWithToken(
+		ctx,
+		http.MethodGet,
+		path,
+		nil,
+		partnerToken,
+		vehicleSpecsRouteTemplate,
+	)
 }
 
 // GetSubscriptionEligibility calls GET /api/1/dx/vehicles/subscriptions/eligibility?vin={vin}.
 func (c *Client) GetSubscriptionEligibility(ctx context.Context, vin string) ([]byte, int, error) {
-	path := fmt.Sprintf("/api/1/dx/vehicles/subscriptions/eligibility?vin=%s", vin)
+	path := fmt.Sprintf("/api/1/dx/vehicles/subscriptions/eligibility?vin=%s", url.QueryEscape(vin))
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
 // GetUpgradeEligibility calls GET /api/1/dx/vehicles/upgrades/eligibility?vin={vin}.
 func (c *Client) GetUpgradeEligibility(ctx context.Context, vin string) ([]byte, int, error) {
-	path := fmt.Sprintf("/api/1/dx/vehicles/upgrades/eligibility?vin=%s", vin)
+	path := fmt.Sprintf("/api/1/dx/vehicles/upgrades/eligibility?vin=%s", url.QueryEscape(vin))
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
 // GetWarrantyDetails calls GET /api/1/dx/warranty/details.
 func (c *Client) GetWarrantyDetails(ctx context.Context) ([]byte, int, error) {
 	return c.doRequest(ctx, http.MethodGet, "/api/1/dx/warranty/details", nil)
+}
+
+// GetVehiclePricing calls POST /api/1/dx/vehicles/pricing with an opaque
+// Tesla-controlled request object and the vehicle_pricing_info partner scope.
+// The endpoint is a read-only query despite using POST.
+func (c *Client) GetVehiclePricing(
+	ctx context.Context,
+	payload JSONRequestObject,
+) (body []byte, status int, err error) {
+	ctx, span := startSpan(ctx, "tesla.GetVehiclePricing")
+	defer endSpan(span, &err)
+
+	requestBody, err := marshalJSONRequestObject(payload)
+	if err != nil {
+		return nil, 0, err
+	}
+	partnerToken, err := c.getPartnerToken(ctx, partnerScopeVehiclePricing)
+	if err != nil {
+		return nil, partnerTokenStatus(err), fmt.Errorf("get vehicle pricing partner token: %w", err)
+	}
+	return c.doPrivateRequestWithToken(
+		ctx,
+		http.MethodPost,
+		vehiclePricingPath,
+		bytes.NewReader(requestBody),
+		partnerToken,
+		vehiclePricingPath,
+	)
+}
+
+// GetEnterpriseRoles calls GET /api/1/dx/enterprise/v1/{vin}/roles with the
+// enterprise_management partner scope.
+func (c *Client) GetEnterpriseRoles(ctx context.Context, vin string) (body []byte, status int, err error) {
+	ctx, span := startSpan(ctx, "tesla.GetEnterpriseRoles")
+	defer endSpan(span, &err)
+
+	partnerToken, err := c.getPartnerToken(ctx, partnerScopeEnterpriseManagement)
+	if err != nil {
+		return nil, partnerTokenStatus(err), fmt.Errorf("get enterprise roles partner token: %w", err)
+	}
+	path := fmt.Sprintf("/api/1/dx/enterprise/v1/%s/roles", url.PathEscape(vin))
+	return c.doPrivateRequestWithToken(
+		ctx,
+		http.MethodGet,
+		path,
+		nil,
+		partnerToken,
+		enterpriseRolesRouteTemplate,
+	)
+}
+
+// SetEnterprisePayer calls POST /api/1/dx/enterprise/v1/{vin}/payer with an
+// opaque Tesla-controlled object. Callers must enforce explicit confirmation
+// before invoking this state-changing operation.
+func (c *Client) SetEnterprisePayer(
+	ctx context.Context,
+	vin string,
+	payload JSONRequestObject,
+) (body []byte, status int, err error) {
+	ctx, span := startSpan(ctx, "tesla.SetEnterprisePayer")
+	defer endSpan(span, &err)
+
+	requestBody, err := marshalJSONRequestObject(payload)
+	if err != nil {
+		return nil, 0, err
+	}
+	partnerToken, err := c.getPartnerToken(ctx, partnerScopeEnterpriseManagement)
+	if err != nil {
+		return nil, partnerTokenStatus(err), fmt.Errorf("get enterprise payer partner token: %w", err)
+	}
+	path := fmt.Sprintf("/api/1/dx/enterprise/v1/%s/payer", url.PathEscape(vin))
+	return c.doPrivateRequestWithToken(
+		ctx,
+		http.MethodPost,
+		path,
+		bytes.NewReader(requestBody),
+		partnerToken,
+		enterprisePayerRouteTemplate,
+	)
+}
+
+func marshalJSONRequestObject(payload JSONRequestObject) ([]byte, error) {
+	if len(payload) == 0 {
+		return nil, ErrEmptyJSONRequestObject
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("encode Tesla request object: %w", err)
+	}
+	return body, nil
 }
 
 // ListVehicles returns all vehicles associated with the authenticated Tesla account.

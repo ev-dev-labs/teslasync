@@ -155,6 +155,7 @@ describe('CommandsPage', () => {
     expect(screen.getByText('Safety & execution')).toBeInTheDocument();
     expect(screen.getByText('Recent command activity')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-command-center')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
   });
 
   it('renders a useful no-vehicle state without hiding safety or activity', () => {
@@ -169,6 +170,7 @@ describe('CommandsPage', () => {
     expect(screen.getByTestId('command-safety')).toBeInTheDocument();
     expect(screen.getByText('Recent command activity')).toBeInTheDocument();
     expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
   });
 
   it('keeps all section shells visible when the roster query fails', () => {
@@ -206,6 +208,7 @@ describe('CommandsPage', () => {
     expect(screen.getByTestId('vehicle-command-center')).toHaveTextContent(
       'Cybertruck',
     );
+    expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
     expect(screen.getByText('1/2 recently reachable')).toBeInTheDocument();
 
     const picker = screen.getByLabelText('Select vehicle');
