@@ -8,8 +8,8 @@
  *   2. Renders effective-from/to, rate/kWh, currency badge per row; the
  *      interval containing now shows "Current", while a future open-ended
  *      row shows "Scheduled".
- *   3. Selecting a row for preview highlights it (primary variant) and
- *      calls `onSelectRate`.
+ *   3. Preview sessions remains an action for selected/unselected rows,
+ *      highlights the selected row, and calls `onSelectRate`.
  *   4. Only future schedules can be cancelled, gated behind confirmation.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -134,23 +134,33 @@ describe('RateHistoryPanel — rows', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('highlights the selected row and labels its impact as shown', () => {
+  it('keeps Preview sessions actionable while highlighting the selected row', () => {
     const rate = makeRate({ id: 5 });
     renderPanel({ rates: [rate], selectedRateId: 5 });
 
-    const btn = screen.getByRole('button', { name: 'Impact shown' });
+    const btn = screen.getByRole('button', { name: 'Preview sessions' });
     // Button component maps variant to a class; "primary" is the
     // selected-row highlight this panel switches to (see component source).
     expect(btn.className).toMatch(/primary|bg-/);
   });
 
-  it('invokes onSelectRate with the exact rate when Review impact is clicked', () => {
+  it('invokes onSelectRate with the exact rate when Preview sessions is clicked', () => {
     const onSelectRate = vi.fn();
     const rate = makeRate({ id: 9 });
     renderPanel({ rates: [rate], onSelectRate });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Review impact' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview sessions' }));
     expect(onSelectRate).toHaveBeenCalledWith(rate);
+  });
+
+  it('explains that previewing does not apply any changes', () => {
+    renderPanel({ rates: [makeRate()] });
+
+    expect(
+      screen.getByText(
+        'Preview sessions shows which historical charges match a rate and what would change before anything is applied.',
+      ),
+    ).toBeInTheDocument();
   });
 });
 

@@ -86,7 +86,6 @@ export default function DrivesListPage() {
     setRangeWithUrlUpdates,
   } = useRangeState({
     persistKey: 'drives.list.range',
-    defaultPresetId: '30d',
   });
   const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
 

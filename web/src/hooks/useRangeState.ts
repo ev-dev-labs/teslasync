@@ -1,7 +1,6 @@
 /**
  * useRangeState — page-level date range state with URL sync, localStorage
- * memory, optional comparison-period resolution, and minDate-clamped "All
- * time" preset.
+ * preference, optional comparison-period resolution, and minDate clamping.
  *
  * Replaces the per-page boilerplate of:
  *   const [startDate, setStartDate] = useUrlString('from', defaultStart);
@@ -9,8 +8,9 @@
  *   const setRangeBatch = useUrlBatch();
  *
  * Precedence on initial mount:
- * **URL > shared range > page localStorage > defaultPresetId > today**.
- * Restoring from storage is done with `replace` (no history entry).
+ * **URL > shared preference > page preference > defaultPresetId > 7 days**.
+ * URL ranges are navigation-specific and never overwrite the global
+ * preference unless the user commits a new picker selection.
  *
  * Why the asymmetric preset/calendar semantics matter:
  *   - Preset clicks (`setRange`) write {from,to} atomically and call onApply.
@@ -19,25 +19,25 @@
  *     <RangePicker> handles it.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  DATE_PRESETS,
   getDatePreset,
   matchPresetId,
-  resolveAllTimeStart,
   type DatePresetRange,
 } from '@/lib/datePresets';
 import { calendarRangeToInstants } from '@/lib/dateRange';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DEFAULT_PRESET_ID = '7d';
+const RANGE_PREFERENCE_VERSION = 2;
 
-export const SHARED_RANGE_STORAGE_KEY = 'teslasync.date-range.v1';
+export const SHARED_RANGE_STORAGE_KEY = 'teslasync.date-range.v2';
 
 export interface UseRangeStateOptions {
   /**
-   * Preset id to use when neither URL nor localStorage yields a range.
-   * Defaults to `'30d'`.
+   * Preset id to use when neither URL nor a stored preference yields a range.
+   * Defaults to `'7d'`.
    */
   defaultPresetId?: string;
   /**
@@ -49,9 +49,8 @@ export interface UseRangeStateOptions {
   toKey?: string;
   compareKey?: string;
   /**
-   * localStorage key used to remember the user's last-selected range on this
-   * page. When omitted, no persistence happens. Recommended: dotted key like
-   * `'charging.list.range'`.
+   * Optional page-specific backup for the shared date-range preference.
+   * Recommended: a dotted key like `'charging.list.range'`.
    */
   persistKey?: string;
   /**
@@ -82,6 +81,11 @@ export interface RangeValue {
   end: string;
 }
 
+interface StoredRangePreference extends RangeValue {
+  version: typeof RANGE_PREFERENCE_VERSION;
+  presetId?: string;
+}
+
 export interface UseRangeStateReturn {
   start: string;
   end: string;
@@ -104,11 +108,16 @@ export interface UseRangeStateReturn {
   compare: boolean;
   /** When `compare` is true: the previous period of equal length. */
   comparePrev: RangeValue | undefined;
-  /** Atomic setter — writes from/to in one navigation. */
-  setRange: (range: RangeValue) => void;
+  /** Atomic setter — writes from/to and the shared preference. */
+  setRange: (range: RangeValue, presetId?: string) => void;
   /** Writes the range and related URL keys in one navigation. */
   setRangeWithUrlUpdates: (
     range: RangeValue,
+    urlUpdates: Record<string, string | null | undefined>,
+    presetId?: string,
+  ) => void;
+  /** Reset the range and update related URL keys in one navigation. */
+  resetWithUrlUpdates: (
     urlUpdates: Record<string, string | null | undefined>,
   ) => void;
   /** Set range by preset id; falls back to current range when id is unknown. */
@@ -131,7 +140,17 @@ function clampRange(range: RangeValue, minDate: string | undefined): RangeValue 
   return { start: minDate, end: range.end };
 }
 
-function loadFromStorage(storageKey: string | undefined): RangeValue | null {
+function getFallbackPreset(id: string) {
+  const preset = getDatePreset(id) ?? getDatePreset(DEFAULT_PRESET_ID);
+  if (!preset) {
+    throw new Error(`useRangeState: missing "${DEFAULT_PRESET_ID}" date preset`);
+  }
+  return preset;
+}
+
+function loadFromStorage(
+  storageKey: string | undefined,
+): StoredRangePreference | null {
   if (!storageKey || typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(storageKey);
@@ -142,25 +161,64 @@ function loadFromStorage(storageKey: string | undefined): RangeValue | null {
     if (
       typeof record.start !== 'string' ||
       typeof record.end !== 'string' ||
+      record.version !== RANGE_PREFERENCE_VERSION ||
       !isValidIsoDate(record.start) ||
       !isValidIsoDate(record.end) ||
       record.start > record.end
     ) {
       return null;
     }
-    return { start: record.start, end: record.end };
+    const presetId =
+      typeof record.presetId === 'string' && getDatePreset(record.presetId)
+        ? record.presetId
+        : undefined;
+    return {
+      version: RANGE_PREFERENCE_VERSION,
+      start: record.start,
+      end: record.end,
+      ...(presetId ? { presetId } : {}),
+    };
   } catch {
     return null;
   }
 }
 
-function saveToStorage(storageKey: string | undefined, value: RangeValue) {
+function saveToStorage(
+  storageKey: string | undefined,
+  value: StoredRangePreference,
+) {
   if (!storageKey || typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(storageKey, JSON.stringify(value));
   } catch {
     // URL state remains authoritative when browser storage is unavailable.
   }
+}
+
+function resolvePreference(preference: StoredRangePreference): RangeValue {
+  const preset = preference.presetId
+    ? getDatePreset(preference.presetId)
+    : undefined;
+  return preset?.resolve() ?? {
+    start: preference.start,
+    end: preference.end,
+  };
+}
+
+function createPreference(
+  range: RangeValue,
+  requestedPresetId?: string,
+): StoredRangePreference {
+  const presetId =
+    requestedPresetId && getDatePreset(requestedPresetId)
+      ? requestedPresetId
+      : matchPresetId(range.start, range.end);
+  return {
+    version: RANGE_PREFERENCE_VERSION,
+    start: range.start,
+    end: range.end,
+    ...(presetId ? { presetId } : {}),
+  };
 }
 
 function applyUrlUpdates(
@@ -200,7 +258,7 @@ function computeComparePrev(start: string, end: string): RangeValue | undefined 
 
 export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateReturn {
   const {
-    defaultPresetId = '30d',
+    defaultPresetId = DEFAULT_PRESET_ID,
     fromKey = 'from',
     toKey = 'to',
     compareKey = 'compare',
@@ -219,19 +277,17 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   // Lazily compute the resolved fallback once per render. The default preset's
   // `resolve()` is cheap (Date math), so re-running it is fine and ensures
   // "today"-style presets stay live without a re-render loop.
-  const fallback = useMemo<RangeValue>(() => {
-    const preset = getDatePreset(defaultPresetId) ?? getDatePreset('30d');
-    if (preset?.id === 'all') {
-      // Honor minDate even on the default preset.
-      const r = preset.resolve();
-      return { start: resolveAllTimeStart(minDate), end: r.end };
-    }
-    return preset?.resolve() ?? DATE_PRESETS[3].resolve();
-  }, [defaultPresetId, minDate]);
+  const fallback = useMemo<RangeValue>(
+    () => clampRange(getFallbackPreset(defaultPresetId).resolve(), minDate),
+    [defaultPresetId, minDate],
+  );
 
-  const sharedStored = loadFromStorage(SHARED_RANGE_STORAGE_KEY);
-  const pageStored = loadFromStorage(persistKey);
-  const stored = sharedStored ?? pageStored;
+  const sharedPreference = loadFromStorage(SHARED_RANGE_STORAGE_KEY);
+  const pagePreference = loadFromStorage(persistKey);
+  const storedPreference = sharedPreference ?? pagePreference;
+  const storedRange = storedPreference
+    ? resolvePreference(storedPreference)
+    : null;
   const urlRange: RangeValue | null =
     isValidIsoDate(urlStart) &&
     isValidIsoDate(urlEnd) &&
@@ -239,75 +295,26 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       ? { start: urlStart, end: urlEnd }
       : null;
 
-  // Resolve the effective range synchronously to avoid rendering a page
-  // default before the inherited selection is restored into the URL.
+  // Resolve synchronously so inherited preferences never flash the page
+  // fallback before the first paint.
   const effective = useMemo<RangeValue>(() => {
     if (urlRange) return clampRange(urlRange, minDate);
-    if (stored) return clampRange(stored, minDate);
+    if (storedRange) return clampRange(storedRange, minDate);
     return fallback;
   }, [
     urlRange?.start,
     urlRange?.end,
-    stored?.start,
-    stored?.end,
+    storedRange?.start,
+    storedRange?.end,
     minDate,
     fallback,
   ]);
-
-  // Seed the shared preference from explicit URLs or legacy page storage,
-  // then expose inherited storage in the URL for bookmarks and copied links.
-  const restoredRef = useRef(false);
-  useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
-
-    if (urlRange) {
-      saveToStorage(SHARED_RANGE_STORAGE_KEY, urlRange);
-      return;
-    }
-
-    if (!stored) return;
-    const pageStoredIsFallback =
-      pageStored?.start === fallback.start && pageStored?.end === fallback.end;
-    if (!sharedStored && pageStored && !pageStoredIsFallback) {
-      saveToStorage(SHARED_RANGE_STORAGE_KEY, pageStored);
-    }
-    const inherited = clampRange(stored, minDate);
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set(fromKey, inherited.start);
-        next.set(toKey, inherited.end);
-        return next;
-      },
-      { replace: true },
-    );
-  }, [
-    urlRange?.start,
-    urlRange?.end,
-    stored?.start,
-    stored?.end,
-    sharedStored?.start,
-    sharedStored?.end,
-    pageStored?.start,
-    pageStored?.end,
-    fallback.start,
-    fallback.end,
-    minDate,
-    fromKey,
-    toKey,
-    setParams,
-  ]);
-
-  // Keep the page key current as a backward-compatible migration fallback.
-  useEffect(() => {
-    saveToStorage(persistKey, effective);
-  }, [persistKey, effective.start, effective.end]);
 
   const commitRange = useCallback(
     (
       range: RangeValue,
       urlUpdates?: Record<string, string | null | undefined>,
+      presetId?: string,
     ) => {
       if (
         !isValidIsoDate(range.start) ||
@@ -320,8 +327,9 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       }
 
       const pageRange = clampRange(range, minDate);
-      saveToStorage(SHARED_RANGE_STORAGE_KEY, range);
-      saveToStorage(persistKey, pageRange);
+      const preference = createPreference(range, presetId);
+      saveToStorage(SHARED_RANGE_STORAGE_KEY, preference);
+      saveToStorage(persistKey, preference);
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -337,7 +345,8 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   );
 
   const setRange = useCallback(
-    (range: RangeValue) => commitRange(range),
+    (range: RangeValue, presetId?: string) =>
+      commitRange(range, undefined, presetId),
     [commitRange],
   );
 
@@ -345,7 +354,8 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     (
       range: RangeValue,
       urlUpdates: Record<string, string | null | undefined>,
-    ) => commitRange(range, urlUpdates),
+      presetId?: string,
+    ) => commitRange(range, urlUpdates, presetId),
     [commitRange],
   );
 
@@ -354,7 +364,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       const preset = getDatePreset(id);
       if (!preset) return;
       const r: DatePresetRange = preset.resolve();
-      setRange(r);
+      setRange(r, id);
     },
     [setRange],
   );
@@ -374,14 +384,18 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     [setParams, compareKey],
   );
 
-  const reset = useCallback(() => {
-    const preset = getDatePreset(defaultPresetId) ?? getDatePreset('30d');
-    const defaultRange = preset?.resolve() ?? DATE_PRESETS[3].resolve();
-    saveToStorage(SHARED_RANGE_STORAGE_KEY, defaultRange);
-    saveToStorage(persistKey, clampRange(defaultRange, minDate));
+  const resetWithUrlUpdates = useCallback((
+    urlUpdates: Record<string, string | null | undefined>,
+  ) => {
+    const preset = getFallbackPreset(defaultPresetId);
+    const defaultRange = preset.resolve();
+    const preference = createPreference(defaultRange, preset.id);
+    saveToStorage(SHARED_RANGE_STORAGE_KEY, preference);
+    saveToStorage(persistKey, preference);
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
+        applyUrlUpdates(next, urlUpdates);
         next.delete(fromKey);
         next.delete(toKey);
         next.delete(compareKey);
@@ -396,8 +410,12 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     compareKey,
     defaultPresetId,
     persistKey,
-    minDate,
   ]);
+
+  const reset = useCallback(
+    () => resetWithUrlUpdates({}),
+    [resetWithUrlUpdates],
+  );
 
   const compare = enableCompare && urlCompare === 'true';
   const comparePrev = useMemo(
@@ -440,6 +458,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     comparePrev,
     setRange,
     setRangeWithUrlUpdates,
+    resetWithUrlUpdates,
     setPreset,
     setCompare,
     reset,

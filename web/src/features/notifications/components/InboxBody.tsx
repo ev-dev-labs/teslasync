@@ -36,7 +36,13 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Button, GlassPanel, useContextMenu, type ContextMenuItem } from '@/components/ui';
+import {
+  Button,
+  Checkbox,
+  GlassPanel,
+  useContextMenu,
+  type ContextMenuItem,
+} from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -44,6 +50,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
 import {
   useNotificationLogs,
@@ -149,8 +156,15 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const [ruleIdsRaw] = useUrlArray('rule_id');
   const [search] = useUrlString('q', '');
   const [readState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
-  const [from] = useUrlString('from', '');
-  const [to] = useUrlString('to', '');
+  const {
+    start: from,
+    end: to,
+    setRange: setDateRange,
+    setRangeWithUrlUpdates,
+    resetWithUrlUpdates: resetRangeWithUrlUpdates,
+  } = useRangeState({
+    persistKey: 'notifications.inbox.range',
+  });
   // View mode is URL-backed too so a deep link can
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
   const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'grouped');
@@ -193,16 +207,34 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     // updates whenever a saved view applied multi-key filters.
     const readValue =
       next.read === undefined ? null : next.read ? 'read' : 'unread';
-    setFiltersBatch({
+    const urlUpdates = {
       severity: (next.severity ?? []).join(',') || null,
       vehicle_id: (next.vehicle_id ?? []).map(String).join(',') || null,
       rule_id: (next.rule_id ?? []).map(String).join(',') || null,
       q: next.q ?? null,
-      from: next.from ?? null,
-      to: next.to ?? null,
       read: readValue,
-    });
-  }, [setFiltersBatch]);
+    };
+    const nextFrom = next.from?.slice(0, 10);
+    const nextTo = next.to?.slice(0, 10);
+    if (!nextFrom || !nextTo) {
+      resetRangeWithUrlUpdates(urlUpdates);
+      return;
+    }
+    if (nextFrom !== from || nextTo !== to) {
+      setRangeWithUrlUpdates(
+        { start: nextFrom, end: nextTo },
+        urlUpdates,
+      );
+      return;
+    }
+    setFiltersBatch(urlUpdates);
+  }, [
+    from,
+    resetRangeWithUrlUpdates,
+    setFiltersBatch,
+    setRangeWithUrlUpdates,
+    to,
+  ]);
 
   // Inbox auto-categorization apply callback.
   // The AI panel's "Apply categories as filter" button passes a
@@ -514,6 +546,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         <NotificationFilterBar
           filters={filters}
           onChange={handleFiltersChange}
+          onRangeChange={setDateRange}
           vehicles={vehicles}
           rules={rules}
         />
@@ -546,15 +579,11 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       <GlassPanel className="p-3 sm:p-4">
         <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
           {!isGrouped && (
-            <input
-              type="checkbox"
-              ref={el => {
-                if (el) el.indeterminate = someVisibleSelected;
-              }}
+            <Checkbox
               checked={allVisibleSelected}
-              onChange={e => (e.target.checked ? selectAllVisible() : clearSelection())}
+              indeterminate={someVisibleSelected}
+              onChange={checked => (checked ? selectAllVisible() : clearSelection())}
               aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
-              className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
             />
           )}
           <span className="text-xs text-[var(--text-muted)]">
@@ -568,13 +597,15 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               role="group"
               aria-label={t('notifications.view.label', 'View')}
             >
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setView('grouped')}
                 aria-pressed={view === 'grouped'}
                 aria-label={t('notifications.view.grouped', 'Grouped')}
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs',
+                  'h-auto rounded-full px-2 py-1',
                   view === 'grouped'
                     ? 'bg-cyan-400/15 text-cyan-200'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
@@ -585,14 +616,16 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 <span className="hidden sm:inline">
                   {t('notifications.view.grouped', 'Grouped')}
                 </span>
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setView('flat')}
                 aria-pressed={view === 'flat'}
                 aria-label={t('notifications.view.flat', 'Flat')}
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs',
+                  'h-auto rounded-full px-2 py-1',
                   view === 'flat'
                     ? 'bg-cyan-400/15 text-cyan-200'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
@@ -603,7 +636,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 <span className="hidden sm:inline">
                   {t('notifications.view.flat', 'Flat')}
                 </span>
-              </button>
+              </Button>
             </div>
           )}
           {!archived && !isGrouped && unreadCount > 0 && (

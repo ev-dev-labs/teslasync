@@ -46,7 +46,6 @@ export default function DrivetrainHealthPage() {
 
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'drivetrain-health.range',
-    defaultPresetId: '30d',
   });
 
   const healthQuery = useDrivetrainHealth(vehicleIdStr);

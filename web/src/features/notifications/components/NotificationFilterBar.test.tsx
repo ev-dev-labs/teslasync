@@ -5,18 +5,17 @@
  * and receives a complete next-state object on every change. These tests drive
  * the real sub-components (severity chips, vehicle/rule <Select>, the debounced
  * SearchInput, ActiveFilterChips) and stub only the heavy RangePicker popover
- * so the from/to commit path can be exercised deterministically.
+ * so the shared range commit path can be exercised deterministically.
  *
  * Coverage:
  *   1. Severity chips — labelled group, pressed state, add / remove / clear-last.
  *   2. Vehicle + rule selects — value reflection, emit on change, "All" clears,
  *      #id fallback label for nameless vehicles.
  *   3. SearchInput — debounced emit, whitespace-only treated as cleared.
- *   4. RangePicker — from+to committed atomically in ONE onChange (regression:
- *      two sequential patches raced the controlled merge and dropped `from`),
- *      reset clears both, and the ISO value is sliced to YYYY-MM-DD.
+ *   4. RangePicker — range + preset metadata are forwarded atomically, and
+ *      the ISO value is sliced to YYYY-MM-DD.
  *   5. ActiveFilterChips — render, single-chip removal preserves siblings,
- *      Clear-all wipes every key.
+ *      and Clear-all preserves the shared date preference.
  *   6. Null-safety / a11y — empty filters render no chips and no pressed chip;
  *      an unknown vehicle id degrades to a #id chip label.
  */
@@ -36,11 +35,11 @@ vi.mock('@/components/forms', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/forms')>();
   const MockRangePicker = ({ value, onChange }: RangePickerProps) => (
     <div data-testid="range-picker" data-start={value.start} data-end={value.end}>
-      <button type="button" onClick={() => onChange({ start: '2024-03-01', end: '2024-03-31' })}>
+      <button type="button" onClick={() => onChange(
+        { start: '2024-03-01', end: '2024-03-31' },
+        '30d',
+      )}>
         commit-range
-      </button>
-      <button type="button" onClick={() => onChange({ start: '', end: '' })}>
-        reset-range
       </button>
     </div>
   );
@@ -60,15 +59,17 @@ const RULES: AlertRule[] = [rule(10, 'Tire Pressure Low'), rule(20, 'Battery Col
 
 function renderBar(overrides: Omit<Partial<NotificationFilterBarProps>, 'onChange'> = {}) {
   const onChange = vi.fn();
+  const onRangeChange = vi.fn();
   render(
     <NotificationFilterBar
       filters={overrides.filters ?? {}}
       onChange={onChange}
+      onRangeChange={overrides.onRangeChange ?? onRangeChange}
       vehicles={overrides.vehicles ?? VEHICLES}
       rules={overrides.rules ?? RULES}
     />,
   );
-  return { onChange };
+  return { onChange, onRangeChange };
 }
 
 describe('NotificationFilterBar — severity chips', () => {
@@ -170,31 +171,17 @@ describe('NotificationFilterBar — search', () => {
   });
 });
 
-describe('NotificationFilterBar — date range (atomic from/to)', () => {
-  it('commits from AND to in a single onChange when the range picker fires', () => {
-    const { onChange } = renderBar({ filters: {} });
+describe('NotificationFilterBar — shared date range', () => {
+  it('forwards the range and preset metadata atomically', () => {
+    const { onChange, onRangeChange } = renderBar({ filters: {} });
 
     fireEvent.click(screen.getByRole('button', { name: 'commit-range' }));
 
-    // Regression guard: the old code emitted two sequential patches (setFrom
-    // then setTo) built from the same stale `filters` closure, so the second
-    // clobbered the first and `from` was lost. It must now be exactly one
-    // patch carrying both bounds.
-    expect(onChange).toHaveBeenCalledTimes(1);
-    const patch = onChange.mock.calls[0][0];
-    expect(patch.from).toBe('2024-03-01');
-    expect(patch.to).toBe('2024-03-31');
-  });
-
-  it('clears both from and to in a single onChange when the range is reset', () => {
-    const { onChange } = renderBar({ filters: { from: '2024-03-01', to: '2024-03-31' } });
-
-    fireEvent.click(screen.getByRole('button', { name: 'reset-range' }));
-
-    expect(onChange).toHaveBeenCalledTimes(1);
-    const patch = onChange.mock.calls[0][0];
-    expect(patch.from).toBeUndefined();
-    expect(patch.to).toBeUndefined();
+    expect(onRangeChange).toHaveBeenCalledWith(
+      { start: '2024-03-01', end: '2024-03-31' },
+      '30d',
+    );
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('passes the ISO range down sliced to YYYY-MM-DD', () => {
@@ -227,7 +214,7 @@ describe('NotificationFilterBar — active filter chips', () => {
     expect(patch.q).toBe('brake');
   });
 
-  it('wipes every filter key via Clear all', () => {
+  it('clears optional filters while preserving the shared date range', () => {
     const { onChange } = renderBar({
       filters: {
         severity: ['warn'],
@@ -247,8 +234,8 @@ describe('NotificationFilterBar — active filter chips', () => {
     expect(patch.vehicle_id).toBeUndefined();
     expect(patch.rule_id).toBeUndefined();
     expect(patch.q).toBeUndefined();
-    expect(patch.from).toBeUndefined();
-    expect(patch.to).toBeUndefined();
+    expect(patch.from).toBe('2024-03-01');
+    expect(patch.to).toBe('2024-03-31');
   });
 
   it('falls back to a #id chip when the filtered vehicle is unknown', () => {

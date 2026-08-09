@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, CheckCircle2 } from 'lucide-react';
 
-import { Modal, Button, Tabs, Badge, Text, EditableText, Label, Select } from '@/components/ui';
+import { Modal, Button, Tabs, Badge, Text, EditableText, Select } from '@/components/ui';
 import {
   useGeofenceRates,
   useDeleteGeofenceRate,
@@ -56,13 +56,31 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
   const markReviewed = useMarkGeofenceReviewed();
   const rename = useRenameGeofence();
   const updateCategory = useUpdateGeofenceCategory();
+  const scrollToPreview = useCallback(() => {
+    const target = previewPanelRef.current;
+    if (!target) return;
+
+    const reduceMotion =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth';
+    const scrollBody = target.closest<HTMLElement>('[data-modal-scroll-body="true"]');
+
+    if (scrollBody && typeof scrollBody.scrollTo === 'function') {
+      const targetTop =
+        scrollBody.scrollTop +
+        target.getBoundingClientRect().top -
+        scrollBody.getBoundingClientRect().top -
+        16;
+      scrollBody.scrollTo({ top: Math.max(0, targetTop), behavior });
+    } else {
+      target.scrollIntoView?.({ behavior, block: 'start' });
+    }
+    target.focus({ preventScroll: true });
+  }, []);
   const handleSelectRate = useCallback((rate: GeofenceRate) => {
     setSelectedRate(rate);
-    queueMicrotask(() => {
-      previewPanelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-      previewPanelRef.current?.focus?.({ preventScroll: true });
-    });
-  }, []);
+    requestAnimationFrame(scrollToPreview);
+  }, [scrollToPreview]);
 
   // Reset per-place UI state whenever a different place opens, and default
   // to the rate active now. A future open-ended schedule is only a fallback
@@ -150,23 +168,28 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
         )}
       </div>
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label>{t('chargingPlaces.detail.placeName', 'Place name')}</Label>
-          <EditableText
-            value={place.name}
-            variant="heading"
-            maxLength={120}
-            ariaLabel={t('chargingPlaces.detail.rename', 'Rename {{name}}', { name: place.name })}
-            validate={(next) =>
-              next.length > 120
-                ? t('geofences.error.nameTooLong', 'Max 120 characters')
-                : null
-            }
-            onSave={async (name) => {
-              await rename.mutateAsync({ geofenceId: place.id, name });
-            }}
-          />
+      <div className="mb-4 grid items-start gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Text as="span" size="sm" weight="medium" color="secondary" className="block">
+            {t('chargingPlaces.detail.placeName', 'Place name')}
+          </Text>
+          <div className="flex min-h-10 items-center">
+            <EditableText
+              value={place.name}
+              variant="heading"
+              maxLength={120}
+              className="max-w-full"
+              ariaLabel={t('chargingPlaces.detail.rename', 'Rename {{name}}', { name: place.name })}
+              validate={(next) =>
+                next.length > 120
+                  ? t('geofences.error.nameTooLong', 'Max 120 characters')
+                  : null
+              }
+              onSave={async (name) => {
+                await rename.mutateAsync({ geofenceId: place.id, name });
+              }}
+            />
+          </div>
         </div>
         <Select
           label={t('chargingPlaces.detail.category', 'Category')}
@@ -214,7 +237,16 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
             onDelete={(r) => deleteRate.mutate({ geofenceId: place.id, rateId: r.id })}
             deletePending={deleteRate.isPending}
           />
-          <div ref={previewPanelRef} tabIndex={-1} className="scroll-mt-4 outline-none">
+          <div
+            ref={previewPanelRef}
+            role="region"
+            aria-label={t(
+              'chargingPlaces.previewApply.regionLabel',
+              'Session pricing preview',
+            )}
+            tabIndex={-1}
+            className="scroll-mt-4 rounded-xl outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2 focus:ring-offset-[var(--bg-app)]"
+          >
             <PreviewApplyPanel geofenceId={place.id} rate={selectedRate} />
           </div>
         </div>

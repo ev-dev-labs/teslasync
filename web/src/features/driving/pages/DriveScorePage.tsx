@@ -596,7 +596,6 @@ export default function DriveScorePage() {
   /* ---- date filter ---- */
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'drive-score.range',
-    defaultPresetId: '30d',
   });
 
   /* ---- table sort (shared DataTable controlled sort) ---- */

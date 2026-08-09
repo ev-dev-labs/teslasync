@@ -33,7 +33,6 @@ export default function RouteEfficiencyPage() {
 
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'route-efficiency.range',
-    defaultPresetId: '30d',
   });
 
   const routeQuery = useRouteEfficiency(vehicleIdStr, startDate, endDate);

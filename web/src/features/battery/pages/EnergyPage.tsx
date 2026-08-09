@@ -196,7 +196,6 @@ export default function EnergyPage() {
   /* ── Date range ───────────────────────────────────────────────── */
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'energy.range',
-    defaultPresetId: '30d',
   });
 
   /* URL-persisted hidden-series state for the two-series

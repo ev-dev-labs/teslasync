@@ -109,7 +109,6 @@ export default function ChargingListPage() {
     setRangeWithUrlUpdates,
   } = useRangeState({
     persistKey: 'charging.list.range',
-    defaultPresetId: '30d',
   });
   const [search] = useUrlString('q', '');
   const [collection] = useUrlEnum<Collection>('coll', COLLECTIONS, 'all');

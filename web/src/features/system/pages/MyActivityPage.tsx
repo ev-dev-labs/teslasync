@@ -43,7 +43,6 @@ export default function MyActivityPage() {
 
   const { start, end, setRange } = useRangeState({
     persistKey: 'my-activity.range',
-    defaultPresetId: '30d',
     fromKey: 'start',
     toKey: 'end',
   });

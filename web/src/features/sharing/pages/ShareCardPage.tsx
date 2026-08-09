@@ -44,7 +44,6 @@ export default function ShareCardPage() {
     setRange,
   } = useRangeState({
     persistKey: 'share-card.range',
-    defaultPresetId: '30d',
     timezone,
   });
   const drivesQuery = useDrives(

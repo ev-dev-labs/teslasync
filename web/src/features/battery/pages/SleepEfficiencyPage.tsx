@@ -45,7 +45,6 @@ export default function SleepEfficiencyPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
   const { start, end, setRange } = useRangeState({
     persistKey: 'sleep-efficiency.range',
-    defaultPresetId: '30d',
   });
   const requestedRange = useMemo(
     () => analyzeSleepRange(start, end),

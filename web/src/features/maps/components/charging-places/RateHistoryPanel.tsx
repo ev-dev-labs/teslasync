@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { History, Trash2 } from 'lucide-react';
+import { History, ListChecks, Trash2 } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Badge, Button, Text, DataTable, useSortToggle, ConfirmDialog, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -130,11 +130,10 @@ export function RateHistoryPanel({
             <Button
               size="sm"
               variant={selectedRateId === r.id ? 'primary' : 'secondary'}
+              icon={<ListChecks className="h-3.5 w-3.5" aria-hidden="true" />}
               onClick={() => onSelectRate(r)}
             >
-              {selectedRateId === r.id
-                ? t('chargingPlaces.rateHistory.impactShown', 'Impact shown')
-                : t('chargingPlaces.rateHistory.reviewImpact', 'Review impact')}
+              {t('chargingPlaces.rateHistory.previewSessions', 'Preview sessions')}
             </Button>
             {Date.parse(r.effective_from) > Date.now() && (
               <Button
@@ -160,6 +159,12 @@ export function RateHistoryPanel({
         <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('chargingPlaces.rateHistory.title', 'Rate History')}
       </PanelTitle>
+      <Text as="p" size="sm" color="muted" className="mb-3">
+        {t(
+          'chargingPlaces.rateHistory.previewHelp',
+          'Preview sessions shows which historical charges match a rate and what would change before anything is applied.',
+        )}
+      </Text>
 
       {error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.rateHistory.title', 'Rate History')} />

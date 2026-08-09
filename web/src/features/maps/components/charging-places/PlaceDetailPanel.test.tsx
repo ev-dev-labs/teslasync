@@ -218,6 +218,17 @@ describe('PlaceDetailPanel — header', () => {
     expect(screen.getByText('Unnamed place')).toBeInTheDocument();
   });
 
+  it('stacks the place-name label and editor using the same field rhythm as Category', () => {
+    render(<PlaceDetailPanel place={makePlace()} onClose={vi.fn()} />);
+
+    const label = screen.getByText('Place name');
+    const editor = screen.getByRole('button', { name: 'Rename Home' });
+
+    expect(label).toHaveClass('block');
+    expect(label.parentElement).toHaveClass('space-y-1');
+    expect(editor.parentElement).toHaveClass('min-h-10', 'items-center');
+  });
+
   it('renames the place through the canonical geofence mutation', async () => {
     render(<PlaceDetailPanel place={makePlace()} onClose={vi.fn()} />);
 
@@ -382,6 +393,62 @@ describe('PlaceDetailPanel — rate selection', () => {
     fireEvent.click(screen.getByText('stub-select-second-rate'));
 
     expect(screen.getByTestId('stub-preview-apply')).toHaveTextContent('rate=2');
+  });
+
+  it('scrolls and focuses the pricing preview when a rate is selected', () => {
+    mockedRates.mockReturnValue({
+      data: [
+        makeRate({ id: 1, effective_to: '2026-08-27T00:00:00Z' }),
+        makeRate({ id: 2, effective_to: null }),
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    render(<PlaceDetailPanel place={makePlace()} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog');
+    const scrollBody = dialog.querySelector<HTMLElement>('[data-modal-scroll-body="true"]');
+    const previewRegion = screen.getByRole('region', { name: 'Session pricing preview' });
+    expect(scrollBody).not.toBeNull();
+
+    const scrollTo = vi.fn();
+    Object.defineProperty(scrollBody, 'scrollTop', { configurable: true, value: 20 });
+    Object.defineProperty(scrollBody, 'scrollTo', { configurable: true, value: scrollTo });
+    vi.spyOn(scrollBody as HTMLElement, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 100,
+      top: 100,
+      right: 600,
+      bottom: 700,
+      left: 0,
+      width: 600,
+      height: 600,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(previewRegion, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 500,
+      top: 500,
+      right: 600,
+      bottom: 700,
+      left: 0,
+      width: 600,
+      height: 200,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.click(screen.getByText('stub-select-second-rate'));
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 404, behavior: 'smooth' });
+    expect(document.activeElement).toBe(previewRegion);
+    requestAnimationFrameSpy.mockRestore();
   });
 
   it('wires RateHistoryPanel\'s onDelete to the delete mutation with {geofenceId, rateId}', () => {

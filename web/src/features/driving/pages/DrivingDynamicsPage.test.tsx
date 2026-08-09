@@ -5,7 +5,7 @@
  * fans four data hooks (`useMotorLatest`, `useMotorHistory`, `useDrives`,
  * `useDrivingCoach`) into eleven presentational sections, derives cross-section
  * state (motor stats + throttle style via the real `helpers`), filters drives to
- * a page-scoped date window, and threads SI→display unit converters down to the
+ * a shared date window, and threads SI→display unit converters down to the
  * children.
  *
  * Strategy:
@@ -25,7 +25,7 @@
  *     imperial (mi / mph / °F) preferences.
  *
  * System time is pinned (Date only — timers stay real so userEvent works) so
- * the default 30-day window resolves to a fixed [2025-05-16, 2025-06-15].
+ * the default 7-day window resolves to a fixed [2025-06-09, 2025-06-15].
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -195,8 +195,7 @@ vi.mock('../components/driving-dynamics', () => ({
         type="button"
         data-testid="widen-range"
         onClick={() => {
-          p.onStartDateChange('2000-01-01');
-          p.onEndDateChange('2999-12-31');
+          p.onRangeChange({ start: '2000-01-01', end: '2999-12-31' });
         }}
       >
         widen
@@ -293,7 +292,7 @@ function drive(over: Record<string, unknown> = {}): any {
 // One in the default window, one before it, one after it, and one with a
 // missing timestamp (exercises the `?? ''` guard — always excluded).
 const DRIVES = [
-  drive({ id: 1, startTs: '2025-06-01T10:00:00Z' }), // in window
+  drive({ id: 1, startTs: '2025-06-12T10:00:00Z' }), // in window
   drive({ id: 2, startTs: '2025-03-01T10:00:00Z' }), // before window
   drive({ id: 3, startTs: '2025-12-01T10:00:00Z' }), // after window
   drive({ id: 4, startTs: null }), // undated — never in any window
@@ -376,7 +375,7 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
     renderPage();
     // Only two queries stay at page level: the live-motor query (PageContainer
     // needs it for the header freshness chip) and the drives list (the
-    // page-scoped date filter narrows it for two different panels). Everything
+    // shared date filter narrows it for two different panels). Everything
     // else is owned by the panel that renders it, at its own cadence.
     expect(mockMotorLatest).toHaveBeenCalledWith(1, 5000);
     expect(mockDrives).toHaveBeenCalledWith('1', 30000);
@@ -436,12 +435,12 @@ describe('DrivingDynamicsPage — live push bridge', () => {
 });
 
 describe('DrivingDynamicsPage — drive date filtering', () => {
-  it('filters drives to the default 30-day window', () => {
+  it('filters drives to the default 7-day window', () => {
     renderPage();
-    // Fixed now = 2025-06-15 → window [2025-05-16, 2025-06-15].
-    expect(screen.getByTestId('da-start')).toHaveTextContent('2025-05-16');
+    // Fixed now = 2025-06-15 → window [2025-06-09, 2025-06-15].
+    expect(screen.getByTestId('da-start')).toHaveTextContent('2025-06-09');
     expect(screen.getByTestId('da-end')).toHaveTextContent('2025-06-15');
-    // Only drive #1 (2025-06-01) falls inside; #2 before, #3 after, #4 undated.
+    // Only drive #1 (2025-06-12) falls inside; #2 before, #3 after, #4 undated.
     expect(num('da-count')).toBe(1);
     expect(num('sg-count')).toBe(1);
   });

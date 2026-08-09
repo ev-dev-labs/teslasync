@@ -125,7 +125,6 @@ export default function EfficiencyPage() {
 
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'efficiency.range',
-    defaultPresetId: '30d',
   });
 
   /* ---- Filtered drives ---- */

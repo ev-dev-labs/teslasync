@@ -128,7 +128,9 @@ describe('PreviewApplyPanel — no rate selected', () => {
     renderPanel({ geofenceId: 7, rate: null });
 
     expect(
-      screen.getByText('Select a rate from the history table above to preview its impact.'),
+      screen.getByText(
+        'Choose Preview sessions on a rate to see affected charging sessions and estimated cost.',
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText('Matched')).not.toBeInTheDocument();
   });
@@ -146,6 +148,11 @@ describe('PreviewApplyPanel — preview metrics', () => {
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getByText('60.0 kWh')).toBeInTheDocument();
     expect(screen.getByText('$7.20')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose Apply.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('shows a loading skeleton while the preview query is in flight', () => {

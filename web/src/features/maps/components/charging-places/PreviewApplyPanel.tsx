@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calculator, Play, RefreshCw } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Button, Input, ConfirmDialog, Badge } from '@/components/ui';
+import { GlassPanel, PanelTitle, Button, Input, ConfirmDialog, Badge, Text } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
 import { MetricTile } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
@@ -87,14 +87,14 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-3 flex items-center gap-2">
           <Calculator className="h-4 w-4 text-violet-300" aria-hidden="true" />
-          {t('chargingPlaces.previewApply.title', 'Preview & Apply')}
+          {t('chargingPlaces.previewApply.title', 'Session Pricing Preview')}
         </PanelTitle>
         <>
           {/* no-action: rate selection is provided directly above this panel in the same workspace. */}
           <EmptyState
             message={t(
               'chargingPlaces.previewApply.selectRate',
-              'Select a rate from the history table above to preview its impact.',
+              'Choose Preview sessions on a rate to see affected charging sessions and estimated cost.',
             )}
           />
         </>
@@ -109,7 +109,7 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Calculator className="h-4 w-4 text-violet-300" aria-hidden="true" />
-          {t('chargingPlaces.previewApply.title', 'Preview & Apply')}
+          {t('chargingPlaces.previewApply.title', 'Session Pricing Preview')}
           <Badge variant="neutral" size="sm">
             {formatRatePerWh(rate.rate_per_wh, rate.currency, locale)} / {t('chargingPlaces.kwh', 'kWh')}
           </Badge>
@@ -124,6 +124,12 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
           {t('chargingPlaces.previewApply.refresh', 'Refresh preview')}
         </Button>
       </div>
+      <Text as="p" size="sm" color="muted" className="mb-3">
+        {t(
+          'chargingPlaces.previewApply.help',
+          'This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose Apply.',
+        )}
+      </Text>
 
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
@@ -169,6 +175,12 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
               label={t('chargingPlaces.previewApply.estimatedCost', 'Estimated Cost')}
             />
           </div>
+          <Text as="p" size="xs" color="muted" className="mt-3">
+            {t(
+              'chargingPlaces.previewApply.metricsHelp',
+              'Matched sessions are in this place and rate period. Eligible sessions can be priced; protected sessions keep their existing cost.',
+            )}
+          </Text>
           {p?.matched_sessions === 0 && (
             <InlineCallout variant="warning" className="mt-3">
               {t(

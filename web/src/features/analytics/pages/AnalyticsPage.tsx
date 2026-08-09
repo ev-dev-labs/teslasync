@@ -21,7 +21,6 @@ export default function AnalyticsPage() {
 
   const { start, end, setRange } = useRangeState({
     persistKey: 'analytics.range',
-    defaultPresetId: '30d',
   });
 
   const fleetQuery = useFleetAnalytics({ start, end });
