@@ -3,6 +3,7 @@ package geofence
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
@@ -107,6 +108,7 @@ type repriceCandidate struct {
 	geofenceID  *int64
 	startLat    *float64
 	startLng    *float64
+	startPlace  *string
 	energyWh    *float64
 	costDecimal *float64
 	costSource  *string
@@ -121,7 +123,7 @@ type repriceCandidate struct {
 // has no PostGIS geometry types, only WKT text + Go Haversine math.
 func (r *GeofenceRepo) loadRepriceCandidates(ctx context.Context, geofenceID int64, from time.Time, to *time.Time) ([]repriceCandidate, error) {
 	query := `
-SELECT id, geofence_id, start_lat, start_lng, total_energy_added_wh, cost_decimal, cost_source
+SELECT id, geofence_id, start_lat, start_lng, start_place, total_energy_added_wh, cost_decimal, cost_source
 FROM charging_sessions
 WHERE (geofence_id = $1 OR geofence_id IS NULL)
   AND started_at >= $2`
@@ -144,6 +146,7 @@ WHERE (geofence_id = $1 OR geofence_id IS NULL)
 			&c.geofenceID,
 			&c.startLat,
 			&c.startLng,
+			&c.startPlace,
 			&c.energyWh,
 			&c.costDecimal,
 			&c.costSource,
@@ -161,7 +164,9 @@ WHERE (geofence_id = $1 OR geofence_id IS NULL)
 // classifyRepriceCandidates partitions loadRepriceCandidates' output into
 // (matched, eligible, protected) against one geofence's circle:
 //   - matched: already attributed to this geofence, OR unattributed but
-//     spatially inside this geofence's circle.
+//     spatially inside this geofence's circle. Legacy sessions without usable
+//     coordinates also match an identical saved start-place name; explicit
+//     preview/apply remains the write gate for this conservative fallback.
 //   - eligible (subset of matched): cost_source is geofence_tariff or
 //     default_estimate, or it is empty/unknown with no existing cost, AND
 //     total_energy_added_wh is known. These are the ids ApplyRate may write.
@@ -181,8 +186,14 @@ func classifyRepriceCandidates(candidates []repriceCandidate, g *systemmodel.Geo
 		switch {
 		case c.geofenceID != nil && *c.geofenceID == g.ID:
 			inScope = true
-		case c.geofenceID == nil && c.startLat != nil && c.startLng != nil && radius > 0:
+		case c.geofenceID == nil &&
+			c.startLat != nil &&
+			c.startLng != nil &&
+			validCoordinate(*c.startLat, *c.startLng) &&
+			radius > 0:
 			inScope = haversineMeters(*c.startLat, *c.startLng, cLat, cLon) <= radius
+		case c.geofenceID == nil && c.startPlace != nil && strings.TrimSpace(g.Name) != "":
+			inScope = strings.EqualFold(strings.TrimSpace(*c.startPlace), strings.TrimSpace(g.Name))
 		}
 		if !inScope {
 			continue

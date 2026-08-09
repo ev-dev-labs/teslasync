@@ -56,11 +56,11 @@ func TestPending_ChargerInfoCaptured(t *testing.T) {
 
 func TestActive_AccumulatesEnergy(t *testing.T) {
 	m := newActiveFSM()
-	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 5.2})
-	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 10.4})
+	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 5200.0})
+	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 10400.0})
 	ctx := m.Context()
-	if ctx.EnergyAdded != 10.4 {
-		t.Fatalf("expected 10.4 kWh, got %f", ctx.EnergyAdded)
+	if ctx.EnergyAdded != 10400 {
+		t.Fatalf("expected 10400 Wh, got %f", ctx.EnergyAdded)
 	}
 }
 
@@ -69,12 +69,12 @@ func TestActive_AccumulatesVoltageCurrentPower(t *testing.T) {
 	m.ProcessSignals(map[string]interface{}{
 		"ChargerVoltage":       240,
 		"ChargerActualCurrent": 32,
-		"ACChargingPower":      7.6,
+		"ACChargingPower":      7600.0,
 	})
 	m.ProcessSignals(map[string]interface{}{
 		"ChargerVoltage":       241,
 		"ChargerActualCurrent": 31,
-		"ACChargingPower":      7.4,
+		"ACChargingPower":      7400.0,
 	})
 	ctx := m.Context()
 	if ctx.VoltageSamples != 2 {
@@ -119,7 +119,7 @@ func TestCompleting_EndFieldsPresent_TransitionsToDone(t *testing.T) {
 	m := newCompletingFSM()
 	m.ProcessSignals(map[string]interface{}{
 		"BatteryLevel":       80,
-		"DCChargingEnergyIn": 25.0,
+		"DCChargingEnergyIn": 25000.0,
 	})
 	if m.State() != Done {
 		t.Fatalf("expected Done, got %s", m.State())
@@ -158,7 +158,7 @@ func TestRecovered_ChargeStillActive_TransitionsToActive(t *testing.T) {
 	if m.State() != Recovered {
 		t.Fatalf("expected Recovered, got %s", m.State())
 	}
-	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 12.0})
+	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 12000.0})
 	if m.State() != Active {
 		t.Fatalf("expected Active, got %s", m.State())
 	}
@@ -186,7 +186,7 @@ func TestValidation_NoEnergyIn5Min(t *testing.T) {
 }
 
 func TestValidation_Energy150kWh(t *testing.T) {
-	c := &Context{StartBattery: 10, EndBattery: 100, EnergyAdded: 200,
+	c := &Context{StartBattery: 10, EndBattery: 100, EnergyAdded: 200_000,
 		StartTime: time.Now().Add(-time.Hour), EndTime: time.Now()}
 	issues := Validate(c)
 	assertContains(t, issues, "energy > 150 kWh")
@@ -194,7 +194,7 @@ func TestValidation_Energy150kWh(t *testing.T) {
 
 func TestValidation_AllGood(t *testing.T) {
 	c := &Context{
-		StartBattery: 45, EndBattery: 80, EnergyAdded: 25,
+		StartBattery: 45, EndBattery: 80, EnergyAdded: 25_000,
 		StartTime: time.Now().Add(-45 * time.Minute), EndTime: time.Now(),
 	}
 	issues := Validate(c)
@@ -223,10 +223,10 @@ func newDoneFSM() *SessionFSM {
 	m.mu.Lock()
 	m.ctx.StartTime = time.Now().UTC().Add(-45 * time.Minute)
 	m.mu.Unlock()
-	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 20.0, "BatteryLevel": 65})
+	m.ProcessSignals(map[string]interface{}{"DCChargingEnergyIn": 20000.0, "BatteryLevel": 65})
 	m.TriggerEnding(map[string]interface{}{
 		"BatteryLevel":       80,
-		"DCChargingEnergyIn": 25.0,
+		"DCChargingEnergyIn": 25000.0,
 	}, false)
 	return m
 }

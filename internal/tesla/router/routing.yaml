@@ -37,6 +37,7 @@ routes:
   - field: ACChargingPower
     dest: charging_telemetry
     column: ac_charging_power_w
+    also_signal_log: true
   - field: AutoSeatClimateLeft
     dest: climate_snapshot
     column: auto_seat_climate_left
@@ -166,6 +167,7 @@ routes:
   - field: DCChargingPower
     dest: charging_telemetry
     column: dc_charging_power_w
+    also_signal_log: true
   - field: DCDCEnable
     dest: signal_log
   - field: DefrostForPreconditioning

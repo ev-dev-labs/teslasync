@@ -201,11 +201,30 @@ describe('PreviewApplyPanel — narrowing the window', () => {
 });
 
 describe('PreviewApplyPanel — apply gating', () => {
-  it('disables Apply when there are zero eligible sessions', () => {
+  it('allows attribution-only apply when matched sessions have protected costs', () => {
     mockedPreview.mockReturnValue(makePreviewQuery({ data: makePreview({ eligible_sessions: 0 }) }));
     renderPanel({ geofenceId: 7, rate });
 
+    expect(screen.getByRole('button', { name: 'Assign Sessions' })).toBeEnabled();
+    expect(
+      screen.getByText(/All matched costs are protected/),
+    ).toBeInTheDocument();
+  });
+
+  it('disables Apply and explains the fix when no sessions match', () => {
+    mockedPreview.mockReturnValue(
+      makePreviewQuery({
+        data: makePreview({
+          matched_sessions: 0,
+          eligible_sessions: 0,
+          protected_sessions: 0,
+        }),
+      }),
+    );
+    renderPanel({ geofenceId: 7, rate });
+
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    expect(screen.getByText(/No sessions match this place and rate period/)).toBeInTheDocument();
   });
 
   it('requires confirmation before calling the apply mutation', async () => {
@@ -226,10 +245,23 @@ describe('PreviewApplyPanel — apply gating', () => {
       mutate: applyMutate,
       reset: applyReset,
       isPending: false,
-      data: { priced_sessions: 6, skipped_sessions: 4, total_cost_decimal: 7.2, currency: 'USD' } satisfies GeofenceRateApplyResult,
+      data: {
+        geofence_id: 7,
+        rate_id: 99,
+        matched_sessions: 10,
+        priced_sessions: 6,
+        skipped_sessions: 4,
+        total_energy_wh: 60_000,
+        total_cost_decimal: 7.2,
+        currency: 'USD',
+      } satisfies GeofenceRateApplyResult,
     });
     renderPanel({ geofenceId: 7, rate });
 
-    expect(screen.getByText('Applied: 6 priced, 4 skipped, $7.20 total.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Processed 10 matched sessions: 6 priced, 4 protected or unchanged, $7.20 total.',
+      ),
+    ).toBeInTheDocument();
   });
 });

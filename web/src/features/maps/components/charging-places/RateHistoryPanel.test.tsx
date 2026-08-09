@@ -92,7 +92,7 @@ describe('RateHistoryPanel — loading/error/empty', () => {
     renderPanel({ rates: [] });
     expect(
       screen.getByText(
-        'No rate configured yet — add one below to start pricing sessions at this place.',
+        'No rate configured yet — use the form above to start pricing sessions at this place.',
       ),
     ).toBeInTheDocument();
   });
@@ -134,22 +134,22 @@ describe('RateHistoryPanel — rows', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('highlights the selected row\'s Preview/Apply button as primary', () => {
+  it('highlights the selected row and labels its impact as shown', () => {
     const rate = makeRate({ id: 5 });
     renderPanel({ rates: [rate], selectedRateId: 5 });
 
-    const btn = screen.getByRole('button', { name: 'Preview / Apply' });
+    const btn = screen.getByRole('button', { name: 'Impact shown' });
     // Button component maps variant to a class; "primary" is the
     // selected-row highlight this panel switches to (see component source).
     expect(btn.className).toMatch(/primary|bg-/);
   });
 
-  it('invokes onSelectRate with the exact rate when Preview/Apply is clicked', () => {
+  it('invokes onSelectRate with the exact rate when Review impact is clicked', () => {
     const onSelectRate = vi.fn();
     const rate = makeRate({ id: 9 });
     renderPanel({ rates: [rate], onSelectRate });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Preview / Apply' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review impact' }));
     expect(onSelectRate).toHaveBeenCalledWith(rate);
   });
 });

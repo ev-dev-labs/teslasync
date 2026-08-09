@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calculator, Play } from 'lucide-react';
+import { Calculator, Play, RefreshCw } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Button, Input, ConfirmDialog, Badge } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
@@ -58,14 +58,24 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
   }, [apply.reset, rate?.id]);
 
   const handleApply = async () => {
-    if (!rate) return;
+    if (!rate || !preview.data || preview.data.matched_sessions === 0) return;
+    const attributionOnly = preview.data.eligible_sessions === 0;
     const ok = await confirm({
-      title: t('chargingPlaces.previewApply.confirmTitle', 'Apply this rate to matching sessions?'),
-      message: t(
-        'chargingPlaces.previewApply.confirmMessage',
-        'This backfills/reprices unpriced or previously geofence-derived sessions in scope. Manual, Tesla-reported, and existing costs with unknown provenance are never overwritten.',
-      ),
-      confirmLabel: t('chargingPlaces.previewApply.applyAction', 'Apply'),
+      title: attributionOnly
+        ? t('chargingPlaces.previewApply.confirmAttributionTitle', 'Assign matching sessions to this place?')
+        : t('chargingPlaces.previewApply.confirmTitle', 'Apply this rate to matching sessions?'),
+      message: attributionOnly
+        ? t(
+            'chargingPlaces.previewApply.confirmAttributionMessage',
+            'Matching sessions will be linked to this place. Their protected costs will remain unchanged.',
+          )
+        : t(
+            'chargingPlaces.previewApply.confirmMessage',
+            'This backfills/reprices unpriced or previously geofence-derived sessions in scope. Manual, Tesla-reported, and existing costs with unknown provenance are never overwritten.',
+          ),
+      confirmLabel: attributionOnly
+        ? t('chargingPlaces.previewApply.assignAction', 'Assign Sessions')
+        : t('chargingPlaces.previewApply.applyAction', 'Apply'),
       variant: 'warning',
     });
     if (!ok) return;
@@ -96,13 +106,24 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
 
   return (
     <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Calculator className="h-4 w-4 text-violet-300" aria-hidden="true" />
-        {t('chargingPlaces.previewApply.title', 'Preview & Apply')}
-        <Badge variant="neutral" size="sm">
-          {formatRatePerWh(rate.rate_per_wh, rate.currency, locale)} / {t('chargingPlaces.kwh', 'kWh')}
-        </Badge>
-      </PanelTitle>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <PanelTitle className="flex items-center gap-2">
+          <Calculator className="h-4 w-4 text-violet-300" aria-hidden="true" />
+          {t('chargingPlaces.previewApply.title', 'Preview & Apply')}
+          <Badge variant="neutral" size="sm">
+            {formatRatePerWh(rate.rate_per_wh, rate.currency, locale)} / {t('chargingPlaces.kwh', 'kWh')}
+          </Badge>
+        </PanelTitle>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={<RefreshCw className={preview.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />}
+          onClick={() => void preview.refetch()}
+          disabled={preview.isFetching}
+        >
+          {t('chargingPlaces.previewApply.refresh', 'Refresh preview')}
+        </Button>
+      </div>
 
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
@@ -124,37 +145,56 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
       ) : preview.isLoading ? (
         <Skeleton className="h-24 w-full" />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <MetricTile value={p?.matched_sessions ?? 0} label={t('chargingPlaces.previewApply.matched', 'Matched')} />
-          <MetricTile
-            value={p?.eligible_sessions ?? 0}
-            label={t('chargingPlaces.previewApply.eligible', 'Eligible')}
-            accentClass="text-emerald-300"
-          />
-          <MetricTile
-            value={p?.protected_sessions ?? 0}
-            label={t('chargingPlaces.previewApply.protected', 'Protected')}
-            accentClass="text-amber-300"
-          />
-          <MetricTile
-            value={p ? formatEnergy(p.total_energy_wh) : '—'}
-            label={t('chargingPlaces.previewApply.energy', 'Energy')}
-          />
-          <MetricTile
-            value={
-              p ? formatCurrencyValue(p.estimated_cost_decimal, p.currency, locale, 2, { useGrouping: true }) : '—'
-            }
-            label={t('chargingPlaces.previewApply.estimatedCost', 'Estimated Cost')}
-          />
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <MetricTile value={p?.matched_sessions ?? 0} label={t('chargingPlaces.previewApply.matched', 'Matched')} />
+            <MetricTile
+              value={p?.eligible_sessions ?? 0}
+              label={t('chargingPlaces.previewApply.eligible', 'Eligible')}
+              accentClass="text-emerald-300"
+            />
+            <MetricTile
+              value={p?.protected_sessions ?? 0}
+              label={t('chargingPlaces.previewApply.protected', 'Protected')}
+              accentClass="text-amber-300"
+            />
+            <MetricTile
+              value={p ? formatEnergy(p.total_energy_wh) : '—'}
+              label={t('chargingPlaces.previewApply.energy', 'Energy')}
+            />
+            <MetricTile
+              value={
+                p ? formatCurrencyValue(p.estimated_cost_decimal, p.currency, locale, 2, { useGrouping: true }) : '—'
+              }
+              label={t('chargingPlaces.previewApply.estimatedCost', 'Estimated Cost')}
+            />
+          </div>
+          {p?.matched_sessions === 0 && (
+            <InlineCallout variant="warning" className="mt-3">
+              {t(
+                'chargingPlaces.previewApply.noMatches',
+                'No sessions match this place and rate period. Check the zone location and radius, or broaden the optional date range. Sessions without coordinates can match an identical saved place name.',
+              )}
+            </InlineCallout>
+          )}
+          {p && p.matched_sessions > 0 && p.eligible_sessions === 0 && (
+            <InlineCallout variant="info" className="mt-3">
+              {t(
+                'chargingPlaces.previewApply.attributionOnly',
+                'All matched costs are protected. Apply can still assign unlinked sessions to this place without changing their cost.',
+              )}
+            </InlineCallout>
+          )}
+        </>
       )}
 
       {apply.data && (
         <InlineCallout variant="success" className="mt-3">
           {t(
             'chargingPlaces.previewApply.applied',
-            'Applied: {{priced}} priced, {{skipped}} skipped, {{cost}} total.',
+            'Processed {{matched}} matched sessions: {{priced}} priced, {{skipped}} protected or unchanged, {{cost}} total.',
             {
+              matched: apply.data.matched_sessions,
               priced: apply.data.priced_sessions,
               skipped: apply.data.skipped_sessions,
               cost: formatCurrencyValue(apply.data.total_cost_decimal, apply.data.currency, locale, 2, {
@@ -171,9 +211,11 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
           icon={<Play className="h-4 w-4" aria-hidden="true" />}
           onClick={() => void handleApply()}
           loading={apply.isPending}
-          disabled={!p || p.eligible_sessions === 0}
+          disabled={!p || p.matched_sessions === 0}
         >
-          {t('chargingPlaces.previewApply.applyAction', 'Apply')}
+          {p && p.matched_sessions > 0 && p.eligible_sessions === 0
+            ? t('chargingPlaces.previewApply.assignAction', 'Assign Sessions')
+            : t('chargingPlaces.previewApply.applyAction', 'Apply')}
         </Button>
       </div>
 

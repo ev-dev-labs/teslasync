@@ -66,6 +66,7 @@ import {
   useUnarchiveGeofence,
   useMarkGeofenceReviewed,
   useRenameGeofence,
+  useUpdateGeofenceCategory,
   useGeofenceRates,
   useCreateGeofenceRate,
   useDeleteGeofenceRate,
@@ -464,6 +465,31 @@ describe('useRenameGeofence', () => {
   });
 });
 
+describe('useUpdateGeofenceCategory', () => {
+  it('PUTs the category and invalidates place lifecycle queries', async () => {
+    mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 7, category: 'work' }));
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useUpdateGeofenceCategory(), {
+      wrapper: Wrapper,
+    });
+
+    await result.current.mutateAsync({ geofenceId: 7, category: 'work' });
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/7');
+    expect(opts.method).toBe('PUT');
+    expect(JSON.parse(opts.body as string)).toEqual({ category: 'work' });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
+    expect(successToast).toHaveBeenCalledWith(
+      'toast.geofence.category.success',
+      'Category updated',
+    );
+  });
+});
+
 describe('useArchiveGeofence', () => {
   it('POSTs /geofences/{id}/archive, invalidates the lifecycle caches, and toasts success', async () => {
     mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 3, archived_at: '2026-08-01T00:00:00Z' }));
@@ -705,8 +731,12 @@ describe('useGeofenceRatePreview', () => {
 describe('useApplyGeofenceRate', () => {
   it('POSTs the apply endpoint and invalidates this place\'s summary/activity AND the global charging-sessions cache', async () => {
     const applyResult: GeofenceRateApplyResult = {
+      geofence_id: 7,
+      rate_id: 99,
+      matched_sessions: 10,
       priced_sessions: 6,
       skipped_sessions: 4,
+      total_energy_wh: 55_000,
       total_cost_decimal: 5.5,
       currency: 'USD',
     };
@@ -723,6 +753,9 @@ describe('useApplyGeofenceRate', () => {
     expect(url).toBe('/geofences/7/rates/99/apply');
     expect(opts.method).toBe('POST');
 
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ['geofences', 7, 'rates', 99, 'preview'],
+    });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceChargingSummary(7) });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['geofences', 7, 'charging-activity'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['charging-sessions'] });

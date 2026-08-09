@@ -241,6 +241,12 @@ func TestClassifyRepriceCandidates(t *testing.T) {
 		{id: 9, geofenceID: int64Ptr(1), energyWh: f64ptr(6000), costSource: strptr(systemmodel.CostSourceGeofenceTariff)},
 		// 10: pre-feature row with a real cost but no provenance -> protected.
 		{id: 10, geofenceID: int64Ptr(1), energyWh: f64ptr(6000), costDecimal: f64ptr(7.25)},
+		// 11: legacy unattributed row without coordinates but with an exact saved place name -> eligible.
+		{id: 11, startPlace: strptr("  test PLACE  "), energyWh: f64ptr(2500)},
+		// 12: a different legacy place name must not match.
+		{id: 12, startPlace: strptr("Different Place"), energyWh: f64ptr(2500)},
+		// 13: placeholder (0,0) coordinates are unusable, so the exact-name fallback applies.
+		{id: 13, startLat: f64ptr(0), startLng: f64ptr(0), startPlace: strptr("Test Place"), energyWh: f64ptr(1500)},
 	}
 
 	matched, eligible, protected := classifyRepriceCandidates(candidates, g)
@@ -257,8 +263,8 @@ func TestClassifyRepriceCandidates(t *testing.T) {
 		}
 	}
 
-	assertIDs(t, "matched", matched, []int64{1, 2, 4, 5, 6, 9, 10})
-	assertIDs(t, "eligible", eligible, []int64{1, 2, 9})
+	assertIDs(t, "matched", matched, []int64{1, 2, 4, 5, 6, 9, 10, 11, 13})
+	assertIDs(t, "eligible", eligible, []int64{1, 2, 9, 11, 13})
 	assertIDs(t, "protected", protected, []int64{4, 5, 10})
 
 	// The remainder (matched - eligible - protected) must be exactly {6}:
@@ -334,7 +340,7 @@ func TestLoadRepriceCandidates(t *testing.T) {
 	})
 
 	t.Run("scan error wrapped", func(t *testing.T) {
-		rows := newFakeRows([][]any{{int64(1), (*int64)(nil), (*float64)(nil), (*float64)(nil), (*float64)(nil), (*string)(nil)}})
+		rows := newFakeRows([][]any{{int64(1), (*int64)(nil), (*float64)(nil), (*float64)(nil), (*string)(nil), (*float64)(nil), (*float64)(nil), (*string)(nil)}})
 		rows.scanErrAt = 0
 		pool := &fakePool{queryQueue: []queryResult{{rows: rows}}}
 		_, err := newRepo(pool).loadRepriceCandidates(context.Background(), 1, from, nil)
@@ -410,8 +416,8 @@ func scenarioCandidatesRows(g *systemmodel.Geofence) [][]any {
 	cLat, cLon := g.Centroid()
 	manual := systemmodel.CostSourceManual
 	return [][]any{
-		{int64(10), (*int64)(nil), &cLat, &cLon, f64ptr(10_000), (*float64)(nil), (*string)(nil)},
-		{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), f64ptr(5_000), f64ptr(4.25), &manual},
+		{int64(10), (*int64)(nil), &cLat, &cLon, (*string)(nil), f64ptr(10_000), (*float64)(nil), (*string)(nil)},
+		{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual},
 	}
 }
 
@@ -459,7 +465,7 @@ func TestPreviewApplyRate(t *testing.T) {
 
 	t.Run("zero eligible sessions skips the aggregate round trip", func(t *testing.T) {
 		manual := systemmodel.CostSourceManual
-		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), f64ptr(5_000), f64ptr(4.25), &manual}}
+		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual}}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
 			queryQueue:    []queryResult{{rows: newFakeRows(onlyProtected)}},
@@ -539,7 +545,7 @@ func TestApplyRate(t *testing.T) {
 
 	t.Run("zero eligible sessions skips the UPDATE round trip", func(t *testing.T) {
 		manual := systemmodel.CostSourceManual
-		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), f64ptr(5_000), f64ptr(4.25), &manual}}
+		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual}}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
 			queryQueue:    []queryResult{{rows: newFakeRows(onlyProtected)}},
@@ -561,7 +567,7 @@ func TestApplyRate(t *testing.T) {
 		cLat, cLon := g.Centroid()
 		manual := systemmodel.CostSourceManual
 		unattributedProtected := [][]any{
-			{int64(11), (*int64)(nil), &cLat, &cLon, f64ptr(5_000), f64ptr(4.25), &manual},
+			{int64(11), (*int64)(nil), &cLat, &cLon, (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual},
 		}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
@@ -599,7 +605,7 @@ func TestApplyRate(t *testing.T) {
 		// an eligible candidate set that yields an UPDATE returning zero
 		// rows (e.g. concurrent apply already converged it to a manual
 		// cost between classification and the UPDATE).
-		alreadyDone := [][]any{{int64(10), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), f64ptr(10_000), f64ptr(1.005), strptr(systemmodel.CostSourceGeofenceTariff)}}
+		alreadyDone := [][]any{{int64(10), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(10_000), f64ptr(1.005), strptr(systemmodel.CostSourceGeofenceTariff)}}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
 			queryQueue: []queryResult{

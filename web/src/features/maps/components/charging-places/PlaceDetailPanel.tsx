@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, CheckCircle2 } from 'lucide-react';
 
-import { Modal, Button, Tabs, Badge, Text, EditableText, Label } from '@/components/ui';
+import { Modal, Button, Tabs, Badge, Text, EditableText, Label, Select } from '@/components/ui';
 import {
   useGeofenceRates,
   useDeleteGeofenceRate,
@@ -11,6 +11,7 @@ import {
   useMarkGeofenceReviewed,
   useGeofenceChargingSummary,
   useRenameGeofence,
+  useUpdateGeofenceCategory,
 } from '@/api/hooks/useLocations';
 import { RateHistoryPanel } from './RateHistoryPanel';
 import { RateForm } from './RateForm';
@@ -18,7 +19,12 @@ import { PreviewApplyPanel } from './PreviewApplyPanel';
 import { ChargingSummaryPanel } from './ChargingSummaryPanel';
 import { ChargingActivityList } from './ChargingActivityList';
 import { isRateActiveAt, isRateOpen } from './helpers';
-import type { Geofence, GeofenceRate } from '@/api/types';
+import {
+  GEOFENCE_CATEGORY_LABELS,
+  GEOFENCE_CATEGORY_VALUES,
+  type GeofenceCategoryValue,
+} from '../../geofenceCategories';
+import type { Geofence, GeofenceCategory, GeofenceRate } from '@/api/types';
 
 export interface PlaceDetailPanelProps {
   /** The place being configured, or `null` when the panel is closed. */
@@ -39,6 +45,8 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<DetailTab>('pricing');
   const [selectedRate, setSelectedRate] = useState<GeofenceRate | null>(null);
+  const [category, setCategory] = useState<GeofenceCategoryValue>('custom');
+  const previewPanelRef = useRef<HTMLDivElement>(null);
 
   const ratesQuery = useGeofenceRates(place?.id);
   const summaryQuery = useGeofenceChargingSummary(place?.id);
@@ -47,6 +55,14 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
   const unarchive = useUnarchiveGeofence();
   const markReviewed = useMarkGeofenceReviewed();
   const rename = useRenameGeofence();
+  const updateCategory = useUpdateGeofenceCategory();
+  const handleSelectRate = useCallback((rate: GeofenceRate) => {
+    setSelectedRate(rate);
+    queueMicrotask(() => {
+      previewPanelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      previewPanelRef.current?.focus?.({ preventScroll: true });
+    });
+  }, []);
 
   // Reset per-place UI state whenever a different place opens, and default
   // to the rate active now. A future open-ended schedule is only a fallback
@@ -55,6 +71,10 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
     setTab('pricing');
     setSelectedRate(null);
   }, [place?.id]);
+
+  useEffect(() => {
+    setCategory(place?.category ?? 'custom');
+  }, [place?.id, place?.category]);
 
   useEffect(() => {
     const rates = ratesQuery.data ?? [];
@@ -74,6 +94,14 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
   const handleMarkReviewed = () => {
     markReviewed.mutate(place.id);
   };
+
+  const categoryOptions = GEOFENCE_CATEGORY_VALUES.map((value) => ({
+    value,
+    label: t(
+      GEOFENCE_CATEGORY_LABELS[value].key,
+      GEOFENCE_CATEGORY_LABELS[value].fallback,
+    ),
+  }));
 
   return (
     <Modal
@@ -122,20 +150,36 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
         )}
       </div>
 
-      <div className="mb-4">
-        <Label>{t('chargingPlaces.detail.placeName', 'Place name')}</Label>
-        <EditableText
-          value={place.name}
-          variant="heading"
-          maxLength={120}
-          ariaLabel={t('chargingPlaces.detail.rename', 'Rename {{name}}', { name: place.name })}
-          validate={(next) =>
-            next.length > 120
-              ? t('geofences.error.nameTooLong', 'Max 120 characters')
-              : null
-          }
-          onSave={async (name) => {
-            await rename.mutateAsync({ geofenceId: place.id, name });
+      <div className="mb-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label>{t('chargingPlaces.detail.placeName', 'Place name')}</Label>
+          <EditableText
+            value={place.name}
+            variant="heading"
+            maxLength={120}
+            ariaLabel={t('chargingPlaces.detail.rename', 'Rename {{name}}', { name: place.name })}
+            validate={(next) =>
+              next.length > 120
+                ? t('geofences.error.nameTooLong', 'Max 120 characters')
+                : null
+            }
+            onSave={async (name) => {
+              await rename.mutateAsync({ geofenceId: place.id, name });
+            }}
+          />
+        </div>
+        <Select
+          label={t('chargingPlaces.detail.category', 'Category')}
+          options={categoryOptions}
+          value={category}
+          disabled={updateCategory.isPending}
+          onChange={(event) => {
+            const next = event.target.value as GeofenceCategory;
+            setCategory(next);
+            updateCategory.mutate(
+              { geofenceId: place.id, category: next },
+              { onError: () => setCategory(place.category ?? 'custom') },
+            );
           }}
         />
       </div>
@@ -166,11 +210,13 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
             error={ratesQuery.error}
             onRetry={() => void ratesQuery.refetch()}
             selectedRateId={selectedRate?.id}
-            onSelectRate={setSelectedRate}
+            onSelectRate={handleSelectRate}
             onDelete={(r) => deleteRate.mutate({ geofenceId: place.id, rateId: r.id })}
             deletePending={deleteRate.isPending}
           />
-          <PreviewApplyPanel geofenceId={place.id} rate={selectedRate} />
+          <div ref={previewPanelRef} tabIndex={-1} className="scroll-mt-4 outline-none">
+            <PreviewApplyPanel geofenceId={place.id} rate={selectedRate} />
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-4">

@@ -1,0 +1,2 @@
+-- Intentional no-op: this is a data repair. Dividing all values on rollback
+-- would corrupt rows written in canonical Wh/W after the up migration ran.

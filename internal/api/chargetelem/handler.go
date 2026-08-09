@@ -27,8 +27,9 @@ type ChargingTelemetryHandler struct {
 	live  signal.LiveStateReader
 }
 
-// Signal → JSON field mappings for charging telemetry projection.
-// Field names match the frontend ChargingTelemetry interface in api/types.ts.
+// Signal → JSON field mappings for charging telemetry projection. Temporary
+// DC fields are merged into the frontend ChargingTelemetry shape before the
+// response is written.
 var chargingTelemetryMappings = []signal.FieldMapping{
 	{Signal: "ChargerVoltage", Field: "charger_voltage"},
 	{Signal: "ChargerActualCurrent", Field: "charger_actual_current"},
@@ -38,11 +39,12 @@ var chargingTelemetryMappings = []signal.FieldMapping{
 	{Signal: "Soc", Field: "soc"},
 	{Signal: "BatteryLevel", Field: "battery_level"},
 	{Signal: "ACChargingEnergyIn", Field: "charge_energy_added_wh"},
-	{Signal: "DCChargingEnergyIn", Field: "energy_added_dc"},
+	{Signal: "DCChargingEnergyIn", Field: "dc_charge_energy_added_wh"},
 	{Signal: "TimeToFullCharge", Field: "time_to_full_charge"},
 	{Signal: "BrickVoltageMax", Field: "brick_voltage_max"},
 	{Signal: "BrickVoltageMin", Field: "brick_voltage_min"},
 	{Signal: "ACChargingPower", Field: "charger_power_w"},
+	{Signal: "DCChargingPower", Field: "dc_charger_power_w"},
 	{Signal: "ChargerPhases", Field: "charger_phases"},
 	{Signal: "IdealBatteryRange", Field: "battery_range_mi"},
 	{Signal: "ChargeState", Field: "charging_state"},
@@ -80,6 +82,9 @@ func (h *ChargingTelemetryHandler) List(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	rows := timelineRowsToFlat(timelineRows)
+	for _, row := range rows {
+		mergeDCChargingValues(row)
+	}
 	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
@@ -105,13 +110,22 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 			result[m.Field] = v
 		}
 	}
-	// DC fast-charging reports DCChargingPower; override the AC field only when positive.
-	if dcVal, ok := snap["DCChargingPower"]; ok {
-		if dc, dcOk := signal.Float64(dcVal); dcOk && dc > 0 {
-			result["charger_power_w"] = dcVal
+	mergeDCChargingValues(result)
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+func mergeDCChargingValues(row map[string]interface{}) {
+	preferPositiveDCValue(row, "charger_power_w", "dc_charger_power_w")
+	preferPositiveDCValue(row, "charge_energy_added_wh", "dc_charge_energy_added_wh")
+}
+
+func preferPositiveDCValue(row map[string]interface{}, canonicalKey, dcKey string) {
+	if value, ok := row[dcKey]; ok {
+		if numeric, numericOK := signal.Float64(value); numericOK && numeric > 0 {
+			row[canonicalKey] = value
 		}
 	}
-	httpx.WriteJSON(w, http.StatusOK, result)
+	delete(row, dcKey)
 }
 
 // timelineRowsToFlat preserves the legacy flat-pivot response shape.

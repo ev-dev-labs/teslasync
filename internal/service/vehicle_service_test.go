@@ -439,7 +439,7 @@ func TestBuildStateFromSignalStore_AcceptsPhase42CodecNumericTypes(t *testing.T)
 		"OutsideTemp":           float32(14.5),
 		"Latitude":              float32(37.4419),
 		"Longitude":             float32(-122.143),
-		"ACChargingPower":       float32(7.2),
+		"ACChargingPower":       float32(7200),
 		"ChargeRateMilePerHour": float32(28.5),
 		"TimeToFullCharge":      float32(2.5),
 		// Int3/Int4 codec fields → int32 in the live store

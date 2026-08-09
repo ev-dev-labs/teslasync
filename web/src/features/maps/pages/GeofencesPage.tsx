@@ -1,36 +1,32 @@
 /**
  * GeofencesPage — modern-ui full-width redesign.
  *
- * Full-bleed responsive bento: a KPI band, an (AI-gated) Helix draft
- * assistant, and a hero "Zones" panel whose geofence cards flow into an
- * auto-fit grid that fills every column on wide monitors. Each data
- * section owns its loading / empty / error state; a modal handles
- * create/edit with vehicle / browser / map-drawn location capture.
+ * Full-bleed responsive workspace: a KPI band, an (AI-gated) Helix draft
+ * assistant, and one directory for zone controls, charging rates, and
+ * session history. Each data section owns its loading / empty / error
+ * state; a modal handles create/edit with vehicle, browser, or map-drawn
+ * location capture.
  */
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  MapPin, Plus, Pencil, Trash2, Globe, Ruler, Shield,
-  LogIn, LogOut, Check, X, Activity, Navigation, RefreshCw,
+  MapPin, Plus, Globe, Ruler,
+  LogIn, LogOut, Check, X, Navigation, RefreshCw,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog,
-  Tabs, PinButton, EditableText, Checkbox, PanelTitle, Caption, Label,
-  Text, HelperText,
+  GlassPanel, Button, Input, Select, Modal, Toggle, ConfirmDialog,
+  Tabs, PanelTitle, Caption, Label, HelperText,
 } from '@/components/ui';
-import { MetricCard, BulkActionToolbar } from '@/components/data-display';
-import { Skeleton, EmptyState, Spinner, AlertBanner, QueryError } from '@/components/feedback';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, Spinner, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
-import { useFilteredList } from '@/hooks/useFilteredList';
+import { FadeIn } from '@/components/motion';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useConfirm } from '@/hooks/useConfirm';
-import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useBulkGeofencesDelete } from '@/api/hooks/useLocations';
 import {
@@ -44,14 +40,17 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { usePinned } from '@/api/hooks/usePinned';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
-import type { Position } from '@/api/types';
+import type { Geofence as ApiGeofence, Position } from '@/api/types';
 import { AISuggestNewGeofences } from '@/components/ai/AISuggestNewGeofences';
 import { ChargingPlacesWorkspace } from '@/features/maps/components/charging-places';
+import {
+  GEOFENCE_CATEGORY_LABELS,
+  GEOFENCE_CATEGORY_VALUES,
+} from '../geofenceCategories';
 import {
   geofenceFormSchema,
   toGeofencePayload,
@@ -78,6 +77,7 @@ const EMPTY_FORM: GeofenceFormData = {
   latitude: '',
   longitude: '',
   radius: '100',
+  category: 'custom',
   alertType: 'both',
   enabled: true,
 };
@@ -89,36 +89,13 @@ const ALERT_OPTIONS = [
   { value: 'none', label: 'None' },
 ];
 
-// Auto-fit bento: cards flow and fill every available column on wide
-// monitors, collapsing to a single column on phones — the strongest
-// "use the whole screen on any monitor" tool per the design language.
-const CARD_GRID = 'grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]';
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getAlertType(g: Geofence): AlertType {
-  if (g.alertOnEntry && g.alertOnExit) return 'both';
-  if (g.alertOnEntry) return 'entry';
-  if (g.alertOnExit) return 'exit';
+function getAlertType(g: ApiGeofence): AlertType {
+  if (g.alert_on_entry && g.alert_on_exit) return 'both';
+  if (g.alert_on_entry) return 'entry';
+  if (g.alert_on_exit) return 'exit';
   return 'none';
-}
-
-function alertBadgeVariant(type: AlertType): 'success' | 'warning' | 'info' | 'neutral' {
-  switch (type) {
-    case 'both': return 'success';
-    case 'entry': return 'info';
-    case 'exit': return 'warning';
-    default: return 'neutral';
-  }
-}
-
-function alertBadgeLabel(type: AlertType, t: (k: string) => string): string {
-  switch (type) {
-    case 'both': return t('Entry & Exit');
-    case 'entry': return t('Entry');
-    case 'exit': return t('Exit');
-    default: return t('None');
-  }
 }
 
 /**
@@ -169,11 +146,10 @@ export default function GeofencesPage() {
   const [initialForm, setInitialForm] = useState<GeofenceFormData>(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof GeofenceFormData, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Geofence | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ApiGeofence | null>(null);
   const [locationSource, setLocationSource] = useState<LocationSource>('vehicle');
   const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [search, setSearch] = useState('');
   // The AI geofence suggestion panel needs a candidate visited-location ID.
   // We expose
   // a small numeric input so the user can paste the ID copied from
@@ -187,11 +163,6 @@ export default function GeofencesPage() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [aiLocationIdRaw]);
 
-  // Bulk selection keys off geofence ids and clears when the filtered list
-  // changes so users don't carry stale selections.
-  // The frontend Geofence type carries id as string (legacy) but the
-  // backend bulk endpoint expects int64s — we convert at the call site.
-  const sel = useBulkSelection<string>();
   const bulkDelete = useBulkGeofencesDelete();
 
   // Dirty when the modal is open AND the form diverges from the initial
@@ -204,6 +175,7 @@ export default function GeofencesPage() {
       form.latitude !== initialForm.latitude ||
       form.longitude !== initialForm.longitude ||
       form.radius !== initialForm.radius ||
+      form.category !== initialForm.category ||
       form.alertType !== initialForm.alertType ||
       form.enabled !== initialForm.enabled
     );
@@ -220,7 +192,6 @@ export default function GeofencesPage() {
   });
   const geofences = geofencesQuery.data;
   const isLoading = geofencesQuery.isLoading;
-  const error = geofencesQuery.error as Error | null;
 
   const { data: vehicles } = useVehicles();
 
@@ -265,31 +236,20 @@ export default function GeofencesPage() {
     onError: (err: Error) => toast.error(t('Failed to delete geofence'), err.message),
   });
 
-  const toggleMut = useMutation({
-    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+  const quickUpdateMut = useMutation({
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: number;
+      patch: Partial<Pick<ApiGeofence, 'enabled' | 'alert_on_entry' | 'alert_on_exit'>>;
+    }) =>
       request<Geofence>(`/geofences/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ enabled }),
+        body: JSON.stringify(patch),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
-    onError: (err: Error) => toast.error(t('Failed to toggle geofence'), err.message),
-  });
-
-  // Inline rename sends a full merged payload rather than a partial `{ name }`
-  // so the backend's PUT semantics
-  // are unambiguous regardless of whether it does field-level merge.
-  // Errors are surfaced inline by EditableText, so no toast here.
-  const renameMut = useMutation({
-    mutationFn: ({ g, name }: { g: Geofence; name: string }) => {
-      const { id: _id, createdAt: _createdAt, ...rest } = g;
-      void _id;
-      void _createdAt;
-      return request<Geofence>(`/geofences/${g.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ ...rest, name }),
-      });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
+    onError: (err: Error) => toast.error(t('Failed to update geofence'), err.message),
   });
 
   // ─── Computed stats ──────────────────────────────────────────────────────
@@ -303,29 +263,6 @@ export default function GeofencesPage() {
       exitAlerts: list.filter((g) => g.alertOnExit).length,
     };
   }, [geofences]);
-
-  const geofenceSearchFields = useMemo(
-    () => ['name'] as const satisfies ReadonlyArray<keyof Geofence>,
-    [],
-  );
-  const filteredGeofences = useFilteredList(geofences, search, geofenceSearchFields);
-  const { data: geofencePins = [] } = usePinned('geofence');
-  const sortedGeofences = useMemo(() => {
-    if (geofencePins.length === 0) return filteredGeofences;
-    const order = new Map<string, number>();
-    geofencePins.forEach((p) => order.set(String(p.item_id), p.position));
-    return [...filteredGeofences].sort((a, b) => {
-      const ap = order.get(String(a.id));
-      const bp = order.get(String(b.id));
-      if (ap != null && bp != null) return ap - bp;
-      if (ap != null) return -1;
-      if (bp != null) return 1;
-      return 0;
-    });
-  }, [filteredGeofences, geofencePins]);
-
-  const list = geofences ?? [];
-  const hasGeofences = list.length > 0;
 
   // ─── Drawer integration ──────────────────────────────────────────────────
 
@@ -438,6 +375,7 @@ export default function GeofencesPage() {
         latitude: String(draft.latitude),
         longitude: String(draft.longitude),
         radius: String(Math.round(draft.radius)),
+        category: EMPTY_FORM.category,
         alertType: EMPTY_FORM.alertType,
         enabled: EMPTY_FORM.enabled,
       };
@@ -452,13 +390,14 @@ export default function GeofencesPage() {
     [],
   );
 
-  const openEdit = useCallback((g: Geofence) => {
-    setEditingId(g.id);
+  const openEdit = useCallback((g: ApiGeofence) => {
+    setEditingId(String(g.id));
     const next: GeofenceFormData = {
       name: g.name,
       latitude: String(g.latitude),
       longitude: String(g.longitude),
       radius: String(g.radius),
+      category: g.category ?? 'custom',
       alertType: getAlertType(g),
       enabled: g.enabled,
     };
@@ -573,17 +512,6 @@ export default function GeofencesPage() {
 
   const isSaving = createMut.isPending || updateMut.isPending;
 
-  const searchChips = (search
-    ? [
-        {
-          key: 'q',
-          label: t('geofences.filterLabel.search', 'Search'),
-          value: search,
-          onRemove: () => setSearch(''),
-        } satisfies FilterChipDescriptor,
-      ]
-    : []) as readonly FilterChipDescriptor[];
-
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
@@ -692,211 +620,28 @@ export default function GeofencesPage() {
         </FadeIn>
       )}
 
-      {/* 3 — Zones: hero panel. Toolbar + search live in the header; the cards
-          flow into a full-width auto-fit bento. Loading / empty / error are
-          handled independently inside the panel body. */}
+      {/* 3 — One directory for geofence boundaries, alert controls, charging
+          pricing, and session history. */}
       <FadeIn delay={0.2}>
-        <section aria-label={t('geofences.zonesAria', 'Geofence zones')}>
-          <GlassPanel className="space-y-4 p-4 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <PanelTitle className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                  {t('geofences.zonesTitle', 'Zones')}
-                </PanelTitle>
-                <Caption>
-                  {t('geofences.zonesCount', '{{count}} defined', { count: list.length })}
-                </Caption>
-              </div>
-              {hasGeofences && (
-                <FilterBar>
-                  <SearchInput
-                    value={search}
-                    onChange={setSearch}
-                    placeholder={t('geofences.searchPlaceholder', 'Search by name…')}
-                    className="w-full sm:w-72"
-                    historyScope="geofences"
-                  />
-                </FilterBar>
-              )}
-            </div>
-
-            {hasGeofences && searchChips.length > 0 && (
-              <ActiveFilterChips
-                filters={searchChips}
-                onClearAll={() => setSearch('')}
-              />
-            )}
-
-            {hasGeofences && (
-              <BulkActionToolbar
-                selectedIds={Array.from(sel.selectedIds)}
-                total={sortedGeofences.length}
-                onClear={sel.clear}
-                itemNoun={{
-                  one: t('geofences.noun.one', 'geofence'),
-                  other: t('geofences.noun.other', 'geofences'),
-                }}
-                actions={[
-                  {
-                    id: 'delete',
-                    label: t('geofences.bulk.delete', 'Delete'),
-                    variant: 'danger',
-                    icon: <Trash2 className="h-4 w-4" aria-hidden="true" />,
-                    confirm: {
-                      title: t('geofences.bulk.deleteConfirm.title', 'Delete geofences?'),
-                      description: t(
-                        'geofences.bulk.deleteConfirm.body',
-                        'Selected geofences will be removed permanently. Linked alert rules and automations will continue to reference their old IDs.',
-                      ),
-                      confirmLabel: t('common.delete', 'Delete'),
-                    },
-                    onClick: async (ids) => {
-                      await bulkDelete.mutateAsync(ids.map((i) => Number(i)));
-                      sel.clear();
-                    },
-                  },
-                ]}
-              />
-            )}
-
-            {isLoading ? (
-              <div className={CARD_GRID}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <GlassPanel key={i} className="space-y-3 p-4">
-                    <Skeleton height={22} width="60%" />
-                    <Skeleton height={14} />
-                    <Skeleton height={14} width="80%" />
-                    <Skeleton height={32} />
-                  </GlassPanel>
-                ))}
-              </div>
-            ) : error ? (
-              <QueryError
-                error={geofencesQuery.error}
-                onRetry={() => geofencesQuery.refetch()}
-                resourceName={t('geofences.noun.one', 'geofence')}
-              />
-            ) : !hasGeofences ? (
-              <EmptyState
-                icon={<Shield className="h-12 w-12" aria-hidden="true" />}
-                title={t('No geofences defined')}
-                message={t('Add a geofence to track when your vehicle arrives or leaves a location.')}
-                action={{ label: t('Add Geofence'), onClick: openCreate }}
-                className="py-10"
-              />
-            ) : filteredGeofences.length === 0 ? (
-              <EmptyState
-                icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
-                message={t('geofences.noMatches', 'No geofences match your search.')}
-                action={{ label: t('Clear search'), onClick: () => setSearch('') }}
-                className="py-8"
-              />
-            ) : (
-              <StaggerContainer className={CARD_GRID}>
-                {sortedGeofences.map((g) => {
-                  const alertType = getAlertType(g);
-                  return (
-                    <StaggerItem key={g.id}>
-                      <GlassPanel hover glow="purple" className="flex h-full flex-col gap-3 p-4">
-                        {/* Header: select + icon + name + badges + pin */}
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={sel.isSelected(g.id)}
-                            onChange={() => sel.toggle(g.id)}
-                            className="mt-1"
-                            aria-label={t('geofences.selectGeofence', 'Select geofence {{name}}', { name: g.name })}
-                          />
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)]">
-                            <MapPin className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <EditableText
-                              value={g.name}
-                              variant="heading"
-                              ariaLabel={t('editableText.rename.geofence', 'Rename geofence {{name}}', { name: g.name })}
-                              maxLength={120}
-                              validate={(next) =>
-                                next.length > 120
-                                  ? t('geofences.error.nameTooLong', 'Max 120 characters')
-                                  : null
-                              }
-                              onSave={async (next) => {
-                                await renameMut.mutateAsync({ g, name: next });
-                              }}
-                            />
-                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                              <Badge variant={g.enabled ? 'success' : 'neutral'} size="sm">
-                                {g.enabled ? t('Active') : t('Inactive')}
-                              </Badge>
-                              <Badge variant={alertBadgeVariant(alertType)} size="sm">
-                                {alertBadgeLabel(alertType, t)}
-                              </Badge>
-                            </div>
-                          </div>
-                          <PinButton itemType="geofence" itemId={g.id} size="sm" />
-                        </div>
-
-                        {/* Meta: coordinates + radius */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <Text as="span" size="xs" color="muted" mono className="flex items-center gap-1">
-                            <Globe className="h-3 w-3" aria-hidden="true" />
-                            {fmtNumber(g.latitude ?? 0, 6)}, {fmtNumber(g.longitude ?? 0, 6)}
-                          </Text>
-                          <Text as="span" size="xs" color="muted" className="flex items-center gap-1">
-                            <Ruler className="h-3 w-3" aria-hidden="true" />
-                            {fmtNumber(g.radius ?? 0)} {t('m')}
-                          </Text>
-                        </div>
-
-                        {/* Footer: enable toggle + edit / delete actions */}
-                        <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
-                          <div className="flex items-center gap-2">
-                            <Toggle
-                              checked={g.enabled}
-                              onChange={(checked) => toggleMut.mutate({ id: g.id, enabled: checked })}
-                              size="sm"
-                              aria-label={t('geofences.toggleGeofence', 'Toggle geofence {{name}}', { name: g.name })}
-                            />
-                            <Text as="span" variant="bodySm">
-                              {g.enabled ? t('Active') : t('Inactive')}
-                            </Text>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={<Pencil className="h-4 w-4" aria-hidden="true" />}
-                              onClick={() => openEdit(g)}
-                              aria-label={t('geofences.editGeofence', 'Edit geofence {{name}}', { name: g.name })}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-                              onClick={() => setDeleteTarget(g)}
-                              aria-label={t('geofences.deleteGeofence', 'Delete geofence {{name}}', { name: g.name })}
-                            />
-                          </div>
-                        </div>
-                      </GlassPanel>
-                    </StaggerItem>
-                  );
-                })}
-              </StaggerContainer>
-            )}
-          </GlassPanel>
-        </section>
-      </FadeIn>
-
-      {/* 4 — Charging Places: geofence-based charging-place pricing. A
-          self-contained workspace (Needs Setup queue, places list with
-          current rate, and per-place rate history/preview-apply/activity
-          detail) — decomposed into features/maps/components/charging-places
-          rather than adding more bulk to this file directly. */}
-      <FadeIn delay={0.3}>
-        <section aria-label={t('chargingPlaces.workspace.title', 'Charging Places')}>
-          <ChargingPlacesWorkspace />
+        <section
+          aria-label={t(
+            'chargingPlaces.workspace.unifiedAria',
+            'Places and charging zones',
+          )}
+        >
+          <ChargingPlacesWorkspace
+            onAdd={openCreate}
+            onEdit={openEdit}
+            onDelete={setDeleteTarget}
+            onUpdate={(place, patch) =>
+              quickUpdateMut.mutate({ id: place.id, patch })
+            }
+            onBulkDelete={async (places) => {
+              await bulkDelete.mutateAsync(places.map((place) => place.id));
+            }}
+            updatePending={quickUpdateMut.isPending}
+            deletePending={bulkDelete.isPending}
+          />
         </section>
       </FadeIn>
 
@@ -1031,6 +776,25 @@ export default function GeofencesPage() {
           />
 
           <Select
+            label={t('chargingPlaces.detail.category', 'Category')}
+            options={GEOFENCE_CATEGORY_VALUES.map((value) => ({
+              value,
+              label: t(
+                GEOFENCE_CATEGORY_LABELS[value].key,
+                GEOFENCE_CATEGORY_LABELS[value].fallback,
+              ),
+            }))}
+            value={form.category}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                category: e.target.value as GeofenceFormData['category'],
+              })
+            }
+            error={fieldErrors.category}
+          />
+
+          <Select
             label={t('Alert Type')}
             options={ALERT_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
             value={form.alertType}
@@ -1077,7 +841,7 @@ export default function GeofencesPage() {
         cancelLabel={t('Cancel')}
         variant="danger"
         onConfirm={() => {
-          if (deleteTarget) deleteMut.mutate(deleteTarget.id);
+          if (deleteTarget) deleteMut.mutate(String(deleteTarget.id));
         }}
         onCancel={() => setDeleteTarget(null)}
       />

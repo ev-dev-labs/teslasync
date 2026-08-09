@@ -67,15 +67,15 @@ type Context struct {
 	Phases           int
 	MaxVoltage       int
 	MaxCurrent       int
-	MaxPower         float64
+	MaxPower         float64 // W
 
 	// Accumulation
-	EnergyAdded    float64 // kWh
+	EnergyAdded    float64 // Wh
 	VoltageSum     float64
 	VoltageSamples int
 	CurrentSum     float64
 	CurrentSamples int
-	PowerSum       float64
+	PowerSum       float64 // sum of W samples
 	PowerSamples   int
 	InsideTempSum  float64
 	OutsideTempSum float64
@@ -112,7 +112,7 @@ func (c *Context) BatteryGain() int {
 	return c.EndBattery - c.StartBattery
 }
 
-// AvgPower returns average charge power in kW.
+// AvgPower returns average charge power in W.
 func (c *Context) AvgPower() float64 {
 	if c.PowerSamples == 0 {
 		return 0
@@ -131,7 +131,7 @@ func Validate(c *Context) []string {
 	if c.EnergyAdded <= 0 && dur > 5*time.Minute {
 		issues = append(issues, "no energy added in >5min charge")
 	}
-	if c.EnergyAdded > 150 {
+	if c.EnergyAdded > 150_000 {
 		issues = append(issues, "energy > 150 kWh — suspicious")
 	}
 	if dur < 1*time.Minute {
@@ -139,7 +139,7 @@ func Validate(c *Context) []string {
 	}
 	if dur.Hours() > 0 && c.EnergyAdded > 0 {
 		rate := c.EnergyAdded / dur.Hours()
-		if rate > 350 {
+		if rate > 350_000 {
 			issues = append(issues, "charge rate > 350 kW — suspicious")
 		}
 	}

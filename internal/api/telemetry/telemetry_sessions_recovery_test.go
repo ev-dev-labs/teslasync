@@ -132,13 +132,13 @@ func TestRecovery_RebuildsStateFromForwardFold(t *testing.T) {
 			case vehicleID == chargeVehicleID && at.Equal(chargeStart):
 				return signal.State{
 					"BatteryLevel":       18.0,
-					"ACChargingEnergyIn": 100.0,
+					"ACChargingEnergyIn": 100000.0,
 					"BatteryRange":       95.0,
 				}, nil
 			case vehicleID == chargeVehicleID && at.Equal(chargeEnd):
 				return signal.State{
 					"BatteryLevel":       80.0,
-					"ACChargingEnergyIn": 130.5,
+					"ACChargingEnergyIn": 130500.0,
 					"BatteryRange":       215.0,
 				}, nil
 			}
@@ -233,19 +233,19 @@ func TestRecovery_RebuildsStateFromForwardFold(t *testing.T) {
 
 	// Charge energy delta: a regression that swapped start/end would
 	// yield a negative delta the production code drops on the > 0 guard,
-	// silently dropping every recovered charge's energy_added_kwh.
+	// silently dropping every recovered charge's energy total.
 	chargeStartLegacy := stateToLegacyMap(chargeStartSnap)
 	chargeEndLegacy := stateToLegacyMap(chargeEndSnap)
 	startEnergy, ok := snapFloat(chargeStartLegacy, "ACChargingEnergyIn")
-	if !ok || startEnergy != 100.0 {
-		t.Fatalf("charge start ACChargingEnergyIn = (%v, %v), want (100.0, true)", startEnergy, ok)
+	if !ok || startEnergy != 100000.0 {
+		t.Fatalf("charge start ACChargingEnergyIn = (%v, %v), want (100000.0, true)", startEnergy, ok)
 	}
 	endEnergy, ok := snapFloat(chargeEndLegacy, "ACChargingEnergyIn")
-	if !ok || endEnergy != 130.5 {
-		t.Fatalf("charge end ACChargingEnergyIn = (%v, %v), want (130.5, true)", endEnergy, ok)
+	if !ok || endEnergy != 130500.0 {
+		t.Fatalf("charge end ACChargingEnergyIn = (%v, %v), want (130500.0, true)", endEnergy, ok)
 	}
-	if delta := endEnergy - startEnergy; delta != 30.5 {
-		t.Fatalf("charge energy delta from snapshots = %v, want 30.5", delta)
+	if delta := endEnergy - startEnergy; delta != 30500 {
+		t.Fatalf("charge energy delta from snapshots = %v, want 30500 Wh", delta)
 	}
 
 	// Nil-state degradation: when SetDriveStateReader has not run yet

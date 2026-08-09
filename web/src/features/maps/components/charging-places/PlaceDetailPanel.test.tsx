@@ -55,6 +55,7 @@ vi.mock('@/api/hooks/useLocations', () => ({
   useMarkGeofenceReviewed: vi.fn(),
   useGeofenceChargingSummary: vi.fn(),
   useRenameGeofence: vi.fn(),
+  useUpdateGeofenceCategory: vi.fn(),
 }));
 
 vi.mock('@/components/feedback/Toast', () => ({
@@ -120,6 +121,7 @@ import {
   useMarkGeofenceReviewed,
   useGeofenceChargingSummary,
   useRenameGeofence,
+  useUpdateGeofenceCategory,
 } from '@/api/hooks/useLocations';
 import { PlaceDetailPanel } from './PlaceDetailPanel';
 import type { Geofence, GeofenceRate } from '@/api/types';
@@ -131,12 +133,14 @@ const mockedUnarchive = useUnarchiveGeofence as unknown as ReturnType<typeof vi.
 const mockedMarkReviewed = useMarkGeofenceReviewed as unknown as ReturnType<typeof vi.fn>;
 const mockedSummary = useGeofenceChargingSummary as unknown as ReturnType<typeof vi.fn>;
 const mockedRename = useRenameGeofence as unknown as ReturnType<typeof vi.fn>;
+const mockedUpdateCategory = useUpdateGeofenceCategory as unknown as ReturnType<typeof vi.fn>;
 
 let deleteMutate: ReturnType<typeof vi.fn>;
 let archiveMutate: ReturnType<typeof vi.fn>;
 let unarchiveMutate: ReturnType<typeof vi.fn>;
 let markReviewedMutate: ReturnType<typeof vi.fn>;
 let renameMutateAsync: ReturnType<typeof vi.fn>;
+let categoryMutate: ReturnType<typeof vi.fn>;
 
 function makePlace(overrides: Partial<Geofence> = {}): Geofence {
   return {
@@ -180,6 +184,7 @@ beforeEach(() => {
   unarchiveMutate = vi.fn();
   markReviewedMutate = vi.fn();
   renameMutateAsync = vi.fn().mockResolvedValue(undefined);
+  categoryMutate = vi.fn();
 
   mockedRates.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
   mockedSummary.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
@@ -188,6 +193,7 @@ beforeEach(() => {
   mockedUnarchive.mockReturnValue({ mutate: unarchiveMutate, isPending: false });
   mockedMarkReviewed.mockReturnValue({ mutate: markReviewedMutate, isPending: false });
   mockedRename.mockReturnValue({ mutateAsync: renameMutateAsync, isPending: false });
+  mockedUpdateCategory.mockReturnValue({ mutate: categoryMutate, isPending: false });
 });
 
 describe('PlaceDetailPanel — closed state', () => {
@@ -225,6 +231,19 @@ describe('PlaceDetailPanel — header', () => {
         geofenceId: 7,
         name: 'Office Charger',
       }),
+    );
+  });
+
+  it('updates the category without resending place geometry', () => {
+    render(<PlaceDetailPanel place={makePlace()} onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: 'work' },
+    });
+
+    expect(categoryMutate).toHaveBeenCalledWith(
+      { geofenceId: 7, category: 'work' },
+      expect.objectContaining({ onError: expect.any(Function) }),
     );
   });
 });

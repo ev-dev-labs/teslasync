@@ -1,31 +1,51 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Zap } from 'lucide-react';
+import { Bell, Globe, MapPin, Pencil, Ruler, Trash2, Zap } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Badge, Button, Text, DataTable, useSortToggle, type Column } from '@/components/ui';
-import { InlineCallout, Skeleton, QueryError } from '@/components/feedback';
+import {
+  Badge,
+  Button,
+  DataTable,
+  PanelTitle,
+  PinButton,
+  Text,
+  Toggle,
+  useSortToggle,
+  type Column,
+} from '@/components/ui';
+import { InlineCallout, QueryError, Skeleton } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
+import { fmtNumber } from '@/lib/numberFormat';
+import {
+  GEOFENCE_CATEGORY_LABELS,
+  type GeofenceCategoryValue,
+} from '../../geofenceCategories';
 import { formatRatePerWh } from './helpers';
 import type { Geofence, GeofenceRate } from '@/api/types';
 
+export type GeofenceQuickPatch = Partial<
+  Pick<Geofence, 'enabled' | 'alert_on_entry' | 'alert_on_exit'>
+>;
+
 export interface PlacesTableProps {
   places?: Geofence[];
-  /** Bulk current-rate lookup (one row per geofence with an active rate). */
   currentRates?: GeofenceRate[];
   isLoading: boolean;
   error?: unknown;
   onRetry?: () => void;
   onSelect: (place: Geofence) => void;
-  /** True while the "Show archived" toggle is on — only affects the empty-state copy. */
+  onEdit?: (place: Geofence) => void;
+  onDelete?: (place: Geofence) => void;
+  onUpdate?: (place: Geofence, patch: GeofenceQuickPatch) => void;
+  updatePending?: boolean;
+  selectedKeys?: number[];
+  onSelectionChange?: (keys: number[]) => void;
+  bulkActions?: (selected: Geofence[]) => ReactNode;
   includesArchived?: boolean;
+  emptyMessage?: string;
 }
 
-/**
- * The Charging Places list — every geofence the user can configure
- * pricing for, with its currently-active rate (if any) resolved from the
- * bulk `/geofences/rates/current` lookup rather than a per-row fetch.
- */
 export function PlacesTable({
   places,
   currentRates,
@@ -33,16 +53,24 @@ export function PlacesTable({
   error,
   onRetry,
   onSelect,
+  onEdit,
+  onDelete,
+  onUpdate,
+  updatePending = false,
+  selectedKeys,
+  onSelectionChange,
+  bulkActions,
   includesArchived = false,
+  emptyMessage,
 }: PlacesTableProps) {
   const { t } = useTranslation();
   const { locale } = useSettings();
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc');
 
   const rateByGeofenceId = useMemo(() => {
-    const m = new Map<number, GeofenceRate>();
-    for (const r of currentRates ?? []) m.set(r.geofence_id, r);
-    return m;
+    const rates = new Map<number, GeofenceRate>();
+    for (const rate of currentRates ?? []) rates.set(rate.geofence_id, rate);
+    return rates;
   }, [currentRates]);
 
   const rows = places ?? [];
@@ -53,12 +81,14 @@ export function PlacesTable({
       switch (sortKey) {
         case 'name':
           return a.name.localeCompare(b.name) * dir;
-        case 'origin':
-          return a.origin.localeCompare(b.origin) * dir;
+        case 'category':
+          return (a.category ?? '').localeCompare(b.category ?? '') * dir;
+        case 'radius':
+          return (a.radius - b.radius) * dir;
         case 'rate': {
-          const ra = rateByGeofenceId.get(a.id)?.rate_per_wh ?? -1;
-          const rb = rateByGeofenceId.get(b.id)?.rate_per_wh ?? -1;
-          return (ra - rb) * dir;
+          const aRate = rateByGeofenceId.get(a.id)?.rate_per_wh ?? -1;
+          const bRate = rateByGeofenceId.get(b.id)?.rate_per_wh ?? -1;
+          return (aRate - bRate) * dir;
         }
         default:
           return 0;
@@ -72,52 +102,141 @@ export function PlacesTable({
         key: 'name',
         header: t('chargingPlaces.table.name', 'Place'),
         sortable: true,
-        render: (g) => (
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-            <div className="flex min-w-0 flex-col">
-              <Text variant="body" className="truncate font-medium">
-                {g.name || t('chargingPlaces.unnamed', 'Unnamed place')}
-              </Text>
-              {g.archived_at && (
-                <Badge variant="neutral" size="sm" className="mt-0.5 w-fit">
-                  {t('chargingPlaces.archived', 'Archived')}
+        render: (place) => (
+          <div className="flex min-w-0 items-start gap-2">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <Text variant="body" className="truncate font-medium">
+                  {place.name || t('chargingPlaces.unnamed', 'Unnamed place')}
+                </Text>
+                <PinButton itemType="geofence" itemId={String(place.id)} size="sm" />
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <Badge
+                  variant={place.origin === 'charging_discovery' ? 'info' : 'neutral'}
+                  size="sm"
+                >
+                  {place.origin === 'charging_discovery'
+                    ? t('chargingPlaces.origin.discovered', 'Auto-discovered')
+                    : t('chargingPlaces.origin.manual', 'Manual')}
                 </Badge>
-              )}
+                {place.needs_review && (
+                  <Badge variant="warning" size="sm">
+                    {t('chargingPlaces.detail.needsReviewBadge', 'Needs review')}
+                  </Badge>
+                )}
+                {place.archived_at && (
+                  <Badge variant="neutral" size="sm">
+                    {t('chargingPlaces.archived', 'Archived')}
+                  </Badge>
+                )}
+              </div>
+              <Text size="xs" color="muted" mono className="mt-1 flex items-center gap-1">
+                <Globe className="h-3 w-3" aria-hidden="true" />
+                {fmtNumber(place.latitude ?? 0, 5)}, {fmtNumber(place.longitude ?? 0, 5)}
+              </Text>
             </div>
           </div>
         ),
       },
       {
-        key: 'origin',
-        header: t('chargingPlaces.table.origin', 'Origin'),
+        key: 'category',
+        header: t('chargingPlaces.table.category', 'Category'),
         sortable: true,
-        render: (g) => (
-          <Badge variant={g.origin === 'charging_discovery' ? 'info' : 'neutral'} size="sm">
-            {g.origin === 'charging_discovery'
-              ? t('chargingPlaces.origin.discovered', 'Auto-discovered')
-              : t('chargingPlaces.origin.manual', 'Manual')}
-          </Badge>
+        render: (place) => {
+          const category = place.category as GeofenceCategoryValue | null | undefined;
+          return (
+            <Text size="sm" color="secondary">
+              {category
+                ? t(
+                    GEOFENCE_CATEGORY_LABELS[category].key,
+                    GEOFENCE_CATEGORY_LABELS[category].fallback,
+                  )
+                : t('chargingPlaces.category.unset', 'Uncategorized')}
+            </Text>
+          );
+        },
+      },
+      {
+        key: 'radius',
+        header: t('chargingPlaces.table.zone', 'Zone'),
+        sortable: true,
+        render: (place) => (
+          <Text size="sm" color="secondary" className="flex items-center gap-1 tabular-nums">
+            <Ruler className="h-3.5 w-3.5" aria-hidden="true" />
+            {fmtNumber(place.radius ?? 0)} {t('common.units.meterShort', 'm')}
+          </Text>
         ),
       },
       {
-        key: 'category',
-        header: t('chargingPlaces.table.category', 'Category'),
+        key: 'enabled',
+        header: t('chargingPlaces.table.status', 'Status'),
         sortable: false,
-        render: (g) => (
-          <Text size="sm" color="secondary">
-            {g.category
-              ? t(`chargingPlaces.category.${g.category}`, g.category)
-              : t('chargingPlaces.category.unset', 'Uncategorized')}
-          </Text>
+        render: (place) => (
+          <Toggle
+            checked={place.enabled}
+            onChange={(enabled) => {
+              if (!updatePending && !place.archived_at) onUpdate?.(place, { enabled });
+            }}
+            size="sm"
+            aria-disabled={updatePending || Boolean(place.archived_at)}
+            className={updatePending || place.archived_at ? 'pointer-events-none opacity-50' : undefined}
+            aria-label={t('geofences.toggleGeofence', 'Toggle geofence {{name}}', {
+              name: place.name,
+            })}
+          />
+        ),
+      },
+      {
+        key: 'alerts',
+        header: t('chargingPlaces.table.alerts', 'Alerts'),
+        sortable: false,
+        render: (place) => (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <Toggle
+                checked={place.alert_on_entry}
+                onChange={(alert_on_entry) => {
+                  if (!updatePending && !place.archived_at) onUpdate?.(place, { alert_on_entry });
+                }}
+                size="sm"
+                aria-disabled={updatePending || Boolean(place.archived_at)}
+                className={updatePending || place.archived_at ? 'pointer-events-none opacity-50' : undefined}
+                aria-label={t('chargingPlaces.table.entryAlertLabel', 'Entry alert for {{name}}', {
+                  name: place.name,
+                })}
+              />
+              <Text size="xs" color="muted">
+                {t('chargingPlaces.table.entry', 'Entry')}
+              </Text>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Toggle
+                checked={place.alert_on_exit}
+                onChange={(alert_on_exit) => {
+                  if (!updatePending && !place.archived_at) onUpdate?.(place, { alert_on_exit });
+                }}
+                size="sm"
+                aria-disabled={updatePending || Boolean(place.archived_at)}
+                className={updatePending || place.archived_at ? 'pointer-events-none opacity-50' : undefined}
+                aria-label={t('chargingPlaces.table.exitAlertLabel', 'Exit alert for {{name}}', {
+                  name: place.name,
+                })}
+              />
+              <Text size="xs" color="muted">
+                {t('chargingPlaces.table.exit', 'Exit')}
+              </Text>
+            </div>
+          </div>
         ),
       },
       {
         key: 'rate',
         header: t('chargingPlaces.table.rate', 'Rate / kWh'),
         sortable: true,
-        render: (g) => {
-          const rate = rateByGeofenceId.get(g.id);
+        render: (place) => {
+          const rate = rateByGeofenceId.get(place.id);
           if (!rate) {
             return (
               <Text size="sm" color="muted">
@@ -126,25 +245,13 @@ export function PlacesTable({
             );
           }
           return (
-            <div className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
-              <Text variant="body" className="tabular-nums">
+            <div>
+              <Text variant="body" className="flex items-center gap-1.5 tabular-nums">
+                <Zap className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
                 {formatRatePerWh(rate.rate_per_wh, rate.currency, locale) || '—'}
               </Text>
+              <TimeStamp value={rate.effective_from} format="absolute" />
             </div>
-          );
-        },
-      },
-      {
-        key: 'effective_from',
-        header: t('chargingPlaces.table.effectiveSince', 'Effective since'),
-        sortable: false,
-        render: (g) => {
-          const rate = rateByGeofenceId.get(g.id);
-          return rate ? (
-            <TimeStamp value={rate.effective_from} format="absolute" />
-          ) : (
-            <Text size="sm" color="muted">—</Text>
           );
         },
       },
@@ -152,57 +259,101 @@ export function PlacesTable({
         key: 'actions',
         header: '',
         sortable: false,
-        render: (g) => (
-          <Button size="sm" variant="secondary" onClick={() => onSelect(g)}>
-            {t('chargingPlaces.table.manage', 'Manage')}
-          </Button>
+        render: (place) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Bell className="h-3.5 w-3.5" aria-hidden="true" />}
+              onClick={() => onSelect(place)}
+            >
+              {t('chargingPlaces.table.manage', 'Manage')}
+            </Button>
+            {onEdit && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
+                onClick={() => onEdit(place)}
+                aria-label={t('geofences.editGeofence', 'Edit geofence {{name}}', {
+                  name: place.name,
+                })}
+              />
+            )}
+            {onDelete && !place.archived_at && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                onClick={() => onDelete(place)}
+                aria-label={t('geofences.deleteGeofence', 'Delete geofence {{name}}', {
+                  name: place.name,
+                })}
+              />
+            )}
+          </div>
         ),
       },
     ],
-    [t, rateByGeofenceId, locale, onSelect],
+    [t, rateByGeofenceId, locale, onSelect, onEdit, onDelete, onUpdate, updatePending],
   );
 
-  return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
-        {t('chargingPlaces.table.title', 'Place Directory')}
-        {rows.length > 0 && (
-          <Badge variant="neutral" size="sm">
-            {rows.length}
-          </Badge>
-        )}
-      </PanelTitle>
+  if (error) {
+    return (
+      <QueryError
+        error={error}
+        onRetry={onRetry}
+        resourceName={t('chargingPlaces.table.title', 'Place Directory')}
+      />
+    );
+  }
 
-      {error ? (
-        <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.table.title', 'Place Directory')} />
-      ) : isLoading && rows.length === 0 ? (
-        <Skeleton className="h-48 w-full" />
-      ) : rows.length === 0 ? (
-        <InlineCallout variant="info">
-          {includesArchived
+  if (isLoading && rows.length === 0) {
+    return <Skeleton className="h-48 w-full" />;
+  }
+
+  if (rows.length === 0) {
+    return (
+      <InlineCallout variant="info">
+        {emptyMessage ??
+          (includesArchived
             ? t(
                 'chargingPlaces.emptyAll',
-                'No charging places yet. Charge somewhere or create a geofence above to start tracking costs.',
+                'No places or zones yet. Charge somewhere or add a place to start.',
               )
             : t(
                 'chargingPlaces.empty',
-                'No active charging places yet. Existing and future confirmed charging locations appear automatically.',
-              )}
-        </InlineCallout>
-      ) : (
-        <DataTable
-          tableId="maps:charging-places"
-          columns={columns}
-          data={sortedRows}
-          keyExtractor={(g) => g.id}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSort={onSort}
-          emptyMessage={t('chargingPlaces.empty', 'No active charging places yet.')}
-          pagination
-        />
-      )}
-    </GlassPanel>
+                'No active places yet. Existing and future confirmed charging locations appear automatically.',
+              ))}
+      </InlineCallout>
+    );
+  }
+
+  return (
+    <div>
+      <PanelTitle className="mb-3 flex items-center gap-2">
+        <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('chargingPlaces.table.title', 'Place Directory')}
+        <Badge variant="neutral" size="sm">
+          {rows.length}
+        </Badge>
+      </PanelTitle>
+      <DataTable
+        tableId="maps:places-zones"
+        columns={columns}
+        data={sortedRows}
+        keyExtractor={(place) => place.id}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={onSort}
+        selectable={onSelectionChange ? 'multi' : 'none'}
+        selectedKeys={selectedKeys}
+        onSelectionChange={(keys) => onSelectionChange?.(keys.map(Number))}
+        bulkActions={bulkActions}
+        mobileColumns={['name', 'rate', 'actions']}
+        columnVisibility
+        pagination
+      />
+    </div>
   );
 }

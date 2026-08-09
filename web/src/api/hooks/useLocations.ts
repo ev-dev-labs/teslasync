@@ -16,6 +16,7 @@ import type {
   GeofenceRateApplyResult,
   GeofenceChargingSummary,
   GeofenceChargingActivity,
+  GeofenceCategory,
 } from '../types';
 
 export const locationKeys = {
@@ -268,6 +269,31 @@ export function useRenameGeofence() {
   });
 }
 
+/** Update a charging place category without resending its geometry. */
+export function useUpdateGeofenceCategory() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({
+      geofenceId,
+      category,
+    }: {
+      geofenceId: number;
+      category: GeofenceCategory;
+    }) =>
+      request<ApiGeofence>(`/geofences/${geofenceId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ category }),
+      }),
+    onSuccess: () => {
+      invalidateGeofenceLifecycle(qc);
+      success('toast.geofence.category.success', 'Category updated');
+    },
+    onError: (err) =>
+      error(err, 'toast.geofence.category.error', 'Failed to update category'),
+  });
+}
+
 /**
  * useGeofenceRates — GET /geofences/{geofenceID}/rates
  *
@@ -406,6 +432,9 @@ export function useApplyGeofenceRate() {
       );
     },
     onSuccess: (_data, vars) => {
+      invalidateAndBroadcast(qc, {
+        queryKey: ['geofences', vars.geofenceId, 'rates', vars.rateId, 'preview'],
+      });
       invalidateAndBroadcast(qc, { queryKey: locationKeys.geofenceChargingSummary(vars.geofenceId) });
       // charging-activity keys are parameterized by limit/offset per page;
       // invalidate the whole ['geofences', id, 'charging-activity'] subtree

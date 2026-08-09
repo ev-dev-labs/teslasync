@@ -4887,6 +4887,10 @@
       "rename": {
         "success": "Place renamed",
         "error": "Failed to rename place"
+      },
+      "category": {
+        "success": "Category updated",
+        "error": "Failed to update category"
       }
     },
     "geofenceRate": {
@@ -22801,7 +22805,14 @@
   "chargingPlaces": {
     "workspace": {
       "title": "Charging Places",
-      "showArchived": "Show archived"
+      "unifiedTitle": "Places & Charging Zones",
+      "unifiedAria": "Places and charging zones",
+      "unifiedDescription": "Manage zone boundaries, alerts, categories, charging rates, and session history in one place.",
+      "showArchived": "Show archived",
+      "addPlace": "Add Place",
+      "search": "Search places, categories, or origin…",
+      "clearSearch": "Clear search",
+      "noSearchMatches": "No places match this search. Clear the search to see all places."
     },
     "needsSetup": {
       "title": "Needs Setup",
@@ -22813,6 +22824,13 @@
       "name": "Place",
       "origin": "Origin",
       "category": "Category",
+      "zone": "Zone",
+      "status": "Status",
+      "alerts": "Alerts",
+      "entry": "Entry",
+      "exit": "Exit",
+      "entryAlertLabel": "Entry alert for {{name}}",
+      "exitAlertLabel": "Exit alert for {{name}}",
       "rate": "Rate / kWh",
       "effectiveSince": "Effective since",
       "manage": "Manage"
@@ -22831,8 +22849,8 @@
       "custom": "Custom"
     },
     "noRate": "Not set",
-    "empty": "No active charging places yet. Existing and future confirmed charging locations appear automatically.",
-    "emptyAll": "No charging places yet. Charge somewhere or create a geofence above to start tracking costs.",
+    "empty": "No active places yet. Existing and future confirmed charging locations appear automatically.",
+    "emptyAll": "No places or zones yet. Charge somewhere or add a place to start.",
     "kwh": "kWh",
     "discoveredAt": "Discovered",
     "detail": {
@@ -22841,6 +22859,7 @@
       "unarchive": "Restore",
       "archive": "Archive",
       "placeName": "Place name",
+      "category": "Category",
       "rename": "Rename {{name}}",
       "pricingTab": "Rates & Pricing",
       "activityTab": "Charging Activity",
@@ -22865,7 +22884,7 @@
     },
     "rateHistory": {
       "title": "Rate History",
-      "empty": "No rate configured yet — add one below to start pricing sessions at this place.",
+      "empty": "No rate configured yet — use the form above to start pricing sessions at this place.",
       "effectiveFrom": "Effective From",
       "rate": "Rate / kWh",
       "currency": "Currency",
@@ -22875,6 +22894,8 @@
       "cancelScheduled": "Cancel scheduled rate",
       "cancel": "Cancel Rate",
       "previewApply": "Preview / Apply",
+      "reviewImpact": "Review impact",
+      "impactShown": "Impact shown",
       "deleteTitle": "Cancel this scheduled rate?",
       "deleteMessage": "The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted."
     },
@@ -22882,8 +22903,12 @@
       "title": "Preview & Apply",
       "selectRate": "Select a rate from the history table above to preview its impact.",
       "confirmTitle": "Apply this rate to matching sessions?",
-      "confirmMessage": "This backfills/reprices unpriced or previously geofence-derived sessions in scope. Manual and Tesla-reported actual costs are never overwritten.",
+      "confirmMessage": "This backfills/reprices unpriced or previously geofence-derived sessions in scope. Manual, Tesla-reported, and existing costs with unknown provenance are never overwritten.",
+      "confirmAttributionTitle": "Assign matching sessions to this place?",
+      "confirmAttributionMessage": "Matching sessions will be linked to this place. Their protected costs will remain unchanged.",
       "applyAction": "Apply",
+      "assignAction": "Assign Sessions",
+      "refresh": "Refresh preview",
       "from": "Narrow from (optional)",
       "to": "Narrow to (optional)",
       "matched": "Matched",
@@ -22891,7 +22916,9 @@
       "protected": "Protected",
       "energy": "Energy",
       "estimatedCost": "Estimated Cost",
-      "applied": "Applied: {{priced}} priced, {{skipped}} skipped, {{cost}} total."
+      "noMatches": "No sessions match this place and rate period. Check the zone location and radius, or broaden the optional date range. Sessions without coordinates can match an identical saved place name.",
+      "attributionOnly": "All matched costs are protected. Apply can still assign unlinked sessions to this place without changing their cost.",
+      "applied": "Processed {{matched}} matched sessions: {{priced}} priced, {{skipped}} protected or unchanged, {{cost}} total."
     },
     "summary": {
       "title": "Charging Summary",

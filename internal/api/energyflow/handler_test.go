@@ -72,8 +72,8 @@ func TestEnergyFlow_Latest_UsesNow(t *testing.T) {
 		stateFn: func(_ context.Context, v int64, at time.Time) (signal.State, error) {
 			calls = append(calls, stateCallRecord{vehicleID: v, at: at})
 			return signal.State{
-				"DCChargingPower": 48.5,
-				"ACChargingPower": 7.2,
+				"DCChargingPower": 48500.0,
+				"ACChargingPower": 7200.0,
 				"EnergyRemaining": 62.3,
 				"PackVoltage":     396.8,
 				"PackCurrent":     -120.4,
@@ -125,6 +125,10 @@ func TestEnergyFlow_Latest_UsesNow(t *testing.T) {
 	}
 	if body["charge_state"] != "Charging" {
 		t.Fatalf("charge_state = %#v, want \"Charging\"", body["charge_state"])
+	}
+	if body["dc_charging_power"] != 48.5 || body["ac_charging_power"] != 7.2 {
+		t.Fatalf("charging power = (%v, %v), want (48.5, 7.2) kW",
+			body["dc_charging_power"], body["ac_charging_power"])
 	}
 }
 

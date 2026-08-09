@@ -24,6 +24,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+
+const { emptyPins } = vi.hoisted(() => ({ emptyPins: [] as never[] }));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -41,6 +44,10 @@ vi.mock('@/api/hooks/useLocations', () => ({
   useGeofencesFull: vi.fn(),
   useGeofenceNeedsReview: vi.fn(),
   useGeofenceCurrentRates: vi.fn(),
+}));
+
+vi.mock('@/api/hooks/usePinned', () => ({
+  usePinned: () => ({ data: emptyPins }),
 }));
 
 interface StubPlace {
@@ -173,6 +180,32 @@ describe('ChargingPlacesWorkspace — data threading', () => {
     mockedPlaces.mockReturnValue({ data: undefined, isLoading: true, error: null, refetch: vi.fn() });
     render(<ChargingPlacesWorkspace />);
     expect(screen.getByTestId('stub-places-table')).toHaveTextContent('loading=true');
+  });
+
+  it('keeps the place directory usable when only current-rate loading fails', () => {
+    mockedPlaces.mockReturnValue({
+      data: [makePlace()],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockedCurrentRates.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('rates unavailable'),
+      refetch: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <ChargingPlacesWorkspace />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('stub-places-table')).toHaveTextContent(
+      'places=1 rates=0 loading=false error=false',
+    );
+    expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 });
 

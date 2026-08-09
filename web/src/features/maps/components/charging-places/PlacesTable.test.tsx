@@ -37,6 +37,14 @@ vi.mock('@/components/data-display', () => ({
   TimeStamp: ({ value }: { value: unknown }) => <span data-testid="effective-since">{String(value)}</span>,
 }));
 
+vi.mock('@/components/ui', async () => {
+  const actual = await vi.importActual<typeof import('@/components/ui')>('@/components/ui');
+  return {
+    ...actual,
+    PinButton: () => <span data-testid="pin-button" />,
+  };
+});
+
 import { PlacesTable } from './PlacesTable';
 import type { Geofence, GeofenceRate } from '@/api/types';
 
@@ -92,6 +100,13 @@ describe('PlacesTable — loading/error/empty', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
   });
 
+  describe('PlacesTable — selection', () => {
+    it('does not expose row-selection controls without a bulk-selection handler', () => {
+      renderTable({ places: [makePlace()] });
+      expect(screen.queryByRole('checkbox', { name: 'Select row' })).toBeNull();
+    });
+  });
+
   it('surfaces a QueryError with a working retry on failure', () => {
     const onRetry = vi.fn();
     renderTable({ error: new Error('boom'), onRetry });
@@ -105,7 +120,7 @@ describe('PlacesTable — loading/error/empty', () => {
     renderTable({ places: [] });
     expect(
       screen.getByText(
-        'No active charging places yet. Existing and future confirmed charging locations appear automatically.',
+        'No active places yet. Existing and future confirmed charging locations appear automatically.',
       ),
     ).toBeInTheDocument();
   });
@@ -114,7 +129,7 @@ describe('PlacesTable — loading/error/empty', () => {
     renderTable({ places: [], includesArchived: true });
     expect(
       screen.getByText(
-        'No charging places yet. Charge somewhere or create a geofence above to start tracking costs.',
+        'No places or zones yet. Charge somewhere or add a place to start.',
       ),
     ).toBeInTheDocument();
   });
@@ -124,9 +139,8 @@ describe('PlacesTable — rows', () => {
   it('renders name, origin, category, and Manage for a manual place with no rate', () => {
     renderTable({ places: [makePlace()] });
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getAllByText('Home')).toHaveLength(2);
     expect(screen.getByText('Manual')).toBeInTheDocument();
-    expect(screen.getByText('home')).toBeInTheDocument();
     expect(screen.getByText('Not set')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage' })).toBeInTheDocument();
   });

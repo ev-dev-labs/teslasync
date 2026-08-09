@@ -132,7 +132,9 @@ export function RateHistoryPanel({
               variant={selectedRateId === r.id ? 'primary' : 'secondary'}
               onClick={() => onSelectRate(r)}
             >
-              {t('chargingPlaces.rateHistory.previewApply', 'Preview / Apply')}
+              {selectedRateId === r.id
+                ? t('chargingPlaces.rateHistory.impactShown', 'Impact shown')
+                : t('chargingPlaces.rateHistory.reviewImpact', 'Review impact')}
             </Button>
             {Date.parse(r.effective_from) > Date.now() && (
               <Button
@@ -169,7 +171,7 @@ export function RateHistoryPanel({
           <EmptyState
             message={t(
               'chargingPlaces.rateHistory.empty',
-              'No rate configured yet — add one below to start pricing sessions at this place.',
+              'No rate configured yet — use the form above to start pricing sessions at this place.',
             )}
           />
         </>
@@ -184,7 +186,7 @@ export function RateHistoryPanel({
           onSort={onSort}
           emptyMessage={t(
             'chargingPlaces.rateHistory.empty',
-            'No rate configured yet — add one below to start pricing sessions at this place.',
+            'No rate configured yet — use the form above to start pricing sessions at this place.',
           )}
         />
       )}
