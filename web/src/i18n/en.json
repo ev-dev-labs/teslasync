@@ -4871,6 +4871,38 @@
         "error": "Failed to remove browser push"
       }
     },
+    "geofence": {
+      "archive": {
+        "success": "Place archived",
+        "error": "Failed to archive place"
+      },
+      "unarchive": {
+        "success": "Place restored",
+        "error": "Failed to restore place"
+      },
+      "reviewed": {
+        "success": "Marked reviewed",
+        "error": "Failed to mark reviewed"
+      },
+      "rename": {
+        "success": "Place renamed",
+        "error": "Failed to rename place"
+      }
+    },
+    "geofenceRate": {
+      "create": {
+        "success": "Rate saved",
+        "error": "Failed to save rate"
+      },
+      "delete": {
+        "success": "Scheduled rate cancelled",
+        "error": "Failed to cancel scheduled rate"
+      },
+      "apply": {
+        "success": "Rate applied to matching sessions",
+        "error": "Failed to apply rate"
+      }
+    },
     "settings": {
       "save": {
         "success": "Settings saved",
@@ -22764,6 +22796,126 @@
     "window": {
       "days": "{{count}} days",
       "label": "Analysis window"
+    }
+  },
+  "chargingPlaces": {
+    "workspace": {
+      "title": "Charging Places",
+      "showArchived": "Show archived"
+    },
+    "needsSetup": {
+      "title": "Needs Setup",
+      "empty": "All caught up — no auto-discovered places need review.",
+      "review": "Review"
+    },
+    "table": {
+      "title": "Place Directory",
+      "name": "Place",
+      "origin": "Origin",
+      "category": "Category",
+      "rate": "Rate / kWh",
+      "effectiveSince": "Effective since",
+      "manage": "Manage"
+    },
+    "unnamed": "Unnamed place",
+    "archived": "Archived",
+    "origin": {
+      "discovered": "Auto-discovered",
+      "manual": "Manual"
+    },
+    "category": {
+      "unset": "Uncategorized",
+      "home": "Home",
+      "work": "Work",
+      "restricted": "Restricted",
+      "custom": "Custom"
+    },
+    "noRate": "Not set",
+    "empty": "No active charging places yet. Existing and future confirmed charging locations appear automatically.",
+    "emptyAll": "No charging places yet. Charge somewhere or create a geofence above to start tracking costs.",
+    "kwh": "kWh",
+    "discoveredAt": "Discovered",
+    "detail": {
+      "needsReviewBadge": "Needs review",
+      "markReviewed": "Mark reviewed",
+      "unarchive": "Restore",
+      "archive": "Archive",
+      "placeName": "Place name",
+      "rename": "Rename {{name}}",
+      "pricingTab": "Rates & Pricing",
+      "activityTab": "Charging Activity",
+      "tabsLabel": "Charging place detail sections",
+      "pricingIntro": "Rate changes never rewrite protected actual costs. The rate active today estimates older unpriced sessions automatically; use preview and apply when you have exact historical rates."
+    },
+    "rateForm": {
+      "title": "Add a Rate",
+      "currency": "Currency",
+      "rate": "Rate per kWh",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to (optional)",
+      "effectiveToHint": "Leave blank for an open-ended rate.",
+      "legacyEstimateHint": "If this rate is active today, it also estimates older unpriced sessions at this place. Existing actual costs stay unchanged.",
+      "submit": "Save Rate",
+      "errors": {
+        "rate": "Enter a non-negative rate.",
+        "effectiveFrom": "Enter a valid effective-from date/time.",
+        "effectiveTo": "Effective-to date/time is invalid.",
+        "order": "Effective-to must be after effective-from."
+      }
+    },
+    "rateHistory": {
+      "title": "Rate History",
+      "empty": "No rate configured yet — add one below to start pricing sessions at this place.",
+      "effectiveFrom": "Effective From",
+      "rate": "Rate / kWh",
+      "currency": "Currency",
+      "effectiveTo": "Effective To",
+      "current": "Current",
+      "scheduled": "Scheduled",
+      "cancelScheduled": "Cancel scheduled rate",
+      "cancel": "Cancel Rate",
+      "previewApply": "Preview / Apply",
+      "deleteTitle": "Cancel this scheduled rate?",
+      "deleteMessage": "The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted."
+    },
+    "previewApply": {
+      "title": "Preview & Apply",
+      "selectRate": "Select a rate from the history table above to preview its impact.",
+      "confirmTitle": "Apply this rate to matching sessions?",
+      "confirmMessage": "This backfills/reprices unpriced or previously geofence-derived sessions in scope. Manual and Tesla-reported actual costs are never overwritten.",
+      "applyAction": "Apply",
+      "from": "Narrow from (optional)",
+      "to": "Narrow to (optional)",
+      "matched": "Matched",
+      "eligible": "Eligible",
+      "protected": "Protected",
+      "energy": "Energy",
+      "estimatedCost": "Estimated Cost",
+      "applied": "Applied: {{priced}} priced, {{skipped}} skipped, {{cost}} total."
+    },
+    "summary": {
+      "title": "Charging Summary",
+      "empty": "No priced charging activity at this place yet.",
+      "sessions": "Sessions",
+      "energy": "Energy",
+      "spend": "Spend"
+    },
+    "activity": {
+      "title": "Charging Activity",
+      "empty": "No charging sessions recorded at this place yet.",
+      "startedAt": "Started",
+      "endedAt": "Ended",
+      "energy": "Energy",
+      "cost": "Cost",
+      "source": "Source",
+      "pageInfo": "Showing {{from}}–{{to}}"
+    },
+    "costSource": {
+      "manual": "Manual",
+      "tesla_actual": "Tesla Reported",
+      "geofence_tariff": "Place Rate",
+      "default_estimate": "Default Estimate",
+      "unknown": "Unknown"
     }
   }
 }

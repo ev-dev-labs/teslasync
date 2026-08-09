@@ -255,7 +255,7 @@ func TestGetStaleSessions_HappyPath(t *testing.T) {
 	}
 	drive := &fakeDriveRepo{
 		getStaleFn: func(context.Context, time.Time) ([]*drivemodel.Drive, error) {
-			return []*drivemodel.Drive{sampleDrive(21, testNow.Add(-48 * time.Hour))}, nil
+			return []*drivemodel.Drive{sampleDrive(21, testNow.Add(-48*time.Hour))}, nil
 		},
 	}
 	h := newTestHandler(charging, drive)
@@ -412,6 +412,56 @@ func TestUpdateCharging_HappyPath(t *testing.T) {
 	if fake.partialFields["cost_currency"] != "USD" {
 		t.Errorf("PartialUpdate cost_currency = %v, want USD", fake.partialFields["cost_currency"])
 	}
+}
+
+func TestUpdateCharging_CostProvenance(t *testing.T) {
+	t.Parallel()
+
+	t.Run("manual cost overrides system provenance", func(t *testing.T) {
+		fake := &fakeChargingRepo{
+			getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
+				return sampleCharging(id), nil
+			},
+		}
+		h := newTestHandler(fake, &fakeDriveRepo{})
+
+		rec := doReq(t, h, http.MethodPut, "/data-repair/charging/42",
+			strings.NewReader(`{"cost_decimal":12.5,"cost_currency":"USD","cost_source":"tesla_actual","rate_id":9,"geofence_id":8}`))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200. body=%s", rec.Code, rec.Body.String())
+		}
+		if got := fake.partialFields["cost_source"]; got != "manual" {
+			t.Fatalf("cost_source = %v, want manual", got)
+		}
+		if got, ok := fake.partialFields["rate_id"]; !ok || got != nil {
+			t.Fatalf("rate_id = %v (present=%v), want explicit nil", got, ok)
+		}
+		if _, ok := fake.partialFields["geofence_id"]; ok {
+			t.Fatalf("public update must not accept geofence_id: %v", fake.partialFields)
+		}
+	})
+
+	t.Run("clearing cost makes it eligible for a later tariff apply", func(t *testing.T) {
+		fake := &fakeChargingRepo{
+			getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
+				return sampleCharging(id), nil
+			},
+		}
+		h := newTestHandler(fake, &fakeDriveRepo{})
+
+		rec := doReq(t, h, http.MethodPut, "/data-repair/charging/42",
+			strings.NewReader(`{"cost_decimal":null,"cost_source":"manual","rate_id":9}`))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200. body=%s", rec.Code, rec.Body.String())
+		}
+		for _, key := range []string{"cost_decimal", "cost_currency", "cost_source", "rate_id"} {
+			if got, ok := fake.partialFields[key]; !ok || got != nil {
+				t.Errorf("%s = %v (present=%v), want explicit nil", key, got, ok)
+			}
+		}
+	})
 }
 
 func TestUpdateCharging_Errors(t *testing.T) {

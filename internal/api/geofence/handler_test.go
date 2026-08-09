@@ -25,7 +25,7 @@ func TestCircleToPolygonWKT_RoundTripsCenterAndRadius(t *testing.T) {
 		lon    = -122.208886
 		radius = 100.0
 	)
-	wkt := circleToPolygonWKT(lat, lon, radius, geofenceCircleSegments)
+	wkt := systemmodel.CircleToPolygonWKT(lat, lon, radius)
 	if !strings.HasPrefix(wkt, "POLYGON((") || !strings.HasSuffix(wkt, "))") {
 		t.Fatalf("WKT not well-formed: %q", wkt)
 	}

@@ -27,6 +27,25 @@ type ChargingSession struct {
 	CostCurrency       *string    `db:"cost_currency" json:"cost_currency,omitempty"`
 	ChargerType        *string    `db:"charger_type" json:"charger_type,omitempty"`
 	CableType          *string    `db:"cable_type" json:"cable_type,omitempty"`
+
+	// Charging-place pricing provenance (migration
+	// 000228_geofence_charging_place_pricing). No DB-level FK on
+	// GeofenceID/RateID — these are written from the async (post-completion)
+	// leg of the telemetry charge tracker and must never be blocked by a
+	// synchronous FK check, mirroring the existing no-FK precedent between
+	// charging_telemetry and charging_sessions.id.
+	//
+	// GeofenceID is the charging place this session was matched (or
+	// auto-discovered) to. RateID is the EXACT geofence_rates version whose
+	// [effective_from, effective_to) interval contained StartedAt at the
+	// moment cost was computed — pinning it (rather than re-deriving it from
+	// StartedAt on every read) is what keeps a session's price frozen forever
+	// even after the place's rate is corrected or superseded. CostSource
+	// records provenance/precedence: "manual" > "tesla_actual" >
+	// "geofence_tariff" > "default_estimate" > "unknown".
+	GeofenceID *int64  `db:"geofence_id" json:"geofence_id,omitempty"`
+	RateID     *int64  `db:"rate_id" json:"rate_id,omitempty"`
+	CostSource *string `db:"cost_source" json:"cost_source,omitempty"`
 }
 
 // IsActive reports whether the charging session is still in progress

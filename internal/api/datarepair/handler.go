@@ -13,6 +13,7 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 	"github.com/rs/zerolog/log"
 )
 
@@ -69,6 +70,32 @@ func (h *DataRepairHandler) now() time.Time {
 		return h.clock()
 	}
 	return time.Now().UTC()
+}
+
+// applyManualCostProvenance prevents the public repair endpoint from forging
+// system-owned pricing provenance. A user-supplied cost becomes a manual
+// actual and no longer points at the tariff it may have replaced. Clearing a
+// cost clears its provenance so a later explicit tariff apply can price it.
+func applyManualCostProvenance(existing *chargingmodel.ChargingSession, patch map[string]interface{}) {
+	delete(patch, "cost_source")
+	delete(patch, "rate_id")
+	delete(patch, "geofence_id")
+
+	if cost, supplied := patch["cost_decimal"]; supplied {
+		patch["rate_id"] = nil
+		if cost == nil {
+			patch["cost_currency"] = nil
+			patch["cost_source"] = nil
+			return
+		}
+		patch["cost_source"] = systemmodel.CostSourceManual
+		return
+	}
+	if _, supplied := patch["cost_currency"]; supplied &&
+		existing != nil && existing.CostDecimal != nil {
+		patch["rate_id"] = nil
+		patch["cost_source"] = systemmodel.CostSourceManual
+	}
 }
 
 // StaleSessionsResponse contains charging sessions and drives that are still open.
@@ -134,6 +161,7 @@ func (h *DataRepairHandler) UpdateCharging(w http.ResponseWriter, r *http.Reques
 		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
+	applyManualCostProvenance(existing, patch)
 
 	if err := h.chargingRepo.PartialUpdate(ctx, id, patch); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update charging session")

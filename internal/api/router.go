@@ -3259,13 +3259,39 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/geofences", func(r chi.Router) {
 			r.Get("/", geofenceHandler.List)
 			r.Post("/", geofenceHandler.Create)
-			// Bulk operations — kept ahead of the
+			// Bulk operations, the "Needs Setup" queue, and the bulk
+			// current-rates lookup are all kept ahead of the
 			// {geofenceID} subrouter so chi matches the static path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
+			r.Get("/needs-review", geofenceHandler.NeedsReview)
+			r.Get("/rates/current", geofenceHandler.CurrentRates)
 			r.Route("/{geofenceID}", func(r chi.Router) {
 				r.Get("/", geofenceHandler.Get)
 				r.Put("/", geofenceHandler.Update)
 				r.Delete("/", geofenceHandler.Delete)
+
+				// Charging-place discovery review + archive lifecycle
+				// (migration 000228_geofence_charging_place_pricing).
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/archive", geofenceHandler.Archive)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/unarchive", geofenceHandler.Unarchive)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/reviewed", geofenceHandler.MarkReviewed)
+
+				// Time-versioned electricity rates.
+				r.Get("/rates", geofenceHandler.ListRates)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rates", geofenceHandler.CreateRate)
+				r.Route("/rates/{rateID}", func(r chi.Router) {
+					r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", geofenceHandler.DeleteRate)
+					// Preview is read-only (no DB writes) but still
+					// rate-limited: it runs the same candidate-session
+					// scan ApplyRate does and must not become a free DoS
+					// vector against charging_sessions.
+					r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/preview", geofenceHandler.PreviewApplyRate)
+					r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/apply", geofenceHandler.ApplyRate)
+				})
+
+				// Read-only charging-activity views for this place.
+				r.Get("/charging-summary", geofenceHandler.ChargingSummary)
+				r.Get("/charging-activity", geofenceHandler.ChargingActivity)
 			})
 		})
 

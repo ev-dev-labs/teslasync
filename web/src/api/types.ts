@@ -249,15 +249,158 @@ export interface ChargeTelemetryReading {
   current_amps?: number | null
 }
 
+// === Geofences / Charging Places ===
+//
+// Canonical snake_case wire shape for GET/POST/PUT /geofences and the
+// charging-place pricing feature's endpoints beneath
+// /geofences/{geofenceID}/... (see internal/api/geofence/rate_handler.go
+// and internal/models/system/{system,geofence_rate}.go — the source of
+// truth for every field below).
+//
+// `rate_per_wh` is the ONLY canonical electricity-rate unit on the wire —
+// never `_kwh`. Convert to currency/kWh strictly at the render/request
+// boundary (see features/maps/components/charging-places/helpers.ts).
+
+/** How a geofence came to exist. */
+export type GeofenceOrigin = 'manual' | 'charging_discovery'
+
+/** Optional category tag a geofence may carry. */
+export type GeofenceCategory = 'home' | 'work' | 'restricted' | 'custom'
+
+/**
+ * A geofence ("charging place" once it has rates/sessions attached).
+ *
+ * `latitude` / `longitude` / `radius` are NOT stored columns — the backend's
+ * `Geofence.MarshalJSON` derives them on every read from `polygon_wkt`
+ * (centroid + max-vertex-distance in meters) so the web client never parses
+ * WKT itself. `category` / `archived_at` use `omitempty` on the Go side:
+ * they are ABSENT from the payload (not `null`) when unset.
+ */
 export interface Geofence {
   id: number
   name: string
-  latitude: number
-  longitude: number
-  radius: number
-  cost_per_kwh: number | null
+  polygon_wkt: string
+  category?: GeofenceCategory | null
+  enabled: boolean
+  alert_on_entry: boolean
+  alert_on_exit: boolean
+  origin: GeofenceOrigin
+  needs_review: boolean
+  archived_at?: string | null
   created_at: string
-  updated_at?: string
+  updated_at: string
+  /** Computed centroid latitude, degrees — see MarshalJSON note above. */
+  latitude: number
+  /** Computed centroid longitude, degrees — see MarshalJSON note above. */
+  longitude: number
+  /** Computed bounding radius, meters — see MarshalJSON note above. */
+  radius: number
+}
+
+/**
+ * One time-versioned electricity-rate row for a geofence. The canonical,
+ * append-only source of truth — there is no separate mutable "current
+ * rate" column anywhere. The active rate for any instant `t` is whichever
+ * row's half-open `[effective_from, effective_to)` interval contains `t`;
+ * `effective_to: null` means "still open" (the current version).
+ */
+export interface GeofenceRate {
+  id: number
+  geofence_id: number
+  /** Currency units per **watt-hour** — SI-canonical, never per-kWh. */
+  rate_per_wh: number
+  /** ISO-4217 currency code, e.g. "USD". */
+  currency: string
+  effective_from: string
+  effective_to?: string | null
+  created_at: string
+}
+
+/** Request body for `POST /geofences/{geofenceID}/rates`. */
+export interface GeofenceRateCreateRequest {
+  rate_per_wh: number
+  currency: string
+  effective_from: string
+  effective_to?: string | null
+}
+
+/**
+ * Charging-session cost provenance values, mirroring the
+ * `charging_sessions.cost_source` CHECK constraint. Precedence (highest to
+ * lowest confidence): manual actual > tesla_actual > geofence_tariff >
+ * default_estimate > unknown.
+ */
+export type CostSource =
+  | 'manual'
+  | 'tesla_actual'
+  | 'geofence_tariff'
+  | 'default_estimate'
+  | 'unknown'
+
+/**
+ * Read-only "what would applying this rate do" response for
+ * `GET /geofences/{geofenceID}/rates/{rateID}/preview` — no rows written.
+ * `eligible_sessions` is the subset of `matched_sessions` an apply call is
+ * actually allowed to touch (unpriced or previously geofence-derived);
+ * `protected_sessions` already carry a manual/Tesla-actual cost and are
+ * matched (in scope by place + time) but will never be overwritten.
+ */
+export interface GeofenceRateImpactPreview {
+  geofence_id: number
+  rate_id: number
+  currency: string
+  matched_sessions: number
+  eligible_sessions: number
+  protected_sessions: number
+  total_energy_wh: number
+  estimated_cost_decimal: number
+}
+
+/**
+ * Outcome of an explicit apply/backfill action —
+ * `POST /geofences/{geofenceID}/rates/{rateID}/apply`. The
+ * write-performing counterpart of {@link GeofenceRateImpactPreview}.
+ */
+export interface GeofenceRateApplyResult {
+  geofence_id: number
+  rate_id: number
+  currency: string
+  matched_sessions: number
+  priced_sessions: number
+  skipped_sessions: number
+  total_energy_wh: number
+  total_cost_decimal: number
+}
+
+/**
+ * A geofence's priced charging activity totals for ONE currency —
+ * `GET /geofences/{geofenceID}/charging-summary` always returns an array,
+ * one entry per currency ever seen at this place. Different currencies are
+ * NEVER summed into a single total; callers must group/scope by currency.
+ */
+export interface GeofenceChargingSummary {
+  geofence_id: number
+  currency: string
+  session_count: number
+  total_energy_wh: number
+  total_cost_decimal: number
+}
+
+/**
+ * One line item in a geofence's charging-session activity feed —
+ * `GET /geofences/{geofenceID}/charging-activity` (paginated via
+ * `limit`/`offset` query params; any pricing state, not just priced rows).
+ */
+export interface GeofenceChargingActivity {
+  session_id: number
+  vehicle_id: number
+  started_at: string
+  ended_at?: string | null
+  energy_wh?: number | null
+  cost_decimal?: number | null
+  cost_currency?: string | null
+  cost_source?: CostSource | null
+  rate_id?: number | null
 }
 
 export interface AppSettings {

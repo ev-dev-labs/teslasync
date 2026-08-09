@@ -126,8 +126,8 @@ func TestCreate(t *testing.T) {
 					t.Errorf("SQL missing %q:\n%s", sub, got.sql)
 				}
 			}
-			if len(got.args) != 7 {
-				t.Fatalf("want 7 args, got %d (%v)", len(got.args), got.args)
+			if len(got.args) != 9 {
+				t.Fatalf("want 9 args, got %d (%v)", len(got.args), got.args)
 			}
 			if got.args[0] != tc.input.Name {
 				t.Errorf("args[0] name: want %q got %v", tc.input.Name, got.args[0])
@@ -161,7 +161,7 @@ func TestGetAll(t *testing.T) {
 		}
 		assertGeofenceEqual(t, got[0], g1)
 		assertGeofenceEqual(t, got[1], g2)
-		if sql := pool.queryCalls[0].sql; !strings.Contains(sql, "FROM geofences") || !strings.Contains(sql, "ORDER BY name LIMIT 500") {
+		if sql := pool.queryCalls[0].sql; !strings.Contains(sql, "FROM geofences") || !strings.Contains(sql, "ORDER BY archived_at NULLS FIRST, name LIMIT 500") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if len(pool.queryCalls[0].args) != 0 {
@@ -272,13 +272,13 @@ func TestUpdate(t *testing.T) {
 			t.Fatalf("want 1 Exec, got %d", len(pool.execCalls))
 		}
 		call := pool.execCalls[0]
-		for _, sub := range []string{"UPDATE geofences", "WHERE id=$1", "updated_at=$8"} {
+		for _, sub := range []string{"UPDATE geofences", "WHERE id=$1", "updated_at=$9"} {
 			if !strings.Contains(call.sql, sub) {
 				t.Errorf("SQL missing %q:\n%s", sub, call.sql)
 			}
 		}
-		if len(call.args) != 8 {
-			t.Fatalf("want 8 args, got %d (%v)", len(call.args), call.args)
+		if len(call.args) != 9 {
+			t.Fatalf("want 9 args, got %d (%v)", len(call.args), call.args)
 		}
 		if call.args[0] != int64(5) {
 			t.Errorf("args[0] id: want 5 got %v", call.args[0])
@@ -360,10 +360,37 @@ func TestFindByCoordinates_FiltersByRadiusNotEnabled(t *testing.T) {
 	if got[1].Enabled {
 		t.Fatalf("expected the second hit to be the DISABLED fence")
 	}
-	// FindByCoordinates loads every row: no WHERE clause, no bound args.
+	// FindByCoordinates loads every active row: a WHERE archived_at IS NULL
+	// clause is expected (see method doc), but still no bound args since the
+	// filter is a static NULL check, not a parameter.
 	call := pool.queryCalls[0]
-	if strings.Contains(call.sql, "WHERE") || len(call.args) != 0 {
-		t.Errorf("expected argument-free full scan, got sql=%q args=%v", call.sql, call.args)
+	if !strings.Contains(call.sql, "WHERE archived_at IS NULL") || len(call.args) != 0 {
+		t.Errorf("expected archived-filtered argument-free full scan, got sql=%q args=%v", call.sql, call.args)
+	}
+}
+
+func TestFindByCoordinates_PrefersManualPlaceWhenGeofencesOverlap(t *testing.T) {
+	discovered := &systemmodel.Geofence{
+		ID: 2, Name: "Auto", PolygonWKT: squareWKT(40, -75),
+		Origin:    systemmodel.GeofenceOriginChargingDiscovery,
+		CreatedAt: fixedTime, UpdatedAt: fixedTime,
+	}
+	manual := &systemmodel.Geofence{
+		ID: 9, Name: "Home", PolygonWKT: squareWKT(40, -75),
+		Origin:    systemmodel.GeofenceOriginManual,
+		CreatedAt: fixedTime, UpdatedAt: fixedTime,
+	}
+	pool := &fakePool{queryQueue: []queryResult{{rows: newFakeRows([][]any{
+		geofenceRowVals(discovered),
+		geofenceRowVals(manual),
+	})}}}
+
+	got, err := newRepo(pool).FindByCoordinates(context.Background(), 40, -75)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if len(got) != 2 || got[0].ID != manual.ID {
+		t.Fatalf("manual place must win overlap matching, got %+v", got)
 	}
 }
 

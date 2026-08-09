@@ -51,6 +51,7 @@ import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
 import type { Position } from '@/api/types';
 import { AISuggestNewGeofences } from '@/components/ai/AISuggestNewGeofences';
+import { ChargingPlacesWorkspace } from '@/features/maps/components/charging-places';
 import {
   geofenceFormSchema,
   toGeofencePayload,
@@ -224,7 +225,10 @@ export default function GeofencesPage() {
   const { data: vehicles } = useVehicles();
 
   const createMut = useMutation({
-    mutationFn: (body: Omit<Geofence, 'id' | 'createdAt'>) =>
+    // origin/needsReview are server-managed (defaulted on create, untouched
+    // on update) — the write form never submits them; only the fields the
+    // backend's geofenceCreateRequest actually declares belong here.
+    mutationFn: (body: Omit<Geofence, 'id' | 'createdAt' | 'origin' | 'needsReview'>) =>
       request<Geofence>('/geofences', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
@@ -235,8 +239,13 @@ export default function GeofencesPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Omit<Geofence, 'id' | 'createdAt'> }) =>
-      request<Geofence>(`/geofences/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: Omit<Geofence, 'id' | 'createdAt' | 'origin' | 'needsReview'>;
+    }) => request<Geofence>(`/geofences/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
       toast.success(t('Geofence updated'));
@@ -545,7 +554,7 @@ export default function GeofencesPage() {
       return;
     }
     setFieldErrors({});
-    const payload = { ...toGeofencePayload(parsed.data), costPerKwh: null };
+    const payload = toGeofencePayload(parsed.data);
     if (editingId) {
       updateMut.mutate({ id: editingId, body: payload });
     } else {
@@ -877,6 +886,17 @@ export default function GeofencesPage() {
               </StaggerContainer>
             )}
           </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 4 — Charging Places: geofence-based charging-place pricing. A
+          self-contained workspace (Needs Setup queue, places list with
+          current rate, and per-place rate history/preview-apply/activity
+          detail) — decomposed into features/maps/components/charging-places
+          rather than adding more bulk to this file directly. */}
+      <FadeIn delay={0.3}>
+        <section aria-label={t('chargingPlaces.workspace.title', 'Charging Places')}>
+          <ChargingPlacesWorkspace />
         </section>
       </FadeIn>
 

@@ -54,7 +54,8 @@ function makeGeofence(overrides: Partial<Geofence> = {}): Geofence {
     alertOnEntry: true,
     alertOnExit: false,
     enabled: true,
-    costPerKwh: null,
+    origin: 'manual',
+    needsReview: false,
     createdAt: '2026-06-01T00:00:00Z',
     ...overrides,
   };
@@ -168,27 +169,30 @@ describe('Location', () => {
 // ---------------------------------------------------------------------------
 
 describe('Geofence', () => {
-  it('carries exactly the ten circular-geofence fields with the right primitive types', () => {
+  it('carries exactly the eleven base circular-geofence fields (plus optional category/archivedAt) with the right primitive types', () => {
     const g = makeGeofence();
 
     expect(Object.keys(g).sort()).toEqual([
       'alertOnEntry',
       'alertOnExit',
-      'costPerKwh',
       'createdAt',
       'enabled',
       'id',
       'latitude',
       'longitude',
       'name',
+      'needsReview',
+      'origin',
       'radius',
     ]);
     expect(typeof g.id).toBe('string');
     expect(typeof g.name).toBe('string');
     expect(typeof g.radius).toBe('number');
     expect(typeof g.createdAt).toBe('string');
+    expect(typeof g.origin).toBe('string');
+    expect(typeof g.needsReview).toBe('boolean');
 
-    expectTypeOf<Geofence>().toEqualTypeOf<{
+    expectTypeOf<Geofence>().toMatchTypeOf<{
       id: string;
       name: string;
       latitude: number;
@@ -197,7 +201,8 @@ describe('Geofence', () => {
       alertOnEntry: boolean;
       alertOnExit: boolean;
       enabled: boolean;
-      costPerKwh: number | null;
+      origin: 'manual' | 'charging_discovery';
+      needsReview: boolean;
       createdAt: string;
     }>();
   });
@@ -218,13 +223,35 @@ describe('Geofence', () => {
     expectTypeOf<Geofence['enabled']>().toEqualTypeOf<boolean>();
   });
 
-  it('models costPerKwh as a nullable number and folds null to 0 at use sites', () => {
-    const untariffed = makeGeofence({ costPerKwh: null });
-    const tariffed = makeGeofence({ costPerKwh: 0.32 });
+  it('models origin as manual by default and charging_discovery for auto-discovered places', () => {
+    const manual = makeGeofence({ origin: 'manual' });
+    const discovered = makeGeofence({ origin: 'charging_discovery' });
 
-    expect(untariffed.costPerKwh).toBeNull();
-    expect(untariffed.costPerKwh ?? 0).toBe(0);
-    expect(tariffed.costPerKwh).toBeCloseTo(0.32, 5);
-    expectTypeOf<Geofence['costPerKwh']>().toEqualTypeOf<number | null>();
+    expect(manual.origin).toBe('manual');
+    expect(discovered.origin).toBe('charging_discovery');
+    expectTypeOf<Geofence['origin']>().toEqualTypeOf<'manual' | 'charging_discovery'>();
+  });
+
+  it('models needsReview as an independent boolean gating the Needs Setup queue', () => {
+    expect(makeGeofence({ needsReview: true }).needsReview).toBe(true);
+    expect(makeGeofence({ needsReview: false }).needsReview).toBe(false);
+    expectTypeOf<Geofence['needsReview']>().toEqualTypeOf<boolean>();
+  });
+
+  it('treats category and archivedAt as optional — absent (not null) when the backend omits them', () => {
+    const bare = makeGeofence();
+    expect('category' in bare).toBe(false);
+    expect('archivedAt' in bare).toBe(false);
+
+    const categorized = makeGeofence({ category: 'home' });
+    expect(categorized.category).toBe('home');
+
+    const archived = makeGeofence({ archivedAt: '2026-08-01T00:00:00Z' });
+    expect(archived.archivedAt).toBe('2026-08-01T00:00:00Z');
+
+    expectTypeOf<Geofence['category']>().toEqualTypeOf<
+      'home' | 'work' | 'restricted' | 'custom' | null | undefined
+    >();
+    expectTypeOf<Geofence['archivedAt']>().toEqualTypeOf<string | null | undefined>();
   });
 });

@@ -123,6 +123,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	if err := a.initTelemetryHandler(ctx); err != nil {
 		return a, err
 	}
+	a.initChargingPlaceHistoryBackfill(ctx)
 
 	a.initWorker(ctx)
 	a.initNotificationWorker(ctx)
@@ -786,7 +787,9 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 
 	a.TelemetryHandler.StartCleanup(ctx)
 
-	go a.TelemetryHandler.SessionTracker().BackfillAddresses(ctx)
+	if sessionTracker != nil {
+		go sessionTracker.BackfillAddresses(ctx)
+	}
 
 	if a.MQTT != nil && a.Cfg.FleetTelemetry.TopicBase != "" {
 		if err := a.initPipelineSubscriber(ctx, vehicleRepo); err != nil {
@@ -794,6 +797,19 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// initChargingPlaceHistoryBackfill runs independently of Fleet Telemetry.
+// Polling-only installations still have historical charging sessions that
+// need place attribution and current-rate estimates.
+func (a *App) initChargingPlaceHistoryBackfill(ctx context.Context) {
+	var sessionTracker *apitelem.TelemetrySessionTracker
+	if a.TelemetryHandler != nil {
+		sessionTracker = a.TelemetryHandler.SessionTracker()
+	} else {
+		sessionTracker = apitelem.NewTelemetrySessionTracker(a.DB, a.EventBus, nil, nil)
+	}
+	sessionTracker.StartChargingPlaceHistoryBackfill(ctx)
 }
 
 // initPipelineSubscriber wires the telemetry ingest stack:

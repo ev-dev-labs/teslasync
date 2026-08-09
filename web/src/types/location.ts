@@ -26,6 +26,12 @@ export interface Location {
   lastVisited: string | null;
 }
 
+/** How a geofence came to exist (charging-place pricing feature). */
+export type GeofenceOrigin = 'manual' | 'charging_discovery';
+
+/** Optional category tag a geofence may carry. */
+export type GeofenceCategory = 'home' | 'work' | 'restricted' | 'custom';
+
 /** A user-defined circular geofence (centroid + bounding radius in meters). */
 export interface Geofence {
   /** Stable identifier for the geofence. */
@@ -41,8 +47,27 @@ export interface Geofence {
   alertOnExit: boolean;
   /** Whether the geofence is currently active. */
   enabled: boolean;
-  /** Charging tariff for this location in $/kWh, or `null` when unset. */
-  costPerKwh: number | null;
+  /**
+   * How this place came to exist: user-created, or auto-discovered off a
+   * confirmed charging session's coordinates. Existing manual geofences
+   * predate this field and still resolve to `'manual'`.
+   */
+  origin: GeofenceOrigin;
+  /**
+   * True while an auto-discovered place awaits a human to confirm its
+   * name/type/location — surfaced as the "Needs Setup" queue in the
+   * Charging Places workspace.
+   */
+  needsReview: boolean;
+  /** Optional category tag; absent (not merely `null`) when unset — mirrors the backend's `omitempty`. */
+  category?: GeofenceCategory | null;
+  /**
+   * ISO-8601 archive timestamp; absent while active. An archived place is
+   * excluded from default active listings but stays resolvable by id for
+   * historical charging-session display (never hard-deleted once it has
+   * sessions or rates attached).
+   */
+  archivedAt?: string | null;
   /** ISO-8601 creation timestamp. */
   createdAt: string;
 }

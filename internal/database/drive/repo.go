@@ -11,6 +11,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // SI canonical schema (migration 000185_drives_si). The drives table is
@@ -47,7 +48,7 @@ const driveColumns = `id, vehicle_id, started_at, ended_at, duration_s, distance
 	start_place, end_place, start_lat, start_lng, end_lat, end_lng,
 	start_soc_pct, end_soc_pct,
 	energy_used_wh, regen_energy_wh, avg_speed_mps, max_speed_mps, avg_power_w,
-	ambient_temp_c_avg`
+	ambient_temp_c_avg, start_geofence_id, end_geofence_id`
 
 // scanDrive scans the SI canonical column list into a drivemodel.Drive. No unit
 // conversion is performed — both struct and DB are SI canonical.
@@ -64,7 +65,7 @@ func scanDrive(row interface{ Scan(dest ...any) error }) (*drivemodel.Drive, err
 		&d.StartAddress, &d.EndAddress, &d.StartLat, &d.StartLon, &d.EndLat, &d.EndLon,
 		&startSocPct, &endSocPct,
 		&d.EnergyUsedWh, &d.RegenEnergyWh, &d.AvgSpeedMps, &d.MaxSpeedMps, &d.AvgPowerW,
-		&d.OutsideTempAvgC,
+		&d.OutsideTempAvgC, &d.StartGeofenceID, &d.EndGeofenceID,
 	)
 	if err != nil {
 		return nil, err
@@ -191,7 +192,15 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 		}
 		drives = append(drives, d)
 	}
-	return drives, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := r.resolveCurrentGeofenceNames(ctx, drives); err != nil {
+		// Non-fatal: the list is still correct using stored start_place/
+		// end_place text, just not refreshed with a since-renamed place.
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("drives: failed to resolve current geofence names")
+	}
+	return drives, nil
 }
 
 func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error) {
@@ -203,7 +212,88 @@ func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*drivemodel.Drive, e
 		return nil, nil
 	}
 	tracing.EndSpan(span, err)
-	return d, err
+	if err != nil {
+		return nil, err
+	}
+	if err := r.resolveCurrentGeofenceNames(ctx, []*drivemodel.Drive{d}); err != nil {
+		log.Warn().Err(err).Int64("drive_id", id).Msg("drives: failed to resolve current geofence names")
+	}
+	return d, nil
+}
+
+// resolveCurrentGeofenceNames overlays each drive's StartAddress/EndAddress
+// with the CURRENT name of its attached geofence (StartGeofenceID /
+// EndGeofenceID), leaving the originally-stored start_place/end_place text
+// untouched as the fallback when no geofence is attached or the batch
+// lookup comes up empty for that id. This is what lets a place rename
+// (e.g. "Unnamed Charging Place" → "Grandma's House") retroactively improve
+// historical drive display without rewriting any stored row.
+//
+// Deliberately does NOT filter on archived_at: "archived places... remain
+// resolvable for history" means an archived place's current (possibly
+// renamed) name is still preferred over the frozen fallback text — only a
+// truly nonexistent id (never possible today; ids are never hard-deleted)
+// would fail to resolve and fall back silently.
+//
+// One batched `id = ANY($1)` query regardless of how many drives are
+// passed in, so GetByVehicle's page of (up to) LIMIT rows costs one extra
+// round trip, not one per row.
+func (r *DriveRepo) resolveCurrentGeofenceNames(ctx context.Context, drives []*drivemodel.Drive) error {
+	ids := make(map[int64]struct{})
+	for _, d := range drives {
+		if d == nil {
+			continue
+		}
+		if d.StartGeofenceID != nil {
+			ids[*d.StartGeofenceID] = struct{}{}
+		}
+		if d.EndGeofenceID != nil {
+			ids[*d.EndGeofenceID] = struct{}{}
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	idList := make([]int64, 0, len(ids))
+	for id := range ids {
+		idList = append(idList, id)
+	}
+
+	rows, err := r.db.Pool.Query(ctx, `SELECT id, name FROM geofences WHERE id = ANY($1)`, idList)
+	if err != nil {
+		return fmt.Errorf("drives resolve_geofence_names query: %w", err)
+	}
+	defer rows.Close()
+
+	names := make(map[int64]string, len(idList))
+	for rows.Next() {
+		var id int64
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return fmt.Errorf("drives resolve_geofence_names scan: %w", err)
+		}
+		names[id] = name
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("drives resolve_geofence_names iter: %w", err)
+	}
+
+	for _, d := range drives {
+		if d == nil {
+			continue
+		}
+		if d.StartGeofenceID != nil {
+			if name, ok := names[*d.StartGeofenceID]; ok {
+				d.StartAddress = &name
+			}
+		}
+		if d.EndGeofenceID != nil {
+			if name, ok := names[*d.EndGeofenceID]; ok {
+				d.EndAddress = &name
+			}
+		}
+	}
+	return nil
 }
 
 // GetStale returns drives that have no end timestamp and started before the
@@ -295,6 +385,11 @@ var DrivePartialAllowed = map[string]string{
 	// values in meters directly.
 	"start_odometer_m": "start_odometer_m",
 	"end_odometer_m":   "end_odometer_m",
+	// Charging-place geofence attribution (migration
+	// 000228_geofence_charging_place_pricing). Match-only, no DB FK — see
+	// drivemodel.Drive.StartGeofenceID / EndGeofenceID doc comment.
+	"start_geofence_id": "start_geofence_id",
+	"end_geofence_id":   "end_geofence_id",
 }
 
 // PartialUpdate updates only the provided fields on a drive. The fields map

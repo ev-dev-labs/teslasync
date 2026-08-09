@@ -84,6 +84,18 @@ const (
 	GeofenceCategoryCustom     GeofenceCategory = "custom"
 )
 
+// GeofenceOrigin enumerates how a geofence came to exist.
+type GeofenceOrigin string
+
+const (
+	// GeofenceOriginManual is the default: a user created the place directly
+	// (Add Geofence modal, import, API).
+	GeofenceOriginManual GeofenceOrigin = "manual"
+	// GeofenceOriginChargingDiscovery marks a place that was auto-created from
+	// a confirmed charging session's coordinates (see AUTO-DISCOVERY rules).
+	GeofenceOriginChargingDiscovery GeofenceOrigin = "charging_discovery"
+)
+
 // Geofence mirrors the post-migration `geofences` schema. PolygonWKT is a
 // Well-Known Text POLYGON((lon lat, ...)) parsed at runtime — not server-side.
 //
@@ -92,6 +104,18 @@ const (
 // `enabled=false`; alert consumers (FSM transitions, notification dispatcher)
 // MUST filter on Enabled themselves — FindByCoordinates intentionally returns
 // disabled fences too because the reverse-geocoder uses it for friendly naming.
+//
+// Origin / NeedsReview / ArchivedAt were added by migration
+// 000228_geofence_charging_place_pricing (charging-place pricing feature):
+//   - Origin distinguishes a user-created place from one auto-discovered off
+//     a confirmed charging session (see internal/database/geofence's
+//     discovery repo). Existing manual geofences default to "manual".
+//   - NeedsReview flags a provisional/auto-discovered place awaiting a
+//     human to confirm name/type/location — surfaced as the "Needs Setup"
+//     queue in the Charging Places UI.
+//   - ArchivedAt marks a place as retired without hard-deleting it: places
+//     with sessions/rates keep their history resolvable, but are excluded
+//     from default active listings (GetAll).
 type Geofence struct {
 	ID           int64             `db:"id" json:"id"`
 	Name         string            `db:"name" json:"name"`
@@ -100,9 +124,17 @@ type Geofence struct {
 	Enabled      bool              `db:"enabled" json:"enabled"`
 	AlertOnEntry bool              `db:"alert_on_entry" json:"alert_on_entry"`
 	AlertOnExit  bool              `db:"alert_on_exit" json:"alert_on_exit"`
+	Origin       GeofenceOrigin    `db:"origin" json:"origin"`
+	NeedsReview  bool              `db:"needs_review" json:"needs_review"`
+	ArchivedAt   *time.Time        `db:"archived_at" json:"archived_at,omitempty"`
 	CreatedAt    time.Time         `db:"created_at" json:"created_at"`
 	UpdatedAt    time.Time         `db:"updated_at" json:"updated_at"`
 }
+
+// IsArchived reports whether this geofence has been archived (soft-deleted).
+// Archived places are excluded from default active listings but remain
+// resolvable by ID for historical display.
+func (g *Geofence) IsArchived() bool { return g != nil && g.ArchivedAt != nil }
 
 // Centroid computes the arithmetic mean of the polygon vertices.
 // Returns (0, 0) for a nil receiver or if PolygonWKT is empty or unparseable.

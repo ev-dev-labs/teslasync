@@ -1364,13 +1364,26 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	// skips fields not in the allowlist, leaving end_place permanently NULL
 	// and the Visited Locations page empty.
 	field := "end_place"
+	geofenceField := "end_geofence_id"
 	if isStart {
 		field = "start_place"
+		geofenceField = "start_geofence_id"
 	}
 
-	// 1. Check geofences first (user-defined names like "Home", "Office")
+	// 1. Check geofences first (user-defined names like "Home", "Office").
+	// Match-only — a drive endpoint NEVER auto-creates a geofence (that is
+	// exclusive to a confirmed charging session; see
+	// telemetry_sessions_charge_geofence_pricing.go). Attaching
+	// start_geofence_id/end_geofence_id lets a later place rename
+	// retroactively improve this drive's displayed name — see
+	// DriveRepo.resolveCurrentGeofenceNames and the StartGeofenceID doc on
+	// drivemodel.Drive — while start_place/end_place keep storing today's
+	// name as the permanent fallback.
 	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
-		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: geofences[0].Name})
+		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{
+			field:         geofences[0].Name,
+			geofenceField: geofences[0].ID,
+		})
 		metrics.GeocodingTotal.WithLabelValues("geofence").Inc()
 		return true
 	}

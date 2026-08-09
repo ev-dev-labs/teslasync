@@ -249,3 +249,65 @@ groups:
           window: "30d"
           owner: "frontend"
           objective: "90"
+  - name: slo_geofence_pricing_read_availability
+    interval: 30s
+    rules:
+      - record: slo:geofence_pricing_read_availability:ratio_rate5m
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[5m]))), 1)"
+        labels:
+          slo: "geofence_pricing_read_availability"
+          window: "5m"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:geofence_pricing_read_availability:ratio_rate1h
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[1h]))), 1)"
+        labels:
+          slo: "geofence_pricing_read_availability"
+          window: "1h"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:geofence_pricing_read_availability:ratio_rate6h
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[6h]))), 1)"
+        labels:
+          slo: "geofence_pricing_read_availability"
+          window: "6h"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:geofence_pricing_read_availability:ratio_rate30d
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[30d]))), 1)"
+        labels:
+          slo: "geofence_pricing_read_availability"
+          window: "30d"
+          owner: "platform"
+          objective: "99.5"
+  - name: slo_geofence_pricing_write_availability
+    interval: 30s
+    rules:
+      - record: slo:geofence_pricing_write_availability:ratio_rate5m
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[5m]))), 1)"
+        labels:
+          slo: "geofence_pricing_write_availability"
+          window: "5m"
+          owner: "platform"
+          objective: "99"
+      - record: slo:geofence_pricing_write_availability:ratio_rate1h
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[1h]))), 1)"
+        labels:
+          slo: "geofence_pricing_write_availability"
+          window: "1h"
+          owner: "platform"
+          objective: "99"
+      - record: slo:geofence_pricing_write_availability:ratio_rate6h
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[6h]))), 1)"
+        labels:
+          slo: "geofence_pricing_write_availability"
+          window: "6h"
+          owner: "platform"
+          objective: "99"
+      - record: slo:geofence_pricing_write_availability:ratio_rate30d
+        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[30d]))), 1)"
+        labels:
+          slo: "geofence_pricing_write_availability"
+          window: "30d"
+          owner: "platform"
+          objective: "99"

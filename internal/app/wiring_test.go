@@ -143,3 +143,28 @@ func TestCutover_ProductionMQTTHelperWired(t *testing.T) {
 		t.Fatal("phase-42a/0050 cutover incomplete: mqtt.NewProductionPipelineMQTT( missing from internal/app; the PipelineSubscriber requires the auto-ack-disabled paho client + DLQ produced by this helper (added in phase-42a/0040)")
 	}
 }
+
+func TestChargingPlaceHistoryBackfillRunsWithoutFleetTelemetry(t *testing.T) {
+	src := readAppSources(t)
+	for _, required := range []string{
+		"a.initChargingPlaceHistoryBackfill(ctx)",
+		"sessionTracker = apitelem.NewTelemetrySessionTracker(a.DB, a.EventBus, nil, nil)",
+		"sessionTracker.StartChargingPlaceHistoryBackfill(ctx)",
+	} {
+		if !strings.Contains(src, required) {
+			t.Errorf("charging-place history backfill wiring missing %q", required)
+		}
+	}
+
+	initTelemetryAt := strings.Index(src, "if err := a.initTelemetryHandler(ctx); err != nil")
+	backfillAt := strings.Index(src, "a.initChargingPlaceHistoryBackfill(ctx)")
+	initWorkerAt := strings.Index(src, "a.initWorker(ctx)")
+	if initTelemetryAt < 0 || backfillAt < initTelemetryAt || initWorkerAt < backfillAt {
+		t.Fatalf(
+			"charging-place backfill must start after telemetry initialization and before workers: telemetry=%d backfill=%d worker=%d",
+			initTelemetryAt,
+			backfillAt,
+			initWorkerAt,
+		)
+	}
+}

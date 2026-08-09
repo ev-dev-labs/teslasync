@@ -180,7 +180,8 @@ function makeGeofence(o: Partial<Geofence> & { id: string; name: string }): Geof
     alertOnEntry: false,
     alertOnExit: false,
     enabled: true,
-    costPerKwh: null,
+    origin: 'manual',
+    needsReview: false,
     createdAt: '2024-01-01T00:00:00Z',
     ...o,
   };
@@ -565,8 +566,8 @@ describe('GeofencesPage — create modal', () => {
       alertOnEntry: true,
       alertOnExit: true,
       enabled: true,
-      costPerKwh: null,
     });
+    expect(body).not.toHaveProperty('costPerKwh');
     expect(toastMock.success).toHaveBeenCalledWith('Geofence created');
   });
 

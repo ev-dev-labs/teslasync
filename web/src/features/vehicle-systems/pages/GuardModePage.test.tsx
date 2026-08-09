@@ -189,7 +189,8 @@ function makeGeofence(over: Partial<Geofence> = {}): Geofence {
     alertOnEntry: true,
     alertOnExit: false,
     enabled: true,
-    costPerKwh: null,
+    origin: 'manual',
+    needsReview: false,
     createdAt: '2026-01-01T00:00:00Z',
     ...over,
   };

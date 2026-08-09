@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"strings"
 
@@ -68,47 +67,6 @@ func coalesceGeofenceRequestSpellings(req *geofenceCreateRequest) {
 	}
 }
 
-// geofenceCircleSegments controls the smoothness of the synthesized
-// polygon. 32 segments keeps the WKT compact while staying visually round
-// at typical city-block radii.
-const geofenceCircleSegments = 32
-
-// circleToPolygonWKT approximates a geodetic circle with a regular N-gon.
-// Coordinates are emitted in WKT order: `POLYGON((lon lat, ..., lon lat))`,
-// closing on the first vertex per the OGC spec.
-func circleToPolygonWKT(latDeg, lonDeg, radiusMeters float64, segments int) string {
-	if segments < 3 {
-		segments = 3
-	}
-	const metersPerDegLat = 111_320.0
-	latRad := latDeg * math.Pi / 180.0
-	metersPerDegLon := metersPerDegLat * math.Cos(latRad)
-	if metersPerDegLon < 1 {
-		// At the poles longitude collapses; clamp so we never divide by ~0.
-		metersPerDegLon = 1
-	}
-	dLat := radiusMeters / metersPerDegLat
-	dLon := radiusMeters / metersPerDegLon
-
-	var b strings.Builder
-	b.WriteString("POLYGON((")
-	for i := 0; i < segments; i++ {
-		theta := 2 * math.Pi * float64(i) / float64(segments)
-		lon := lonDeg + dLon*math.Sin(theta)
-		lat := latDeg + dLat*math.Cos(theta)
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		fmt.Fprintf(&b, "%.7f %.7f", lon, lat)
-	}
-	// Close the ring by repeating the first vertex.
-	lonClose := lonDeg + dLon*math.Sin(0)
-	latClose := latDeg + dLat*math.Cos(0)
-	fmt.Fprintf(&b, ",%.7f %.7f", lonClose, latClose)
-	b.WriteString("))")
-	return b.String()
-}
-
 // decodeGeofenceWriteBody unmarshals the request and resolves whichever
 // geometry the client supplied into a populated *systemmodel.Geofence.
 //
@@ -141,7 +99,7 @@ func decodeGeofenceWriteBody(body io.Reader) (*systemmodel.Geofence, *geofenceCr
 	}
 
 	if req.Latitude != nil && req.Longitude != nil && req.Radius != nil {
-		g.PolygonWKT = circleToPolygonWKT(*req.Latitude, *req.Longitude, *req.Radius, geofenceCircleSegments)
+		g.PolygonWKT = systemmodel.CircleToPolygonWKT(*req.Latitude, *req.Longitude, *req.Radius)
 	}
 
 	return g, &req, nil
@@ -179,6 +137,16 @@ type Handler struct {
 	// WithBulkStore overrides for tests. Never nil after NewHandler
 	// unless both db and WithBulkStore(nil) were passed.
 	bulk BulkStore
+	// rateRepo is the resolved charging-place discovery-review, archive,
+	// rate-CRUD, and preview/apply-repricing store used by
+	// rate_handler.go. Defaults to geofenceRepo; WithRateStore overrides
+	// for tests. See geofenceRateRepo in rate_handler.go for the exact
+	// method subset and rationale (same "small interface + Option +
+	// default-wire the concrete repo" idiom as BulkStore above, applied
+	// to the endpoints added for the geofence charging-place pricing
+	// feature so they get real route/validation/response-shape test
+	// coverage instead of a hand-duplicated "mirror").
+	rateRepo geofenceRateRepo
 	// audit is the optional per-mutation audit callback. nil → no-op.
 	// Bound to "geofence" entity_type at the call site so the subpackage
 	// does not need to know about the parent's audit categorization.
@@ -201,6 +169,12 @@ type AuditFunc func(r *http.Request, action string, entityID *int64, detail stri
 // the constructor wire the repo.
 func WithBulkStore(s BulkStore) Option { return func(h *Handler) { h.bulk = s } }
 
+// WithRateStore overrides the default rate/discovery/repricing store
+// (which is the same *geofencedb.GeofenceRepo used by the CRUD methods
+// and bulk store). Intended for tests; production code should construct
+// via NewHandler(db) and let the constructor wire the repo.
+func WithRateStore(s geofenceRateRepo) Option { return func(h *Handler) { h.rateRepo = s } }
+
 // WithAuditFunc installs the audit callback invoked after a successful
 // bulk_delete. Without it, BulkUpdate skips the audit row but still
 // performs the delete.
@@ -214,6 +188,7 @@ func NewHandler(db *database.DB, opts ...Option) *Handler {
 	if db != nil {
 		h.geofenceRepo = geofencedb.NewGeofenceRepo(db)
 		h.bulk = h.geofenceRepo
+		h.rateRepo = h.geofenceRepo
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -222,7 +197,15 @@ func NewHandler(db *database.DB, opts ...Option) *Handler {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	geofences, err := h.geofenceRepo.GetAll(r.Context())
+	var (
+		geofences []*systemmodel.Geofence
+		err       error
+	)
+	if strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("include_archived")), "true") {
+		geofences, err = h.geofenceRepo.GetAllIncludingArchived(r.Context())
+	} else {
+		geofences, err = h.geofenceRepo.GetAll(r.Context())
+	}
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list geofences")
 		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to list geofences"))
@@ -350,10 +333,30 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, &merged)
 }
 
+// Delete hard-deletes a geofence with no charging/drive history. A place
+// that has ever been referenced by a charging session, rate, or drive
+// endpoint (geofence_id / rate_id / start_geofence_id / end_geofence_id —
+// none of which carry a DB-level FK, by design, to keep the telemetry hot
+// path unblocked) is NEVER hard-deleted: the historical-integrity rule
+// requires those places to go through POST /{geofenceID}/archive instead,
+// so already-priced sessions keep resolving their place by id forever. A
+// place with no history at all keeps working exactly as before this
+// feature.
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := apiparams.URLParamInt64(r, "geofenceID")
 	if err != nil {
 		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid geofence ID"))
+		return
+	}
+
+	hasHistory, err := h.geofenceRepo.HasChargingHistory(r.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("failed to check geofence charging history")
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to check geofence history"))
+		return
+	}
+	if hasHistory {
+		apperror.Write(w, r, apperror.ErrGeofenceHasHistory)
 		return
 	}
 
