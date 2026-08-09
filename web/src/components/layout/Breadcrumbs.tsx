@@ -32,7 +32,7 @@ export function Breadcrumbs({
   homeAriaLabel,
 }: BreadcrumbsProps) {
   const { t } = useTranslation();
-  if (items.length <= 1) return null;
+  if (items.length === 0) return null;
 
   return (
     <nav

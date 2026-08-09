@@ -17,9 +17,9 @@ import { ROUTE_META, type RouteMeta } from '@/lib/routeMeta';
  * overrides is the `breadcrumbLabels` prop on `<PageContainer>`, which
  * passes them straight through to this hook.
  *
- * Returns an empty array for unknown / chrome-less routes; `<Breadcrumbs>`
- * also self-suppresses when there are <= 1 items, so top-level pages render
- * nothing without per-page wiring.
+ * Returns an empty array only for unknown / chrome-less routes. Registered
+ * top-level routes return one current-page item so the global Layout can
+ * render Home > Current Page everywhere without per-page wiring.
  */
 export function useBreadcrumbs(overrides?: Partial<Record<string, string>>): BreadcrumbItem[] {
   const location = useLocation();
@@ -83,4 +83,3 @@ export function useBreadcrumbs(overrides?: Partial<Record<string, string>>): Bre
     return items;
   }, [location.pathname, params, overrides, t]);
 }
-

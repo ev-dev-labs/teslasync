@@ -468,6 +468,13 @@ describe('Layout — sidebar style selection', () => {
   })
 })
 
+describe('Layout — global page chrome', () => {
+  it('mounts breadcrumbs for a registered route that is not a sidebar entry', () => {
+    renderLayout('/notifications/archived')
+    expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument()
+  })
+})
+
 // ══════════════════════════════════════════════════════════════════════
 // Legacy sidebar navigation + active state
 // ══════════════════════════════════════════════════════════════════════

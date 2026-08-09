@@ -11,9 +11,11 @@ const renderItems = (items: BreadcrumbItem[], homeHref?: string) =>
   );
 
 describe('Breadcrumbs', () => {
-  it('renders nothing when items.length <= 1', () => {
+  it('renders Home and the current page for a single top-level item', () => {
     const { container } = renderItems([{ label: 'Drives' }]);
-    expect(container.querySelector('nav')).toBeNull();
+    expect(container.querySelector('nav')).toBeInTheDocument();
+    expect(container.querySelector('a[href="/"]')).toBeInTheDocument();
+    expect(screen.getByText('Drives').closest('a')).toBeNull();
   });
 
   it('renders nothing when items is empty', () => {

@@ -1669,14 +1669,7 @@ export default function Layout() {
           )}
         >
           <div className="w-full px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8 2xl:px-10 3xl:px-12">
-            {activeNavEntry && (
-              <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">
-                <LayoutBreadcrumbs className="min-w-0 text-xs" />
-                <p className="hidden shrink-0 text-2xs text-[var(--text-muted)] lg:block">
-                  {t('nav.quickSearchHint', 'Ctrl+K to jump')}
-                </p>
-              </div>
-            )}
+            <LayoutBreadcrumbs className="min-w-0 text-xs" />
             <RouteTransition>
               <Outlet />
             </RouteTransition>
