@@ -1,13 +1,12 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { VehicleSelect } from '@/components/forms'
 import { PageContainer } from '@/components/layout'
 import { AlertBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
-import { Badge, Button, Select } from '@/components/ui'
+import { Button } from '@/components/ui'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
-import { Icons } from '@/lib/icons'
 import { VehicleManagementWorkspace } from '../components/vehicle-management'
 
 export default function VehicleManagementPage() {
@@ -18,7 +17,6 @@ export default function VehicleManagementPage() {
   const {
     vehicleId,
     vehicle: selectedFromStore,
-    setVehicleId,
   } = useSelectedVehicle()
   const vehicles = vehiclesQuery.data ?? []
   const selectedVehicle =
@@ -29,28 +27,6 @@ export default function VehicleManagementPage() {
     vehicles[0] ??
     null
 
-  const vehicleOptions = useMemo(
-    () =>
-      vehicles.map((vehicle) => ({
-        value: String(vehicle.id),
-        label:
-          vehicle.display_name?.trim() ||
-          vehicle.vin ||
-          t('vehicleManagement.vehicle.fallbackName', 'Vehicle {{id}}', {
-            id: vehicle.id,
-          }),
-      })),
-    [t, vehicles],
-  )
-
-  const selectedName = selectedVehicle
-    ? selectedVehicle.display_name?.trim() ||
-      selectedVehicle.vin ||
-      t('vehicleManagement.vehicle.fallbackName', 'Vehicle {{id}}', {
-        id: selectedVehicle.id,
-      })
-    : null
-
   return (
     <PageContainer
       title={t('vehicleManagement.pageTitle', 'Vehicle Management')}
@@ -59,27 +35,15 @@ export default function VehicleManagementPage() {
         'Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.',
       )}
       actions={
-        vehicles.length > 1 ? (
-          <Select
-            id="vehicle-management-vehicle"
-            aria-label={t(
-              'vehicleManagement.selectVehicle',
-              'Select management vehicle',
-            )}
-            value={selectedVehicle ? String(selectedVehicle.id) : ''}
-            onChange={(event) => {
-              const next = Number(event.target.value)
-              if (Number.isFinite(next) && next > 0) setVehicleId(next)
-            }}
-            options={vehicleOptions}
-            className="min-h-11 min-w-48"
-          />
-        ) : selectedName ? (
-          <Badge variant="neutral" size="lg" className="min-h-11">
-            <Icons.vehicle className="h-3.5 w-3.5" aria-hidden="true" />
-            {selectedName}
-          </Badge>
-        ) : null
+        <VehicleSelect
+          id="vehicle-management-vehicle"
+          ariaLabel={t(
+            'vehicleManagement.selectVehicle',
+            'Select management vehicle',
+          )}
+          className="min-h-11 min-w-48"
+          withIcon
+        />
       }
     >
       <div className="space-y-4">

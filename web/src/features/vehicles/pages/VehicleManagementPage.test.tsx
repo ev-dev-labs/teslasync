@@ -144,6 +144,18 @@ describe('VehicleManagementPage', () => {
     expect(setVehicleIdMock).toHaveBeenCalledWith(2)
   })
 
+  it('keeps the vehicle dropdown visible for a single-vehicle fleet', () => {
+    const vehicle = makeVehicle(1, 'Falcon')
+    installHooks({ vehicles: [vehicle], selected: vehicle })
+
+    renderPage()
+
+    expect(screen.getByLabelText('Select management vehicle')).toHaveValue('1')
+    expect(
+      screen.getByRole('option', { name: 'Falcon' }),
+    ).toBeInTheDocument()
+  })
+
   it('keeps the workspace visible while the fleet loads', () => {
     installHooks({ vehicles: undefined, selected: null, loading: true })
 
