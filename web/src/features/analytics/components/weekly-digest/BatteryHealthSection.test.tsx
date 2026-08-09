@@ -83,26 +83,26 @@ import { ApiError } from '@/lib/resilience';
 
 // A fully-zeroed DigestMetrics so each test overrides only the fields the
 // battery section actually reads (chargingSessionCount, batteryStart,
-// batteryEnd, chargeEnergyAdded) — the prop type demands the whole shape.
+// batteryEnd, chargeEnergyAddedWh) — the prop type demands the whole shape.
 function makeMetrics(over: Partial<DigestMetrics> = {}): DigestMetrics {
   return {
-    totalDistance: 0,
-    prevDistance: 0,
+    totalDistanceM: 0,
+    prevDistanceM: 0,
     totalDrives: 0,
     prevDriveCount: 0,
-    energyUsed: 0,
-    prevEnergy: 0,
+    energyUsedWh: 0,
+    prevEnergyWh: 0,
     chargingCost: 0,
     prevChargingCost: 0,
     co2Saved: 0,
     prevCo2: 0,
-    avgEfficiency: 0,
-    prevAvgEfficiency: 0,
-    totalDuration: 0,
+    avgEfficiencyWhPerM: 0,
+    prevAvgEfficiencyWhPerM: 0,
+    totalDurationS: 0,
     topDrive: undefined,
-    chargeEnergyAdded: 0,
-    prevChargeEnergy: 0,
-    avgChargeRate: 0,
+    chargeEnergyAddedWh: 0,
+    prevChargeEnergyWh: 0,
+    avgChargePowerW: 0,
     chargingSessionCount: 0,
     batteryStart: 0,
     batteryEnd: 0,
@@ -147,7 +147,7 @@ describe('BatteryHealthSection — populated', () => {
 
   it('renders both battery pills with their labels and rounded SoC values', () => {
     renderSection(
-      makeMetrics({ chargingSessionCount: 12, batteryStart: 20, batteryEnd: 80, chargeEnergyAdded: 40 }),
+      makeMetrics({ chargingSessionCount: 12, batteryStart: 20, batteryEnd: 80, chargeEnergyAddedWh: 40_000 }),
     );
 
     expect(screen.getByText('Avg Battery at Charge Start')).toBeInTheDocument();
@@ -159,7 +159,7 @@ describe('BatteryHealthSection — populated', () => {
 
   it('derives the three mini-stats: gain = end − start, fmtInt session count, range = energy × 5.5 km', () => {
     renderSection(
-      makeMetrics({ chargingSessionCount: 12, batteryStart: 20, batteryEnd: 80, chargeEnergyAdded: 40 }),
+      makeMetrics({ chargingSessionCount: 12, batteryStart: 20, batteryEnd: 80, chargeEnergyAddedWh: 40_000 }),
     );
 
     // Avg Charge Gain: fmtNumber(80 - 20, 1) → "60.0%".
@@ -177,7 +177,7 @@ describe('BatteryHealthSection — populated', () => {
 
   it('does not render the loading / error / empty bodies when data is present', () => {
     const { container } = renderSection(
-      makeMetrics({ chargingSessionCount: 3, batteryStart: 50, batteryEnd: 70, chargeEnergyAdded: 10 }),
+      makeMetrics({ chargingSessionCount: 3, batteryStart: 50, batteryEnd: 70, chargeEnergyAddedWh: 10_000 }),
     );
 
     expect(container.querySelector('.animate-pulse')).toBeNull();
@@ -192,7 +192,7 @@ describe('BatteryHealthSection — computation & rounding', () => {
   it('rounds each pill independently but computes the gain from the RAW (unrounded) values', () => {
     // start 54.6 → pill 55%, end 90.4 → pill 90%; gain uses raw 90.4 − 54.6.
     renderSection(
-      makeMetrics({ chargingSessionCount: 4, batteryStart: 54.6, batteryEnd: 90.4, chargeEnergyAdded: 0 }),
+      makeMetrics({ chargingSessionCount: 4, batteryStart: 54.6, batteryEnd: 90.4, chargeEnergyAddedWh: 0 }),
     );
 
     expect(screen.getByText('55%')).toBeInTheDocument();
@@ -203,7 +203,7 @@ describe('BatteryHealthSection — computation & rounding', () => {
 
   it('scales estimated range linearly with charge energy (× 5.5 km per unit)', () => {
     renderSection(
-      makeMetrics({ chargingSessionCount: 1, batteryStart: 10, batteryEnd: 20, chargeEnergyAdded: 100 }),
+      makeMetrics({ chargingSessionCount: 1, batteryStart: 10, batteryEnd: 20, chargeEnergyAddedWh: 100_000 }),
     );
     // 100 × 5.5 = 550, rounded to 0 dp.
     expect(screen.getByText('550 km')).toBeInTheDocument();
@@ -305,7 +305,7 @@ describe('BatteryHealthSection — null safety', () => {
     const holes = sparse as Record<string, unknown>;
     holes.batteryStart = undefined;
     holes.batteryEnd = undefined;
-    holes.chargeEnergyAdded = undefined;
+    holes.chargeEnergyAddedWh = undefined;
 
     renderSection(sparse);
 

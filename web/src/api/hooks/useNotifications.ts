@@ -68,6 +68,7 @@ export type NotificationChannelInput =
 
 export const notificationKeys = {
   alerts: ['alerts'] as const,
+  alertHistory: (limit: number) => ['alerts', 'history', limit] as const,
   alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
   alertMetrics: ['alert-metrics'] as const,
@@ -134,6 +135,21 @@ export function useAlerts() {
     queryKey: notificationKeys.alerts,
     queryFn: ({ signal }) => request<Alert[]>('/alerts', { signal }),
     refetchInterval: INTERVALS.STANDARD,
+    select: safeArray,
+  });
+}
+
+/**
+ * Fetches the largest backend-supported alert page for analytical views.
+ * Ordinary inbox consumers keep the lightweight polling query above.
+ */
+export function useAlertHistory(limit = 1000) {
+  const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  return useQuery({
+    queryKey: notificationKeys.alertHistory(boundedLimit),
+    queryFn: ({ signal }) =>
+      request<Alert[]>(`/alerts?limit=${boundedLimit}`, { signal }),
+    staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
   });
 }

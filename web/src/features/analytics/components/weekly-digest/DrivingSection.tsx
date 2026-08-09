@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUnits } from '@/hooks/useUnits';
 import { Car, BarChart3, Clock, TrendingDown, TrendingUp, Activity } from 'lucide-react';
 import { GlassPanel, Badge, PanelTitle, Text, Caption } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
@@ -9,7 +11,9 @@ import {
 } from '@/components/charts';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDate } from '@/lib/dateFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { MiniStat } from './MiniStat';
+import { formatEfficiencyFromSI } from './display';
 import { pctChange } from './helpers';
 import type { DigestMetrics, DailyDistanceEntry } from './types';
 
@@ -31,8 +35,21 @@ export function DrivingSection({
   onRetry,
 }: DrivingSectionProps) {
   const { t } = useTranslation();
+  const { unitPrefs, formatDistance, formatDuration } = useUnits();
   const distanceData = dailyDistanceData ?? [];
-  const hasChart = distanceData.some((d) => (d.distance ?? 0) > 0);
+  const hasChart = distanceData.some((entry) => (entry.distanceM ?? 0) > 0);
+  const distanceChartData = useMemo(
+    () =>
+      distanceData.map((entry) => ({
+        day: entry.day,
+        distance: convertDistanceFromSI(entry.distanceM ?? 0, unitPrefs.distance),
+      })),
+    [distanceData, unitPrefs.distance],
+  );
+  const topDriveEfficiencyWhPerM =
+    metrics.topDrive && (metrics.topDrive.distanceM ?? 0) > 0
+      ? (metrics.topDrive.energyUsedWh ?? 0) / metrics.topDrive.distanceM
+      : 0;
 
   return (
     <GlassPanel className="flex h-full flex-col gap-5 p-4 sm:p-5">
@@ -44,7 +61,9 @@ export function DrivingSection({
       {/* Daily Distance bar chart */}
       <div>
         <Caption className="mb-2 block">
-          {t('analytics.weeklyDigest.dailyDistance', 'Daily Distance (km)')}
+          {t('analytics.weeklyDigest.dailyDistance', 'Daily Distance ({{unit}})', {
+            unit: unitPrefs.distance,
+          })}
         </Caption>
         {isLoading ? (
           <Skeleton height={220} />
@@ -54,10 +73,14 @@ export function DrivingSection({
           <div
             className="h-56 sm:h-64 xl:h-72"
             role="img"
-            aria-label={t('analytics.weeklyDigest.dailyDistanceChartLabel', 'Bar chart of daily driving distance in kilometres')}
+            aria-label={t(
+              'analytics.weeklyDigest.dailyDistanceChartLabel',
+              'Bar chart of daily driving distance in {{unit}}',
+              { unit: unitPrefs.distance },
+            )}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={distanceData} margin={chartMarginLabeled}>
+              <BarChart data={distanceChartData} margin={chartMarginLabeled}>
                 {chartGrid}
                 <XAxis dataKey="day" {...axisTickSm} />
                 <YAxis {...axisTickSm} tickFormatter={(v: number) => fmtInt(v)} />
@@ -84,23 +107,30 @@ export function DrivingSection({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <MiniStat
           label={t('analytics.weeklyDigest.avgEfficiency', 'Avg Efficiency')}
-          value={`${fmtNumber(metrics.avgEfficiency ?? 0, 1)} Wh/km`}
+          value={formatEfficiencyFromSI(metrics.avgEfficiencyWhPerM ?? 0, unitPrefs)}
           icon={<BarChart3 className="h-4 w-4" />}
         />
         <MiniStat
           label={t('analytics.weeklyDigest.totalDrivingTime', 'Total Driving Time')}
-          value={`${fmtInt(Math.floor((metrics.totalDuration ?? 0) / 60))}h ${fmtInt((metrics.totalDuration ?? 0) % 60)}m`}
+          value={formatDuration(metrics.totalDurationS ?? 0, { precision: 1 })}
           icon={<Clock className="h-4 w-4" />}
         />
         <MiniStat
           label={t('analytics.weeklyDigest.efficiencyChange', 'Efficiency Change')}
           value={
-            (metrics.prevAvgEfficiency ?? 0) > 0
-              ? `${fmtNumber(pctChange(metrics.avgEfficiency ?? 0, metrics.prevAvgEfficiency ?? 0), 1)}%`
+            (metrics.prevAvgEfficiencyWhPerM ?? 0) > 0
+              ? `${fmtNumber(
+                  pctChange(
+                    metrics.avgEfficiencyWhPerM ?? 0,
+                    metrics.prevAvgEfficiencyWhPerM ?? 0,
+                  ),
+                  1,
+                )}%`
               : '—'
           }
           icon={
-            (metrics.avgEfficiency ?? 0) <= (metrics.prevAvgEfficiency ?? 0) ? (
+            (metrics.avgEfficiencyWhPerM ?? 0) <=
+            (metrics.prevAvgEfficiencyWhPerM ?? 0) ? (
               <TrendingDown className="h-4 w-4 text-emerald-300" />
             ) : (
               <TrendingUp className="h-4 w-4 text-rose-300" />
@@ -125,25 +155,25 @@ export function DrivingSection({
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.date', 'Date')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {formatDate(metrics.topDrive.start_date)}
+                {formatDate(metrics.topDrive.startTs)}
                 </Text>
               </div>
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.distance', 'Distance')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {fmtNumber(metrics.topDrive.distance ?? 0, 1)} km
+                  {formatDistance(metrics.topDrive.distanceM ?? 0, { precision: 1 })}
                 </Text>
               </div>
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.duration', 'Duration')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {fmtInt(metrics.topDrive.duration_min ?? 0)} min
+                  {formatDuration(metrics.topDrive.durationS ?? 0, { precision: 1 })}
                 </Text>
               </div>
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.efficiency', 'Efficiency')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {fmtNumber(metrics.topDrive.efficiency_wh_km ?? 0, 1)} Wh/km
+                  {formatEfficiencyFromSI(topDriveEfficiencyWhPerM, unitPrefs)}
                 </Text>
               </div>
             </div>

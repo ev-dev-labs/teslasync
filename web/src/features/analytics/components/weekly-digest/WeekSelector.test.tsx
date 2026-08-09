@@ -23,7 +23,7 @@
  *   6. A11Y        — the icon-only-on-mobile buttons expose real text accessible
  *                    names via aria-label, the calendar glyph is decorative
  *                    (aria-hidden), and the label is never hidden from AT.
- *   7. KEYBOARD    — Previous is a genuine native <button>, so it is focusable
+ *   7. KEYBOARD    — Previous is a genuine native button, so it is focusable
  *                    and keyboard-operable (Enter/Space) out of the box.
  *   8. HARDENING   — an empty label degrades to an em-dash placeholder instead of
  *                    collapsing the band into a blank strip.
@@ -142,7 +142,7 @@ describe('WeekSelector', () => {
     setup();
 
     const prev = prevButton();
-    // Native <button> semantics guarantee Enter/Space activation + tab focus.
+    // Native button semantics guarantee Enter/Space activation + tab focus.
     expect(prev.tagName).toBe('BUTTON');
     prev.focus();
     expect(prev).toHaveFocus();

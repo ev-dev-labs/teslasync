@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useUnits } from '@/hooks/useUnits';
 import { Battery, TrendingUp, Zap, MapPin } from 'lucide-react';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
@@ -7,12 +8,8 @@ import { BatteryPill } from './BatteryPill';
 import { MiniStat } from './MiniStat';
 import type { DigestMetrics } from './types';
 
-// Rough driving-range estimate: ~5.5 km of range gained per unit of charge
-// energy added. The weekly-digest feature treats `chargeEnergyAdded` on the
-// kWh scale (ChargingSection labels the same value "kWh"), so this factor is
-// km-per-kWh and stays consistent with the sibling section — it is deliberately
-// NOT a Wh→km conversion despite the underlying `total_energy_added_wh` field.
-const EST_RANGE_KM_PER_ENERGY_UNIT = 5.5;
+// Rough driving-range estimate: 5.5 km/kWh is dimensionally 5.5 m/Wh.
+const EST_RANGE_M_PER_WH = 5.5;
 
 interface BatteryHealthSectionProps {
   metrics: DigestMetrics;
@@ -30,6 +27,7 @@ export function BatteryHealthSection({
   onRetry,
 }: BatteryHealthSectionProps) {
   const { t } = useTranslation();
+  const { formatDistance } = useUnits();
   const hasData = (metrics.chargingSessionCount ?? 0) > 0;
 
   return (
@@ -76,7 +74,10 @@ export function BatteryHealthSection({
             />
             <MiniStat
               label={t('analytics.weeklyDigest.estRangeAdded', 'Est. Range Added')}
-              value={`${fmtNumber((metrics.chargeEnergyAdded ?? 0) * EST_RANGE_KM_PER_ENERGY_UNIT, 0)} km`}
+              value={formatDistance(
+                (metrics.chargeEnergyAddedWh ?? 0) * EST_RANGE_M_PER_WH,
+                { precision: 0 },
+              )}
               icon={<MapPin className="h-4 w-4" />}
             />
           </div>

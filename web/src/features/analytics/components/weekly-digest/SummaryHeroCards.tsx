@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { Car, Activity, Zap, Fuel, Leaf, MapPin } from 'lucide-react';
 import { SectionTitle, GlassPanel } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
@@ -29,6 +30,7 @@ export function SummaryHeroCards({
 }: SummaryHeroCardsProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+  const { formatDistance, formatEnergy } = useUnits();
 
   return (
     <section
@@ -54,8 +56,8 @@ export function SummaryHeroCards({
           <HighlightCard
             icon={<Car className="h-5 w-5" />}
             label={t('analytics.weeklyDigest.totalDistance', 'Total Distance')}
-            value={`${fmtNumber(metrics.totalDistance ?? 0, 1)} km`}
-            change={trendFor(metrics.totalDistance ?? 0, metrics.prevDistance ?? 0)}
+            value={formatDistance(metrics.totalDistanceM ?? 0, { precision: 1 })}
+            change={trendFor(metrics.totalDistanceM ?? 0, metrics.prevDistanceM ?? 0)}
             color="cyan"
           />
           <HighlightCard
@@ -68,8 +70,8 @@ export function SummaryHeroCards({
           <HighlightCard
             icon={<Zap className="h-5 w-5" />}
             label={t('analytics.weeklyDigest.energyUsed', 'Energy Used')}
-            value={`${fmtNumber(metrics.energyUsed ?? 0, 1)} kWh`}
-            change={trendFor(metrics.energyUsed ?? 0, metrics.prevEnergy ?? 0, true)}
+            value={formatEnergy(metrics.energyUsedWh ?? 0, { precision: 1 })}
+            change={trendFor(metrics.energyUsedWh ?? 0, metrics.prevEnergyWh ?? 0, true)}
             color="purple"
           />
           <HighlightCard

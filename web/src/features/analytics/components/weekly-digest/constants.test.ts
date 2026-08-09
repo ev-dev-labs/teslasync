@@ -68,10 +68,10 @@ describe('DAY_LABELS', () => {
   });
 
   it('maps to one zeroed bin per weekday in order (digest binning shape)', () => {
-    const bins = DAY_LABELS.map((day) => ({ day, distance: 0 }));
+    const bins = DAY_LABELS.map((day) => ({ day, distanceM: 0 }));
     expect(bins).toHaveLength(7);
     expect(bins.map((b) => b.day)).toEqual([...DAY_LABELS]);
-    expect(bins.every((b) => b.distance === 0)).toBe(true);
+    expect(bins.every((b) => b.distanceM === 0)).toBe(true);
   });
 
   it('is a frozen singleton that rejects mutation', () => {

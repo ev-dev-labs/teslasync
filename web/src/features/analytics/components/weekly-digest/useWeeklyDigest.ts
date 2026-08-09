@@ -1,17 +1,64 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { request } from '@/api/client';
+import { useDrives } from '@/api/hooks/useDriving';
+import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
+import { useAlertHistory } from '@/api/hooks/useNotifications';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 
 import type {
-  Drive, ChargingSession, Alert,
+  Drive, ChargingSession,
   DigestMetrics, FunFact, DailyDistanceEntry, DailyEnergyEntry, AlertPieEntry,
 } from './types';
 import { DAY_LABELS, ALERT_SEVERITY_COLORS, CO2_PER_KWH_GASOLINE_KG } from './constants';
 import { CHART_COLORS } from '@/components/charts';
 import { getWeekRange, isInRange, dayOfWeekIndex, findCityPair } from './helpers';
+
+const ANALYTICS_WINDOW_LIMIT = 1000;
+
+function averagePresent(values: Array<number | null | undefined>): number {
+  const present = values.filter(
+    (value): value is number => typeof value === 'number' && Number.isFinite(value),
+  );
+  return present.length > 0
+    ? present.reduce((sum, value) => sum + value, 0) / present.length
+    : 0;
+}
+
+function efficiencyWhPerM(drives: readonly Drive[]): number {
+  const measuredDrives = drives.filter(
+    (drive) =>
+      Number.isFinite(drive.distanceM)
+      && drive.distanceM > 0
+      && typeof drive.energyUsedWh === 'number'
+      && Number.isFinite(drive.energyUsedWh),
+  );
+  const distanceM = measuredDrives.reduce(
+    (sum, drive) => sum + safeNumber(drive.distanceM),
+    0,
+  );
+  if (distanceM <= 0) return 0;
+  const energyWh = measuredDrives.reduce(
+    (sum, drive) => sum + safeNumber(drive.energyUsedWh),
+    0,
+  );
+  return energyWh / distanceM;
+}
+
+function chargingPowerW(session: ChargingSession): number {
+  const reportedPowerW = safeNumber(session.avg_power_w);
+  if (reportedPowerW > 0) return reportedPowerW;
+
+  const startMs = Date.parse(session.started_at);
+  const endMs = session.ended_at ? Date.parse(session.ended_at) : Number.NaN;
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return 0;
+
+  const durationHours = (endMs - startMs) / 3_600_000;
+  return durationHours > 0
+    ? safeNumber(session.total_energy_added_wh) / durationHours
+    : 0;
+}
 
 export function useWeeklyDigest() {
   const [weekOffset, setWeekOffset] = useState(0);
@@ -40,15 +87,27 @@ export function useWeeklyDigest() {
   );
 
   const selectedVehicleId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  const selectedVehicleNumber = useMemo(() => {
+    const parsed = Number(selectedVehicleId);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }, [selectedVehicleId]);
+
+  const queryStart = useMemo(() => prevStart.toISOString(), [prevStart]);
+  const queryEndExclusive = useMemo(
+    () => new Date(weekEnd.getTime() + 1).toISOString(),
+    [weekEnd],
+  );
 
   /* ── Data queries ──
    * Each domain query is surfaced independently so every page section can own
    * its loading / empty / error state (modern-ui §8) instead of gating the
-   * whole page behind one combined flag. */
-  const drivesQuery = useQuery({
-    queryKey: ['drives', selectedVehicleId],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${selectedVehicleId}`),
-    enabled: !!selectedVehicleId,
+   * whole page behind one combined flag. The drive and charge requests cover
+   * exactly the selected + comparison weeks, avoiding the list endpoints'
+   * default 50-row page silently dropping older weeks. */
+  const drivesQuery = useDrives(selectedVehicleId || undefined, {
+    start: queryStart,
+    end: queryEndExclusive,
+    limit: ANALYTICS_WINDOW_LIMIT,
   });
   const {
     data: drives,
@@ -57,10 +116,10 @@ export function useWeeklyDigest() {
     refetch: refetchDrives,
   } = drivesQuery;
 
-  const chargingQuery = useQuery({
-    queryKey: ['charging', selectedVehicleId],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${selectedVehicleId}`),
-    enabled: !!selectedVehicleId,
+  const chargingQuery = useChargingSessionsPaginated(selectedVehicleNumber, {
+    start: queryStart,
+    end: queryEndExclusive,
+    limit: ANALYTICS_WINDOW_LIMIT,
   });
   const {
     data: chargingSessions,
@@ -69,11 +128,7 @@ export function useWeeklyDigest() {
     refetch: refetchCharging,
   } = chargingQuery;
 
-  const alertsQuery = useQuery({
-    queryKey: ['alerts', selectedVehicleId],
-    queryFn: () => request<Alert[]>('/alerts'),
-    enabled: !!selectedVehicleId,
-  });
+  const alertsQuery = useAlertHistory(ANALYTICS_WINDOW_LIMIT);
   const {
     data: alerts,
     isLoading: alertsLoading,
@@ -106,28 +161,37 @@ export function useWeeklyDigest() {
 
   /* ── Filter data by week ── */
   const weekDrives = useMemo(
-    () => (drives ?? []).filter((d) => isInRange(d.start_date, weekStart, weekEnd)),
+    () => (drives ?? []).filter((drive) => isInRange(drive.startTs, weekStart, weekEnd)),
     [drives, weekStart, weekEnd],
   );
 
   const prevWeekDrives = useMemo(
-    () => (drives ?? []).filter((d) => isInRange(d.start_date, prevStart, prevEnd)),
+    () => (drives ?? []).filter((drive) => isInRange(drive.startTs, prevStart, prevEnd)),
     [drives, prevStart, prevEnd],
   );
 
   const weekCharging = useMemo(
-    () => (chargingSessions ?? []).filter((c) => isInRange(c.start_ts, weekStart, weekEnd)),
+    () => (chargingSessions ?? []).filter(
+      (session) => isInRange(session.started_at, weekStart, weekEnd),
+    ),
     [chargingSessions, weekStart, weekEnd],
   );
 
   const prevWeekCharging = useMemo(
-    () => (chargingSessions ?? []).filter((c) => isInRange(c.start_ts, prevStart, prevEnd)),
+    () => (chargingSessions ?? []).filter(
+      (session) => isInRange(session.started_at, prevStart, prevEnd),
+    ),
     [chargingSessions, prevStart, prevEnd],
   );
 
   const weekAlerts = useMemo(
-    () => (alerts ?? []).filter((a) => isInRange(a.created_at, weekStart, weekEnd)),
-    [alerts, weekStart, weekEnd],
+    () => (alerts ?? []).filter(
+      (alert) =>
+        isInRange(alert.created_at, weekStart, weekEnd)
+        && selectedVehicleNumber !== null
+        && (alert.vehicle_id === selectedVehicleNumber || alert.vehicle_id === 0),
+    ),
+    [alerts, selectedVehicleNumber, weekStart, weekEnd],
   );
 
   /* ── Aggregated metrics ── */
@@ -135,55 +199,61 @@ export function useWeeklyDigest() {
     // safeNumber() coerces null / undefined / NaN / ±Infinity to 0 so a single
     // malformed API row can't poison an aggregate into NaN (the fields are typed
     // `number`, but partial telemetry rows can arrive with missing values).
-    const totalDistance = weekDrives.reduce((s, d) => s + safeNumber(d.distance), 0);
-    const prevDistance = prevWeekDrives.reduce((s, d) => s + safeNumber(d.distance), 0);
+    const totalDistanceM = weekDrives.reduce((sum, drive) => sum + safeNumber(drive.distanceM), 0);
+    const prevDistanceM = prevWeekDrives.reduce(
+      (sum, drive) => sum + safeNumber(drive.distanceM),
+      0,
+    );
     const totalDrives = weekDrives.length;
     const prevDriveCount = prevWeekDrives.length;
-    const energyUsed = weekDrives.reduce((s, d) => s + safeNumber(d.energy_used), 0);
-    const prevEnergy = prevWeekDrives.reduce((s, d) => s + safeNumber(d.energy_used), 0);
-    const chargingCost = weekCharging.reduce((s, c) => s + safeNumber(c.cost), 0);
-    const prevChargingCost = prevWeekCharging.reduce((s, c) => s + safeNumber(c.cost), 0);
-    const co2Saved = energyUsed * CO2_PER_KWH_GASOLINE_KG;
-    const prevCo2 = prevEnergy * CO2_PER_KWH_GASOLINE_KG;
-    const avgEfficiency =
-      totalDrives > 0
-        ? weekDrives.reduce((s, d) => s + safeNumber(d.efficiency_wh_km), 0) / totalDrives
-        : 0;
-    const prevAvgEfficiency =
-      prevDriveCount > 0
-        ? prevWeekDrives.reduce((s, d) => s + safeNumber(d.efficiency_wh_km), 0) / prevDriveCount
-        : 0;
-    const totalDuration = weekDrives.reduce((s, d) => s + safeNumber(d.duration_min), 0);
+    const energyUsedWh = weekDrives.reduce(
+      (sum, drive) => sum + safeNumber(drive.energyUsedWh),
+      0,
+    );
+    const prevEnergyWh = prevWeekDrives.reduce(
+      (sum, drive) => sum + safeNumber(drive.energyUsedWh),
+      0,
+    );
+    const chargingCost = weekCharging.reduce(
+      (sum, session) => sum + safeNumber(session.cost_decimal),
+      0,
+    );
+    const prevChargingCost = prevWeekCharging.reduce(
+      (sum, session) => sum + safeNumber(session.cost_decimal),
+      0,
+    );
+    const co2Saved =
+      convertEnergyFromSI(energyUsedWh, 'kWh') * CO2_PER_KWH_GASOLINE_KG;
+    const prevCo2 =
+      convertEnergyFromSI(prevEnergyWh, 'kWh') * CO2_PER_KWH_GASOLINE_KG;
+    const avgEfficiencyWhPerM = efficiencyWhPerM(weekDrives);
+    const prevAvgEfficiencyWhPerM = efficiencyWhPerM(prevWeekDrives);
+    const totalDurationS = weekDrives.reduce(
+      (sum, drive) => sum + safeNumber(drive.durationS),
+      0,
+    );
     const topDrive =
       weekDrives.length > 0
-        ? weekDrives.reduce((best, d) =>
-            safeNumber(d.distance) > safeNumber(best.distance) ? d : best,
+        ? weekDrives.reduce((best, drive) =>
+            safeNumber(drive.distanceM) > safeNumber(best.distanceM) ? drive : best,
           )
         : undefined;
-    const chargeEnergyAdded = weekCharging.reduce(
-      (s, c) => s + safeNumber(c.total_energy_added_wh),
+    const chargeEnergyAddedWh = weekCharging.reduce(
+      (sum, session) => sum + safeNumber(session.total_energy_added_wh),
       0,
     );
-    const prevChargeEnergy = prevWeekCharging.reduce(
-      (s, c) => s + safeNumber(c.total_energy_added_wh),
+    const prevChargeEnergyWh = prevWeekCharging.reduce(
+      (sum, session) => sum + safeNumber(session.total_energy_added_wh),
       0,
     );
-    const avgChargeRate =
-      weekCharging.length > 0
-        ? weekCharging.reduce(
-            (s, c) =>
-              s + (c.duration_min > 0 ? (safeNumber(c.total_energy_added_wh) / c.duration_min) * 60 : 0),
-            0,
-          ) / weekCharging.length
-        : 0;
-    const batteryStart =
-      weekCharging.length > 0
-        ? weekCharging.reduce((s, c) => s + safeNumber(c.start_battery_pct), 0) / weekCharging.length
-        : 0;
-    const batteryEnd =
-      weekCharging.length > 0
-        ? weekCharging.reduce((s, c) => s + safeNumber(c.end_battery_pct), 0) / weekCharging.length
-        : 0;
+    const chargingPowersW = weekCharging
+      .map((session) => chargingPowerW(session))
+      .filter((powerW) => powerW > 0);
+    const avgChargePowerW = chargingPowersW.length > 0
+      ? chargingPowersW.reduce((sum, powerW) => sum + powerW, 0) / chargingPowersW.length
+      : 0;
+    const batteryStart = averagePresent(weekCharging.map((session) => session.start_soc_pct));
+    const batteryEnd = averagePresent(weekCharging.map((session) => session.end_soc_pct));
 
     const alertsByType: Record<string, number> = {};
     for (const a of weekAlerts) {
@@ -191,23 +261,23 @@ export function useWeeklyDigest() {
     }
 
     return {
-      totalDistance,
-      prevDistance,
+      totalDistanceM,
+      prevDistanceM,
       totalDrives,
       prevDriveCount,
-      energyUsed,
-      prevEnergy,
+      energyUsedWh,
+      prevEnergyWh,
       chargingCost,
       prevChargingCost,
       co2Saved,
       prevCo2,
-      avgEfficiency,
-      prevAvgEfficiency,
-      totalDuration,
+      avgEfficiencyWhPerM,
+      prevAvgEfficiencyWhPerM,
+      totalDurationS,
       topDrive,
-      chargeEnergyAdded,
-      prevChargeEnergy,
-      avgChargeRate,
+      chargeEnergyAddedWh,
+      prevChargeEnergyWh,
+      avgChargePowerW,
       chargingSessionCount: weekCharging.length,
       batteryStart,
       batteryEnd,
@@ -218,22 +288,22 @@ export function useWeeklyDigest() {
 
   /* ── Daily distance chart data ── */
   const dailyDistanceData: DailyDistanceEntry[] = useMemo(() => {
-    const bins = DAY_LABELS.map((label) => ({ day: label, distance: 0 }));
-    for (const d of weekDrives) {
-      const idx = dayOfWeekIndex(d.start_date);
-      if (idx < 0) continue; // unparseable start_date — skip rather than crash
-      bins[idx].distance += safeNumber(d.distance);
+    const bins = DAY_LABELS.map((label) => ({ day: label, distanceM: 0 }));
+    for (const drive of weekDrives) {
+      const idx = dayOfWeekIndex(drive.startTs);
+      if (idx < 0) continue;
+      bins[idx].distanceM += safeNumber(drive.distanceM);
     }
     return bins;
   }, [weekDrives]);
 
   /* ── Daily energy added chart data ── */
   const dailyEnergyData: DailyEnergyEntry[] = useMemo(() => {
-    const bins = DAY_LABELS.map((label) => ({ day: label, energy: 0 }));
-    for (const c of weekCharging) {
-      const idx = dayOfWeekIndex(c.start_ts);
-      if (idx < 0) continue; // unparseable start_ts — skip rather than crash
-      bins[idx].energy += safeNumber(c.total_energy_added_wh);
+    const bins = DAY_LABELS.map((label) => ({ day: label, energyWh: 0 }));
+    for (const session of weekCharging) {
+      const idx = dayOfWeekIndex(session.started_at);
+      if (idx < 0) continue;
+      bins[idx].energyWh += safeNumber(session.total_energy_added_wh);
     }
     return bins;
   }, [weekCharging]);
@@ -249,12 +319,13 @@ export function useWeeklyDigest() {
 
   /* ── Fun fact ── */
   const funFact: FunFact | undefined = useMemo(() => {
-    if (metrics.totalDistance < 10) return undefined;
-    const pair = findCityPair(metrics.totalDistance);
+    const totalDistanceKm = convertDistanceFromSI(metrics.totalDistanceM, 'km');
+    if (totalDistanceKm < 10) return undefined;
+    const pair = findCityPair(totalDistanceKm);
     if (!pair) return undefined;
-    const times = metrics.totalDistance / pair.km;
+    const times = totalDistanceKm / pair.km;
     return { from: pair.from, to: pair.to, times: fmtNumber(times, 1) };
-  }, [metrics.totalDistance]);
+  }, [metrics.totalDistanceM]);
 
   /* ── Navigation callbacks ── */
   const goToPrevWeek = useCallback(() => setWeekOffset((o) => o - 1), []);

@@ -37,7 +37,7 @@ export function ChargingSection({
   const { formatCurrency } = useFormatting();
   const { formatEnergy, formatPower, unitPrefs } = useUnits();
   const energyData = dailyEnergyData ?? [];
-  const hasChart = energyData.some((d) => (d?.energy ?? 0) > 0);
+  const hasChart = energyData.some((entry) => (entry?.energyWh ?? 0) > 0);
 
   // The API delivers charge energy in SI watt-hours; convert to the user's
   // energy unit at the render boundary so the bars, axis, and tooltip agree
@@ -46,7 +46,7 @@ export function ChargingSection({
     () =>
       energyData.map((d) => ({
         day: d?.day ?? '',
-        energy: convertEnergyFromSI(d?.energy ?? 0, unitPrefs.energy),
+        energy: convertEnergyFromSI(d?.energyWh ?? 0, unitPrefs.energy),
       })),
     [energyData, unitPrefs.energy],
   );
@@ -61,7 +61,9 @@ export function ChargingSection({
       {/* Daily Energy Added bar chart */}
       <div>
         <Caption className="mb-2 block">
-          {t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added (kWh)')}
+          {t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added ({{unit}})', {
+            unit: unitPrefs.energy,
+          })}
         </Caption>
         {isLoading ? (
           <Skeleton height={220} />
@@ -102,12 +104,12 @@ export function ChargingSection({
         />
         <MiniStat
           label={t('analytics.weeklyDigest.totalEnergyAdded', 'Total Energy Added')}
-          value={formatEnergy(metrics.chargeEnergyAdded ?? 0, { precision: 1 })}
+          value={formatEnergy(metrics.chargeEnergyAddedWh ?? 0, { precision: 1 })}
           icon={<Zap className="h-4 w-4" />}
         />
         <MiniStat
           label={t('analytics.weeklyDigest.avgChargeRate', 'Avg Charge Rate')}
-          value={formatPower(metrics.avgChargeRate ?? 0, { precision: 1 })}
+          value={formatPower(metrics.avgChargePowerW ?? 0, { precision: 1 })}
           icon={<Activity className="h-4 w-4" />}
         />
         <MiniStat
@@ -122,12 +124,20 @@ export function ChargingSection({
         <Caption>{t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. Last Week')}</Caption>
         <Badge
           variant={
-            (metrics.chargeEnergyAdded ?? 0) >= (metrics.prevChargeEnergy ?? 0) ? 'success' : 'warning'
+            (metrics.chargeEnergyAddedWh ?? 0) >= (metrics.prevChargeEnergyWh ?? 0)
+              ? 'success'
+              : 'warning'
           }
           size="sm"
         >
-          {(metrics.prevChargeEnergy ?? 0) > 0
-            ? `${fmtNumber(pctChange(metrics.chargeEnergyAdded ?? 0, metrics.prevChargeEnergy ?? 0), 1)}%`
+          {(metrics.prevChargeEnergyWh ?? 0) > 0
+            ? `${fmtNumber(
+                pctChange(
+                  metrics.chargeEnergyAddedWh ?? 0,
+                  metrics.prevChargeEnergyWh ?? 0,
+                ),
+                1,
+              )}%`
             : '—'}
         </Badge>
       </GlassPanel>
