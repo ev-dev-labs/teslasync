@@ -4,6 +4,14 @@ import {
   parseNonEmptyJSONObject,
   summarizeManagementData,
 } from './managementJson'
+import {
+  humanizeManagementLabel,
+  parseEnterpriseRoles,
+  parseManagementScalarFields,
+  parseSubscriptionEligibility,
+  parseVehicleOptions,
+  parseWarrantyDetails,
+} from './managementData'
 
 describe('parseNonEmptyJSONObject', () => {
   it.each([
@@ -47,5 +55,130 @@ describe('management JSON safety helpers', () => {
       { label: 'model', value: 'Model 3' },
       { label: 'trim', value: 'Performance' },
     ])
+  })
+})
+
+describe('vehicle management response normalization', () => {
+  it('normalizes Tesla option codes without inventing missing values', () => {
+    expect(
+      parseVehicleOptions({
+        codes: [
+          {
+            code: '$PMNG',
+            colorCode: 'PMNG',
+            displayName: 'Midnight Silver Metallic',
+            isActive: true,
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        code: '$PMNG',
+        colorCode: 'PMNG',
+        displayName: 'Midnight Silver Metallic',
+        isActive: true,
+      },
+    ])
+  })
+
+  it('normalizes grouped warranty coverage from Tesla camelCase fields', () => {
+    expect(
+      parseWarrantyDetails({
+        activeWarranty: [
+          {
+            warrantyDisplayName: 'Drive Unit Limited Warranty',
+            coverageAgeInYears: 8,
+            expirationOdometer: 120000,
+            warrantyExpiredOn: null,
+          },
+        ],
+        expiredWarranty: [],
+        upcomingWarranty: [],
+      }),
+    ).toEqual({
+      active: [
+        {
+          state: 'active',
+          displayName: 'Drive Unit Limited Warranty',
+          code: null,
+          coverageAgeYears: 8,
+          coverageAgeMonths: null,
+          expirationOdometer: 120000,
+          expirationDate: null,
+        },
+      ],
+      upcoming: [],
+      expired: [],
+    })
+  })
+
+  it('normalizes subscription offers and reported billing terms', () => {
+    expect(
+      parseSubscriptionEligibility({
+        country: 'US',
+        eligible: [
+          {
+            optionCode: '$ESASUB',
+            product: 'EXTENDED_WARRANTY',
+            billingOptions: [
+              {
+                price: 60,
+                total: 60,
+                currencyCode: 'USD',
+                billingPeriod: 'MONTHLY',
+              },
+            ],
+          },
+        ],
+      }),
+    ).toEqual({
+      country: 'US',
+      offers: [
+        {
+          optionCode: '$ESASUB',
+          product: 'EXTENDED_WARRANTY',
+          billingOptions: [
+            {
+              price: 60,
+              total: 60,
+              currencyCode: 'USD',
+              billingPeriod: 'MONTHLY',
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('humanizes Tesla identifiers for display without changing source data', () => {
+    expect(humanizeManagementLabel('EXTENDED_WARRANTY')).toBe(
+      'Extended Warranty',
+    )
+    expect(humanizeManagementLabel('warrantyDisplayName')).toBe(
+      'Warranty Display Name',
+    )
+  })
+
+  it('normalizes scalar specifications and role objects', () => {
+    expect(
+      parseManagementScalarFields({
+        model: 'Model Y',
+        trim_badging: 'Performance',
+        trimBadging: 'Performance',
+        nested: { ignored: true },
+      }),
+    ).toEqual([
+      { key: 'model', label: 'Model', value: 'Model Y' },
+      {
+        key: 'trim_badging',
+        label: 'Trim Badging',
+        value: 'Performance',
+      },
+    ])
+    expect(
+      parseEnterpriseRoles({
+        roles: ['fleet_manager', { displayName: 'Billing Admin' }],
+      }),
+    ).toEqual(['fleet_manager', 'Billing Admin'])
   })
 })

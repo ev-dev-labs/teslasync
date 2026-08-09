@@ -20,6 +20,7 @@ export function VehiclePricingCard() {
         )}
         endpoint="POST /api/1/dx/vehicles/pricing"
         prerequisite="partner"
+        kind="pricing"
         data={pricing.data?.data}
         error={pricing.error}
         refreshPending={pricing.isPending}

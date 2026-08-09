@@ -1,13 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { isApiError } from '@/api/client'
 import { AlertBanner, EmptyState, Spinner } from '@/components/feedback'
-import { Badge } from '@/components/ui'
 import {
   managementErrorText,
-  summarizeManagementData,
   type ManagementEndpointKind,
 } from './managementJson'
-import { StructuredDataView } from './StructuredDataView'
+import { ManagementDataView } from './ManagementDataView'
 
 interface ManagementEndpointBodyProps {
   data: unknown
@@ -39,22 +37,8 @@ export function ManagementEndpointBody({
   emptyMessage,
 }: ManagementEndpointBodyProps) {
   const { t } = useTranslation()
-  const recordData =
-    data !== null && typeof data === 'object' && !Array.isArray(data)
-      ? data as Record<string, unknown>
-      : null
-  const summary = summarizeManagementData(recordData, kind)
   const capabilityUnavailable =
     isApiError(error) && [401, 402, 403, 412].includes(error.status)
-  const summaryLabels = {
-    model: t('vehicleManagement.summary.model', 'Model'),
-    trim: t('vehicleManagement.summary.trim', 'Trim'),
-    status: t('vehicleManagement.summary.status', 'Status'),
-    expiry: t('vehicleManagement.summary.expiry', 'Expiry'),
-    items: t('vehicleManagement.summary.items', 'Items'),
-    fields: t('vehicleManagement.summary.fields', 'Fields returned'),
-    roles: t('vehicleManagement.summary.roles', 'Roles'),
-  }
 
   if (unavailable) {
     return (
@@ -111,18 +95,7 @@ export function ManagementEndpointBody({
     )
   }
   if (hasRenderableData(data)) {
-    return (
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {summary.map((item) => (
-            <Badge key={`${item.label}-${item.value}`} variant="neutral">
-              {summaryLabels[item.label]}: {item.value}
-            </Badge>
-          ))}
-        </div>
-        <StructuredDataView value={data} />
-      </div>
-    )
+    return <ManagementDataView data={data} kind={kind} />
   }
   if (hasCompletedResult) {
     return (

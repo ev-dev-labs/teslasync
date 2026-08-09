@@ -7,6 +7,8 @@ export type ManagementEndpointKind =
   | 'subscriptions'
   | 'upgrades'
   | 'roles'
+  | 'pricing'
+  | 'payer'
   | 'generic'
 
 export interface ManagementSummaryItem {

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Grid, Stack } from '@/components/layout'
+import { Masonry, Stack } from '@/components/layout'
 import { AlertBanner } from '@/components/feedback'
 import { Badge, GlassPanel, Heading, Text } from '@/components/ui'
 import { Icons } from '@/lib/icons'
@@ -12,8 +12,6 @@ import { VehiclePricingCard } from './VehiclePricingCard'
 interface VehicleManagementWorkspaceProps {
   vehicleId?: number
 }
-
-const MANAGEMENT_GRID_COLUMNS = { default: 1, xl: 2 } as const
 
 export function VehicleManagementWorkspace({
   vehicleId,
@@ -70,13 +68,16 @@ export function VehicleManagementWorkspace({
           )}
         </GlassPanel>
 
-        <Grid cols={MANAGEMENT_GRID_COLUMNS} gap={4}>
+        <Masonry
+          className="columns-1 xl:columns-2"
+          data-testid="vehicle-management-endpoints"
+        >
           <VehicleMetadataCards vehicleId={vehicleId} />
           <PaidVehicleSpecsCard vehicleId={vehicleId} />
           <VehiclePricingCard />
           <EnterpriseRolesCard vehicleId={vehicleId} />
           <EnterprisePayerCard vehicleId={vehicleId} />
-        </Grid>
+        </Masonry>
       </Stack>
     </section>
   )

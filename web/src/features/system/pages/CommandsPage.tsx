@@ -9,13 +9,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Car, History, Wifi } from 'lucide-react';
+import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
-import { Badge, Button, Select } from '@/components/ui';
+import { Badge, Button } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { Icons } from '@/lib/icons';
 import {
   CommandCenterFallback,
   VehicleCommandCenter,
@@ -33,11 +34,7 @@ export default function CommandsPage() {
    * loading/error/refetch state needed for explicit route placeholders.
    */
   const vehiclesQuery = useVehicles();
-  const {
-    vehicleId,
-    vehicle: selectedFromStore,
-    setVehicleId,
-  } = useSelectedVehicle();
+  const { vehicleId, vehicle: selectedFromStore } = useSelectedVehicle();
   const vehicles = vehiclesQuery.data ?? [];
 
   /**
@@ -52,20 +49,6 @@ export default function CommandsPage() {
       : null) ??
     vehicles[0] ??
     null;
-
-  const vehicleOptions = useMemo(
-    () =>
-      vehicles.map((vehicle) => ({
-        value: String(vehicle.id),
-        label:
-          vehicle.display_name?.trim() ||
-          vehicle.vin ||
-          t('commands.vehicle.fallbackName', 'Vehicle {{id}}', {
-            id: vehicle.id,
-          }),
-      })),
-    [t, vehicles],
-  );
 
   /**
    * Keep the existing fleet readiness summary, but make the language honest:
@@ -87,14 +70,6 @@ export default function CommandsPage() {
       ? 'error'
       : 'empty';
 
-  const selectedName = selectedVehicle
-    ? selectedVehicle.display_name?.trim() ||
-      selectedVehicle.vin ||
-      t('commands.vehicle.fallbackName', 'Vehicle {{id}}', {
-        id: selectedVehicle.id,
-      })
-    : null;
-
   return (
     <PageContainer
       title={t('commands.pageTitle', 'Vehicle Command Center')}
@@ -110,7 +85,7 @@ export default function CommandsPage() {
               size="lg"
               className="min-h-11"
             >
-              <Wifi className="h-3.5 w-3.5" aria-hidden="true" />
+              <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
               {t(
                 'commands.reachableCount',
                 '{{reachable}}/{{total}} recently reachable',
@@ -122,33 +97,19 @@ export default function CommandsPage() {
             </Badge>
           )}
 
-          {vehicles.length > 1 ? (
-            <Select
-              id="commands-vehicle"
-              aria-label={t('commands.selectVehicle', 'Select vehicle')}
-              value={selectedVehicle ? String(selectedVehicle.id) : ''}
-              onChange={(event) => {
-                const next = Number(event.target.value);
-                if (Number.isFinite(next) && next > 0) {
-                  setVehicleId(next);
-                }
-              }}
-              options={vehicleOptions}
-              className="min-h-11 min-w-48"
-            />
-          ) : selectedName ? (
-            <Badge variant="neutral" size="lg" className="min-h-11">
-              <Car className="h-3.5 w-3.5" aria-hidden="true" />
-              {selectedName}
-            </Badge>
-          ) : null}
+          <VehicleSelect
+            id="commands-vehicle"
+            ariaLabel={t('commands.selectVehicle', 'Select vehicle')}
+            className="min-h-11 min-w-48"
+            withIcon
+          />
 
           <Button
             type="button"
             variant="ghost"
             size="lg"
             className="min-h-11"
-            icon={<History className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.history className="h-4 w-4" aria-hidden="true" />}
             onClick={() => navigate('/command-history')}
           >
             {t('commands.viewHistory', 'View history')}

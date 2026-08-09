@@ -234,14 +234,18 @@ describe('CommandsPage', () => {
     expect(setVehicleIdMock).toHaveBeenCalledWith(2);
   });
 
-  it('shows the single selected vehicle as a named badge', () => {
+  it('keeps the vehicle dropdown visible for a single-vehicle fleet', () => {
     const only = makeVehicle(7, { display_name: 'Solo' });
     installHooks({ vehicles: [only], selected: only });
 
     renderPage();
 
-    expect(screen.getAllByText('Solo')).toHaveLength(2);
-    expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Select vehicle')).toHaveValue('7');
+    expect(
+      within(screen.getByLabelText('Select vehicle')).getByRole('option', {
+        name: 'Solo',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('navigates to command history from the header action', () => {

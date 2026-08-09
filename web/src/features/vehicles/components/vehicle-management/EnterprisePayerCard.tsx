@@ -39,6 +39,7 @@ export function EnterprisePayerCard({ vehicleId }: EnterprisePayerCardProps) {
         )}
         endpoint="POST /api/1/dx/enterprise/v1/{vin}/payer"
         prerequisite="enterprise"
+        kind="payer"
         data={payer.data?.data}
         error={payer.error}
         refreshPending={payer.isPending}

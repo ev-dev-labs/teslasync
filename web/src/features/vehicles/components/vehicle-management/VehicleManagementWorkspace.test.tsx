@@ -91,7 +91,12 @@ function responseFor(url: string): unknown {
   }
   if (url.endsWith('/specs')) {
     return {
-      data: { model: 'Model 3', trim_badging: 'Performance' },
+      data: {
+        model: 'Model 3',
+        trim_badging: 'Performance',
+        exterior_color: 'Midnight Silver Metallic',
+        wheel_type: 'Uberturbine',
+      },
       fetched_at: cachedAt,
     }
   }
@@ -126,7 +131,18 @@ function responseFor(url: string): unknown {
   }
   if (url.endsWith('/warranty')) {
     return {
-      data: { warranty_status: 'active', expiry_date: '2028-01-01' },
+      data: {
+        activeWarranty: [
+          {
+            warrantyDisplayName: 'Drive Unit Limited Warranty',
+            coverageAgeInYears: 8,
+            expirationOdometer: 120000,
+            warrantyExpiredOn: null,
+          },
+        ],
+        expiredWarranty: [],
+        upcomingWarranty: [],
+      },
       fetched_at: cachedAt,
     }
   }
@@ -233,15 +249,37 @@ describe('VehicleManagementWorkspace', () => {
     ]))
     expect(calls('POST')).toHaveLength(0)
 
-    expect(screen.queryByText('must-never-render')).not.toBeInTheDocument()
-    expect(screen.getByText('Redacted')).toBeInTheDocument()
     expect(screen.getByText('Full Self-Driving (Supervised)')).toBeInTheDocument()
-    expect(screen.getByText('EXTENDED_WARRANTY')).toBeInTheDocument()
+    expect(screen.getByText('1 active of 1 options returned')).toBeInTheDocument()
+    expect(screen.getByText('Drive Unit Limited Warranty')).toBeInTheDocument()
+    expect(screen.getByText('8 years')).toBeInTheDocument()
+    expect(screen.getByText('120,000')).toBeInTheDocument()
+    expect(screen.getByText('Extended Warranty')).toBeInTheDocument()
+    expect(endpointCard('subscription-eligibility')).toHaveTextContent(
+      '$60 / month',
+    )
+    expect(screen.queryByText('warrantyDisplayName')).not.toBeInTheDocument()
+    expect(screen.queryByText('must-never-render')).not.toBeInTheDocument()
+    expect(screen.getByText('4 specification fields returned')).toBeInTheDocument()
+    expect(screen.getByText('Fleet Manager')).toBeInTheDocument()
+
+    fireEvent.click(
+      within(endpointCard('vehicle-options')).getByRole('button', {
+        name: 'Technical response details',
+      }),
+    )
+    expect(screen.getByText('Redacted')).toBeInTheDocument()
+    expect(screen.queryByText('must-never-render')).not.toBeInTheDocument()
+
     expect(
       within(endpointCard('upgrade-eligibility')).getByText(
         'No matching data returned',
       ),
     ).toBeInTheDocument()
+    expect(screen.getByTestId('vehicle-management-endpoints')).toHaveClass(
+      'columns-1',
+      'xl:columns-2',
+    )
     expect(document.body).not.toHaveTextContent('[object Object]')
   })
 
@@ -311,7 +349,7 @@ describe('VehicleManagementWorkspace', () => {
 
   it('refreshes cached enterprise roles only after the explicit action', async () => {
     renderWorkspace()
-    await screen.findByText('fleet_manager')
+    await screen.findByText('Fleet Manager')
     const card = endpointCard('enterprise-roles')
 
     fireEvent.click(

@@ -13522,7 +13522,8 @@
       "true": "Yes",
       "false": "No",
       "maxDepth": "Additional nested data",
-      "item": "Item {{index}}"
+      "item": "Item {{index}}",
+      "technicalDetails": "Technical response details"
     },
     "state": {
       "vehicleRequired": "Select a vehicle",
@@ -13553,7 +13554,16 @@
     },
     "options": {
       "title": "Vehicle options",
-      "description": "Option codes and factory configuration available to the connected Tesla user."
+      "description": "Option codes and factory configuration available to the connected Tesla user.",
+      "resultSummary": "{{active}} active of {{total}} options returned",
+      "factoryConfiguration": "Factory configuration",
+      "active": "Active",
+      "inactive": "Inactive",
+      "unknownStatus": "Status unknown",
+      "paintCode": "Paint {{code}}",
+      "unnamed": "Option {{index}}",
+      "emptyTitle": "No vehicle options returned",
+      "emptyDetail": "Tesla returned a response, but it did not contain recognizable option records."
     },
     "specs": {
       "title": "Vehicle specifications",
@@ -13562,15 +13572,51 @@
       "costWarning": "Tesla bills $0.10 for each successful specifications result. TeslaSync also enforces a 24-hour refresh guard.",
       "confirmTitle": "Request paid vehicle specifications?",
       "confirmMessage": "A successful Tesla response costs $0.10. Continue only if the cached result needs updating.",
-      "confirmAction": "Request $0.10 result"
+      "confirmAction": "Request $0.10 result",
+      "resultSummary": "{{count}} specification fields returned",
+      "emptyTitle": "No specifications returned",
+      "emptyDetail": "Tesla returned a response, but it did not contain recognizable specification fields."
     },
     "warranty": {
       "title": "Warranty details",
-      "description": "Warranty coverage details for the selected Tesla VIN."
+      "description": "Warranty coverage details for the selected Tesla VIN.",
+      "active": "Active",
+      "upcoming": "Upcoming",
+      "expired": "Expired",
+      "activeCount": "{{count}} active",
+      "upcomingCount": "{{count}} upcoming",
+      "expiredCount": "{{count}} expired",
+      "unnamedCoverage": "Warranty coverage",
+      "coverageTerm": "Coverage term",
+      "odometerLimit": "Odometer limit",
+      "expiration": "Expiration",
+      "years": "{{count}} years",
+      "months": "{{count}} months",
+      "notProvided": "Not provided",
+      "odometerNote": "Odometer limits are shown exactly as Tesla reports them because this response does not identify a unit.",
+      "emptyTitle": "No warranty coverage returned",
+      "emptyDetail": "Tesla returned a response, but it did not include active, upcoming, or expired coverage records."
     },
     "subscriptions": {
       "title": "Subscription eligibility",
-      "description": "Eligibility information for Tesla vehicle subscriptions."
+      "description": "Eligibility information for Tesla vehicle subscriptions.",
+      "resultSummary": "{{count}} eligible subscription offers",
+      "market": "Market {{country}}",
+      "unnamedOffer": "Tesla subscription",
+      "eligible": "Eligible",
+      "billingOption": "Billing option",
+      "perPeriod": " / {{period}}",
+      "total": "Total {{amount}}",
+      "noBilling": "Tesla returned no billing options for this offer.",
+      "emptyTitle": "No eligible subscriptions returned",
+      "emptyDetail": "Tesla returned a response, but it did not include any eligible subscription offers.",
+      "period": {
+        "day": "day",
+        "week": "week",
+        "month": "month",
+        "year": "year",
+        "oneTime": "one time"
+      }
     },
     "upgrades": {
       "title": "Upgrade eligibility",
@@ -13588,7 +13634,10 @@
     },
     "roles": {
       "title": "Enterprise roles",
-      "description": "Cached business roles for the selected VIN. Refresh is the only action that contacts Tesla."
+      "description": "Cached business roles for the selected VIN. Refresh is the only action that contacts Tesla.",
+      "resultSummary": "{{count}} enterprise roles returned",
+      "emptyTitle": "No enterprise roles returned",
+      "emptyDetail": "Tesla returned a response, but it did not include enterprise roles for this vehicle."
     },
     "payer": {
       "title": "Enterprise payer",

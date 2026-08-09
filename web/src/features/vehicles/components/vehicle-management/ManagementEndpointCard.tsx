@@ -9,6 +9,7 @@ import {
   Text,
 } from '@/components/ui'
 import { AlertBanner } from '@/components/feedback'
+import { formatDateTime } from '@/lib/dateFormat'
 import { Icons } from '@/lib/icons'
 import type { ManagementEndpointKind } from './managementJson'
 import { ManagementEndpointBody } from './ManagementEndpointBody'
@@ -43,6 +44,18 @@ const prerequisiteVariant = {
   enterprise: 'danger',
 } as const
 
+const endpointIcon = {
+  options: Icons.settings,
+  specs: Icons.vehicle,
+  warranty: Icons.securityCheck,
+  subscriptions: Icons.receipt,
+  upgrades: Icons.sparkles,
+  roles: Icons.users,
+  pricing: Icons.shoppingCart,
+  payer: Icons.wallet,
+  generic: Icons.database,
+} as const
+
 export function ManagementEndpointCard({
   endpointId,
   title,
@@ -70,23 +83,31 @@ export function ManagementEndpointCard({
     partner: t('vehicleManagement.prerequisite.partner', 'Partner token'),
     enterprise: t('vehicleManagement.prerequisite.enterprise', 'Enterprise'),
   }[prerequisite]
+  const EndpointIcon = endpointIcon[kind]
 
   return (
     <GlassPanel
-      className="flex min-h-72 flex-col gap-3 p-4"
+      className="flex flex-col gap-4 p-4 sm:p-5"
       data-management-endpoint={endpointId}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 space-y-1">
-          <PanelTitle>{title}</PanelTitle>
-          <Text variant="bodySm" as="p">{description}</Text>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="rounded-xl bg-cyan-500/10 p-2 text-cyan-300">
+            <EndpointIcon className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 space-y-1">
+            <PanelTitle>{title}</PanelTitle>
+            <Text variant="bodySm" as="p">{description}</Text>
+          </div>
         </div>
         <Badge variant={prerequisiteVariant[prerequisite]}>
           {prerequisiteLabel}
         </Badge>
       </div>
 
-      <Code className="break-all text-[var(--text-secondary)]">{endpoint}</Code>
+      <Code className="w-fit max-w-full break-all rounded-md bg-[var(--surface-2)] px-2 py-1 text-[var(--text-secondary)]">
+        {endpoint}
+      </Code>
       {warning}
       {operationSucceeded && !error && (
         <AlertBanner
@@ -100,7 +121,7 @@ export function ManagementEndpointCard({
         </AlertBanner>
       )}
 
-      <div className="min-h-24 flex-1">
+      <div className="flex-1">
         <ManagementEndpointBody
           data={data}
           loading={loading}
@@ -116,7 +137,9 @@ export function ManagementEndpointCard({
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-default)] pt-3">
         <Text variant="caption">
           {fetchedAt
-            ? t('vehicleManagement.state.fetchedAt', 'Cached {{time}}', { time: fetchedAt })
+            ? t('vehicleManagement.state.fetchedAt', 'Cached {{time}}', {
+                time: formatDateTime(fetchedAt),
+              })
             : t('vehicleManagement.state.notFetched', 'Not cached')}
         </Text>
         {onRefresh && (

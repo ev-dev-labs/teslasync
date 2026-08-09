@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Code, Text } from '@/components/ui'
+import { Badge, Text } from '@/components/ui'
 import { isSensitiveManagementKey } from './managementJson'
+import { humanizeManagementLabel } from './managementData'
 
 interface StructuredDataViewProps {
   value: unknown
@@ -26,9 +27,9 @@ function renderScalar(value: string | number | boolean | null, labels: RendererL
   }
   if (typeof value === 'boolean') {
     return (
-      <Text variant="bodySm">
+      <Badge variant={value ? 'success' : 'neutral'}>
         {value ? labels.trueValue : labels.falseValue}
-      </Text>
+      </Badge>
     )
   }
   return (
@@ -60,9 +61,12 @@ function renderNode(value: unknown, depth: number, labels: RendererLabels): Reac
       return <Text variant="helper">{labels.emptyArray}</Text>
     }
     return (
-      <div className="space-y-2 border-l border-[var(--border-default)] pl-3">
+      <div className="grid gap-2">
         {value.map((item, index) => (
-          <div key={index} className="space-y-1">
+          <div
+            key={index}
+            className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+          >
             <Text variant="label">{labels.item(index + 1)}</Text>
             {renderNode(item, depth + 1, labels)}
           </div>
@@ -77,14 +81,16 @@ function renderNode(value: unknown, depth: number, labels: RendererLabels): Reac
       return <Text variant="helper">{labels.emptyObject}</Text>
     }
     return (
-      <dl className="space-y-2">
+      <dl className="grid gap-2">
         {entries.map(([key, nested]) => (
           <div
             key={key}
-            className="grid gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-2 sm:grid-cols-[minmax(8rem,0.4fr)_minmax(0,1fr)]"
+            className="grid gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 sm:grid-cols-[minmax(9rem,0.35fr)_minmax(0,1fr)]"
           >
             <dt className="min-w-0">
-              <Code className="break-all">{key}</Code>
+              <Text variant="label" title={key}>
+                {humanizeManagementLabel(key)}
+              </Text>
             </dt>
             <dd className="min-w-0">
               {isSensitiveManagementKey(key)
@@ -115,10 +121,7 @@ export function StructuredDataView({ value }: StructuredDataViewProps) {
   }
 
   return (
-    <div
-      className="max-h-80 overflow-auto pr-1"
-      data-testid="management-structured-data"
-    >
+    <div data-testid="management-structured-data">
       {renderNode(value, 0, labels)}
     </div>
   )
