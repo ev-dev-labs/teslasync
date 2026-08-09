@@ -15,6 +15,7 @@ interface ManagementEndpointBodyProps {
   error?: unknown
   unavailable: boolean
   kind: ManagementEndpointKind
+  hasCompletedResult?: boolean
   emptyTitle?: string
   emptyMessage?: string
 }
@@ -33,6 +34,7 @@ export function ManagementEndpointBody({
   error,
   unavailable,
   kind,
+  hasCompletedResult = false,
   emptyTitle,
   emptyMessage,
 }: ManagementEndpointBodyProps) {
@@ -120,6 +122,22 @@ export function ManagementEndpointBody({
         </div>
         <StructuredDataView value={data} />
       </div>
+    )
+  }
+  if (hasCompletedResult) {
+    return (
+      // no-action: Refresh and operation actions are already exposed in the endpoint card header.
+      <EmptyState
+        title={t(
+          'vehicleManagement.state.emptyResult',
+          'No matching data returned',
+        )}
+        message={t(
+          'vehicleManagement.state.emptyResultDetail',
+          'Tesla completed the request but returned no matching data for this vehicle.',
+        )}
+        className="py-5"
+      />
     )
   }
   return (

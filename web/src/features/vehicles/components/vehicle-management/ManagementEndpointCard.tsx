@@ -107,6 +107,7 @@ export function ManagementEndpointCard({
           error={error}
           unavailable={unavailable}
           kind={kind}
+          hasCompletedResult={Boolean(fetchedAt) || operationSucceeded}
           emptyTitle={emptyTitle}
           emptyMessage={emptyMessage}
         />

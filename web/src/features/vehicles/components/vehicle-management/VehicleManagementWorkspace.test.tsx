@@ -76,7 +76,13 @@ function responseFor(url: string): unknown {
     if (optionsError) throw optionsError
     return {
       data: {
-        codes: ['A', 'B'],
+        codes: [
+          {
+            code: '$APF2',
+            displayName: 'Full Self-Driving (Supervised)',
+            isActive: true,
+          },
+        ],
         api_token: 'must-never-render',
         nested: { enabled: true },
       },
@@ -91,17 +97,34 @@ function responseFor(url: string): unknown {
   }
   if (url.endsWith('/subscriptions')) {
     return {
-      data: { subscriptions: [{ name: 'Premium' }], eligible: true },
+      data: {
+        vin: 'MASKED',
+        country: 'US',
+        eligible: [
+          {
+            optionCode: '$ESASUB',
+            product: 'EXTENDED_WARRANTY',
+            billingOptions: [
+              {
+                price: 60,
+                total: 60,
+                currencyCode: 'USD',
+                billingPeriod: 'MONTHLY',
+              },
+            ],
+          },
+        ],
+      },
       fetched_at: cachedAt,
     }
   }
   if (url.endsWith('/upgrades')) {
     return {
-      data: { upgrades: [{ name: 'Acceleration Boost' }] },
+      data: {},
       fetched_at: cachedAt,
     }
   }
-  if (url === '/tesla/warranty') {
+  if (url.endsWith('/warranty')) {
     return {
       data: { warranty_status: 'active', expiry_date: '2028-01-01' },
       fetched_at: cachedAt,
@@ -205,13 +228,20 @@ describe('VehicleManagementWorkspace', () => {
       `/vehicles/${VEHICLE_ID}/specs`,
       `/vehicles/${VEHICLE_ID}/subscriptions`,
       `/vehicles/${VEHICLE_ID}/upgrades`,
-      '/tesla/warranty',
+      `/vehicles/${VEHICLE_ID}/warranty`,
       `/vehicles/${VEHICLE_ID}/enterprise-roles`,
     ]))
     expect(calls('POST')).toHaveLength(0)
 
     expect(screen.queryByText('must-never-render')).not.toBeInTheDocument()
     expect(screen.getByText('Redacted')).toBeInTheDocument()
+    expect(screen.getByText('Full Self-Driving (Supervised)')).toBeInTheDocument()
+    expect(screen.getByText('EXTENDED_WARRANTY')).toBeInTheDocument()
+    expect(
+      within(endpointCard('upgrade-eligibility')).getByText(
+        'No matching data returned',
+      ),
+    ).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('[object Object]')
   })
 
@@ -350,7 +380,7 @@ describe('VehicleManagementWorkspace', () => {
 
     expect(screen.getByText('Vehicle selection required')).toBeInTheDocument()
     expect(document.querySelectorAll('[data-management-endpoint]')).toHaveLength(8)
-    await waitFor(() => expect(calls('GET').length).toBeGreaterThan(0))
+    expect(calls('GET')).toHaveLength(0)
     expect(
       calls().some(([url]) => url.includes('/vehicles/undefined')),
     ).toBe(false)
@@ -364,7 +394,7 @@ describe('VehicleManagementWorkspace', () => {
       within(endpointCard('warranty-details')).getByRole('button', {
         name: 'Refresh from Tesla',
       }),
-    ).toBeEnabled()
+    ).toBeDisabled()
     expect(
       within(endpointCard('vehicle-pricing')).getByRole('button', {
         name: 'Open pricing query',

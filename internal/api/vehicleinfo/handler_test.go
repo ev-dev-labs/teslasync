@@ -100,8 +100,8 @@ func (f *fakeTeslaClient) GetUpgradeEligibility(_ context.Context, vin string) (
 	return f.record("upgrades", vin)
 }
 
-func (f *fakeTeslaClient) GetWarrantyDetails(_ context.Context) ([]byte, int, error) {
-	return f.record("warranty", "")
+func (f *fakeTeslaClient) GetWarrantyDetails(_ context.Context, vin string) ([]byte, int, error) {
+	return f.record("warranty", vin)
 }
 
 func (f *fakeTeslaClient) GetVehiclePricing(
@@ -363,7 +363,7 @@ func TestGetHandlers_ConfigKeyRouting(t *testing.T) {
 		{"subscriptions", (*Handler).SubscriptionEligibility, "subscriptions:" + testVIN, true},
 		{"upgrades", (*Handler).UpgradeEligibility, "upgrades:" + testVIN, true},
 		{"enterprise-roles", (*Handler).EnterpriseRoles, "enterprise_roles:" + testVIN, true},
-		{"warranty", (*Handler).WarrantyDetails, "warranty", false},
+		{"warranty", (*Handler).WarrantyDetails, "warranty:" + testVIN, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -485,12 +485,12 @@ func TestRefresh_SuccessAndPersistence(t *testing.T) {
 		confirmed  bool
 	}{
 		{"mobile-enabled", (*Handler).RefreshMobileEnabled, `{"response":true}`, "mobile_enabled", "mobile_enabled:" + testVIN, `{"enabled":true}`, true, false},
-		{"options", (*Handler).RefreshVehicleOptions, `{"response":{"codes":["A"]}}`, "vehicle_options", "vehicle_options:" + testVIN, `{"codes":["A"]}`, true, false},
+		{"options", (*Handler).RefreshVehicleOptions, `{"codes":[{"code":"$APF2","displayName":"Full Self-Driving (Supervised)","isActive":true}]}`, "vehicle_options", "vehicle_options:" + testVIN, `{"codes":[{"code":"$APF2","displayName":"Full Self-Driving (Supervised)","isActive":true}]}`, true, false},
 		{"specs", (*Handler).RefreshVehicleSpecs, `{"response":{"weight":1000}}`, "vehicle_specs", "vehicle_specs:" + testVIN, `{"weight":1000}`, true, true},
-		{"subscriptions", (*Handler).RefreshSubscriptionEligibility, `{"response":{"eligible":true}}`, "subscriptions", "subscriptions:" + testVIN, `{"eligible":true}`, true, false},
-		{"upgrades", (*Handler).RefreshUpgradeEligibility, `{"response":{"tier":"x"}}`, "upgrades", "upgrades:" + testVIN, `{"tier":"x"}`, true, false},
+		{"subscriptions", (*Handler).RefreshSubscriptionEligibility, `{"vin":"TESTVIN","country":"US","eligible":[{"product":"EXTENDED_WARRANTY"}]}`, "subscriptions", "subscriptions:" + testVIN, `{"vin":"TESTVIN","country":"US","eligible":[{"product":"EXTENDED_WARRANTY"}]}`, true, false},
+		{"upgrades", (*Handler).RefreshUpgradeEligibility, `{}`, "upgrades", "upgrades:" + testVIN, `{}`, true, false},
 		{"enterprise-roles", (*Handler).RefreshEnterpriseRoles, `{"response":{"roles":["fleet_manager"]}}`, "enterprise_roles", "enterprise_roles:" + testVIN, `{"roles":["fleet_manager"]}`, true, false},
-		{"warranty", (*Handler).RefreshWarrantyDetails, `{"response":{"active":true}}`, "warranty", "warranty", `{"active":true}`, false, false},
+		{"warranty", (*Handler).RefreshWarrantyDetails, `{"active":true}`, "warranty", "warranty:" + testVIN, `{"active":true}`, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -774,25 +774,26 @@ func TestRefreshVehicleSpecs_GuardDoesNotPersist(t *testing.T) {
 	}
 }
 
-// The warranty endpoints are account-level and must not require a vehicle id.
-func TestWarranty_DoesNotRequireVehicleID(t *testing.T) {
-	tc := &fakeTeslaClient{validToken: true, status: http.StatusOK, body: []byte(`{"response":{"active":true}}`)}
+func TestWarranty_RequiresVehicleAndUsesVIN(t *testing.T) {
+	tc := &fakeTeslaClient{validToken: true, status: http.StatusOK, body: []byte(`{"active":true}`)}
 	cfg := newFakeConfigStore()
-	// A finder that would fail if consulted proves warranty never resolves a VIN.
-	veh := &fakeVehicleFinder{err: errors.New("should not be called")}
+	veh := &fakeVehicleFinder{vehicle: okVehicle()}
 	h := newHandler(tc, cfg, veh)
 
 	rec := httptest.NewRecorder()
-	h.RefreshWarrantyDetails(rec, vehReq(http.MethodPost, ""))
+	h.RefreshWarrantyDetails(rec, vehReq(http.MethodPost, "7"))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("refresh status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	if veh.gotID != 0 {
-		t.Fatalf("vehicle finder was consulted for account-level warranty")
+	if veh.gotID != 7 {
+		t.Fatalf("vehicle finder got id = %d, want 7", veh.gotID)
+	}
+	if len(tc.calls) != 1 || tc.calls[0].vin != testVIN {
+		t.Fatalf("Tesla calls = %+v, want warranty call for selected VIN", tc.calls)
 	}
 
 	rec = httptest.NewRecorder()
-	h.WarrantyDetails(rec, vehReq(http.MethodGet, ""))
+	h.WarrantyDetails(rec, vehReq(http.MethodGet, "7"))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("get status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}

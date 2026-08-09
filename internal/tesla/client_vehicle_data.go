@@ -109,9 +109,10 @@ func (c *Client) GetUpgradeEligibility(ctx context.Context, vin string) ([]byte,
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
-// GetWarrantyDetails calls GET /api/1/dx/warranty/details.
-func (c *Client) GetWarrantyDetails(ctx context.Context) ([]byte, int, error) {
-	return c.doRequest(ctx, http.MethodGet, "/api/1/dx/warranty/details", nil)
+// GetWarrantyDetails calls GET /api/1/dx/warranty/details?vin={vin}.
+func (c *Client) GetWarrantyDetails(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/warranty/details?vin=%s", url.QueryEscape(vin))
+	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
 // GetVehiclePricing calls POST /api/1/dx/vehicles/pricing with an opaque

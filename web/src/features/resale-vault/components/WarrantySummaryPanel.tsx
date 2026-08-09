@@ -1,7 +1,6 @@
 /**
  * Warranty summary — renders the already-scrubbed Tesla warranty payload
- * (see `redaction.ts::scrubSensitiveRecord`) as a flat key/value list, plus
- * the account-level (not vehicle-scoped) backend limitation note.
+ * (see `redaction.ts::scrubSensitiveRecord`) as a flat key/value list.
  */
 import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui';
@@ -38,14 +37,14 @@ export function WarrantySummaryPanel({ warranty }: WarrantySummaryPanelProps) {
       <PanelTitle>{t('resaleVault.warranty.title', 'Warranty')}</PanelTitle>
 
       {!warranty || !warranty.data ? (
-        // no-action: mirrors Tesla's account-level warranty endpoint as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
+        // no-action: the panel receives no refetch handler and the Evidence tab has no manual sync control.
         <EmptyState message={t('resaleVault.warranty.empty', 'No warranty evidence in this report.')} />
       ) : (
         <>
           <InlineCallout variant="info" icon={<Info />}>
             {t(
               'resaleVault.warranty.scopeNote',
-              'Warranty details are fetched at the Tesla account level, not scoped to an individual vehicle.',
+              'Warranty details are scoped to the vehicle selected for this report.',
             )}
           </InlineCallout>
           <KVList

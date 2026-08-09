@@ -13489,11 +13489,11 @@
     },
     "roster": {
       "loadingTitle": "Loading vehicle context",
-      "loading": "Vehicle-scoped cards remain unavailable while the fleet loads. Cached account-level warranty data can still load.",
+      "loading": "Vehicle-scoped management data remains unavailable while the fleet loads.",
       "errorTitle": "Vehicle context unavailable",
-      "error": "The vehicle list could not be loaded. Account-level cached data remains available.",
+      "error": "The vehicle list could not be loaded, so vehicle-scoped management data is unavailable.",
       "emptyTitle": "No vehicles available",
-      "empty": "Connect and sync a Tesla vehicle to enable vehicle-scoped management APIs. Account-level warranty data remains available."
+      "empty": "Connect and sync a Tesla vehicle to enable vehicle-scoped management APIs."
     },
     "title": "Vehicle Management workspace",
     "description": "Account metadata, paid specifications, pricing, and enterprise controls are separate from physical vehicle commands.",
@@ -13536,6 +13536,8 @@
       "successDetail": "Tesla accepted the request. Any returned data is shown below.",
       "empty": "No cached data",
       "emptyDetail": "Use refresh to request this information from Tesla when the required access is available.",
+      "emptyResult": "No matching data returned",
+      "emptyResultDetail": "Tesla completed the request but returned no matching data for this vehicle.",
       "fetchedAt": "Cached {{time}}",
       "notFetched": "Not cached"
     },
@@ -13564,7 +13566,7 @@
     },
     "warranty": {
       "title": "Warranty details",
-      "description": "Tesla account warranty coverage details; VIN behavior can vary by account."
+      "description": "Warranty coverage details for the selected Tesla VIN."
     },
     "subscriptions": {
       "title": "Subscription eligibility",
@@ -20834,7 +20836,7 @@
     "warranty": {
       "empty": "No warranty evidence in this report.",
       "fetchedAt": "Fetched at",
-      "scopeNote": "Warranty details are fetched at the Tesla account level, not scoped to an individual vehicle.",
+      "scopeNote": "Warranty details are scoped to the vehicle selected for this report.",
       "title": "Warranty"
     }
   },

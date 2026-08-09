@@ -71,7 +71,7 @@ const COVERAGE_TYPES = [
   { key: 'body', labelKey: 'widget.warranty.body', fallback: 'Body' },
 ] as const;
 
-export default function WarrantyStatusWidget({ size }: WidgetProps) {
+export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const { formatDate, locale } = useDateFormat();
@@ -90,7 +90,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useWarrantyDetails();
+  } = useWarrantyDetails(vehicleId ? String(vehicleId) : undefined);
 
   const warrantyData = envelope?.data ?? null;
   const isCompact = size.cols <= 1;

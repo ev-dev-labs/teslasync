@@ -106,7 +106,7 @@ export function summarizeManagementData(
   }
 
   if (kind === 'subscriptions' || kind === 'upgrades') {
-    const count = arrayLength(data, [kind])
+    const count = arrayLength(data, [kind, 'eligible'])
     const status = scalar(data, ['eligible', 'status'])
     if (count != null) summary.push({ label: 'items', value: String(count) })
     if (status) summary.push({ label: 'status', value: status })

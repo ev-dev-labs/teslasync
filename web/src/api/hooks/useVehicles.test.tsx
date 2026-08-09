@@ -749,27 +749,34 @@ describe('useWakeVehicle', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('warranty details', () => {
-  it('useWarrantyDetails GETs /tesla/warranty', async () => {
+  it('useWarrantyDetails GETs the selected vehicle warranty route', async () => {
     requestMock.mockResolvedValueOnce({ data: { in_warranty: true }, fetched_at: null });
-    const { result } = renderH(() => useWarrantyDetails());
+    const { result } = renderH(() => useWarrantyDetails('5'));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(lastUrl()).toBe('/tesla/warranty');
+    expect(lastUrl()).toBe('/vehicles/5/warranty');
     expect(lastOpts()).toHaveProperty('signal');
+  });
+
+  it('useWarrantyDetails stays idle without a selected vehicle', async () => {
+    const { result } = renderH(() => useWarrantyDetails());
+    await tick();
+    expect(requestMock).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
   });
 
   it('useRefreshWarrantyDetails POSTs the refresh route, invalidates, and toasts', async () => {
     requestMock.mockResolvedValueOnce({ data: {}, fetched_at: '2025-01-01T00:00:00Z' });
     const client = makeClient();
     const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
-    const { result } = renderHook(() => useRefreshWarrantyDetails(), {
+    const { result } = renderHook(() => useRefreshWarrantyDetails('5'), {
       wrapper: makeWrapper(client),
     });
 
     await result.current.mutateAsync();
 
-    expect(lastUrl()).toBe('/tesla/warranty/refresh');
+    expect(lastUrl()).toBe('/vehicles/5/warranty/refresh');
     expect(lastOpts().method).toBe('POST');
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['warranty-details'] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['warranty-details', '5'] });
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         'toast.vehicles.warranty.refresh.success',

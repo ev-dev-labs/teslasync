@@ -1,6 +1,7 @@
 package vehicleinfo
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -39,7 +40,7 @@ type teslaInfoClient interface {
 	GetVehicleSpecs(ctx context.Context, vin string) ([]byte, int, error)
 	GetSubscriptionEligibility(ctx context.Context, vin string) ([]byte, int, error)
 	GetUpgradeEligibility(ctx context.Context, vin string) ([]byte, int, error)
-	GetWarrantyDetails(ctx context.Context) ([]byte, int, error)
+	GetWarrantyDetails(ctx context.Context, vin string) ([]byte, int, error)
 	GetVehiclePricing(ctx context.Context, payload tesla.JSONRequestObject) ([]byte, int, error)
 	GetEnterpriseRoles(ctx context.Context, vin string) ([]byte, int, error)
 	SetEnterprisePayer(ctx context.Context, vin string, payload tesla.JSONRequestObject) ([]byte, int, error)
@@ -374,24 +375,32 @@ func (h *Handler) RefreshUpgradeEligibility(w http.ResponseWriter, r *http.Reque
 
 // ---------- Warranty Details ----------
 
-// WarrantyDetails returns stored warranty details from DB.
-// GET /api/v1/tesla/warranty
+// WarrantyDetails returns stored warranty details for a vehicle from DB.
+// GET /api/v1/vehicles/{vehicleID}/warranty
 func (h *Handler) WarrantyDetails(w http.ResponseWriter, r *http.Request) {
 	r, span := startHandlerSpan(r, "api.vehicle_info.warranty")
 	defer span.End()
 
-	h.getVehicleConfig(w, r, "warranty", "warranty", 0)
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
+		return
+	}
+	h.getVehicleConfig(w, r, "warranty:"+vin, "warranty", localVehicleID(r))
 }
 
-// RefreshWarrantyDetails fetches warranty details from Tesla and saves to DB.
-// POST /api/v1/tesla/warranty/refresh
+// RefreshWarrantyDetails fetches VIN-scoped warranty details from Tesla and saves to DB.
+// POST /api/v1/vehicles/{vehicleID}/warranty/refresh
 func (h *Handler) RefreshWarrantyDetails(w http.ResponseWriter, r *http.Request) {
 	r, span := startHandlerSpan(r, "api.vehicle_info.refresh_warranty")
 	defer span.End()
 
-	configKey := "warranty"
-	h.refreshVehicleConfig(w, r, configKey, "warranty", 0, func(ctx context.Context) ([]byte, int, error) {
-		return h.teslaClient.GetWarrantyDetails(ctx)
+	vin, ok := h.resolveVINOrWriteError(w, r)
+	if !ok {
+		return
+	}
+	configKey := "warranty:" + vin
+	h.refreshVehicleConfig(w, r, configKey, "warranty", localVehicleID(r), func(ctx context.Context) ([]byte, int, error) {
+		return h.teslaClient.GetWarrantyDetails(ctx, vin)
 	}, userTokenRequired, false)
 }
 
@@ -579,12 +588,9 @@ func (h *Handler) refreshVehicleConfig(
 
 	data := string(response)
 
-	// mobile_enabled returns a bare boolean (true/false) — wrap as
-	// {"enabled": <bool>}. The empty/null check below runs AFTER this guard,
-	// so we must skip wrapping when the response is missing/null; otherwise a
-	// blank Tesla response would produce syntactically invalid JSON such as
-	// {"enabled":} that later fails to parse on read.
-	if configType == "mobile_enabled" && data != "" && data != "null" {
+	// mobile_enabled returns a bare boolean (true/false). Wrap only those
+	// literals; direct JSON objects from other response variants stay intact.
+	if configType == "mobile_enabled" && (data == "true" || data == "false") {
 		data = fmt.Sprintf(`{"enabled":%s}`, data)
 	}
 
@@ -706,16 +712,22 @@ func (h *Handler) writeTeslaFailure(
 }
 
 func unwrapTeslaResponse(body []byte) (json.RawMessage, error) {
-	var envelope struct {
-		Response json.RawMessage `json:"response"`
+	trimmed := bytes.TrimSpace(body)
+	if !json.Valid(trimmed) {
+		return nil, errors.New("decode Tesla response: invalid JSON")
 	}
-	if err := json.Unmarshal(body, &envelope); err != nil {
-		return nil, fmt.Errorf("decode Tesla response envelope: %w", err)
+
+	if len(trimmed) > 0 && trimmed[0] == '{' {
+		var object map[string]json.RawMessage
+		if err := json.Unmarshal(trimmed, &object); err != nil {
+			return nil, fmt.Errorf("decode Tesla response object: %w", err)
+		}
+		if response, ok := object["response"]; ok {
+			return response, nil
+		}
 	}
-	if len(envelope.Response) == 0 {
-		return json.RawMessage("null"), nil
-	}
-	return envelope.Response, nil
+
+	return json.RawMessage(append([]byte(nil), trimmed...)), nil
 }
 
 func decodeLimitedJSON(

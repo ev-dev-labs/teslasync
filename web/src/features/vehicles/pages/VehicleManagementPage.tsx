@@ -93,7 +93,7 @@ export default function VehicleManagementPage() {
           >
             {t(
               'vehicleManagement.roster.loading',
-              'Vehicle-scoped cards remain unavailable while the fleet loads. Cached account-level warranty data can still load.',
+              'Vehicle-scoped management data remains unavailable while the fleet loads.',
             )}
           </AlertBanner>
         )}
@@ -110,7 +110,7 @@ export default function VehicleManagementPage() {
               <span>
                 {t(
                   'vehicleManagement.roster.error',
-                  'The vehicle list could not be loaded. Account-level cached data remains available.',
+                  'The vehicle list could not be loaded, so vehicle-scoped management data is unavailable.',
                 )}
               </span>
               <Button
@@ -137,7 +137,7 @@ export default function VehicleManagementPage() {
             >
               {t(
                 'vehicleManagement.roster.empty',
-                'Connect and sync a Tesla vehicle to enable vehicle-scoped management APIs. Account-level warranty data remains available.',
+                'Connect and sync a Tesla vehicle to enable vehicle-scoped management APIs.',
               )}
             </AlertBanner>
           )}

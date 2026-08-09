@@ -514,21 +514,22 @@ export function useRefreshVehicleUpgrades(vehicleId?: string) {
 
 // ---------- Warranty Details ----------
 
-export function useWarrantyDetails() {
+export function useWarrantyDetails(vehicleId?: string) {
   return useQuery({
-    queryKey: ['warranty-details'],
-    queryFn: ({ signal }) => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty', { signal }),
+    queryKey: ['warranty-details', vehicleId],
+    queryFn: ({ signal }) => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/warranty`, { signal }),
+    enabled: !!vehicleId,
     staleTime: STALE_TIMES.DAILY,
   });
 }
 
-export function useRefreshWarrantyDetails() {
+export function useRefreshWarrantyDetails(vehicleId?: string) {
   const queryClient = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty/refresh', { method: 'POST' }),
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/warranty/refresh`, { method: 'POST' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['warranty-details'] });
+      queryClient.invalidateQueries({ queryKey: ['warranty-details', vehicleId] });
       success('toast.vehicles.warranty.refresh.success', 'Warranty details refreshed');
     },
     onError: (e) => error(e, 'toast.vehicles.warranty.refresh.error', 'Failed to refresh warranty details'),

@@ -417,14 +417,14 @@ func mountVehicleScopedManagementRoutes(r chi.Router, h vehicleManagementRouteHa
 	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", h.RefreshSubscriptionEligibility)
 	r.Get("/upgrades", h.UpgradeEligibility)
 	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", h.RefreshUpgradeEligibility)
+	r.Get("/warranty", h.WarrantyDetails)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/warranty/refresh", h.RefreshWarrantyDetails)
 	r.Get("/enterprise-roles", h.EnterpriseRoles)
 	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/enterprise-roles/refresh", h.RefreshEnterpriseRoles)
 	r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/enterprise-payer", h.EnterprisePayer)
 }
 
 func mountAccountVehicleManagementRoutes(r chi.Router, h vehicleManagementRouteHandler) {
-	r.Get("/tesla/warranty", h.WarrantyDetails)
-	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/warranty/refresh", h.RefreshWarrantyDetails)
 	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/vehicle-pricing", h.VehiclePricing)
 }
 

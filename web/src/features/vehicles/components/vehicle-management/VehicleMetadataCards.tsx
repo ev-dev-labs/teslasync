@@ -21,11 +21,11 @@ export function VehicleMetadataCards({ vehicleId }: VehicleMetadataCardsProps) {
   const options = useVehicleOptions(selectedId)
   const subscriptions = useVehicleSubscriptions(selectedId)
   const upgrades = useVehicleUpgrades(selectedId)
-  const warranty = useWarrantyDetails()
+  const warranty = useWarrantyDetails(selectedId)
   const refreshOptions = useRefreshVehicleOptions(selectedId)
   const refreshSubscriptions = useRefreshVehicleSubscriptions(selectedId)
   const refreshUpgrades = useRefreshVehicleUpgrades(selectedId)
-  const refreshWarranty = useRefreshWarrantyDetails()
+  const refreshWarranty = useRefreshWarrantyDetails(selectedId)
   const vehicleUnavailable = !selectedId
 
   return (
@@ -55,9 +55,9 @@ export function VehicleMetadataCards({ vehicleId }: VehicleMetadataCardsProps) {
         title={t('vehicleManagement.warranty.title', 'Warranty details')}
         description={t(
           'vehicleManagement.warranty.description',
-          'Tesla account warranty coverage details; VIN behavior can vary by account.',
+          'Warranty coverage details for the selected Tesla VIN.',
         )}
-        endpoint="GET /api/1/dx/warranty/details"
+        endpoint="GET /api/1/dx/warranty/details?vin={vin}"
         prerequisite="user"
         kind="warranty"
         data={warranty.data?.data}
@@ -66,6 +66,7 @@ export function VehicleMetadataCards({ vehicleId }: VehicleMetadataCardsProps) {
         error={refreshWarranty.error ?? warranty.error}
         refreshPending={refreshWarranty.isPending}
         operationSucceeded={refreshWarranty.isSuccess}
+        unavailable={vehicleUnavailable}
         onRefresh={() => refreshWarranty.mutate()}
       />
 

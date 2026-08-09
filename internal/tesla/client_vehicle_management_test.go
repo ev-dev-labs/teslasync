@@ -231,9 +231,9 @@ func TestVehicleManagementUserCallsUseExactMethodAndPath(t *testing.T) {
 		},
 		{
 			name: "warranty details",
-			path: "/api/1/dx/warranty/details",
+			path: "/api/1/dx/warranty/details?vin=TESTVIN",
 			invokeCall: func(ctx context.Context, client *Client) ([]byte, int, error) {
-				return client.GetWarrantyDetails(ctx)
+				return client.GetWarrantyDetails(ctx, "TESTVIN")
 			},
 		},
 		{
