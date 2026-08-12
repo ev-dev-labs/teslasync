@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useMemo, useState } from 'react';
+import { createContext, useContext, useId, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -1216,6 +1216,79 @@ function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
   );
 }
 
+/**
+ * Spins the photo's own wheel: a circular crop of the compositor image,
+ * centered on the wheel, rotating in place over the base photo. Because it
+ * is the same bitmap and the wheel design is 5-fold symmetric, the crop is
+ * invisible while parked and the drive-in spin (−1080° = 15 × −72°) ends
+ * pixel-identical to the photo.
+ */
+function PhotoWheelSpinner({
+  cx,
+  u,
+  imgWidth,
+  imgLeft,
+  imgTop,
+  photoUrl,
+  driveIn,
+  driving,
+}: {
+  cx: number;
+  u: number;
+  imgWidth: number;
+  imgLeft: number;
+  imgTop: number;
+  photoUrl: string;
+  driveIn: boolean;
+  driving: boolean;
+}) {
+  const R = 34; // crop radius in viewBox units — covers the rim, stays on the tire
+  const size = 2 * R * u;
+  const left = (cx - R) * u;
+  const top = (WHEEL_CY - R - VIEWBOX_MIN_Y) * u;
+  const shouldSpin = driveIn || driving;
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        pointerEvents: 'none',
+      }}
+      initial={shouldSpin ? { rotate: 0 } : false}
+      animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
+      transition={
+        shouldSpin
+          ? {
+            duration: driving ? 0.9 : DRIVE_IN_DURATION,
+            repeat: driving ? Infinity : 0,
+            ease: 'linear',
+          }
+          : { duration: 0 }
+      }
+    >
+      <img
+        src={photoUrl}
+        alt=""
+        draggable={false}
+        style={{
+          position: 'absolute',
+          maxWidth: 'none',
+          width: imgWidth,
+          left: imgLeft - left,
+          top: imgTop - top,
+        }}
+      />
+    </motion.div>
+  );
+}
+
 function SvgDefs({ paint, ids }: { paint: PaintPalette; ids: TwinIds }) {
   return (
     <defs>
@@ -1357,31 +1430,23 @@ export function VehicleTwin({
   const photoUrl = useMemo(() => buildCompositorUrl(paint.id, model), [paint.id, model]);
   const photoOn = photoState === 'ready';
 
-  // The photo's wheels can't rotate, so the vector wheels (traced to sit
-  // exactly on top of them) take over whenever spin is needed: during the
-  // drive-in and while driving. Once the drive-in settles and the car is
-  // parked, they fade out to reveal the photo's real wheels.
-  const [driveInSettled, setDriveInSettled] = useState(!driveIn);
-  useEffect(() => {
-    if (!driveIn) return;
-    const t = setTimeout(() => setDriveInSettled(true), (DRIVE_IN_DURATION + 0.15) * 1000);
-    return () => clearTimeout(t);
-  }, [driveIn]);
-  const showSvgWheels = !photoOn || isDriving || (driveIn && !driveInSettled);
 
   // Align the photo with the SVG overlay: the twin geometry was traced from
   // this exact render, so image carLeft..carRight ↔ viewBox x 43..556 and
   // image ground ↔ viewBox y 263 (viewBox min-y 52).
   const u = width / VIEWBOX_WIDTH; // CSS px per viewBox unit
   const unitsPerImgPx = (556 - 43) / (COMPOSITOR_METRICS.carRight - COMPOSITOR_METRICS.carLeft);
+  const imgWidth = COMPOSITOR_METRICS.imgWidth * unitsPerImgPx * u;
+  const imgLeft = (43 - COMPOSITOR_METRICS.carLeft * unitsPerImgPx) * u;
+  const imgTop = ((263 - VIEWBOX_MIN_Y) - COMPOSITOR_METRICS.ground * unitsPerImgPx) * u;
   const imgStyle = {
     position: 'absolute' as const,
-    width: COMPOSITOR_METRICS.imgWidth * unitsPerImgPx * u,
+    width: imgWidth,
     // Tailwind preflight sets `img { max-width: 100% }`, which would clamp
     // the image to the wrapper and break the car/overlay alignment.
     maxWidth: 'none' as const,
-    left: (43 - COMPOSITOR_METRICS.carLeft * unitsPerImgPx) * u,
-    top: ((263 - VIEWBOX_MIN_Y) - COMPOSITOR_METRICS.ground * unitsPerImgPx) * u,
+    left: imgLeft,
+    top: imgTop,
     opacity: photoOn ? 1 : 0,
     transition: 'opacity 200ms ease',
   };
@@ -1426,6 +1491,30 @@ export function VehicleTwin({
             onLoad={() => setPhotoState('ready')}
             onError={() => setPhotoState('failed')}
           />
+        )}
+        {photoOn && (
+          <>
+            <PhotoWheelSpinner
+              cx={FRONT_WHEEL_CX}
+              u={u}
+              imgWidth={imgWidth}
+              imgLeft={imgLeft}
+              imgTop={imgTop}
+              photoUrl={photoUrl}
+              driveIn={driveIn}
+              driving={isDriving}
+            />
+            <PhotoWheelSpinner
+              cx={REAR_WHEEL_CX}
+              u={u}
+              imgWidth={imgWidth}
+              imgLeft={imgLeft}
+              imgTop={imgTop}
+              photoUrl={photoUrl}
+              driveIn={driveIn}
+              driving={isDriving}
+            />
+          </>
         )}
         <svg
           viewBox={`0 ${VIEWBOX_MIN_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
@@ -1485,20 +1574,12 @@ export function VehicleTwin({
             <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
             <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
           </g>
-          <AnimatePresence>
-            {showSvgWheels && (
-              <motion.g
-                id="wheels"
-                initial={false}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35 }}
-              >
-                <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
-                <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
-              </motion.g>
-            )}
-          </AnimatePresence>
+          {!photoOn && (
+            <g id="wheels">
+              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
+              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
+            </g>
+          )}
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
         </svg>
       </motion.div>
