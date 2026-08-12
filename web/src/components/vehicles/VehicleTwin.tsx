@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -1357,6 +1357,18 @@ export function VehicleTwin({
   const photoUrl = useMemo(() => buildCompositorUrl(paint.id, model), [paint.id, model]);
   const photoOn = photoState === 'ready';
 
+  // The photo's wheels can't rotate, so the vector wheels (traced to sit
+  // exactly on top of them) take over whenever spin is needed: during the
+  // drive-in and while driving. Once the drive-in settles and the car is
+  // parked, they fade out to reveal the photo's real wheels.
+  const [driveInSettled, setDriveInSettled] = useState(!driveIn);
+  useEffect(() => {
+    if (!driveIn) return;
+    const t = setTimeout(() => setDriveInSettled(true), (DRIVE_IN_DURATION + 0.15) * 1000);
+    return () => clearTimeout(t);
+  }, [driveIn]);
+  const showSvgWheels = !photoOn || isDriving || (driveIn && !driveInSettled);
+
   // Align the photo with the SVG overlay: the twin geometry was traced from
   // this exact render, so image carLeft..carRight ↔ viewBox x 43..556 and
   // image ground ↔ viewBox y 263 (viewBox min-y 52).
@@ -1473,12 +1485,20 @@ export function VehicleTwin({
             <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
             <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
           </g>
-          {!photoOn && (
-            <g id="wheels">
-              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
-              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
-            </g>
-          )}
+          <AnimatePresence>
+            {showSvgWheels && (
+              <motion.g
+                id="wheels"
+                initial={false}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35 }}
+              >
+                <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
+                <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
+              </motion.g>
+            )}
+          </AnimatePresence>
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
         </svg>
       </motion.div>
