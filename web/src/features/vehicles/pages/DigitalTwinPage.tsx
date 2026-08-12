@@ -278,6 +278,7 @@ export default function DigitalTwinPage() {
                     driveIn
                     vehicleId={vehicle?.id}
                     exteriorColor={vehicle?.exterior_color}
+                    model={vehicle?.model}
                   />
                   {twinState.lastUpdated ? (
                     <Text as="p" variant="caption" className="mt-4 text-center">

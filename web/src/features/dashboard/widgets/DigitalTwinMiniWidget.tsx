@@ -64,6 +64,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
               size="sm"
               vehicleId={vehicle?.id}
               exteriorColor={vehicle?.exterior_color}
+              model={vehicle?.model}
             />
           </div>
 

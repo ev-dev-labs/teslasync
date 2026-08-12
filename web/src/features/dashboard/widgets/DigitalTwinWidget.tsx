@@ -86,6 +86,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
               size={twinSize}
               vehicleId={vehicle?.id}
               exteriorColor={vehicle?.exterior_color}
+              model={vehicle?.model}
               driveIn
               className="relative z-10 drop-shadow-2xl"
             />
