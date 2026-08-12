@@ -1365,6 +1365,9 @@ export function VehicleTwin({
   const imgStyle = {
     position: 'absolute' as const,
     width: COMPOSITOR_METRICS.imgWidth * unitsPerImgPx * u,
+    // Tailwind preflight sets `img { max-width: 100% }`, which would clamp
+    // the image to the wrapper and break the car/overlay alignment.
+    maxWidth: 'none' as const,
     left: (43 - COMPOSITOR_METRICS.carLeft * unitsPerImgPx) * u,
     top: ((263 - VIEWBOX_MIN_Y) - COMPOSITOR_METRICS.ground * unitsPerImgPx) * u,
     opacity: photoOn ? 1 : 0,
