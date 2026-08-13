@@ -1242,7 +1242,11 @@ function PhotoWheelSpinner({
   driveIn: boolean;
   driving: boolean;
 }) {
-  const R = 34; // crop radius in viewBox units — covers the rim, stays on the tire
+  // Crop radius in viewBox units. Must stay strictly on the rim face:
+  // anything larger drags the tire's baked-in lighting — and, on the front
+  // wheel, the dark aero deflector ahead of the tire — around the hub,
+  // which reads as a wobbling second wheel.
+  const R = 28;
   const size = 2 * R * u;
   const left = (cx - R) * u;
   const top = (WHEEL_CY - R - VIEWBOX_MIN_Y) * u;
@@ -1430,6 +1434,12 @@ export function VehicleTwin({
   const photoUrl = useMemo(() => buildCompositorUrl(paint.id, model), [paint.id, model]);
   const photoOn = photoState === 'ready';
 
+  // Entry spin only makes sense while the drive-in slide is still running.
+  // If the photo arrives late (slow network), the car is already parked —
+  // spinning the wheels then would look broken.
+  const [mountedAt] = useState(() => performance.now());
+  const [entrySpinOk, setEntrySpinOk] = useState(false);
+
 
   // Align the photo with the SVG overlay: the twin geometry was traced from
   // this exact render, so image carLeft..carRight ↔ viewBox x 43..556 and
@@ -1488,7 +1498,10 @@ export function VehicleTwin({
             aria-hidden="true"
             draggable={false}
             style={imgStyle}
-            onLoad={() => setPhotoState('ready')}
+            onLoad={() => {
+              setPhotoState('ready');
+              setEntrySpinOk(performance.now() - mountedAt < 700);
+            }}
             onError={() => setPhotoState('failed')}
           />
         )}
@@ -1501,7 +1514,7 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={driveIn}
+              driveIn={driveIn && entrySpinOk}
               driving={isDriving}
             />
             <PhotoWheelSpinner
@@ -1511,7 +1524,7 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={driveIn}
+              driveIn={driveIn && entrySpinOk}
               driving={isDriving}
             />
           </>
